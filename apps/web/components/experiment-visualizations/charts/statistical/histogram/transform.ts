@@ -102,6 +102,10 @@ export function transformHistogramData(
     histnorm: effectiveHistnorm,
     cumulative: chartConfig.cumulative ? { enabled: true } : undefined,
     orientation,
+    // Categories within the same facet cell should share bin edges so
+    // overlay/stack/cumulative views compare across colors. Scope by
+    // cell (xaxisId) so per-facet ranges still adapt to local data.
+    bingroup: s.xaxisId ? `cell:${s.xaxisId}` : "default",
   }));
 
   return { chartSeries: enriched, subplots: facetResult.subplots };

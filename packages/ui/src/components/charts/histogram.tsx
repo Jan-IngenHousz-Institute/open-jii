@@ -101,8 +101,12 @@ function gaussianPdf(x: number, mean: number, std: number): number {
   return Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
 }
 
-/** Compute the (x, y) samples of a fitted normal PDF for a numeric series. */
-function buildNormalFit(values: ReadonlyArray<string | number | Date | undefined>): {
+/** Compute the (x, y) samples of a fitted normal PDF (or CDF when
+ *  `cumulative` is true) for a numeric series. */
+function buildNormalFit(
+  values: ReadonlyArray<string | number | Date | undefined>,
+  cumulative: boolean,
+): {
   xs: number[];
   ys: number[];
   mean: number;
@@ -125,13 +129,21 @@ function buildNormalFit(values: ReadonlyArray<string | number | Date | undefined
   const end = Math.max(dataMax, mean + FIT_OVERLAY_TAIL_SIGMAS * std);
   const step = (end - start) / (FIT_OVERLAY_SAMPLES - 1);
   const xs: number[] = [];
-  const ys: number[] = [];
+  const pdf: number[] = [];
   for (let i = 0; i < FIT_OVERLAY_SAMPLES; i++) {
     const x = start + i * step;
     xs.push(x);
-    ys.push(gaussianPdf(x, mean, std));
+    pdf.push(gaussianPdf(x, mean, std));
   }
-  return { xs, ys, mean, std };
+  if (!cumulative) return { xs, ys: pdf, mean, std };
+  // Trapezoidal integration -> CDF on the same x-grid, matching the
+  // histogram's cumulative-of-density bars.
+  const cdf: number[] = new Array(FIT_OVERLAY_SAMPLES);
+  cdf[0] = 0;
+  for (let i = 1; i < FIT_OVERLAY_SAMPLES; i++) {
+    cdf[i] = cdf[i - 1] + ((pdf[i] + pdf[i - 1]) / 2) * step;
+  }
+  return { xs, ys: cdf, mean, std };
 }
 
 export function Histogram({
@@ -157,8 +169,12 @@ export function Histogram({
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
-        x: (series.orientation || orientation) === "v" ? series.x : series.y,
-        y: (series.orientation || orientation) === "h" ? series.x : series.y,
+        // Transforms already place the binned values in `x` (vertical) or
+        // `y` (horizontal) per orientation. Don't swap here -- the older
+        // swap left `y: undefined` for horizontal histograms and Plotly
+        // had nothing to bin.
+        x: series.x,
+        y: series.y,
         // Per-trace subplot routing for facets. Plotly reads `xaxis` /
         // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
         // matches them to the numbered axis configs in `layout`.
@@ -218,19 +234,25 @@ export function Histogram({
 
   // Fitted-distribution overlays: one smooth line trace per histogram
   // series. Requires histnorm "probability density" for the curve and
-  // bars to share a Y scale; the renderer enforces this.
+  // bars to share a Y scale; the renderer enforces this. When the parent
+  // histogram is cumulative the fit integrates to a CDF so the two
+  // share shape, not just scale.
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
       const seriesOrientation = series.orientation || orientation;
       const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
       if (!valuesForFit || valuesForFit.length === 0) continue;
-      const fit = buildNormalFit(valuesForFit);
+      const fit = buildNormalFit(valuesForFit, Boolean(series.cumulative?.enabled));
       if (!fit) continue;
       const lineColor = series.marker?.color || series.color;
       const fitTrace = {
         x: seriesOrientation === "v" ? fit.xs : fit.ys,
         y: seriesOrientation === "v" ? fit.ys : fit.xs,
+        // Match the parent histogram's subplot routing so each facet's
+        // fit lands on its own cell instead of all stacking on subplot 1.
+        xaxis: series.xaxisId,
+        yaxis: series.yaxisId,
         name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
         type: "scatter",
         mode: "lines",
