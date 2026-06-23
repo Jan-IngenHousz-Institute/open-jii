@@ -13,6 +13,8 @@ export interface DensityPlot2DProps extends BaseChartProps {
   /** Raw (x, y) pairs that show as the underlying scatter trace. */
   x: (string | number | Date)[];
   y: (string | number)[];
+  /** Hide the raw scatter layer; only the contour stays visible. */
+  showMarkers?: boolean;
   /** Marker styling for the scatter layer. */
   markerSize?: number;
   markerOpacity?: number;
@@ -48,6 +50,7 @@ export function DensityPlot2D({
   className,
   loading,
   error,
+  showMarkers = true,
   markerSize = 4,
   markerOpacity = 0.4,
   markerColor,
@@ -65,22 +68,26 @@ export function DensityPlot2D({
   // renders when there's data: `makeCrossings` crashes on empty x/y.
   const hasData = x.length > 0;
   const plotData: PlotData[] = [
-    {
-      x,
-      y,
-      type: "scatter",
-      mode: "markers",
-      marker: {
-        size: markerSize,
-        opacity: markerOpacity,
-        color: markerColor ?? "#1f77b4",
-      },
-      // Raw points carry no name; the contour layer's colorbar is the
-      // legend, and `showlegend: false` keeps the scatter trace from
-      // duplicating itself in the legend frame.
-      showlegend: false,
-      hoverinfo: "x+y",
-    } as unknown as PlotData,
+    ...(showMarkers
+      ? [
+          {
+            x,
+            y,
+            type: "scatter",
+            mode: "markers",
+            marker: {
+              size: markerSize,
+              opacity: markerOpacity,
+              color: markerColor ?? "#1f77b4",
+            },
+            // Raw points carry no name; the contour layer's colorbar is
+            // the legend, and `showlegend: false` keeps the scatter trace
+            // from duplicating itself in the legend frame.
+            showlegend: false,
+            hoverinfo: "x+y",
+          } as unknown as PlotData,
+        ]
+      : []),
     ...(hasData
       ? [
           {

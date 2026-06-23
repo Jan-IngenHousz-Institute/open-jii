@@ -13,6 +13,7 @@ export function densityPlot2DDefaultConfig(): ChartFormConfig {
     color: [DEFAULT_PRIMARY_COLOR],
     // Smaller and more translucent than scatter defaults: points sit
     // under the contour layer and should stay unobtrusive.
+    density2dShowMarkers: true,
     density2dMarkerSize: 4,
     density2dMarkerOpacity: 0.4,
     density2dContourFill: false,

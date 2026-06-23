@@ -567,6 +567,7 @@
       "correlationMatrixOptions": "Correlation options",
       "cumulative": "Cumulative",
       "density2dContourFill": "Contour fill",
+      "density2dShowMarkers": "Show markers",
       "densityAppearance": "Appearance",
       "densityBandwidth": "Bandwidth",
       "densityCumulative": "Cumulative",

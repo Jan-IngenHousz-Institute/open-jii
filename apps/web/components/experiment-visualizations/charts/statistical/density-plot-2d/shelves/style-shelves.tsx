@@ -23,10 +23,31 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
   const fillId = useId();
   const showColorbarId = useId();
+  const showMarkersId = useId();
 
   return (
     <CollapsibleStyleSection title={t("workspace.style.densityPlot2dOptions")} flat={flat}>
       <StyleSubsection title={t("workspace.style.densityPlot2dPoints")}>
+        <FormField
+          control={form.control}
+          name="config.density2dShowMarkers"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox
+                  id={showMarkersId}
+                  // Default-on: treat undefined as checked.
+                  checked={field.value !== false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel htmlFor={showMarkersId} className="text-xs font-medium">
+                {t("workspace.style.density2dShowMarkers")}
+              </FormLabel>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="config.density2dMarkerSize"
