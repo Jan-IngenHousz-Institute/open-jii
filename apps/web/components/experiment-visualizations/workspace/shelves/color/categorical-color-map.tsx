@@ -49,8 +49,7 @@ interface Category {
  */
 export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const { t } = useTranslation("experimentVisualizations");
-  // experimentId lives in the URL params (`/experiments/[id]/...`); reading
-  // it here avoids prop-drilling experimentId through every panel/shelf.
+  // Read experimentId from URL params to skip plumbing it through panels.
   const params = useParams<{ id?: string }>();
   const experimentId = params?.id;
   const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
@@ -61,9 +60,8 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
 
-  // Series keys come from Y data sources with a column picked. Mirrors
-  // the renderer's seriesKey choice (`source.alias ?? source.columnName`)
-  // so the swatch keys line up with what `getCategoryColor` looks up.
+  // Mirror the renderer's seriesKey (`alias ?? columnName`) so swatch
+  // keys align with `getCategoryColor` lookups.
   const seriesKeys = useMemo(() => {
     return dataSourcesByRole(sources, "y")
       .map(({ source }) => source.alias ?? source.columnName)
@@ -82,8 +80,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     enabled: Boolean(experimentId) && Boolean(tableName) && Boolean(colorColumn),
   });
 
-  // Sort for stable visual order across renders (the endpoint may return
-  // values in arbitrary order). Stringify once for the comparator.
+  // Alphabetical sort so the swatch order matches the renderer's palette indices.
   const categories = useMemo<Category[]>(() => {
     const seen = new Set<string>();
     const out: Category[] = [];
@@ -163,9 +160,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
               colorMap={colorMap}
               keyFor={(c) => composeColorMapKey(seriesKey, c.key)}
               fallbackKeyFor={(c) => c.key}
-              // Match the renderer's palette offset (`catIndex + seriesOrdinal * N`)
-              // so the default swatch shown here equals the color the chart
-              // actually draws for that (series, category) pair.
+              // Match the renderer's palette offset (catIndex + seriesOrdinal * N).
               paletteIndexFor={(_c, i) => seriesIndex * categories.length + i}
               onSet={setOverride}
               onClear={clearOverride}

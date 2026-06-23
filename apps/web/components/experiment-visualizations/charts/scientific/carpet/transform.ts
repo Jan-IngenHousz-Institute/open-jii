@@ -97,8 +97,7 @@ export function transformCarpetData(
     return { carpetData: [], contourData: [], degenerateReason: "singleAxisValue" };
   }
 
-  // Carpet trace: a/b/x/y all length M*N. Without x/y Plotly draws nothing.
-  // x=a, y=b lays the carpet out as a plain rectangular grid.
+  // Plotly carpet needs a/b/x/y all length M*N for explicit screen coords.
   const expandedA: number[] = [];
   const expandedB: number[] = [];
   const expandedX: number[] = [];
@@ -112,11 +111,8 @@ export function transformCarpetData(
     }
   }
 
-  // Plotly's carpet/heatmap calc bins 1D columns as `_arr[bIdx][aIdx]`
-  // (heatmap/convert_column_xyz.js: rows = b, cols = a). z must match or
-  // interp2d + autoContours collapse to start >= end, emptyPathinfo
-  // returns [], makeCrossings crashes reading `pathinfo[0].z`.
-  // pivotToMatrix already returns z[yi][xi] = z[bIdx][aIdx], pass through.
+  // Plotly contourcarpet z is z[bIdx][aIdx] (heatmap/convert_column_xyz.js
+  // bins 1D columns rows=b, cols=a). pivotToMatrix already returns that.
   const carpetZ: number[][] = [];
   for (let j = 0; j < bValuesNumeric.length; j++) {
     const row: number[] = [];
@@ -130,12 +126,8 @@ export function transformCarpetData(
   const ncontours = Math.max(2, Math.floor(chartConfig.carpetNContours ?? 15));
   const showLabels = Boolean(chartConfig.carpetShowContourLabels);
 
-  // Plotly's autocontour rewrites contours.start/end/size into the trace
-  // input on every calc and re-coerces from there on subsequent renders.
-  // When a style toggle re-runs calc, the cached values can collapse to
-  // start >= end (zmin/zmax math at the boundaries), emptyPathinfo returns
-  // [], and makeCrossings crashes reading pathinfo[0].z. Compute the bounds
-  // ourselves and pass them explicitly so Plotly never runs autocontour.
+  // Pass explicit contour bounds; Plotly's autocontour state collapses to
+  // start >= end on style-toggle re-renders and crashes makeCrossings.
   let zMin = Number.POSITIVE_INFINITY;
   let zMax = Number.NEGATIVE_INFINITY;
   for (const row of carpetZ) {
@@ -176,8 +168,7 @@ export function transformCarpetData(
           start: contourStart,
           end: contourEnd,
           size: contourSize,
-          // Labels need lines to attach to; force lines on when labels are
-          // requested so Plotly's label-placement doesn't read undefined.
+          // Labels need lines to attach to.
           showlines: coloring !== "fill" || showLabels,
           showlabels: showLabels,
           coloring,

@@ -80,9 +80,7 @@ export function DensityPlot2D({
               opacity: markerOpacity,
               color: markerColor ?? "#1f77b4",
             },
-            // Raw points carry no name; the contour layer's colorbar is
-            // the legend, and `showlegend: false` keeps the scatter trace
-            // from duplicating itself in the legend frame.
+            // Contour colorbar is the legend; don't list the point cloud.
             showlegend: false,
             hoverinfo: "x+y",
           } as unknown as PlotData,

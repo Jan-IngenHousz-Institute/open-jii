@@ -46,10 +46,6 @@ export const CATEGORY_PALETTE = [
   "#9edae5",
 ] as const;
 
-/** Separator used to encode (seriesKey, categoryKey) pairs as flat colorMap
- *  keys. Picked for visual readability and rarity in real column / value
- *  names; the renderer falls back to the bare category key when no
- *  composite entry matches, so old single-series colorMaps keep working. */
 export const COLOR_MAP_KEY_SEPARATOR = "::";
 
 export function composeColorMapKey(seriesKey: string, categoryKey: string): string {
@@ -62,10 +58,7 @@ export function getCategoryColor(
   key?: string,
   seriesKey?: string,
 ): string {
-  // Composite (`series::category`) override wins; falls back to plain
-  // category override, then palette cycle. Charts with one Y series
-  // never bother writing composite keys, so the fallback keeps them
-  // working unchanged.
+  // Composite (series::category) > flat category > palette cycle.
   if (key && colorMap) {
     if (seriesKey) {
       const composite = composeColorMapKey(seriesKey, key);

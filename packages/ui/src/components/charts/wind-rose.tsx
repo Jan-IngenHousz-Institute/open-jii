@@ -118,15 +118,10 @@ export function WindRose({
       bgcolor: "white",
       radialaxis: {
         title: { text: radialAxisTitle },
-        // Draw the radial axis horizontally to the east (3 o'clock).
-        // `angle: 90` stacks tick labels and the title vertically and
-        // overlaps bars clustered around the top. East gives horizontal
-        // text spacing along the axis.
+        // East-pointing radial axis: avoids the north overlap with bars.
         angle: 0,
         tickangle: 0,
-        // Plotly's auto-ticks pick ~8 values regardless of viewport, which
-        // collide along the short east-axis at typical chart sizes. Cap
-        // the count so labels always have horizontal room.
+        // Cap ticks so labels don't collide on small charts.
         nticks: 5,
         gridcolor: "#E6E6E6",
         showgrid: config.showGrid !== false,

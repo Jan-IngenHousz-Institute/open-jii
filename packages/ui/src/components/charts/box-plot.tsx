@@ -108,10 +108,8 @@ export function BoxPlot({
         jitter: series.jitter || 0.3,
         pointpos: series.pointpos || -1.8,
 
-        // Styling
-        // line.color defaults to the trace color which then matches the
-        // box fill, hiding the box border, mean line, and notched outline.
-        // Force a contrasting dark line so those features stay visible.
+        // Dark default for line so box border, mean line, and notch outline
+        // stay visible against the trace-color fill.
         fillcolor: series.fillcolor || series.color,
         line: {
           color: series.line?.color || "#444",

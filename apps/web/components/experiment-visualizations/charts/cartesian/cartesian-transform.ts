@@ -100,10 +100,7 @@ export function transformCartesianData(
       seen.add(key);
       pending.push({ key, label: raw == null ? null : (raw as string | number) });
     }
-    // Alphabetical sort so palette indices stay stable across renders and
-    // match the swatch order shown in the color-map picker (which also
-    // sorts alphabetically). Row-fetch order leaked SQL ordering into the
-    // legend palette.
+    // Sort alphabetically so palette indices match the picker's swatch order.
     pending.sort((a, b) => a.key.localeCompare(b.key));
     for (const { key, label } of pending) {
       globalCategoryKeys.push(key);
@@ -258,11 +255,8 @@ export function transformCartesianData(
       }
     }
 
-    // Stacked area traces need every category to share the same x grid
-    // so Plotly's stackgroup can pair values correctly. Without this each
-    // trace has its own x array (one entry per row in that category) and
-    // Plotly stacks by INDEX, mixing values across unrelated x points.
-    // Build a union x grid once per cell and zero-fill missing slots.
+    // Stacked area pairs values by index, not by x. Share the x grid
+    // across categories and zero-fill missing slots.
     const needsSharedXGrid =
       defaultTraceType === "area" &&
       chartConfig.stackMode !== undefined &&
@@ -305,18 +299,15 @@ export function transformCartesianData(
     });
   };
 
-  // Dispatch by colour mode. The continuous-color path still hides the
-  // colorbar on cells > 0 (only one colorbar per chart makes sense); the
-  // legend itself is deduped across cells below so each unique series
-  // appears once regardless of which facet first contains its data.
+  // Continuous-color: only cell 0 keeps the colorbar. Categorical /
+  // plain: legend dedup runs below so each series shows once across
+  // facets.
   const buildSeriesForCell = (
     cellRows: Record<string, unknown>[],
     cellIndex: number,
   ): CartesianSeries[] => {
     const { xaxisId, yaxisId } = buildAxisIds(cellIndex);
     if (isContinuousColor && colorColumn) {
-      // Continuous still suppresses extra colorbars; the per-cell
-      // showlegend flag here doubles as the colorbar gate.
       const showlegend = cellIndex === 0 ? undefined : false;
       return buildContinuousColorCellSeries(cellRows, cellIndex, xaxisId, yaxisId, showlegend);
     }
@@ -331,11 +322,7 @@ export function transformCartesianData(
     allSeries.push(...buildSeriesForCell(facetGroups[i].rows, i));
   }
 
-  // Faceted charts emit one trace per (cell, series). Each species may
-  // only have data in a subset of cells, so dedupe legend entries by
-  // (legendgroup ?? name) and keep showlegend=true only on the first
-  // trace whose y array carries values -- i.e. the first facet that
-  // actually plots that series.
+  // Show each (legendgroup ?? name) once -- from the first cell with data.
   const seenLegendKeys = new Set<string>();
   for (let i = 0; i < allSeries.length; i++) {
     const trace = allSeries[i];
@@ -348,12 +335,8 @@ export function transformCartesianData(
     seenLegendKeys.add(key);
   }
 
-  // Plotly's `stackgroup` only stacks on numeric (linear or log) axes.
-  // Our X is typically date or category, so the stack call is silently
-  // ignored and the chart renders as overlaid translucent fills. Compute
-  // the cumulative y values ourselves and clear `stackgroup` so Plotly
-  // just draws the bands. `fill: "tonexty"` keeps each band filling to
-  // the trace below it.
+  // Plotly's stackgroup only works on linear/log axes; cumulate the y
+  // values ourselves so date and category axes stack the same way.
   const stackedSeries = applyManualStacking(allSeries, chartConfig.stackMode);
 
   if (!facetColumn) {
@@ -392,18 +375,9 @@ export function transformCartesianData(
   return { chartSeries: stackedSeries, subplots: subplotsConfig, useIndexForX };
 }
 
-/**
- * Group `stackgroup`-tagged area traces by their group key and replace each
- * trace's `y` with the running cumulative total (per X) of every prior
- * trace in the group, plus its own value. Percent mode additionally
- * normalizes by the per-X total before cumulating.
- *
- * Bypasses Plotly's built-in `stackgroup` because that one is restricted
- * to numeric / linear axes, which our date and category X columns aren't.
- * After this rewrite, each trace's y is already the upper edge of its
- * stacked band; the wrapper's `fill: "tonexty"` then paints between the
- * bands correctly.
- */
+/** Cumulate y values per stackgroup so date/category x-axes stack the
+ *  same way Plotly's stackgroup would on linear/log. Percent mode
+ *  normalizes by the per-x total before cumulating. */
 function applyManualStacking(
   series: CartesianSeries[],
   stackMode: ChartFormConfig["stackMode"],
@@ -454,10 +428,7 @@ function applyManualStacking(
         cumulative[xi] = (cumulative[xi] ?? 0) + v;
         newY.push(cumulative[xi] ?? 0);
       }
-      // Clear stackgroup so Plotly doesn't restack the already-cumulative
-      // y values. The bottom trace in a stack fills from its line down to
-      // the x-axis ("tozeroy"); subsequent traces fill DOWN to the trace
-      // below them ("tonexty"), producing the band-between-lines visual.
+      // Bottom trace fills to y=0; the rest fill down to the trace below.
       const fill = pos === 0 ? "tozeroy" : "tonexty";
       result[idx] = { ...trace, y: newY, stackgroup: undefined, fill };
     }

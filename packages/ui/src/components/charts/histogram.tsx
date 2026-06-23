@@ -119,8 +119,7 @@ function fitScaleFor(
     case "probability density":
       return 1;
     default:
-      // "" or undefined: raw counts. Each bar is count / N * binWidth in
-      // PDF terms, so multiply the PDF by N * binWidth to match.
+      // Raw counts.
       return n * binWidth;
   }
 }
@@ -154,8 +153,7 @@ function buildNormalFit(
   const start = Math.min(dataMin, mean - FIT_OVERLAY_TAIL_SIGMAS * std);
   const end = Math.max(dataMax, mean + FIT_OVERLAY_TAIL_SIGMAS * std);
   const step = (end - start) / (FIT_OVERLAY_SAMPLES - 1);
-  // Bin width: when the user pinned `nbinsx` use it; otherwise Sturges'
-  // rule matches Plotly's auto-binning closely enough for the overlay.
+  // Sturges' rule when nbinsx isn't pinned; close enough to Plotly's auto.
   const sturges = Math.max(1, Math.ceil(Math.log2(numeric.length) + 1));
   const effectiveNbins = nbins && nbins > 0 ? nbins : sturges;
   const binWidth = Math.max((dataMax - dataMin) / effectiveNbins, 1e-9);
@@ -169,8 +167,7 @@ function buildNormalFit(
     pdf.push(gaussianPdf(x, mean, std) * scale);
   }
   if (!cumulative) return { xs, ys: pdf, mean, std };
-  // Trapezoidal integration -> CDF on the same x-grid, already in the
-  // histogram's units thanks to the per-sample scaling above.
+  // Trapezoidal integration to CDF on the same x-grid.
   const cdf: number[] = [0];
   let running = 0;
   let prev = pdf[0] ?? 0;
@@ -206,10 +203,7 @@ export function Histogram({
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
-        // Transforms already place the binned values in `x` (vertical) or
-        // `y` (horizontal) per orientation. Don't swap here -- the older
-        // swap left `y: undefined` for horizontal histograms and Plotly
-        // had nothing to bin.
+        // Transform sets x or y per orientation; don't swap.
         x: series.x,
         y: series.y,
         // Per-trace subplot routing for facets. Plotly reads `xaxis` /
@@ -269,11 +263,7 @@ export function Histogram({
       }) as any as PlotData,
   );
 
-  // Fitted-distribution overlays: one smooth line trace per histogram
-  // series. Requires histnorm "probability density" for the curve and
-  // bars to share a Y scale; the renderer enforces this. When the parent
-  // histogram is cumulative the fit integrates to a CDF so the two
-  // share shape, not just scale.
+  // One scaled-PDF (or CDF when cumulative) line trace per histogram series.
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
@@ -293,17 +283,14 @@ export function Histogram({
       const fitTrace = {
         x: seriesOrientation === "v" ? fit.xs : fit.ys,
         y: seriesOrientation === "v" ? fit.ys : fit.xs,
-        // Match the parent histogram's subplot routing so each facet's
-        // fit lands on its own cell instead of all stacking on subplot 1.
+        // Route to parent's subplot so faceted fits land on the right cell.
         xaxis: series.xaxisId,
         yaxis: series.yaxisId,
         name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
         type: "scatter",
         mode: "lines",
         line: { color: lineColor, width: 2 },
-        // Bind the overlay to its parent series's legend toggle so users
-        // can hide both at once, but keep its own legend entry visible
-        // so the fit can be read independently.
+        // Share legendgroup with the parent so the toggle hides both.
         legendgroup: series.legendgroup ?? series.name,
         showlegend: series.showlegend !== false,
         hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,

@@ -68,11 +68,8 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   return webglTypes[baseType] || baseType;
 }
 
-// ISO 8601 date / datetime, with optional time, fractional seconds, and
-// timezone. Also accepts year-only (`2025`) and year-month (`2025-08`)
-// shapes -- these come back from `date_trunc('month', ...)` etc. and
-// previously fell through to "category", which silently disabled
-// stackgroup on area charts (Plotly only stacks on numeric/date axes).
+// ISO 8601 (year, year-month, or date with optional time / fractional
+// seconds / timezone). Year-month covers date_trunc('month', ...) output.
 const ISO_DATE_RE =
   /^\d{4}(-\d{2}(-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?)?)?$/;
 
@@ -146,19 +143,11 @@ export function refineAxisType(
 
 type LegendPosition = NonNullable<PlotlyChartConfig["legendPosition"]>;
 
-/**
- * Maps a `legendPosition` value to the Plotly `layout.legend` anchor block.
- * Exported so custom-layout charts (polar / radar / ternary / wind-rose)
- * can honor the same position dropdown as cartesian charts without
- * duplicating the anchor presets.
- */
+/** Map a legendPosition to its Plotly `layout.legend` anchor block.
+ *  Shared with polar / radar / ternary / wind-rose so they get the same
+ *  position dropdown as cartesian charts. `top` / `bottom` use container
+ *  coords so the legend doesn't overlap axis tick / title bands. */
 export function legendAnchorFor(position: LegendPosition) {
-  // - "right" / "left": paper coords, vertical legend in the side margin.
-  // - "top" / "bottom": container coords so the legend doesn't collide
-  //   with axis tick / title bands (Plotly's `automargin` and legend
-  //   autoexpand don't coordinate).
-  // - "inside-*": paper coords inside the plot area, anchored to a corner
-  //   with a slight inset.
   const anchors = {
     right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" },
     left: {
@@ -392,12 +381,8 @@ export function createBaseLayout(
       bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
       bordercolor: gridColor,
       borderwidth: 1,
-      // Force normal trace order so the legend list stays consistent
-      // across stack modes. Plotly's default reverses the order when
-      // traces are stacked (top-of-stack shown first), which made the
-      // same category appear at different positions in the legend
-      // between stacked / non-stacked and looked like the colors had
-      // shifted.
+      // Keep emit order across stack modes; Plotly's default reverses it
+      // for stacked traces.
       traceorder: "normal",
       font: {
         size: veryCompact ? 9 : compact ? 10 : snug ? 11 : 12,

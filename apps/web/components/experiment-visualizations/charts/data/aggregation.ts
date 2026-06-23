@@ -103,12 +103,9 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
     return true;
   });
 
-  // Per-source aggregates are the form's source of truth for cartesian-
-  // family charts; rebuild the wire-format `functions[]` from them. Pie
-  // and other legacy "single function" shelves write directly to
-  // `aggregation.functions`, so fall back to that when no per-source
-  // aggregates exist (otherwise pie's SUM/AVG/etc. gets silently stripped
-  // on save and the chart renders empty on reload).
+  // Cartesian charts derive functions[] from per-source aggregates; pie and
+  // other single-function shelves write directly to aggregation.functions
+  // and need that path preserved when no per-source aggregates exist.
   const groupBy = (dataConfig.aggregation?.groupBy ?? []).filter(
     (g) => g.column && g.column.length > 0,
   );

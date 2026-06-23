@@ -391,11 +391,8 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
             line: series.marker?.line,
           }
         : undefined,
-    // Stacked area traces need fill: "tonexty" so each band fills between
-    // its own line and the trace below. "tozeroy" would make every fill
-    // drop to y=0 and the topmost trace would cover the others. Plotly
-    // claims to auto-default this when stackgroup is set, but in practice
-    // (v3 + react-plotly.js) only an explicit value renders the bands.
+    // Plotly's stackgroup-implies-tonexty default doesn't render in
+    // plotly.js v3; set it explicitly.
     fill:
       series.fill ?? (series.stackgroup ? "tonexty" : isArea ? "tozeroy" : "none"),
     fillcolor: series.fillcolor,

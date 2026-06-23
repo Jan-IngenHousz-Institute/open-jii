@@ -34,8 +34,7 @@ function LineYShelf({ form, columns }: ChartPanelProps) {
 }
 
 function LineGroupShelf({ form, columns, flat }: ChartPanelProps) {
-  // Same `role: "color"` columns scatter uses; surfaced under the unified
-  // Group by shelf (categorical-only — line traces don't accept gradients).
+  // Categorical only; line traces don't take gradients.
   const groupColumns = useMemo(() => filterColumnsForRole(columns, "line", "color"), [columns]);
   return <ColorDimensionShelf form={form} columns={groupColumns} categoricalOnly flat={flat} />;
 }
