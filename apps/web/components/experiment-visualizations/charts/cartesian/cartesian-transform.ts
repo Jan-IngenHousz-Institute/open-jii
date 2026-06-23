@@ -319,8 +319,16 @@ export function transformCartesianData(
     allSeries.push(...buildSeriesForCell(facetGroups[i].rows, i));
   }
 
+  // Plotly's `stackgroup` only stacks on numeric (linear or log) axes.
+  // Our X is typically date or category, so the stack call is silently
+  // ignored and the chart renders as overlaid translucent fills. Compute
+  // the cumulative y values ourselves and clear `stackgroup` so Plotly
+  // just draws the bands. `fill: "tonexty"` keeps each band filling to
+  // the trace below it.
+  const stackedSeries = applyManualStacking(allSeries, chartConfig.stackMode);
+
   if (!facetColumn) {
-    return { chartSeries: allSeries, subplots: undefined, useIndexForX };
+    return { chartSeries: stackedSeries, subplots: undefined, useIndexForX };
   }
 
   // Build the grid spec. `facetColumns` overrides the auto default;
@@ -352,7 +360,77 @@ export function transformCartesianData(
     roworder: chartConfig.facetRowOrder === "bottom-to-top" ? "bottom to top" : "top to bottom",
   };
 
-  return { chartSeries: allSeries, subplots: subplotsConfig, useIndexForX };
+  return { chartSeries: stackedSeries, subplots: subplotsConfig, useIndexForX };
+}
+
+/**
+ * Group `stackgroup`-tagged area traces by their group key and replace each
+ * trace's `y` with the running cumulative total (per X) of every prior
+ * trace in the group, plus its own value. Percent mode additionally
+ * normalizes by the per-X total before cumulating.
+ *
+ * Bypasses Plotly's built-in `stackgroup` because that one is restricted
+ * to numeric / linear axes, which our date and category X columns aren't.
+ * After this rewrite, each trace's y is already the upper edge of its
+ * stacked band; the wrapper's `fill: "tonexty"` then paints between the
+ * bands correctly.
+ */
+function applyManualStacking(
+  series: CartesianSeries[],
+  stackMode: ChartFormConfig["stackMode"],
+): CartesianSeries[] {
+  if (stackMode === undefined || stackMode === "none") return series;
+  const groups = new Map<string, number[]>();
+  for (let i = 0; i < series.length; i++) {
+    const sg = series[i]?.stackgroup;
+    if (!sg) continue;
+    const list = groups.get(sg) ?? [];
+    list.push(i);
+    groups.set(sg, list);
+  }
+  if (groups.size === 0) return series;
+
+  const result = [...series];
+  for (const indices of groups.values()) {
+    const first = result[indices[0]];
+    if (!first) continue;
+    const xLen = Array.isArray(first.y) ? first.y.length : 0;
+    if (xLen === 0) continue;
+
+    const totals = new Array<number>(xLen).fill(0);
+    if (stackMode === "percent") {
+      for (const idx of indices) {
+        const trace = result[idx];
+        if (!trace?.y) continue;
+        for (let xi = 0; xi < xLen; xi++) {
+          const v = Number(trace.y[xi]);
+          if (Number.isFinite(v)) totals[xi] += v;
+        }
+      }
+    }
+
+    const cumulative = new Array<number>(xLen).fill(0);
+    for (const idx of indices) {
+      const trace = result[idx];
+      if (!trace?.y) continue;
+      const newY: number[] = [];
+      for (let xi = 0; xi < xLen; xi++) {
+        let v = Number(trace.y[xi]);
+        if (!Number.isFinite(v)) v = 0;
+        if (stackMode === "percent") {
+          const total = totals[xi] ?? 0;
+          v = total > 0 ? (v / total) * 100 : 0;
+        }
+        cumulative[xi] = (cumulative[xi] ?? 0) + v;
+        newY.push(cumulative[xi] ?? 0);
+      }
+      // Clear stackgroup so Plotly doesn't restack the already-cumulative
+      // y values. Force fill: "tonexty" so each band fills between its
+      // line and the previous trace's line.
+      result[idx] = { ...trace, y: newY, stackgroup: undefined, fill: "tonexty" };
+    }
+  }
+  return result;
 }
 
 interface SizeContext {
@@ -595,7 +673,12 @@ function buildSeries({
 
   if (traceType === "area") {
     const stackMode = chartConfig.stackMode ?? "none";
-    const stackgroup = stackMode === "none" ? undefined : "one";
+    // Scope the stackgroup per Y axis: traces sharing an axis stack
+    // together; traces on different axes (primary vs. secondary) stack
+    // independently. This way revenue + cost on the same axis stack into
+    // a total; revenue on primary and cost on secondary each get their
+    // own stack of category bands.
+    const stackgroup = stackMode === "none" ? undefined : `stack-${axis}`;
     const groupnorm = stackMode === "percent" ? "percent" : "";
     const fillOpacity = chartConfig.fillOpacity ?? 0.4;
     return {
