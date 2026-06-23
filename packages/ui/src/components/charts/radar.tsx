@@ -140,13 +140,10 @@ export function RadarPlot({
       angularaxis: {
         visible: angularAxisVisible,
         showgrid: config.showGrid !== false,
-        tickmode: categories ? "array" : "linear",
-        ...(categories
-          ? {
-              tickvals: categories.map((_, i) => i * (360 / categories.length)),
-              ticktext: categories,
-            }
-          : {}),
+        // Series theta values are category names (column labels), not
+        // degrees. Without type: "category" Plotly tries to parse them
+        // as numbers, fails, and stacks every point at angle 0.
+        ...(categories ? { type: "category", categoryarray: categories } : {}),
         tickangle: tickAngle,
         direction: "clockwise",
         period: 360,
