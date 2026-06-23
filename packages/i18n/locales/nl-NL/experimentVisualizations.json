@@ -801,7 +801,10 @@
       "blackbody": "Blackbody",
       "earth": "Earth",
       "electric": "Electric",
-      "bluered": "Blue-Red"
+      "bluered": "Blue-Red",
+      "orrd": "Oranje-Rood",
+      "magma": "Magma",
+      "openjii": "openJII"
     },
     "bar": {
       "aggregation": "Aggregatie",
