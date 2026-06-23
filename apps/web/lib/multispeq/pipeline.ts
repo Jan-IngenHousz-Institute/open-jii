@@ -5,11 +5,9 @@
  *
  * Timing model: a phase fires one pulse per detector channel, each spaced by
  * pulse_distance, so a phase with N pulses, K detector channels and D µs
- * pulse_distance lasts N*K*D µs. See outputRecords / inputRecords below.
- *
- * Variable resolution (`@nX:Y` / `@sX`) lives in `@repo/iot`
- * (`resolveProtocolVariables`) so this decoder and the mobile protocol estimator
- * resolve protocol variables from a single shared origin.
+ * pulse_distance lasts N*K*D µs. Variable resolution (`@nX:Y` / `@sX`) lives in
+ * `@repo/iot` (`resolveProtocolVariables`) — a single origin shared with the
+ * mobile protocol estimator.
  */
 
 import { resolveProtocolVariables } from "@repo/iot";
@@ -146,7 +144,6 @@ export function resolveVariables(
   protocolJson: ProtocolJson,
   occurrence = 0,
 ): Record<string, number> {
-  // Single origin in @repo/iot, shared with the mobile protocol estimator.
   return resolveProtocolVariables(protocolJson.v_arrays ?? [], occurrence);
 }
 

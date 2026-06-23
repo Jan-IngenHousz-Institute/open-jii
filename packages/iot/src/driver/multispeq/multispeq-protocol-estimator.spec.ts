@@ -9,17 +9,9 @@ import {
 } from "./multispeq-protocol-estimator";
 
 /**
- * The real "light response curve" protocol (protocol_id 1547) from OJD-1565.
- * Kept verbatim so the estimate is exercised against a genuine field protocol.
- *
- * Hand-computed expectation (see assertions below):
- *   v_arrays[0].length = 7  → set_repeats
- *   autogain block (do_once) counted a single time              =   3_000 ms
- *   ecs_dirk:  (400 pulses × 1 detector × 1500µs)=600ms + 5000ms pre-illum,
- *              × 3 protocol_repeats = 16_800 ms, × 7 set repeats = 117_600 ms
- *   ftrans:    (300 pulses × 1 detector × 4000µs)=1200ms + 5000ms pre-illum,
- *              × 1 repeat = 6_200 ms,             × 7 set repeats =  43_400 ms
- *   total = 3_000 + 117_600 + 43_400                            = 164_000 ms
+ * Real "light response curve" protocol (protocol_id 1547, OJD-1565). Expected
+ * 164_000 ms = autogain 3_000 (do_once) + ecs_dirk (600+5000)×3×7 = 117_600 +
+ * ftrans (1200+5000)×1×7 = 43_400.
  */
 const LIGHT_RESPONSE_CURVE = [
   {
