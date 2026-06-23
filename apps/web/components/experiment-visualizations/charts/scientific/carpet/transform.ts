@@ -112,13 +112,12 @@ export function transformCarpetData(
     }
   }
 
-  // contourcarpet wants z[bIdx][aIdx] (rows = b, cols = a), which is the
-  // shape pivotToMatrix already returns. Fill any missing cells with NaN
-  // so Plotly doesn't choke on a ragged matrix.
+  // contourcarpet wants z[aIdx][bIdx] (rows = a, cols = b). pivotToMatrix
+  // returns z[yi][xi] = z[bIdx][aIdx], so transpose.
   const carpetZ: number[][] = [];
-  for (let j = 0; j < bValuesNumeric.length; j++) {
+  for (let i = 0; i < aValuesNumeric.length; i++) {
     const row: number[] = [];
-    for (let i = 0; i < aValuesNumeric.length; i++) {
+    for (let j = 0; j < bValuesNumeric.length; j++) {
       row.push(z[j]?.[i] ?? NaN);
     }
     carpetZ.push(row);
@@ -149,7 +148,9 @@ export function transformCarpetData(
         showscale: chartConfig.carpetShowColorbar !== false,
         ncontours,
         contours: {
-          showlines: coloring !== "fill",
+          // Labels need lines to attach to; force lines on when labels are
+          // requested so Plotly's label-placement doesn't read undefined.
+          showlines: coloring !== "fill" || showLabels,
           showlabels: showLabels,
           coloring,
         },
