@@ -130,6 +130,26 @@ export function transformCarpetData(
   const ncontours = Math.max(2, Math.floor(chartConfig.carpetNContours ?? 15));
   const showLabels = Boolean(chartConfig.carpetShowContourLabels);
 
+  // Plotly's autocontour rewrites contours.start/end/size into the trace
+  // input on every calc and re-coerces from there on subsequent renders.
+  // When a style toggle re-runs calc, the cached values can collapse to
+  // start >= end (zmin/zmax math at the boundaries), emptyPathinfo returns
+  // [], and makeCrossings crashes reading pathinfo[0].z. Compute the bounds
+  // ourselves and pass them explicitly so Plotly never runs autocontour.
+  let zMin = Number.POSITIVE_INFINITY;
+  let zMax = Number.NEGATIVE_INFINITY;
+  for (const row of carpetZ) {
+    for (const v of row) {
+      if (!Number.isFinite(v)) continue;
+      if (v < zMin) zMin = v;
+      if (v > zMax) zMax = v;
+    }
+  }
+  const zSpan = zMax - zMin;
+  const contourSize = zSpan / ncontours;
+  const contourStart = zMin + contourSize / 2;
+  const contourEnd = zMax - contourSize / 2;
+
   return {
     carpetData: [
       {
@@ -151,6 +171,9 @@ export function transformCarpetData(
         showscale: chartConfig.carpetShowColorbar !== false,
         ncontours,
         contours: {
+          start: contourStart,
+          end: contourEnd,
+          size: contourSize,
           // Labels need lines to attach to; force lines on when labels are
           // requested so Plotly's label-placement doesn't read undefined.
           showlines: coloring !== "fill" || showLabels,
