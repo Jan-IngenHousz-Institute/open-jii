@@ -105,19 +105,24 @@ export function ViolinPlot({
         span: series.span,
         side: series.side || "both",
 
+        // Plotly's box.fillcolor and box.line.color default to the trace's
+        // own colors, so the inner box renders invisibly on top of the
+        // violin body. Force a white fill + dark outline for contrast.
         box: series.box
           ? {
               visible: series.box.visible !== false,
               width: series.box.width || 0.25,
-              fillcolor: series.box.fillcolor,
-              line: series.box.line,
+              fillcolor: series.box.fillcolor ?? "rgba(255,255,255,0.9)",
+              line: series.box.line ?? { color: "#444", width: 1 },
             }
           : { visible: true, width: 0.25 },
 
+        // meanline.color also defaults to the trace color; force dark so
+        // the mean line shows against the violin fill.
         meanline: series.meanline
           ? {
               visible: series.meanline.visible !== false,
-              color: series.meanline.color,
+              color: series.meanline.color ?? "#222",
               width: series.meanline.width || 2,
             }
           : { visible: true },
