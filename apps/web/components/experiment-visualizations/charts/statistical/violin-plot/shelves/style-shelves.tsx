@@ -35,139 +35,149 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
 
   return (
     <CollapsibleStyleSection title={t("workspace.style.violinOptions")} flat={flat}>
-      <FormField
-        control={form.control}
-        name="config.violinOrientation"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-medium">
-              {t("workspace.style.orientation")}
-            </FormLabel>
-            <Select value={String(field.value ?? "v")} onValueChange={field.onChange}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="v">{t("workspace.orientations.vertical")}</SelectItem>
-                <SelectItem value="h">{t("workspace.orientations.horizontal")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={form.control}
+          name="config.violinOrientation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.orientation")}
+              </FormLabel>
+              <Select value={String(field.value ?? "v")} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="v">{t("workspace.orientations.vertical")}</SelectItem>
+                  <SelectItem value="h">{t("workspace.orientations.horizontal")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <FormField
-        control={form.control}
-        name="config.violinmode"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-medium">{t("workspace.style.violinmode")}</FormLabel>
-            <Select value={String(field.value ?? "group")} onValueChange={field.onChange}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="group">{t("workspace.boxmodes.group")}</SelectItem>
-                <SelectItem value="overlay">{t("workspace.boxmodes.overlay")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+        <FormField
+          control={form.control}
+          name="config.violinmode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.violinmode")}
+              </FormLabel>
+              <Select value={String(field.value ?? "group")} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="group">{t("workspace.boxmodes.group")}</SelectItem>
+                  <SelectItem value="overlay">{t("workspace.boxmodes.overlay")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
-      <FormField
-        control={form.control}
-        name="config.violinSide"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-medium">{t("workspace.style.violinSide")}</FormLabel>
-            <Select value={String(field.value ?? "both")} onValueChange={field.onChange}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="both">{t("workspace.violinSides.both")}</SelectItem>
-                <SelectItem value="positive">{t("workspace.violinSides.positive")}</SelectItem>
-                <SelectItem value="negative">{t("workspace.violinSides.negative")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={form.control}
+          name="config.violinSide"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.violinSide")}
+              </FormLabel>
+              <Select value={String(field.value ?? "both")} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="both">{t("workspace.violinSides.both")}</SelectItem>
+                  <SelectItem value="positive">{t("workspace.violinSides.positive")}</SelectItem>
+                  <SelectItem value="negative">{t("workspace.violinSides.negative")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <FormField
-        control={form.control}
-        name="config.violinScalemode"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-medium">
-              {t("workspace.style.violinScalemode")}
-            </FormLabel>
-            <Select value={String(field.value ?? "width")} onValueChange={field.onChange}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="width">{t("workspace.violinScalemodes.width")}</SelectItem>
-                <SelectItem value="count">{t("workspace.violinScalemodes.count")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+        <FormField
+          control={form.control}
+          name="config.violinScalemode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.violinScalemode")}
+              </FormLabel>
+              <Select value={String(field.value ?? "width")} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="width">{t("workspace.violinScalemodes.width")}</SelectItem>
+                  <SelectItem value="count">{t("workspace.violinScalemodes.count")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       <StyleSubsection title={t("workspace.style.violinOverlay")}>
-        <FormField
-          control={form.control}
-          name="config.violinShowBox"
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-2 space-y-0">
-              <FormControl>
-                <Checkbox
-                  id={showBoxId}
-                  // The default is on; treat undefined as checked so the
-                  // control reflects the rendered state on first paint.
-                  checked={field.value !== false}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <FormLabel htmlFor={showBoxId} className="text-xs font-medium">
-                {t("workspace.style.violinShowBox")}
-              </FormLabel>
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="config.violinShowBox"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-2 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    id={showBoxId}
+                    // The default is on; treat undefined as checked so the
+                    // control reflects the rendered state on first paint.
+                    checked={field.value !== false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel htmlFor={showBoxId} className="text-xs font-medium">
+                  {t("workspace.style.violinShowBox")}
+                </FormLabel>
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="config.violinShowMeanline"
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-2 space-y-0">
-              <FormControl>
-                <Checkbox
-                  id={showMeanlineId}
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <FormLabel htmlFor={showMeanlineId} className="text-xs font-medium">
-                {t("workspace.style.violinShowMeanline")}
-              </FormLabel>
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="config.violinShowMeanline"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-2 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    id={showMeanlineId}
+                    checked={Boolean(field.value)}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel htmlFor={showMeanlineId} className="text-xs font-medium">
+                  {t("workspace.style.violinShowMeanline")}
+                </FormLabel>
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
