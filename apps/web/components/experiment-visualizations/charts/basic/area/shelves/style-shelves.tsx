@@ -1,25 +1,14 @@
 "use client";
 
-import {
-  AreaChart,
-  BarChart3,
-  Circle,
-  LayoutGrid,
-  Minus,
-  MoveVertical,
-  Settings2,
-  Spline,
-} from "lucide-react";
+import { AreaChart, LayoutGrid, Minus, MoveVertical, Settings2, Spline } from "lucide-react";
 
 import { AreaStyleSection } from "../../../../workspace/style-sections/area-style-section";
-import { BarStyleSection } from "../../../../workspace/style-sections/bar-style-section";
 import { DisplayOptionsSection } from "../../../../workspace/style-sections/display-options-section";
 import { ErrorBarStyleSection } from "../../../../workspace/style-sections/error-bar-style-section";
 import { FacetStyleSection } from "../../../../workspace/style-sections/facet-style-section";
 import { LineStyleSection } from "../../../../workspace/style-sections/line-style-section";
-import { MarkerStyleSection } from "../../../../workspace/style-sections/marker-style-section";
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
-import { hasAnyErrorColumn, hasFacetSource, hasTraceType } from "../../../shelf-visibility";
+import { hasAnyErrorColumn, hasFacetSource } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function AreaDisplay({ form, flat }: ChartPanelProps) {
@@ -31,32 +20,10 @@ function AreaPrimaryStyle({ form, flat }: ChartPanelProps) {
 }
 
 function AreaLineStyle({ form, flat }: ChartPanelProps) {
-  // Area's outline + markers are styled via the line/marker controls;
-  // mirrors the standalone area panel.
+  // Line settings here style the area's outline (the line above the
+  // colored fill), which is part of the primary area trace -- not a
+  // sub-series override.
   return <LineStyleSection form={form} titleKey="workspace.style.lineOptions" flat={flat} />;
-}
-
-function AreaScatterSeries({ form, flat }: ChartPanelProps) {
-  return (
-    <MarkerStyleSection
-      form={form}
-      titleKey="workspace.style.scatterSeriesOptions"
-      defaultTitle="Scatter series"
-      flat={flat}
-    />
-  );
-}
-
-function AreaBarSeries({ form, flat }: ChartPanelProps) {
-  return (
-    <BarStyleSection
-      form={form}
-      titleKey="workspace.style.barSeriesOptions"
-      defaultTitle="Bar series"
-      showOrientation={false}
-      flat={flat}
-    />
-  );
 }
 
 function AreaErrorBar({ form, flat }: ChartPanelProps) {
@@ -71,6 +38,9 @@ function AreaFacetStyle({ form, flat }: ChartPanelProps) {
   return <FacetStyleSection form={form} flat={flat} />;
 }
 
+// Area exposes its primary trace styling: the area fill + its outline
+// line. Sub-series trace overrides (scatter / bar) use renderer-derived
+// defaults -- no separate style panels for those.
 export const areaStyleShelves: ShelfDef[] = [
   {
     key: "display",
@@ -89,20 +59,6 @@ export const areaStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.lineOptions",
     icon: Spline,
     Component: AreaLineStyle,
-  },
-  {
-    key: "scatter",
-    labelKey: "workspace.style.scatterSeriesOptions",
-    icon: Circle,
-    Component: AreaScatterSeries,
-    visible: (form) => hasTraceType(form, "scatter"),
-  },
-  {
-    key: "bar",
-    labelKey: "workspace.style.barSeriesOptions",
-    icon: BarChart3,
-    Component: AreaBarSeries,
-    visible: (form) => hasTraceType(form, "bar"),
   },
   {
     key: "errorBar",
