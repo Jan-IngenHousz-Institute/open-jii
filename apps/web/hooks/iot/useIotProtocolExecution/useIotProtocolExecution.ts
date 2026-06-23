@@ -25,6 +25,9 @@ function parseResponseData(data: unknown): unknown {
   }
 }
 
+// Console commands fail fast; protocols run the full measurement budget.
+const CONSOLE_COMMAND_TIMEOUT_MS = 10_000;
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useIotProtocolExecution(
@@ -39,12 +42,12 @@ export function useIotProtocolExecution(
       }
 
       if (sensorFamily === "multispeq") {
-        // MultispeQ: send the protocol JSON array directly — device runs the measurement
+        // MultispeQ: send the protocol JSON array directly; device runs the measurement
         const result = await driver.execute(protocolCode);
         return parseResponseData(unwrap(result, "Protocol execution failed"));
       }
 
-      // Generic / Ambit: load config → run → retrieve data
+      // Generic / Ambit: load config, run, then retrieve data
       unwrap(
         await driver.execute({ command: "SET_CONFIG", params: { protocol: protocolCode } }),
         "Failed to load protocol on device",
@@ -62,5 +65,18 @@ export function useIotProtocolExecution(
     [driver, isConnected, sensorFamily],
   );
 
-  return { executeProtocol };
+  // Inline command cell: a raw string (`hello`, `battery`) or a parsed JSON/YAML
+  // object/array, sent straight to the device with a short timeout.
+  const executeCommand = useCallback(
+    async (command: string | Record<string, unknown> | unknown[]) => {
+      if (!driver || !isConnected) {
+        throw new Error("Not connected to device");
+      }
+      const result = await driver.execute(command, { timeoutMs: CONSOLE_COMMAND_TIMEOUT_MS });
+      return parseResponseData(unwrap(result, "Command execution failed"));
+    },
+    [driver, isConnected],
+  );
+
+  return { executeProtocol, executeCommand };
 }

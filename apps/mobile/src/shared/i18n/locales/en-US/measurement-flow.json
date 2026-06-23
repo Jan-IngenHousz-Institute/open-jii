@@ -163,6 +163,17 @@
     "retryMeasurement": "Retry measurement",
     "connectToDevice": "Connect to device"
   },
+  "commandNode": {
+    "heading": "Device command",
+    "responseLabel": "Response",
+    "run": "Run command",
+    "running": "Running…",
+    "continue": "Continue",
+    "toast": {
+      "notConnected": "Not connected to sensor",
+      "error": "Command failed"
+    }
+  },
   "questionNode": {
     "autoProceeded": {
       "currentPlot": "Your current plot"

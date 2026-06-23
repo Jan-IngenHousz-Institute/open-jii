@@ -77,7 +77,10 @@ export function BranchCellComponent({
       (allCells ?? []).filter(
         (c) =>
           c.id !== cell.id &&
-          (c.type === "protocol" || c.type === "macro" || c.type === "question"),
+          (c.type === "protocol" ||
+            c.type === "command" ||
+            c.type === "macro" ||
+            c.type === "question"),
       ),
     [allCells, cell.id],
   );
@@ -120,6 +123,8 @@ export function BranchCellComponent({
       switch (c.type) {
         case "protocol":
           return `Protocol (${c.payload.name ?? c.payload.protocolId.slice(0, 8)})`;
+        case "command":
+          return `Command (${c.payload.name ?? c.payload.content.slice(0, 12)})`;
         case "macro":
           return `Macro (${c.payload.name ?? c.payload.macroId.slice(0, 8)})`;
         case "question":

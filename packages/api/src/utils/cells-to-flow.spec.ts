@@ -247,4 +247,20 @@ describe("cellsToFlowGraph", () => {
     const { nodes } = cellsToFlowGraph(cells);
     expect(nodes[0].name).toHaveLength(64);
   });
+
+  it("converts an inline command cell to a measurement node carrying the command", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { format: "string", content: "battery" },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].type).toBe("measurement");
+    expect(nodes[0].name).toBe("battery");
+    expect(nodes[0].content).toEqual({ command: { format: "string", content: "battery" } });
+  });
 });
