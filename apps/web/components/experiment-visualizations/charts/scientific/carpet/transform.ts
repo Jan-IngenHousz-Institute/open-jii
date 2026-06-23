@@ -112,11 +112,13 @@ export function transformCarpetData(
     }
   }
 
-  // pivotToMatrix returns z[yi][xi]; transpose to [aIdx][bIdx] for contourcarpet.
+  // contourcarpet wants z[bIdx][aIdx] (rows = b, cols = a), which is the
+  // shape pivotToMatrix already returns. Fill any missing cells with NaN
+  // so Plotly doesn't choke on a ragged matrix.
   const carpetZ: number[][] = [];
-  for (let i = 0; i < aValuesNumeric.length; i++) {
+  for (let j = 0; j < bValuesNumeric.length; j++) {
     const row: number[] = [];
-    for (let j = 0; j < bValuesNumeric.length; j++) {
+    for (let i = 0; i < aValuesNumeric.length; i++) {
       row.push(z[j]?.[i] ?? NaN);
     }
     carpetZ.push(row);
