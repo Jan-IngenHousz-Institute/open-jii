@@ -91,25 +91,22 @@ export function transformCarpetData(
     return { carpetData: [], contourData: [], degenerateReason: "sparseGrid" };
   }
 
-  // Carpet's a is the X factor axis, b is the Y factor axis. The carpet
-  // trace wants a fully-expanded grid (length M*N pushed in (i, j) order);
-  // the contour overlay takes 1D aValues / bValues plus 2D z[i][j].
-  // pivotToMatrix returns z[yi][xi], so transpose to carpet's [aIdx][bIdx].
+  // Carpet's a is the X factor axis, b is the Y factor axis. Plotly's
+  // `carpet` trace renders in grid mode when `a` is the 1D array of
+  // unique a-values (length M) and `b` is the 1D array of unique
+  // b-values (length N); the cheater projection then lays out a uniform
+  // M×N grid. Emitting M*N expanded arrays without matching `x`/`y` was
+  // the broken middle state — Plotly drew nothing.
+  //
+  // pivotToMatrix returns z[yi][xi]; transpose to the carpet's
+  // [aIdx][bIdx] for the contour overlay (a along the rows, b along the
+  // columns), matching how Plotly's contourcarpet indexes z.
   const aValuesNumeric = toNumericAxis(xCategories);
   const bValuesNumeric = toNumericAxis(yCategories);
   if (aValuesNumeric === null || bValuesNumeric === null) {
     // Numeric-only role contract should prevent this, but a stale
     // dataConfig on a renamed column could land here.
     return { carpetData: [], contourData: [], degenerateReason: "singleAxisValue" };
-  }
-
-  const expandedA: number[] = [];
-  const expandedB: number[] = [];
-  for (const a of aValuesNumeric) {
-    for (const b of bValuesNumeric) {
-      expandedA.push(a);
-      expandedB.push(b);
-    }
   }
 
   const carpetZ: number[][] = [];
@@ -128,8 +125,8 @@ export function transformCarpetData(
   return {
     carpetData: [
       {
-        a: expandedA,
-        b: expandedB,
+        a: aValuesNumeric,
+        b: bValuesNumeric,
         aaxis: { title: xColumn },
         baxis: { title: yColumn },
       },
