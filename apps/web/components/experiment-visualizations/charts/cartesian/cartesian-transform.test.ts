@@ -148,4 +148,102 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, config, baseOptions);
     expect(result.subplots?.roworder).toBe("bottom to top");
   });
+
+  it("sorts categorical color buckets alphabetically so palette indices stay stable", () => {
+    // Rows arrive in fetch order ("B" first); the legend palette mapping
+    // should align with alphabetical order so it matches the picker.
+    const rows = [
+      { x: 1, v: 10, g: "B" },
+      { x: 2, v: 20, g: "A" },
+      { x: 3, v: 30, g: "C" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    expect(result.chartSeries.map((s) => s.name)).toEqual(["A", "B", "C"]);
+  });
+
+  it("dedupes the legend across facet cells when each cell has a different category", () => {
+    // Greenhouse A has Arabidopsis, Greenhouse B has Tomato. The old
+    // cell-0-only legend rule hid Tomato entirely; the dedupe should
+    // show each category once from the first cell that holds its data.
+    const rows = [
+      { v: 1, g: "Arabidopsis", site: "A" },
+      { v: 2, g: "Tomato", site: "B" },
+    ];
+    const sources = [
+      ds("y", "v"),
+      ds("color", "g"),
+      ds("facet", "site"),
+    ];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    const visibleInLegend = result.chartSeries.filter((s) => s.showlegend !== false);
+    expect(visibleInLegend.map((s) => s.name).sort()).toEqual(["Arabidopsis", "Tomato"]);
+  });
+
+  it("stacks area traces with `stack-${axis}` so primary and secondary axes stack independently", () => {
+    const rows = [
+      { x: 1, a: 5, b: 50 },
+      { x: 2, a: 10, b: 100 },
+    ];
+    const sources = [
+      ds("x", "x"),
+      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
+      // Secondary-axis Y series.
+      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+    ];
+    const config: ChartFormConfig = { stackMode: "stacked" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    // After manual stacking, stackgroup is cleared (the cumulative work
+    // happened in the transform) so Plotly doesn't try to restack.
+    expect(result.chartSeries.every((s) => s.stackgroup === undefined)).toBe(true);
+    // The bottom trace of each axis-scoped stack fills to y=0; later
+    // traces fill between the previous trace and their own line.
+    const primary = result.chartSeries.find((s) => s.axis !== "secondary");
+    const secondary = result.chartSeries.find((s) => s.axis === "secondary");
+    expect(primary?.fill).toBe("tozeroy");
+    expect(secondary?.fill).toBe("tozeroy");
+  });
+
+  it("cumulates y values across categories within a stack group", () => {
+    const rows = [
+      { x: 1, v: 5, g: "A" },
+      { x: 1, v: 7, g: "B" },
+      { x: 2, v: 6, g: "A" },
+      { x: 2, v: 9, g: "B" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { stackMode: "stacked", colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    // A (bottom): own values 5, 6. B (top): cumulative A+B = 12, 15.
+    const a = result.chartSeries.find((s) => s.name === "A");
+    const b = result.chartSeries.find((s) => s.name === "B");
+    expect(a?.y).toEqual([5, 6]);
+    expect(b?.y).toEqual([12, 15]);
+  });
+
+  it("normalises to percent when stackMode is 'percent'", () => {
+    const rows = [
+      { x: 1, v: 25, g: "A" },
+      { x: 1, v: 75, g: "B" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { stackMode: "percent", colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    const a = result.chartSeries.find((s) => s.name === "A");
+    const b = result.chartSeries.find((s) => s.name === "B");
+    expect(a?.y).toEqual([25]);
+    // A=25%, B cumulative=100%.
+    expect(b?.y).toEqual([100]);
+  });
 });

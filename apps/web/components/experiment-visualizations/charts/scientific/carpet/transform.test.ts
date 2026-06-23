@@ -98,4 +98,52 @@ describe("transformCarpetData", () => {
     const result = transformCarpetData(wellShaped, sources, cfg);
     expect(result.contourData[0].contours?.showlines).toBe(true);
   });
+
+  it("forces showlines on when labels are requested so plotly can place them", () => {
+    // Without lines on, plotly's contour-label placer reads undefined
+    // crossings and crashes (`Cannot read properties of undefined`).
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const cfg: ChartFormConfig = {
+      carpetContourColoring: "fill",
+      carpetShowContourLabels: true,
+    };
+    const result = transformCarpetData(wellShaped, sources, cfg);
+    expect(result.contourData[0].contours?.showlines).toBe(true);
+    expect(result.contourData[0].contours?.showlabels).toBe(true);
+  });
+
+  it("emits explicit contour start/end/size so plotly never enters autocontour", () => {
+    // Autocontour persists `trace._input.contours` across re-renders and
+    // can collapse to start >= end, which empties pathinfo and crashes
+    // makeCrossings on style-toggle re-renders.
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(wellShaped, sources, baseConfig);
+    const contours = result.contourData[0].contours;
+    expect(typeof contours?.start).toBe("number");
+    expect(typeof contours?.end).toBe("number");
+    expect(typeof contours?.size).toBe("number");
+    expect(contours?.start).toBeLessThan(contours?.end ?? 0);
+    expect(contours?.size).toBeGreaterThan(0);
+  });
+
+  it("emits z as a [b][a]-shaped 2D matrix (plotly carpet/heatmap convention)", () => {
+    // pivot returns z[yi][xi] = z[bIdx][aIdx]; the renderer must
+    // preserve that shape or interp2d + autoContours produce garbage and
+    // makeCrossings crashes.
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(wellShaped, sources, baseConfig);
+    const z = result.contourData[0].z as number[][];
+    expect(z).toHaveLength(2); // |b values|
+    expect(z[0]).toHaveLength(2); // |a values|
+  });
+
+  it("wires showGrid through to both a and b carpet axes", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const offResult = transformCarpetData(wellShaped, sources, { showGrid: false });
+    expect(offResult.carpetData[0].aaxis?.showgrid).toBe(false);
+    expect(offResult.carpetData[0].baxis?.showgrid).toBe(false);
+    const onResult = transformCarpetData(wellShaped, sources, { showGrid: true });
+    expect(onResult.carpetData[0].aaxis?.showgrid).toBe(true);
+    expect(onResult.carpetData[0].baxis?.showgrid).toBe(true);
+  });
 });
