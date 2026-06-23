@@ -1,10 +1,7 @@
 "use client";
 
-import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
-import { modifierLabel } from "@/lib/platform";
-import { useHotkey } from "@tanstack/react-hotkeys";
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Send, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type {
   QuestionCell as QuestionCellType,
@@ -165,13 +162,11 @@ export function QuestionCellComponent({
     onRun?.();
   };
 
-  // Returns whether the answer actually submitted, so callers don't treat a no-op as success.
   const handleSubmitAnswer = () => {
-    if (question.required && !pendingAnswer.trim()) return false;
+    if (question.required && !pendingAnswer.trim()) return;
     onUpdate({ ...cell, answer: pendingAnswer, isAnswered: true });
     onQuestionAnswered?.(pendingAnswer);
     setIsAnswering(false);
-    return true;
   };
 
   const handleCancelAnswer = () => {
@@ -180,24 +175,6 @@ export function QuestionCellComponent({
     // Empty string signals cancellation back to a runAll prompt.
     if (promptOpen) onQuestionAnswered?.("");
   };
-
-  const openEndedRef = useRef<HTMLTextAreaElement>(null);
-
-  // Cmd/Ctrl+Enter submits the open-ended answer from within its textarea.
-  useHotkey(
-    "Mod+Enter",
-    (event) => {
-      event.preventDefault();
-      if (handleSubmitAnswer()) {
-        showShortcutHint({ keys: [modifierLabel(), "↵"], label: "Submit" });
-      }
-    },
-    {
-      target: openEndedRef,
-      enabled: isAnswering && question.kind === "open_ended",
-      preventDefault: true,
-    },
-  );
 
   return (
     <>
@@ -256,12 +233,14 @@ export function QuestionCellComponent({
 
             {question.kind === "open_ended" && (
               <Textarea
-                ref={openEndedRef}
                 value={pendingAnswer}
                 onChange={(e) => setPendingAnswer(e.target.value)}
                 placeholder="Type your answer..."
                 className="min-h-24 resize-none"
                 autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.metaKey) handleSubmitAnswer();
+                }}
               />
             )}
 

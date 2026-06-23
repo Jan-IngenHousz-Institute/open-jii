@@ -1,10 +1,7 @@
 "use client";
 
-import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
-import { modifierLabel } from "@/lib/platform";
-import { useHotkey } from "@tanstack/react-hotkeys";
 import { Edit3, Eye, FileText } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { MarkdownCell as MarkdownCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
@@ -46,19 +43,14 @@ export function MarkdownCellComponent({
     if (!readOnly) setIsEditing(true);
   };
 
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Cmd/Ctrl+Enter commits the edit and switches to preview. Scoped to the
-  // editor; plain Enter still inserts a newline in the rich-text editor.
-  useHotkey(
-    "Mod+Enter",
-    (event) => {
-      event.preventDefault();
+  // Cmd/Ctrl+Enter commits the edit and switches to preview. Plain Enter
+  // still inserts a newline in the rich-text editor.
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
       setIsEditing(false);
-      showShortcutHint({ keys: [modifierLabel(), "↵"], label: "Done editing" });
-    },
-    { target: editorRef, enabled: !readOnly && isEditing, preventDefault: true },
-  );
+    }
+  };
 
   return (
     <CellWrapper
@@ -93,7 +85,7 @@ export function MarkdownCellComponent({
       }
     >
       {!readOnly && isEditing ? (
-        <div ref={editorRef}>
+        <div onKeyDown={handleEditorKeyDown}>
           <RichTextarea
             value={cell.content}
             onChange={handleContentChange}
