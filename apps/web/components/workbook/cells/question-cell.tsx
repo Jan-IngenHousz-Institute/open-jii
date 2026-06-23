@@ -165,11 +165,14 @@ export function QuestionCellComponent({
     onRun?.();
   };
 
+  // Returns whether the answer was actually submitted (false when blocked by
+  // the required-field guard) so callers don't report success on a no-op.
   const handleSubmitAnswer = () => {
-    if (question.required && !pendingAnswer.trim()) return;
+    if (question.required && !pendingAnswer.trim()) return false;
     onUpdate({ ...cell, answer: pendingAnswer, isAnswered: true });
     onQuestionAnswered?.(pendingAnswer);
     setIsAnswering(false);
+    return true;
   };
 
   const handleCancelAnswer = () => {
@@ -186,8 +189,9 @@ export function QuestionCellComponent({
     "Mod+Enter",
     (event) => {
       event.preventDefault();
-      handleSubmitAnswer();
-      showShortcutHint({ keys: [modifierLabel(), "↵"], label: "Submit" });
+      if (handleSubmitAnswer()) {
+        showShortcutHint({ keys: [modifierLabel(), "↵"], label: "Submit" });
+      }
     },
     {
       target: openEndedRef,

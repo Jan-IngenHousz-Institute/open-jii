@@ -4,15 +4,11 @@ import { Kbd } from "@/components/command/kbd";
 
 import { useShortcutHint } from "./use-shortcut-hint";
 
-// Triple drop shadow: a tight contact edge, a mid lift, and a soft deep cast —
-// gives the keycaps real elevation with no surface of their own.
-const KEYCAP_SHADOW =
-  "shadow-[0_1px_0_rgba(0,0,0,0.10),0_3px_6px_rgba(0,0,0,0.16),0_12px_24px_rgba(0,0,0,0.22)]";
-
-// Bottom-center feedback when a global shortcut fires. It has no background of
-// its own — the keycaps float in with a layered shadow and a single overshoot,
-// reading as a tactile press rather than a toast. Informational only, so it
-// never captures pointer events.
+// Bottom-center feedback when a global shortcut fires. It has no surface of its
+// own — the keycaps pop in and read as a tactile press rather than a toast.
+// Informational only, so it never captures pointer events.
+// NOTE: the keyframes live inline until Tailwind is upgraded on main, after
+// which this should move to an `animate-*` theme utility.
 export function ShortcutHint() {
   const hint = useShortcutHint();
 
@@ -42,7 +38,7 @@ export function ShortcutHint() {
             {hint.keys.map((key, i) => (
               <Kbd
                 key={`${key}-${i}`}
-                className={`text-foreground h-8 min-w-8 rounded-lg px-2.5 text-sm ${KEYCAP_SHADOW}`}
+                className="text-foreground h-8 min-w-8 rounded-lg px-2.5 text-sm"
               >
                 {key}
               </Kbd>
