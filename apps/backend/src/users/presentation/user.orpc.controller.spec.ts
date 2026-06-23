@@ -17,7 +17,7 @@ import { CreateUserProfileUseCase } from "../application/use-cases/create-user-p
 import { GetDeletionBlockersUseCase } from "../application/use-cases/get-deletion-blockers/get-deletion-blockers";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
 
-describe("UserController", () => {
+describe("UserOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let searchUsersUseCase: SearchUsersUseCase;

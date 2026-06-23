@@ -1,28 +1,25 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { userOrpcContract } from "@repo/api/domains/user/user.orpc";
 
 import { HmacGuard } from "../../common/guards/hmac.guard";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetUsersMetadataUseCase } from "../application/use-cases/get-users-metadata/get-users-metadata";
 
 @Controller()
 @AllowAnonymous()
 @UseGuards(HmacGuard)
-export class UserWebhookController {
-  private readonly logger = new Logger(UserWebhookController.name);
+export class UserWebhookOrpcController {
+  private readonly logger = new Logger(UserWebhookOrpcController.name);
 
   constructor(private readonly getUsersMetadataUseCase: GetUsersMetadataUseCase) {}
 
-  @TsRestHandler(contract.users.getUserMetadata)
+  @Implement(userOrpcContract.getUserMetadata)
   handleGetUserMetadata() {
-    return tsRestHandler(contract.users.getUserMetadata, async ({ body }) => {
-      const result = await this.getUsersMetadataUseCase.execute({
-        userIds: body.userIds,
-      });
+    return implement(userOrpcContract.getUserMetadata).handler(async ({ input }) => {
+      const result = await this.getUsersMetadataUseCase.execute({ userIds: input.userIds });
 
       if (result.isSuccess()) {
         const users = result.value.map((user) => ({
@@ -39,16 +36,10 @@ export class UserWebhookController {
           status: "success",
         });
 
-        return {
-          status: StatusCodes.OK as const,
-          body: {
-            users,
-            success: true,
-          },
-        };
+        return { users, success: true };
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

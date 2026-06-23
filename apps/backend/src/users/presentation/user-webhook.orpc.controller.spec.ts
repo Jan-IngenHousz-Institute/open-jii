@@ -15,7 +15,7 @@ import { TestHarness } from "../../test/test-harness";
 import { GetUsersMetadataUseCase } from "../application/use-cases/get-users-metadata/get-users-metadata";
 import { UserRepository } from "../core/repositories/user.repository";
 
-describe("UserWebhookController", () => {
+describe("UserWebhookOrpcController", () => {
   const testApp = TestHarness.App;
   let userRepository: UserRepository;
   let getUsersMetadataUseCase: GetUsersMetadataUseCase;

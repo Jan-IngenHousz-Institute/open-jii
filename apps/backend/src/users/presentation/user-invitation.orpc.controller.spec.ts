@@ -12,7 +12,7 @@ import { GetInvitationsUseCase } from "../application/use-cases/get-invitations/
 import type { EmailPort } from "../core/ports/email.port";
 import { EMAIL_PORT } from "../core/ports/email.port";
 
-describe("InvitationController", () => {
+describe("InvitationOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let emailPort: EmailPort;
