@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope } from "lucide-react";
+import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope, Terminal } from "lucide-react";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -39,6 +39,7 @@ const cellOptions: {
   { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
   { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
   { type: "macro", label: "Macro", icon: Code, color: "#6C5CE7" },
+  { type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
   { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
   { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
 ];

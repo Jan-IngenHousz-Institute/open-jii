@@ -22,6 +22,7 @@
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-yaml": "^6.1.2",
     "@codemirror/language": "^6.12.3",
     "@codemirror/legacy-modes": "^6.5.2",
     "@codemirror/lint": "^6.9.5",
@@ -65,6 +66,7 @@
     "react-resizable": "^3",
     "tailwind-merge": "^3.5.0",
     "uuid": "^14.0.0",
+    "yaml": "2.8.3",
     "zod": "catalog:"
   },
   "devDependencies": {

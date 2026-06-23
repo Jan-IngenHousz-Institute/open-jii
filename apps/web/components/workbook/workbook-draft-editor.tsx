@@ -79,7 +79,7 @@ export function WorkbookDraftEditor({
     toKey: (c) => JSON.stringify(c),
     // Skip autosave while cells are transiently invalid (e.g. a half-typed or
     // just-added empty option) so the draft never persists a state the API
-    // would reject — edits resume saving once valid.
+    // would reject; edits resume saving once valid.
     isValid: (c) => zWorkbookCellArray.safeParse(c).success,
     save,
     delayMs: AUTO_SAVE_DELAY,
@@ -116,12 +116,12 @@ export function WorkbookDraftEditor({
   const isCreator = session?.user.id === createdBy;
 
   // Trigger the same `connect()` the toolbar uses when the user clicks Run on
-  // a Protocol cell with no device. Done before any await so the browser's
-  // Web Serial / Web Bluetooth picker still sees a live user gesture.
+  // a Protocol or Command cell with no device. Done before any await so the
+  // browser's Web Serial / Web Bluetooth picker still sees a live user gesture.
   const handleRunCell = useCallback(
     (cellId: string) => {
       const cell = cells.find((c) => c.id === cellId);
-      if (cell?.type === "protocol" && !isConnected) {
+      if ((cell?.type === "protocol" || cell?.type === "command") && !isConnected) {
         void connect();
         return;
       }

@@ -44,6 +44,17 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         isStart,
       );
 
+    case "command":
+      // Inline command rides the existing measurement node so old apps drop it
+      // cleanly (unknown content) rather than choking on a new node type.
+      return makeNode(
+        cell.id,
+        "measurement",
+        (cell.payload.name ?? cell.payload.content).slice(0, 64),
+        { command: { format: cell.payload.format, content: cell.payload.content } } as Content,
+        isStart,
+      );
+
     case "macro":
       return makeNode(
         cell.id,

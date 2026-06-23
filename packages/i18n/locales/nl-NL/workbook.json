@@ -57,6 +57,8 @@
     "cellSummary": {
       "protocol_one": "{{count}} Protocol",
       "protocol_other": "{{count}} Protocollen",
+      "command_one": "{{count}} Opdracht",
+      "command_other": "{{count}} Opdrachten",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macro's",
       "question_one": "{{count}} Vraag",
@@ -73,7 +75,7 @@
     "expand": "Uitvoer uitvouwen",
     "collapse": "Uitvoer samenvouwen",
     "clear": "Uitvoer wissen",
-    "empty": "Geen meetgegevens beschikbaar — voer eerst een protocolcel uit",
+    "empty": "Geen meetgegevens beschikbaar - voer eerst een protocol- of opdrachtcel uit",
     "noData": "Geen uitvoergegevens",
     "tabTable": "Tabel",
     "tabJson": "JSON",

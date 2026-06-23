@@ -36,6 +36,7 @@ import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
 import type {
   BranchCell,
+  CommandCell,
   MacroCell,
   MarkdownCell,
   OutputCell,
@@ -467,6 +468,26 @@ export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): Proto
     payload: { protocolId: crypto.randomUUID(), version: 1 },
     isCollapsed: false,
     ...overrides,
+  };
+}
+
+export function createCommandCell(
+  overrides: Partial<Omit<CommandCell, "payload">> & {
+    payload?: Partial<{ format: "string" | "json" | "yaml"; content: string; name: string }>;
+  } = {},
+): CommandCell {
+  cellSeq++;
+  const { payload, ...rest } = overrides;
+  return {
+    id: `cell-cmd-${cellSeq}`,
+    type: "command",
+    isCollapsed: false,
+    ...rest,
+    payload: {
+      format: payload?.format ?? "string",
+      content: payload?.content ?? "battery",
+      ...(payload?.name !== undefined ? { name: payload.name } : {}),
+    },
   };
 }
 
