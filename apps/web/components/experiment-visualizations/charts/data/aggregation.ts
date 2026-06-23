@@ -103,20 +103,27 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
     return true;
   });
 
-  // Per-source aggregates are the form's source of truth. Rebuild the
-  // wire-format `functions[]` from them at save time too, so the body
-  // matches whatever the live preview was using.
+  // Per-source aggregates are the form's source of truth for cartesian-
+  // family charts; rebuild the wire-format `functions[]` from them. Pie
+  // and other legacy "single function" shelves write directly to
+  // `aggregation.functions`, so fall back to that when no per-source
+  // aggregates exist (otherwise pie's SUM/AVG/etc. gets silently stripped
+  // on save and the chart renders empty on reload).
   const groupBy = (dataConfig.aggregation?.groupBy ?? []).filter(
     (g) => g.column && g.column.length > 0,
   );
   const groupByColumnSet = new Set(groupBy.map((g) => g.column));
   const sourceFunctions = materializeFunctions(dataConfig.dataSources, groupByColumnSet);
+  const existingFunctions = (dataConfig.aggregation?.functions ?? []).filter(
+    (f) => f.column && f.column.length > 0 && Boolean(f.function),
+  );
+  const functions = sourceFunctions.length > 0 ? sourceFunctions : existingFunctions;
 
   let cleanedAggregation: DataAggregation | undefined;
-  if (groupBy.length > 0 || sourceFunctions.length > 0) {
+  if (groupBy.length > 0 || functions.length > 0) {
     cleanedAggregation = {
       groupBy: groupBy.length > 0 ? groupBy : undefined,
-      functions: sourceFunctions.length > 0 ? sourceFunctions : undefined,
+      functions: functions.length > 0 ? functions : undefined,
     };
   }
 
