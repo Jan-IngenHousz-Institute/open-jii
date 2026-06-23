@@ -251,6 +251,17 @@ export function transformCartesianData(
       }
     }
 
+    // Stacked area traces need every category to share the same x grid
+    // so Plotly's stackgroup can pair values correctly. Without this each
+    // trace has its own x array (one entry per row in that category) and
+    // Plotly stacks by INDEX, mixing values across unrelated x points.
+    // Build a union x grid once per cell and zero-fill missing slots.
+    const needsSharedXGrid =
+      defaultTraceType === "area" &&
+      chartConfig.stackMode !== undefined &&
+      chartConfig.stackMode !== "none";
+    const sharedX = needsSharedXGrid ? buildUnionXGrid(cellByCategory, xColumn) : null;
+
     return effectiveYEntries.flatMap(({ source, index: dsIndex }, seriesOrdinal) => {
       const baseName = source.alias ?? source.columnName;
       const yKey = rowKeyFor(source, dsIndex);
@@ -258,8 +269,10 @@ export function transformCartesianData(
         const key = globalCategoryKeys[catIndex];
         const groupRows = cellByCategory.get(key)?.rows ?? [];
         const categoryLabel = categoryValue == null ? "(none)" : String(categoryValue);
-        const x = xByCategory.get(key) ?? [];
-        const y = groupRows.map((row: Record<string, unknown>) => coerceCell(row[yKey]));
+        const x = sharedX ?? xByCategory.get(key) ?? [];
+        const y = sharedX
+          ? alignYToSharedX(groupRows, xColumn, yKey, sharedX)
+          : groupRows.map((row: Record<string, unknown>) => coerceCell(row[yKey]));
         const errorValues = readErrorValues(groupRows, source.errorColumn);
         const sizeContextForGroup = sizeContextByCategory?.get(key) ?? sizeCtx;
         const series = buildSeries({
@@ -409,6 +422,51 @@ function buildXValues(
     return rows.map((_row, i) => i);
   }
   return rows.map((row) => coerceCell(row[xColumn]));
+}
+
+/** Union of x values across all category buckets, sorted ascending. Numeric
+ *  if every value is numeric (ISO dates sort correctly lexically). */
+function buildUnionXGrid(
+  cellByCategory: Map<string, { rows: Record<string, unknown>[]; indices: number[] }>,
+  xColumn: string | undefined,
+): (string | number)[] {
+  if (!xColumn) return [];
+  const seen = new Map<string, string | number>();
+  for (const { rows } of cellByCategory.values()) {
+    for (const row of rows) {
+      const xv = coerceCell(row[xColumn]);
+      if (xv === null) continue;
+      const key = String(xv);
+      if (!seen.has(key)) seen.set(key, xv);
+    }
+  }
+  const all = Array.from(seen.values());
+  const allNumeric = all.every((v) => typeof v === "number");
+  all.sort((a, b) =>
+    allNumeric ? (a as number) - (b as number) : String(a).localeCompare(String(b)),
+  );
+  return all;
+}
+
+/** Map a category's rows onto the shared x grid, filling missing slots with
+ *  `0` so stacked area traces line up. Treats absence as zero contribution
+ *  to the stack — the typical stacked-area expectation. */
+function alignYToSharedX(
+  rows: Record<string, unknown>[],
+  xColumn: string | undefined,
+  yKey: string,
+  sharedX: (string | number)[],
+): (string | number | null)[] {
+  if (!xColumn) {
+    return sharedX.map((_, i) => coerceCell(rows[i]?.[yKey]) ?? 0);
+  }
+  const yByXKey = new Map<string, string | number | null>();
+  for (const row of rows) {
+    const xv = coerceCell(row[xColumn]);
+    if (xv === null) continue;
+    yByXKey.set(String(xv), coerceCell(row[yKey]));
+  }
+  return sharedX.map((xv) => yByXKey.get(String(xv)) ?? 0);
 }
 
 // Inverse of Plotly's `makeBubbleSizeFn`; pick `sizeref` so the largest
