@@ -60,6 +60,36 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
             />
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="config.color.0"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.markerColor")}
+              </FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    className="h-9 w-12 shrink-0 p-1"
+                    value={typeof field.value === "string" ? field.value : "#3b82f6"}
+                    onChange={field.onChange}
+                  />
+                  <Input
+                    type="text"
+                    className="min-w-0 font-mono text-sm"
+                    placeholder="#000000"
+                    value={typeof field.value === "string" ? field.value : ""}
+                    onChange={field.onChange}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </StyleSubsection>
 
       <StyleSubsection title={t("workspace.style.densityPlot2dContour")}>

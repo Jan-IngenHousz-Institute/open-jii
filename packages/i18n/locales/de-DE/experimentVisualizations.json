@@ -458,6 +458,7 @@
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
       "markerOpacity": "Marker opacity",
+      "markerColor": "Marker color",
       "referenceLineAdd": "Add reference line",
       "referenceLineAxis": "Axis",
       "referenceLineColor": "Color",
