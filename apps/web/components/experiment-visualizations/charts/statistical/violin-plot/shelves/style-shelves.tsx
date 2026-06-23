@@ -7,6 +7,7 @@ import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import { FormSlider } from "@repo/ui/components/form-slider";
+import { Input } from "@repo/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -167,6 +168,36 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="config.violinBoxColor"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.violinBoxColor")}
+              </FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    className="h-9 w-12 shrink-0 p-1"
+                    value={typeof field.value === "string" ? field.value : "#ffffff"}
+                    onChange={field.onChange}
+                  />
+                  <Input
+                    type="text"
+                    className="min-w-0 font-mono text-sm"
+                    placeholder="#ffffff"
+                    value={typeof field.value === "string" ? field.value : ""}
+                    onChange={field.onChange}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </StyleSubsection>
 
       <StyleSubsection title={t("workspace.style.boxPointsSubsection")}>
@@ -218,6 +249,36 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
               onCommit={field.onChange}
               formatBadge={(v) => `${Math.round(v * 100)}%`}
             />
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="config.violinMarkerColor"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.markerColor")}
+              </FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    className="h-9 w-12 shrink-0 p-1"
+                    value={typeof field.value === "string" ? field.value : "#3b82f6"}
+                    onChange={field.onChange}
+                  />
+                  <Input
+                    type="text"
+                    className="min-w-0 font-mono text-sm"
+                    placeholder="#000000"
+                    value={typeof field.value === "string" ? field.value : ""}
+                    onChange={field.onChange}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
       </StyleSubsection>

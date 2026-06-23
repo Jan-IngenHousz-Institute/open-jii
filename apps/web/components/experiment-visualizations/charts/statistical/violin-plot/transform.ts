@@ -77,6 +77,8 @@ export function transformViolinPlotData(
   const showMeanline = Boolean(chartConfig.violinShowMeanline);
   const side = chartConfig.violinSide ?? "both";
   const scalemode = chartConfig.violinScalemode ?? "width";
+  const boxColor = chartConfig.violinBoxColor;
+  const markerColor = chartConfig.violinMarkerColor;
 
   const baseSeries = (
     yValues: number[],
@@ -92,9 +94,11 @@ export function transformViolinPlotData(
     x: orientation === "v" ? xValues : yValues,
     name,
     color,
-    marker: { opacity: markerOpacity },
+    marker: { opacity: markerOpacity, color: markerColor },
     points,
-    box: { visible: showBox },
+    box: boxColor
+      ? { visible: showBox, fillcolor: boxColor, line: { color: boxColor, width: 1 } }
+      : { visible: showBox },
     meanline: { visible: showMeanline },
     side,
     scalemode,

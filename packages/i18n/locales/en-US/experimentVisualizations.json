@@ -699,6 +699,7 @@
       "violinScalemode": "Scale mode",
       "violinShowBox": "Show box",
       "violinShowMeanline": "Show mean line",
+      "violinBoxColor": "Box color",
       "violinSide": "Side",
       "violinSpanmode": "Span mode",
       "violinmode": "Group mode",
