@@ -68,7 +68,7 @@ export function WindRoseRenderer({
           config={chartConfig}
           directionTicks={directionTicks}
           directionLabels={directionLabels}
-          radialAxisTitle={t("workspace.style.windRoseRadialAxisTitle")}
+          radialAxisTitle={yColumn ?? t("workspace.style.windRoseRadialAxisTitle")}
         />
       </div>
     </ChartFrame>
