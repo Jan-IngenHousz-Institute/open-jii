@@ -5,9 +5,12 @@
 @import "nativewind/theme";
 
 /*
- * Theme tokens live at the top level (not inside @layer base) and the `.dark`
- * variant overrides them. The @theme block maps each token to a color utility
- * so `bg-*` / `text-*` / `border-*` resolve through the active scheme.
+ * Theme tokens live at the top level (not inside @layer base) and an
+ * `@media (prefers-color-scheme: dark)` block overrides them. The @theme block
+ * maps each token to a color utility so `bg-*` / `text-*` / `border-*` resolve
+ * through the active scheme. react-native-css (NativeWind 5) only honors the
+ * media-query dark path, not a `.dark` class; Appearance.setColorScheme() (see
+ * ThemeContext) drives prefers-color-scheme so the manual toggle still works.
  * Source of truth for the values: src/constants/colors.ts (JII Design System).
  */
 :root {
@@ -61,53 +64,55 @@
   --info: hsl(217 91% 60%);
 }
 
-.dark {
-  --background: hsl(0 0% 7%);
-  --foreground: hsl(0 0% 100%);
-  --surface: hsl(0 0% 12%);
-  --on-surface: hsl(0 0% 100%);
-  --on-background: hsl(0 0% 100%);
-  --on-primary: hsl(0 0% 0%);
-  --card: hsl(0 0% 15%);
-  --card-foreground: hsl(0 0% 100%);
-  --popover: hsl(0 0% 15%);
-  --popover-foreground: hsl(0 0% 100%);
-  --border: hsl(0 0% 17%);
-  --input: hsl(0 0% 17%);
-  --ring: hsl(134 70% 58%);
-  --divider: hsl(0 0% 17%);
-  --inactive: hsl(0 0% 46%);
-  --muted: hsl(0 0% 12%);
-  --muted-foreground: hsl(220 9% 72%);
-  --accent: hsl(0 0% 15%);
-  --accent-foreground: hsl(0 0% 100%);
-  --primary: hsl(134 70% 58%);
-  --primary-foreground: hsl(0 0% 7%);
-  --secondary: hsl(0 0% 15%);
-  --secondary-foreground: hsl(0 0% 100%);
-  --destructive: hsl(0 84% 60%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --gray-background: hsl(0 0% 18%);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: hsl(0 0% 7%);
+    --foreground: hsl(0 0% 100%);
+    --surface: hsl(0 0% 12%);
+    --on-surface: hsl(0 0% 100%);
+    --on-background: hsl(0 0% 100%);
+    --on-primary: hsl(0 0% 0%);
+    --card: hsl(0 0% 15%);
+    --card-foreground: hsl(0 0% 100%);
+    --popover: hsl(0 0% 15%);
+    --popover-foreground: hsl(0 0% 100%);
+    --border: hsl(0 0% 17%);
+    --input: hsl(0 0% 17%);
+    --ring: hsl(134 70% 58%);
+    --divider: hsl(0 0% 17%);
+    --inactive: hsl(0 0% 46%);
+    --muted: hsl(0 0% 12%);
+    --muted-foreground: hsl(220 9% 72%);
+    --accent: hsl(0 0% 15%);
+    --accent-foreground: hsl(0 0% 100%);
+    --primary: hsl(134 70% 58%);
+    --primary-foreground: hsl(0 0% 7%);
+    --secondary: hsl(0 0% 15%);
+    --secondary-foreground: hsl(0 0% 100%);
+    --destructive: hsl(0 84% 60%);
+    --destructive-foreground: hsl(0 0% 100%);
+    --gray-background: hsl(0 0% 18%);
 
-  --jii-darker-green: hsl(180 100% 9%);
-  --jii-yellow: hsl(55 80% 60%);
-  --jii-yellow-light: hsl(56 25% 22%);
-  --jii-mint: hsl(180 14% 16%);
-  --jii-mint-light: hsl(180 14% 18%);
-  --muted-body: hsl(210 7% 70%);
+    --jii-darker-green: hsl(180 100% 9%);
+    --jii-yellow: hsl(55 80% 60%);
+    --jii-yellow-light: hsl(56 25% 22%);
+    --jii-mint: hsl(180 14% 16%);
+    --jii-mint-light: hsl(180 14% 18%);
+    --muted-body: hsl(210 7% 70%);
 
-  --badge-active: hsl(142 30% 22%);
-  --badge-stale: hsl(35 50% 28%);
-  --badge-published: hsl(200 30% 25%);
-  --badge-featured: hsl(180 14% 20%);
+    --badge-active: hsl(142 30% 22%);
+    --badge-stale: hsl(35 50% 28%);
+    --badge-published: hsl(200 30% 25%);
+    --badge-featured: hsl(180 14% 20%);
 
-  --success: hsl(140 70% 50%);
-  --warning: hsl(43 96% 56%);
-  --error: hsl(0 84% 60%);
-  --info: hsl(217 91% 60%);
+    --success: hsl(140 70% 50%);
+    --warning: hsl(43 96% 56%);
+    --error: hsl(0 84% 60%);
+    --info: hsl(217 91% 60%);
+  }
 }
 
-@theme {
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
