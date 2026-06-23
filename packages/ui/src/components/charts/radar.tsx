@@ -135,9 +135,11 @@ export function RadarPlot({
         rangemode: rangeMode,
         gridcolor: "#E6E6E6",
         linecolor: "#444",
+        showgrid: config.showGrid !== false,
       },
       angularaxis: {
         visible: angularAxisVisible,
+        showgrid: config.showGrid !== false,
         tickmode: categories ? "array" : "linear",
         ...(categories
           ? {

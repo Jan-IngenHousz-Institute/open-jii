@@ -150,6 +150,8 @@ export function transformCarpetData(
   const contourStart = zMin + contourSize / 2;
   const contourEnd = zMax - contourSize / 2;
 
+  const showGrid = chartConfig.showGrid !== false;
+
   return {
     carpetData: [
       {
@@ -157,8 +159,8 @@ export function transformCarpetData(
         b: expandedB,
         x: expandedX,
         y: expandedY,
-        aaxis: { title: xColumn },
-        baxis: { title: yColumn },
+        aaxis: { title: xColumn, showgrid: showGrid },
+        baxis: { title: yColumn, showgrid: showGrid },
       },
     ],
     contourData: [
