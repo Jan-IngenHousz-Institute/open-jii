@@ -278,6 +278,7 @@
       "yAxis": "Y-as",
       "barYAxisHelp": "Optioneel. Laat leeg om rijen per X-waarde te tellen.",
       "colorDimension": "Color dimension",
+      "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
       "facetDimension": "Facet (kleine veelvouden)",
       "facetNone": "Geen (één grafiek)",
       "facetHelp": "Splitst de grafiek op in één subplot per unieke waarde van de gekozen kolom. Pas de rasterindeling aan in het Stijl-tabblad.",

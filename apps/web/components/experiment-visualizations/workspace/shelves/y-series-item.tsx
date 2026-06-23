@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -292,23 +293,32 @@ export function YSeriesItem({
                   {t("workspace.shelves.color")}
                 </FormLabel>
                 <FormControl>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="color"
-                      className="h-9 w-12 shrink-0 p-1"
-                      value={field.value ?? "#3b82f6"}
-                      onChange={field.onChange}
-                      disabled={isColorMapped}
-                    />
-                    <Input
-                      type="text"
-                      className="min-w-0 font-mono text-sm"
-                      placeholder="#000000"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      disabled={isColorMapped}
-                    />
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="color"
+                          className="h-9 w-12 shrink-0 p-1"
+                          value={field.value ?? "#3b82f6"}
+                          onChange={field.onChange}
+                          disabled={isColorMapped}
+                        />
+                        <Input
+                          type="text"
+                          className="min-w-0 font-mono text-sm"
+                          placeholder="#000000"
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          disabled={isColorMapped}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    {isColorMapped && (
+                      <TooltipContent>
+                        {t("workspace.shelves.seriesColorDisabledByColorDimension")}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
                 </FormControl>
                 <FormMessage />
               </FormItem>

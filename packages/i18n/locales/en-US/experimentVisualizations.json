@@ -288,6 +288,7 @@
       "yAxis": "Y axis",
       "barYAxisHelp": "Optional. Leave empty to count rows per X value.",
       "colorDimension": "Color dimension",
+      "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
       "facetDimension": "Facet (small multiples)",
       "facetNone": "None (single chart)",
       "facetHelp": "Splits the chart into one subplot per unique value of the picked column. Tune the grid in the Style tab.",

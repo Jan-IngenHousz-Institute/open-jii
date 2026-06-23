@@ -278,6 +278,7 @@
       "yAxis": "Y-Achse",
       "barYAxisHelp": "Optional. Leer lassen, um Zeilen pro X-Wert zu zählen.",
       "colorDimension": "Color dimension",
+      "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
       "facetDimension": "Facet (kleine Mehrfachgrafiken)",
       "facetNone": "Keine (einzelne Grafik)",
       "facetHelp": "Teilt die Grafik in einen Subplot pro eindeutigem Wert der ausgewählten Spalte. Layout-Optionen im Stil-Tab.",
