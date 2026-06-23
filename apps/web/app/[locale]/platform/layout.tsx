@@ -2,6 +2,7 @@ import { ActivityProvider } from "@/components/activity/activity-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PageContainer } from "@/components/page-container";
+import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -70,6 +71,7 @@ export default async function AppLayout({
         <ShortcutsRoot locale={locale} />
         <CommandPalette locale={locale} />
         <Toaster />
+        <ShortcutHint />
       </ActivityProvider>
     </SidebarProvider>
   );

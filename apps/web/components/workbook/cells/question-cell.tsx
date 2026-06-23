@@ -1,7 +1,10 @@
 "use client";
 
+import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
+import { modifierLabel } from "@/lib/platform";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Send, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   QuestionCell as QuestionCellType,
@@ -176,6 +179,23 @@ export function QuestionCellComponent({
     if (promptOpen) onQuestionAnswered?.("");
   };
 
+  const openEndedRef = useRef<HTMLTextAreaElement>(null);
+
+  // Cmd/Ctrl+Enter submits the open-ended answer from within its textarea.
+  useHotkey(
+    "Mod+Enter",
+    (event) => {
+      event.preventDefault();
+      handleSubmitAnswer();
+      showShortcutHint({ keys: [modifierLabel(), "↵"], label: "Submit" });
+    },
+    {
+      target: openEndedRef,
+      enabled: isAnswering && question.kind === "open_ended",
+      preventDefault: true,
+    },
+  );
+
   return (
     <>
       <Dialog open={isAnswering} onOpenChange={(open) => !open && handleCancelAnswer()}>
@@ -233,14 +253,12 @@ export function QuestionCellComponent({
 
             {question.kind === "open_ended" && (
               <Textarea
+                ref={openEndedRef}
                 value={pendingAnswer}
                 onChange={(e) => setPendingAnswer(e.target.value)}
                 placeholder="Type your answer..."
                 className="min-h-24 resize-none"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && e.metaKey) handleSubmitAnswer();
-                }}
               />
             )}
 

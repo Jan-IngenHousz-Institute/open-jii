@@ -2,6 +2,7 @@
 
 import { Kbd, KbdSequence } from "@/components/command/kbd";
 import { CHEATSHEET_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
+import { useShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
 import { modifierLabel } from "@/lib/platform";
 import * as React from "react";
 
@@ -58,15 +59,35 @@ export function CheatsheetDialog() {
   React.useEffect(() => setMod(modifierLabel()), []);
   const SECTIONS = React.useMemo(() => buildSections(mod), [mod]);
 
+  // `?` toggles the sheet; the command palette only fires this while it's closed.
   React.useEffect(() => {
-    const onOpen = () => setOpen(true);
-    window.addEventListener(CHEATSHEET_OPEN_EVENT, onOpen);
-    return () => window.removeEventListener(CHEATSHEET_OPEN_EVENT, onOpen);
+    const onToggle = () => setOpen((prev) => !prev);
+    window.addEventListener(CHEATSHEET_OPEN_EVENT, onToggle);
+    return () => window.removeEventListener(CHEATSHEET_OPEN_EVENT, onToggle);
   }, []);
 
+  // The cheatsheet is a non-blocking reference: it doesn't trap the keyboard
+  // (modal={false} + autofocus suppressed below), so shortcuts keep firing while
+  // it's open, and it dismisses itself once one does. Every fired shortcut pushes
+  // a hint, so we close on the first hint raised after the sheet opened.
+  const hint = useShortcutHint();
+  const latestHint = React.useRef(hint);
+  latestHint.current = hint;
+  const baselineHintId = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (open) baselineHintId.current = latestHint.current?.id ?? null;
+  }, [open]);
+  React.useEffect(() => {
+    if (open && hint && hint.id !== baselineHintId.current) setOpen(false);
+  }, [open, hint]);
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-h-[70vh] max-w-3xl overflow-y-auto">
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+      <DialogContent
+        className="max-h-[70vh] max-w-3xl overflow-y-auto"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Keyboard shortcuts</DialogTitle>
         </DialogHeader>
