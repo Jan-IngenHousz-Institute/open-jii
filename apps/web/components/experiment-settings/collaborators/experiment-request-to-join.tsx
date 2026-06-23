@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { CreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
-import { zCreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -31,8 +31,8 @@ interface ExperimentRequestToJoinProps {
 export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoinProps) {
   const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const form = useForm<CreateJoinRequestBody>({
-    resolver: zodResolver(zCreateJoinRequestBody),
+  const form = useForm<ExperimentCreateJoinRequestBody>({
+    resolver: zodResolver(zExperimentCreateJoinRequestBody),
     defaultValues: {
       message: "",
     },
@@ -61,7 +61,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
     }
   };
 
-  const handleSubmit = (data: CreateJoinRequestBody) => {
+  const handleSubmit = (data: ExperimentCreateJoinRequestBody) => {
     const trimmedMessage = data.message?.trim();
     const message = trimmedMessage === "" ? undefined : trimmedMessage;
     requestJoin({ params: { id: experimentId }, body: { message: message ?? undefined } });

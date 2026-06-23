@@ -4,7 +4,7 @@ import { Palette } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import type { ChartFormValues } from "../../../../experiment-visualizations/charts/chart-config";
@@ -15,7 +15,7 @@ import { StripPopoverControl } from "../strip-popover-control";
 
 interface VisualizationStyleStripProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
 }
 
 export function VisualizationStyleStrip({ form, columns }: VisualizationStyleStripProps) {

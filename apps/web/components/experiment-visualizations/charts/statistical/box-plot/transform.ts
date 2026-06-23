@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { BoxSeriesData } from "@repo/ui/components/charts/box-plot";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 
@@ -57,7 +57,7 @@ function collectNumericYAndOptionalX(
 /** Pure data transform for the box-plot chart: buckets rows per facet/category/Y series and emits `BoxSeriesData[]`. */
 export function transformBoxPlotData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): BoxPlotTransformResult {
   const yEntries = dataSourcesByRole(dataSources, "y");

@@ -1,4 +1,4 @@
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 
 import { tsr } from "../../../lib/tsr";
 

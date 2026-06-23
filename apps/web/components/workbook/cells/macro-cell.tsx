@@ -8,8 +8,8 @@ import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
-import type { MacroCell as MacroCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import type { MacroCell as MacroCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
 import {

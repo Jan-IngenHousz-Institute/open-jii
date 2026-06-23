@@ -1,4 +1,4 @@
-import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 export type UploadHistoryStatus = "pending" | "running" | "completed" | "failed";
 
@@ -12,7 +12,7 @@ export interface UploadMetadata {
   experimentId: string;
   uploadTableId: string | null;
   uploadTableName: string | null;
-  sourceKind: UploadSourceKind;
+  sourceKind: ExperimentUploadSourceKind;
   status: UploadHistoryStatus;
   fileCount: number | null;
   rowCount: number | null;

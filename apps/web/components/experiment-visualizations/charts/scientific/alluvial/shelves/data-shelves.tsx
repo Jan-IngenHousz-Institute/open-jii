@@ -3,7 +3,7 @@
 import { Layers, Sigma } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
 import { useTranslation } from "@repo/i18n";
 
 import { MultiColumnShelf } from "../../../../workspace/shelves/multi-column-shelf";

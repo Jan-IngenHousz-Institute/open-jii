@@ -4,9 +4,9 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ChartType } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
-import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
+import type { ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -41,7 +41,7 @@ export function VisualizationWorkspace({
   const { t } = useTranslation("experimentVisualizations");
   const form = useFormContext<ChartFormValues>();
 
-  const [pendingChartType, setPendingChartType] = useState<ChartType | null>(null);
+  const [pendingChartType, setPendingChartType] = useState<ExperimentChartType | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 
   const {
@@ -101,7 +101,7 @@ export function VisualizationWorkspace({
     form.setValue("config.yAxisTitle", "", { shouldDirty: true });
   };
 
-  const applyChartType = (type: ChartType) => {
+  const applyChartType = (type: ExperimentChartType) => {
     const def = getChartTypeDef(type);
     const tableName = form.getValues("dataConfig.tableName");
     form.setValue("chartFamily", def.family, { shouldDirty: true });
@@ -115,7 +115,7 @@ export function VisualizationWorkspace({
     return sources.some((ds) => Boolean(ds.columnName));
   };
 
-  const handleChartTypeChange = (type: ChartType) => {
+  const handleChartTypeChange = (type: ExperimentChartType) => {
     if (type === form.getValues("chartType")) {
       return;
     }

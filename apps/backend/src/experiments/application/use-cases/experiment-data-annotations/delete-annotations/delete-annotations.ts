@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { AnnotationRowsAffected } from "@repo/api/schemas/experiment.schema";
+import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/experiment.schema";
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";
@@ -24,7 +24,7 @@ export class DeleteAnnotationsUseCase {
     experimentId: string,
     request: DeleteAnnotationsRequest,
     userId: string,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Deleting annotation(s) from experiment data",
       operation: "deleteAnnotations",

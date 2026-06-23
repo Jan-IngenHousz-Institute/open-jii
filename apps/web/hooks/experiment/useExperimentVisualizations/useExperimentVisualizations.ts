@@ -1,7 +1,7 @@
 import { tsr } from "@/lib/tsr";
 import { useState } from "react";
 
-import type { ChartFamily } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentChartFamily } from "@repo/api/domains/experiment/experiment.schema";
 
 export const useExperimentVisualizations = ({
   experimentId,
@@ -10,11 +10,11 @@ export const useExperimentVisualizations = ({
   initialOffset = 0,
 }: {
   experimentId: string;
-  initialChartFamily?: ChartFamily | undefined;
+  initialChartFamily?: ExperimentChartFamily | undefined;
   initialLimit?: number;
   initialOffset?: number;
 }) => {
-  const [chartFamily, setChartFamily] = useState<ChartFamily | undefined>(initialChartFamily);
+  const [chartFamily, setChartFamily] = useState<ExperimentChartFamily | undefined>(initialChartFamily);
   const [limit, setLimit] = useState<number>(initialLimit);
   const [offset, setOffset] = useState<number>(initialOffset);
 

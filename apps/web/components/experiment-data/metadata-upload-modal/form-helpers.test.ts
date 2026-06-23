@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { MetadataFormValues } from "./form-helpers";
 import { autoNameUntitled, toWirePayload } from "./form-helpers";

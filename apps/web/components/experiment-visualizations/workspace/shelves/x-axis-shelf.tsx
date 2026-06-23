@@ -3,8 +3,8 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn, TimeBucketUnit } from "@repo/api/schemas/experiment.schema";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { ExperimentDataColumn, ExperimentTimeBucketUnit } from "@repo/api/domains/experiment/experiment.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
@@ -28,7 +28,7 @@ import { dataSourcesByRole, firstDataSourceByRole } from "../../charts/data/data
 
 const BUCKET_NONE = "__none__";
 
-const TIME_BUCKETS: { value: TimeBucketUnit; label: string }[] = [
+const TIME_BUCKETS: { value: ExperimentTimeBucketUnit; label: string }[] = [
   { value: "minute", label: "Minute" },
   { value: "hour", label: "Hour" },
   { value: "day", label: "Day" },
@@ -40,7 +40,7 @@ const TIME_BUCKETS: { value: TimeBucketUnit; label: string }[] = [
 
 interface XAxisShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   hideAxisType?: boolean;
   hideTimeBucket?: boolean;
   allowNone?: boolean;
@@ -102,7 +102,7 @@ export function XAxisShelf({
   };
 
   const handleBucketChange = (raw: string) => {
-    const bucket = raw === BUCKET_NONE ? undefined : (raw as TimeBucketUnit);
+    const bucket = raw === BUCKET_NONE ? undefined : (raw as ExperimentTimeBucketUnit);
     setColumnBucket(form, xColumnName, bucket, hasFunctions);
 
     // Bucketing X without aggregating Y produces SQL that projects only

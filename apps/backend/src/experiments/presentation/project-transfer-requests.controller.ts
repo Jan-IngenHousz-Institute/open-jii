@@ -5,7 +5,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { TransferRequestStatus } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/experiment.schema";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
@@ -39,7 +39,7 @@ export class ProjectTransferRequestsController {
       if (result.isSuccess()) {
         const request = {
           ...result.value,
-          status: result.value.status as TransferRequestStatus,
+          status: result.value.status as ExperimentTransferRequestStatus,
         };
 
         return {
@@ -66,7 +66,7 @@ export class ProjectTransferRequestsController {
       if (result.isSuccess()) {
         const requests = result.value.map((request) => ({
           ...request,
-          status: request.status as TransferRequestStatus,
+          status: request.status as ExperimentTransferRequestStatus,
         }));
 
         return {

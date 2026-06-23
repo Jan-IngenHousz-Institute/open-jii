@@ -2,12 +2,12 @@
  * Experiment annotation interfaces for storing comments and flags on experiment data
  */
 import type {
-  AnnotationCommentContent,
-  AnnotationFlagContent,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAnnotationCommentContent,
+  ExperimentAnnotationFlagContent,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 // Type guards
-export function isCommentContent(content: unknown): content is AnnotationCommentContent {
+export function isCommentContent(content: unknown): content is ExperimentAnnotationCommentContent {
   return (
     typeof content === "object" &&
     content !== null &&
@@ -17,7 +17,7 @@ export function isCommentContent(content: unknown): content is AnnotationComment
   );
 }
 
-export function isFlagContent(content: unknown): content is AnnotationFlagContent {
+export function isFlagContent(content: unknown): content is ExperimentAnnotationFlagContent {
   return (
     typeof content === "object" &&
     content !== null &&

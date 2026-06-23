@@ -3,11 +3,11 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterChip } from "./filter-chip";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {
@@ -18,7 +18,7 @@ function mountDistinct() {
 describe("FilterChip", () => {
   it("opens the popover when the chip face is clicked", async () => {
     mountDistinct();
-    const filter: DataFilter = { column: "label", operator: "equals", value: "hello" };
+    const filter: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
     render(
       <FilterChip
         filter={filter}
@@ -38,7 +38,7 @@ describe("FilterChip", () => {
   it("does not commit when the draft equals the original filter on apply", async () => {
     mountDistinct();
     const onChange = vi.fn();
-    const filter: DataFilter = { column: "label", operator: "equals", value: "hello" };
+    const filter: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
     const user = userEvent.setup();
     render(
       <FilterChip
@@ -61,7 +61,7 @@ describe("FilterChip", () => {
   it("invokes onRemove and closes when the remove button is pressed", async () => {
     mountDistinct();
     const onRemove = vi.fn();
-    const filter: DataFilter = { column: "label", operator: "equals", value: "hello" };
+    const filter: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
     const user = userEvent.setup();
     render(
       <FilterChip
@@ -81,7 +81,7 @@ describe("FilterChip", () => {
 
   it("disables apply when the draft is incomplete", async () => {
     mountDistinct();
-    const filter: DataFilter = { column: "label", operator: "in", value: [] };
+    const filter: ExperimentDataFilter = { column: "label", operator: "in", value: [] };
     const user = userEvent.setup();
     render(
       <FilterChip
@@ -104,7 +104,7 @@ describe("FilterChip", () => {
   it("emits onChange when the operator changes and apply is pressed", async () => {
     mountDistinct();
     const onChange = vi.fn();
-    const filter: DataFilter = { column: "label", operator: "equals", value: "hello" };
+    const filter: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };
     const user = userEvent.setup();
     render(
       <FilterChip
@@ -133,7 +133,7 @@ describe("FilterChip", () => {
   it("treats unchanged array-value drafts as equal and skips onChange on apply", async () => {
     mountDistinct();
     const onChange = vi.fn();
-    const filter: DataFilter = { column: "label", operator: "in", value: ["a", "b"] };
+    const filter: ExperimentDataFilter = { column: "label", operator: "in", value: ["a", "b"] };
     const user = userEvent.setup();
     render(
       <FilterChip

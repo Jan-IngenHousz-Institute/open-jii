@@ -20,7 +20,7 @@ import { useListExports } from "~/hooks/experiment/useListExports/useListExports
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
-import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -58,7 +58,7 @@ const statusBorderColor: Record<string, string> = {
   failed: "border-l-red-500",
 };
 
-const StatusBadge = ({ status }: { status: ExportRecord["status"] }) => {
+const StatusBadge = ({ status }: { status: ExperimentExportRecord["status"] }) => {
   const { t } = useTranslation("experimentData");
 
   const statusConfig = {
@@ -135,7 +135,7 @@ const ExportCard = ({
   isDownloading,
   index,
 }: {
-  export: ExportRecord;
+  export: ExperimentExportRecord;
   onDownload: (exportId: string) => void;
   isDownloading: boolean;
   index: number;

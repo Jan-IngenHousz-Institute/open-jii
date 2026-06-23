@@ -2,7 +2,7 @@ import { act, renderWithForm, screen } from "@/test/test-utils";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { densityPlot2DChartType } from "../";
 import type { ChartFormValues } from "../../../chart-config";
@@ -20,7 +20,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [{ name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" }];
+const columns: ExperimentDataColumn[] = [{ name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" }];
 
 function renderPanel(formDefaults?: ChartFormValues) {
   return renderWithForm<ChartFormValues>(

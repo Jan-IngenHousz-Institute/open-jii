@@ -1,6 +1,6 @@
 "use client";
 
-import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 
 import { UploadHistoryCard } from "./upload-history-card";
@@ -9,7 +9,7 @@ import { UploadHistoryLoading } from "./upload-history-loading";
 
 export interface UploadHistoryContentProps {
   isLoading: boolean;
-  uploads: UploadMetadata[];
+  uploads: ExperimentUploadMetadata[];
 }
 
 export function UploadHistoryContent({ isLoading, uploads }: UploadHistoryContentProps) {

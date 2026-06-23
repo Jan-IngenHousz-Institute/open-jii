@@ -6,7 +6,7 @@ import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";

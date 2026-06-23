@@ -1,4 +1,4 @@
-import type { ChartFamily, ChartType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentChartFamily, ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
 
 import { areaChartType } from "./basic/area";
 import { barChartType } from "./basic/bar";
@@ -28,7 +28,7 @@ import { spcControlChartType } from "./statistical/spc-control-chart";
 import { violinPlotChartType } from "./statistical/violin-plot";
 import type { ChartTypeDef } from "./types";
 
-const REGISTRY: Record<ChartType, ChartTypeDef> = {
+const REGISTRY: Record<ExperimentChartType, ChartTypeDef> = {
   line: lineChartType,
   scatter: scatterChartType,
   bar: barChartType,
@@ -57,7 +57,7 @@ const REGISTRY: Record<ChartType, ChartTypeDef> = {
   carpet: carpetChartType,
 };
 
-export function getChartTypeDef(type: ChartType): ChartTypeDef {
+export function getChartTypeDef(type: ExperimentChartType): ChartTypeDef {
   return REGISTRY[type];
 }
 
@@ -65,8 +65,8 @@ export function listChartTypes(): ChartTypeDef[] {
   return Object.values(REGISTRY);
 }
 
-export function listChartTypesByFamily(): Record<ChartFamily, ChartTypeDef[]> {
-  const grouped: Record<ChartFamily, ChartTypeDef[]> = {
+export function listChartTypesByFamily(): Record<ExperimentChartFamily, ChartTypeDef[]> {
+  const grouped: Record<ExperimentChartFamily, ChartTypeDef[]> = {
     basic: [],
     scientific: [],
     "3d": [],

@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 
 import type {
-  DataColumn,
-  DataFilter,
-  DataFilterOperator,
-} from "@repo/api/schemas/experiment.schema";
-import { zDataFilter } from "@repo/api/schemas/experiment.schema";
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+  ExperimentDataFilterOperator,
+} from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";
@@ -29,11 +29,11 @@ import { FilterValueInput } from "../value-input";
 import { FilterChipFace } from "./chip-face";
 
 interface FilterChipProps {
-  filter: DataFilter;
-  column: DataColumn | undefined;
+  filter: ExperimentDataFilter;
+  column: ExperimentDataColumn | undefined;
   experimentId: string;
   tableName: string;
-  onChange: (next: DataFilter) => void;
+  onChange: (next: ExperimentDataFilter) => void;
   onRemove: () => void;
 }
 
@@ -47,7 +47,7 @@ export function FilterChip({
 }: FilterChipProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<DataFilter>(filter);
+  const [draft, setDraft] = useState<ExperimentDataFilter>(filter);
 
   // Sync only when closed so URL back/forward doesn't clobber in-flight edits.
   useEffect(() => {
@@ -59,7 +59,7 @@ export function FilterChip({
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
-      if (zDataFilter.safeParse(draft).success) {
+      if (zExperimentDataFilter.safeParse(draft).success) {
         if (!filtersEqual(draft, filter)) {
           onChange(draft);
         }
@@ -70,7 +70,7 @@ export function FilterChip({
   };
 
   const handleOperatorChange = (op: string) => {
-    const next = op as DataFilterOperator;
+    const next = op as ExperimentDataFilterOperator;
     setDraft({
       ...draft,
       operator: next,
@@ -135,7 +135,7 @@ export function FilterChip({
           <Button
             type="button"
             size="sm"
-            disabled={!zDataFilter.safeParse(draft).success}
+            disabled={!zExperimentDataFilter.safeParse(draft).success}
             onClick={() => handleOpenChange(false)}
           >
             {t("dataFilters.apply")}
@@ -146,14 +146,14 @@ export function FilterChip({
   );
 }
 
-function filtersEqual(a: DataFilter, b: DataFilter): boolean {
+function filtersEqual(a: ExperimentDataFilter, b: ExperimentDataFilter): boolean {
   if (a.column !== b.column || a.operator !== b.operator) {
     return false;
   }
   return filterValuesEqual(a.value, b.value);
 }
 
-function filterValuesEqual(a: DataFilter["value"], b: DataFilter["value"]): boolean {
+function filterValuesEqual(a: ExperimentDataFilter["value"], b: ExperimentDataFilter["value"]): boolean {
   const bothArrays = Array.isArray(a) && Array.isArray(b);
   if (bothArrays) {
     return a.length === b.length && a.every((v, i) => v === b[i]);

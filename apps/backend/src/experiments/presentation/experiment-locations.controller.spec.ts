@@ -1,14 +1,14 @@
 import { faker } from "@faker-js/faker";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-return */
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  ErrorResponse,
-  LocationList,
+  ExperimentLocationList,
   AddExperimentLocationsBody,
   UpdateExperimentLocationsBody,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -81,7 +81,7 @@ describe("ExperimentLocationsController", () => {
       });
 
       // Request the locations list
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -143,7 +143,7 @@ describe("ExperimentLocationsController", () => {
       });
 
       // Request the locations list
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -217,7 +217,7 @@ describe("ExperimentLocationsController", () => {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(locationsToAdd)
@@ -273,7 +273,7 @@ describe("ExperimentLocationsController", () => {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(emptyLocations)
@@ -397,7 +397,7 @@ describe("ExperimentLocationsController", () => {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .put(path)
         .withAuth(testUserId)
         .send(newLocations)
@@ -464,7 +464,7 @@ describe("ExperimentLocationsController", () => {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<LocationList> = await testApp
+      const response: SuperTestResponse<ExperimentLocationList> = await testApp
         .put(path)
         .withAuth(testUserId)
         .send(emptyLocations)

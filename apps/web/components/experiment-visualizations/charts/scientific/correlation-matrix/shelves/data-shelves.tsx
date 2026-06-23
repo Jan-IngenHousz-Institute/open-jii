@@ -4,8 +4,8 @@ import { Variable } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
-import type { AggregationItem } from "@repo/api/schemas/experiment.schema";
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import type { ExperimentAggregationItem } from "@repo/api/domains/experiment/experiment.schema";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
 import { useTranslation } from "@repo/i18n";
 
 import { MultiColumnShelf } from "../../../../workspace/shelves/multi-column-shelf";
@@ -36,7 +36,7 @@ function CorrelationVariablesShelf({ form, columns }: ChartPanelProps) {
 
   useEffect(() => {
     const unique = Array.from(new Set(pickedYColumns));
-    const functions: AggregationItem[] = [];
+    const functions: ExperimentAggregationItem[] = [];
     for (let i = 0; i < unique.length; i++) {
       for (let j = i + 1; j < unique.length; j++) {
         functions.push({

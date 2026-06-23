@@ -2,7 +2,7 @@ import { act, renderHook } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 import { useUrlDataFilters } from "./useUrlDataFilters";
 
@@ -12,7 +12,7 @@ function setSearchParams(qs: string): void {
 
 const mockedReplace = vi.mocked(nav.useRouter()).replace;
 
-const encodeFilters = (f: DataFilter[]) => encodeURIComponent(JSON.stringify(f));
+const encodeFilters = (f: ExperimentDataFilter[]) => encodeURIComponent(JSON.stringify(f));
 
 describe("useUrlDataFilters", () => {
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe("useUrlDataFilters", () => {
   });
 
   it("seeds filters from the f_<table> URL param", () => {
-    const seed: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
+    const seed: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
     setSearchParams(`f_raw_data=${encodeFilters(seed)}`);
 
     const { result } = renderHook(() => useUrlDataFilters("raw_data"));
@@ -42,8 +42,8 @@ describe("useUrlDataFilters", () => {
   });
 
   it("namespaces filters per table so two tabs don't collide", () => {
-    const a: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
-    const b: DataFilter[] = [{ column: "lot", operator: "equals", value: "L42" }];
+    const a: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
+    const b: ExperimentDataFilter[] = [{ column: "lot", operator: "equals", value: "L42" }];
     setSearchParams(`f_raw_data=${encodeFilters(a)}&f_device=${encodeFilters(b)}`);
 
     const rawHook = renderHook(() => useUrlDataFilters("raw_data"));
@@ -62,7 +62,7 @@ describe("useUrlDataFilters", () => {
   it("writes the complete-filter subset to the URL when filters change", () => {
     const { result } = renderHook(() => useUrlDataFilters("raw_data"));
 
-    const next: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
+    const next: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
     act(() => {
       result.current.setFilters(next);
     });
@@ -89,7 +89,7 @@ describe("useUrlDataFilters", () => {
   });
 
   it("clears the URL param when the last complete filter is removed", () => {
-    const seed: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
+    const seed: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
     setSearchParams(`f_raw_data=${encodeFilters(seed)}`);
     const { result } = renderHook(() => useUrlDataFilters("raw_data"));
     mockedReplace.mockClear();
@@ -107,8 +107,8 @@ describe("useUrlDataFilters", () => {
   });
 
   it("re-seeds local state when the URL param changes externally (back/forward)", () => {
-    const seed: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
-    const next: DataFilter[] = [{ column: "device_id", operator: "equals", value: "D2" }];
+    const seed: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D1" }];
+    const next: ExperimentDataFilter[] = [{ column: "device_id", operator: "equals", value: "D2" }];
     setSearchParams(`f_raw_data=${encodeFilters(seed)}`);
 
     const { result, rerender } = renderHook(() => useUrlDataFilters("raw_data"));

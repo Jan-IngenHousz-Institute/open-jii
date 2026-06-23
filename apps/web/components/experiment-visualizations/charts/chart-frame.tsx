@@ -4,7 +4,7 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 

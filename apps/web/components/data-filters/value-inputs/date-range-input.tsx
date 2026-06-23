@@ -3,7 +3,7 @@
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";
@@ -21,8 +21,8 @@ const DAY_START_TIME = "00:00";
 const EMPTY_BOUND_LABEL = "…";
 
 interface DateRangeInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 interface ParsedRange {
@@ -162,7 +162,7 @@ function PresetButton({
   );
 }
 
-function parseRange(value: DataFilterValue): ParsedRange {
+function parseRange(value: ExperimentDataFilterValue): ParsedRange {
   if (!Array.isArray(value)) {
     return { start: undefined, end: undefined };
   }

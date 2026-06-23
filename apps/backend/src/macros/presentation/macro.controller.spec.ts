@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { MacroProtocolList } from "@repo/api/schemas/macro.schema";
+import type { MacroProtocolList } from "@repo/api/domains/macro/macro.schema";
 import { protocols } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";

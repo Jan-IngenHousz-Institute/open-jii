@@ -4,8 +4,8 @@ import { useForm } from "react-hook-form";
 import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
 import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
-import type { AnnotationContent, AnnotationType } from "@repo/api/schemas/experiment.schema";
-import { zAnnotationContent } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationContent, ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentAnnotationContent } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -39,7 +39,7 @@ export interface AddAnnotationDialogProps {
   experimentId: string;
   tableName: string;
   rowIds: string[];
-  type: AnnotationType;
+  type: ExperimentAnnotationType;
   open?: boolean;
   setOpen?: (value: React.SetStateAction<boolean>) => void;
   clearSelection?: () => void;
@@ -68,7 +68,7 @@ export function AddAnnotationDialog({
   const bulkSuffix = isBulk ? "Bulk" : "";
   const pendingSuffix = isPending ? "Pending" : "";
 
-  const defaultValues: Record<AnnotationType, AnnotationContent> = useMemo(
+  const defaultValues: Record<ExperimentAnnotationType, ExperimentAnnotationContent> = useMemo(
     () => ({
       comment: { type: "comment", text: "" },
       flag: { type: "flag", flagType: "outlier", text: "" },
@@ -76,8 +76,8 @@ export function AddAnnotationDialog({
     [],
   );
 
-  const form = useForm<AnnotationContent>({
-    resolver: zodResolver(zAnnotationContent),
+  const form = useForm<ExperimentAnnotationContent>({
+    resolver: zodResolver(zExperimentAnnotationContent),
     defaultValues: defaultValues[type],
     mode: "onChange",
   });
@@ -86,7 +86,7 @@ export function AddAnnotationDialog({
     form.reset(defaultValues[type]);
   }, [defaultValues, type, form]);
 
-  async function handleSubmit(content: AnnotationContent) {
+  async function handleSubmit(content: ExperimentAnnotationContent) {
     if (isBulk) {
       await addAnnotationsBulk({
         params: { id: experimentId },

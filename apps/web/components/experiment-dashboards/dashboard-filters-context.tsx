@@ -12,28 +12,28 @@ import {
 import type { ReactNode } from "react";
 
 import type {
-  DashboardWidget,
-  DataFilter,
-  DataFilterValue,
-  FilterWidget,
-} from "@repo/api/schemas/experiment.schema";
-import { zDataFilter } from "@repo/api/schemas/experiment.schema";
+  ExperimentDashboardWidget,
+  ExperimentDataFilter,
+  ExperimentDataFilterValue,
+  ExperimentFilterWidget,
+} from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 interface DashboardFiltersContextValue {
-  getFiltersForTable: (tableName: string) => DataFilter[];
-  getValueForWidget: (widgetId: string) => DataFilterValue | undefined;
-  setValueForWidget: (widgetId: string, value: DataFilterValue | undefined) => void;
+  getFiltersForTable: (tableName: string) => ExperimentDataFilter[];
+  getValueForWidget: (widgetId: string) => ExperimentDataFilterValue | undefined;
+  setValueForWidget: (widgetId: string, value: ExperimentDataFilterValue | undefined) => void;
   isOverridden: (widgetId: string) => boolean;
   resetWidget: (widgetId: string) => void;
 }
 
-type OverrideMap = Record<string, DataFilterValue | undefined>;
+type OverrideMap = Record<string, ExperimentDataFilterValue | undefined>;
 
 const DashboardFiltersContext = createContext<DashboardFiltersContextValue | null>(null);
-const EMPTY_FILTERS: DataFilter[] = [];
+const EMPTY_FILTERS: ExperimentDataFilter[] = [];
 
 interface DashboardFiltersProviderProps {
-  widgets: DashboardWidget[];
+  widgets: ExperimentDashboardWidget[];
   children: ReactNode;
 }
 
@@ -45,7 +45,7 @@ export function DashboardFiltersProvider({ widgets, children }: DashboardFilters
   useGarbageCollectStaleOverrides(filterWidgetsById, setOverrides);
 
   const getValueForWidget = useCallback(
-    (widgetId: string): DataFilterValue | undefined => {
+    (widgetId: string): ExperimentDataFilterValue | undefined => {
       const widget = filterWidgetsById.get(widgetId);
       if (!widget) {
         return undefined;
@@ -56,7 +56,7 @@ export function DashboardFiltersProvider({ widgets, children }: DashboardFilters
   );
 
   const setValueForWidget = useCallback(
-    (widgetId: string, value: DataFilterValue | undefined) => {
+    (widgetId: string, value: ExperimentDataFilterValue | undefined) => {
       const widget = filterWidgetsById.get(widgetId);
       if (!widget) {
         return;
@@ -113,7 +113,7 @@ export function DashboardFiltersProvider({ widgets, children }: DashboardFilters
 }
 
 /** AND-merged filters for a table; empty outside a dashboard so viz pages work. */
-export function useDashboardFiltersForTable(tableName: string | undefined): DataFilter[] {
+export function useDashboardFiltersForTable(tableName: string | undefined): ExperimentDataFilter[] {
   const ctx = useContext(DashboardFiltersContext);
   if (!ctx || !tableName) {
     return EMPTY_FILTERS;
@@ -128,19 +128,19 @@ export function useDashboardFilterWidget(widgetId: string) {
   }
   return {
     value: ctx.getValueForWidget(widgetId),
-    setValue: (next: DataFilterValue | undefined) => ctx.setValueForWidget(widgetId, next),
+    setValue: (next: ExperimentDataFilterValue | undefined) => ctx.setValueForWidget(widgetId, next),
     isOverridden: ctx.isOverridden(widgetId),
     reset: () => ctx.resetWidget(widgetId),
   };
 }
 
 // Override cache keyed by (id, column, operator) so column/operator swaps invalidate.
-function overrideKeyFor(widget: FilterWidget): string {
+function overrideKeyFor(widget: ExperimentFilterWidget): string {
   return `${widget.id}:${widget.config.column ?? ""}:${widget.config.operator ?? ""}`;
 }
 
-function indexFilterWidgets(widgets: DashboardWidget[]): Map<string, FilterWidget> {
-  const map = new Map<string, FilterWidget>();
+function indexFilterWidgets(widgets: ExperimentDashboardWidget[]): Map<string, ExperimentFilterWidget> {
+  const map = new Map<string, ExperimentFilterWidget>();
   for (const widget of widgets) {
     if (widget.type === "filter") {
       map.set(widget.id, widget);
@@ -150,9 +150,9 @@ function indexFilterWidgets(widgets: DashboardWidget[]): Map<string, FilterWidge
 }
 
 function resolveWidgetValue(
-  widget: FilterWidget,
+  widget: ExperimentFilterWidget,
   overrides: OverrideMap,
-): DataFilterValue | undefined {
+): ExperimentDataFilterValue | undefined {
   const key = overrideKeyFor(widget);
   if (key in overrides) {
     return overrides[key];
@@ -170,10 +170,10 @@ function dropKey(map: OverrideMap, key: string): OverrideMap {
 }
 
 function buildFiltersByTable(
-  filterWidgetsById: Map<string, FilterWidget>,
+  filterWidgetsById: Map<string, ExperimentFilterWidget>,
   overrides: OverrideMap,
-): Map<string, DataFilter[]> {
-  const map = new Map<string, DataFilter[]>();
+): Map<string, ExperimentDataFilter[]> {
+  const map = new Map<string, ExperimentDataFilter[]>();
   for (const widget of filterWidgetsById.values()) {
     const { tableName, column, operator } = widget.config;
     if (!tableName || !column || !operator) {
@@ -183,8 +183,8 @@ function buildFiltersByTable(
     if (value === undefined) {
       continue;
     }
-    const candidate: DataFilter = { column, operator, value };
-    if (!zDataFilter.safeParse(candidate).success) {
+    const candidate: ExperimentDataFilter = { column, operator, value };
+    if (!zExperimentDataFilter.safeParse(candidate).success) {
       continue;
     }
     const existing = map.get(tableName) ?? [];
@@ -195,7 +195,7 @@ function buildFiltersByTable(
 
 /** Drops overrides whose widget was removed or whose column/operator changed. */
 function useGarbageCollectStaleOverrides(
-  filterWidgetsById: Map<string, FilterWidget>,
+  filterWidgetsById: Map<string, ExperimentFilterWidget>,
   setOverrides: (updater: (prev: OverrideMap) => OverrideMap) => void,
 ) {
   const validKeysSignature = useMemo(
@@ -216,7 +216,7 @@ function useGarbageCollectStaleOverrides(
 
 function pruneOverrides(
   prev: OverrideMap,
-  filterWidgetsById: Map<string, FilterWidget>,
+  filterWidgetsById: Map<string, ExperimentFilterWidget>,
 ): OverrideMap {
   const validKeys = new Set(Array.from(filterWidgetsById.values()).map(overrideKeyFor));
   const next: OverrideMap = {};

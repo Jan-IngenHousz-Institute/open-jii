@@ -8,10 +8,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type {
-  ChartFamily,
-  ChartType,
+  ExperimentChartFamily,
+  ExperimentChartType,
   ExperimentVisualization,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -38,7 +38,7 @@ import { getChartTypeDef } from "../charts/chart-registry";
 
 // Type-pill background keyed off chart family so the list scales without
 // per-type bookkeeping. Unsupported types fall through to the neutral token.
-const FAMILY_BADGE_CLASS: Record<ChartFamily, string> = {
+const FAMILY_BADGE_CLASS: Record<ExperimentChartFamily, string> = {
   basic: "bg-badge-published",
   statistical: "bg-badge-stale",
   scientific: "bg-badge-archived",
@@ -176,6 +176,6 @@ export function VisualizationTableRow({
   );
 }
 
-function badgeClassFor(chartType: ChartType): string {
+function badgeClassFor(chartType: ExperimentChartType): string {
   return FAMILY_BADGE_CLASS[getChartTypeDef(chartType).family];
 }

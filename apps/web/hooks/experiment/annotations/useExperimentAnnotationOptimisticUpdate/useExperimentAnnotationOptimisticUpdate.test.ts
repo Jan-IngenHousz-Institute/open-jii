@@ -4,9 +4,9 @@ import { describe, it, expect, vi } from "vitest";
 
 import type {
   ExperimentDataResponse,
-  AnnotationType,
-  AnnotationContent,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAnnotationType,
+  ExperimentAnnotationContent,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 
@@ -49,7 +49,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
     },
   ];
 
-  const mockAnnotationRequest: { type: AnnotationType; content: AnnotationContent } = {
+  const mockAnnotationRequest: { type: ExperimentAnnotationType; content: ExperimentAnnotationContent } = {
     type: "comment",
     content: { type: "comment", text: "Test annotation" },
   };
@@ -245,7 +245,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         emptyData,
         "test_table",
         ["row1"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       expect(updatedData).toBe(emptyData);
@@ -537,7 +537,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         dataWithAnnotations,
         "test_table",
         ["row1", "row2"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       expect(updatedData).not.toBe(dataWithAnnotations);
@@ -597,7 +597,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         dataWithMissingIds,
         "test_table",
         ["row1", "row2"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       const rows = updatedData[0]?.data?.rows;
@@ -619,7 +619,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         mockExperimentData,
         "different_table",
         ["row1"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       expect(updatedData).toBe(mockExperimentData);
@@ -646,7 +646,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         emptyData,
         "test_table",
         ["row1"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       expect(updatedData).toBe(emptyData);
@@ -676,7 +676,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         dataWithNullAnnotations,
         "test_table",
         ["row1", "row2", "row3"],
-        "comment" as AnnotationType,
+        "comment" as ExperimentAnnotationType,
       );
 
       const rows = updatedData[0]?.data?.rows;

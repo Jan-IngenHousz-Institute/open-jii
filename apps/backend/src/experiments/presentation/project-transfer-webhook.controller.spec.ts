@@ -4,10 +4,10 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  ProjectTransferWebhookPayload,
-  ProjectTransferWebhookResponse,
-} from "@repo/api/schemas/experiment.schema";
-import type { WebhookErrorResponse } from "@repo/api/schemas/user.schema";
+  ExperimentProjectTransferWebhookPayload,
+  ExperimentProjectTransferWebhookResponse,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
@@ -45,7 +45,7 @@ describe("ProjectTransferWebhookController", () => {
     it("should create experiment, protocol, and macro and return 201", async () => {
       const testUserId = await testApp.createTestUser({});
 
-      const webhookPayload: ProjectTransferWebhookPayload = {
+      const webhookPayload: ExperimentProjectTransferWebhookPayload = {
         experiment: {
           name: "Transfer Exp",
           createdBy: testUserId,
@@ -74,7 +74,7 @@ describe("ProjectTransferWebhookController", () => {
         .send(webhookPayload);
 
       expect(response.status).toBe(StatusCodes.CREATED);
-      const body = response.body as ProjectTransferWebhookResponse;
+      const body = response.body as ExperimentProjectTransferWebhookResponse;
       expect(body.success).toBe(true);
       expect(body.experimentId).toBeDefined();
       expect(body.protocolId).toBeDefined();
@@ -86,7 +86,7 @@ describe("ProjectTransferWebhookController", () => {
     it("should reject requests without valid API key ID", async () => {
       const testUserId = await testApp.createTestUser({});
 
-      const webhookPayload: ProjectTransferWebhookPayload = {
+      const webhookPayload: ExperimentProjectTransferWebhookPayload = {
         experiment: { name: "E", createdBy: testUserId },
         protocol: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
         macro: { name: "M", language: "javascript", code: "Y29kZQ==", createdBy: testUserId },
@@ -104,7 +104,7 @@ describe("ProjectTransferWebhookController", () => {
     it("should reject requests with invalid signature", async () => {
       const testUserId = await testApp.createTestUser({});
 
-      const webhookPayload: ProjectTransferWebhookPayload = {
+      const webhookPayload: ExperimentProjectTransferWebhookPayload = {
         experiment: { name: "E", createdBy: testUserId },
         protocol: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
         macro: { name: "M", language: "javascript", code: "Y29kZQ==", createdBy: testUserId },
@@ -145,7 +145,7 @@ describe("ProjectTransferWebhookController", () => {
     it("should handle payload with locations", async () => {
       const testUserId = await testApp.createTestUser({});
 
-      const webhookPayload: ProjectTransferWebhookPayload = {
+      const webhookPayload: ExperimentProjectTransferWebhookPayload = {
         experiment: {
           name: "Exp With Locations",
           createdBy: testUserId,
@@ -175,13 +175,13 @@ describe("ProjectTransferWebhookController", () => {
         .send(webhookPayload);
 
       expect(response.status).toBe(StatusCodes.CREATED);
-      expect((response.body as ProjectTransferWebhookResponse).success).toBe(true);
+      expect((response.body as ExperimentProjectTransferWebhookResponse).success).toBe(true);
     });
 
     it("should handle payload with questions and create flow", async () => {
       const testUserId = await testApp.createTestUser({});
 
-      const webhookPayload: ProjectTransferWebhookPayload = {
+      const webhookPayload: ExperimentProjectTransferWebhookPayload = {
         experiment: {
           name: "Exp With Questions",
           createdBy: testUserId,
@@ -214,7 +214,7 @@ describe("ProjectTransferWebhookController", () => {
         .send(webhookPayload);
 
       expect(response.status).toBe(StatusCodes.CREATED);
-      const body = response.body as ProjectTransferWebhookResponse;
+      const body = response.body as ExperimentProjectTransferWebhookResponse;
       expect(body.success).toBe(true);
       expect(body.flowId).toBeDefined();
     });

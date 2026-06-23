@@ -6,10 +6,10 @@ import { FormProvider, useForm } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 
 import type {
-  DashboardLayout,
-  DashboardWidget,
+  ExperimentDashboardLayout,
+  ExperimentDashboardWidget,
   ExperimentDashboard,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
 import { Form } from "@repo/ui/components/form";
 
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
@@ -21,8 +21,8 @@ import { useDashboardAutosave } from "./editor/hooks/use-dashboard-autosave";
 export interface DashboardFormValues {
   name: string;
   description?: string;
-  layout: DashboardLayout;
-  widgets: DashboardWidget[];
+  layout: ExperimentDashboardLayout;
+  widgets: ExperimentDashboardWidget[];
 }
 
 export interface DashboardFormShellProps {

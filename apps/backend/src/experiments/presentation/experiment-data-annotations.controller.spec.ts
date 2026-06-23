@@ -2,12 +2,12 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  AddAnnotationBody,
-  AddAnnotationsBulkBody,
-  AnnotationRowsAffected,
-  DeleteAnnotationsBulkBody,
-  UpdateAnnotationBody,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAddAnnotationBody,
+  ExperimentAddAnnotationsBulkBody,
+  ExperimentAnnotationRowsAffected,
+  ExperimentDeleteAnnotationsBulkBody,
+  ExperimentUpdateAnnotationBody,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -54,7 +54,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -67,7 +67,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(addAnnotationsData)
@@ -83,7 +83,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -136,7 +136,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -167,7 +167,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -180,7 +180,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(addAnnotationsData)
@@ -196,7 +196,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -250,7 +250,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -282,7 +282,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -290,7 +290,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .patch(path)
         .withAuth(testUserId)
         .send(updateAnnotationData)
@@ -309,7 +309,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -334,7 +334,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -383,7 +383,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -391,7 +391,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .patch(path)
         .withAuth(testUserId)
         .send(updateAnnotationData)
@@ -412,7 +412,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -464,14 +464,14 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(deleteAnnotationsBulkData)
@@ -489,7 +489,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",
@@ -534,7 +534,7 @@ describe("ExperimentDataAnnotationsController", () => {
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",

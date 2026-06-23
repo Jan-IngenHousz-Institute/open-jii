@@ -4,7 +4,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { tsr } from "~/shared/api/tsr";
 
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 // Loads an experiment's workbook flow into the store: fetch the workbook version
 // and derive the graph locally via cellsToFlowGraph (cells kept for branch eval).

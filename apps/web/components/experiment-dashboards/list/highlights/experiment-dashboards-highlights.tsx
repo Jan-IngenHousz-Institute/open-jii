@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { HighlightCard } from "./highlight-card";

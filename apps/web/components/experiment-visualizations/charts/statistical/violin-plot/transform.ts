@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { ViolinSeriesData } from "@repo/ui/components/charts/box-plot";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 
@@ -56,7 +56,7 @@ function collectNumericYAndOptionalX(
 /** Pure data transform for the violin-plot chart: buckets rows per (cell/category/Y) and passes raw values to the violin trace. */
 export function transformViolinPlotData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): ViolinPlotTransformResult {
   const yEntries = dataSourcesByRole(dataSources, "y");

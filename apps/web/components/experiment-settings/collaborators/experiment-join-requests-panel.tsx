@@ -3,7 +3,7 @@
 import { Check, ChevronDown, ChevronUp, Mail, UserRoundPlus, X } from "lucide-react";
 import { useState } from "react";
 
-import type { ExperimentJoinRequest } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentJoinRequest } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

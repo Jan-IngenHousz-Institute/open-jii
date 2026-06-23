@@ -8,7 +8,7 @@ import type {
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { evaluateAndRoute, MAX_BRANCH_VISITS } from "./evaluate-and-route";
 

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterWidgetEditor } from "./filter/filter-widget-editor";
 import { RichTextWidgetEditor } from "./rich-text/rich-text-widget-editor";
@@ -17,7 +17,7 @@ const VisualizationWidgetEditor = dynamic(
 );
 
 interface WidgetEditorProps {
-  widget: DashboardWidget;
+  widget: ExperimentDashboardWidget;
   experimentId: string;
   widgetIndex: number;
   isSelected: boolean;

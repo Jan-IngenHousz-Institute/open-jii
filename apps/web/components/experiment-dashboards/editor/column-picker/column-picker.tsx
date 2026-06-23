@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useMemo } from "react";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { AddColumnPopover } from "./add-column-popover";
@@ -26,7 +26,7 @@ import { ColumnPickerSkeleton } from "./column-picker-skeleton";
 import { ColumnRow } from "./column-row";
 
 export interface ColumnPickerProps {
-  available: DataColumn[];
+  available: ExperimentDataColumn[];
   value: string[] | undefined;
   onChange: (next: string[]) => void;
   isLoading?: boolean;

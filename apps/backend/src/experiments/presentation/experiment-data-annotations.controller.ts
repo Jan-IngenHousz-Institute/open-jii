@@ -4,7 +4,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 
 import { contract } from "@repo/api/contract";
-import type { AddAnnotationsBulkBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
@@ -33,7 +33,7 @@ export class ExperimentDataAnnotationsController {
         userId: session.user.id,
       });
 
-      const addBody: AddAnnotationsBulkBody = {
+      const addBody: ExperimentAddAnnotationsBulkBody = {
         tableName: body.tableName,
         annotation: body.annotation,
         rowIds: [body.rowId],

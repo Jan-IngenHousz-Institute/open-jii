@@ -3,7 +3,7 @@
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { Building2, Link2, Mail } from "lucide-react";
 
-import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Card, CardContent } from "@repo/ui/components/card";

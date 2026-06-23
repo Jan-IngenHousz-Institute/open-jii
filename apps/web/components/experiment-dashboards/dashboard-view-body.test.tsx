@@ -2,7 +2,7 @@ import { createDashboardLayout, createRichTextWidget } from "@/test/factories";
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardViewBody } from "./dashboard-view-body";
@@ -13,7 +13,7 @@ vi.mock("./dashboard-renderer", () => ({
   DashboardRenderer: ({
     dashboard,
   }: {
-    dashboard: { id: string; name: string; widgets: DashboardWidget[] };
+    dashboard: { id: string; name: string; widgets: ExperimentDashboardWidget[] };
   }) => (
     <div
       data-testid="renderer"

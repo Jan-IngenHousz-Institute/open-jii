@@ -2,7 +2,7 @@ import { createLocation } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Location } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentLocation } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
@@ -20,28 +20,28 @@ vi.mock("../../map", () => ({
 }));
 
 const mockLocations = {
-  one: [createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 })],
+  one: [createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 })],
   two: [
-    createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 }),
-    createLocation({ id: "loc-2", name: "Location 2", latitude: 34.0522, longitude: -118.2437 }),
+    createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 }),
+    createLocation({ id: "loc-2", name: "ExperimentLocation 2", latitude: 34.0522, longitude: -118.2437 }),
   ],
   three: [
-    createLocation({ id: "loc-1", name: "Location 1", latitude: 40.7128, longitude: -74.006 }),
-    createLocation({ id: "loc-2", name: "Location 2", latitude: 34.0522, longitude: -118.2437 }),
-    createLocation({ id: "loc-3", name: "Location 3", latitude: 41.8781, longitude: -87.6298 }),
+    createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 }),
+    createLocation({ id: "loc-2", name: "ExperimentLocation 2", latitude: 34.0522, longitude: -118.2437 }),
+    createLocation({ id: "loc-3", name: "ExperimentLocation 3", latitude: 41.8781, longitude: -87.6298 }),
   ],
 };
 
 describe("ExperimentLocationsSection", () => {
   it("renders title", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(<ExperimentLocationsSection experimentId="exp-123" locations={locations} />);
 
     expect(screen.getByText("details.location.locationsTitle")).toBeInTheDocument();
   });
 
   it("renders manage button when user has access and not archived", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(
       <ExperimentLocationsSection
         experimentId="exp-123"
@@ -55,7 +55,7 @@ describe("ExperimentLocationsSection", () => {
   });
 
   it("renders view button when user has no access", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(
       <ExperimentLocationsSection experimentId="exp-123" locations={locations} hasAccess={false} />,
     );
@@ -64,7 +64,7 @@ describe("ExperimentLocationsSection", () => {
   });
 
   it("renders view button when experiment is archived", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(
       <ExperimentLocationsSection
         experimentId="exp-123"
@@ -78,7 +78,7 @@ describe("ExperimentLocationsSection", () => {
   });
 
   it("renders no locations message when locations array is empty", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(<ExperimentLocationsSection experimentId="exp-123" locations={locations} />);
 
     expect(screen.getByText("details.location.noLocationsAdded")).toBeInTheDocument();
@@ -87,8 +87,8 @@ describe("ExperimentLocationsSection", () => {
   it("renders location names when locations are provided", () => {
     render(<ExperimentLocationsSection experimentId="exp-123" locations={mockLocations.two} />);
 
-    expect(screen.getByText("Location 1")).toBeInTheDocument();
-    expect(screen.getByText("Location 2")).toBeInTheDocument();
+    expect(screen.getByText("ExperimentLocation 1")).toBeInTheDocument();
+    expect(screen.getByText("ExperimentLocation 2")).toBeInTheDocument();
   });
 
   it("renders map when locations are provided", () => {
@@ -98,7 +98,7 @@ describe("ExperimentLocationsSection", () => {
   });
 
   it("does not render map when no locations", () => {
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(<ExperimentLocationsSection experimentId="exp-123" locations={locations} />);
 
     expect(screen.queryByTestId("map")).not.toBeInTheDocument();
@@ -113,7 +113,7 @@ describe("ExperimentLocationsSection", () => {
 
   it("opens dialog when manage/view button is clicked", async () => {
     const user = userEvent.setup();
-    const locations: Location[] = [];
+    const locations: ExperimentLocation[] = [];
     render(<ExperimentLocationsSection experimentId="exp-123" locations={locations} />);
 
     const button = screen.getByText("View");

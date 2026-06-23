@@ -1,7 +1,7 @@
 "use client";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
 import { BranchCellComponent } from "./cells/branch-cell";
 import { MacroCellComponent } from "./cells/macro-cell";

@@ -1,4 +1,4 @@
-import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
 
 import { tsr } from "../../../lib/tsr";
 

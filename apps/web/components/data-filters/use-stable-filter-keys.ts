@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 /** Stable per-filter keys so popover state survives neighbour add/remove. */
-export function useStableFilterKeys(filters: DataFilter[]): string[] {
-  const [state, setState] = useState<{ filters: DataFilter[]; keys: string[] }>({
+export function useStableFilterKeys(filters: ExperimentDataFilter[]): string[] {
+  const [state, setState] = useState<{ filters: ExperimentDataFilter[]; keys: string[] }>({
     filters: [],
     keys: [],
   });

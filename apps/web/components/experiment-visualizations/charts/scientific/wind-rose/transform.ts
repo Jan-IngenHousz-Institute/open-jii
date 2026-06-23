@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { WindRoseSeriesData } from "@repo/ui/components/charts/wind-rose";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -113,7 +113,7 @@ function formatRange(low: number, high: number): string {
 /** Pure data transform for the wind-rose chart: bins (direction, magnitude) into a (direction x value) matrix and emits one barpolar trace per value band. */
 export function transformWindRoseData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): WindRoseTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

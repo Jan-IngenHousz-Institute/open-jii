@@ -3,7 +3,7 @@ import { act, renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { DashboardEditorProvider, useDashboardEditor } from "../context/dashboard-editor-context";
@@ -11,7 +11,7 @@ import { DashboardCanvas } from "./dashboard-canvas";
 
 type DashboardEditor = ReturnType<typeof useDashboardEditor>;
 
-function setup(opts: { widgets?: DashboardWidget[] } = {}) {
+function setup(opts: { widgets?: ExperimentDashboardWidget[] } = {}) {
   server.mount(contract.experiments.getExperimentTables, { body: [] });
 
   const editorRef: { current: DashboardEditor | null } = { current: null };
@@ -48,7 +48,7 @@ describe("DashboardCanvas", () => {
   });
 
   it("renders one selectable card per widget", () => {
-    const widgets: DashboardWidget[] = [
+    const widgets: ExperimentDashboardWidget[] = [
       {
         id: "rt-1",
         type: "richText",
@@ -68,7 +68,7 @@ describe("DashboardCanvas", () => {
   });
 
   it("renders the widgets in row-then-column reading order (DOM order matches a11y order)", () => {
-    const widgets: DashboardWidget[] = [
+    const widgets: ExperimentDashboardWidget[] = [
       // Bottom-row first in widget list, but should render after top-row card.
       {
         id: "bottom",
@@ -96,7 +96,7 @@ describe("DashboardCanvas", () => {
   });
 
   it("scrolls the selected widget into view", () => {
-    const widgets: DashboardWidget[] = [
+    const widgets: ExperimentDashboardWidget[] = [
       {
         id: "rt-1",
         type: "richText",

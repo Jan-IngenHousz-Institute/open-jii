@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { AlluvialSeriesData } from "@repo/ui/components/charts/parallel-coordinates";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -22,7 +22,7 @@ interface AggregatedLink {
 
 export function transformAlluvialData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): AlluvialSeriesData[] {
   const stages = dataSourcesByRole(dataSources, "groupBy")

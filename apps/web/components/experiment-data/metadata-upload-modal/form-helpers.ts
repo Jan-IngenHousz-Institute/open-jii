@@ -1,14 +1,14 @@
 import type { MetadataRow } from "@/components/metadata-table/types";
 
 import type {
-  CustomMetadataPayload,
+  ExperimentCustomMetadataPayload,
   ExperimentMetadata,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
 
 // Form values mirror the contract's `metadata` payload, with col_X column ids
 // during editing. `zCustomMetadataPayload`'s `identifierColumnId` is checked
 // against `column.id`, so the same schema validates both shapes.
-export type MetadataFormValues = CustomMetadataPayload;
+export type MetadataFormValues = ExperimentCustomMetadataPayload;
 
 export const EMPTY_FORM_VALUES: MetadataFormValues = {
   name: "",

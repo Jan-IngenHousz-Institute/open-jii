@@ -1,11 +1,11 @@
 "use client";
 
 import type {
-  DataColumn,
-  DataFilterOperator,
-  DataFilterValue,
-} from "@repo/api/schemas/experiment.schema";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+  ExperimentDataColumn,
+  ExperimentDataFilterOperator,
+  ExperimentDataFilterValue,
+} from "@repo/api/domains/experiment/experiment.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 
 import { CategoricalMultiInput } from "./value-inputs/categorical-multi-input";
@@ -18,10 +18,10 @@ import { NumericRangeInput } from "./value-inputs/numeric-range-input";
 import { TextInput } from "./value-inputs/text-input";
 
 export interface FilterValueInputProps {
-  column: DataColumn | undefined;
-  operator: DataFilterOperator;
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  column: ExperimentDataColumn | undefined;
+  operator: ExperimentDataFilterOperator;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
   experimentId: string;
   tableName: string;
 }

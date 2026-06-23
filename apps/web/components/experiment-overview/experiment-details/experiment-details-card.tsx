@@ -5,7 +5,7 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { Experiment, ExperimentMember, Location } from "@repo/api/schemas/experiment.schema";
+import type { Experiment, ExperimentMember, ExperimentLocation } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -45,7 +45,7 @@ const panelContentVariants = cva("w-full md:w-96", {
 interface ExperimentDetailsCardProps {
   experimentId: string;
   experiment: Experiment;
-  locations: Location[];
+  locations: ExperimentLocation[];
   members: ExperimentMember[];
   isMembersLoading: boolean;
   hasAccess?: boolean;

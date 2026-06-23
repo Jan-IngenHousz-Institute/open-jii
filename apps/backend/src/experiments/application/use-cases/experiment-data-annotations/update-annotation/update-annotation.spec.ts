@@ -1,4 +1,4 @@
-import type { UpdateAnnotationBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUpdateAnnotationBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import {
   assertFailure,
@@ -49,7 +49,7 @@ describe("UpdateAnnotation", () => {
     vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const annotationId = "c926b964-a1fd-4fb9-9a41-c154d631a524";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated comment text",
@@ -78,7 +78,7 @@ describe("UpdateAnnotation", () => {
     vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "flag",
         flagType: "outlier",
@@ -110,7 +110,7 @@ describe("UpdateAnnotation", () => {
     vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "flag",
         flagType: "outlier",
@@ -137,7 +137,7 @@ describe("UpdateAnnotation", () => {
     });
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated text",
@@ -157,7 +157,7 @@ describe("UpdateAnnotation", () => {
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated text",
@@ -189,7 +189,7 @@ describe("UpdateAnnotation", () => {
     });
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated text",
@@ -228,7 +228,7 @@ describe("UpdateAnnotation", () => {
     );
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated text",
@@ -264,7 +264,7 @@ describe("UpdateAnnotation", () => {
     vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
 
     const annotationId = "test-annotation-id";
-    const updateData: UpdateAnnotationBody = {
+    const updateData: ExperimentUpdateAnnotationBody = {
       content: {
         type: "comment",
         text: "Updated text",

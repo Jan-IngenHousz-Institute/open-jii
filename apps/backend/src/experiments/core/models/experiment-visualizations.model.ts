@@ -1,7 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zChartConfig, zChartDataConfig } from "@repo/api/schemas/experiment.schema";
+import { zExperimentChartConfig, zExperimentChartDataConfig } from "@repo/api/domains/experiment/experiment.schema";
 import { experimentVisualizations } from "@repo/database";
 
 // Create schemas for database operations
@@ -14,8 +14,8 @@ export const createExperimentVisualizationSchema = createInsertSchema(experiment
     createdBy: true,
   })
   .extend({
-    config: zChartConfig,
-    dataConfig: zChartDataConfig,
+    config: zExperimentChartConfig,
+    dataConfig: zExperimentChartDataConfig,
   });
 
 export const updateExperimentVisualizationSchema = createInsertSchema(experimentVisualizations)
@@ -28,15 +28,15 @@ export const updateExperimentVisualizationSchema = createInsertSchema(experiment
     createdBy: true,
   })
   .extend({
-    config: zChartConfig,
-    dataConfig: zChartDataConfig,
+    config: zExperimentChartConfig,
+    dataConfig: zExperimentChartDataConfig,
   });
 
 export const selectExperimentVisualizationSchema = createSelectSchema(
   experimentVisualizations,
 ).extend({
-  config: zChartConfig,
-  dataConfig: zChartDataConfig,
+  config: zExperimentChartConfig,
+  dataConfig: zExperimentChartDataConfig,
   createdByName: z.string().optional(),
 });
 

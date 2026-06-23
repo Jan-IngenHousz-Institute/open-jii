@@ -9,8 +9,8 @@ import type { UseFormReturn } from "react-hook-form";
 import type {
   CreateExperimentBody,
   ExperimentMemberRole,
-} from "@repo/api/schemas/experiment.schema";
-import type { UserProfile } from "@repo/api/schemas/user.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { UserProfile } from "@repo/api/domains/user/user.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

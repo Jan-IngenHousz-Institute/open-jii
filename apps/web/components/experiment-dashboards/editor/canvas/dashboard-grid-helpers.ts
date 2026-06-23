@@ -1,7 +1,7 @@
 import { verticalCompactor } from "react-grid-layout";
 import type { LayoutItem, ResizeHandleAxis } from "react-grid-layout";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import { getWidgetMinDimensions } from "../../widgets/widget-dimensions";
 import type { DashboardTool } from "../context/dashboard-editor-context";
@@ -24,7 +24,7 @@ export const DRAG_CANCEL_SELECTOR = [
   "[data-no-drag]",
 ].join(", ");
 
-export function widgetTypeForTool(tool: DashboardTool): DashboardWidget["type"] | null {
+export function widgetTypeForTool(tool: DashboardTool): ExperimentDashboardWidget["type"] | null {
   if (tool === "cursor") {
     return null;
   }
@@ -41,7 +41,7 @@ export function widgetTypeForTool(tool: DashboardTool): DashboardWidget["type"] 
 }
 
 export function defaultWidgetSize(
-  type: DashboardWidget["type"],
+  type: ExperimentDashboardWidget["type"],
   columns: number,
 ): { colSpan: number; rowSpan: number } {
   const { minW, minH, defaultW, defaultH } = getWidgetMinDimensions(type);
@@ -58,7 +58,7 @@ export function widgetForTool(
   columns: number,
   col: number,
   row: number,
-): DashboardWidget | null {
+): ExperimentDashboardWidget | null {
   const type = widgetTypeForTool(tool);
   if (!type) {
     return null;
@@ -94,7 +94,7 @@ export function compactWithGhost(
   return [...verticalCompactor.compact([...cloned, ghost], cols)];
 }
 
-export function widgetToLayoutItem(widget: DashboardWidget): LayoutItem {
+export function widgetToLayoutItem(widget: ExperimentDashboardWidget): LayoutItem {
   const { minW, minH, maxH } = getWidgetMinDimensions(widget.type);
   return {
     i: widget.id,
@@ -117,7 +117,7 @@ export function widgetToLayoutItem(widget: DashboardWidget): LayoutItem {
  * Use this after any change that can leave a gap (delete, resize-shrink) so the
  * form's layout stays in sync with what RGL renders.
  */
-export function compactWidgets(widgets: DashboardWidget[], columns: number): DashboardWidget[] {
+export function compactWidgets(widgets: ExperimentDashboardWidget[], columns: number): ExperimentDashboardWidget[] {
   const compacted = verticalCompactor.compact(widgets.map(widgetToLayoutItem), columns);
   const compactedById = new Map(compacted.map((item) => [item.i, item]));
   return widgets.map((w) => {

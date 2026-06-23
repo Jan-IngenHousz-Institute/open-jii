@@ -3,7 +3,7 @@
 import { Sigma, Tag } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
 
 import { firstDataSourceByRole } from "../../../data/data-sources";
 import type { ChartPanelProps, ShelfDef } from "../../../types";

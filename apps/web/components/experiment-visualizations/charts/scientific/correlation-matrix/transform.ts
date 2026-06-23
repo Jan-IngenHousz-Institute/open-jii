@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import { aliasForCorrelationPair } from "../../data/correlation-alias";
 import { dataSourcesByRole } from "../../data/data-sources";
@@ -11,7 +11,7 @@ export interface CorrelationMatrixTransformResult {
 /** Assembles the symmetric correlation matrix from the aggregation row's per-pair aliases. */
 export function transformCorrelationMatrixData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
 ): CorrelationMatrixTransformResult {
   const pickedColumns = dataSourcesByRole(dataSources, "y")
     .map((entry) => entry.source.columnName)

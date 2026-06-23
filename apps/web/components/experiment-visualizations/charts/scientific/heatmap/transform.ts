@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { HeatmapSeriesData } from "@repo/ui/components/charts/heatmap";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -29,7 +29,7 @@ export interface HeatmapTransformResult {
  */
 export function transformHeatmapData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): HeatmapTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

@@ -1,13 +1,13 @@
 import type {
-  DataColumn,
-  DataFilterOperator,
-  DataFilterValue,
-} from "@repo/api/schemas/experiment.schema";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
-import type { ColumnKind } from "@repo/api/utils/column-type-utils";
+  ExperimentDataColumn,
+  ExperimentDataFilterOperator,
+  ExperimentDataFilterValue,
+} from "@repo/api/domains/experiment/experiment.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
+import type { ColumnKind } from "@repo/api/transforms/column-type-utils";
 
 export interface OperatorChoice {
-  value: DataFilterOperator;
+  value: ExperimentDataFilterOperator;
   label: string;
 }
 
@@ -69,19 +69,19 @@ export function operatorsForKind(kind: ColumnKind | undefined): OperatorChoice[]
   return UNKNOWN_OPERATORS;
 }
 
-export function operatorsForColumn(column: DataColumn | undefined): OperatorChoice[] {
+export function operatorsForColumn(column: ExperimentDataColumn | undefined): OperatorChoice[] {
   return operatorsForKind(column ? getColumnKind(column.type_text) : undefined);
 }
 
 export function coerceOperatorForColumn(
-  operator: DataFilterOperator,
-  column: DataColumn | undefined,
-): DataFilterOperator {
+  operator: ExperimentDataFilterOperator,
+  column: ExperimentDataColumn | undefined,
+): ExperimentDataFilterOperator {
   const allowed = operatorsForColumn(column).map((o) => o.value);
   return allowed.includes(operator) ? operator : "equals";
 }
 
-export function operatorValueShape(op: DataFilterOperator): OperatorValueShape {
+export function operatorValueShape(op: ExperimentDataFilterOperator): OperatorValueShape {
   if (op === "between") {
     return "tuple";
   }
@@ -91,7 +91,7 @@ export function operatorValueShape(op: DataFilterOperator): OperatorValueShape {
   return "scalar";
 }
 
-export function defaultValueForOperator(op: DataFilterOperator): DataFilterValue {
+export function defaultValueForOperator(op: ExperimentDataFilterOperator): ExperimentDataFilterValue {
   if (op === "between" || op === "in") {
     return [];
   }
@@ -99,7 +99,7 @@ export function defaultValueForOperator(op: DataFilterOperator): DataFilterValue
 }
 
 /** Best-fit operator for a column based on its column kind. */
-export function defaultOperatorForColumn(column: DataColumn | undefined): DataFilterOperator {
+export function defaultOperatorForColumn(column: ExperimentDataColumn | undefined): ExperimentDataFilterOperator {
   const kind = column ? getColumnKind(column.type_text) : undefined;
   if (kind === "temporal") {
     return "between";

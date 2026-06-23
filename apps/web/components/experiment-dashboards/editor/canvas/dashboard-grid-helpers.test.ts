@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import {
   compactWidgets,
@@ -12,7 +12,7 @@ import {
   widgetTypeForTool,
 } from "./dashboard-grid-helpers";
 
-function richText(id: string, layout: DashboardWidget["layout"]): DashboardWidget {
+function richText(id: string, layout: ExperimentDashboardWidget["layout"]): ExperimentDashboardWidget {
   return { id, type: "richText", layout, config: { html: "" } };
 }
 
@@ -85,7 +85,7 @@ describe("widgetForTool", () => {
 
 describe("widgetToLayoutItem", () => {
   it("maps a widget's layout into RGL's LayoutItem shape", () => {
-    const widget: DashboardWidget = {
+    const widget: ExperimentDashboardWidget = {
       id: "w1",
       type: "richText",
       layout: { col: 2, row: 3, colSpan: 4, rowSpan: 5 },
@@ -127,7 +127,7 @@ describe("compactWidgets", () => {
   });
 
   it("preserves widget config / fields that aren't part of layout", () => {
-    const widget: DashboardWidget = {
+    const widget: ExperimentDashboardWidget = {
       id: "w1",
       type: "richText",
       layout: { col: 0, row: 5, colSpan: 6, rowSpan: 4 },

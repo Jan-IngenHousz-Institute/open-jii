@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { ChartFormConfig } from "../chart-config";
 import { transformCartesianData } from "./cartesian-transform";
@@ -13,7 +13,7 @@ const baseOptions: CartesianTransformOptions = {
   supportsSize: false,
 };
 
-function ds(role: DataSourceConfig["role"], columnName: string): DataSourceConfig {
+function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

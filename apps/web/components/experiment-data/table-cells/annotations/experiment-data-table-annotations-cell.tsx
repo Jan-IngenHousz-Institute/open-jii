@@ -5,17 +5,17 @@ import React from "react";
 import { formatDate } from "~/util/date";
 
 import type {
-  Annotation,
-  AnnotationFlagContent,
-  AnnotationType,
-  AnnotationFlagType,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAnnotation,
+  ExperimentAnnotationFlagContent,
+  ExperimentAnnotationType,
+  ExperimentAnnotationFlagType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
-const FLAG_TYPE_COLORS: Record<AnnotationFlagType, { bg: string; text: string; border: string }> = {
+const FLAG_TYPE_COLORS: Record<ExperimentAnnotationFlagType, { bg: string; text: string; border: string }> = {
   outlier: {
     bg: "bg-amber-100 dark:bg-amber-950",
     text: "text-amber-900 dark:text-amber-300",
@@ -28,16 +28,16 @@ const FLAG_TYPE_COLORS: Record<AnnotationFlagType, { bg: string; text: string; b
   },
 };
 
-export function parseAnnotations(data: string): Annotation[] {
+export function parseAnnotations(data: string): ExperimentAnnotation[] {
   try {
-    return JSON.parse(data) as Annotation[];
+    return JSON.parse(data) as ExperimentAnnotation[];
   } catch {
     return [];
   }
 }
 
-export function groupAnnotations(annotations: Annotation[]): Record<AnnotationType, Annotation[]> {
-  const annotationsPerType: Record<AnnotationType, Annotation[]> = {
+export function groupAnnotations(annotations: ExperimentAnnotation[]): Record<ExperimentAnnotationType, ExperimentAnnotation[]> {
+  const annotationsPerType: Record<ExperimentAnnotationType, ExperimentAnnotation[]> = {
     comment: [],
     flag: [],
   };
@@ -71,14 +71,14 @@ function FlagsBadge({ count }: { count: number }) {
   );
 }
 
-function AnnotationItem({ annotation }: { annotation: Annotation & { preview?: boolean } }) {
+function AnnotationItem({ annotation }: { annotation: ExperimentAnnotation & { preview?: boolean } }) {
   const { t } = useTranslation();
   const content = annotation.content;
   const isPreview = annotation.preview === true;
 
   const isFlag = (
-    annotation: Annotation,
-  ): annotation is Annotation & { content: AnnotationFlagContent } => {
+    annotation: ExperimentAnnotation,
+  ): annotation is ExperimentAnnotation & { content: ExperimentAnnotationFlagContent } => {
     return annotation.type === "flag";
   };
 
@@ -138,11 +138,11 @@ function AnnotationItem({ annotation }: { annotation: Annotation & { preview?: b
 }
 
 interface CommentsPopoverProps {
-  comments: Annotation[];
+  comments: ExperimentAnnotation[];
   commentCount: number;
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void;
+  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
 function CommentsPopover({
@@ -198,11 +198,11 @@ function CommentsPopover({
 }
 
 interface FlagsPopoverProps {
-  flags: Annotation[];
+  flags: ExperimentAnnotation[];
   flagCount: number;
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void;
+  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
 function FlagsPopover({
@@ -259,7 +259,7 @@ function FlagsPopover({
 
 interface EmptyAnnotationsPopoverProps {
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void;
+  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
 function EmptyAnnotationsPopover({ rowId, onAddAnnotation }: EmptyAnnotationsPopoverProps) {
@@ -318,8 +318,8 @@ function EmptyAnnotationsPopover({ rowId, onAddAnnotation }: EmptyAnnotationsPop
 interface ExperimentDataTableAnnotationsCellProps {
   data: string; // JSON string of annotations array
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void;
+  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
 export function ExperimentDataTableAnnotationsCell({

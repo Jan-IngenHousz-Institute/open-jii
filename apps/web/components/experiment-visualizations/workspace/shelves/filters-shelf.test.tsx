@@ -3,7 +3,7 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -27,7 +27,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "site", type_name: "STRING", type_text: "STRING" },
   { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
 ];

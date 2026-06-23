@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { ChartFormConfig } from "../../chart-config";
 import { transformCarpetData } from "./transform";
 
 const baseConfig: ChartFormConfig = {};
 
-function ds(role: DataSourceConfig["role"], columnName: string): DataSourceConfig {
+function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 
@@ -42,7 +42,7 @@ describe("transformCarpetData", () => {
   });
 
   it("flags `sameColumnAxes` when X and Y point to the same column", () => {
-    const sources: DataSourceConfig[] = [
+    const sources: ExperimentDataSourceConfig[] = [
       { tableName: "t", columnName: "shared", role: "x" },
       { tableName: "t", columnName: "shared", role: "y" },
       { tableName: "t", columnName: "z", role: "z" },

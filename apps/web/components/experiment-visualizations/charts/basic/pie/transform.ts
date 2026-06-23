@@ -1,4 +1,4 @@
-import type { DataAggregation, DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataAggregation, ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { PieSeriesData } from "@repo/ui/components/charts/pie-chart";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -10,8 +10,8 @@ import { dataSourcesByRole } from "../../data/data-sources";
 /** Pure data transform for the pie chart. Expects rows pre-aggregated by the SQL pipeline (one row per label). */
 export function transformPieData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
-  aggregation: DataAggregation | undefined,
+  dataSources: ExperimentDataSourceConfig[],
+  aggregation: ExperimentDataAggregation | undefined,
   chartConfig: ChartFormConfig,
 ): PieSeriesData[] {
   const labelsColumn = dataSourcesByRole(dataSources, "labels")[0]?.source.columnName;

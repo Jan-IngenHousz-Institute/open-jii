@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { CarpetContourSeriesData, CarpetSeriesData } from "@repo/ui/components/charts/carpet";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -37,7 +37,7 @@ export interface CarpetTransformResult {
 /** Pure data transform for the carpet chart: pivots (x, y, z) rows into Plotly's carpet matrix plus its contour overlay. */
 export function transformCarpetData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): CarpetTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

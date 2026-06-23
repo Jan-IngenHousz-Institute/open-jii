@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { stableStringify } from "../../../../common/utils/stable-json";

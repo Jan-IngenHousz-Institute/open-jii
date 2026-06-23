@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { RadarSeriesData } from "@repo/ui/components/charts/radar";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -16,7 +16,7 @@ export interface RadarTransformResult {
 /** Pure data transform for the radar chart: one polygon per row, each Y column an axis around the circle. */
 export function transformRadarData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): RadarTransformResult {
   const yEntries = dataSourcesByRole(dataSources, "y");

@@ -12,7 +12,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useMemo, useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,

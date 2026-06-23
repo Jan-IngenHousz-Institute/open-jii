@@ -3,13 +3,13 @@ import { DndContext } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ColumnRow } from "./column-row";
 
-const column: DataColumn = { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" };
+const column: ExperimentDataColumn = { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" };
 
-function setup(opts: { column?: DataColumn | undefined } = {}) {
+function setup(opts: { column?: ExperimentDataColumn | undefined } = {}) {
   const onRemove = vi.fn();
   const result = render(
     <DndContext>

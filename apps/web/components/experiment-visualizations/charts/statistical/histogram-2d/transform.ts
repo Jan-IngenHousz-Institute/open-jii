@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { Histogram2DSeriesData } from "@repo/ui/components/charts/histogram";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -18,7 +18,7 @@ export function positiveOrAuto(n: number | undefined): number | undefined {
 /** Pure data transform for the 2D histogram: extracts paired numeric (x, y) tuples and drops rows where either fails to coerce. */
 export function transformHistogram2DData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): Histogram2DSeriesData[] {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

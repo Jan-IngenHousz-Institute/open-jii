@@ -3,7 +3,7 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { AggregationFunction, DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAggregationFunction, ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
@@ -22,7 +22,7 @@ import { firstDataSourceByRole } from "../../charts/data/data-sources";
 const AGG_NONE = "__none__";
 
 // Z is one cell per (x, y); cumsum/std/var aren't meaningful here.
-const Z_AGG_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
+const Z_AGG_FUNCTIONS: { value: ExperimentAggregationFunction; label: string }[] = [
   { value: "avg", label: "Average" },
   { value: "sum", label: "Sum" },
   { value: "count", label: "Count" },
@@ -32,7 +32,7 @@ const Z_AGG_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
 
 interface ZShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   heading: string;
   xColumn: string;
   yColumn: string;
@@ -52,7 +52,7 @@ export function ZShelf({ form, columns, heading, xColumn, yColumn }: ZShelfProps
   const aggregateValue = getDataSourceAggregate(sources, sourceIndex) ?? AGG_NONE;
 
   const handleAggregateChange = (raw: string) => {
-    const fn = raw === AGG_NONE ? undefined : (raw as AggregationFunction);
+    const fn = raw === AGG_NONE ? undefined : (raw as ExperimentAggregationFunction);
     setDataSourceAggregate(form, sourceIndex, fn, [xColumn, yColumn]);
   };
 

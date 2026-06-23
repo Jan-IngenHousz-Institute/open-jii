@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 
@@ -17,7 +17,7 @@ export interface DensityPlotTransformResult {
 /** Pure data transform for the density-plot chart: computes per-(cell/category/Y) KDE curves via `computeKDE`. */
 export function transformDensityPlotData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): DensityPlotTransformResult {
   const yEntries = dataSourcesByRole(dataSources, "y");

@@ -2,7 +2,7 @@
 
 import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 
-import type { DataColumn, FilterWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import { parentColumnName } from "../../../data-filters/filter-column-path";
 import { operatorsForColumn } from "../../../data-filters/filter-operators";
@@ -11,8 +11,8 @@ export interface ResolvedFilterWidgetConfig {
   tableName: string | undefined;
   columnName: string | undefined;
   parentColumn: string | undefined;
-  operator: FilterWidget["config"]["operator"];
-  column: DataColumn | undefined;
+  operator: ExperimentFilterWidget["config"]["operator"];
+  column: ExperimentDataColumn | undefined;
   operatorLabel: string;
   displayTitle: string | undefined;
   isConfigured: boolean;
@@ -24,7 +24,7 @@ export interface ResolvedFilterWidgetConfig {
  * default-title fallback chain, and the `isConfigured` gate.
  */
 export function useFilterWidgetConfig(
-  widget: FilterWidget,
+  widget: ExperimentFilterWidget,
   experimentId: string,
 ): ResolvedFilterWidgetConfig {
   const { tableName, column: columnName, operator } = widget.config;

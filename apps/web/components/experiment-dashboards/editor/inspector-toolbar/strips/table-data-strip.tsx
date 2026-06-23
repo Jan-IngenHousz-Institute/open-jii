@@ -5,7 +5,7 @@ import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useE
 import { Columns3, Database, Filter as FilterIcon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { TableWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTableWidget } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -23,7 +23,7 @@ import { StripOverflowList } from "../strip-overflow-list";
 import { StripPopoverControl } from "../strip-popover-control";
 
 interface TableDataStripProps {
-  widget: TableWidget;
+  widget: ExperimentTableWidget;
   widgetIndex: number;
   experimentId: string;
 }
@@ -42,7 +42,7 @@ export function TableDataStrip({ widget, widgetIndex, experimentId }: TableDataS
     tableName,
   );
 
-  const setConfig = (next: Partial<TableWidget["config"]>) => {
+  const setConfig = (next: Partial<ExperimentTableWidget["config"]>) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, ...next },
@@ -54,7 +54,7 @@ export function TableDataStrip({ widget, widgetIndex, experimentId }: TableDataS
     setConfig({ tableName: value, columns: undefined });
   };
 
-  const handleFiltersChange = (next: TableWidget["config"]["filters"]) => {
+  const handleFiltersChange = (next: ExperimentTableWidget["config"]["filters"]) => {
     setConfig({ filters: next && next.length > 0 ? next : undefined });
   };
 

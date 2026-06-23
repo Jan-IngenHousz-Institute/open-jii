@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 
-import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -18,12 +18,12 @@ import { UploadHistoryPanel } from "./history/upload-history-panel";
 export interface UploadListViewProps {
   experimentId: string;
   enabled: boolean;
-  onNewUpload: (sourceKind: UploadSourceKind) => void;
+  onNewUpload: (sourceKind: ExperimentUploadSourceKind) => void;
   onClose: () => void;
 }
 
 // Ambyte is folder-based, so it sits last after the file-based tabular kinds.
-const SOURCE_KIND_ORDER: UploadSourceKind[] = [
+const SOURCE_KIND_ORDER: ExperimentUploadSourceKind[] = [
   "csv",
   "tsv",
   "parquet",

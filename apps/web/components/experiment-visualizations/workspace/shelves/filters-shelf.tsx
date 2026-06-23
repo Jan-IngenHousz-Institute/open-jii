@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Collapsible,
@@ -19,7 +19,7 @@ import type { ChartFormValues } from "../../charts/chart-config";
 
 interface FiltersShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   experimentId: string;
   tableName: string;
   /** Render inline with no Collapsible chrome (for popover-hosted shelves). */
@@ -42,7 +42,7 @@ export function FiltersShelf({
 
   const [open, setOpen] = useState(false);
 
-  const filters = (form.watch("dataConfig.filters") ?? []) as DataFilter[];
+  const filters = (form.watch("dataConfig.filters") ?? []) as ExperimentDataFilter[];
 
   const list = (
     <FilterChipList

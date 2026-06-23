@@ -5,7 +5,7 @@ import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCr
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 import { parseApiError } from "~/util/apiError";
 
-import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody, User } from "@repo/api/domains/user/user.schema";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";

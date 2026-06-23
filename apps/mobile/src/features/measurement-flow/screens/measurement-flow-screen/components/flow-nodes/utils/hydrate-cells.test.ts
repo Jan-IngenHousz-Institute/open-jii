@@ -5,8 +5,8 @@ import type {
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
-import { resolveConditionValue } from "@repo/api/utils/evaluate-branch";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveConditionValue } from "@repo/api/transforms/evaluate-branch";
 
 import { hydrateCells } from "./hydrate-cells";
 import type { HydrationContext } from "./hydrate-cells";

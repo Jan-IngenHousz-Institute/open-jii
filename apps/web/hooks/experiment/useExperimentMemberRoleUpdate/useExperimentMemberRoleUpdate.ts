@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/experiment.schema";
 
 /**
  * Hook to update a member's role in an experiment

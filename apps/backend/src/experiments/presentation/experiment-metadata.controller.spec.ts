@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";

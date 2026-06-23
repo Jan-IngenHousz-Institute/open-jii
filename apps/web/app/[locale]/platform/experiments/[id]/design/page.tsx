@@ -21,8 +21,8 @@ import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useCallback, useMemo } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";

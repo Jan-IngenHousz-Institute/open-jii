@@ -7,7 +7,7 @@ import type {
   UserMetadataWebhookPayload,
   UserMetadataWebhookResponse,
   WebhookErrorResponse,
-} from "@repo/api/schemas/user.schema";
+} from "@repo/api/domains/user/user.schema";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";

@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ChartType } from "@repo/api/schemas/experiment.schema";
-import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
+import type { ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -43,7 +43,7 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
   const { t: tDash } = useTranslation("experimentDashboards");
   const { t: tCommon } = useTranslation("common");
   const form = useFormContext<ChartFormValues>();
-  const [pendingChartType, setPendingChartType] = useState<ChartType | null>(null);
+  const [pendingChartType, setPendingChartType] = useState<ExperimentChartType | null>(null);
   const [activeTab, setActiveTab] = useState<BuilderTab>("widget");
 
   const {
@@ -89,7 +89,7 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
     form.setValue("config.yAxisTitle", "", { shouldDirty: true });
   };
 
-  const applyChartType = (type: ChartType) => {
+  const applyChartType = (type: ExperimentChartType) => {
     const def = getChartTypeDef(type);
     const currentTable = form.getValues("dataConfig.tableName");
     form.setValue("chartFamily", def.family, { shouldDirty: true });
@@ -103,7 +103,7 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
     return sources.some((ds) => Boolean(ds.columnName));
   };
 
-  const handleChartTypeChange = (type: ChartType) => {
+  const handleChartTypeChange = (type: ExperimentChartType) => {
     if (type === form.getValues("chartType")) return;
     if (hasMeaningfulConfig()) {
       setPendingChartType(type);

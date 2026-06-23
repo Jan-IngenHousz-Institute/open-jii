@@ -3,7 +3,7 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { AggregationFunction, DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAggregationFunction, ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
@@ -20,10 +20,10 @@ import { firstDataSourceByRole } from "../../../data/data-sources";
 
 interface PieValuesShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
 }
 
-const PIE_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
+const PIE_FUNCTIONS: { value: ExperimentAggregationFunction; label: string }[] = [
   { value: "sum", label: "Sum" },
   { value: "avg", label: "Average" },
   { value: "count", label: "Count" },
@@ -44,7 +44,7 @@ export function PieValuesShelf({ form, columns }: PieValuesShelfProps) {
   const currentFunction = aggregation?.functions?.[0]?.function ?? "sum";
   const isCount = currentFunction === "count";
 
-  const writeFunction = (fn: AggregationFunction, column: string) => {
+  const writeFunction = (fn: ExperimentAggregationFunction, column: string) => {
     // Count without a values column uses COUNT(*); otherwise the column
     // gates which rows contribute (COUNT(yield) skips nulls, etc.).
     const functionColumn = fn === "count" && column === "" ? "*" : column;
@@ -78,7 +78,7 @@ export function PieValuesShelf({ form, columns }: PieValuesShelfProps) {
   };
 
   const handleFunctionChange = (raw: string) => {
-    const fn = raw as AggregationFunction;
+    const fn = raw as ExperimentAggregationFunction;
     const currentColumn = form.getValues(`dataConfig.dataSources.${sourceIndex}.columnName`);
     writeFunction(fn, currentColumn);
   };

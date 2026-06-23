@@ -5,7 +5,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import type { LocationPoint } from "@repo/ui/components/map";
 
 import { NewExperimentLocationsCard } from "./new-experiment-locations-card";

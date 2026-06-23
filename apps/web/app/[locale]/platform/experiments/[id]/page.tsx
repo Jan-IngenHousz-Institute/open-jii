@@ -11,7 +11,7 @@ import { ExperimentDetailsCard } from "~/components/experiment-overview/experime
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
 import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
-import type { Experiment } from "@repo/api/schemas/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import ExperimentDashboardsDisplay from "../../../../../components/experiment-dashboards/list/experiment-dashboards-display";

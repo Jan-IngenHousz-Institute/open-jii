@@ -1,7 +1,7 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { scatterChartType } from "../";
 import { DataSourcesFieldArrayProvider } from "../../../../workspace/context/data-sources-field-array-context";
@@ -20,7 +20,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "x", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "y", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "grp", type_name: "STRING", type_text: "STRING" },

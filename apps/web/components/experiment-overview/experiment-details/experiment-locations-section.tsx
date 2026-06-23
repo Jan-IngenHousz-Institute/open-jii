@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { Location } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentLocation } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -19,7 +19,7 @@ import { Map } from "../../map";
 
 interface ExperimentLocationsSectionProps {
   experimentId: string;
-  locations: Location[];
+  locations: ExperimentLocation[];
   hasAccess?: boolean;
   isArchived?: boolean;
 }
@@ -107,7 +107,7 @@ export function ExperimentLocationsSection({
         )}
       </div>
 
-      {/* Location Management Dialog */}
+      {/* ExperimentLocation Management Dialog */}
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>

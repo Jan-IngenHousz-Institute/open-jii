@@ -1,4 +1,4 @@
-import type { AddAnnotationsBulkBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import {
   assertFailure,
@@ -49,7 +49,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 2 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "experiment_data_table",
       rowIds: ["row1", "row2"],
       annotation: {
@@ -79,7 +79,7 @@ describe("AddAnnotations", () => {
       userId: testUserId,
     });
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "experiment_data_table",
       rowIds: ["row1"],
       annotation: {
@@ -103,7 +103,7 @@ describe("AddAnnotations", () => {
 
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "experiment_data_table",
       rowIds: ["row1", "row2"],
       annotation: {
@@ -139,7 +139,7 @@ describe("AddAnnotations", () => {
       userId: otherUserId,
     });
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "experiment_data_table",
       rowIds: ["row1", "row2"],
       annotation: {
@@ -182,7 +182,7 @@ describe("AddAnnotations", () => {
       }),
     );
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "test_table",
       rowIds: ["row1"],
       annotation: {
@@ -216,7 +216,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 2 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "experiment_data_table",
       rowIds: ["row1", "row2"],
       annotation: {
@@ -252,7 +252,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "test_table",
       rowIds: ["row1"],
       annotation: {
@@ -287,7 +287,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "test_table",
       rowIds: ["row1"],
       annotation: {
@@ -340,7 +340,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "test_table",
       rowIds: ["row1"],
       annotation: {
@@ -386,7 +386,7 @@ describe("AddAnnotations", () => {
     const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
     vi.spyOn(repository, "storeAnnotations").mockResolvedValue(success({ rowsAffected: 1 }));
 
-    const newAnnotation: AddAnnotationsBulkBody = {
+    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
       tableName: "test_table",
       rowIds: ["row1"],
       annotation: {

@@ -1,11 +1,11 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ColumnPicker } from "./column-picker";
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
   { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "humidity", type_name: "DOUBLE", type_text: "DOUBLE" },

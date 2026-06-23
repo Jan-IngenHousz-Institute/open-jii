@@ -6,13 +6,13 @@ import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import type {
-  DataColumn,
-  DataFilter,
-  DataFilterOperator,
-} from "@repo/api/schemas/experiment.schema";
-import { zDataFilter } from "@repo/api/schemas/experiment.schema";
-import type { ColumnKind } from "@repo/api/utils/column-type-utils";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+  ExperimentDataFilterOperator,
+} from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ColumnKind } from "@repo/api/transforms/column-type-utils";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
@@ -22,13 +22,13 @@ import { AddFilterDraftEditor } from "../add-filter/add-filter-draft-editor";
 import { filterColumnPathFor } from "../filter-column-path";
 import { defaultValueForOperator } from "../filter-operators";
 
-const EMPTY_DRAFT: DataFilter = { column: "", operator: "equals", value: "" };
+const EMPTY_DRAFT: ExperimentDataFilter = { column: "", operator: "equals", value: "" };
 
 export interface AddFilterPopoverProps {
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   experimentId: string;
   tableName: string;
-  onAdd: (filter: DataFilter) => void;
+  onAdd: (filter: ExperimentDataFilter) => void;
 }
 
 export function AddFilterPopover({
@@ -39,10 +39,10 @@ export function AddFilterPopover({
 }: AddFilterPopoverProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const [pickedColumn, setPickedColumn] = useState<DataColumn | undefined>(undefined);
+  const [pickedColumn, setPickedColumn] = useState<ExperimentDataColumn | undefined>(undefined);
 
-  const form = useForm<DataFilter>({
-    resolver: zodResolver(zDataFilter),
+  const form = useForm<ExperimentDataFilter>({
+    resolver: zodResolver(zExperimentDataFilter),
     mode: "onChange",
     defaultValues: EMPTY_DRAFT,
   });
@@ -57,7 +57,7 @@ export function AddFilterPopover({
     if (!next) reset();
   };
 
-  const handlePick = (col: DataColumn) => {
+  const handlePick = (col: ExperimentDataColumn) => {
     const operator = defaultOperatorForKind(getColumnKind(col.type_text));
     setPickedColumn(col);
     // Struct columns route to the identity sub-field so the filter is wire-ready.
@@ -112,7 +112,7 @@ export function AddFilterPopover({
   );
 }
 
-function defaultOperatorForKind(kind: ColumnKind | undefined): DataFilterOperator {
+function defaultOperatorForKind(kind: ColumnKind | undefined): ExperimentDataFilterOperator {
   if (kind === "temporal") return "between";
   return "equals";
 }

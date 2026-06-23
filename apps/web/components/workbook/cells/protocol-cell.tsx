@@ -12,8 +12,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolCell as ProtocolCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";

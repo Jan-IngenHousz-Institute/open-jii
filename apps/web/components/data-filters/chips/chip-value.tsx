@@ -1,6 +1,6 @@
 "use client";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -11,7 +11,7 @@ const NO_VALUE = "—";
 const INLINE_LIST_MAX = 2;
 
 export interface ChipValueProps {
-  filter: DataFilter;
+  filter: ExperimentDataFilter;
   isContributor: boolean;
   fullWidth: boolean;
   parentColumn: string;
@@ -50,7 +50,7 @@ export function ChipValue({
 }
 
 function formatFilterDisplay(
-  filter: DataFilter,
+  filter: ExperimentDataFilter,
   summarizeCount: (count: number) => string,
 ): string {
   const { value, operator } = filter;

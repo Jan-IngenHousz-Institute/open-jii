@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import { dataSourcesByRole, firstDataSourceByRole, makeDataSource } from "./data-sources";
 
-function ds(role: DataSourceConfig["role"], columnName: string): DataSourceConfig {
+function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

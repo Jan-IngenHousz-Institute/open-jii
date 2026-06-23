@@ -1,7 +1,7 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -22,7 +22,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "label", type_name: "STRING", type_text: "STRING" },
   { name: "count", type_name: "INT", type_text: "INT" },
 ];

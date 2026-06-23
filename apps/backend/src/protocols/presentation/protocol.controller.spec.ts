@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolMacroList } from "@repo/api/schemas/protocol.schema";
+import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
 import { macros } from "@repo/database";
 
 import { AppError, failure } from "../../common/utils/fp-utils";

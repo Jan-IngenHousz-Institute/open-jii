@@ -7,8 +7,8 @@ import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucid
 import { useCallback } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   DropdownMenu,
   DropdownMenuContent,

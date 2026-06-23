@@ -2,12 +2,12 @@
 
 import type { ChangeEvent } from "react";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
 import { Input } from "@repo/ui/components/input";
 
 export interface NumericInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 export function NumericInput({ value, onChange }: NumericInputProps) {

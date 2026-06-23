@@ -3,14 +3,14 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { AddFilterPopover } from "./add-filter-popover";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: DataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
+const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const numericColumn: ExperimentDataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
 
-const columns: DataColumn[] = [stringColumn, numericColumn];
+const columns: ExperimentDataColumn[] = [stringColumn, numericColumn];
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {

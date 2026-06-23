@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 
-import type { TransferRequest } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/experiment.schema";
 
 interface TransferRequestCreateProps {
   onSuccess?: (requestId: string) => void;
@@ -21,7 +21,7 @@ export const useTransferRequestCreate = (props?: TransferRequestCreateProps) => 
       await queryClient.cancelQueries({ queryKey: ["transferRequests"] });
 
       // Get the current transfer requests
-      const previousRequests = queryClient.getQueryData<TransferRequest[]>(["transferRequests"]);
+      const previousRequests = queryClient.getQueryData<ExperimentTransferRequest[]>(["transferRequests"]);
 
       // Return the previous requests to use in case of error
       return { previousRequests };

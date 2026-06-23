@@ -4,10 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type {
-  DataColumn,
-  DataFilter,
-  DataFilterOperator,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+  ExperimentDataFilterOperator,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -26,7 +26,7 @@ import {
 import { FilterValueInput } from "../value-input";
 
 export interface AddFilterDraftEditorProps {
-  column: DataColumn;
+  column: ExperimentDataColumn;
   experimentId: string;
   tableName: string;
   onBack: () => void;
@@ -43,13 +43,13 @@ export function AddFilterDraftEditor({
   onApply,
 }: AddFilterDraftEditorProps) {
   const { t } = useTranslation("common");
-  const form = useFormContext<DataFilter>();
+  const form = useFormContext<ExperimentDataFilter>();
   const operator = useWatch({ control: form.control, name: "operator" });
   const value = useWatch({ control: form.control, name: "value" });
   const canApply = form.formState.isValid;
 
   const handleOperatorChange = (op: string) => {
-    const next = op as DataFilterOperator;
+    const next = op as ExperimentDataFilterOperator;
     const shapeMatches = operatorValueShape(next) === operatorValueShape(operator);
     form.setValue("operator", next, { shouldValidate: true });
     if (!shapeMatches) {

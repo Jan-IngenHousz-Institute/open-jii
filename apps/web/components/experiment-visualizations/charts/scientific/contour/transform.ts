@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 import type { ContourSeriesData } from "@repo/ui/components/charts/contour";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -26,7 +26,7 @@ export interface ContourTransformResult {
  */
 export function transformContourData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): ContourTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

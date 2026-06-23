@@ -3,11 +3,11 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatDate } from "~/util/date";
 
-import type { Annotation } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotation } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ExperimentDataTableAnnotationsCell } from "./experiment-data-table-annotations-cell";
 
-const sampleAnnotations: Annotation[] = [
+const sampleAnnotations: ExperimentAnnotation[] = [
   {
     id: "1",
     type: "comment",

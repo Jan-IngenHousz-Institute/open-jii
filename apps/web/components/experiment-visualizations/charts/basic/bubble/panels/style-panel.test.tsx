@@ -2,7 +2,7 @@ import { renderWithForm, screen } from "@/test/test-utils";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { bubbleChartType } from "../";
 import type { ChartFormValues } from "../../../chart-config";
@@ -20,7 +20,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "x", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "y", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "weight", type_name: "DOUBLE", type_text: "DOUBLE" },

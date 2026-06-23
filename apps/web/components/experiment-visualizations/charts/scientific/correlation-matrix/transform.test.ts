@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import { aliasForCorrelationPair } from "../../data/correlation-alias";
 import { transformCorrelationMatrixData } from "./transform";
 
-function ds(role: DataSourceConfig["role"], columnName: string): DataSourceConfig {
+function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

@@ -4,13 +4,13 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 export interface ColumnRowProps {
   name: string;
-  column: DataColumn | undefined;
+  column: ExperimentDataColumn | undefined;
   onRemove: (name: string) => void;
 }
 

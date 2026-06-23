@@ -3,13 +3,13 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterValueInput } from "./value-input";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: DataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
-const timestampColumn: DataColumn = {
+const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const numericColumn: ExperimentDataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
+const timestampColumn: ExperimentDataColumn = {
   name: "ts",
   type_name: "TIMESTAMP",
   type_text: "TIMESTAMP",

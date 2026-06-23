@@ -3,10 +3,10 @@ import { randomUUID } from "crypto";
 
 import {
   ExperimentTableName,
-  zUploadHistoryStatus,
-  zUploadSourceKind,
-} from "@repo/api/schemas/experiment.schema";
-import type { UploadTargetTable } from "@repo/api/schemas/experiment.schema";
+  zExperimentUploadHistoryStatus,
+  zExperimentUploadSourceKind,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadTargetTable } from "@repo/api/domains/experiment/experiment.schema";
 
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
@@ -36,7 +36,7 @@ export class ExperimentDataUploadsRepository {
    */
   async validateTargetTable(input: {
     experimentId: string;
-    target: UploadTargetTable;
+    target: ExperimentUploadTargetTable;
   }): Promise<Result<{ uploadTableId: string; uploadTableName: string }>> {
     const { experimentId, target } = input;
 
@@ -177,8 +177,8 @@ export class ExperimentDataUploadsRepository {
       experimentId: row[experimentIdIdx] ?? "",
       uploadTableId: uploadTableIdIdx >= 0 ? emptyToNull(row[uploadTableIdIdx]) : null,
       uploadTableName: uploadTableNameIdx >= 0 ? emptyToNull(row[uploadTableNameIdx]) : null,
-      sourceKind: zUploadSourceKind.parse(row[sourceKindIdx]),
-      status: zUploadHistoryStatus.parse(row[statusIdx]),
+      sourceKind: zExperimentUploadSourceKind.parse(row[sourceKindIdx]),
+      status: zExperimentUploadHistoryStatus.parse(row[statusIdx]),
       fileCount: parseIntOrNull(row[fileCountIdx]),
       rowCount: parseIntOrNull(row[rowCountIdx]),
       createdBy: row[createdByIdx] ?? "",

@@ -3,27 +3,27 @@ import { MarkerType } from "@xyflow/react";
 import type { z } from "zod";
 import { stripHtml } from "~/util/strip-html";
 
-import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFlow, ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/experiment.schema";
 import {
-  zFlowGraph,
-  zQuestionContent,
-  zInstructionContent,
-  zMeasurementContent,
-  zAnalysisContent,
-  zBranchContent,
-} from "@repo/api/schemas/experiment.schema";
-import type { zQuestionKind } from "@repo/api/schemas/experiment.schema";
+  zExperimentFlowGraph,
+  zExperimentQuestionContent,
+  zExperimentInstructionContent,
+  zExperimentMeasurementContent,
+  zExperimentAnalysisContent,
+  zExperimentBranchContent,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { zExperimentQuestionKind } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { NodeType } from "../react-flow/node-config";
 import { nodeTypeColorMap } from "../react-flow/node-config";
 
 // Inferred content types from zod schemas (using z.infer for strong typing)
-type QuestionContent = z.infer<typeof zQuestionContent>;
-type InstructionContent = z.infer<typeof zInstructionContent>;
-type MeasurementContent = z.infer<typeof zMeasurementContent>;
-type AnalysisContent = z.infer<typeof zAnalysisContent>;
-type BranchContent = z.infer<typeof zBranchContent>;
-type QuestionKind = z.infer<typeof zQuestionKind>;
+type QuestionContent = z.infer<typeof zExperimentQuestionContent>;
+type InstructionContent = z.infer<typeof zExperimentInstructionContent>;
+type MeasurementContent = z.infer<typeof zExperimentMeasurementContent>;
+type AnalysisContent = z.infer<typeof zExperimentAnalysisContent>;
+type BranchContent = z.infer<typeof zExperimentBranchContent>;
+type QuestionKind = z.infer<typeof zExperimentQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
 interface QuestionUI {
@@ -101,13 +101,13 @@ const ANSWER_TYPE_TO_QUESTION_CONTENT = {
 } as const;
 
 /**
- * FlowMapper centralizes conversion between API flow representations and React Flow graph structures.
- * toReactFlow: API -> React Flow (adds ephemeral layout info)
- * toApiGraph: React Flow nodes/edges -> validated API graph (UpsertFlowBody)
+ * FlowMapper centralizes conversion between API flow representations and React ExperimentFlow graph structures.
+ * toReactFlow: API -> React ExperimentFlow (adds ephemeral layout info)
+ * toApiGraph: React ExperimentFlow nodes/edges -> validated API graph (ExperimentUpsertFlowBody)
  */
 export class FlowMapper {
-  /** Convert API Flow object to React Flow nodes/edges */
-  static toReactFlow(apiFlow: Flow): { nodes: Node[]; edges: Edge[] } {
+  /** Convert API ExperimentFlow object to React ExperimentFlow nodes/edges */
+  static toReactFlow(apiFlow: ExperimentFlow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
       const reactFlowTypeMapping: Record<
         "question" | "instruction" | "measurement" | "analysis" | "branch",
@@ -179,8 +179,8 @@ export class FlowMapper {
     return { nodes, edges };
   }
 
-  /** Convert React Flow graph back to validated API graph shape */
-  static toApiGraph(nodes: Node[], edges: Edge[]): UpsertFlowBody {
+  /** Convert React ExperimentFlow graph back to validated API graph shape */
+  static toApiGraph(nodes: Node[], edges: Edge[]): ExperimentUpsertFlowBody {
     const apiNodes = nodes.map((node) => {
       const data = node.data as unknown as FlowNodeDataWithSpec;
 
@@ -215,7 +215,7 @@ export class FlowMapper {
           );
 
           // Throw only the first message if invalid
-          const parsed = zQuestionContent.safeParse(candidate);
+          const parsed = zExperimentQuestionContent.safeParse(candidate);
           if (!parsed.success) {
             throw new Error(parsed.error.errors[0].message);
           }
@@ -229,7 +229,7 @@ export class FlowMapper {
           };
 
           // Throw only the first message if invalid
-          const parsed = zQuestionContent.safeParse(candidate);
+          const parsed = zExperimentQuestionContent.safeParse(candidate);
           if (!parsed.success) {
             throw new Error(parsed.error.errors[0].message);
           }
@@ -250,7 +250,7 @@ export class FlowMapper {
         } as const;
 
         // Let Zod handle all validation including missing protocol
-        const parsed = zMeasurementContent.safeParse(candidate);
+        const parsed = zExperimentMeasurementContent.safeParse(candidate);
         if (!parsed.success) {
           throw new Error(parsed.error.errors[0].message);
         }
@@ -270,7 +270,7 @@ export class FlowMapper {
         } as const;
 
         // Let Zod handle all validation including missing macro
-        const parsed = zAnalysisContent.safeParse(candidate);
+        const parsed = zExperimentAnalysisContent.safeParse(candidate);
         if (!parsed.success) {
           throw new Error(parsed.error.errors[0].message);
         }
@@ -279,7 +279,7 @@ export class FlowMapper {
         const spec = isObject(data.stepSpecification)
           ? (data.stepSpecification as Partial<BranchContent>)
           : {};
-        const parsed = zBranchContent.safeParse({
+        const parsed = zExperimentBranchContent.safeParse({
           paths: spec.paths ?? [],
           defaultPathId: spec.defaultPathId,
         });
@@ -291,7 +291,7 @@ export class FlowMapper {
         // instruction - prioritize current description over existing stepSpecification
         const candidate: InstructionContent = { text: text || "Instruction" } as const;
 
-        const parsed = zInstructionContent.safeParse(candidate);
+        const parsed = zExperimentInstructionContent.safeParse(candidate);
         if (!parsed.success) {
           throw new Error(parsed.error.errors[0].message);
         }
@@ -320,7 +320,7 @@ export class FlowMapper {
     });
 
     const flowGraph = { nodes: apiNodes, edges: apiEdges };
-    const result = zFlowGraph.safeParse(flowGraph);
+    const result = zExperimentFlowGraph.safeParse(flowGraph);
     if (!result.success) {
       throw new Error(result.error.errors[0].message);
     }

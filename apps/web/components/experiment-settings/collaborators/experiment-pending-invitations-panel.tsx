@@ -2,8 +2,8 @@
 
 import { Mail } from "lucide-react";
 
-import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
-import type { Invitation } from "@repo/api/schemas/user.schema";
+import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type { Invitation } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,

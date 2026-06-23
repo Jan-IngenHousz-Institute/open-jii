@@ -1,4 +1,4 @@
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 
 import { tsr } from "../../../lib/tsr";
 

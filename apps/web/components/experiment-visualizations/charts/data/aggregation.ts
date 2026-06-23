@@ -1,12 +1,12 @@
 import type { UseFormReturn } from "react-hook-form";
 
 import type {
-  AggregationFunction,
-  AggregationItem,
-  DataAggregation,
-  GroupByItem,
-  TimeBucketUnit,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAggregationFunction,
+  ExperimentAggregationItem,
+  ExperimentDataAggregation,
+  ExperimentGroupByItem,
+  ExperimentTimeBucketUnit,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import type { ChartFormDataConfig, ChartFormValues } from "../chart-config";
 
@@ -14,9 +14,9 @@ import type { ChartFormDataConfig, ChartFormValues } from "../chart-config";
 // `aggregation.functions[]` is rebuilt from them at save time.
 
 export function getColumnBucket(
-  aggregation: DataAggregation | undefined,
+  aggregation: ExperimentDataAggregation | undefined,
   column: string,
-): TimeBucketUnit | undefined {
+): ExperimentTimeBucketUnit | undefined {
   if (!column) return undefined;
   return aggregation?.groupBy?.find((g) => g.column === column)?.timeBucket;
 }
@@ -24,19 +24,19 @@ export function getColumnBucket(
 export function getDataSourceAggregate(
   sources: ChartFormDataConfig["dataSources"],
   dsIndex: number,
-): AggregationFunction | undefined {
+): ExperimentAggregationFunction | undefined {
   return sources[dsIndex]?.aggregate;
 }
 
 /** Row aggregates require GROUP BY; the `cumsum` window function does not. */
-export function aggregateRequiresGroupBy(fn: AggregationFunction): boolean {
+export function aggregateRequiresGroupBy(fn: ExperimentAggregationFunction): boolean {
   return fn !== "cumsum";
 }
 
 /** Stable SQL alias for a series's aggregate, unique even when two series share column + function. */
 export function aggregateAliasForSource(
   columnName: string,
-  fn: AggregationFunction,
+  fn: ExperimentAggregationFunction,
   dsIndex: number,
 ): string {
   const base = columnName === "" || columnName === "*" ? "count" : columnName;
@@ -45,7 +45,7 @@ export function aggregateAliasForSource(
 
 /** Row key a renderer reads a data source's value under; matches the SQL projection scheme. */
 export function rowKeyForSource(
-  source: { columnName?: string; aggregate?: AggregationFunction | undefined },
+  source: { columnName?: string; aggregate?: ExperimentAggregationFunction | undefined },
   dsIndex: number,
 ): string {
   if (source.aggregate) {
@@ -57,7 +57,7 @@ export function rowKeyForSource(
 /** Row key for the legacy single-function aggregation path (pie's values shelf etc.). */
 export function rowKeyForFunction(fn: {
   column: string;
-  function: AggregationFunction;
+  function: ExperimentAggregationFunction;
   alias?: string;
 }): string {
   if (fn.alias) return fn.alias;
@@ -71,9 +71,9 @@ export function rowKeyForFunction(fn: {
 function materializeFunctions(
   dataSources: ChartFormDataConfig["dataSources"],
   groupByColumns: ReadonlySet<string> = new Set(),
-): AggregationItem[] {
+): ExperimentAggregationItem[] {
   return dataSources
-    .map((ds, dsIndex): AggregationItem | null => {
+    .map((ds, dsIndex): ExperimentAggregationItem | null => {
       if (!ds.aggregate) return null;
       const rawColumn = ds.columnName;
       const column = rawColumn === "" ? "*" : rawColumn;
@@ -91,7 +91,7 @@ function materializeFunctions(
         alias: aggregateAliasForSource(rawColumn, ds.aggregate, dsIndex),
       };
     })
-    .filter((x): x is AggregationItem => x !== null);
+    .filter((x): x is ExperimentAggregationItem => x !== null);
 }
 
 /** Strip draft / incomplete entries from the form snapshot before sending it to the API. */
@@ -116,7 +116,7 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
   );
   const functions = sourceFunctions.length > 0 ? sourceFunctions : existingFunctions;
 
-  let cleanedAggregation: DataAggregation | undefined;
+  let cleanedAggregation: ExperimentDataAggregation | undefined;
   if (groupBy.length > 0 || functions.length > 0) {
     cleanedAggregation = {
       groupBy: groupBy.length > 0 ? groupBy : undefined,
@@ -135,8 +135,8 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
 // schema rejects `{}`.
 function writeAggregation(
   form: UseFormReturn<ChartFormValues>,
-  groupBy: GroupByItem[],
-  functions: AggregationItem[],
+  groupBy: ExperimentGroupByItem[],
+  functions: ExperimentAggregationItem[],
 ): void {
   const groupByOut = groupBy.length > 0 ? groupBy : undefined;
   const functionsOut = functions.length > 0 ? functions : undefined;
@@ -153,7 +153,7 @@ function writeAggregation(
 export function setColumnBucket(
   form: UseFormReturn<ChartFormValues>,
   column: string,
-  bucket: TimeBucketUnit | undefined,
+  bucket: ExperimentTimeBucketUnit | undefined,
   keepInGroupBy: boolean,
 ): void {
   if (!column) return;
@@ -185,7 +185,7 @@ export function setColumnBucket(
 export function setDataSourceAggregate(
   form: UseFormReturn<ChartFormValues>,
   dsIndex: number,
-  fn: AggregationFunction | undefined,
+  fn: ExperimentAggregationFunction | undefined,
   axisColumns: string | readonly string[],
 ): void {
   const axisColumnList = (typeof axisColumns === "string" ? [axisColumns] : axisColumns).filter(

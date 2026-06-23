@@ -9,7 +9,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import {
   makeCustomMetadataFormSchema,
   sanitizeQuestionLabel,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { asStoredMetadata, EMPTY_FORM_VALUES } from "../form-helpers";
 import type { MetadataFormValues } from "../form-helpers";

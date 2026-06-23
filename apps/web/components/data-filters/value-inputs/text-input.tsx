@@ -1,11 +1,11 @@
 "use client";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
 import { Input } from "@repo/ui/components/input";
 
 export interface TextInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
   placeholder: string;
 }
 

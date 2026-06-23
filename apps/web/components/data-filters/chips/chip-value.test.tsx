@@ -3,11 +3,11 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ChipValue } from "./chip-value";
 
-function renderValue(filter: DataFilter, isContributor = false) {
+function renderValue(filter: ExperimentDataFilter, isContributor = false) {
   return render(
     <ChipValue
       filter={filter}

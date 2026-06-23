@@ -1,9 +1,9 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import {
-  AddAnnotationsBulkBody,
-  AnnotationRowsAffected,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAddAnnotationsBulkBody,
+  ExperimentAnnotationRowsAffected,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";
@@ -33,9 +33,9 @@ export class AddAnnotationsUseCase {
 
   async execute(
     experimentId: string,
-    data: AddAnnotationsBulkBody,
+    data: ExperimentAddAnnotationsBulkBody,
     userId: string,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Adding annotation(s) to experiment data",
       operation: "addAnnotations",

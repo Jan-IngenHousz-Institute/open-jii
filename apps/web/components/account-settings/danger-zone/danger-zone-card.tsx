@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
-import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";

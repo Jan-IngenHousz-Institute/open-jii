@@ -1,13 +1,13 @@
 import { initContract } from "@ts-rest/core";
 
-import { authContract } from "./contracts/auth.contract";
-import { experimentContract } from "./contracts/experiment.contract";
-import { healthContract } from "./contracts/health.contract";
-import { iotContract } from "./contracts/iot.contract";
-import { macroContract } from "./contracts/macro.contract";
-import { protocolContract } from "./contracts/protocol.contract";
-import { userContract } from "./contracts/user.contract";
-import { workbookContract } from "./contracts/workbook.contract";
+import { authContract } from "./domains/auth/auth.contract";
+import { experimentContract } from "./domains/experiment/experiment.contract";
+import { healthContract } from "./domains/health/health.contract";
+import { iotContract } from "./domains/iot/iot.contract";
+import { macroContract } from "./domains/macro/macro.contract";
+import { protocolContract } from "./domains/protocol/protocol.contract";
+import { userContract } from "./domains/user/user.contract";
+import { workbookContract } from "./domains/workbook/workbook.contract";
 
 // Initialize the main contract
 const c = initContract();

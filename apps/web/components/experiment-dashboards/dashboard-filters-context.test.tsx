@@ -4,7 +4,7 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import {
   DashboardFiltersProvider,
@@ -12,7 +12,7 @@ import {
   useDashboardFiltersForTable,
 } from "./dashboard-filters-context";
 
-function wrapWithWidgets(widgets: DashboardWidget[]) {
+function wrapWithWidgets(widgets: ExperimentDashboardWidget[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <DashboardFiltersProvider widgets={widgets}>{children}</DashboardFiltersProvider>;
   };

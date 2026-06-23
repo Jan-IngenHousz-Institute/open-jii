@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";

@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
 
 import { coerceCell } from "../../data/cell-coercion";
 import { dataSourcesByRole } from "../../data/data-sources";
@@ -12,7 +12,7 @@ export interface DensityPlot2DTransformResult {
 /** Pure data transform for the 2D density plot: extracts paired (x, y) numeric tuples and drops rows where either fails to coerce. */
 export function transformDensityPlot2DData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
 ): DensityPlot2DTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;
   const yColumn = dataSourcesByRole(dataSources, "y")[0]?.source.columnName;

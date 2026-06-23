@@ -3,7 +3,7 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn, Role } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentRole } from "@repo/api/domains/experiment/experiment.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {
@@ -19,8 +19,8 @@ import { firstDataSourceByRole } from "../../charts/data/data-sources";
 
 interface SingleColumnShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
-  role: Role;
+  columns: ExperimentDataColumn[];
+  role: ExperimentRole;
   heading: string;
   columnLabel: string;
   placeholder: string;

@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { AggregationFunction, DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAggregationFunction, ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -29,12 +29,12 @@ import { firstDataSourceByRole } from "../../../data/data-sources";
 
 interface BubbleSizeShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
 }
 
 const AGG_NONE = "__none__";
 
-const SIZE_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
+const SIZE_FUNCTIONS: { value: ExperimentAggregationFunction; label: string }[] = [
   { value: "sum", label: "Sum" },
   { value: "avg", label: "Average" },
   { value: "count", label: "Count" },
@@ -82,7 +82,7 @@ export function BubbleSizeShelf({ form, columns }: BubbleSizeShelfProps) {
   };
 
   const handleAggregateChange = (raw: string) => {
-    const fn = raw === AGG_NONE ? undefined : (raw as AggregationFunction);
+    const fn = raw === AGG_NONE ? undefined : (raw as ExperimentAggregationFunction);
     setDataSourceAggregate(form, sourceIndex, fn, xColumnName);
   };
 

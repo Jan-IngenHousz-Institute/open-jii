@@ -25,7 +25,7 @@ import {
 } from "~/components/experiment-data/experiment-data-utils";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
-import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Form } from "@repo/ui/components/form";
@@ -89,10 +89,10 @@ export function ExperimentDataTable({
 
   const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
   const [addAnnotationRowIds, setAddAnnotationRowIds] = useState<string[]>([]);
-  const [addAnnotationType, setAddAnnotationType] = useState<AnnotationType>("comment");
+  const [addAnnotationType, setAddAnnotationType] = useState<ExperimentAnnotationType>("comment");
   const [deleteAnnotationsDialogOpen, setDeleteAnnotationsDialogOpen] = useState(false);
   const [deleteAnnotationRowIds, setDeleteAnnotationRowIds] = useState<string[]>([]);
-  const [deleteAnnotationType, setDeleteAnnotationType] = useState<AnnotationType>("comment");
+  const [deleteAnnotationType, setDeleteAnnotationType] = useState<ExperimentAnnotationType>("comment");
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
@@ -140,7 +140,7 @@ export function ExperimentDataTable({
   );
 
   const openAddAnnotationDialog = useCallback(
-    (rowIds: string[], type: AnnotationType = "comment") => {
+    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
       setAddAnnotationRowIds(rowIds);
       setAddAnnotationType(type);
       setAddAnnotationDialogOpen(true);
@@ -149,7 +149,7 @@ export function ExperimentDataTable({
   );
 
   const openDeleteAnnotationsDialog = useCallback(
-    (rowIds: string[], type: AnnotationType = "comment") => {
+    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
       setDeleteAnnotationRowIds(rowIds);
       setDeleteAnnotationType(type);
       setDeleteAnnotationsDialogOpen(true);

@@ -6,7 +6,7 @@ import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/use
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { tsr } from "~/lib/tsr";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
   BranchCell,
   MacroCell,
@@ -14,8 +14,8 @@ import type {
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
-import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
+import { evaluateBranch, validateBranchCell } from "@repo/api/transforms/evaluate-branch";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 

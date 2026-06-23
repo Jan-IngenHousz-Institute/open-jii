@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardRenderer } from "./dashboard-renderer";

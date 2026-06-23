@@ -7,7 +7,7 @@ import type {
   MacroBatchExecutionResponse,
   MacroBatchExecutionWireBody,
   MacroBatchWebhookErrorResponse,
-} from "@repo/api/schemas/macro.schema";
+} from "@repo/api/domains/macro/macro.schema";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";

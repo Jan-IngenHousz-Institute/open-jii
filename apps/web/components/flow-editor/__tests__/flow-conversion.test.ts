@@ -1,7 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 
-import { zUpsertFlowBody } from "@repo/api/schemas/experiment.schema";
+import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FlowMapper } from "../flow-mapper";
 
@@ -39,7 +39,7 @@ describe("Flow Conversion", () => {
       });
 
       // Validate with backend schema
-      expect(() => zUpsertFlowBody.parse(result)).not.toThrow();
+      expect(() => zExperimentUpsertFlowBody.parse(result)).not.toThrow();
     });
 
     it("should use title as fallback when description is missing", () => {
@@ -96,7 +96,7 @@ describe("Flow Conversion", () => {
       });
 
       // Validate with backend schema
-      expect(() => zUpsertFlowBody.parse(result)).not.toThrow();
+      expect(() => zExperimentUpsertFlowBody.parse(result)).not.toThrow();
     });
   });
 
@@ -132,7 +132,7 @@ describe("Flow Conversion", () => {
       });
 
       // Validate with backend schema
-      expect(() => zUpsertFlowBody.parse(result)).not.toThrow();
+      expect(() => zExperimentUpsertFlowBody.parse(result)).not.toThrow();
     });
 
     it("should throw error when measurement node has no protocol", () => {
@@ -213,7 +213,7 @@ describe("Flow Conversion", () => {
       expect(startNodes[0].id).toBe("start-question");
 
       // Validate with backend schema - this should not throw
-      expect(() => zUpsertFlowBody.parse(result)).not.toThrow();
+      expect(() => zExperimentUpsertFlowBody.parse(result)).not.toThrow();
     });
 
     it("should fail validation if no start node is present", () => {

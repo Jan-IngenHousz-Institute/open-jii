@@ -4,7 +4,7 @@ import { Database, Palette } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentTableMetadata } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
@@ -27,7 +27,7 @@ interface WorkspaceInspectorProps {
   tablesError?: unknown;
   selectedTableName: string;
   onTableChange: (tableName: string) => void;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   isColumnsLoading: boolean;
   columnsError?: unknown;
 }

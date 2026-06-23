@@ -3,8 +3,8 @@ import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 import {
   chipValueForOption,
@@ -12,8 +12,8 @@ import {
   useDistinctOptions,
 } from "./use-distinct-options";
 
-const labelColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const contributorColumn: DataColumn = {
+const labelColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,

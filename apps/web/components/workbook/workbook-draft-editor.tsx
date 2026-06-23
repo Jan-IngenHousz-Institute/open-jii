@@ -8,9 +8,9 @@ import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkboo
 import { useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import { zWorkbookCellArray } from "@repo/api/schemas/workbook-cells.schema";
-import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";

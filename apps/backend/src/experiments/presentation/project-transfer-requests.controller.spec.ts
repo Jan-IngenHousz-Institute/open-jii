@@ -2,9 +2,9 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  CreateTransferRequestBody,
-  TransferRequest,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentCreateTransferRequestBody,
+  ExperimentTransferRequest,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -60,13 +60,13 @@ describe("ProjectTransferRequestsController", () => {
       const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
 
       // Create the request body
-      const createRequestData: CreateTransferRequestBody = {
+      const createRequestData: ExperimentCreateTransferRequestBody = {
         projectIdOld: "12345",
         projectUrlOld: "https://photosynq.org/projects/12345",
       };
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(createRequestData)
@@ -135,7 +135,7 @@ describe("ProjectTransferRequestsController", () => {
       const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
 
       // Create the request body
-      const createRequestData: CreateTransferRequestBody = {
+      const createRequestData: ExperimentCreateTransferRequestBody = {
         projectIdOld: "12345",
         projectUrlOld: "https://photosynq.org/projects/12345",
       };
@@ -183,7 +183,7 @@ describe("ProjectTransferRequestsController", () => {
       const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest[]> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -202,7 +202,7 @@ describe("ProjectTransferRequestsController", () => {
       const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest[]> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);

@@ -1,7 +1,7 @@
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -19,7 +19,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: DataColumn[] = [{ name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" }];
+const columns: ExperimentDataColumn[] = [{ name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" }];
 
 describe("StyleTabContent", () => {
   it("renders the style panel for the active chart type", () => {

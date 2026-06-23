@@ -5,10 +5,10 @@ import type { IncomingHttpHeaders } from "http";
 import {
   UPLOAD_FILENAME_SCHEMAS,
   UPLOAD_KIND_CONSTANTS,
-  zUploadSourceKind,
-  zUploadTargetTable,
-} from "@repo/api/schemas/experiment.schema";
-import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+  zExperimentUploadSourceKind,
+  zExperimentUploadTargetTable,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 import { compactTimestamp } from "../../../../common/utils/datetime";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
@@ -26,7 +26,7 @@ export interface UploadedFileResult {
 
 export interface UploadDataResult {
   uploadId: string;
-  sourceKind: UploadSourceKind;
+  sourceKind: ExperimentUploadSourceKind;
   uploadTableId?: string;
   uploadTableName?: string;
   runId?: number;
@@ -37,7 +37,7 @@ export interface UploadExecuteInput {
   experimentId: string;
   userId: string;
   // When set, skips the form-level sourceKind read (controller pins it).
-  fixedSourceKind?: UploadSourceKind;
+  fixedSourceKind?: ExperimentUploadSourceKind;
   requestStream: NodeJS.ReadableStream;
   requestHeaders: IncomingHttpHeaders;
 }
@@ -78,7 +78,7 @@ export class UploadDataUseCase {
     const formFields: Record<string, string | undefined> = {};
     const successfulUploads: UploadedFileResult[] = [];
     const errors: { fileName: string; error: string }[] = [];
-    const state: { ctx: UploadContext | null; sourceKind: UploadSourceKind | null } = {
+    const state: { ctx: UploadContext | null; sourceKind: ExperimentUploadSourceKind | null } = {
       ctx: null,
       sourceKind: null,
     };
@@ -102,7 +102,7 @@ export class UploadDataUseCase {
       onFile: async (file) => {
         if (!state.sourceKind) {
           const raw = input.fixedSourceKind ?? formFields.sourceKind;
-          const parsed = raw ? zUploadSourceKind.safeParse(raw) : null;
+          const parsed = raw ? zExperimentUploadSourceKind.safeParse(raw) : null;
           if (!parsed?.success) {
             file.stream.resume();
             const message = raw
@@ -165,7 +165,7 @@ export class UploadDataUseCase {
   private async preexecute(
     experimentId: string,
     userId: string,
-    _sourceKind: UploadSourceKind,
+    _sourceKind: ExperimentUploadSourceKind,
     formFields: { targetKind?: string; targetName?: string; uploadTableId?: string },
   ): Promise<Result<UploadContext>> {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -182,11 +182,11 @@ export class UploadDataUseCase {
 
     const parsed =
       formFields.targetKind === "existing"
-        ? zUploadTargetTable.safeParse({
+        ? zExperimentUploadTargetTable.safeParse({
             kind: "existing",
             uploadTableId: formFields.uploadTableId,
           })
-        : zUploadTargetTable.safeParse({
+        : zExperimentUploadTargetTable.safeParse({
             kind: "new",
             name: formFields.targetName,
           });
@@ -211,7 +211,7 @@ export class UploadDataUseCase {
 
   private async postexecute(
     ctx: UploadContext,
-    sourceKind: UploadSourceKind,
+    sourceKind: ExperimentUploadSourceKind,
     userId: string,
     successfulUploads: UploadedFileResult[],
     errors: { fileName: string; error: string }[],

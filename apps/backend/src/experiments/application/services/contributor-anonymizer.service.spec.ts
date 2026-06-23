@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ContributorAnonymizerService } from "./contributor-anonymizer.service";
 

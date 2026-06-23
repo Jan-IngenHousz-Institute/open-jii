@@ -6,7 +6,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import { validateProtocolJson } from "@repo/api/schemas/protocol-validator";
+import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";

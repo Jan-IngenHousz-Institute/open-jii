@@ -4,7 +4,7 @@ import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { formatDate } from "@/util/date";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Textarea } from "@repo/ui/components/textarea";

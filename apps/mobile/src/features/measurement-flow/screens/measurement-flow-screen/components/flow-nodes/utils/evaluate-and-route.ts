@@ -3,8 +3,8 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { FlowNode } from "~/shared/measurements/flow-node";
 
-import type { BranchCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import { evaluateBranch } from "@repo/api/utils/evaluate-branch";
+import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { evaluateBranch } from "@repo/api/transforms/evaluate-branch";
 
 import { hydrateCells } from "./hydrate-cells";
 

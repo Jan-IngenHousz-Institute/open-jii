@@ -3,7 +3,7 @@
 import { AlertTriangle, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { DataColumn, SeriesAxis, SeriesTraceType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn, ExperimentSeriesAxis, ExperimentSeriesTraceType } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -24,8 +24,8 @@ import type { ChartFormValues } from "../../charts/chart-config";
 
 export const AGG_NONE = "__none__";
 export const TRACE_TYPE_DEFAULT = "__default__";
-export const TRACE_TYPE_OPTIONS: SeriesTraceType[] = ["line", "bar", "scatter", "area"];
-export const AXIS_OPTIONS: SeriesAxis[] = ["primary", "secondary"];
+export const TRACE_TYPE_OPTIONS: ExperimentSeriesTraceType[] = ["line", "bar", "scatter", "area"];
+export const AXIS_OPTIONS: ExperimentSeriesAxis[] = ["primary", "secondary"];
 
 interface AggregateOption {
   value: string;
@@ -41,8 +41,8 @@ export interface YSeriesItemProps {
   canRemove: boolean;
   willBeSilentlyDropped: boolean;
   aggregateValue: string;
-  columns: DataColumn[];
-  effectiveErrorColumns: DataColumn[];
+  columns: ExperimentDataColumn[];
+  effectiveErrorColumns: ExperimentDataColumn[];
   xColumnName: string;
   aggregateOptions: AggregateOption[];
   showCartesianControls: boolean;
@@ -50,7 +50,7 @@ export interface YSeriesItemProps {
   showSeriesColor: boolean;
   hideAggregate: boolean;
   isColorMapped: boolean;
-  defaultTraceType: SeriesTraceType | undefined;
+  defaultTraceType: ExperimentSeriesTraceType | undefined;
   onColumnChange: (value: string, seriesIndex: number) => void;
   onAggregateChange: (raw: string, dsIndex: number) => void;
   onRemove: (dsIndex: number) => void;

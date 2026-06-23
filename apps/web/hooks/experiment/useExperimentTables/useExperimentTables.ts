@@ -1,6 +1,6 @@
 import { tsr } from "~/lib/tsr";
 
-import type { ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 // Re-export types for convenience
 export type { ExperimentTableMetadata };

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import type { ChartType, VisualizationWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentChartType, ExperimentVisualizationWidget } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
@@ -32,7 +32,7 @@ import { StripPopoverControl } from "../strip-popover-control";
 import { WidgetDisplayPopover } from "./widget-display-popover";
 
 interface VisualizationWidgetStripProps {
-  widget: VisualizationWidget;
+  widget: ExperimentVisualizationWidget;
   widgetIndex: number;
   experimentId: string;
   /** Fires after a successful inline create. Parent uses it to jump to the Data section. */
@@ -54,7 +54,7 @@ export function VisualizationWidgetStrip({
   const visualizations = data?.body ?? [];
   const { setDatasetOpen } = useDashboardEditor();
 
-  const setConfig = (next: Partial<VisualizationWidget["config"]>) => {
+  const setConfig = (next: Partial<ExperimentVisualizationWidget["config"]>) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, ...next },
@@ -72,7 +72,7 @@ export function VisualizationWidgetStrip({
     },
   });
 
-  const handleCreateWithType = (type: ChartType) => {
+  const handleCreateWithType = (type: ExperimentChartType) => {
     const def = getChartTypeDef(type);
     const defaultName = `${t("editor.visualizationConfig.untitledViz")} - ${new Date().toLocaleDateString(
       locale,

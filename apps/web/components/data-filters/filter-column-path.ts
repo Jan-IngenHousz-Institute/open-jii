@@ -1,8 +1,8 @@
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 /** Wire-ready dotted path; struct columns route through their identity sub-field. */
-export function filterColumnPathFor(column: DataColumn): string {
+export function filterColumnPathFor(column: ExperimentDataColumn): string {
   if (column.type_text === WellKnownColumnTypes.CONTRIBUTOR) {
     return `${column.name}.id`;
   }

@@ -9,7 +9,7 @@ import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWor
 import { formatDate } from "@/util/date";
 import { parseApiError } from "~/util/apiError";
 
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";

@@ -4,7 +4,7 @@ import { useExperimentDashboards } from "@/hooks/experiment/useExperimentDashboa
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { CardTitle } from "@repo/ui/components/card";

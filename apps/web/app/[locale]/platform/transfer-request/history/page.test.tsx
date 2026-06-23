@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { TransferRequestStatus } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/experiment.schema";
 
 import TransferRequestHistoryPage from "./page";
 
@@ -12,7 +12,7 @@ vi.mock("~/util/date", () => ({
   formatDate: (date: string) => `formatted-${date}`,
 }));
 
-const createRequest = (requestId: string, status: TransferRequestStatus, projectIdOld: string) =>
+const createRequest = (requestId: string, status: ExperimentTransferRequestStatus, projectIdOld: string) =>
   createTransferRequest({
     requestId,
     status,

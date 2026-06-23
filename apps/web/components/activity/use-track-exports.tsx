@@ -5,7 +5,7 @@ import type { ActivityEntry, ActivityJobStatus } from "@/components/activity/act
 import * as React from "react";
 import { env } from "~/env";
 
-import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -15,11 +15,11 @@ const FORMAT_LABELS: Record<string, string> = {
   parquet: "Parquet",
 };
 
-function mapStatus(s: ExportRecord["status"]): ActivityJobStatus {
+function mapStatus(s: ExperimentExportRecord["status"]): ActivityJobStatus {
   return s === "completed" ? "succeeded" : s;
 }
 
-function exportEntryId(record: ExportRecord, tableKey: string): string {
+function exportEntryId(record: ExperimentExportRecord, tableKey: string): string {
   // Stable across the export's lifecycle: `exportId` only appears after the
   // first poll, so keying on it would orphan the pending entry (duplicate row,
   // skipped transition toast). `tableKey` + `createdAt` is stable from creation.
@@ -37,7 +37,7 @@ export function useTrackExports(args: {
   experimentId: string;
   tableName: string;
   displayName?: string;
-  exports: ExportRecord[];
+  exports: ExperimentExportRecord[];
 }) {
   const { experimentId, tableName, displayName, exports } = args;
   const { upsert } = useActivity();

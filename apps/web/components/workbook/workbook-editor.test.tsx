@@ -11,7 +11,7 @@ import { assertExists, render, screen, userEvent, waitFor, within } from "@/test
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { WorkbookEditor, createDefaultCell, reorderCellsWithGluedOutput } from "./workbook-editor";
 

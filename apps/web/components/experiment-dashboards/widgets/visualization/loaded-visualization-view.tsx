@@ -6,8 +6,8 @@ import { useMemo } from "react";
 
 import type {
   ExperimentVisualization,
-  VisualizationWidget,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentVisualizationWidget,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import ExperimentVisualizationRenderer from "../../../experiment-visualizations/experiment-visualization-renderer";
@@ -17,7 +17,7 @@ import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { WidgetHeader } from "../shell/widget-header";
 
 export interface LoadedVisualizationViewProps {
-  widget: VisualizationWidget;
+  widget: ExperimentVisualizationWidget;
   visualizationId: string;
   experimentId: string;
 }

@@ -1,4 +1,4 @@
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 interface WidgetDimensionConstraints {
   minW: number;
@@ -8,7 +8,7 @@ interface WidgetDimensionConstraints {
   defaultH?: number;
 }
 
-export function getWidgetMinDimensions(type: DashboardWidget["type"]): WidgetDimensionConstraints {
+export function getWidgetMinDimensions(type: ExperimentDashboardWidget["type"]): WidgetDimensionConstraints {
   switch (type) {
     case "visualization":
       return { minW: 3, minH: 4 };
