@@ -35,8 +35,13 @@ export function transformRadarData(
 
   const colorEntry = dataSourcesByRole(dataSources, "color").at(0);
   const colorKey = colorEntry ? rowKeyForSource(colorEntry.source, colorEntry.index) : undefined;
-  const theta = categories;
-  const thetaClosed = [...theta, theta[0]];
+  // Emit theta as numeric degrees matching the wrapper's tick positions
+  // (`categories[i]` at `i * 360/N`). String theta values would force the
+  // angular axis into category mode while the wrapper sets it linear, so
+  // every point would land at angle 0 (the top).
+  const angleStep = 360 / categories.length;
+  const thetaDegrees = categories.map((_, i) => i * angleStep);
+  const thetaClosed = [...thetaDegrees, thetaDegrees[0]];
 
   const fill = chartConfig.radarFill !== false;
   const fillOpacity = chartConfig.radarFillOpacity ?? 0.4;
