@@ -680,7 +680,6 @@
       "windRoseDirectionBins": "Direction bins",
       "windRoseLabels": "Labels",
       "windRoseOptions": "Wind rose options",
-      "windRoseRadialAxisTitle": "Radial axis title",
       "windRoseShowDirectionLabels": "Show direction labels",
       "windRoseValueBins": "Value bins"
     },
