@@ -83,6 +83,7 @@ export function CheatsheetDialog() {
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogContent
         className="max-h-[70vh] max-w-3xl overflow-y-auto"
+        overlayClassName="bg-transparent pointer-events-none"
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
