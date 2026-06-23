@@ -91,24 +91,28 @@ export function transformCarpetData(
     return { carpetData: [], contourData: [], degenerateReason: "sparseGrid" };
   }
 
-  // Carpet's a is the X factor axis, b is the Y factor axis. Plotly's
-  // `carpet` trace renders in grid mode when `a` is the 1D array of
-  // unique a-values (length M) and `b` is the 1D array of unique
-  // b-values (length N); the cheater projection then lays out a uniform
-  // M×N grid. Emitting M*N expanded arrays without matching `x`/`y` was
-  // the broken middle state — Plotly drew nothing.
-  //
-  // pivotToMatrix returns z[yi][xi]; transpose to the carpet's
-  // [aIdx][bIdx] for the contour overlay (a along the rows, b along the
-  // columns), matching how Plotly's contourcarpet indexes z.
   const aValuesNumeric = toNumericAxis(xCategories);
   const bValuesNumeric = toNumericAxis(yCategories);
   if (aValuesNumeric === null || bValuesNumeric === null) {
-    // Numeric-only role contract should prevent this, but a stale
-    // dataConfig on a renamed column could land here.
     return { carpetData: [], contourData: [], degenerateReason: "singleAxisValue" };
   }
 
+  // Carpet trace: a/b/x/y all length M*N. Without x/y Plotly draws nothing.
+  // x=a, y=b lays the carpet out as a plain rectangular grid.
+  const expandedA: number[] = [];
+  const expandedB: number[] = [];
+  const expandedX: number[] = [];
+  const expandedY: number[] = [];
+  for (let i = 0; i < aValuesNumeric.length; i++) {
+    for (let j = 0; j < bValuesNumeric.length; j++) {
+      expandedA.push(aValuesNumeric[i]);
+      expandedB.push(bValuesNumeric[j]);
+      expandedX.push(aValuesNumeric[i]);
+      expandedY.push(bValuesNumeric[j]);
+    }
+  }
+
+  // pivotToMatrix returns z[yi][xi]; transpose to [aIdx][bIdx] for contourcarpet.
   const carpetZ: number[][] = [];
   for (let i = 0; i < aValuesNumeric.length; i++) {
     const row: number[] = [];
@@ -125,8 +129,10 @@ export function transformCarpetData(
   return {
     carpetData: [
       {
-        a: aValuesNumeric,
-        b: bValuesNumeric,
+        a: expandedA,
+        b: expandedB,
+        x: expandedX,
+        y: expandedY,
         aaxis: { title: xColumn },
         baxis: { title: yColumn },
       },

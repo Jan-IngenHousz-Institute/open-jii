@@ -32,10 +32,11 @@ describe("transformCarpetData", () => {
     expect(result.degenerateReason).toBeNull();
     expect(result.carpetData).toHaveLength(1);
     expect(result.contourData).toHaveLength(1);
-    // Carpet emits unique 1D a/b arrays (length M and N) so Plotly's
-    // cheater projection renders a uniform M × N grid.
-    expect(result.carpetData[0].a).toEqual([1, 2]);
-    expect(result.carpetData[0].b).toEqual([1, 2]);
+    // 2 x 2 grid: 4 expanded (a, b) pairs plus matching x/y for screen coords.
+    expect(result.carpetData[0].a).toHaveLength(4);
+    expect(result.carpetData[0].b).toHaveLength(4);
+    expect(result.carpetData[0].x).toHaveLength(4);
+    expect(result.carpetData[0].y).toHaveLength(4);
     expect(result.contourData[0].a).toEqual([1, 2]);
     expect(result.contourData[0].b).toEqual([1, 2]);
   });
