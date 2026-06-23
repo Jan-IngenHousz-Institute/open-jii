@@ -8,6 +8,7 @@ import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import {
   ArrowUpCircle,
   BookOpen,
@@ -21,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import NextLink from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -73,7 +74,21 @@ export function LinkedWorkbookCard({
 
   const hasNewerPublished =
     !!pinnedVersion && versions.length > 0 && latestVersion.version > pinnedVersion.version;
-  const hasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
+
+  // The upgrade indicator must reflect only fully-settled state. While the
+  // draft is autosaving or its queries are refetching, the server-computed
+  // `isUpgradable` flag is mid-flight and briefly flips, flashing the banner
+  // on and off. Freeze the last settled value until every read and the save
+  // mutation have come to rest, so the banner only changes once state is current.
+  const fetchingWorkbook = useIsFetching({ queryKey: ["workbook", workbookId] });
+  const fetchingVersions = useIsFetching({ queryKey: ["workbookVersions", workbookId] });
+  const savingWorkbook = useIsMutating({ mutationKey: ["workbook", workbookId, "update"] });
+  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook > 0;
+
+  const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
+  const settledHasUpgradeRef = useRef(liveHasUpgrade);
+  if (!isSyncing) settledHasUpgradeRef.current = liveHasUpgrade;
+  const hasUpgrade = settledHasUpgradeRef.current;
 
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
