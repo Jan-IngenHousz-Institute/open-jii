@@ -141,6 +141,80 @@ export function refineAxisType(
  * only flip when the container crosses a breakpoint; full-size charts
  * get the regular layout regardless.
  */
+
+type LegendPosition = NonNullable<PlotlyChartConfig["legendPosition"]>;
+
+/**
+ * Maps a `legendPosition` value to the Plotly `layout.legend` anchor block.
+ * Exported so custom-layout charts (polar / radar / ternary / wind-rose)
+ * can honor the same position dropdown as cartesian charts without
+ * duplicating the anchor presets.
+ */
+export function legendAnchorFor(position: LegendPosition) {
+  // - "right" / "left": paper coords, vertical legend in the side margin.
+  // - "top" / "bottom": container coords so the legend doesn't collide
+  //   with axis tick / title bands (Plotly's `automargin` and legend
+  //   autoexpand don't coordinate).
+  // - "inside-*": paper coords inside the plot area, anchored to a corner
+  //   with a slight inset.
+  const anchors = {
+    right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" },
+    left: {
+      x: 0,
+      y: 1,
+      xref: "container",
+      xanchor: "left",
+      yanchor: "top",
+      orientation: "v",
+    },
+    top: {
+      x: 0.5,
+      y: 1,
+      yref: "container",
+      xanchor: "center",
+      yanchor: "top",
+      orientation: "h",
+    },
+    bottom: {
+      x: 0.5,
+      y: 0,
+      yref: "container",
+      xanchor: "center",
+      yanchor: "bottom",
+      orientation: "h",
+    },
+    "inside-top-right": {
+      x: 0.98,
+      y: 0.98,
+      xanchor: "right",
+      yanchor: "top",
+      orientation: "v",
+    },
+    "inside-top-left": {
+      x: 0.02,
+      y: 0.98,
+      xanchor: "left",
+      yanchor: "top",
+      orientation: "v",
+    },
+    "inside-bottom-right": {
+      x: 0.98,
+      y: 0.02,
+      xanchor: "right",
+      yanchor: "bottom",
+      orientation: "v",
+    },
+    "inside-bottom-left": {
+      x: 0.02,
+      y: 0.02,
+      xanchor: "left",
+      yanchor: "bottom",
+      orientation: "v",
+    },
+  } as const;
+  return anchors[position];
+}
+
 export function createBaseLayout(
   config: PlotlyChartConfig,
   options: {
@@ -220,70 +294,9 @@ export function createBaseLayout(
   //  - "inside-*": paper coords inside the plot area, anchored to a
   //    corner. Slight inset (0.02 / 0.98) keeps the legend off the axis
   //    spines.
-  const baseLegendAnchor = (
-    {
-      right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" } as const,
-      // Y axis ticks + title also live in `margin.l`. Paper coords reconcile
-      // with axis automargin via `max` and end up sharing the same band,
-      // overlapping the ticks; container coords route through
-      // `_reservedMargin` which composes additively.
-      left: {
-        x: 0,
-        y: 1,
-        xref: "container" as const,
-        xanchor: "left" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      top: {
-        x: 0.5,
-        y: 1,
-        yref: "container" as const,
-        xanchor: "center" as const,
-        yanchor: "top" as const,
-        orientation: "h" as const,
-      },
-      bottom: {
-        x: 0.5,
-        y: 0,
-        yref: "container" as const,
-        xanchor: "center" as const,
-        yanchor: "bottom" as const,
-        orientation: "h" as const,
-      },
-      "inside-top-right": {
-        x: 0.98,
-        y: 0.98,
-        xanchor: "right" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      "inside-top-left": {
-        x: 0.02,
-        y: 0.98,
-        xanchor: "left" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      "inside-bottom-right": {
-        x: 0.98,
-        y: 0.02,
-        xanchor: "right" as const,
-        yanchor: "bottom" as const,
-        orientation: "v" as const,
-      },
-      "inside-bottom-left": {
-        x: 0.02,
-        y: 0.02,
-        xanchor: "left" as const,
-        yanchor: "bottom" as const,
-        orientation: "v" as const,
-      },
-    } as const
-  )[effectiveLegendPosition];
+  const baseLegendAnchor = legendAnchorFor(effectiveLegendPosition);
   // When a colorbar shares the right gutter, push the legend a little
-  // further out: `x: 1.18` clears the colorbar bar AND its rotated
-  // title text (default ~50px combined past plot edge).
+  // further out so it clears the colorbar bar and its rotated title.
   const legendAnchor =
     hasColorbar && effectiveLegendPosition === "right"
       ? { ...baseLegendAnchor, x: 1.18 }
