@@ -15,7 +15,7 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExecuteMacroBatchUseCase } from "../application/use-cases/execute-macro-batch/execute-macro-batch";
 
-describe("MacroWebhookController", () => {
+describe("MacroWebhookOrpcController", () => {
   const testApp = TestHarness.App;
   let executeMacroBatchUseCase: ExecuteMacroBatchUseCase;
 
@@ -66,6 +66,7 @@ describe("MacroWebhookController", () => {
 
       vi.spyOn(executeMacroBatchUseCase, "execute").mockResolvedValue(
         success({
+          success: true as const,
           results: [
             { id: "item-1", macro_id: macroId, success: true, output: { processed: true } },
             { id: "item-2", macro_id: macroId, success: true, output: { processed: true } },
@@ -100,6 +101,7 @@ describe("MacroWebhookController", () => {
 
       vi.spyOn(executeMacroBatchUseCase, "execute").mockResolvedValue(
         success({
+          success: true as const,
           results: [{ id: "item-1", macro_id: macroId, success: false, error: "Macro not found" }],
           errors: [`Macro not found: ${macroId}`],
         }),

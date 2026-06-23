@@ -21,7 +21,7 @@ import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/ma
 import { generateHashedFilename } from "../core/models/macro.model";
 import { MacroProtocolRepository } from "../core/repositories/macro-protocol.repository";
 
-describe("MacroController", () => {
+describe("MacroOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let analyticsAdapter: MockAnalyticsAdapter;

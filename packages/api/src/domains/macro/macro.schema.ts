@@ -27,7 +27,7 @@ export const zMacro = z.object({
   description: z.string().nullable(),
   language: zMacroLanguage,
   code: z.string(),
-  sortOrder: z.number().nullable(),
+  sortOrder: z.number().nullish(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
