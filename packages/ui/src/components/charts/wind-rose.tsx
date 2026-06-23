@@ -123,6 +123,10 @@ export function WindRose({
         // text spacing along the axis.
         angle: 0,
         tickangle: 0,
+        // Plotly's auto-ticks pick ~8 values regardless of viewport, which
+        // collide along the short east-axis at typical chart sizes. Cap
+        // the count so labels always have horizontal room.
+        nticks: 5,
         gridcolor: "#E6E6E6",
         showgrid: config.showGrid !== false,
       },
