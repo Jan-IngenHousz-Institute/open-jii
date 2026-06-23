@@ -69,7 +69,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       { key: "p", label: "Protocols", path: `/${locale}/platform/protocols` },
       { key: "m", label: "Macros", path: `/${locale}/platform/macros` },
       { key: "t", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
-      { key: "s", label: "Settings", path: `/${locale}/platform/account/settings` },
+      { key: "s", label: "Settings", path: `/${locale}/platform/account` },
       {
         key: "n",
         label: "Notifications",
@@ -78,7 +78,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       {
         key: "a",
         label: "Account",
-        path: `/${locale}/platform/account/settings`,
+        path: `/${locale}/platform/account`,
       },
     ],
     [locale],

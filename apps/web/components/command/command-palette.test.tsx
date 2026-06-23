@@ -36,7 +36,7 @@ describe("CommandPalette", () => {
       ["Protocols", "/en-US/platform/protocols"],
       ["Macros", "/en-US/platform/macros"],
       ["Transfer requests", "/en-US/platform/transfer-request"],
-      ["Settings", "/en-US/platform/account/settings"],
+      ["Settings", "/en-US/platform/account"],
       ["Create experiment", "/en-US/platform/experiments/new"],
     ];
     for (const [label, path] of cases) {

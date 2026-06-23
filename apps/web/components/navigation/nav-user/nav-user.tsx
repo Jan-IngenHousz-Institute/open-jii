@@ -98,7 +98,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
           {/* ACCOUNT */}
           <DropdownMenuItem asChild>
             <Link
-              href={`/${locale}/platform/account/settings`}
+              href={`/${locale}/platform/account`}
               className="flex w-full cursor-default items-center"
             >
               <Avatar className="bg-muted mr-2 h-4 w-4">
@@ -199,7 +199,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             {/* ACCOUNT */}
             <DropdownMenuItem asChild>
               <Link
-                href={`/${locale}/platform/account/settings`}
+                href={`/${locale}/platform/account`}
                 className="flex w-full cursor-default items-center"
               >
                 <Avatar className="bg-muted mr-2 h-4 w-4">
