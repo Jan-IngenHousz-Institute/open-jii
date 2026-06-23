@@ -4,8 +4,9 @@ import {
   computeScanTimeoutMs,
   estimateProtocolDurationMs,
   resolveNumericRef,
+  resolveProtocolVariables,
   SCAN_TIMEOUT_DEFAULTS,
-} from "./estimate-protocol-duration";
+} from "./multispeq-protocol-estimator";
 
 /**
  * The real "light response curve" protocol (protocol_id 1547) from OJD-1565.
@@ -13,10 +14,12 @@ import {
  *
  * Hand-computed expectation (see assertions below):
  *   v_arrays[0].length = 7  → set_repeats
- *   autogain block (no pulses)                         = 3_000 ms  (SETUP_BLOCK_MS)
- *   ecs_dirk:  (400×1500µs)=600ms + 5000ms preillum, ×3 repeats = 16_800 ms
- *   ftrans:    (300×4000µs)=1200ms + 5000ms preillum, ×1 repeat =  6_200 ms
- *   per run = 26_000 ms  →  ×7 = 182_000 ms
+ *   autogain block (do_once) counted a single time              =   3_000 ms
+ *   ecs_dirk:  (400 pulses × 1 detector × 1500µs)=600ms + 5000ms pre-illum,
+ *              × 3 protocol_repeats = 16_800 ms, × 7 set repeats = 117_600 ms
+ *   ftrans:    (300 pulses × 1 detector × 4000µs)=1200ms + 5000ms pre-illum,
+ *              × 1 repeat = 6_200 ms,             × 7 set repeats =  43_400 ms
+ *   total = 3_000 + 117_600 + 43_400                            = 164_000 ms
  */
 const LIGHT_RESPONSE_CURVE = [
   {
@@ -97,9 +100,44 @@ describe("resolveNumericRef", () => {
   });
 });
 
+describe("resolveProtocolVariables", () => {
+  it("indexes numeric cells as @nN:I plus the occurrence-stepped @sN", () => {
+    const vArrays = [
+      [10, 20],
+      [3000, 6000],
+    ];
+    expect(resolveProtocolVariables(vArrays, 0)).toEqual({
+      "@n0:0": 10,
+      "@n0:1": 20,
+      "@n1:0": 3000,
+      "@n1:1": 6000,
+      "@s0": 10,
+      "@s1": 3000,
+    });
+    expect(resolveProtocolVariables(vArrays, 1)).toMatchObject({ "@s0": 20, "@s1": 6000 });
+  });
+
+  it("leaves @sN unset when the indexed slot is a non-numeric placeholder", () => {
+    expect(resolveProtocolVariables([["p_light", 2500]], 0)).toEqual({ "@n0:1": 2500 });
+    expect(resolveProtocolVariables([["p_light", 2500]], 1)).toEqual({
+      "@n0:1": 2500,
+      "@s0": 2500,
+    });
+  });
+
+  it("clamps out-of-range occurrences to the last numeric value", () => {
+    expect(resolveProtocolVariables([[10, 20]], 5)).toMatchObject({ "@s0": 20 });
+  });
+
+  it("returns empty for missing or empty v_arrays", () => {
+    expect(resolveProtocolVariables([])).toEqual({});
+    expect(resolveProtocolVariables([[]])).toEqual({});
+  });
+});
+
 describe("estimateProtocolDurationMs", () => {
   it("computes the expected duration for the real light-response-curve protocol", () => {
-    expect(estimateProtocolDurationMs(LIGHT_RESPONSE_CURVE)).toBe(182_000);
+    expect(estimateProtocolDurationMs(LIGHT_RESPONSE_CURVE)).toBe(164_000);
   });
 
   it("accounts for set_repeats", () => {
@@ -161,7 +199,72 @@ describe("estimateProtocolDurationMs", () => {
 
   it("accepts a single set object (not wrapped in an array)", () => {
     const single = LIGHT_RESPONSE_CURVE[0];
-    expect(estimateProtocolDurationMs(single)).toBe(182_000);
+    expect(estimateProtocolDurationMs(single)).toBe(164_000);
+  });
+
+  it("multiplies a pulse train by the per-phase detector channel count", () => {
+    const protocol = [
+      {
+        v_arrays: [],
+        set_repeats: 1,
+        // 10 pulses × 2 detectors × 1000µs = 20ms (each channel fires its own pulse)
+        _protocol_set_: [{ pulses: [10], pulse_distance: [1000], detectors: [[3, 4]] }],
+      },
+    ];
+    expect(estimateProtocolDurationMs(protocol)).toBe(20);
+  });
+
+  it("resolves @sN pulse counts per set-repeat occurrence", () => {
+    const protocol = [
+      {
+        // pulses step 20 → 100 across the two set repeats
+        v_arrays: [[20, 100]],
+        set_repeats: 2,
+        _protocol_set_: [{ pulses: ["@s0"], pulse_distance: [1000] }],
+      },
+    ];
+    // occ0: 20 × 1000µs = 20ms, occ1: 100 × 1000µs = 100ms → 120ms
+    expect(estimateProtocolDurationMs(protocol)).toBe(120);
+  });
+
+  it("clamps @sN to the last value when set_repeats runs past the step array", () => {
+    const protocol = [
+      {
+        // 3 set repeats but only 2 step values → the 3rd clamps to the last (100)
+        v_arrays: [[20, 100]],
+        set_repeats: 3,
+        _protocol_set_: [{ pulses: ["@s0"], pulse_distance: [1000] }],
+      },
+    ];
+    // occ0: 20ms, occ1: 100ms, occ2 (clamped): 100ms → 220ms
+    expect(estimateProtocolDurationMs(protocol)).toBe(220);
+  });
+
+  it("adds protocols_delay (seconds) as a wall-clock wait", () => {
+    const protocol = [
+      {
+        v_arrays: [],
+        set_repeats: 1,
+        // 1ms train + 2000ms protocols_delay
+        _protocol_set_: [{ pulses: [1], pulse_distance: [1000], protocols_delay: 2 }],
+      },
+    ];
+    expect(estimateProtocolDurationMs(protocol)).toBe(2001);
+  });
+
+  it("counts a do_once block only once across set_repeats", () => {
+    const protocol = [
+      {
+        v_arrays: [],
+        set_repeats: 3,
+        _protocol_set_: [
+          { autogain: [[1]], do_once: 1, label: "autogain" }, // 3000ms, once
+          { pulses: [10], pulse_distance: [1000] }, // 10ms × 3 repeats
+        ],
+      },
+    ];
+    // 3000 (once) + 10 × 3 = 3030
+    expect(estimateProtocolDurationMs(protocol)).toBe(3030);
   });
 
   it("returns 0 for unusable input rather than throwing", () => {
@@ -191,8 +294,8 @@ describe("estimateProtocolDurationMs", () => {
 
 describe("computeScanTimeoutMs", () => {
   it("applies safety factor and grace to the estimate", () => {
-    // 182_000 × 2 + 10_000
-    expect(computeScanTimeoutMs(LIGHT_RESPONSE_CURVE)).toBe(374_000);
+    // 164_000 × 2 + 10_000
+    expect(computeScanTimeoutMs(LIGHT_RESPONSE_CURVE)).toBe(338_000);
   });
 
   it("floors at minMs so short/garbage protocols still get a sane timeout", () => {

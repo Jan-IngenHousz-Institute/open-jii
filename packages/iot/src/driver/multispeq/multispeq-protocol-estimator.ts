@@ -36,13 +36,19 @@
  * - `123`        → literal number
  * - `"#lN"`      → length of `v_arrays[N]`
  * - `"@nN:I"`    → `v_arrays[N][I]`
- * - `"@sN"`      → per-iteration step value (intensity, not duration) → unresolved
+ * - `"@sN"`      → `v_arrays[N][occurrence]` (per set-repeat step value)
+ *
+ * This module is the single origin of the MultispeQ protocol timing model: a
+ * phase with N pulses, K detector channels and D µs `pulse_distance` lasts
+ * N*K*D µs (one pulse per channel), plus `pre_illumination` and
+ * `protocols_delay` waits. apps/web's `pipeline.ts` reuses `resolveProtocolVariables`
+ * from here so the estimate and the rendered chart resolve variables identically.
  */
 
 type Json = unknown;
 
-/** A 2-D table of numeric variable arrays referenced by `@n` / `#l` / `@s`. */
-type VArrays = number[][];
+/** A 2-D table of variable arrays referenced by `@n` / `#l` / `@s` (cells may be non-numeric). */
+export type VArrays = unknown[][];
 
 /** Fixed overhead (ms) attributed to a setup block (e.g. `autogain`). */
 const SETUP_BLOCK_MS = 3_000;
@@ -74,9 +80,21 @@ function asNumber(value: Json): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function isTruthy(value: Json): boolean {
+  return value === true || value === 1;
+}
+
+/** Phase lookup with `getSafe` fallback: a short array reuses its last entry. */
+function getSafe(lst: Json[], idx: number, fallback: Json): Json {
+  if (lst.length === 0) return fallback;
+  return idx < lst.length ? lst[idx] : lst[lst.length - 1];
+}
+
 /**
- * Resolve a numeric reference against the protocol's `v_arrays`.
- * Returns `undefined` when the reference is unknown or step-dependent (`@s`).
+ * Resolve an occurrence-independent numeric reference against `v_arrays`:
+ * literal numbers, `#lN` (array length) and `@nN:I` (a fixed cell). Returns
+ * `undefined` for `@sN` step references — those depend on the set-repeat
+ * occurrence and are resolved through {@link resolveProtocolVariables}.
  */
 export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefined {
   const literal = asNumber(ref);
@@ -95,12 +113,62 @@ export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefin
     return asNumber(vArrays[Number(indexMatch[1])]?.[Number(indexMatch[2])]);
   }
 
-  // "@sN" → per-iteration step value; affects intensity, not duration.
   return undefined;
 }
 
-/** Estimated runtime (ms) of a single `_protocol_set_` block. */
-function estimateBlockMs(block: Json, vArrays: VArrays): number {
+/**
+ * Build the `@nN:I` / `@sN` numeric lookup table for one set-repeat occurrence —
+ * the single origin of MultispeQ variable resolution, shared by this estimator
+ * and apps/web's `pipeline.ts` (its `resolveVariables` delegates here).
+ *
+ * Every numeric cell of `v_arrays[N]` is exposed as `@nN:I`. `@sN` is the
+ * device's per-occurrence step value: `v_arrays[N][occurrence]`, clamped to the
+ * last numeric entry when the occurrence runs past the array. A non-numeric slot
+ * in range (e.g. the `"p_light"` runtime placeholder) leaves `@sN` unset so the
+ * caller can fall back to the device's measured value.
+ */
+export function resolveProtocolVariables(vArrays: VArrays, occurrence = 0): Record<string, number> {
+  const lookup: Record<string, number> = {};
+  vArrays.forEach((arr, i) => {
+    if (!Array.isArray(arr) || arr.length === 0) return;
+    arr.forEach((val, j) => {
+      const n = asNumber(val);
+      if (n !== undefined) lookup[`@n${i}:${j}`] = Math.trunc(n);
+    });
+    let chosen: number | undefined;
+    if (occurrence < arr.length) {
+      const indexed = asNumber(arr[occurrence]);
+      if (indexed !== undefined) chosen = Math.trunc(indexed);
+    } else {
+      for (const val of arr) {
+        const n = asNumber(val);
+        if (n !== undefined) chosen = Math.trunc(n);
+      }
+    }
+    if (chosen !== undefined) lookup[`@s${i}`] = chosen;
+  });
+  return lookup;
+}
+
+/** Resolve a reference for an occurrence: literal / `#lN` / `@nN:I`, then `@sN`. */
+function resolveField(
+  ref: Json,
+  vArrays: VArrays,
+  vars: Record<string, number>,
+): number | undefined {
+  const base = resolveNumericRef(ref, vArrays);
+  if (base !== undefined) return base;
+  if (typeof ref === "string" && ref in vars) return vars[ref];
+  return undefined;
+}
+
+/** Detector channels in a phase — the device fires one pulse per channel. */
+function channelCount(detectorsEntry: Json): number {
+  return Array.isArray(detectorsEntry) ? Math.max(1, detectorsEntry.length) : 1;
+}
+
+/** Estimated runtime (ms) of a single `_protocol_set_` block for one occurrence. */
+function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, number>): number {
   if (!isRecord(block)) return 0;
 
   // Setup blocks (autogain, etc.) carry a small fixed cost rather than a pulse train.
@@ -111,29 +179,35 @@ function estimateBlockMs(block: Json, vArrays: VArrays): number {
 
   const pulses = block.pulses as Json[];
   const pulseDistance = Array.isArray(block.pulse_distance) ? (block.pulse_distance as Json[]) : [];
+  const detectors = Array.isArray(block.detectors) ? (block.detectors as Json[]) : [];
 
-  // Pulse train: Σ pulses[i] × pulse_distance[i] (µs) → ms.
+  // Pulse train: Σ pulses[i] × channels[i] × pulse_distance[i] (µs) → ms. Each
+  // detector channel fires as its own pulse spaced by pulse_distance, so a phase
+  // with K detectors lasts K× a single-detector phase — the same N×K×D model
+  // apps/web's pipeline lays the chart out on. Entries may be refs (e.g. "@s8",
+  // "@n0:1"); resolve them so a referenced count/distance isn't read as 0.
   let pulseTrainUs = 0;
   for (let i = 0; i < pulses.length; i++) {
-    // pulses / pulse_distance entries may be protocol refs (e.g. "@n0:1"), not
-    // just literals — resolve them so a referenced count/distance isn't read as
-    // 0, which would under-size the timeout and abort a valid long measurement.
-    const count = resolveNumericRef(pulses[i], vArrays) ?? 0;
-    const distanceUs = resolveNumericRef(pulseDistance[i], vArrays) ?? 0;
-    pulseTrainUs += count * distanceUs;
+    const count = resolveField(pulses[i], vArrays, vars) ?? 0;
+    const distanceUs = resolveField(getSafe(pulseDistance, i, 0), vArrays, vars) ?? 0;
+    const channels = channelCount(getSafe(detectors, i, [0]));
+    pulseTrainUs += count * channels * distanceUs;
   }
   const pulseTrainMs = pulseTrainUs / 1000;
 
-  // Pre-illumination duration lives at index 2 of the pre_illumination tuple.
+  // Pre-illumination duration (ms) lives at index 2 of the pre_illumination tuple.
   const preIllumination = Array.isArray(block.pre_illumination)
     ? (block.pre_illumination as Json[])
     : [];
-  const preIlluminationMs = resolveNumericRef(preIllumination[2], vArrays) ?? 0;
+  const preIlluminationMs = resolveField(preIllumination[2], vArrays, vars) ?? 0;
 
-  const repeats = Math.max(1, resolveNumericRef(block.protocol_repeats, vArrays) ?? 1);
-  const averages = Math.max(1, resolveNumericRef(block.protocol_averages, vArrays) ?? 1);
+  const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
+  const averages = Math.max(1, resolveField(block.protocol_averages, vArrays, vars) ?? 1);
+  // protocols_delay is a wall-clock wait (seconds) the device holds before each
+  // block run; the chart pipeline counts it too. Scales with repeats, not averages.
+  const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
 
-  return (pulseTrainMs + preIlluminationMs) * repeats * averages;
+  return (pulseTrainMs + preIlluminationMs) * repeats * averages + delayMs * repeats;
 }
 
 /** Estimated runtime (ms) of one top-level protocol-set object. */
@@ -144,11 +218,19 @@ function estimateSetMs(set: Json): number {
   const blocks = Array.isArray(set._protocol_set_) ? (set._protocol_set_ as Json[]) : [];
   const setRepeats = Math.max(1, resolveNumericRef(set.set_repeats, vArrays) ?? 1);
 
-  let perRunMs = 0;
-  for (const block of blocks) {
-    perRunMs += estimateBlockMs(block, vArrays);
+  // Walk each set-repeat occurrence so `@sN` step values (pulse counts/distances
+  // that change per repeat) are summed for real rather than approximated.
+  let total = 0;
+  for (let occurrence = 0; occurrence < setRepeats; occurrence++) {
+    const vars = resolveProtocolVariables(vArrays, occurrence);
+    for (const block of blocks) {
+      // `do_once` blocks (e.g. autogain calibration) run a single time for the
+      // whole set, not once per repeat.
+      if (occurrence > 0 && isRecord(block) && isTruthy(block.do_once)) continue;
+      total += estimateBlockMs(block, vArrays, vars);
+    }
   }
-  return perRunMs * setRepeats;
+  return total;
 }
 
 /**

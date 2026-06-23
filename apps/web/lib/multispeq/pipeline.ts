@@ -3,9 +3,16 @@
  * Decodes a PhotosynQ/MultispeQ measurement (sample_raw + protocol JSON) into
  * input (LED) and output (detector) timeseries records.
  *
- * Timing model: for a phase with N pulses, D µs pulse_distance, and K active
- * detectors, each pulse emits one timestamp; phase duration is N*D, not N*K*D.
+ * Timing model: a phase fires one pulse per detector channel, each spaced by
+ * pulse_distance, so a phase with N pulses, K detector channels and D µs
+ * pulse_distance lasts N*K*D µs. See outputRecords / inputRecords below.
+ *
+ * Variable resolution (`@nX:Y` / `@sX`) lives in `@repo/iot`
+ * (`resolveProtocolVariables`) so this decoder and the mobile protocol estimator
+ * resolve protocol variables from a single shared origin.
  */
+
+import { resolveProtocolVariables } from "@repo/iot";
 
 export const LED_NAMES: Record<number, string> = {
   1: "530 nm (green, body)",
@@ -139,24 +146,8 @@ export function resolveVariables(
   protocolJson: ProtocolJson,
   occurrence = 0,
 ): Record<string, number> {
-  const lookup: Record<string, number> = {};
-  const arrs = protocolJson.v_arrays ?? [];
-  arrs.forEach((arr, i) => {
-    if (!Array.isArray(arr) || arr.length === 0) return;
-    arr.forEach((val, j) => {
-      if (isFiniteNumber(val)) lookup[`@n${i}:${j}`] = Math.trunc(val);
-    });
-    let chosen: number | null = null;
-    if (occurrence < arr.length) {
-      const indexed = arr[occurrence];
-      if (isFiniteNumber(indexed)) chosen = Math.trunc(indexed);
-    } else {
-      // Out-of-range: clamp to the last numeric in the array.
-      for (const val of arr) if (isFiniteNumber(val)) chosen = Math.trunc(val);
-    }
-    if (chosen != null) lookup[`@s${i}`] = chosen;
-  });
-  return lookup;
+  // Single origin in @repo/iot, shared with the mobile protocol estimator.
+  return resolveProtocolVariables(protocolJson.v_arrays ?? [], occurrence);
 }
 
 function resolveInt(val: unknown, variables: Record<string, number>): number | null {
