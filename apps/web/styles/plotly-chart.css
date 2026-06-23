@@ -25,15 +25,15 @@
 
 .js-plotly-plot .modebar-container .modebar-btn svg,
 .js-plotly-plot .modebar-container .modebar-btn svg path {
-  fill: hsl(var(--muted-foreground)) !important;
+  fill: var(--muted-foreground) !important;
 }
 
 .js-plotly-plot .modebar-container .modebar-btn:hover svg,
 .js-plotly-plot .modebar-container .modebar-btn:hover svg path {
-  fill: hsl(var(--foreground)) !important;
+  fill: var(--foreground) !important;
 }
 
 .js-plotly-plot .modebar-container .modebar-btn.active svg,
 .js-plotly-plot .modebar-container .modebar-btn.active svg path {
-  fill: hsl(var(--primary)) !important;
+  fill: var(--primary) !important;
 }

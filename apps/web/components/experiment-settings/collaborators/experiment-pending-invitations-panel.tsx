@@ -89,7 +89,7 @@ export function ExperimentPendingInvitationsPanel({
               {t("experimentSettings.pendingInvite")}
             </span>
           </div>
-          <div className="flex flex-shrink-0">
+          <div className="flex shrink-0">
             <Select
               value={invitation.role}
               disabled={isArchived || !isAdmin}

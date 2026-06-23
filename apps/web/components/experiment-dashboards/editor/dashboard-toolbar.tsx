@@ -254,7 +254,7 @@ function SectionTab({ section, isActive, label, onSelect }: SectionTabProps) {
       className={cn(
         "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
         isActive
-          ? "bg-background text-foreground shadow-sm"
+          ? "bg-background text-foreground shadow-xs"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

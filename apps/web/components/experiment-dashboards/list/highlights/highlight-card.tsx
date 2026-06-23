@@ -26,7 +26,7 @@ export function HighlightCard({ dashboard, href, thumbnailMaxHeight }: Highlight
       <Link
         href={href}
         aria-label={dashboard.name}
-        className="focus-visible:ring-primary/40 absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2"
+        className="focus-visible:ring-primary/40 focus-visible:outline-hidden absolute inset-0 z-10 rounded-xl focus-visible:ring-2"
       />
       <CardContent className="space-y-3 pt-6">
         <div className="min-w-0">

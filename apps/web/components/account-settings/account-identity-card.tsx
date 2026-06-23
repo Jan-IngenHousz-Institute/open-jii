@@ -65,7 +65,6 @@ export function AccountIdentityCard({
                 onSave={onSaveName}
                 isPending={isPending}
                 actionsInline
-                centerTitle
               />
             </div>
 

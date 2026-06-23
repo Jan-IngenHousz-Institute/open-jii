@@ -9,13 +9,13 @@ import { cn } from "@repo/ui/lib/utils";
 export const WidgetCardTabSlotContext = createContext<HTMLDivElement | null>(null);
 
 const ROOT_INTERACTIVE_CLASS =
-  "focus-visible:ring-primary/40 focus-visible:outline-none focus-visible:ring-2";
+  "focus-visible:ring-primary/40 focus-visible:outline-hidden focus-visible:ring-2";
 const ROOT_BASE_CLASS = "group/widget relative flex h-full w-full flex-col";
 const INNER_BASE_CLASS =
   "bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border transition-[border-color,box-shadow]";
 // Drop rounded corners so resize handles align with the box corners.
 const INNER_SELECTED_CLASS =
-  "dashboard-widget--selected border-primary rounded-none shadow-[0_0_0_1px_hsl(var(--primary))]";
+  "dashboard-widget--selected border-primary rounded-none shadow-[0_0_0_1px_var(--primary)]";
 
 interface WidgetCardProps {
   children: ReactNode;

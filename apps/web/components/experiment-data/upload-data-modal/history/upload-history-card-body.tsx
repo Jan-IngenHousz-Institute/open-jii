@@ -29,7 +29,7 @@ export const UploadHistoryCardBody = React.forwardRef<HTMLDivElement, UploadHist
         className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${UPLOAD_STATUS_BORDER_COLOR[upload.status]}${className ? ` ${className}` : ""}`}
         {...props}
       >
-        <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+        <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
           <Database className="h-4 w-4 text-gray-500 dark:text-gray-400" />
         </div>
 
@@ -67,7 +67,7 @@ export const UploadHistoryCardBody = React.forwardRef<HTMLDivElement, UploadHist
           </div>
         </div>
 
-        <span className="text-muted-foreground hidden flex-shrink-0 text-xs sm:inline">
+        <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
           {t("experimentData.uploadDataModal.history.uploadTitle", { number: index })}
         </span>
       </div>

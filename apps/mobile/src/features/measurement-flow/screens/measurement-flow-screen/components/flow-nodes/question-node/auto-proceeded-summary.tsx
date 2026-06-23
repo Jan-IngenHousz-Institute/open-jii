@@ -68,7 +68,7 @@ export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProc
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
-              className="text-foreground flex-shrink text-base font-semibold"
+              className="text-foreground shrink text-base font-semibold"
             >
               {getAnswer(iterationCount, n.id)}
             </Text>

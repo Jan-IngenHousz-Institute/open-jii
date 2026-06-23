@@ -14,20 +14,3 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
-
-// matchMedia is not implemented in jsdom but used by useIsMobile / useBreakpoint.
-// Default to a non-matching (desktop) result so responsive components render
-// their wide layout in tests.
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
-});
