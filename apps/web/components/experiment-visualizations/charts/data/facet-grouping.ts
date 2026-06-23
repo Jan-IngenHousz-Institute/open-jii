@@ -73,6 +73,20 @@ export function buildFacetSeries<TSeries>(
     }
   }
 
+  // Alphabetical sort so palette indices stay stable and match the
+  // color-map picker's swatch order (it also sorts alphabetically).
+  // Keep keys + values aligned by sorting via a paired index.
+  if (globalCategoryKeys.length > 1) {
+    const order = globalCategoryKeys.map((_, i) => i);
+    order.sort((a, b) => globalCategoryKeys[a].localeCompare(globalCategoryKeys[b]));
+    const sortedKeys = order.map((i) => globalCategoryKeys[i]);
+    const sortedValues = order.map((i) => globalCategoryValues[i]);
+    globalCategoryKeys.length = 0;
+    globalCategoryKeys.push(...sortedKeys);
+    globalCategoryValues.length = 0;
+    globalCategoryValues.push(...sortedValues);
+  }
+
   const facetGroups: { key: string; label: string; rows: Record<string, unknown>[] }[] = [];
   if (groupMap) {
     for (const [key, groupRows] of groupMap) {

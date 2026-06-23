@@ -392,6 +392,13 @@ export function createBaseLayout(
       bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
       bordercolor: gridColor,
       borderwidth: 1,
+      // Force normal trace order so the legend list stays consistent
+      // across stack modes. Plotly's default reverses the order when
+      // traces are stacked (top-of-stack shown first), which made the
+      // same category appear at different positions in the legend
+      // between stacked / non-stacked and looked like the colors had
+      // shifted.
+      traceorder: "normal",
       font: {
         size: veryCompact ? 9 : compact ? 10 : snug ? 11 : 12,
         color: textColor,

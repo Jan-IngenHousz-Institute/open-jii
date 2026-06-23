@@ -155,7 +155,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
 
       {hasMultipleSeries ? (
         <div className="space-y-3">
-          {seriesKeys.map((seriesKey) => (
+          {seriesKeys.map((seriesKey, seriesIndex) => (
             <CategorySwatchList
               key={seriesKey}
               heading={seriesKey}
@@ -163,6 +163,10 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
               colorMap={colorMap}
               keyFor={(c) => composeColorMapKey(seriesKey, c.key)}
               fallbackKeyFor={(c) => c.key}
+              // Match the renderer's palette offset (`catIndex + seriesOrdinal * N`)
+              // so the default swatch shown here equals the color the chart
+              // actually draws for that (series, category) pair.
+              paletteIndexFor={(_c, i) => seriesIndex * categories.length + i}
               onSet={setOverride}
               onClear={clearOverride}
             />
@@ -173,6 +177,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
           categories={categories}
           colorMap={colorMap}
           keyFor={(c) => c.key}
+          paletteIndexFor={(_c, i) => i}
           onSet={setOverride}
           onClear={clearOverride}
         />
@@ -197,6 +202,10 @@ interface CategorySwatchListProps {
    *  the multi-series mode so categories inherit the plain entry when no
    *  series-specific override is set). */
   fallbackKeyFor?: (c: Category) => string;
+  /** Palette index for a row when nothing in `colorMap` matches. Must
+   *  mirror the renderer's index choice so swatches show what the chart
+   *  would actually draw (renderer uses `catIndex + seriesOrdinal * N`). */
+  paletteIndexFor: (c: Category, i: number) => number;
   onSet: (mapKey: string, hex: string) => void;
   onClear: (mapKey: string) => void;
 }
@@ -207,6 +216,7 @@ function CategorySwatchList({
   colorMap,
   keyFor,
   fallbackKeyFor,
+  paletteIndexFor,
   onSet,
   onClear,
 }: CategorySwatchListProps) {
@@ -223,7 +233,8 @@ function CategorySwatchList({
             const explicit = colorMap[mapKey];
             const fallbackKey = fallbackKeyFor?.(c);
             const fallbackHit = fallbackKey ? colorMap[fallbackKey] : undefined;
-            const effective = explicit ?? fallbackHit ?? getCategoryColor(i, colorMap, c.key);
+            const effective =
+              explicit ?? fallbackHit ?? getCategoryColor(paletteIndexFor(c, i), colorMap, c.key);
             const isOverridden = Boolean(explicit);
             return (
               <li key={mapKey} className="flex items-center gap-2 py-0.5">

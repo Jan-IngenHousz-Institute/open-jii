@@ -92,15 +92,22 @@ export function transformCartesianData(
   const globalCategoryLabels: (string | number | null)[] = [];
   if (isCategoricalColor && colorColumn) {
     const seen = new Set<string>();
+    const pending: { key: string; label: string | number | null }[] = [];
     for (const row of rows) {
       const raw = row[colorColumn];
       const key = toBucketKey(raw);
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
+      pending.push({ key, label: raw == null ? null : (raw as string | number) });
+    }
+    // Alphabetical sort so palette indices stay stable across renders and
+    // match the swatch order shown in the color-map picker (which also
+    // sorts alphabetically). Row-fetch order leaked SQL ordering into the
+    // legend palette.
+    pending.sort((a, b) => a.key.localeCompare(b.key));
+    for (const { key, label } of pending) {
       globalCategoryKeys.push(key);
-      globalCategoryLabels.push(raw == null ? null : (raw as string | number));
+      globalCategoryLabels.push(label);
     }
   }
 
