@@ -57,6 +57,8 @@
     "cellSummary": {
       "protocol_one": "{{count}} Protocol",
       "protocol_other": "{{count}} Protocols",
+      "command_one": "{{count}} Command",
+      "command_other": "{{count}} Commands",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macros",
       "question_one": "{{count}} Question",
@@ -73,7 +75,7 @@
     "expand": "Expand output",
     "collapse": "Collapse output",
     "clear": "Clear output",
-    "empty": "No measurement data available - run a protocol cell first",
+    "empty": "No measurement data available - run a protocol or command cell first",
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
