@@ -89,7 +89,7 @@ export const violinPlotDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: ViolinColorShelf,
     summary: (form) => {

@@ -360,6 +360,16 @@
       "colorMode": "Mode",
       "colorModeCategorical": "Categorical (per value)",
       "colorModeCategoricalHelp": "Each unique value gets its own color. Cycles through the palette above past 12.",
+      "colorMap": {
+        "title": "Category colors",
+        "resetAll": "Reset all",
+        "resetOne": "Reset {{name}} to palette color",
+        "pickerLabel": "Pick color for {{name}}",
+        "loading": "Loading category values...",
+        "empty": "No values available for this column yet.",
+        "truncated": "Showing the first {{count}} values; the rest fall back to the palette.",
+        "nullLabel": "(empty)"
+      },
       "colorModeContinuous": "Continuous (gradient)",
       "filters": "Filters",
       "groupBy": "Group by",

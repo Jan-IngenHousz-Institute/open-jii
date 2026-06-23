@@ -5,8 +5,8 @@ import { useMemo } from "react";
 
 import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
 
+import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";
 import { FacetShelf } from "../../../../workspace/shelves/facet-shelf";
-import { GroupByShelf } from "../../../../workspace/shelves/group-by-shelf";
 import { XAxisShelf } from "../../../../workspace/shelves/x-axis-shelf";
 import { YAxisShelf } from "../../../../workspace/shelves/y-axis-shelf";
 import { dataSourcesByRole, firstDataSourceByRole } from "../../../data/data-sources";
@@ -34,10 +34,10 @@ function LineYShelf({ form, columns }: ChartPanelProps) {
 }
 
 function LineGroupShelf({ form, columns, flat }: ChartPanelProps) {
-  // Same `role: "color"` columns scatter uses; the GroupByShelf surfaces
-  // them with the right verbiage (and a focused UI) for line.
+  // Same `role: "color"` columns scatter uses; surfaced under the unified
+  // Group by shelf (categorical-only — line traces don't accept gradients).
   const groupColumns = useMemo(() => filterColumnsForRole(columns, "line", "color"), [columns]);
-  return <GroupByShelf form={form} columns={groupColumns} flat={flat} />;
+  return <ColorDimensionShelf form={form} columns={groupColumns} categoricalOnly flat={flat} />;
 }
 
 function LineFacetShelfWrapper({ form, columns, flat }: ChartPanelProps) {

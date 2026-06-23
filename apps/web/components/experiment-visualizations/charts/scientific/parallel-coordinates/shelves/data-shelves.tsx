@@ -59,7 +59,7 @@ export const parallelCoordinatesDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: ParcoordsColorShelf,
     summary: (form) => {

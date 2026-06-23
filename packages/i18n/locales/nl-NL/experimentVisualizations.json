@@ -279,6 +279,16 @@
       "barYAxisHelp": "Optioneel. Laat leeg om rijen per X-waarde te tellen.",
       "colorDimension": "Color dimension",
       "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
+      "colorMap": {
+        "title": "Category colors",
+        "resetAll": "Reset all",
+        "resetOne": "Reset {{name}} to palette color",
+        "pickerLabel": "Pick color for {{name}}",
+        "loading": "Loading category values...",
+        "empty": "No values available for this column yet.",
+        "truncated": "Showing the first {{count}} values; the rest fall back to the palette.",
+        "nullLabel": "(empty)"
+      },
       "facetDimension": "Facet (kleine veelvouden)",
       "facetNone": "Geen (één grafiek)",
       "facetHelp": "Splitst de grafiek op in één subplot per unieke waarde van de gekozen kolom. Pas de rasterindeling aan in het Stijl-tabblad.",

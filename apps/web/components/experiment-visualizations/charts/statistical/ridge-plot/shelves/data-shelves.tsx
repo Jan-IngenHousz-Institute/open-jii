@@ -50,7 +50,7 @@ export const ridgePlotDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: RidgeColorShelf,
     summary: (form) => {
