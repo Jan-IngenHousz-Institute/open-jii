@@ -24,7 +24,7 @@ const macroItemVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
         false: "border-gray-200 bg-white",
       },
     },

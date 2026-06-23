@@ -23,7 +23,7 @@ const cardVariants = cva("my-2 rounded-xl", {
       teal: "bg-jii-primary",
     },
     padded: { true: "p-4", false: "p-0" },
-    flat: { true: "", false: "shadow-sm shadow-black/10" },
+    flat: { true: "", false: "shadow-xs shadow-black/10" },
   },
 });
 

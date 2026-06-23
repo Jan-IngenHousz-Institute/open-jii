@@ -57,7 +57,7 @@ export function ExperimentsScreen() {
 
         {selectedExperimentId && (
           <TouchableOpacity
-            className="border-border bg-surface h-11 w-11 items-center justify-center rounded-lg border shadow-sm shadow-black/10"
+            className="border-border bg-surface shadow-xs h-11 w-11 items-center justify-center rounded-lg border shadow-black/10"
             onPress={handleRefresh}
             disabled={isFetching}
           >

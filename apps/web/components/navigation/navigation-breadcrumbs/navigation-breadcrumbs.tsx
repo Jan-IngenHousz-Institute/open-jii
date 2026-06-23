@@ -97,7 +97,7 @@ export function Breadcrumbs({ locale }: BreadcrumbsProps) {
                   href={toInternalHref(item.href)}
                   className={cn(
                     "hover:text-foreground transition-colors",
-                    "focus-visible:ring-ring focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    "focus-visible:ring-ring focus-visible:outline-hidden focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2",
                   )}
                 >
                   {title}

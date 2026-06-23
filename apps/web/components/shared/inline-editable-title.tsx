@@ -18,24 +18,7 @@ interface InlineEditableTitleProps {
   actions?: ReactNode;
   /** When true, actions render right after the title instead of pushed to the row's far end. */
   actionsInline?: boolean;
-  /** Center the title on mobile (left-aligned from `sm` up). */
-  centerTitle?: boolean;
 }
-
-const rootVariants = cva("flex min-w-0 items-center gap-2", {
-  variants: {
-    actionsInline: { true: "", false: "justify-between" },
-    centerTitle: { true: "w-full justify-center sm:w-auto sm:justify-start", false: "" },
-  },
-  defaultVariants: { actionsInline: false, centerTitle: false },
-});
-
-const editRowVariants = cva("flex min-w-0 items-center gap-2", {
-  variants: {
-    centerTitle: { true: "w-full", false: "flex-1" },
-  },
-  defaultVariants: { centerTitle: false },
-});
 
 const titleVariants = cva("text-2xl transition-all duration-300", {
   variants: {
@@ -43,23 +26,11 @@ const titleVariants = cva("text-2xl transition-all duration-300", {
       true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2 group",
       false: "",
     },
-    centerTitle: { true: "relative", false: "" },
   },
-  defaultVariants: { editable: false, centerTitle: false },
+  defaultVariants: {
+    editable: false,
+  },
 });
-
-const editIconVariants = cva(
-  "text-muted-foreground h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100",
-  {
-    variants: {
-      centerTitle: {
-        true: "absolute left-full top-1/2 ml-2 -translate-y-1/2",
-        false: "ml-2 inline",
-      },
-    },
-    defaultVariants: { centerTitle: false },
-  },
-);
 
 export function InlineEditableTitle({
   name,
@@ -69,7 +40,6 @@ export function InlineEditableTitle({
   badges,
   actions,
   actionsInline = false,
-  centerTitle = false,
 }: InlineEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -103,9 +73,11 @@ export function InlineEditableTitle({
   };
 
   return (
-    <div className={rootVariants({ actionsInline, centerTitle })}>
+    <div
+      className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
+    >
       {isEditing ? (
-        <div className={editRowVariants({ centerTitle })}>
+        <div className="flex flex-1 items-center gap-2">
           <Input
             value={editedTitle}
             onChange={(e) => setEditedTitle(e.target.value)}
@@ -118,40 +90,35 @@ export function InlineEditableTitle({
                 handleCancel();
               }
             }}
-            className="min-w-0 flex-1 text-lg font-semibold sm:text-2xl"
+            className="min-w-[300px] flex-1 text-2xl font-semibold"
             disabled={isPending}
             autoFocus
             onBlur={handleBlur}
           />
           <Button
             variant="secondary"
-            size="icon"
-            className="shrink-0"
             onClick={handleCancel}
             disabled={isPending}
             data-role="edit-action"
             aria-label="Cancel"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </Button>
           <Button
-            size="icon"
-            className="shrink-0"
             onClick={handleSave}
             disabled={isPending}
             data-role="edit-action"
             aria-label="Save"
           >
-            <Check className="h-5 w-5" />
+            <Check className="h-6 w-6" />
           </Button>
         </div>
       ) : (
-        <CardTitle
-          className={titleVariants({ editable: hasAccess, centerTitle })}
-          onClick={handleClick}
-        >
-          <span className="min-w-0 break-words">{name}</span>
-          {hasAccess && <Pencil className={editIconVariants({ centerTitle })} />}
+        <CardTitle className={titleVariants({ editable: hasAccess })} onClick={handleClick}>
+          {name}
+          {hasAccess && (
+            <Pencil className="text-muted-foreground ml-2 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+          )}
         </CardTitle>
       )}
 

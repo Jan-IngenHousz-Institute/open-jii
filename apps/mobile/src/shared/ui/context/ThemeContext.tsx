@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colorScheme } from "nativewind";
 import React, { createContext, useState, useEffect } from "react";
 import { Appearance } from "react-native";
 import { Theme, darkTheme, lightTheme } from "~/shared/constants/theme";
@@ -55,7 +54,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    colorScheme.set(themePreference);
+    Appearance.setColorScheme(themePreference);
   }, [themePreference]);
 
   const changeTheme = async (newPreference: ThemePreference) => {

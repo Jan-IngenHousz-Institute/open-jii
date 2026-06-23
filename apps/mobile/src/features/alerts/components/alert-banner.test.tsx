@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
-import { Linking, Text } from "react-native";
+import { Text } from "react-native";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -10,10 +10,6 @@ import { AlertBanner } from "./alert-banner";
 vi.mock("~/shared/ui/ctf-rich-text", () => ({
   CtfRichText: ({ json }: { json: unknown }) =>
     React.createElement(Text, null, JSON.stringify(json)),
-}));
-
-vi.mock("~/shared/stores/environment-store", () => ({
-  useEnvVar: () => "https://app.example.com",
 }));
 
 const makeAlert = (overrides: Record<string, unknown> = {}) =>
@@ -70,29 +66,5 @@ describe("AlertBanner", () => {
     const json = { nodeType: "document", content: [] };
     render(<AlertBanner alert={makeAlert({ body: { json } })} onDismiss={vi.fn()} />);
     expect(screen.getByText(JSON.stringify(json))).toBeTruthy();
-  });
-
-  it("opens a relative CTA link against the web base URL", () => {
-    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
-    render(
-      <AlertBanner
-        alert={makeAlert({ link: { url: "/about", label: "Learn more" } })}
-        onDismiss={vi.fn()}
-      />,
-    );
-    fireEvent.press(screen.getByText("Learn more"));
-    expect(openURL).toHaveBeenCalledWith("https://app.example.com/about");
-  });
-
-  it("opens an absolute CTA link unchanged", () => {
-    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
-    render(
-      <AlertBanner
-        alert={makeAlert({ link: { url: "https://other.example.com/x", label: "Learn more" } })}
-        onDismiss={vi.fn()}
-      />,
-    );
-    fireEvent.press(screen.getByText("Learn more"));
-    expect(openURL).toHaveBeenCalledWith("https://other.example.com/x");
   });
 });

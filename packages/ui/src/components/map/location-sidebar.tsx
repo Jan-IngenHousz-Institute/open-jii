@@ -78,7 +78,7 @@ export const LocationSidebarEntry = ({
           {/* Location Name */}
           <div className="flex items-start gap-2">
             <MapPin
-              className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+              className={`mt-0.5 h-4 w-4 shrink-0 ${
                 isSelected ? "text-jii-dark-green" : "text-gray-500"
               }`}
             />

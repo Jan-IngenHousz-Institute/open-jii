@@ -91,7 +91,7 @@ export function VariantExpandedContent({ data }: { data: string }) {
       <Button
         variant="ghost"
         size="sm"
-        className="z-1 absolute right-12 top-8 h-7 border bg-white/90 px-2 shadow-sm backdrop-blur-sm hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
+        className="z-1 shadow-xs backdrop-blur-xs absolute right-12 top-8 h-7 border bg-white/90 px-2 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
         onClick={handleCopy}
         title={t("common.copy")}
       >

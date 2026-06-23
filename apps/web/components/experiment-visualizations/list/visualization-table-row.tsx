@@ -92,7 +92,7 @@ export function VisualizationTableRow({
         <TableCell className="px-6 py-3 text-[13px] font-semibold text-[#011111]">
           <Link
             href={viewHref}
-            className="focus-visible:ring-primary/40 hover:underline focus-visible:outline-none focus-visible:ring-2"
+            className="focus-visible:ring-primary/40 focus-visible:outline-hidden hover:underline focus-visible:ring-2"
           >
             {visualization.name}
           </Link>

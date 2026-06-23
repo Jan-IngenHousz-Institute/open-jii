@@ -100,21 +100,21 @@ function DataTabs({
       <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
         <TabsTrigger
           value="table"
-          className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
         >
           {t("output.tabTable")}
         </TabsTrigger>
         {showTimeseries && (
           <TabsTrigger
             value="timeseries"
-            className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
           >
             {t("output.tabTimeseries")}
           </TabsTrigger>
         )}
         <TabsTrigger
           value="json"
-          className="rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
         >
           {t("output.tabJson")}
         </TabsTrigger>
@@ -139,7 +139,7 @@ function DataTabs({
             {JSON.stringify(data, null, 2)}
           </pre>
           <button
-            className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] shadow-sm transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
+            className="shadow-xs absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
             onClick={() => void copy(JSON.stringify(data, null, 2))}
             title={t("output.copyJson")}
             aria-label={t("output.copyJson")}

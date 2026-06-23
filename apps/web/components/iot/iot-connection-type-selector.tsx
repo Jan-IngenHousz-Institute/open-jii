@@ -61,7 +61,7 @@ export function ConnectionTypeSelector({
                   className={cn(
                     "h-7 gap-1.5 rounded-sm px-2.5 text-xs",
                     connectionType === "bluetooth"
-                      ? "bg-background text-foreground hover:bg-background shadow-sm"
+                      ? "bg-background text-foreground hover:bg-background shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-transparent",
                   )}
                   disabled={!browserSupport.bluetooth}
@@ -90,7 +90,7 @@ export function ConnectionTypeSelector({
                   className={cn(
                     "h-7 gap-1.5 rounded-sm px-2.5 text-xs",
                     connectionType === "serial"
-                      ? "bg-background text-foreground hover:bg-background shadow-sm"
+                      ? "bg-background text-foreground hover:bg-background shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-transparent",
                   )}
                   disabled={!browserSupport.serial}

@@ -56,7 +56,7 @@ export function NodeContent({
       />
       <div className="flex items-center gap-3 py-3 pl-4 pr-3">
         <div
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
           style={{
             backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,
             color: accent,
@@ -71,7 +71,7 @@ export function NodeContent({
           <div className="flex items-center gap-1.5">
             {isStartNode && (
               <span
-                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ backgroundColor: "#22C55E" }}
                 title={t("start")}
               />
