@@ -88,18 +88,14 @@ export function transformHistogramData(
     },
   );
 
-  // Stamp histogram-specific options on every trace. `histnorm:
-  // "probability density"` is forced when the normal-fit overlay is on
-  // so bars and fitted PDF share a Y scale (otherwise the curve is invisible).
-  const effectiveHistnorm = chartConfig.showNormalFit
-    ? "probability density"
-    : chartConfig.histnorm;
-
+  // Stamp histogram-specific options on every trace. The fit overlay
+  // scales itself to whatever histnorm is selected (see histogram.tsx),
+  // so we no longer force "probability density" when the fit is on.
   const enriched: HistogramSeriesData[] = facetResult.chartSeries.map((s) => ({
     ...s,
     nbinsx: orientation === "v" ? chartConfig.nbinsx : undefined,
     nbinsy: orientation === "h" ? chartConfig.nbinsx : undefined,
-    histnorm: effectiveHistnorm,
+    histnorm: chartConfig.histnorm,
     cumulative: chartConfig.cumulative ? { enabled: true } : undefined,
     orientation,
     // Categories within the same facet cell should share bin edges so

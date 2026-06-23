@@ -101,11 +101,37 @@ function gaussianPdf(x: number, mean: number, std: number): number {
   return Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
 }
 
-/** Compute the (x, y) samples of a fitted normal PDF (or CDF when
- *  `cumulative` is true) for a numeric series. */
+/** Scale factor that aligns a unit-area PDF with the histogram's bars
+ *  for a given Plotly histnorm. `nbins` is approximate (Sturges' rule)
+ *  when the user hasn't pinned it explicitly. */
+function fitScaleFor(
+  histnorm: HistogramSeriesData["histnorm"],
+  n: number,
+  binWidth: number,
+): number {
+  switch (histnorm) {
+    case "percent":
+      return 100 * binWidth;
+    case "probability":
+      return binWidth;
+    case "density":
+      return n;
+    case "probability density":
+      return 1;
+    default:
+      // "" or undefined: raw counts. Each bar is count / N * binWidth in
+      // PDF terms, so multiply the PDF by N * binWidth to match.
+      return n * binWidth;
+  }
+}
+
+/** Compute the (x, y) samples of a fitted normal curve (PDF, or CDF when
+ *  `cumulative` is true) scaled to match the histogram's histnorm. */
 function buildNormalFit(
   values: ReadonlyArray<string | number | Date | undefined>,
   cumulative: boolean,
+  histnorm: HistogramSeriesData["histnorm"],
+  nbins: number | undefined,
 ): {
   xs: number[];
   ys: number[];
@@ -128,20 +154,31 @@ function buildNormalFit(
   const start = Math.min(dataMin, mean - FIT_OVERLAY_TAIL_SIGMAS * std);
   const end = Math.max(dataMax, mean + FIT_OVERLAY_TAIL_SIGMAS * std);
   const step = (end - start) / (FIT_OVERLAY_SAMPLES - 1);
+  // Bin width: when the user pinned `nbinsx` use it; otherwise Sturges'
+  // rule matches Plotly's auto-binning closely enough for the overlay.
+  const sturges = Math.max(1, Math.ceil(Math.log2(numeric.length) + 1));
+  const effectiveNbins = nbins && nbins > 0 ? nbins : sturges;
+  const binWidth = Math.max((dataMax - dataMin) / effectiveNbins, 1e-9);
+  const scale = fitScaleFor(histnorm, numeric.length, binWidth);
+
   const xs: number[] = [];
   const pdf: number[] = [];
   for (let i = 0; i < FIT_OVERLAY_SAMPLES; i++) {
     const x = start + i * step;
     xs.push(x);
-    pdf.push(gaussianPdf(x, mean, std));
+    pdf.push(gaussianPdf(x, mean, std) * scale);
   }
   if (!cumulative) return { xs, ys: pdf, mean, std };
-  // Trapezoidal integration -> CDF on the same x-grid, matching the
-  // histogram's cumulative-of-density bars.
-  const cdf: number[] = new Array(FIT_OVERLAY_SAMPLES);
-  cdf[0] = 0;
+  // Trapezoidal integration -> CDF on the same x-grid, already in the
+  // histogram's units thanks to the per-sample scaling above.
+  const cdf: number[] = [0];
+  let running = 0;
+  let prev = pdf[0] ?? 0;
   for (let i = 1; i < FIT_OVERLAY_SAMPLES; i++) {
-    cdf[i] = cdf[i - 1] + ((pdf[i] + pdf[i - 1]) / 2) * step;
+    const next = pdf[i] ?? 0;
+    running += ((next + prev) / 2) * step;
+    cdf.push(running);
+    prev = next;
   }
   return { xs, ys: cdf, mean, std };
 }
@@ -240,10 +277,17 @@ export function Histogram({
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
+      if (!series) continue;
       const seriesOrientation = series.orientation || orientation;
       const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
       if (!valuesForFit || valuesForFit.length === 0) continue;
-      const fit = buildNormalFit(valuesForFit, Boolean(series.cumulative?.enabled));
+      const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
+      const fit = buildNormalFit(
+        valuesForFit,
+        Boolean(series.cumulative?.enabled),
+        series.histnorm,
+        seriesNbins,
+      );
       if (!fit) continue;
       const lineColor = series.marker?.color || series.color;
       const fitTrace = {

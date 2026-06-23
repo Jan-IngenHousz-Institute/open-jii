@@ -63,11 +63,11 @@ describe("transformHistogramData", () => {
     expect(result.chartSeries[1].x).toEqual([2]);
   });
 
-  it("forces probability density histnorm when showNormalFit is on", () => {
+  it("preserves the user's histnorm when showNormalFit is on (fit scales to match)", () => {
     const rows = [{ v: 1 }, { v: 2 }];
     const config: ChartFormConfig = { showNormalFit: true, histnorm: "percent" };
     const result = transformHistogramData(rows, [ds("y", "v")], config);
-    expect(result.chartSeries[0].histnorm).toBe("probability density");
+    expect(result.chartSeries[0].histnorm).toBe("percent");
   });
 
   it("passes nbinsx through on vertical orientation, nbinsy on horizontal", () => {
