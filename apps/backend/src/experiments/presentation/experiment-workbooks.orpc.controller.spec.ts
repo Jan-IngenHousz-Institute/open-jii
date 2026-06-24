@@ -9,7 +9,7 @@ import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/
 import { DetachWorkbookUseCase } from "../application/use-cases/detach-workbook/detach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "../application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 
-describe("ExperimentWorkbooksController", () => {
+describe("ExperimentWorkbooksOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let attachUseCase: AttachWorkbookUseCase;
