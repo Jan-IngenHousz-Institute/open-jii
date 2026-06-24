@@ -160,5 +160,13 @@ describe("ContributorAnonymizerService", () => {
       expect(parsed.id).not.toBe("u1");
       expect(parsed.avatar).toBeNull();
     });
+
+    it("leaves a non-string distinct value untouched", () => {
+      const out = service.anonymizeDistinctValues([42], WellKnownColumnTypes.CONTRIBUTOR, {
+        id: "exp-1",
+        anonymizeContributors: true,
+      });
+      expect(out).toEqual([42]);
+    });
   });
 });
