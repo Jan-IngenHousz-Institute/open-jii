@@ -96,7 +96,7 @@ import { ExperimentVisualizationRepository } from "./core/repositories/experimen
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
-import { ExperimentDashboardsController } from "./presentation/experiment-dashboards.controller";
+import { ExperimentDashboardsOrpcController } from "./presentation/experiment-dashboards.orpc.controller";
 // Controllers
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
@@ -133,7 +133,7 @@ import { ProjectTransferWebhookOrpcController } from "./presentation/project-tra
     ExperimentJoinRequestsController,
     ExperimentMetadataOrpcController,
     ExperimentVisualizationsController,
-    ExperimentDashboardsController,
+    ExperimentDashboardsOrpcController,
     ExperimentLocationsOrpcController,
     ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,

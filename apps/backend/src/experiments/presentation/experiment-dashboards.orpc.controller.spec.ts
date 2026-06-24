@@ -38,7 +38,7 @@ const createMockDashboardDto = (
   ...overrides,
 });
 
-describe("ExperimentDashboardsController", () => {
+describe("ExperimentDashboardsOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let listExperimentDashboardsUseCase: ListExperimentDashboardsUseCase;
