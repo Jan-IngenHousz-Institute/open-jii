@@ -43,6 +43,11 @@ export const FormColorInput = React.forwardRef<HTMLDivElement, FormColorInputPro
       ariaLabel,
       debounceMs = 150,
       className,
+      // Form-association props injected by FormControl belong on the focusable
+      // input, not the wrapper, so the sibling FormLabel resolves to the field.
+      id,
+      "aria-describedby": ariaDescribedBy,
+      "aria-invalid": ariaInvalid,
       ...rest
     },
     ref,
@@ -51,8 +56,13 @@ export const FormColorInput = React.forwardRef<HTMLDivElement, FormColorInputPro
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Re-seed when the value changes from outside the picker (palette reset,
-    // color-mapping toggle, chart-type switch).
+    // color-mapping toggle, chart-type switch). Drop any pending debounced
+    // commit first so a stale draft can't overwrite the external update.
     useEffect(() => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
       setDraft(value ?? fallback);
     }, [value, fallback]);
 
@@ -79,6 +89,9 @@ export const FormColorInput = React.forwardRef<HTMLDivElement, FormColorInputPro
       <div ref={ref} className={cn("flex items-center gap-2", className)} {...rest}>
         <Input
           type="color"
+          id={id}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           className={cn("h-9 w-12 shrink-0 p-1", swatchClassName)}
           value={draft || fallback}
           onChange={(e) => handleChange(e.target.value)}

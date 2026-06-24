@@ -92,12 +92,16 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     return out;
   }, [rawValues, t]);
 
+  // Read the live colorMap at commit time, not the render-time snapshot:
+  // debounced swatch commits from different rows can land close together and
+  // a closed-over snapshot would drop a sibling row's just-committed color.
   const setOverride = (mapKey: string, hex: string) => {
-    form.setValue("config.colorMap", { ...colorMap, [mapKey]: hex }, { shouldDirty: true });
+    const current = form.getValues("config.colorMap") ?? {};
+    form.setValue("config.colorMap", { ...current, [mapKey]: hex }, { shouldDirty: true });
   };
 
   const clearOverride = (mapKey: string) => {
-    const next = { ...colorMap };
+    const next = { ...(form.getValues("config.colorMap") ?? {}) };
     delete next[mapKey];
     form.setValue("config.colorMap", next, { shouldDirty: true });
   };
