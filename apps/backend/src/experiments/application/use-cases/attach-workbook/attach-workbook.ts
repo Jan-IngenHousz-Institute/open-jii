@@ -75,6 +75,12 @@ export class AttachWorkbookUseCase {
           version = versionResult.value;
         }
 
+        if (version.workbookId !== workbookId) {
+          return failure(
+            AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),
+          );
+        }
+
         const updateResult = await this.experimentRepository.update(experimentId, {
           workbookId,
           workbookVersionId: version.id,

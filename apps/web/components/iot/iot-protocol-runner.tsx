@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Play } from "lucide-react";
+import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
@@ -8,6 +8,7 @@ import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/use
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
+import { protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -40,6 +41,11 @@ export function IotProtocolRunner({
   const isRunningRef = useRef(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
+
+  // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
+  // with the device silent until the user acts; warn so they know to follow the
+  // instrument's prompts rather than assuming it hung. See OJD-1643.
+  const requiresInteraction = protocolRequiresInteraction(protocolCode);
 
   // Auto-select the first supported connection type
   useEffect(() => {
@@ -152,6 +158,21 @@ export function IotProtocolRunner({
                 </>
               )}
             </Button>
+          )}
+
+          {/* Interactive protocols pause for the user to open/close the clamp.
+              The device gives no signal while it waits, so prompt the user to
+              follow the instrument rather than assume the run stalled. */}
+          {isConnected && requiresInteraction && (
+            <div className="bg-muted text-foreground flex items-start gap-2 rounded-lg p-3">
+              <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t("iot.protocolRunner.interactionTitle")}</p>
+                <p className="text-muted-foreground mt-0.5 text-sm">
+                  {t("iot.protocolRunner.interactionHint")}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

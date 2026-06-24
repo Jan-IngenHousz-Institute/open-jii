@@ -12,15 +12,9 @@ import {
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 
 import { useWorkbookList } from "../../hooks/workbook/useWorkbookList/useWorkbookList";
+import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface NewExperimentDetailsCardProps {
   form: UseFormReturn<CreateExperimentBody>;
@@ -71,27 +65,19 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
         <FormField
           control={form.control}
           name="workbookId"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>{t("newExperiment.workbook")}</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value === "__none__" ? undefined : value)}
-                value={field.value ?? "__none__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("newExperiment.workbookPlaceholder")} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("newExperiment.noWorkbook")}</SelectItem>
-                  {workbooks.map((wb) => (
-                    <SelectItem key={wb.id} value={wb.id}>
-                      {wb.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <WorkbookSelect
+                workbooks={workbooks}
+                value={field.value ?? undefined}
+                onChange={(id) => field.onChange(id ?? undefined)}
+                triggerPlaceholder={t("newExperiment.workbookPlaceholder")}
+                searchPlaceholder={t("newExperiment.searchWorkbook")}
+                emptyText={t("newExperiment.noWorkbooksFound")}
+                noneLabel={t("newExperiment.noWorkbook")}
+                invalid={!!fieldState.error}
+              />
               <FormMessage />
             </FormItem>
           )}

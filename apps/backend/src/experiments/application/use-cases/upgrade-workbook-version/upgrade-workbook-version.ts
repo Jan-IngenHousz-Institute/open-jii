@@ -87,6 +87,14 @@ export class UpgradeWorkbookVersionUseCase {
           version = versionResult.value;
         }
 
+        if (version.workbookId !== experiment.workbookId) {
+          return failure(
+            AppError.notFound(
+              `No valid workbook version found for workbook ${experiment.workbookId}`,
+            ),
+          );
+        }
+
         const updateResult = await this.experimentRepository.update(experimentId, {
           workbookVersionId: version.id,
         });

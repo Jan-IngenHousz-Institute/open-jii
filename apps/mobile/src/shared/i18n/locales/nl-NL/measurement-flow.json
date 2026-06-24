@@ -129,7 +129,7 @@
       "fallbackMessage": "Er is een fout opgetreden tijdens de meting"
     },
     "noDevice": {
-      "disconnected": "Apparaat losgekoppeld — {{name}}",
+      "disconnected": "Apparaat losgekoppeld, {{name}}",
       "reconnect": "Opnieuw verbinden met {{name}}",
       "connectDifferent": "Verbind een ander apparaat",
       "connectFirst": "Maak eerst verbinding met een apparaat"
@@ -147,12 +147,14 @@
       "measuring": "Bezig met meten…",
       "elapsed": "{{elapsed}} verstreken",
       "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}",
-      "expected": "~{{estimate}} verwacht"
+      "expected": "~{{estimate}} verwacht",
+      "interactionTitle": "Volg het instrument",
+      "interactionHint": "Dit protocol pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen."
     },
     "toast": {
       "notConnected": "Geen verbinding met sensor",
       "noProtocol": "Geen protocol geselecteerd",
-      "protocolUnavailable": "Protocol niet beschikbaar — maak verbinding met internet en probeer opnieuw",
+      "protocolUnavailable": "Protocol niet beschikbaar, maak verbinding met internet en probeer opnieuw",
       "scanError": "Scanfout"
     },
     "privacyNote": "Je (gps-)locatie en volledige naam worden samen met de meetgegevens opgeslagen. Houd er rekening mee dat deze openbaar zijn.",
@@ -222,7 +224,7 @@
       "removeAlertMessage": "\"{{experimentName}}\" is al naar de cloud geüpload. Verwijderen van deze telefoon? De cloudkopie blijft intact.",
       "deleteAlertTitle": "Niet-gesynchroniseerde meting verwijderen",
       "deleteAlertMessage": "\"{{experimentName}}\" is nog niet geüpload. Als je dit nu verwijdert, gaat de meting definitief verloren.",
-      "deleteBlockedUploading": "Kan niet verwijderen tijdens uploaden — probeer het zo opnieuw."
+      "deleteBlockedUploading": "Kan niet verwijderen tijdens uploaden, probeer het zo opnieuw."
     },
     "empty": "Geen stappen beschikbaar.",
     "error": "Kon experiment niet laden. Probeer het opnieuw.",
