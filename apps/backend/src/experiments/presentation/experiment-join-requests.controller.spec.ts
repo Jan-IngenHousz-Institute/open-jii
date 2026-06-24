@@ -86,7 +86,7 @@ describe("ExperimentJoinRequestsController", () => {
       );
     });
 
-    it("returns 200 with the existing pending request on duplicate submit (dedup)", async () => {
+    it("returns the existing pending request on duplicate submit (dedup)", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Dedup exp",
         userId: adminUserId,
@@ -107,7 +107,7 @@ describe("ExperimentJoinRequestsController", () => {
         .post(path)
         .withAuth(requesterUserId)
         .send({ message: "different message" })
-        .expect(StatusCodes.OK);
+        .expect(StatusCodes.CREATED);
 
       expect(second.body.id).toBe(first.body.id);
     });
