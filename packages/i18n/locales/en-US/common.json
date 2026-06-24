@@ -222,6 +222,8 @@
     "workbook": "Workbook",
     "workbookPlaceholder": "Select a workbook",
     "noWorkbook": "None",
+    "searchWorkbook": "Search workbooks...",
+    "noWorkbooksFound": "No workbooks found",
     "addMembersTitle": "Add Members",
     "addMembersDescription": "Manage who has access to this experiment",
     "addMemberPlaceholder": "Add a member",

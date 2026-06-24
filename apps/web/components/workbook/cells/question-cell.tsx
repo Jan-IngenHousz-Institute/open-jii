@@ -376,13 +376,27 @@ export function QuestionCellComponent({
             ))}
           </div>
 
-          <Input
-            value={question.text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Type your question here..."
-            className="border-[#CDD5DB] bg-white text-sm placeholder:text-[#CDD5DB]"
-            disabled={readOnly}
-          />
+          <div className="space-y-1.5">
+            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#011111]">
+              Question text
+              <span className="text-[#C58AAE]" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <Input
+              value={question.text}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="Type your question here..."
+              className="border-[#C58AAE]/40 bg-white text-sm placeholder:text-[#CDD5DB] focus-visible:ring-[#C58AAE]/30"
+              disabled={readOnly}
+              aria-label="Question text"
+            />
+            {!readOnly && (
+              <p className="text-muted-foreground text-xs">
+                Shown to participants when they answer. The label above is the data column name.
+              </p>
+            )}
+          </div>
 
           {!readOnly && (
             <label className="text-muted-foreground flex items-center gap-2 text-xs">
