@@ -16,7 +16,7 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import type { UserDto } from "../../users/core/models/user.model";
 
-describe("ExperimentController", () => {
+describe("ExperimentOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let analyticsAdapter: MockAnalyticsAdapter;

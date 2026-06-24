@@ -109,7 +109,7 @@ import { ExperimentMembersOrpcController } from "./presentation/experiment-membe
 import { ExperimentMetadataOrpcController } from "./presentation/experiment-metadata.orpc.controller";
 import { ExperimentVisualizationsOrpcController } from "./presentation/experiment-visualizations.orpc.controller";
 import { ExperimentWorkbooksOrpcController } from "./presentation/experiment-workbooks.orpc.controller";
-import { ExperimentController } from "./presentation/experiment.controller";
+import { ExperimentOrpcController } from "./presentation/experiment.orpc.controller";
 import { ProjectTransferRequestsOrpcController } from "./presentation/project-transfer-requests.orpc.controller";
 import { ProjectTransferWebhookOrpcController } from "./presentation/project-transfer-webhook.orpc.controller";
 
@@ -124,7 +124,7 @@ import { ProjectTransferWebhookOrpcController } from "./presentation/project-tra
     WorkbookModule,
   ],
   controllers: [
-    ExperimentController,
+    ExperimentOrpcController,
     ExperimentDataController,
     ExperimentDataExportsController,
     ExperimentFlowsOrpcController,
