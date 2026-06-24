@@ -7,14 +7,15 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Check, Copy, ExternalLink, Loader2, Microscope } from "lucide-react";
+import { Check, Copy, ExternalLink, Hand, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
+import { protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -111,7 +112,7 @@ export function ProtocolCellComponent({
   });
 
   // Expose the live editor code to the run flow so the device runs exactly what
-  // is on screen — no backend round-trip — while autosave persists in the
+  // is on screen (no backend round-trip) while autosave persists in the
   // background. Reads a ref so the source stays stable across keystrokes.
   const localCodeRef = useRef(localCode);
   localCodeRef.current = localCode;
@@ -129,6 +130,14 @@ export function ProtocolCellComponent({
     () => registerProtocolCodeSource(protocolId, getCurrentCode),
     [protocolId, getCurrentCode],
   );
+
+  // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
+  // with the device silent until the user acts. Surface a prompt while the cell
+  // runs so it does not look hung. See OJD-1643.
+  const requiresInteraction = useMemo(() => {
+    const code = getCurrentCode();
+    return code ? protocolRequiresInteraction(code) : false;
+  }, [getCurrentCode, localCode]);
 
   const handleCopy = () => {
     void copy(localCode ?? protocolCode ?? "");
@@ -191,6 +200,18 @@ export function ProtocolCellComponent({
         </div>
       }
     >
+      {executionStatus === "running" && requiresInteraction ? (
+        <div className="bg-muted text-foreground mx-3 mb-2 flex items-start gap-2 rounded-lg p-3">
+          <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Follow the instrument</p>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              This protocol pauses for you to open and close the clamp. Watch the device and act
+              when its lights prompt you.
+            </p>
+          </div>
+        </div>
+      ) : null}
       {protocolLoading ? (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
