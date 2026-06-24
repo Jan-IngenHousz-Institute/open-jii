@@ -73,6 +73,18 @@ export function buildFacetSeries<TSeries>(
     }
   }
 
+  // Sort alphabetically so palette indices match the picker's swatch order.
+  if (globalCategoryKeys.length > 1) {
+    const order = globalCategoryKeys.map((_, i) => i);
+    order.sort((a, b) => globalCategoryKeys[a].localeCompare(globalCategoryKeys[b]));
+    const sortedKeys = order.map((i) => globalCategoryKeys[i]);
+    const sortedValues = order.map((i) => globalCategoryValues[i]);
+    globalCategoryKeys.length = 0;
+    globalCategoryKeys.push(...sortedKeys);
+    globalCategoryValues.length = 0;
+    globalCategoryValues.push(...sortedValues);
+  }
+
   const facetGroups: { key: string; label: string; rows: Record<string, unknown>[] }[] = [];
   if (groupMap) {
     for (const [key, groupRows] of groupMap) {

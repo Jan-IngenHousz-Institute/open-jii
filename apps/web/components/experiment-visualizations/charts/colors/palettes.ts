@@ -46,8 +46,28 @@ export const CATEGORY_PALETTE = [
   "#9edae5",
 ] as const;
 
-export function getCategoryColor(index: number, colorMap?: Record<string, string>, key?: string) {
-  if (key && colorMap?.[key]) return colorMap[key];
+export const COLOR_MAP_KEY_SEPARATOR = "::";
+
+export function composeColorMapKey(seriesKey: string, categoryKey: string): string {
+  return `${seriesKey}${COLOR_MAP_KEY_SEPARATOR}${categoryKey}`;
+}
+
+export function getCategoryColor(
+  index: number,
+  colorMap?: Record<string, string>,
+  key?: string,
+  seriesKey?: string,
+): string {
+  // Composite (series::category) > flat category > palette cycle.
+  if (key && colorMap) {
+    if (seriesKey) {
+      const composite = composeColorMapKey(seriesKey, key);
+      const hit = colorMap[composite];
+      if (hit) return hit;
+    }
+    const flat = colorMap[key];
+    if (flat) return flat;
+  }
   return CATEGORY_PALETTE[index % CATEGORY_PALETTE.length];
 }
 

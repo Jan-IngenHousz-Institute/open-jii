@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getDefaultSeriesColor } from "../../charts/colors/palettes";
@@ -54,6 +55,10 @@ export function MultiColumnShelf({
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const entries = dataSourcesByRole(sources, role);
+  // A color dimension overrides per-series colors; disable + tooltip so
+  // the per-series picker isn't silently ignored.
+  const colorSources = dataSourcesByRole(sources, "color");
+  const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0]?.source.columnName);
 
   const handleColumnChange = (value: string, dsIndex: number, seriesIndex: number) => {
     // Stamp alias from column name so the legend reads sensibly by default.
@@ -195,21 +200,32 @@ export function MultiColumnShelf({
                             {t("workspace.shelves.color")}
                           </FormLabel>
                           <FormControl>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="color"
-                                className="h-9 w-12 shrink-0 p-1"
-                                value={field.value ?? "#3b82f6"}
-                                onChange={field.onChange}
-                              />
-                              <Input
-                                type="text"
-                                className="min-w-0 font-mono text-sm"
-                                placeholder="#000000"
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                              />
-                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="color"
+                                    className="h-9 w-12 shrink-0 p-1"
+                                    value={field.value ?? "#3b82f6"}
+                                    onChange={field.onChange}
+                                    disabled={isColorMapped}
+                                  />
+                                  <Input
+                                    type="text"
+                                    className="min-w-0 font-mono text-sm"
+                                    placeholder="#000000"
+                                    value={field.value ?? ""}
+                                    onChange={field.onChange}
+                                    disabled={isColorMapped}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {isColorMapped && (
+                                <TooltipContent>
+                                  {t("workspace.shelves.seriesColorDisabledByColorDimension")}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

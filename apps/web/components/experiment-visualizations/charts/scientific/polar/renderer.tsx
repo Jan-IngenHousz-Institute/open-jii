@@ -52,10 +52,13 @@ export function PolarRenderer({
 
   // Map config → wrapper's angular-axis layout so users get the
   // compass convention by default (0° at top, clockwise sweep).
+  const showGrid = chartConfig.showGrid !== false;
   const angularAxis = {
     direction: chartConfig.polarDirection ?? "clockwise",
     rotation: chartConfig.polarStartAngle ?? 90,
+    showgrid: showGrid,
   };
+  const radialAxis = { showgrid: showGrid };
 
   const hasRows = Boolean(xColumn) && hasYPicks && rows.length > 0 && series.length > 0;
 
@@ -68,7 +71,12 @@ export function PolarRenderer({
       hasRows={hasRows}
     >
       <div className="flex h-full w-full flex-col">
-        <PolarPlot data={series} config={chartConfig} angularAxis={angularAxis} />
+        <PolarPlot
+          data={series}
+          config={chartConfig}
+          angularAxis={angularAxis}
+          radialAxis={radialAxis}
+        />
       </div>
     </ChartFrame>
   );

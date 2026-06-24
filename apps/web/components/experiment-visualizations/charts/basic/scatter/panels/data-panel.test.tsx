@@ -42,9 +42,7 @@ describe("ScatterDataPanel", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.xAxis" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.yAxis" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.facetDimension" }),
     ).toBeInTheDocument();
@@ -94,7 +92,7 @@ describe("ScatterDataPanel", () => {
   it("opens the color shelf and exposes the column picker", async () => {
     const user = userEvent.setup();
     renderPanel();
-    await user.click(screen.getByRole("button", { name: /workspace.shelves.colorDimension/i }));
+    await user.click(screen.getByRole("button", { name: /workspace.shelves.groupBy/i }));
     // FormLabel "Column" appears inside the expanded content.
     const labels = await screen.findAllByText("workspace.shelves.column");
     expect(labels.length).toBeGreaterThan(0);

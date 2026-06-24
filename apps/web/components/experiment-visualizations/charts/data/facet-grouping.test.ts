@@ -45,7 +45,9 @@ describe("buildFacetSeries", () => {
     expect(result.chartSeries.map((s) => s.showlegend)).toEqual([undefined, false, false]);
   });
 
-  it("computes the global category list across rows in first-seen order", () => {
+  it("computes the global category list across rows sorted alphabetically", () => {
+    // Alphabetical (not first-seen) so palette indices stay stable and
+    // match the swatch order shown in the color-map picker.
     const rows = [{ c: "B" }, { c: "A" }, { c: "B" }, { c: "C" }];
     let captured: { keys: string[]; values: (string | number | null)[] } = {
       keys: [],
@@ -58,8 +60,8 @@ describe("buildFacetSeries", () => {
         return [];
       },
     );
-    expect(captured.keys).toEqual(["B", "A", "C"]);
-    expect(captured.values).toEqual(["B", "A", "C"]);
+    expect(captured.keys).toEqual(["A", "B", "C"]);
+    expect(captured.values).toEqual(["A", "B", "C"]);
   });
 
   it("maps null facet values to '(none)' label and empty-string key", () => {

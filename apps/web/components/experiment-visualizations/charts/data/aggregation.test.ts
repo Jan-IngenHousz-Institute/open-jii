@@ -145,6 +145,24 @@ describe("sanitizeDataConfigForSave", () => {
     expect(result.aggregation).toBeUndefined();
   });
 
+  it("preserves aggregation.functions written directly (pie's single-function path)", () => {
+    const result = sanitizeDataConfigForSave({
+      tableName: "t",
+      dataSources: [
+        { tableName: "t", columnName: "product", role: "labels" },
+        { tableName: "t", columnName: "market_share_pct", role: "values" },
+      ],
+      aggregation: {
+        groupBy: [{ column: "product" }],
+        functions: [{ column: "market_share_pct", function: "sum" }],
+      },
+    });
+    expect(result.aggregation?.functions).toEqual([
+      { column: "market_share_pct", function: "sum" },
+    ]);
+    expect(result.aggregation?.groupBy).toEqual([{ column: "product" }]);
+  });
+
   it("materialises wire-format functions[] from per-source aggregates", () => {
     const result = sanitizeDataConfigForSave({
       tableName: "t",

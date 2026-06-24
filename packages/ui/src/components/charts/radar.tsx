@@ -5,7 +5,7 @@ import React from "react";
 
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { createPlotlyConfig, getRenderer, getPlotType, legendAnchorFor } from "./utils";
 
 export interface RadarSeriesData extends BaseSeries {
   r: number[];
@@ -135,9 +135,11 @@ export function RadarPlot({
         rangemode: rangeMode,
         gridcolor: "#E6E6E6",
         linecolor: "#444",
+        showgrid: config.showGrid !== false,
       },
       angularaxis: {
         visible: angularAxisVisible,
+        showgrid: config.showGrid !== false,
         tickmode: categories ? "array" : "linear",
         ...(categories
           ? {
@@ -156,6 +158,7 @@ export function RadarPlot({
     },
 
     showlegend: config.showLegend !== false,
+    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any;
 
   const plotConfig = createPlotlyConfig(config);

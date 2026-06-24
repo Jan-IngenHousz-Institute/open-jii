@@ -73,9 +73,9 @@ export function TernaryRenderer({
           data={series}
           config={chartConfig}
           sum={sum}
-          aaxis={{ title: aColumn }}
-          baxis={{ title: bColumn }}
-          caxis={{ title: cColumn }}
+          aaxis={{ title: aColumn, showgrid: chartConfig.showGrid !== false }}
+          baxis={{ title: bColumn, showgrid: chartConfig.showGrid !== false }}
+          caxis={{ title: cColumn, showgrid: chartConfig.showGrid !== false }}
         />
       </div>
     </ChartFrame>

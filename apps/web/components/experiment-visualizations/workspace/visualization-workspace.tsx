@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
+import { TooltipProvider } from "@repo/ui/components/tooltip";
 
 import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
@@ -135,82 +136,84 @@ export function VisualizationWorkspace({
   const isLoadingShell = isLoadingTables;
 
   return (
-    <div className="space-y-4 pb-6">
-      <div className="flex items-center justify-between gap-2">
-        <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
+    <TooltipProvider delayDuration={200}>
+      <div className="space-y-4 pb-6">
+        <div className="flex items-center justify-between gap-2">
+          <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
 
-        <Button
-          type="button"
-          variant="outline"
-          size={isInspectorOpen ? "icon" : "sm"}
-          onClick={() => setIsInspectorOpen((prev) => !prev)}
-          aria-label={t(
-            isInspectorOpen ? "workspace.inspector.collapse" : "workspace.inspector.expand",
-          )}
-          aria-expanded={isInspectorOpen}
-          className="bg-card text-muted-foreground hover:text-foreground gap-2"
-        >
-          {isInspectorOpen ? (
-            <PanelRightClose className="size-4" />
-          ) : (
-            <>
-              <PanelRightOpen className="size-4" />
-              <span>{t("workspace.inspector.expandLabel")}</span>
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <WorkspaceCanvas
-            control={form.control}
-            experimentId={experimentId}
-            visualizationId={visualizationId}
-          />
+          <Button
+            type="button"
+            variant="outline"
+            size={isInspectorOpen ? "icon" : "sm"}
+            onClick={() => setIsInspectorOpen((prev) => !prev)}
+            aria-label={t(
+              isInspectorOpen ? "workspace.inspector.collapse" : "workspace.inspector.expand",
+            )}
+            aria-expanded={isInspectorOpen}
+            className="bg-card text-muted-foreground hover:text-foreground gap-2"
+          >
+            {isInspectorOpen ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <>
+                <PanelRightOpen className="size-4" />
+                <span>{t("workspace.inspector.expandLabel")}</span>
+              </>
+            )}
+          </Button>
         </div>
 
-        {isInspectorOpen && (
-          <div className="w-full lg:w-[320px] lg:shrink-0 xl:w-[380px] 2xl:w-[440px]">
-            <WorkspaceInspector
-              form={form}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <WorkspaceCanvas
+              control={form.control}
               experimentId={experimentId}
-              tables={tables ?? []}
-              isTablesLoading={isLoadingTables}
-              tablesError={tablesError}
-              selectedTableName={tableName}
-              onTableChange={handleTableChange}
-              columns={columns}
-              isColumnsLoading={isColumnsLoading || isLoadingShell}
-              columnsError={columnsError}
+              visualizationId={visualizationId}
             />
           </div>
-        )}
-      </div>
 
-      <AlertDialog
-        open={pendingChartType !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingChartType(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("workspace.charts.switchConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("workspace.charts.switchConfirmDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("ui.actions.back")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmChartTypeChange}>
-              {t("workspace.charts.switchConfirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+          {isInspectorOpen && (
+            <div className="w-full lg:w-[320px] lg:shrink-0 xl:w-[380px] 2xl:w-[440px]">
+              <WorkspaceInspector
+                form={form}
+                experimentId={experimentId}
+                tables={tables ?? []}
+                isTablesLoading={isLoadingTables}
+                tablesError={tablesError}
+                selectedTableName={tableName}
+                onTableChange={handleTableChange}
+                columns={columns}
+                isColumnsLoading={isColumnsLoading || isLoadingShell}
+                columnsError={columnsError}
+              />
+            </div>
+          )}
+        </div>
+
+        <AlertDialog
+          open={pendingChartType !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingChartType(null);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("workspace.charts.switchConfirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("workspace.charts.switchConfirmDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("ui.actions.back")}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmChartTypeChange}>
+                {t("workspace.charts.switchConfirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }

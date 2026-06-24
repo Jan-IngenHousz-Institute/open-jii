@@ -5,7 +5,7 @@ import React from "react";
 
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { createPlotlyConfig, getRenderer, getPlotType, legendAnchorFor } from "./utils";
 
 export interface TernarySeriesData extends BaseSeries {
   a: number[];
@@ -248,6 +248,7 @@ export function TernaryPlot({
     },
 
     showlegend: config.showLegend !== false,
+    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any; // Layout type allows flexible property assignment
 
   const plotConfig = createPlotlyConfig(config);
@@ -404,6 +405,7 @@ export function TernaryContour({
     },
 
     showlegend: config.showLegend !== false,
+    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any; // Layout type allows flexible property assignment
 
   const plotConfig = createPlotlyConfig(config);

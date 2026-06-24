@@ -40,9 +40,7 @@ describe("RidgePlotDataPanel", () => {
   it("renders the variable and color shelves", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.variable" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
   });
 
   it("seeds the variable trigger from the existing y data source", () => {

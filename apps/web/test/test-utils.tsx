@@ -33,6 +33,8 @@ import type { ReactElement } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import type { FieldValues, UseFormProps } from "react-hook-form";
 
+import { TooltipProvider } from "@repo/ui/components/tooltip";
+
 // ── Provider wrapper ────────────────────────────────────────────
 
 /**
@@ -67,7 +69,9 @@ function AllProviders({ children, queryClient }: WrapperProps) {
   return (
     <QueryClientProvider client={client}>
       <tsr.ReactQueryProvider>
-        <ActivityProvider>{children}</ActivityProvider>
+        <TooltipProvider delayDuration={0}>
+          <ActivityProvider>{children}</ActivityProvider>
+        </TooltipProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );

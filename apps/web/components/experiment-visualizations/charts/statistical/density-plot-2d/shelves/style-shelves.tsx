@@ -23,10 +23,31 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
   const fillId = useId();
   const showColorbarId = useId();
+  const showMarkersId = useId();
 
   return (
     <CollapsibleStyleSection title={t("workspace.style.densityPlot2dOptions")} flat={flat}>
       <StyleSubsection title={t("workspace.style.densityPlot2dPoints")}>
+        <FormField
+          control={form.control}
+          name="config.density2dShowMarkers"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox
+                  id={showMarkersId}
+                  // Default-on: treat undefined as checked.
+                  checked={field.value !== false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel htmlFor={showMarkersId} className="text-xs font-medium">
+                {t("workspace.style.density2dShowMarkers")}
+              </FormLabel>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="config.density2dMarkerSize"
@@ -58,6 +79,36 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
               onCommit={field.onChange}
               formatBadge={(v) => `${Math.round(v * 100)}%`}
             />
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="config.color.0"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.markerColor")}
+              </FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    className="h-9 w-12 shrink-0 p-1"
+                    value={typeof field.value === "string" ? field.value : "#3b82f6"}
+                    onChange={field.onChange}
+                  />
+                  <Input
+                    type="text"
+                    className="min-w-0 font-mono text-sm"
+                    placeholder="#000000"
+                    value={typeof field.value === "string" ? field.value : ""}
+                    onChange={field.onChange}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
       </StyleSubsection>

@@ -92,15 +92,19 @@ export function transformCartesianData(
   const globalCategoryLabels: (string | number | null)[] = [];
   if (isCategoricalColor && colorColumn) {
     const seen = new Set<string>();
+    const pending: { key: string; label: string | number | null }[] = [];
     for (const row of rows) {
       const raw = row[colorColumn];
       const key = toBucketKey(raw);
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
+      pending.push({ key, label: raw == null ? null : (raw as string | number) });
+    }
+    // Sort alphabetically so palette indices match the picker's swatch order.
+    pending.sort((a, b) => a.key.localeCompare(b.key));
+    for (const { key, label } of pending) {
       globalCategoryKeys.push(key);
-      globalCategoryLabels.push(raw == null ? null : (raw as string | number));
+      globalCategoryLabels.push(label);
     }
   }
 
@@ -251,6 +255,14 @@ export function transformCartesianData(
       }
     }
 
+    // Stacked area pairs values by index, not by x. Share the x grid
+    // across categories and zero-fill missing slots.
+    const needsSharedXGrid =
+      defaultTraceType === "area" &&
+      chartConfig.stackMode !== undefined &&
+      chartConfig.stackMode !== "none";
+    const sharedX = needsSharedXGrid ? buildUnionXGrid(cellByCategory, xColumn) : null;
+
     return effectiveYEntries.flatMap(({ source, index: dsIndex }, seriesOrdinal) => {
       const baseName = source.alias ?? source.columnName;
       const yKey = rowKeyFor(source, dsIndex);
@@ -258,8 +270,10 @@ export function transformCartesianData(
         const key = globalCategoryKeys[catIndex];
         const groupRows = cellByCategory.get(key)?.rows ?? [];
         const categoryLabel = categoryValue == null ? "(none)" : String(categoryValue);
-        const x = xByCategory.get(key) ?? [];
-        const y = groupRows.map((row: Record<string, unknown>) => coerceCell(row[yKey]));
+        const x = sharedX ?? xByCategory.get(key) ?? [];
+        const y = sharedX
+          ? alignYToSharedX(groupRows, xColumn, yKey, sharedX)
+          : groupRows.map((row: Record<string, unknown>) => coerceCell(row[yKey]));
         const errorValues = readErrorValues(groupRows, source.errorColumn);
         const sizeContextForGroup = sizeContextByCategory?.get(key) ?? sizeCtx;
         const series = buildSeries({
@@ -271,6 +285,7 @@ export function transformCartesianData(
             catIndex + seriesOrdinal * globalCategoryLabels.length,
             colorMap,
             key,
+            baseName,
           ),
           sizeContext: sizeContextForGroup,
           legendgroup: effectiveYEntries.length > 1 ? baseName : undefined,
@@ -284,21 +299,19 @@ export function transformCartesianData(
     });
   };
 
-  // Dispatch by colour mode. Only cell 0 contributes to the shared legend /
-  // colorbar; later cells suppress legend + colorbar to stay deduped.
   const buildSeriesForCell = (
     cellRows: Record<string, unknown>[],
     cellIndex: number,
   ): CartesianSeries[] => {
     const { xaxisId, yaxisId } = buildAxisIds(cellIndex);
-    const showlegend = cellIndex === 0 ? undefined : false;
     if (isContinuousColor && colorColumn) {
+      const showlegend = cellIndex === 0 ? undefined : false;
       return buildContinuousColorCellSeries(cellRows, cellIndex, xaxisId, yaxisId, showlegend);
     }
     if (!colorColumn) {
-      return buildPlainCellSeries(cellRows, xaxisId, yaxisId, showlegend);
+      return buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined);
     }
-    return buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, showlegend);
+    return buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
   };
 
   const allSeries: CartesianSeries[] = [];
@@ -306,8 +319,25 @@ export function transformCartesianData(
     allSeries.push(...buildSeriesForCell(facetGroups[i].rows, i));
   }
 
+  // Show each (legendgroup ?? name) once -- from the first cell with data.
+  const seenLegendKeys = new Set<string>();
+  for (let i = 0; i < allSeries.length; i++) {
+    const trace = allSeries[i];
+    const hasData = trace.y.length > 0 && trace.y.some((v) => v !== null);
+    const key = trace.legendgroup ?? trace.name ?? "";
+    if (!hasData || seenLegendKeys.has(key)) {
+      allSeries[i] = { ...trace, showlegend: false };
+      continue;
+    }
+    seenLegendKeys.add(key);
+  }
+
+  // Plotly's stackgroup only works on linear/log axes; cumulate the y
+  // values ourselves so date and category axes stack the same way.
+  const stackedSeries = applyManualStacking(allSeries, chartConfig.stackMode);
+
   if (!facetColumn) {
-    return { chartSeries: allSeries, subplots: undefined, useIndexForX };
+    return { chartSeries: stackedSeries, subplots: undefined, useIndexForX };
   }
 
   // Build the grid spec. `facetColumns` overrides the auto default;
@@ -339,7 +369,65 @@ export function transformCartesianData(
     roworder: chartConfig.facetRowOrder === "bottom-to-top" ? "bottom to top" : "top to bottom",
   };
 
-  return { chartSeries: allSeries, subplots: subplotsConfig, useIndexForX };
+  return { chartSeries: stackedSeries, subplots: subplotsConfig, useIndexForX };
+}
+
+/** Cumulate y values per stackgroup so date/category x-axes stack the
+ *  same way Plotly's stackgroup would on linear/log. Percent mode
+ *  normalizes by the per-x total before cumulating. */
+function applyManualStacking(
+  series: CartesianSeries[],
+  stackMode: ChartFormConfig["stackMode"],
+): CartesianSeries[] {
+  if (stackMode === undefined || stackMode === "none") return series;
+  const groups = new Map<string, number[]>();
+  for (let i = 0; i < series.length; i++) {
+    const sg = series[i]?.stackgroup;
+    if (!sg) continue;
+    const list = groups.get(sg) ?? [];
+    list.push(i);
+    groups.set(sg, list);
+  }
+  if (groups.size === 0) return series;
+
+  const result = [...series];
+  for (const indices of groups.values()) {
+    const first = result[indices[0]];
+    const xLen = Array.isArray(first.y) ? first.y.length : 0;
+    if (xLen === 0) continue;
+
+    const totals = new Array<number>(xLen).fill(0);
+    if (stackMode === "percent") {
+      for (const idx of indices) {
+        const trace = result[idx];
+        for (let xi = 0; xi < xLen; xi++) {
+          const v = Number(trace.y[xi]);
+          if (Number.isFinite(v)) totals[xi] += v;
+        }
+      }
+    }
+
+    const cumulative = new Array<number>(xLen).fill(0);
+    for (let pos = 0; pos < indices.length; pos++) {
+      const idx = indices[pos];
+      const trace = result[idx];
+      const newY: number[] = [];
+      for (let xi = 0; xi < xLen; xi++) {
+        let v = Number(trace.y[xi]);
+        if (!Number.isFinite(v)) v = 0;
+        if (stackMode === "percent") {
+          const total = totals[xi] ?? 0;
+          v = total > 0 ? (v / total) * 100 : 0;
+        }
+        cumulative[xi] = (cumulative[xi] ?? 0) + v;
+        newY.push(cumulative[xi] ?? 0);
+      }
+      // Bottom trace fills to y=0; the rest fill down to the trace below.
+      const fill = pos === 0 ? "tozeroy" : "tonexty";
+      result[idx] = { ...trace, y: newY, stackgroup: undefined, fill };
+    }
+  }
+  return result;
 }
 
 interface SizeContext {
@@ -409,6 +497,51 @@ function buildXValues(
     return rows.map((_row, i) => i);
   }
   return rows.map((row) => coerceCell(row[xColumn]));
+}
+
+/** Union of x values across all category buckets, sorted ascending. Numeric
+ *  if every value is numeric (ISO dates sort correctly lexically). */
+function buildUnionXGrid(
+  cellByCategory: Map<string, { rows: Record<string, unknown>[]; indices: number[] }>,
+  xColumn: string | undefined,
+): (string | number)[] {
+  if (!xColumn) return [];
+  const seen = new Map<string, string | number>();
+  for (const { rows } of cellByCategory.values()) {
+    for (const row of rows) {
+      const xv = coerceCell(row[xColumn]);
+      if (xv === null) continue;
+      const key = String(xv);
+      if (!seen.has(key)) seen.set(key, xv);
+    }
+  }
+  const all = Array.from(seen.values());
+  const allNumeric = all.every((v) => typeof v === "number");
+  all.sort((a, b) =>
+    allNumeric ? (a as number) - (b as number) : String(a).localeCompare(String(b)),
+  );
+  return all;
+}
+
+/** Map a category's rows onto the shared x grid, filling missing slots with
+ *  `0` so stacked area traces line up. Treats absence as zero contribution
+ *  to the stack — the typical stacked-area expectation. */
+function alignYToSharedX(
+  rows: Record<string, unknown>[],
+  xColumn: string | undefined,
+  yKey: string,
+  sharedX: (string | number)[],
+): (string | number | null)[] {
+  if (!xColumn) {
+    return sharedX.map((_, i) => coerceCell(rows[i]?.[yKey]) ?? 0);
+  }
+  const yByXKey = new Map<string, string | number | null>();
+  for (const row of rows) {
+    const xv = coerceCell(row[xColumn]);
+    if (xv === null) continue;
+    yByXKey.set(String(xv), coerceCell(row[yKey]));
+  }
+  return sharedX.map((xv) => yByXKey.get(String(xv)) ?? 0);
 }
 
 // Inverse of Plotly's `makeBubbleSizeFn`; pick `sizeref` so the largest
@@ -537,7 +670,8 @@ function buildSeries({
 
   if (traceType === "area") {
     const stackMode = chartConfig.stackMode ?? "none";
-    const stackgroup = stackMode === "none" ? undefined : "one";
+    // Per-axis so primary and secondary stack independently.
+    const stackgroup = stackMode === "none" ? undefined : `stack-${axis}`;
     const groupnorm = stackMode === "percent" ? "percent" : "";
     const fillOpacity = chartConfig.fillOpacity ?? 0.4;
     return {

@@ -5,7 +5,7 @@ import React from "react";
 
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { createPlotlyConfig, getRenderer, getPlotType, legendAnchorFor } from "./utils";
 
 export interface PolarSeriesData extends BaseSeries {
   r: number[];
@@ -206,6 +206,7 @@ export function PolarPlot({
     },
 
     showlegend: config.showLegend !== false,
+    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any;
 
   const plotConfig = createPlotlyConfig(config);

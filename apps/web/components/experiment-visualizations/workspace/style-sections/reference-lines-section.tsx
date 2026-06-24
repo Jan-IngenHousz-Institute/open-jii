@@ -6,7 +6,6 @@ import { useFieldArray } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Separator } from "@repo/ui/components/separator";
 
 import type { ChartFormValues } from "../../charts/chart-config";
 import { ReferenceLineRow } from "./reference-line-row";
@@ -34,43 +33,33 @@ export function ReferenceLinesSection({ form, flat = false }: ReferenceLinesSect
   });
 
   return (
-    <>
-      <CollapsibleStyleSection title={t("workspace.style.referenceLines")} flat={flat}>
-        {fields.length === 0 && (
-          <p className="text-muted-foreground text-xs">
-            {t("workspace.style.referenceLinesEmpty")}
-          </p>
-        )}
+    <CollapsibleStyleSection title={t("workspace.style.referenceLines")} flat={flat}>
+      {fields.length === 0 && (
+        <p className="text-muted-foreground text-xs">{t("workspace.style.referenceLinesEmpty")}</p>
+      )}
 
-        {fields.map((field, index) => (
-          <ReferenceLineRow
-            key={field.id}
-            form={form}
-            index={index}
-            onRemove={() => remove(index)}
-          />
-        ))}
+      {fields.map((field, index) => (
+        <ReferenceLineRow key={field.id} form={form} index={index} onRemove={() => remove(index)} />
+      ))}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() =>
-            append({
-              axis: "y",
-              value: 0,
-              label: "",
-              color: DEFAULT_COLOR,
-              dash: "dash",
-            })
-          }
-        >
-          <Plus className="mr-1 h-3 w-3" />
-          {t("workspace.style.referenceLineAdd")}
-        </Button>
-      </CollapsibleStyleSection>
-      <Separator />
-    </>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() =>
+          append({
+            axis: "y",
+            value: 0,
+            label: "",
+            color: DEFAULT_COLOR,
+            dash: "dash",
+          })
+        }
+      >
+        <Plus className="mr-1 h-3 w-3" />
+        {t("workspace.style.referenceLineAdd")}
+      </Button>
+    </CollapsibleStyleSection>
   );
 }

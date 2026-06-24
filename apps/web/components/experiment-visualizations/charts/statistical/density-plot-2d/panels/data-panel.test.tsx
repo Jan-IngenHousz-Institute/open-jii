@@ -42,7 +42,7 @@ describe("DensityPlot2DDataPanel", () => {
     expect(screen.getByRole("heading", { name: "workspace.shelves.xAxis" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.yAxis" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.queryByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "workspace.shelves.facetDimension" }),
