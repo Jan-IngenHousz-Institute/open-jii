@@ -1,7 +1,7 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor, act } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -31,6 +31,36 @@ describe("useDetachWorkbook", () => {
     });
 
     expect(spy.called).toBe(true);
+  });
+
+  it("invalidates the workbook caches using the experiment's workbookId (OJD-1626)", async () => {
+    const workbookId = "22222222-2222-2222-2222-222222222222";
+    server.mount(contract.experiments.detachWorkbook, {
+      body: createExperiment({ id: experimentId, workbookId: null }),
+    });
+
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(["experiment", experimentId], {
+      body: createExperiment({ id: experimentId, workbookId }),
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useDetachWorkbook(), { queryClient });
+
+    act(() => {
+      result.current.mutate({ params: { id: experimentId } });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["workbook", workbookId] }),
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["workbookVersions", workbookId] }),
+    );
   });
 
   it("handles error state", async () => {
