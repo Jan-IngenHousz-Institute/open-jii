@@ -47,7 +47,7 @@ const columns: DataColumn[] = [
 ];
 
 async function expandShelf(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /workspace\.shelves\.colorDimension/ }));
+  await user.click(screen.getByRole("button", { name: /workspace\.shelves\.groupBy/ }));
 }
 
 describe("ColorDimensionShelf", () => {
@@ -57,7 +57,7 @@ describe("ColorDimensionShelf", () => {
       useFormProps: { defaultValues: defaults() },
     });
 
-    expect(screen.getByText("workspace.shelves.colorDimension")).toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.groupBy")).toBeInTheDocument();
     await expandShelf(user);
     // Mode select + colorscale only render once a column is picked.
     expect(screen.queryByText("workspace.shelves.colorMode")).not.toBeInTheDocument();

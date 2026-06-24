@@ -22,6 +22,7 @@
  */
 import { ActivityProvider } from "@/components/activity/activity-context";
 import { tsr } from "@/lib/tsr";
+import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type { RenderOptions, RenderResult } from "@testing-library/react";
@@ -67,7 +68,9 @@ function AllProviders({ children, queryClient }: WrapperProps) {
   return (
     <QueryClientProvider client={client}>
       <tsr.ReactQueryProvider>
-        <ActivityProvider>{children}</ActivityProvider>
+        <TooltipProvider delayDuration={0}>
+          <ActivityProvider>{children}</ActivityProvider>
+        </TooltipProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );
