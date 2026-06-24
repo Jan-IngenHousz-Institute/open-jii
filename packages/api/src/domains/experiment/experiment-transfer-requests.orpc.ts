@@ -1,0 +1,17 @@
+import { oc } from "@orpc/contract";
+
+import {
+  zExperimentCreateTransferRequestBody,
+  zExperimentTransferRequest,
+  zExperimentTransferRequestList,
+} from "./experiment.schema";
+
+export const experimentTransferRequestsOrpcContract = {
+  createTransferRequest: oc
+    .route({ method: "POST", path: "/api/v1/transfer-requests", successStatus: 201 })
+    .input(zExperimentCreateTransferRequestBody)
+    .output(zExperimentTransferRequest),
+  listTransferRequests: oc
+    .route({ method: "GET", path: "/api/v1/transfer-requests", successStatus: 200 })
+    .output(zExperimentTransferRequestList),
+};

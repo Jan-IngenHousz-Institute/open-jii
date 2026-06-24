@@ -110,7 +110,7 @@ import { ExperimentMetadataController } from "./presentation/experiment-metadata
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksOrpcController } from "./presentation/experiment-workbooks.orpc.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
-import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
+import { ProjectTransferRequestsOrpcController } from "./presentation/project-transfer-requests.orpc.controller";
 import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
 
 @Module({
@@ -137,7 +137,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,
-    ProjectTransferRequestsController,
+    ProjectTransferRequestsOrpcController,
     ProjectTransferWebhookController,
   ],
   providers: [

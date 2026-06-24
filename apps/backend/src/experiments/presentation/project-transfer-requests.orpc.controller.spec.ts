@@ -12,7 +12,7 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateTransferRequestUseCase } from "../application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "../application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 
-describe("ProjectTransferRequestsController", () => {
+describe("ProjectTransferRequestsOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let createTransferRequestUseCase: CreateTransferRequestUseCase;
