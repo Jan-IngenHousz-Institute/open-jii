@@ -26,6 +26,23 @@ build
 dist
 .cache
 *.tsbuildinfo
+.asyncapi
+.openapi
+.expo
+
+# Secrets (mirror .gitignore; never ship to the builder)
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# AI artifacts (huge: worktrees, sessions)
+
+.claude
+.wolf
 
 # CI/CD
 
@@ -35,5 +52,7 @@ dist
 
 .vscode
 .turbo
+.vercel
+*.zip
 *.md
 !apps/mobile/README.md
