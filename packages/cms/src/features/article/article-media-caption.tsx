@@ -9,7 +9,7 @@ export const ArticleMediaCaption = ({
   className,
   ...props
 }: ArticleMediaCaptionProps) => (
-  <figcaption {...props} className={cn("-mt-1 text-sm italic text-gray-500", className)}>
+  <figcaption {...props} className={cn("text-muted-foreground -mt-1 text-sm italic", className)}>
     {children}
   </figcaption>
 );
