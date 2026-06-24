@@ -1,4 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import {
   eq,
@@ -73,7 +74,10 @@ export class UserRepository {
 
   async findUsersByIds(userIds: string[]): Promise<Result<UserProfileMetadata[]>> {
     return tryCatch(async () => {
-      if (userIds.length === 0) {
+      // users.id is a uuid column; a non-uuid id would raise a Postgres cast
+      // error and fail the whole batch, so drop malformed ids here.
+      const validIds = userIds.filter((id) => z.string().uuid().safeParse(id).success);
+      if (validIds.length === 0) {
         return [];
       }
 
@@ -86,7 +90,7 @@ export class UserRepository {
         })
         .from(users)
         .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(inArray(users.id, userIds));
+        .where(inArray(users.id, validIds));
 
       return result;
     });

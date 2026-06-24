@@ -47,7 +47,7 @@ const columns: DataColumn[] = [
 ];
 
 async function expandShelf(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /workspace\.shelves\.colorDimension/ }));
+  await user.click(screen.getByRole("button", { name: /workspace\.shelves\.groupBy/ }));
 }
 
 describe("ColorDimensionShelf", () => {
@@ -57,7 +57,7 @@ describe("ColorDimensionShelf", () => {
       useFormProps: { defaultValues: defaults() },
     });
 
-    expect(screen.getByText("workspace.shelves.colorDimension")).toBeInTheDocument();
+    expect(screen.getByText("workspace.shelves.groupBy")).toBeInTheDocument();
     await expandShelf(user);
     // Mode select + colorscale only render once a column is picked.
     expect(screen.queryByText("workspace.shelves.colorMode")).not.toBeInTheDocument();
@@ -143,7 +143,7 @@ describe("ColorDimensionShelf", () => {
     // its own colorScale combobox underneath. The column picker is the
     // first combobox in DOM order.
     await user.click(screen.getAllByRole("combobox")[0]);
-    await user.click(await screen.findByText("workspace.shelves.noColorMapping"));
+    await user.click(await screen.findByText("workspace.shelves.groupByNone"));
 
     const sources = form.getValues("dataConfig.dataSources");
     expect(sources.find((d) => d.role === "color")).toBeUndefined();

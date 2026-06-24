@@ -46,9 +46,7 @@ describe("BubbleDataPanel", () => {
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.sizeDimension" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.facetDimension" }),
     ).toBeInTheDocument();
@@ -101,7 +99,7 @@ describe("BubbleDataPanel", () => {
   it("opens the color shelf and exposes its column picker", async () => {
     const user = userEvent.setup();
     renderPanel();
-    await user.click(screen.getByRole("button", { name: /workspace.shelves.colorDimension/i }));
+    await user.click(screen.getByRole("button", { name: /workspace.shelves.groupBy/i }));
     const labels = await screen.findAllByText("workspace.shelves.column");
     expect(labels.length).toBeGreaterThan(0);
   });

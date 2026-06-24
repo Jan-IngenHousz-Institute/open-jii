@@ -108,11 +108,12 @@ export function BoxPlot({
         jitter: series.jitter || 0.3,
         pointpos: series.pointpos || -1.8,
 
-        // Styling
+        // Dark default for line so box border, mean line, and notch outline
+        // stay visible against the trace-color fill.
         fillcolor: series.fillcolor || series.color,
         line: {
-          color: series.line?.color || series.color,
-          width: series.line?.width || 2,
+          color: series.line?.color || "#444",
+          width: series.line?.width || 1.5,
         },
         marker: {
           color: series.marker?.color || series.color,

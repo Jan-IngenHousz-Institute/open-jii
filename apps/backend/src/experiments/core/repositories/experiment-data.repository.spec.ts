@@ -605,16 +605,18 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual({ values: ["alpha", "007"], truncated: false });
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: ["site"],
-        distinct: true,
-        orderBy: "site",
-        orderDirection: "ASC",
-        limit: 11,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId,
+          columns: ["site"],
+          distinct: true,
+          orderBy: "site",
+          orderDirection: "ASC",
+          limit: 11,
+        }),
+      );
     });
 
     it("coerces values to numbers only for a numeric column", async () => {

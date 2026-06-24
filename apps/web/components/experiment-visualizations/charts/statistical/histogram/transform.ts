@@ -72,6 +72,7 @@ export function transformHistogramData(
             catIndex + yIndex * globalCategoryValues.length,
             colorMap,
             key,
+            baseName,
           );
           return {
             x: orientation === "v" ? values : undefined,
@@ -88,20 +89,16 @@ export function transformHistogramData(
     },
   );
 
-  // Stamp histogram-specific options on every trace. `histnorm:
-  // "probability density"` is forced when the normal-fit overlay is on
-  // so bars and fitted PDF share a Y scale (otherwise the curve is invisible).
-  const effectiveHistnorm = chartConfig.showNormalFit
-    ? "probability density"
-    : chartConfig.histnorm;
-
   const enriched: HistogramSeriesData[] = facetResult.chartSeries.map((s) => ({
     ...s,
     nbinsx: orientation === "v" ? chartConfig.nbinsx : undefined,
     nbinsy: orientation === "h" ? chartConfig.nbinsx : undefined,
-    histnorm: effectiveHistnorm,
+    histnorm: chartConfig.histnorm,
     cumulative: chartConfig.cumulative ? { enabled: true } : undefined,
     orientation,
+    // Share bin edges across colors in the same cell; scope by cell so
+    // per-facet ranges still adapt to local data.
+    bingroup: s.xaxisId ? `cell:${s.xaxisId}` : "default",
   }));
 
   return { chartSeries: enriched, subplots: facetResult.subplots };

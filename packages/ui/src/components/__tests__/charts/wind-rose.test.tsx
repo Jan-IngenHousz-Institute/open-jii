@@ -22,6 +22,7 @@ vi.mock("../../charts/utils", () => ({
     responsive: true,
     displayModeBar: false,
   })),
+  legendAnchorFor: vi.fn(() => ({})),
 }));
 
 const sampleData: WindRoseSeriesData[] = [

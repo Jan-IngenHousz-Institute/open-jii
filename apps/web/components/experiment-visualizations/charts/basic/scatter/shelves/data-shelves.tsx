@@ -73,7 +73,7 @@ export const scatterDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: ScatterColorShelf,
     summary: (form) => {

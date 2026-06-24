@@ -5,7 +5,7 @@ import React from "react";
 
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createPlotlyConfig } from "./utils";
+import { createPlotlyConfig, legendAnchorFor } from "./utils";
 
 /**
  * Wind-rose series. Each series represents one **value band** (e.g.
@@ -109,6 +109,7 @@ export function WindRose({
     paper_bgcolor: config.backgroundColor || "white",
     autosize: true,
     showlegend: config.showLegend !== false,
+    legend: legendAnchorFor(config.legendPosition ?? "right"),
     // Stack value-band segments within each direction slice (the
     // canonical wind-rose rendering). `barmode: "stack"` is read by
     // both cartesian bar traces and barpolar.
@@ -117,12 +118,11 @@ export function WindRose({
       bgcolor: "white",
       radialaxis: {
         title: { text: radialAxisTitle },
-        // Draw the radial axis horizontally to the east (3 o'clock).
-        // `angle: 90` stacks tick labels and the title vertically and
-        // overlaps bars clustered around the top. East gives horizontal
-        // text spacing along the axis.
+        // East-pointing radial axis: avoids the north overlap with bars.
         angle: 0,
         tickangle: 0,
+        // Cap ticks so labels don't collide on small charts.
+        nticks: 5,
         gridcolor: "#E6E6E6",
         showgrid: config.showGrid !== false,
       },

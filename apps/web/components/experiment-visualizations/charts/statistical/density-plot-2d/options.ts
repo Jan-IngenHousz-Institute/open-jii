@@ -3,6 +3,7 @@
  * sharing the same X / Y axes.
  */
 export interface DensityPlot2DChartOptions {
+  density2dShowMarkers?: boolean;
   density2dMarkerSize?: number;
   density2dMarkerOpacity?: number;
   density2dContourFill?: boolean;

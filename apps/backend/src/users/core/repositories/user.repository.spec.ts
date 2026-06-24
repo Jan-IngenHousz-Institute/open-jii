@@ -819,6 +819,18 @@ describe("UserRepository", () => {
       expect(result.value).toEqual([]);
     });
 
+    it("should ignore malformed (non-uuid) user IDs without erroring", async () => {
+      // A non-uuid id would otherwise raise a Postgres uuid cast error and fail
+      // the whole batch.
+      const result = await repository.findUsersByIds([testUser1Id, "dev-user"]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]?.userId).toBe(testUser1Id);
+    });
+
     it("should handle duplicate user IDs", async () => {
       // Act - pass duplicate user IDs
       const result = await repository.findUsersByIds([testUser1Id, testUser1Id, testUser2Id]);

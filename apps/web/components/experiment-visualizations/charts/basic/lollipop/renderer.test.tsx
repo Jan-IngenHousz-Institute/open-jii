@@ -81,6 +81,19 @@ describe("LollipopRenderer", () => {
     expect(screen.getByText("errors.noData")).toBeInTheDocument();
   });
 
+  it("falls back to the empty-state when the Y data source is missing entirely", () => {
+    // Reading `[0].source.columnName` would have crashed the public page
+    // renderer; the empty-state is the right user-visible behavior.
+    const viz = buildViz({
+      dataConfig: {
+        tableName: "harvest",
+        dataSources: [{ tableName: "harvest", columnName: "variety", role: "x" }],
+      },
+    });
+    render(<LollipopRenderer visualization={viz} experimentId="exp-1" data={[{ variety: "T" }]} />);
+    expect(screen.getByText("errors.noData")).toBeInTheDocument();
+  });
+
   it("computes per-row error magnitudes when the Y source declares an errorColumn", () => {
     const viz = buildViz({
       dataConfig: {

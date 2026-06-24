@@ -33,8 +33,8 @@ describe("transformRadarData", () => {
     ];
     const result = transformRadarData(rows, sources, baseConfig);
     expect(result.series).toHaveLength(2);
-    // theta closed: [a, b, c, a] (4 values for 3 axes).
-    expect(result.series[0].theta).toEqual(["a", "b", "c", "a"]);
+    // theta closed in degrees: [0, 120, 240, 0] for 3 evenly-spaced axes.
+    expect(result.series[0].theta).toEqual([0, 120, 240, 0]);
     expect(result.series[0].r).toEqual([1, 2, 3, 1]);
   });
 

@@ -79,4 +79,20 @@ describe("transformDensityPlotData", () => {
     const result = transformDensityPlotData(rows, sources, baseConfig);
     expect(result.subplots?.cells.map((c) => c.title)).toEqual(["A", "B"]);
   });
+
+  it("shares the x-grid across cumulative CDFs so they line up over the same range", () => {
+    const rows = [
+      { v: 1, g: "X" },
+      { v: 2, g: "X" },
+      { v: 8, g: "Y" },
+      { v: 9, g: "Y" },
+    ];
+    const sources = [ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { densityCumulative: true };
+    const result = transformDensityPlotData(rows, sources, config);
+    const xX = result.chartSeries[0]?.x ?? [];
+    const xY = result.chartSeries[1]?.x ?? [];
+    expect(xX.length).toBeGreaterThan(0);
+    expect(xY).toEqual(xX);
+  });
 });

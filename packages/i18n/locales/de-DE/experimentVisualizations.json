@@ -278,6 +278,17 @@
       "yAxis": "Y-Achse",
       "barYAxisHelp": "Optional. Leer lassen, um Zeilen pro X-Wert zu zählen.",
       "colorDimension": "Color dimension",
+      "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
+      "colorMap": {
+        "title": "Category colors",
+        "resetAll": "Reset all",
+        "resetOne": "Reset {{name}} to palette color",
+        "pickerLabel": "Pick color for {{name}}",
+        "loading": "Loading category values...",
+        "empty": "No values available for this column yet.",
+        "truncated": "Showing the first {{count}} values; the rest fall back to the palette.",
+        "nullLabel": "(empty)"
+      },
       "facetDimension": "Facet (kleine Mehrfachgrafiken)",
       "facetNone": "Keine (einzelne Grafik)",
       "facetHelp": "Teilt die Grafik in einen Subplot pro eindeutigem Wert der ausgewählten Spalte. Layout-Optionen im Stil-Tab.",
@@ -458,6 +469,7 @@
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
       "markerOpacity": "Marker opacity",
+      "markerColor": "Marker color",
       "referenceLineAdd": "Add reference line",
       "referenceLineAxis": "Axis",
       "referenceLineColor": "Color",
@@ -536,6 +548,7 @@
       "correlationMatrixOptions": "Correlation options",
       "cumulative": "Cumulative",
       "density2dContourFill": "Contour fill",
+      "density2dShowMarkers": "Show markers",
       "densityAppearance": "Appearance",
       "densityBandwidth": "Bandwidth",
       "densityCumulative": "Cumulative",
@@ -667,6 +680,7 @@
       "violinScalemode": "Scale mode",
       "violinShowBox": "Show box",
       "violinShowMeanline": "Show mean line",
+      "violinBoxColor": "Box color",
       "violinSide": "Side",
       "violinSpanmode": "Span mode",
       "violinmode": "Group mode",
@@ -680,7 +694,6 @@
       "windRoseDirectionBins": "Direction bins",
       "windRoseLabels": "Labels",
       "windRoseOptions": "Wind rose options",
-      "windRoseRadialAxisTitle": "Radial axis title",
       "windRoseShowDirectionLabels": "Show direction labels",
       "windRoseValueBins": "Value bins"
     },
@@ -801,7 +814,10 @@
       "blackbody": "Blackbody",
       "earth": "Earth",
       "electric": "Electric",
-      "bluered": "Blue-Red"
+      "bluered": "Blue-Red",
+      "orrd": "Orange-Rot",
+      "magma": "Magma",
+      "openjii": "openJII"
     },
     "bar": {
       "aggregation": "Aggregation",

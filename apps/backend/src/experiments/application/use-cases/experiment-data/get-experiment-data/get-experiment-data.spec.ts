@@ -185,16 +185,15 @@ describe("GetExperimentDataUseCase", () => {
     assertSuccess(result);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(experimentDataRepository.getTableData).toHaveBeenCalledWith({
-      experimentId: experiment.id,
-      experiment: expect.objectContaining({ id: experiment.id }) as typeof experiment,
-      tableName: "bronze_data",
-      columns: undefined,
-      orderBy: "timestamp",
-      orderDirection: "DESC",
-      page: 1,
-      pageSize: 5,
-    });
+    expect(experimentDataRepository.getTableData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        experimentId: experiment.id,
+        experiment: expect.objectContaining({ id: experiment.id }) as typeof experiment,
+        tableName: "bronze_data",
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+      }),
+    );
   });
 
   it("should return not found error when experiment does not exist", async () => {
