@@ -19,12 +19,12 @@ import type { CommandResult, ExecuteOptions } from "../driver-base";
 import { MULTISPEQ_COMMANDS, MULTISPEQ_CONSOLE } from "./commands";
 import type { MultispeqTransportConfig } from "./config";
 import { MULTISPEQ_FRAMING } from "./config";
-import { resolveCommandTimeoutMs } from "./estimate-protocol-duration";
 import type {
   MultispeqStreamEvents,
   MultispeqCommandResult,
   MultispeqDeviceInfo,
 } from "./interface";
+import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
 
 /** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
 function summarizeCommand(commandStr: string, maxLength = 120): string {

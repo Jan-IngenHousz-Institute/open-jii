@@ -14,6 +14,8 @@ import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { protocolRequiresInteraction } from "@repo/iot";
+
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
 import { ReadyState } from "./components/ready-state";
@@ -151,6 +153,9 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
               progress={scanProgress}
               scanStartedAt={scanStartedAt}
               estimatedMs={estimatedMs}
+              requiresInteraction={
+                protocol?.code ? protocolRequiresInteraction(protocol.code) : false
+              }
             />
           </View>
           <View className="gap-4 px-4 py-3">
