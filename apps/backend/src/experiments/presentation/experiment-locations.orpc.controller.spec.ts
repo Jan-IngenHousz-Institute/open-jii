@@ -18,7 +18,7 @@ import { SearchPlacesUseCase } from "../application/use-cases/experiment-locatio
 import type { CreateLocationDto } from "../core/models/experiment-locations.model";
 import { LocationRepository } from "../core/repositories/experiment-location.repository";
 
-describe("ExperimentLocationsController", () => {
+describe("ExperimentLocationsOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
 

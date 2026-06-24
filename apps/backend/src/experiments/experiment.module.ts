@@ -104,7 +104,7 @@ import { ExperimentDataUploadsController } from "./presentation/experiment-data-
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsOrpcController } from "./presentation/experiment-flows.orpc.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
-import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
+import { ExperimentLocationsOrpcController } from "./presentation/experiment-locations.orpc.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentMetadataOrpcController } from "./presentation/experiment-metadata.orpc.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
@@ -134,7 +134,7 @@ import { ProjectTransferWebhookOrpcController } from "./presentation/project-tra
     ExperimentMetadataOrpcController,
     ExperimentVisualizationsController,
     ExperimentDashboardsController,
-    ExperimentLocationsController,
+    ExperimentLocationsOrpcController,
     ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,
     ProjectTransferRequestsOrpcController,
