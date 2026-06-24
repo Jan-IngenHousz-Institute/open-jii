@@ -10,7 +10,7 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import type { FlowNode } from "../../../../types";
 
-const answerText = cva("flex-shrink text-base", {
+const answerText = cva("shrink text-base", {
   variants: {
     state: {
       answered: "font-semibold",

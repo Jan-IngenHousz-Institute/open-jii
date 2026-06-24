@@ -1,5 +1,5 @@
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
-import { createWorkbook } from "@/test/factories";
+import { createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -23,6 +23,9 @@ describe("WorkbookLayoutContent", () => {
       data: { user: { id: "user-1", name: "Test User", email: "test@test.com" } },
       isPending: false,
     } as ReturnType<typeof useSession>);
+    // Default: an unpublished workbook (no versions). Tests that need a
+    // published version re-mount the handler.
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
   });
 
   function renderContent(overrides: Partial<typeof workbook> = {}) {
@@ -73,5 +76,33 @@ describe("WorkbookLayoutContent", () => {
   it("shows a dash when createdByName is null", () => {
     renderContent({ createdByName: undefined });
     expect(screen.getByText("-")).toBeInTheDocument();
+  });
+
+  it("shows the latest published version number", async () => {
+    server.mount(contract.workbooks.listWorkbookVersions, {
+      body: [
+        createWorkbookVersionSummary({ workbookId: "wb-1", version: 3 }),
+        createWorkbookVersionSummary({ workbookId: "wb-1", version: 2 }),
+      ],
+    });
+
+    renderContent();
+
+    expect(await screen.findByText("v3")).toBeInTheDocument();
+  });
+
+  it("shows a draft label when the workbook has no published versions", async () => {
+    renderContent();
+    expect(await screen.findByText("workbooks.draftVersion")).toBeInTheDocument();
+  });
+
+  it("falls back to a dash (not 'Draft') when the versions fetch fails", async () => {
+    server.mount(contract.workbooks.listWorkbookVersions, { status: 500 });
+
+    renderContent({ createdByName: "Test User" });
+
+    // The version cell shows "-" rather than wrongly claiming the workbook is a draft.
+    expect(await screen.findByText("-")).toBeInTheDocument();
+    expect(screen.queryByText("workbooks.draftVersion")).not.toBeInTheDocument();
   });
 });

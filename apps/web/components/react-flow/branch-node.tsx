@@ -102,7 +102,7 @@ export function BranchNode(props: BranchNodeProps) {
             style={{ borderBottom: "1px solid #E2E8F0", height: HEADER_HEIGHT }}
           >
             <div
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
               style={{
                 backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,
                 color: accent,
@@ -114,7 +114,7 @@ export function BranchNode(props: BranchNodeProps) {
               <div className="flex items-center gap-1.5">
                 {data.isStartNode && (
                   <span
-                    className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ backgroundColor: "#22C55E" }}
                     title="Start"
                   />
@@ -148,7 +148,7 @@ export function BranchNode(props: BranchNodeProps) {
                     style={{ height: PATH_ROW_HEIGHT }}
                   >
                     <div
-                      className="h-2 w-2 flex-shrink-0 rounded-full"
+                      className="h-2 w-2 shrink-0 rounded-full"
                       style={{ backgroundColor: path.color || accent }}
                     />
                     <span

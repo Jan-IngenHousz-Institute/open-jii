@@ -29,7 +29,7 @@ export function UploadHistoryCard({ upload, index }: UploadHistoryCardProps) {
             upload={upload}
             index={index}
             tabIndex={0}
-            className="focus-visible:ring-ring rounded-lg focus-visible:outline-none focus-visible:ring-2"
+            className="focus-visible:ring-ring focus-visible:outline-hidden rounded-lg focus-visible:ring-2"
           />
         </TooltipTrigger>
         <TooltipContent

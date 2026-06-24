@@ -331,7 +331,7 @@ export function QuestionCellComponent({
               <button
                 type="button"
                 aria-label={`Rename question (current: ${cell.name})`}
-                className="cursor-pointer rounded px-0.5 hover:underline focus:outline-none focus-visible:underline"
+                className="focus:outline-hidden cursor-pointer rounded px-0.5 hover:underline focus-visible:underline"
                 style={{ color: CELL_ACCENT.question }}
               >
                 {cell.name}
@@ -361,7 +361,7 @@ export function QuestionCellComponent({
                 className={cn(
                   "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
                   question.kind === kind
-                    ? "shadow-sm"
+                    ? "shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                   readOnly && "pointer-events-none",
                 )}

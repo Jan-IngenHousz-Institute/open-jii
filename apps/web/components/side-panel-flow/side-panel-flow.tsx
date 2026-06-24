@@ -141,10 +141,10 @@ export function ExperimentSidePanel({
       {/* Node Side Panel */}
       <div
         className={
-          "fixed inset-0 z-50 bg-black transition-opacity duration-300 " +
+          "fixed inset-0 z-50 transition-opacity duration-300 " +
           (open && nodeType
-            ? "pointer-events-auto bg-opacity-60 opacity-100"
-            : "pointer-events-none bg-opacity-0 opacity-0")
+            ? "pointer-events-auto bg-black/60 opacity-100"
+            : "pointer-events-none bg-black/0 opacity-0")
         }
         onClick={onClose}
         aria-label="Close side panel backdrop"
@@ -210,7 +210,7 @@ export function ExperimentSidePanel({
                 disabled={isDisabled}
                 required={displayNodeType === "QUESTION"}
                 aria-required={displayNodeType === "QUESTION"}
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
               {displayNodeType === "QUESTION" && (
                 <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
@@ -269,7 +269,7 @@ export function ExperimentSidePanel({
                           ))
                       }
                     />
-                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
+                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer-focus:outline-hidden peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
                   </label>
                 </div>
               </CardContent>

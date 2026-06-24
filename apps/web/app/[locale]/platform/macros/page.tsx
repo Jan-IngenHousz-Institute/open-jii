@@ -1,4 +1,5 @@
 import { ListMacros } from "@/components/list-macros";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ export default async function MacroPage({ params }: MacroPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">{t("macros.title")}</h1>
@@ -32,6 +33,6 @@ export default async function MacroPage({ params }: MacroPageProps) {
         </Link>
       </div>
       <ListMacros />
-    </div>
+    </PageContainer>
   );
 }

@@ -46,7 +46,7 @@ export function FilterChipFace({
   return (
     <div
       className={cn(
-        "bg-background inline-flex h-7 items-center rounded-md border text-xs shadow-sm",
+        "bg-background shadow-xs inline-flex h-7 items-center rounded-md border text-xs",
         fullWidth && "flex w-full",
         className,
       )}

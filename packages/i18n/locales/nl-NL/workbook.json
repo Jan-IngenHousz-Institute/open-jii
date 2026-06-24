@@ -17,6 +17,8 @@
     "filterWorkbooks": "Werkboeken filteren",
     "clearSearch": "Zoekopdracht wissen",
     "lastUpdate": "Laatste update",
+    "version": "Versie",
+    "draftVersion": "Concept",
     "noCells": "Nog geen cellen. Open het werkboek om uw notebook te bouwen.",
     "saving": "Opslaan...",
     "allChangesSaved": "Alle wijzigingen opgeslagen",

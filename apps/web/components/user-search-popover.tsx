@@ -120,8 +120,6 @@ export function UserSearchPopover({
       <PopoverContent
         className="max-h-[300px] w-[var(--radix-popover-trigger-width)] overflow-y-auto p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onWheel={(e) => e.nativeEvent.stopImmediatePropagation()}
-        onTouchMove={(e) => e.nativeEvent.stopImmediatePropagation()}
       >
         <PopoverResults
           loading={loading}
@@ -202,7 +200,7 @@ const SearchInput = React.forwardRef<
           </Button>
         )}
       </div>
-      {hasSelection && onRoleChange && (
+      {hasSelection && (
         <>
           <div className="bg-border h-6 w-px" />
           <Select
