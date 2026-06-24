@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type { UserSession } from "@thallesp/nestjs-better-auth";
+import { expect } from "vitest";
 import { Readable } from "stream";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
@@ -7,38 +7,15 @@ import { TestHarness } from "../../test/test-harness";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
-import { ExperimentDataExportsController } from "./experiment-data-exports.controller";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
-describe("ExperimentDataExportsController", () => {
+describe("ExperimentDataExportsOrpcController", () => {
   const testApp = TestHarness.App;
-  let controller: ExperimentDataExportsController;
+  let testUserId: string;
   let initiateExportUseCase: InitiateExportUseCase;
   let listExportsUseCase: ListExportsUseCase;
   let downloadExportUseCase: DownloadExportUseCase;
-
-  const mockSession: UserSession = {
-    user: {
-      id: faker.string.uuid(),
-      email: faker.internet.email(),
-      name: faker.person.fullName(),
-      emailVerified: true,
-      image: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    session: {
-      id: faker.string.uuid(),
-      userId: faker.string.uuid(),
-      expiresAt: new Date(Date.now() + 86400000),
-      token: faker.string.alphanumeric(32),
-      ipAddress: "127.0.0.1",
-      userAgent: "test-agent",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  };
 
   beforeAll(async () => {
     await testApp.setup();
@@ -46,7 +23,7 @@ describe("ExperimentDataExportsController", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    controller = testApp.module.get(ExperimentDataExportsController);
+    testUserId = await testApp.createTestUser({});
     initiateExportUseCase = testApp.module.get(InitiateExportUseCase);
     listExportsUseCase = testApp.module.get(ListExportsUseCase);
     downloadExportUseCase = testApp.module.get(DownloadExportUseCase);
@@ -66,191 +43,147 @@ describe("ExperimentDataExportsController", () => {
 
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(success({ status: "pending" }));
 
-      const handler = controller.initiateExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        body: { tableName: "raw_data", format: "csv" },
-        headers: {},
-      });
+      const response = await testApp
+        .post(`/api/v1/experiments/${experimentId}/data/exports`)
+        .withAuth(testUserId)
+        .send({ tableName: "raw_data", format: "csv" })
+        .expect(201);
 
-      expect(result.status).toBe(201);
-      expect(result.body).toEqual({ status: "pending" });
+      expect(response.body).toEqual({ status: "pending" });
       expect(initiateExportUseCase.execute).toHaveBeenCalledWith(
         experimentId,
-        mockSession.user.id,
-        { tableName: "raw_data", format: "csv" },
+        testUserId,
+        expect.objectContaining({ tableName: "raw_data", format: "csv" }),
       );
     });
 
     it("should return 404 when experiment not found", async () => {
       const experimentId = faker.string.uuid();
-
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Experiment not found")),
       );
 
-      const handler = controller.initiateExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        body: { tableName: "raw_data", format: "csv" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(404);
+      await testApp
+        .post(`/api/v1/experiments/${experimentId}/data/exports`)
+        .withAuth(testUserId)
+        .send({ tableName: "raw_data", format: "csv" })
+        .expect(404);
     });
 
     it("should return 403 when access denied", async () => {
       const experimentId = faker.string.uuid();
-
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(
         failure(AppError.forbidden("Access denied")),
       );
 
-      const handler = controller.initiateExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        body: { tableName: "raw_data", format: "csv" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(403);
+      await testApp
+        .post(`/api/v1/experiments/${experimentId}/data/exports`)
+        .withAuth(testUserId)
+        .send({ tableName: "raw_data", format: "csv" })
+        .expect(403);
     });
   });
 
   describe("listExports", () => {
-    it("should return 200 with exports list", async () => {
+    it("should return 200 with exports list, stripping fields outside the contract", async () => {
       const experimentId = faker.string.uuid();
-      const mockExports = {
-        exports: [
-          {
-            exportId: faker.string.uuid(),
-            experimentId,
-            tableName: "raw_data",
-            format: "csv" as const,
-            status: "completed" as const,
-            filePath: "/path/to/file.csv",
-            rowCount: 500,
-            fileSize: 25000,
-            createdBy: mockSession.user.id,
-            createdAt: "2026-01-01T00:00:00Z",
-            completedAt: "2026-01-01T00:05:00Z",
-            jobRunId: 123,
-          },
-        ],
+      const exportRecord = {
+        exportId: faker.string.uuid(),
+        experimentId,
+        tableName: "raw_data",
+        format: "csv" as const,
+        status: "completed" as const,
+        filePath: "/path/to/file.csv",
+        rowCount: 500,
+        fileSize: 25000,
+        createdBy: testUserId,
+        createdAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T00:05:00Z",
       };
 
-      vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(success(mockExports));
+      vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
+        success({ exports: [{ ...exportRecord, jobRunId: 123 }] }),
+      );
 
-      const handler = controller.listExports(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
+      const response = await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(200);
 
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual(mockExports);
-      expect(listExportsUseCase.execute).toHaveBeenCalledWith(experimentId, mockSession.user.id, {
+      expect(response.body).toEqual({ exports: [exportRecord] });
+      expect(listExportsUseCase.execute).toHaveBeenCalledWith(experimentId, testUserId, {
         tableName: "raw_data",
       });
     });
 
     it("should return 404 when experiment not found", async () => {
       const experimentId = faker.string.uuid();
-
       vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Experiment not found")),
       );
 
-      const handler = controller.listExports(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(404);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(404);
     });
 
     it("should return 403 when access denied", async () => {
       const experimentId = faker.string.uuid();
-
       vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
         failure(AppError.forbidden("Access denied")),
       );
 
-      const handler = controller.listExports(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(403);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(403);
     });
   });
 
   describe("downloadExport", () => {
-    it("should return 200 with StreamableFile on success", async () => {
+    it("should return 200 streaming the export file", async () => {
       const experimentId = faker.string.uuid();
       const exportId = faker.string.uuid();
-      const mockStream = new Readable({
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        read() {},
-      });
+      const fileContents = "col1,col2\n1,2\n";
 
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
-        success({ stream: mockStream, filename: "raw_data.csv" }),
+        success({ stream: Readable.from([Buffer.from(fileContents)]), filename: "raw_data.csv" }),
       );
 
-      const handler = controller.downloadExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId, exportId },
-        headers: {},
-      });
+      const response = await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
+        .withAuth(testUserId)
+        .expect(200);
 
-      expect(result.status).toBe(200);
-      // The body should be a StreamableFile
-      expect(result.body).toBeDefined();
-      expect(downloadExportUseCase.execute).toHaveBeenCalledWith(
-        experimentId,
-        exportId,
-        mockSession.user.id,
-      );
+      expect(response.headers["content-disposition"]).toContain("raw_data.csv");
+      expect(downloadExportUseCase.execute).toHaveBeenCalledWith(experimentId, exportId, testUserId);
     });
 
     it("should return 404 when export not found", async () => {
       const experimentId = faker.string.uuid();
       const exportId = faker.string.uuid();
-
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Export not found")),
       );
 
-      const handler = controller.downloadExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId, exportId },
-        headers: {},
-      });
-
-      expect(result.status).toBe(404);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
+        .withAuth(testUserId)
+        .expect(404);
     });
 
     it("should return 500 when download fails", async () => {
       const experimentId = faker.string.uuid();
       const exportId = faker.string.uuid();
-
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
         failure(AppError.internal("Download failed")),
       );
 
-      const handler = controller.downloadExport(mockSession);
-      const result = await handler({
-        params: { id: experimentId, exportId },
-        headers: {},
-      });
-
-      expect(result.status).toBe(500);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
+        .withAuth(testUserId)
+        .expect(500);
     });
   });
 });

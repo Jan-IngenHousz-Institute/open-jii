@@ -5,8 +5,8 @@ import type { IncomingHttpHeaders } from "http";
 import {
   UPLOAD_FILENAME_SCHEMAS,
   UPLOAD_KIND_CONSTANTS,
+  zExperimentUploadFormFields,
   zExperimentUploadSourceKind,
-  zExperimentUploadTargetTable,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -165,7 +165,7 @@ export class UploadDataUseCase {
   private async preexecute(
     experimentId: string,
     userId: string,
-    _sourceKind: ExperimentUploadSourceKind,
+    sourceKind: ExperimentUploadSourceKind,
     formFields: { targetKind?: string; targetName?: string; uploadTableId?: string },
   ): Promise<Result<UploadContext>> {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
@@ -180,24 +180,19 @@ export class UploadDataUseCase {
       return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
-    const parsed =
-      formFields.targetKind === "existing"
-        ? zExperimentUploadTargetTable.safeParse({
-            kind: "existing",
-            uploadTableId: formFields.uploadTableId,
-          })
-        : zExperimentUploadTargetTable.safeParse({
-            kind: "new",
-            name: formFields.targetName,
-          });
-    if (!parsed.success) {
+    const parsedForm = zExperimentUploadFormFields.safeParse({ ...formFields, sourceKind });
+    if (!parsedForm.success) {
       return failure(
-        AppError.badRequest(parsed.error.issues[0]?.message ?? "Invalid target table"),
+        AppError.badRequest(parsedForm.error.issues[0]?.message ?? "Invalid upload form fields"),
       );
     }
+    const targetSelection =
+      parsedForm.data.targetKind === "new"
+        ? { kind: "new" as const, name: parsedForm.data.targetName }
+        : { kind: "existing" as const, uploadTableId: parsedForm.data.uploadTableId };
     const validated = await this.uploadsRepository.validateTargetTable({
       experimentId,
-      target: parsed.data,
+      target: targetSelection,
     });
     if (validated.isFailure()) {
       return failure(validated.error);

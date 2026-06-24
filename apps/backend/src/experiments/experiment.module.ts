@@ -99,9 +99,9 @@ import { ProjectTransferRequestsRepository } from "./core/repositories/project-t
 import { ExperimentDashboardsOrpcController } from "./presentation/experiment-dashboards.orpc.controller";
 // Controllers
 import { ExperimentDataAnnotationsOrpcController } from "./presentation/experiment-data-annotations.orpc.controller";
-import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
+import { ExperimentDataExportsOrpcController } from "./presentation/experiment-data-exports.orpc.controller";
 import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
-import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentDataOrpcController } from "./presentation/experiment-data.orpc.controller";
 import { ExperimentFlowsOrpcController } from "./presentation/experiment-flows.orpc.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsOrpcController } from "./presentation/experiment-locations.orpc.controller";
@@ -125,8 +125,8 @@ import { ProjectTransferWebhookOrpcController } from "./presentation/project-tra
   ],
   controllers: [
     ExperimentOrpcController,
-    ExperimentDataController,
-    ExperimentDataExportsController,
+    ExperimentDataOrpcController,
+    ExperimentDataExportsOrpcController,
     ExperimentFlowsOrpcController,
     ExperimentWorkbooksOrpcController,
     ExperimentMembersOrpcController,
