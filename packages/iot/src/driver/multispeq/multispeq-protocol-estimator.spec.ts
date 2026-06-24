@@ -93,6 +93,12 @@ describe("resolveNumericRef", () => {
     expect(resolveNumericRef(null, vArrays)).toBeUndefined();
     expect(resolveNumericRef(NaN, vArrays)).toBeUndefined();
   });
+
+  it("does not treat a non-array v_arrays entry as a length (#lN)", () => {
+    // A malformed scalar must not resolve to its string length (would inflate set_repeats).
+    expect(resolveNumericRef("#l0", ["abc"] as unknown as number[][])).toBeUndefined();
+    expect(resolveNumericRef("#l0", [[1, 2, 3]])).toBe(3);
+  });
 });
 
 describe("resolveProtocolVariables", () => {
@@ -195,6 +201,15 @@ describe("estimateProtocolDurationMs", () => {
   it("accepts a single set object (not wrapped in an array)", () => {
     const single = LIGHT_RESPONSE_CURVE[0];
     expect(estimateProtocolDurationMs(single)).toBe(164_000);
+  });
+
+  it("counts protocols_delay on setup-only and delay-only blocks", () => {
+    // autogain block with a 2s delay: SETUP_BLOCK_MS (3000) + 2000
+    expect(
+      estimateProtocolDurationMs([{ _protocol_set_: [{ autogain: [[1]], protocols_delay: 2 }] }]),
+    ).toBe(5000);
+    // delay-only block (no pulses, no autogain): just the 2s delay
+    expect(estimateProtocolDurationMs([{ _protocol_set_: [{ protocols_delay: 2 }] }])).toBe(2000);
   });
 
   it("multiplies a pulse train by the per-phase detector channel count", () => {

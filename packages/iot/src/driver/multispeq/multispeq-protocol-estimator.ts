@@ -67,7 +67,12 @@ export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefin
   if (typeof ref !== "string") return undefined;
 
   const lengthMatch = /^#l(\d+)$/.exec(ref);
-  if (lengthMatch) return vArrays[Number(lengthMatch[1])]?.length;
+  if (lengthMatch) {
+    // Only a real array has a meaningful length; a malformed scalar (e.g. a
+    // string) would otherwise inflate set_repeats and the timeout estimate.
+    const arr = vArrays[Number(lengthMatch[1])];
+    return Array.isArray(arr) ? arr.length : undefined;
+  }
 
   const indexMatch = /^@n(\d+):(\d+)$/.exec(ref);
   if (indexMatch) return asNumber(vArrays[Number(indexMatch[1])]?.[Number(indexMatch[2])]);
@@ -122,9 +127,16 @@ function channelCount(detectorsEntry: Json): number {
 function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, number>): number {
   if (!isRecord(block)) return 0;
 
-  // Setup blocks (autogain, etc.) carry a fixed cost rather than a pulse train.
+  const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
+  const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
+
+  // Setup blocks (autogain, etc.) carry a fixed cost rather than a pulse train,
+  // but a setup-only / delay-only block still waits its protocols_delay.
   const hasPulses = Array.isArray(block.pulses) && block.pulses.length > 0;
-  if (!hasPulses) return "autogain" in block ? SETUP_BLOCK_MS : 0;
+  if (!hasPulses) {
+    const setupMs = "autogain" in block ? SETUP_BLOCK_MS : 0;
+    return setupMs + delayMs * repeats;
+  }
 
   const pulses = block.pulses as Json[];
   const pulseDistance = Array.isArray(block.pulse_distance) ? (block.pulse_distance as Json[]) : [];
@@ -143,9 +155,7 @@ function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, num
     : [];
   const preIlluminationMs = resolveField(preIllumination[2], vArrays, vars) ?? 0;
 
-  const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
   const averages = Math.max(1, resolveField(block.protocol_averages, vArrays, vars) ?? 1);
-  const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
 
   return (pulseTrainMs + preIlluminationMs) * repeats * averages + delayMs * repeats;
 }

@@ -15,6 +15,7 @@ import { parseApiError } from "~/util/apiError";
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
+import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -49,6 +50,7 @@ export function ProtocolCellComponent({
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
+  const { t } = useTranslation("iot");
 
   const useSnapshot = snapshot != null;
   const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
@@ -209,10 +211,9 @@ export function ProtocolCellComponent({
         <div className="bg-muted text-foreground mx-3 mb-2 flex items-start gap-2 rounded-lg p-3">
           <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-medium">Follow the instrument</p>
+            <p className="text-sm font-medium">{t("iot.protocolRunner.interactionTitle")}</p>
             <p className="text-muted-foreground mt-0.5 text-sm">
-              This protocol pauses for you to open and close the clamp. Watch the device and act
-              when its lights prompt you.
+              {t("iot.protocolRunner.interactionHint")}
             </p>
           </div>
         </div>
