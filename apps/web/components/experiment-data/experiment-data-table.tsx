@@ -1,11 +1,14 @@
 "use client";
 
+import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
+import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
 import type {
   DataRow,
   TableMetadata,
 } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
@@ -290,20 +293,29 @@ export function ExperimentDataTable({
 
   const selectedRowIds = Object.keys(rowSelection);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight" && table.getCanNextPage()) {
-        table.nextPage();
-      }
+  useHotkey(
+    "ArrowRight",
+    (event) => {
+      if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
+      if (!table.getCanNextPage()) return;
+      event.preventDefault();
+      table.nextPage();
+      showShortcutHint({ keys: ["→"], label: "Next page" });
+    },
+    { preventDefault: false, stopPropagation: false },
+  );
 
-      if (event.key === "ArrowLeft" && table.getCanPreviousPage()) {
-        table.previousPage();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [table]);
+  useHotkey(
+    "ArrowLeft",
+    (event) => {
+      if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
+      if (!table.getCanPreviousPage()) return;
+      event.preventDefault();
+      table.previousPage();
+      showShortcutHint({ keys: ["←"], label: "Previous page" });
+    },
+    { preventDefault: false, stopPropagation: false },
+  );
 
   if (isLoading && !persistedMetaData) {
     return (
