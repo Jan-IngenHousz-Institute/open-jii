@@ -7,6 +7,7 @@ import { cn, cva } from "@repo/ui/lib/utils";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { CtfVideo } from "../contentful/ctf-video";
+import { ArticleMediaCaption } from "./article-media-caption";
 
 interface ArticleVideoProps {
   video: ComponentRichImage;
@@ -56,7 +57,9 @@ export const ArticleVideo = ({ video, videoClassName }: ArticleVideoProps): Reac
         />
       </div>
       {video.caption && (
-        <figcaption {...inspectorProps({ fieldId: "caption" })}>{video.caption}</figcaption>
+        <ArticleMediaCaption {...inspectorProps({ fieldId: "caption" })}>
+          {video.caption}
+        </ArticleMediaCaption>
       )}
     </figure>
   );
