@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { primaryKey, check, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   pgTable,
@@ -12,6 +13,7 @@ import {
   integer,
   bigint,
   decimal,
+  customType,
 } from "drizzle-orm/pg-core";
 
 // UTC timestamps helper
@@ -24,6 +26,16 @@ const timestamps = {
     .$onUpdate(() => new Date())
     .notNull(),
 };
+
+// Postgres tsvector column for full-text search. The actual GENERATED ALWAYS expression and the
+// GIN / pg_trgm indexes are defined in the migration SQL (see drizzle/00xx_*_search*.sql) — they
+// reference helper functions and operator classes that drizzle-kit cannot serialise reliably.
+// This column is excluded from API responses (stripped in repositories + omitted from DTO schemas).
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -162,6 +174,12 @@ export const experiments = pgTable("experiments", {
     .references(() => users.id)
     .notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). See migration for the
+  // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${experiments.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${experiments.description}, '')), 'B')`,
+  ),
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
@@ -274,6 +292,12 @@ export const protocols = pgTable("protocols", {
     .references(() => users.id)
     .notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). The `family` enum is matched at
+  // query time (enum->text casts are not immutable, so they can't live in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${protocols.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${protocols.description}, '')), 'B')`,
+  ),
 });
 
 // Macro Language Enum
@@ -292,6 +316,12 @@ export const macros = pgTable("macros", {
     .references(() => users.id)
     .notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). The `language` enum is matched at
+  // query time (enum->text casts are not immutable, so they can't live in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${macros.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${macros.description}, '')), 'B')`,
+  ),
 });
 
 // Protocol-Macro Compatibility (many-to-many)

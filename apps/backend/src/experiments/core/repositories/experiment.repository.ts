@@ -6,17 +6,21 @@ import {
   eq,
   and,
   or,
-  ilike,
   ne,
   experiments,
   experimentMembers,
+  experimentLocations,
   exists,
+  ilike,
   sql,
   profiles,
+  alias,
+  getTableColumns,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -26,6 +30,10 @@ import {
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+
+// All experiment columns except the internal full-text `search_vector` (never returned to clients).
+const { searchVector: _experimentSearchVector, ...experimentColumns } =
+  getTableColumns(experiments);
 
 @Injectable()
 export class ExperimentRepository {
@@ -54,6 +62,7 @@ export class ExperimentRepository {
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
     search?: string,
+    limit?: number,
   ): Promise<Result<ExperimentDto[]>> {
     const experimentFields = {
       id: experiments.id,
@@ -117,25 +126,85 @@ export class ExperimentRepository {
         conditions.push(eq(experiments.status, status));
       }
 
+      // Cross-table fields matched at query time (can't live in the generated search_vector).
+      // Creator via the `profiles` join; one-to-many members/locations via `exists` subqueries.
+      // `memberProfiles` is aliased so it doesn't collide with the creator `profiles` join.
+      // Deactivated accounts are excluded from name matching entirely — they display as "Unknown User".
+      const memberProfiles = alias(profiles, "member_profiles");
+      const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const creatorMatch = (term: string) =>
+        sql`(${profiles.activated} = true AND ${ilike(creatorName, `%${term}%`)})`;
+      const memberMatch = (term: string) =>
+        exists(
+          this.database
+            .select()
+            .from(experimentMembers)
+            .innerJoin(memberProfiles, eq(memberProfiles.userId, experimentMembers.userId))
+            .where(
+              and(
+                eq(experimentMembers.experimentId, experiments.id),
+                eq(memberProfiles.activated, true),
+                ilike(
+                  sql<string>`(${memberProfiles.firstName} || ' ' || ${memberProfiles.lastName})`,
+                  `%${term}%`,
+                ),
+              ),
+            ),
+        );
+      const locationMatch = (term: string) =>
+        exists(
+          this.database
+            .select()
+            .from(experimentLocations)
+            .where(
+              and(
+                eq(experimentLocations.experimentId, experiments.id),
+                or(
+                  ilike(experimentLocations.name, `%${term}%`),
+                  ilike(experimentLocations.country, `%${term}%`),
+                  ilike(experimentLocations.region, `%${term}%`),
+                  ilike(experimentLocations.municipality, `%${term}%`),
+                  ilike(experimentLocations.addressLabel, `%${term}%`),
+                ),
+              ),
+            ),
+        );
+
       if (search) {
-        conditions.push(ilike(experiments.name, `%${search}%`));
+        // Match name/description (weighted vector) + name typos, plus creator/member/location names.
+        conditions.push(
+          sql`(${ftsMatch(experiments.searchVector, experiments.name, search)} OR ${creatorMatch(search)} OR ${memberMatch(search)} OR ${locationMatch(search)})`,
+        );
       }
 
-      const where = and(...conditions);
+      // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus so an
+      // experiment whose NAME matches always ranks above one matched only by a related field.
+      const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + 0.05 * (CASE WHEN ${creatorMatch(search ?? "")} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN (${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")}) THEN 1 ELSE 0 END))`;
 
-      const query = this.database
+      let query = this.database
         .select(experimentFields)
         .from(experiments)
-        .orderBy(desc(experiments.updatedAt));
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .$dynamic();
 
-      return where ? query.where(where) : query;
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      query = query.orderBy(search ? desc(rank) : desc(experiments.updatedAt));
+
+      if (limit !== undefined) {
+        query = query.limit(limit);
+      }
+
+      return query;
     });
   }
 
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select(experimentColumns)
         .from(experiments)
         .where(eq(experiments.id, id))
         .limit(1);
@@ -151,7 +220,7 @@ export class ExperimentRepository {
   async findByName(name: string): Promise<Result<ExperimentDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select(experimentColumns)
         .from(experiments)
         .where(eq(experiments.name, name))
         .limit(1);
@@ -257,7 +326,7 @@ export class ExperimentRepository {
   async findExpiredEmbargoes(): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select(experimentColumns)
         .from(experiments)
         .where(
           and(
