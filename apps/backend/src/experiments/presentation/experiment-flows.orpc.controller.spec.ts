@@ -4,7 +4,7 @@ import { contract } from "@repo/api/contract";
 
 import { TestHarness } from "../../test/test-harness";
 
-describe("ExperimentFlowsController", () => {
+describe("ExperimentFlowsOrpcController", () => {
   const testApp = TestHarness.App;
   let ownerId: string;
   let memberId: string;
