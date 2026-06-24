@@ -12,7 +12,7 @@ import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
 
-describe("ProjectTransferWebhookController", () => {
+describe("ProjectTransferWebhookOrpcController", () => {
   const testApp = TestHarness.App;
 
   const apiKeyId = process.env.DATABRICKS_WEBHOOK_API_KEY_ID ?? "test-api-key-id";

@@ -111,7 +111,7 @@ import { ExperimentVisualizationsController } from "./presentation/experiment-vi
 import { ExperimentWorkbooksOrpcController } from "./presentation/experiment-workbooks.orpc.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsOrpcController } from "./presentation/project-transfer-requests.orpc.controller";
-import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
+import { ProjectTransferWebhookOrpcController } from "./presentation/project-transfer-webhook.orpc.controller";
 
 @Module({
   imports: [
@@ -138,7 +138,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,
     ProjectTransferRequestsOrpcController,
-    ProjectTransferWebhookController,
+    ProjectTransferWebhookOrpcController,
   ],
   providers: [
     // Port implementations
