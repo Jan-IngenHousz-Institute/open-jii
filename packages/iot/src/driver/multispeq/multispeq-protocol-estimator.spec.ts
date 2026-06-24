@@ -3,9 +3,12 @@ import { describe, it, expect } from "vitest";
 import {
   computeScanTimeoutMs,
   estimateProtocolDurationMs,
+  resolveCommandTimeoutMs,
   resolveNumericRef,
   resolveProtocolVariables,
+  protocolRequiresInteraction,
   SCAN_TIMEOUT_DEFAULTS,
+  MEASUREMENT_TIMEOUT_FLOOR_MS,
 } from "./multispeq-protocol-estimator";
 
 /**
@@ -317,5 +320,65 @@ describe("computeScanTimeoutMs", () => {
     expect(computeScanTimeoutMs(LIGHT_RESPONSE_CURVE, { minMs: 500_000, maxMs: 900_000 })).toBe(
       500_000,
     );
+  });
+});
+
+/**
+ * Real interactive protocol (OJD-1643). The pulse train estimates to ~20s, but
+ * the device pauses on the clamp open/close gates for as long as the user
+ * takes, so the 60s base would cut it off mid-measurement.
+ */
+const INTERACTIVE_PROTOCOL = [
+  {
+    _protocol_set_: [
+      { label: "no_leaf_baseline", par_led_start_on_open: 2, energy_save_timeout: 300000 },
+      {
+        label: "DIRK_ECS",
+        par_led_start_on_close: 2,
+        protocols_delay: 10,
+        pulses: [100, 100, 20],
+        pulse_distance: [1500, 1500, 1500],
+        detectors: [[3], [3], [3]],
+      },
+    ],
+  },
+];
+
+describe("resolveCommandTimeoutMs", () => {
+  it("keeps the base timeout for string console commands", () => {
+    expect(resolveCommandTimeoutMs("1007+", 5_000)).toBe(5_000);
+  });
+
+  it("floors a measurement protocol at the 3 min measurement floor, not the base", () => {
+    // The interactive protocol's pulse estimate is well under the floor; it must
+    // still get the full 3 min so the open/close pause is not cut off.
+    expect(resolveCommandTimeoutMs(INTERACTIVE_PROTOCOL, 60_000)).toBe(
+      MEASUREMENT_TIMEOUT_FLOOR_MS,
+    );
+    expect(MEASUREMENT_TIMEOUT_FLOOR_MS).toBe(180_000);
+  });
+
+  it("lets a long protocol grow past the floor via its estimate", () => {
+    // 164_000 × 2 + 10_000 = 338_000 > floor.
+    expect(resolveCommandTimeoutMs(LIGHT_RESPONSE_CURVE, 60_000)).toBe(338_000);
+  });
+});
+
+describe("protocolRequiresInteraction", () => {
+  it("detects open/close clamp gates anywhere in the protocol", () => {
+    expect(protocolRequiresInteraction(INTERACTIVE_PROTOCOL)).toBe(true);
+    expect(protocolRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_open: 2 }] }])).toBe(
+      true,
+    );
+    expect(protocolRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_close: 1 }] }])).toBe(
+      true,
+    );
+  });
+
+  it("returns false for protocols without a gate, and for non-protocols", () => {
+    expect(protocolRequiresInteraction(LIGHT_RESPONSE_CURVE)).toBe(false);
+    expect(protocolRequiresInteraction([{ _protocol_set_: [{ pulses: [10] }] }])).toBe(false);
+    expect(protocolRequiresInteraction("garbage")).toBe(false);
+    expect(protocolRequiresInteraction([])).toBe(false);
   });
 });

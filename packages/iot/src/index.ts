@@ -51,7 +51,9 @@ export {
   resolveCommandTimeoutMs,
   resolveNumericRef,
   resolveProtocolVariables,
+  protocolRequiresInteraction,
   SCAN_TIMEOUT_DEFAULTS,
+  MEASUREMENT_TIMEOUT_FLOOR_MS,
 } from "./driver/multispeq/multispeq-protocol-estimator";
 
 // ── Driver: Generic ─────────────────────────────────

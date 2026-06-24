@@ -16,7 +16,7 @@ export type VArrays = unknown[][];
 const SETUP_BLOCK_MS = 3_000;
 
 export interface ScanTimeoutOptions {
-  /** Multiplier applied to the raw estimate (default 2 — 100% head-room). */
+  /** Multiplier applied to the raw estimate (default 2, 100% head-room). */
   safetyFactor?: number;
   /** Flat head-room added on top, in ms (default 10_000). */
   graceMs?: number;
@@ -32,6 +32,16 @@ export const SCAN_TIMEOUT_DEFAULTS: Required<ScanTimeoutOptions> = {
   minMs: 60_000,
   maxMs: 600_000,
 };
+
+/**
+ * Floor (ms) for a measurement protocol's response timeout. The pulse estimate
+ * only covers compute time, but a protocol can pause on a physical open/close
+ * gate (`par_led_start_on_*`) where the device sits silent for as long as the
+ * user takes to open/close the clamp. 3 min covers the slowest hand-measured
+ * DIRK/PAM workflows while still letting a truly dead device fail well before
+ * the 10 min maxMs. See OJD-1643.
+ */
+export const MEASUREMENT_TIMEOUT_FLOOR_MS = 180_000;
 
 function isRecord(value: Json): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -66,7 +76,7 @@ export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefin
 }
 
 /**
- * `@nN:I` / `@sN` lookup table for one set-repeat occurrence — the single origin
+ * `@nN:I` / `@sN` lookup table for one set-repeat occurrence: the single origin
  * of MultispeQ variable resolution, shared with apps/web's pipeline.ts. `@sN` is
  * `v_arrays[N][occurrence]`, clamped to the last numeric when out of range and
  * left unset for an in-range non-numeric placeholder (e.g. "p_light").
@@ -179,9 +189,34 @@ export function computeScanTimeoutMs(protocol: Json, options: ScanTimeoutOptions
 
 /**
  * Response timeout (ms) for a command. String console commands keep the base
- * timeout; JSON measurement protocols are sized to their estimated runtime.
+ * timeout; JSON measurement protocols are sized to their estimated runtime but
+ * floored at MEASUREMENT_TIMEOUT_FLOOR_MS, so a protocol that pauses on a
+ * physical open/close gate (device silent while the user acts) is not cut off
+ * by the pulse-only estimate. Long protocols still grow past the floor.
  */
 export function resolveCommandTimeoutMs(command: Json, baseTimeoutMs: number): number {
   if (typeof command === "string") return baseTimeoutMs;
-  return computeScanTimeoutMs(command, { minMs: baseTimeoutMs });
+  return computeScanTimeoutMs(command, { minMs: MEASUREMENT_TIMEOUT_FLOOR_MS });
+}
+
+const INTERACTION_GATE_KEYS = ["par_led_start_on_open", "par_led_start_on_close"] as const;
+
+function hasInteractionGate(block: Json): boolean {
+  return isRecord(block) && INTERACTION_GATE_KEYS.some((key) => key in block);
+}
+
+/**
+ * True when the protocol pauses for a physical open/close of the leaf clamp
+ * (`par_led_start_on_open` / `par_led_start_on_close`). While gated the device
+ * stays silent and the run is human-paced, so callers should prompt the user to
+ * open/close the clamp. See OJD-1643.
+ */
+export function protocolRequiresInteraction(protocol: Json): boolean {
+  const sets = Array.isArray(protocol) ? protocol : [protocol];
+  return sets.some((set) => {
+    if (!isRecord(set)) return false;
+    if (hasInteractionGate(set)) return true;
+    const blocks = Array.isArray(set._protocol_set_) ? (set._protocol_set_ as Json[]) : [];
+    return blocks.some(hasInteractionGate);
+  });
 }
