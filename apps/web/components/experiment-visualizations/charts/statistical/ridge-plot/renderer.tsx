@@ -51,9 +51,7 @@ export function RidgePlotRenderer({
 
   const hasRows = rows.length > 0 && Boolean(yColumn) && Boolean(colorColumn);
 
-  // Ridge plots have no axis-title shelf, so axes would render blank.
-  // Default to the picked columns: yColumn on the value (x) axis,
-  // colorColumn on the lane (y) axis. User-set titles still win.
+  // No axis-title shelf on this chart; default to the picked column names.
   const ridgeConfig = {
     ...chartConfig,
     xAxisTitle: chartConfig.xAxisTitle || yColumn || "",

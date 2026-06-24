@@ -73,9 +73,7 @@ export function buildFacetSeries<TSeries>(
     }
   }
 
-  // Alphabetical sort so palette indices stay stable and match the
-  // color-map picker's swatch order (it also sorts alphabetically).
-  // Keep keys + values aligned by sorting via a paired index.
+  // Sort alphabetically so palette indices match the picker's swatch order.
   if (globalCategoryKeys.length > 1) {
     const order = globalCategoryKeys.map((_, i) => i);
     order.sort((a, b) => globalCategoryKeys[a].localeCompare(globalCategoryKeys[b]));

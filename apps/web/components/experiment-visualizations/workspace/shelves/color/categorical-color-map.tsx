@@ -49,7 +49,6 @@ interface Category {
  */
 export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const { t } = useTranslation("experimentVisualizations");
-  // Read experimentId from URL params to skip plumbing it through panels.
   const params = useParams<{ id?: string }>();
   const experimentId = params?.id;
   const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
@@ -60,8 +59,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
 
-  // Mirror the renderer's seriesKey (`alias ?? columnName`) so swatch
-  // keys align with `getCategoryColor` lookups.
+  // Mirror the renderer's seriesKey for `getCategoryColor` lookups.
   const seriesKeys = useMemo(() => {
     return dataSourcesByRole(sources, "y")
       .map(({ source }) => source.alias ?? source.columnName)

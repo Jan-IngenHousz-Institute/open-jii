@@ -146,10 +146,6 @@ describe("sanitizeDataConfigForSave", () => {
   });
 
   it("preserves aggregation.functions written directly (pie's single-function path)", () => {
-    // Pie writes the aggregate to `aggregation.functions` rather than to
-    // a per-source `ds.aggregate`; the sanitizer used to strip these,
-    // causing pie charts to lose their SUM/AVG on save and render empty
-    // on reload.
     const result = sanitizeDataConfigForSave({
       tableName: "t",
       dataSources: [

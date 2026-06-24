@@ -89,9 +89,6 @@ export function transformHistogramData(
     },
   );
 
-  // Stamp histogram-specific options on every trace. The fit overlay
-  // scales itself to whatever histnorm is selected (see histogram.tsx),
-  // so we no longer force "probability density" when the fit is on.
   const enriched: HistogramSeriesData[] = facetResult.chartSeries.map((s) => ({
     ...s,
     nbinsx: orientation === "v" ? chartConfig.nbinsx : undefined,
@@ -99,9 +96,8 @@ export function transformHistogramData(
     histnorm: chartConfig.histnorm,
     cumulative: chartConfig.cumulative ? { enabled: true } : undefined,
     orientation,
-    // Categories within the same facet cell should share bin edges so
-    // overlay/stack/cumulative views compare across colors. Scope by
-    // cell (xaxisId) so per-facet ranges still adapt to local data.
+    // Share bin edges across colors in the same cell; scope by cell so
+    // per-facet ranges still adapt to local data.
     bingroup: s.xaxisId ? `cell:${s.xaxisId}` : "default",
   }));
 

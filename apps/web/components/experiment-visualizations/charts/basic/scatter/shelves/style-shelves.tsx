@@ -30,10 +30,6 @@ function ScatterFacetStyle({ form, flat }: ChartPanelProps) {
   return <FacetStyleSection form={form} flat={flat} />;
 }
 
-// Scatter exposes its own marker styling only. Sub-series trace
-// overrides (line / bar / area) use whatever defaults the renderer
-// derives -- no separate style panels here to keep the shelf focused
-// on the chart's primary trace type.
 export const scatterStyleShelves: ShelfDef[] = [
   {
     key: "display",

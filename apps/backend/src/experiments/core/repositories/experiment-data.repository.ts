@@ -108,8 +108,7 @@ export class ExperimentDataRepository {
       if (hasPaging) {
         const offset = (page - 1) * pageSize;
 
-        // Count of filtered/projected rows: build the same filter query
-        // without LIMIT/OFFSET/ORDER BY and wrap it as a COUNT subquery.
+        // COUNT(*) over the unpaged filter query.
         const countSubqueryResult = this.buildQuery(experimentId, metadata, {
           columns,
           filters,
@@ -196,10 +195,7 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, tableName, column, limit } = params;
 
-    // Schemas are needed so columns living inside a VARIANT (upload / macro /
-    // questions / custom_metadata) get extracted by `buildQuery`. Without
-    // them the picker SELECTs nothing for non-static columns and returns
-    // "No values found." even though the data table renders them fine.
+    // Need schemas so buildQuery can extract columns living inside a VARIANT.
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
       identifier: tableName,
       includeSchemas: true,

@@ -30,10 +30,6 @@ function BarFacetStyle({ form, flat }: ChartPanelProps) {
   return <FacetStyleSection form={form} flat={flat} />;
 }
 
-// Bar exposes its own bar styling only. Sub-series trace overrides
-// (line / scatter / area) use renderer-derived defaults -- no separate
-// style panels here to keep the shelf focused on the chart's primary
-// trace type.
 export const barStyleShelves: ShelfDef[] = [
   {
     key: "display",

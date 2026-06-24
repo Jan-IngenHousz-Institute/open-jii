@@ -52,8 +52,7 @@ export function FacetStyleSection({ form, flat = false }: FacetStyleSectionProps
           <FormSlider
             label={t("workspace.style.facetColumns")}
             value={typeof field.value === "number" ? field.value : undefined}
-            // No numeric default; `undefined` means auto (renderer
-            // picks ceil(sqrt(N))).
+            // undefined = auto (renderer picks ceil(sqrt(N))).
             fallback={2}
             min={1}
             max={8}
@@ -72,8 +71,7 @@ export function FacetStyleSection({ form, flat = false }: FacetStyleSectionProps
             <FormControl>
               <Checkbox
                 id={sharedXId}
-                // Default true: scientific facets almost always want
-                // shared scales for cross-cell comparison.
+                // Default-on: shared scales make cross-cell comparison easier.
                 checked={field.value !== false}
                 onCheckedChange={field.onChange}
               />

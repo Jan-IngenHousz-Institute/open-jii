@@ -20,9 +20,7 @@ function AreaPrimaryStyle({ form, flat }: ChartPanelProps) {
 }
 
 function AreaLineStyle({ form, flat }: ChartPanelProps) {
-  // Line settings here style the area's outline (the line above the
-  // colored fill), which is part of the primary area trace -- not a
-  // sub-series override.
+  // The outline above the area fill.
   return <LineStyleSection form={form} titleKey="workspace.style.lineOptions" flat={flat} />;
 }
 
@@ -38,9 +36,6 @@ function AreaFacetStyle({ form, flat }: ChartPanelProps) {
   return <FacetStyleSection form={form} flat={flat} />;
 }
 
-// Area exposes its primary trace styling: the area fill + its outline
-// line. Sub-series trace overrides (scatter / bar) use renderer-derived
-// defaults -- no separate style panels for those.
 export const areaStyleShelves: ShelfDef[] = [
   {
     key: "display",

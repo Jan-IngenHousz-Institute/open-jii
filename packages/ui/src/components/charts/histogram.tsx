@@ -119,7 +119,6 @@ function fitScaleFor(
     case "probability density":
       return 1;
     default:
-      // Raw counts.
       return n * binWidth;
   }
 }
@@ -167,7 +166,6 @@ function buildNormalFit(
     pdf.push(gaussianPdf(x, mean, std) * scale);
   }
   if (!cumulative) return { xs, ys: pdf, mean, std };
-  // Trapezoidal integration to CDF on the same x-grid.
   const cdf: number[] = [0];
   let running = 0;
   let prev = pdf[0] ?? 0;
@@ -263,7 +261,6 @@ export function Histogram({
       }) as any as PlotData,
   );
 
-  // One scaled-PDF (or CDF when cumulative) line trace per histogram series.
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
@@ -283,14 +280,13 @@ export function Histogram({
       const fitTrace = {
         x: seriesOrientation === "v" ? fit.xs : fit.ys,
         y: seriesOrientation === "v" ? fit.ys : fit.xs,
-        // Route to parent's subplot so faceted fits land on the right cell.
         xaxis: series.xaxisId,
         yaxis: series.yaxisId,
         name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
         type: "scatter",
         mode: "lines",
         line: { color: lineColor, width: 2 },
-        // Share legendgroup with the parent so the toggle hides both.
+        // Share legendgroup so the parent's toggle hides the fit too.
         legendgroup: series.legendgroup ?? series.name,
         showlegend: series.showlegend !== false,
         hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,

@@ -67,10 +67,8 @@ export class GetExperimentDataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        // Page/pageSize stay undefined when the caller omits them: the
-        // repo uses their presence to discriminate "paginated read" (table
-        // widget) from "all matching rows" (chart preview), so defaulting
-        // here would force pagination on chart consumers too.
+        // Leave page/pageSize undefined; the repo discriminates "paginated
+        // read" from "all matching rows" by their presence.
         const {
           page,
           pageSize,

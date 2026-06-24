@@ -442,9 +442,8 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
         ? `SELECT * FROM (${flattenedView}) ${whereFlattened}`.trim()
         : flattenedView;
 
-    // Add outer SELECT for column filtering if specific columns requested.
-    // DISTINCT applies at the outer projection so dedup happens on the
-    // flattened/extracted columns, not the raw VARIANT row.
+    // Wrap in an outer SELECT so DISTINCT dedups on the projected columns,
+    // not the raw VARIANT row.
     if (this.selectClause !== "*") {
       const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
       return `

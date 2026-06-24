@@ -23,9 +23,7 @@ interface FilterChipFaceProps {
   className?: string;
 }
 
-// `forwardRef` so Radix `PopoverTrigger asChild` can slot props + ref onto
-// the chip's outer container; without it the positioning ref is dropped
-// and the popover may render off-anchor or not at all.
+// forwardRef so Radix PopoverTrigger asChild can slot its positioning ref.
 export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
   function FilterChipFace(
     { filter, column, experimentId, tableName, onClick, onRemove, fullWidth = false, className },

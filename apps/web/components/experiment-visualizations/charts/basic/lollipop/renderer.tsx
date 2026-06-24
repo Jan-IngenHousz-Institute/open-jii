@@ -25,8 +25,6 @@ export function LollipopRenderer({
     .columnName;
   const yEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0];
   const yColumn = yEntry?.source.columnName;
-  // rowKeyForSource projects per-series aggregates under an aliased
-  // column; reading via the helper keeps raw + aggregated paths uniform.
   const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
@@ -36,8 +34,7 @@ export function LollipopRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
 
-  // Lollipop is strictly single-series; the wrapper takes scalar
-  // categories[]/values[] and synthesises N stems + 1 dot internally.
+  // Single-series; the wrapper takes scalar arrays and emits stems + dots.
   const categories = useMemo<string[]>(() => {
     if (!xColumn) {
       return [];
@@ -49,10 +46,8 @@ export function LollipopRenderer({
     if (!yRowKey) {
       return [];
     }
-    // Plotly tolerates NaN as missing data on numeric axes, so coercing a
-    // non-numeric Y cell to NaN is preferable to silently dropping the row
-    // (which would misalign the categories array). The role contract
-    // restricts Y to numeric kinds, so this case is rare in practice.
+    // Coerce non-numeric to NaN (Plotly treats it as a gap); dropping the row
+    // would misalign categories[].
     return rows.map((row) => Number(row[yRowKey]));
   }, [rows, yRowKey]);
 
@@ -75,11 +70,8 @@ export function LollipopRenderer({
     return <ChartConfigError message={t("errors.invalidConfiguration")} />;
   }
 
-  // Swap axis titles/types when horizontal so the form's "X axis" label
-  // (the user's mental model: X = categories) follows the category axis to
-  // the left side. Same convention used by bar/dot-plot. The LollipopChart
-  // wrapper falls back to placeholder titles ("Category" / "Value") when
-  // empty, which fills in nicely if the user hasn't named anything.
+  // Swap axis title/type when horizontal so the form's "X axis" still maps
+  // to the category axis (same convention as bar / dot-plot).
   const effectiveConfig: PlotlyChartConfig =
     orientation === "h"
       ? {

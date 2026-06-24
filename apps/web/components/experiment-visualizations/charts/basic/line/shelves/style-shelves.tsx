@@ -30,10 +30,6 @@ function LineFacetStyle({ form, flat }: ChartPanelProps) {
   return <FacetStyleSection form={form} flat={flat} />;
 }
 
-// Line exposes its own line styling only. Sub-series trace overrides
-// (scatter / bar / area) use renderer-derived defaults -- no separate
-// style panels here to keep the shelf focused on the chart's primary
-// trace type.
 export const lineStyleShelves: ShelfDef[] = [
   {
     key: "display",

@@ -81,8 +81,6 @@ describe("transformDensityPlotData", () => {
   });
 
   it("shares the x-grid across cumulative CDFs so they line up over the same range", () => {
-    // Without a shared range each CDF stopped at its own max, dropping
-    // vertically back to y=0 due to fill: "tozeroy".
     const rows = [
       { v: 1, g: "X" },
       { v: 2, g: "X" },

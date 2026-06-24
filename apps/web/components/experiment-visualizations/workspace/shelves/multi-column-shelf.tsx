@@ -55,10 +55,8 @@ export function MultiColumnShelf({
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const entries = dataSourcesByRole(sources, role);
-  // A color dimension takes precedence over per-series colors: when it's
-  // set, the renderer cycles palette colors by category, so the per-
-  // series picker has no visible effect. Disable + tooltip rather than
-  // silently ignoring user input. Mirrors y-axis-shelf's isColorMapped.
+  // A color dimension overrides per-series colors; disable + tooltip so
+  // the per-series picker isn't silently ignored.
   const colorSources = dataSourcesByRole(sources, "color");
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0]?.source.columnName);
 

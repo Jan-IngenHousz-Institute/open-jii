@@ -299,9 +299,6 @@ export function transformCartesianData(
     });
   };
 
-  // Continuous-color: only cell 0 keeps the colorbar. Categorical /
-  // plain: legend dedup runs below so each series shows once across
-  // facets.
   const buildSeriesForCell = (
     cellRows: Record<string, unknown>[],
     cellIndex: number,
@@ -676,11 +673,7 @@ function buildSeries({
 
   if (traceType === "area") {
     const stackMode = chartConfig.stackMode ?? "none";
-    // Scope the stackgroup per Y axis: traces sharing an axis stack
-    // together; traces on different axes (primary vs. secondary) stack
-    // independently. This way revenue + cost on the same axis stack into
-    // a total; revenue on primary and cost on secondary each get their
-    // own stack of category bands.
+    // Per-axis so primary and secondary stack independently.
     const stackgroup = stackMode === "none" ? undefined : `stack-${axis}`;
     const groupnorm = stackMode === "percent" ? "percent" : "";
     const fillOpacity = chartConfig.fillOpacity ?? 0.4;

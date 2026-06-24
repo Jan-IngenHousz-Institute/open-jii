@@ -150,8 +150,6 @@ describe("transformCartesianData", () => {
   });
 
   it("sorts categorical color buckets alphabetically so palette indices stay stable", () => {
-    // Rows arrive in fetch order ("B" first); the legend palette mapping
-    // should align with alphabetical order so it matches the picker.
     const rows = [
       { x: 1, v: 10, g: "B" },
       { x: 2, v: 20, g: "A" },
@@ -164,9 +162,6 @@ describe("transformCartesianData", () => {
   });
 
   it("dedupes the legend across facet cells when each cell has a different category", () => {
-    // Greenhouse A has Arabidopsis, Greenhouse B has Tomato. The old
-    // cell-0-only legend rule hid Tomato entirely; the dedupe should
-    // show each category once from the first cell that holds its data.
     const rows = [
       { v: 1, g: "Arabidopsis", site: "A" },
       { v: 2, g: "Tomato", site: "B" },
@@ -190,7 +185,6 @@ describe("transformCartesianData", () => {
     const sources = [
       ds("x", "x"),
       { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
-      // Secondary-axis Y series.
       { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
     ];
     const config: ChartFormConfig = { stackMode: "stacked" };
@@ -198,11 +192,7 @@ describe("transformCartesianData", () => {
       ...baseOptions,
       defaultTraceType: "area",
     });
-    // After manual stacking, stackgroup is cleared (the cumulative work
-    // happened in the transform) so Plotly doesn't try to restack.
     expect(result.chartSeries.every((s) => s.stackgroup === undefined)).toBe(true);
-    // The bottom trace of each axis-scoped stack fills to y=0; later
-    // traces fill between the previous trace and their own line.
     const primary = result.chartSeries.find((s) => s.axis !== "secondary");
     const secondary = result.chartSeries.find((s) => s.axis === "secondary");
     expect(primary?.fill).toBe("tozeroy");
@@ -222,7 +212,6 @@ describe("transformCartesianData", () => {
       ...baseOptions,
       defaultTraceType: "area",
     });
-    // A (bottom): own values 5, 6. B (top): cumulative A+B = 12, 15.
     const a = result.chartSeries.find((s) => s.name === "A");
     const b = result.chartSeries.find((s) => s.name === "B");
     expect(a?.y).toEqual([5, 6]);
@@ -243,7 +232,6 @@ describe("transformCartesianData", () => {
     const a = result.chartSeries.find((s) => s.name === "A");
     const b = result.chartSeries.find((s) => s.name === "B");
     expect(a?.y).toEqual([25]);
-    // A=25%, B cumulative=100%.
     expect(b?.y).toEqual([100]);
   });
 });

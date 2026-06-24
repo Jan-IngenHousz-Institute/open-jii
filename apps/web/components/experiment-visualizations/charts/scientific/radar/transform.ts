@@ -35,10 +35,7 @@ export function transformRadarData(
 
   const colorEntry = dataSourcesByRole(dataSources, "color").at(0);
   const colorKey = colorEntry ? rowKeyForSource(colorEntry.source, colorEntry.index) : undefined;
-  // Emit theta as numeric degrees matching the wrapper's tick positions
-  // (`categories[i]` at `i * 360/N`). String theta values would force the
-  // angular axis into category mode while the wrapper sets it linear, so
-  // every point would land at angle 0 (the top).
+  // Numeric degrees; string theta collapses to angle 0 on the linear axis.
   const angleStep = 360 / categories.length;
   const thetaDegrees = categories.map((_, i) => i * angleStep);
   const thetaClosed = [...thetaDegrees, thetaDegrees[0]];

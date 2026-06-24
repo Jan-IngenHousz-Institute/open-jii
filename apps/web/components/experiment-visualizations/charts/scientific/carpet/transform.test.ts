@@ -100,8 +100,6 @@ describe("transformCarpetData", () => {
   });
 
   it("forces showlines on when labels are requested so plotly can place them", () => {
-    // Without lines on, plotly's contour-label placer reads undefined
-    // crossings and crashes (`Cannot read properties of undefined`).
     const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
     const cfg: ChartFormConfig = {
       carpetContourColoring: "fill",
@@ -113,9 +111,6 @@ describe("transformCarpetData", () => {
   });
 
   it("emits explicit contour start/end/size so plotly never enters autocontour", () => {
-    // Autocontour persists `trace._input.contours` across re-renders and
-    // can collapse to start >= end, which empties pathinfo and crashes
-    // makeCrossings on style-toggle re-renders.
     const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
     const result = transformCarpetData(wellShaped, sources, baseConfig);
     const contours = result.contourData[0].contours;
@@ -127,14 +122,11 @@ describe("transformCarpetData", () => {
   });
 
   it("emits z as a [b][a]-shaped 2D matrix (plotly carpet/heatmap convention)", () => {
-    // pivot returns z[yi][xi] = z[bIdx][aIdx]; the renderer must
-    // preserve that shape or interp2d + autoContours produce garbage and
-    // makeCrossings crashes.
     const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
     const result = transformCarpetData(wellShaped, sources, baseConfig);
     const z = result.contourData[0].z as number[][];
-    expect(z).toHaveLength(2); // |b values|
-    expect(z[0]).toHaveLength(2); // |a values|
+    expect(z).toHaveLength(2);
+    expect(z[0]).toHaveLength(2);
   });
 
   it("wires showGrid through to both a and b carpet axes", () => {

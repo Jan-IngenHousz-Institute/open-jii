@@ -66,10 +66,8 @@ export function transformDensityPlotData(
     };
   };
 
-  // Cumulative curves need a shared x-grid across all series so each CDF
-  // rises from 0 and saturates at 1 over the same span. With per-series
-  // ranges, the curve stops at its own max and Plotly's fill polygon
-  // closes vertically back to the baseline, drawing a wall on the right.
+  // Shared x-grid for cumulative curves; otherwise each CDF stops at its
+  // own max and Plotly's fill drops a vertical wall back to the baseline.
   const unionRangeOf = (allValues: number[][]): [number, number] | undefined => {
     if (!cumulative) return undefined;
     const flat = allValues.flat();
@@ -108,8 +106,7 @@ export function transformDensityPlotData(
 
       const cellIndicesByCategory = bucketIndicesByColumn(cellRows, colorColumn);
 
-      // Pre-collect each (yEntry, category) series's values so the cumulative
-      // union range can be computed before the KDE calls.
+      // Pre-collect values so the union range is known before KDE runs.
       type Bucket = {
         values: number[];
         source: (typeof yEntries)[number]["source"];

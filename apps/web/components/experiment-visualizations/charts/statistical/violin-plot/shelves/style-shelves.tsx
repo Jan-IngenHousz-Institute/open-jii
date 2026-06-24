@@ -146,8 +146,7 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
                 <FormControl>
                   <Checkbox
                     id={showBoxId}
-                    // The default is on; treat undefined as checked so the
-                    // control reflects the rendered state on first paint.
+                    // Default-on: treat undefined as checked.
                     checked={field.value !== false}
                     onCheckedChange={field.onChange}
                   />
