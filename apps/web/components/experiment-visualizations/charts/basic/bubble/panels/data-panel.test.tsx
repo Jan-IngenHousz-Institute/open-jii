@@ -46,9 +46,7 @@ describe("BubbleDataPanel", () => {
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.sizeDimension" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.facetDimension" }),
     ).toBeInTheDocument();

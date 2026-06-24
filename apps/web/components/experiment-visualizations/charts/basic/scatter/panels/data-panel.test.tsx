@@ -42,9 +42,7 @@ describe("ScatterDataPanel", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.xAxis" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.yAxis" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.facetDimension" }),
     ).toBeInTheDocument();

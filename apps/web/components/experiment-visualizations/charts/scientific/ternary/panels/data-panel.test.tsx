@@ -44,9 +44,7 @@ describe("TernaryDataPanel", () => {
     expect(screen.getByRole("heading", { name: "workspace.shelves.ternaryA" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.ternaryB" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.ternaryC" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
   });
 
   it("seeds the A trigger from the existing x data source", () => {
