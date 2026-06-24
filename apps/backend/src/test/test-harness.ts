@@ -304,6 +304,7 @@ export class TestHarness {
     activated = true,
     createProfile = true,
     registered = true,
+    deletedAt = null,
   }: {
     email?: string;
     name?: string;
@@ -312,6 +313,7 @@ export class TestHarness {
     activated?: boolean;
     createProfile?: boolean;
     registered?: boolean;
+    deletedAt?: Date | null;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
@@ -333,6 +335,7 @@ export class TestHarness {
         firstName,
         lastName,
         activated,
+        deletedAt,
       });
     }
 

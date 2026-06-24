@@ -12,6 +12,7 @@ import {
   experimentLocations,
   exists,
   ilike,
+  isNull,
   sql,
   profiles,
   alias,
@@ -129,11 +130,11 @@ export class ExperimentRepository {
       // Cross-table fields matched at query time (can't live in the generated search_vector).
       // Creator via the `profiles` join; one-to-many members/locations via `exists` subqueries.
       // `memberProfiles` is aliased so it doesn't collide with the creator `profiles` join.
-      // Deactivated accounts are excluded from name matching entirely — they display as "Unknown User".
+      // Deactivated ("Unknown User") and deleted accounts are excluded from name matching entirely.
       const memberProfiles = alias(profiles, "member_profiles");
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
-        sql`(${profiles.activated} = true AND ${ilike(creatorName, `%${term}%`)})`;
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${term}%`)})`;
       const memberMatch = (term: string) =>
         exists(
           this.database
@@ -144,6 +145,7 @@ export class ExperimentRepository {
               and(
                 eq(experimentMembers.experimentId, experiments.id),
                 eq(memberProfiles.activated, true),
+                isNull(memberProfiles.deletedAt),
                 ilike(
                   sql<string>`(${memberProfiles.firstName} || ' ' || ${memberProfiles.lastName})`,
                   `%${term}%`,

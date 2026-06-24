@@ -7,6 +7,7 @@ import {
   desc,
   eq,
   ilike,
+  isNull,
   inArray,
   protocols,
   users,
@@ -70,10 +71,10 @@ export class ProtocolRepository {
       const conditions: (SQL | undefined)[] = [];
 
       // Creator name + family enum are matched at query time (alongside the name/description vector).
-      // Deactivated creators are excluded from name matching (they display as "Unknown User").
+      // Deactivated ("Unknown User") and deleted creators are excluded from name matching.
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
-        sql`(${profiles.activated} = true AND ${ilike(creatorName, `%${term}%`)})`;
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${term}%`)})`;
       const familyText = sql<string>`${protocols.family}::text`;
 
       if (search) {

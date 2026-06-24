@@ -745,6 +745,43 @@ describe("ExperimentRepository", () => {
         expect(result.value.some((e) => e.name === "Maize field trial")).toBe(false);
       }
     });
+
+    it("excludes deleted contributors from creator and member matching", async () => {
+      // Active (activated=true) but soft-deleted accounts must not be matchable by name.
+      const deletedCreatorId = await testApp.createTestUser({
+        name: "Deleted Creator",
+        deletedAt: new Date(),
+      });
+      await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: deletedCreatorId,
+        visibility: "public",
+      });
+
+      const deletedMemberId = await testApp.createTestUser({
+        name: "Deleted Member",
+        deletedAt: new Date(),
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Sorghum field trial",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.addExperimentMember(experiment.id, deletedMemberId, "member");
+
+      const byCreator = await repository.findAll(
+        testUserId,
+        undefined,
+        undefined,
+        "Deleted Creator",
+      );
+      assertSuccess(byCreator);
+      expect(byCreator.value.some((e) => e.name === "Maize field trial")).toBe(false);
+
+      const byMember = await repository.findAll(testUserId, undefined, undefined, "Deleted Member");
+      assertSuccess(byMember);
+      expect(byMember.value.some((e) => e.name === "Sorghum field trial")).toBe(false);
+    });
   });
 
   describe("findOne", () => {
