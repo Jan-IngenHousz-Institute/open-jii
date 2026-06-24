@@ -49,9 +49,13 @@ export class ExperimentVisualizationsOrpcController {
   }
 
   @Implement(experimentVisualizationsOrpcContract.getExperimentVisualization)
-  getVisualization() {
+  getVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsOrpcContract.getExperimentVisualization).handler(async ({ input }) => {
-      const result = await this.getExperimentVisualizationUseCase.execute(input.id, input.visualizationId);
+      const result = await this.getExperimentVisualizationUseCase.execute(
+        input.id,
+        input.visualizationId,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return formatDates(result.value);
       }

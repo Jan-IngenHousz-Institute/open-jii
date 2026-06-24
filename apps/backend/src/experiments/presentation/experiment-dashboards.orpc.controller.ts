@@ -49,9 +49,13 @@ export class ExperimentDashboardsOrpcController {
   }
 
   @Implement(experimentDashboardsOrpcContract.getExperimentDashboard)
-  getDashboard() {
+  getDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsOrpcContract.getExperimentDashboard).handler(async ({ input }) => {
-      const result = await this.getExperimentDashboardUseCase.execute(input.id, input.dashboardId);
+      const result = await this.getExperimentDashboardUseCase.execute(
+        input.id,
+        input.dashboardId,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return formatDates(result.value);
       }
