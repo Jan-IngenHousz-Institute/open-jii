@@ -349,13 +349,13 @@ describe("resolveCommandTimeoutMs", () => {
     expect(resolveCommandTimeoutMs("1007+", 5_000)).toBe(5_000);
   });
 
-  it("floors a measurement protocol at the 3 min measurement floor, not the base", () => {
+  it("floors a measurement protocol at the 2 min measurement floor, not the base", () => {
     // The interactive protocol's pulse estimate is well under the floor; it must
-    // still get the full 3 min so the open/close pause is not cut off.
+    // still get the full 2 min so the open/close pause is not cut off.
     expect(resolveCommandTimeoutMs(INTERACTIVE_PROTOCOL, 60_000)).toBe(
       MEASUREMENT_TIMEOUT_FLOOR_MS,
     );
-    expect(MEASUREMENT_TIMEOUT_FLOOR_MS).toBe(180_000);
+    expect(MEASUREMENT_TIMEOUT_FLOOR_MS).toBe(120_000);
   });
 
   it("lets a long protocol grow past the floor via its estimate", () => {

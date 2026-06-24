@@ -37,11 +37,11 @@ export const SCAN_TIMEOUT_DEFAULTS: Required<ScanTimeoutOptions> = {
  * Floor (ms) for a measurement protocol's response timeout. The pulse estimate
  * only covers compute time, but a protocol can pause on a physical open/close
  * gate (`par_led_start_on_*`) where the device sits silent for as long as the
- * user takes to open/close the clamp. 3 min covers the slowest hand-measured
- * DIRK/PAM workflows while still letting a truly dead device fail well before
+ * user takes to open/close the clamp. 2 min covers a typical hand-measured
+ * DIRK/PAM workflow while still letting a truly dead device fail well before
  * the 10 min maxMs. See OJD-1643.
  */
-export const MEASUREMENT_TIMEOUT_FLOOR_MS = 180_000;
+export const MEASUREMENT_TIMEOUT_FLOOR_MS = 120_000;
 
 function isRecord(value: Json): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
