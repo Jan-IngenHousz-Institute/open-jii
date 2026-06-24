@@ -14,17 +14,17 @@ import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
-import { Eye, GitBranch, List, Pencil } from "lucide-react";
+import { GitBranch, List } from "lucide-react";
 import { notFound } from "next/navigation";
-import { use, useMemo, useState } from "react";
+import { use, useCallback, useMemo } from "react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n/client";
-import { Button } from "@repo/ui/components/button";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -66,7 +66,18 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   const isWorkbookOwner =
     !!session?.user.id && !!workbookDraft && session.user.id === workbookDraft.createdBy;
-  const [isEditing, setIsEditing] = useState(false);
+
+  // Editing auto-applies a new version on every save, and that upgrade is
+  // experiment-admin only. So editing requires admin AND ownership; a non-admin
+  // owner would otherwise save fine but hit a failing upgrade (error toast) on
+  // every save. Everyone else gets the read-only view.
+  const canEdit = isWorkbookOwner && hasAccess;
+
+  // Each autosave re-pins the experiment to the latest version (OJD-1626).
+  const upgradeVersion = useUpgradeWorkbookVersion(id);
+  const handleDraftSaved = useCallback(() => {
+    upgradeVersion.mutate({ params: { id } });
+  }, [id, upgradeVersion]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
@@ -134,6 +145,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         workbookId={workbookId}
         workbookVersionId={workbookVersionId}
         hasAccess={hasAccess}
+        isWorkbookOwner={isWorkbookOwner}
       />
 
       <NavTabs defaultValue="list">
@@ -150,31 +162,19 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
         <NavTabsContent value="list" className="mt-6">
           <AutosaveStatusProvider>
-            {isWorkbookOwner && (
-              <div className="mb-3 flex items-center justify-end gap-3">
-                {isEditing && <EditAutosaveStatus />}
-                <Button variant="outline" size="sm" onClick={() => setIsEditing((v) => !v)}>
-                  {isEditing ? (
-                    <>
-                      <Eye className="mr-1.5 h-4 w-4" />
-                      {t("flow.viewPinned")}
-                    </>
-                  ) : (
-                    <>
-                      <Pencil className="mr-1.5 h-4 w-4" />
-                      {t("flow.editWorkbook")}
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-            {isEditing && isWorkbookOwner ? (
-              <WorkbookDraftEditor
-                id={workbookId}
-                initialCells={workbookDraft.cells as WorkbookCell[]}
-                createdBy={workbookDraft.createdBy}
-                name={workbookDraft.name}
-              />
+            {canEdit ? (
+              <>
+                <div className="mb-3 flex items-center justify-end">
+                  <EditAutosaveStatus />
+                </div>
+                <WorkbookDraftEditor
+                  id={workbookId}
+                  initialCells={workbookDraft.cells as WorkbookCell[]}
+                  createdBy={workbookDraft.createdBy}
+                  name={workbookDraft.name}
+                  onSaved={handleDraftSaved}
+                />
+              </>
             ) : (
               <WorkbookEditor
                 cells={versionedCells}

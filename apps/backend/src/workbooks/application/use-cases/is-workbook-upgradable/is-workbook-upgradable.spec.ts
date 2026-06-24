@@ -1,4 +1,5 @@
 import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
@@ -116,6 +117,44 @@ describe("IsWorkbookUpgradableUseCase", () => {
     const result = await useCase.execute(expectValue(fresh.value));
     assertSuccess(result);
     expect(result.value).toBe(true);
+  });
+
+  // Key-order insensitivity is covered in stable-json.spec.ts.
+  it("tracks drift in a referenced protocol's code", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "P",
+      code: [{ pulses: [10, 20] }],
+      createdBy: userId,
+    });
+    const workbook = await testApp.createWorkbook({
+      name: "WB",
+      cells: [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: protocol.id, version: 1 },
+        },
+      ],
+      createdBy: userId,
+    });
+    await publishV1(workbook); // snapshots the protocol's current code
+
+    // Unchanged protocol -> not upgradable.
+    const before = await workbookRepo.findById(workbook.id);
+    assertSuccess(before);
+    const unchanged = await useCase.execute(expectValue(before.value));
+    assertSuccess(unchanged);
+    expect(unchanged.value).toBe(false);
+
+    // The referenced protocol's code changes -> upgradable.
+    const protocolRepo = testApp.module.get(ProtocolRepository);
+    await protocolRepo.update(protocol.id, { code: [{ pulses: [10, 30] }] });
+    const after = await workbookRepo.findById(workbook.id);
+    assertSuccess(after);
+    const drifted = await useCase.execute(expectValue(after.value));
+    assertSuccess(drifted);
+    expect(drifted.value).toBe(true);
   });
 
   it("is false when only UI fold state (isCollapsed) changes", async () => {
