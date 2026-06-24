@@ -24,6 +24,8 @@ coverage
 out
 build
 dist
+.cache
+*.tsbuildinfo
 
 # CI/CD
 
