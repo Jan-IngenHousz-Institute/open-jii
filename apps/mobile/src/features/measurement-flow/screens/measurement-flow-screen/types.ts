@@ -15,12 +15,19 @@ export type QuestionKind =
   | "open_ended";
 
 export function isQuestionsOnlyFlow(flowNodes: FlowNode[]): boolean {
-  // Branches produce no uploadable data and auto-advance, so they're transparent
-  // here: a flow of questions/instructions/branches still ends at the submit
-  // screen rather than wrapping to a new iteration.
+  // Branches and commands produce no uploadable data and auto-advance, so
+  // they're transparent here: a flow of questions/instructions/branches/commands
+  // still ends at the submit screen rather than wrapping to a new iteration
+  // (which, without a measurement node, would loop forever with no way to stop).
   return (
     flowNodes.length > 0 &&
-    flowNodes.every((n) => n.type === "question" || n.type === "instruction" || n.type === "branch")
+    flowNodes.every(
+      (n) =>
+        n.type === "question" ||
+        n.type === "instruction" ||
+        n.type === "branch" ||
+        n.type === "command",
+    )
   );
 }
 

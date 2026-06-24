@@ -53,5 +53,11 @@ function renderNode(currentNode: FlowNode) {
 
 export function ActiveState({ currentNode }: ActiveStateProps) {
   // Each node controls its own navigation/actions; no shared footer here.
-  return <View className="flex-1">{renderNode(currentNode)}</View>;
+  // Key on the node id so React remounts (and resets local state) when the
+  // flow advances between same-type nodes — e.g. two command cells in a row.
+  return (
+    <View key={currentNode.id} className="flex-1">
+      {renderNode(currentNode)}
+    </View>
+  );
 }
