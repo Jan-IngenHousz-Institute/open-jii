@@ -41,7 +41,7 @@ describe("RidgePlotDataPanel", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "workspace.shelves.variable" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
   });
 

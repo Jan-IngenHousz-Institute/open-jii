@@ -45,7 +45,7 @@ describe("RadarDataPanel", () => {
       screen.getByRole("heading", { name: "workspace.shelves.radarAxes" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
   });
 

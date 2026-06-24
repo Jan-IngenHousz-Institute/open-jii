@@ -44,7 +44,7 @@ describe("ParallelCoordinatesDataPanel", () => {
       screen.getByRole("heading", { name: "workspace.shelves.parcoordsAxes" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
   });
 

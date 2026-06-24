@@ -44,7 +44,7 @@ describe("DensityPlotDataPanel", () => {
       screen.getByRole("heading", { name: "workspace.shelves.variables" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.facetDimension" }),

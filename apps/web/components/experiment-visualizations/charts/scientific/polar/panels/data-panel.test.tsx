@@ -48,7 +48,7 @@ describe("PolarDataPanel", () => {
       screen.getByRole("heading", { name: "workspace.shelves.polarRadial" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
   });
 

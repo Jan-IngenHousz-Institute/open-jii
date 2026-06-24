@@ -45,7 +45,7 @@ describe("TernaryDataPanel", () => {
     expect(screen.getByRole("heading", { name: "workspace.shelves.ternaryB" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "workspace.shelves.ternaryC" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
+      screen.getByRole("heading", { name: "workspace.shelves.groupBy" }),
     ).toBeInTheDocument();
   });
 
