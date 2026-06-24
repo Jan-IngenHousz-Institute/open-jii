@@ -16,7 +16,7 @@ import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-
 import { DeleteAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
 
-describe("ExperimentDataAnnotationsController", () => {
+describe("ExperimentDataAnnotationsOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let addAnnotationsUseCase: AddAnnotationsUseCase;
