@@ -88,10 +88,15 @@ export class ExperimentDataRepository {
     const hasColumns = Boolean(columns && columns.length > 0);
     const hasPaging = page !== undefined && pageSize !== undefined;
 
+    // When the experiment anonymizes contributors, the filter picker selects
+    // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
+    // (recomputed in-query) instead of the raw id the client never receives.
+    const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
+
     // Aggregation summary: page/pageSize ignored, `limit` caps the result.
     if (hasAggregation) {
       const queryResult = this.buildQuery(experimentId, metadata, {
-        filters,
+        filters: effectiveFilters,
         aggregation,
         orderBy,
         orderDirection,
@@ -111,7 +116,7 @@ export class ExperimentDataRepository {
         // COUNT(*) over the unpaged filter query.
         const countSubqueryResult = this.buildQuery(experimentId, metadata, {
           columns,
-          filters,
+          filters: effectiveFilters,
         });
         if (countSubqueryResult.isFailure()) {
           return countSubqueryResult;
@@ -125,7 +130,7 @@ export class ExperimentDataRepository {
 
         const dataQueryResult = this.buildQuery(experimentId, metadata, {
           columns,
-          filters,
+          filters: effectiveFilters,
           orderBy,
           orderDirection,
           limit: pageSize,
@@ -148,7 +153,7 @@ export class ExperimentDataRepository {
       // Chart-style: all matching rows in one page, capped by `limit`.
       const queryResult = this.buildQuery(experimentId, metadata, {
         columns,
-        filters,
+        filters: effectiveFilters,
         orderBy,
         orderDirection,
         limit,
@@ -257,6 +262,26 @@ export class ExperimentDataRepository {
     );
 
     return success({ values, truncated });
+  }
+
+  /**
+   * Tag contributor id filters so the query compares the pseudonym (recomputed
+   * in SQL) instead of the raw id. The picker sends pseudonyms when the
+   * experiment anonymizes (see `anonymizeDistinctValues`); this lets them match
+   * without the real id ever reaching the client. The FE routes contributor
+   * filters through a `<column>.id` struct path (its only producer of one).
+   */
+  private pseudonymizeContributorFilters(
+    experiment: ExperimentDto,
+    filters?: FilterCondition[],
+  ): FilterCondition[] | undefined {
+    if (!experiment.anonymizeContributors || !filters) {
+      return filters;
+    }
+
+    return filters.map((f) =>
+      /^[^.]+\.id$/.test(f.column) ? { ...f, contributorPseudonymSalt: experiment.id } : f,
+    );
   }
 
   private buildQuery(

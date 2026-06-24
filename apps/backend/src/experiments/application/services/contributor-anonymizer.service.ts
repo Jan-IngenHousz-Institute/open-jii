@@ -12,7 +12,9 @@ import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
 export class ContributorAnonymizerService {
   /**
    * Stable pseudonym per (experimentId, userId). 6 hex chars across a typical
-   * cohort gives a vanishingly small collision probability.
+   * cohort gives a vanishingly small collision probability. The SQL filter
+   * path recomputes this exact form (see `buildFilterCondition`), so the two
+   * implementations must stay in lockstep.
    */
   pseudonymFor(experimentId: string, userId: string): string {
     const digest = createHash("sha256")
@@ -60,11 +62,11 @@ export class ContributorAnonymizerService {
 
   /**
    * Pseudonymise contributor structs surfaced by the distinct-values filter
-   * picker. Mirrors `anonymizeRows` for `name`/`avatar` but KEEPS the real
-   * `id`: the categorical filter sends the struct's `id` back as the match
-   * value and the data query filters raw (un-anonymised) rows by it, so a
-   * pseudonymised id here would filter to nothing. The id is never rendered
-   * (the picker shows the name), so the pseudonym still hides who contributed.
+   * picker, at full parity with `anonymizeRows` (id + name + avatar). The
+   * picker sends the struct's `id` back as the filter match value; the data
+   * read recomputes the same pseudonym in SQL (see `buildFilterCondition`'s
+   * `contributorPseudonymSalt` path) to match raw rows, so the real id never
+   * reaches the client.
    */
   anonymizeDistinctValues(
     values: (string | number)[],
@@ -81,7 +83,7 @@ export class ContributorAnonymizerService {
       }
       const realId = (JSON.parse(v) as { id?: string }).id ?? "";
       const pseudo = this.pseudonymFor(experiment.id, realId);
-      return JSON.stringify({ id: realId, name: pseudo, avatar: null });
+      return JSON.stringify({ id: pseudo, name: pseudo, avatar: null });
     });
   }
 }

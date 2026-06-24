@@ -145,7 +145,7 @@ describe("ContributorAnonymizerService", () => {
       expect(out).toBe(values);
     });
 
-    it("pseudonymises the name and clears the avatar but keeps the real id", () => {
+    it("pseudonymises id, name and avatar (full parity with anonymizeRows)", () => {
       const values = [contributorStruct("u1", "Alice")];
       const [out] = service.anonymizeDistinctValues(values, WellKnownColumnTypes.CONTRIBUTOR, {
         id: "exp-1",
@@ -153,10 +153,11 @@ describe("ContributorAnonymizerService", () => {
       });
       if (typeof out !== "string") throw new Error("expected serialized contributor");
       const parsed = JSON.parse(out) as { id: string; name: string; avatar: string | null };
-      // id is kept so the categorical filter still matches raw rows.
-      expect(parsed.id).toBe("u1");
-      expect(parsed.name).toBe(service.pseudonymFor("exp-1", "u1"));
-      expect(parsed.name).not.toBe("Alice");
+      const pseudo = service.pseudonymFor("exp-1", "u1");
+      // id is pseudonymised too; the data read translates it back to match raw rows.
+      expect(parsed.id).toBe(pseudo);
+      expect(parsed.name).toBe(pseudo);
+      expect(parsed.id).not.toBe("u1");
       expect(parsed.avatar).toBeNull();
     });
   });
