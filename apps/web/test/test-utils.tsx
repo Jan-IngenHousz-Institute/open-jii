@@ -22,7 +22,6 @@
  */
 import { ActivityProvider } from "@/components/activity/activity-context";
 import { tsr } from "@/lib/tsr";
-import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type { RenderOptions, RenderResult } from "@testing-library/react";
@@ -33,6 +32,8 @@ import React from "react";
 import type { ReactElement } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import type { FieldValues, UseFormProps } from "react-hook-form";
+
+import { TooltipProvider } from "@repo/ui/components/tooltip";
 
 // ── Provider wrapper ────────────────────────────────────────────
 
