@@ -21,7 +21,7 @@ const validMetadataBody = {
   },
 };
 
-describe("ExperimentMetadataController", () => {
+describe("ExperimentMetadataOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
 
