@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { expect } from "vitest";
 
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+
 import {
   AppError,
   success,
@@ -573,7 +575,13 @@ describe("ExperimentDataRepository", () => {
 
   describe("getDistinctColumnValues", () => {
     const experimentId = faker.string.uuid();
-    const baseParams = { experimentId, tableName: "raw_data", column: "site", limit: 3 };
+    const baseParams = {
+      experimentId,
+      experiment: mockExperiment,
+      tableName: "raw_data",
+      column: "site",
+      limit: 3,
+    };
     const metadata: ExperimentTableMetadata[] = [
       {
         identifier: "raw_data",
@@ -643,6 +651,31 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual({ values: ["a", "b", "c"], truncated: true });
+    });
+
+    it("pseudonymises contributor names when the experiment anonymizes contributors", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(
+          mockRows(
+            [JSON.stringify({ id: "u1", name: "Alice", avatar: "https://a" })],
+            WellKnownColumnTypes.CONTRIBUTOR,
+          ),
+        ),
+      );
+
+      const result = await repository.getDistinctColumnValues({
+        ...baseParams,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+      });
+
+      assertSuccess(result);
+      const [value] = result.value.values;
+      const parsed = JSON.parse(String(value)) as { id: string; name: string; avatar: null };
+      expect(parsed.id).toBe("u1");
+      expect(parsed.name).toMatch(/^Contributor-[0-9A-F]{6}$/);
+      expect(parsed.avatar).toBeNull();
     });
 
     it("propagates a metadata lookup failure", async () => {

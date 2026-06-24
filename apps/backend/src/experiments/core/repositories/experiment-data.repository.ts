@@ -189,11 +189,12 @@ export class ExperimentDataRepository {
    */
   async getDistinctColumnValues(params: {
     experimentId: string;
+    experiment: ExperimentDto;
     tableName: string;
     column: string;
     limit: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, tableName, column, limit } = params;
+    const { experimentId, experiment, tableName, column, limit } = params;
 
     // Need schemas so buildQuery can extract columns living inside a VARIANT.
     const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
@@ -241,13 +242,19 @@ export class ExperimentDataRepository {
     // string column with numeric-looking codes (e.g. "007") keeps its form.
     const columnType = dataResult.value.columns[0]?.type_text;
     const isNumericColumn = isNumericType(columnType) || isDecimalType(columnType);
-    const values: (string | number)[] = trimmed.map((v) => {
+    const coerced: (string | number)[] = trimmed.map((v) => {
       if (!isNumericColumn) {
         return v;
       }
       const n = Number(v);
       return Number.isFinite(n) && v.trim() !== "" ? n : v;
     });
+
+    const values = this.contributorAnonymizer.anonymizeDistinctValues(
+      coerced,
+      columnType,
+      experiment,
+    );
 
     return success({ values, truncated });
   }

@@ -66,6 +66,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
     expect(result.value).toEqual(mockResponse);
     expect(repoSpy).toHaveBeenCalledWith({
       experimentId: experiment.id,
+      experiment: expect.objectContaining({ id: experiment.id }),
       tableName: "bronze_data",
       column: "category",
       limit: 100,
@@ -90,6 +91,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
     // Default cap from DISTINCT_VALUES_DEFAULT_LIMIT.
     expect(repoSpy).toHaveBeenCalledWith({
       experimentId: experiment.id,
+      experiment: expect.objectContaining({ id: experiment.id }),
       tableName: "bronze_data",
       column: "category",
       limit: 200,

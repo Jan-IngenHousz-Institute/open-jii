@@ -57,4 +57,31 @@ export class ContributorAnonymizerService {
       return next;
     });
   }
+
+  /**
+   * Pseudonymise contributor structs surfaced by the distinct-values filter
+   * picker. Mirrors `anonymizeRows` for `name`/`avatar` but KEEPS the real
+   * `id`: the categorical filter sends the struct's `id` back as the match
+   * value and the data query filters raw (un-anonymised) rows by it, so a
+   * pseudonymised id here would filter to nothing. The id is never rendered
+   * (the picker shows the name), so the pseudonym still hides who contributed.
+   */
+  anonymizeDistinctValues(
+    values: (string | number)[],
+    columnType: string | undefined,
+    experiment: { id: string; anonymizeContributors: boolean },
+  ): (string | number)[] {
+    if (!experiment.anonymizeContributors || columnType !== WellKnownColumnTypes.CONTRIBUTOR) {
+      return values;
+    }
+
+    return values.map((v) => {
+      if (typeof v !== "string") {
+        return v;
+      }
+      const realId = (JSON.parse(v) as { id?: string }).id ?? "";
+      const pseudo = this.pseudonymFor(experiment.id, realId);
+      return JSON.stringify({ id: realId, name: pseudo, avatar: null });
+    });
+  }
 }
