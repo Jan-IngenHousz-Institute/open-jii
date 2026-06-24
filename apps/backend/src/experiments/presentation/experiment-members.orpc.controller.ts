@@ -27,58 +27,84 @@ export class ExperimentMembersOrpcController {
 
   @Implement(experimentMembersOrpcContract.listExperimentMembers)
   listMembers(@Session() session: UserSession) {
-    return implement(experimentMembersOrpcContract.listExperimentMembers).handler(async ({ input }) => {
-      const result = await this.listExperimentMembersUseCase.execute(input.id, session.user.id);
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentMembersOrpcContract.listExperimentMembers).handler(
+      async ({ input }) => {
+        const result = await this.listExperimentMembersUseCase.execute(input.id, session.user.id);
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentMembersOrpcContract.addExperimentMembers)
   addMembers(@Session() session: UserSession) {
-    return implement(experimentMembersOrpcContract.addExperimentMembers).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const result = await this.addExperimentMembersUseCase.execute(id, body.members, session.user.id);
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentMembersOrpcContract.addExperimentMembers).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.addExperimentMembersUseCase.execute(
+          id,
+          body.members,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentMembersOrpcContract.removeExperimentMember)
   removeMember(@Session() session: UserSession) {
-    return implement(experimentMembersOrpcContract.removeExperimentMember).handler(async ({ input }) => {
-      const result = await this.removeExperimentMemberUseCase.execute(input.id, input.memberId, session.user.id);
-      if (result.isSuccess()) {
-        return undefined;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentMembersOrpcContract.removeExperimentMember).handler(
+      async ({ input }) => {
+        const result = await this.removeExperimentMemberUseCase.execute(
+          input.id,
+          input.memberId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return undefined;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentMembersOrpcContract.updateExperimentMemberRole)
   updateMemberRole(@Session() session: UserSession) {
-    return implement(experimentMembersOrpcContract.updateExperimentMemberRole).handler(async ({ input }) => {
-      const { id, memberId, ...body } = input;
-      const result = await this.updateExperimentMemberRoleUseCase.execute(id, memberId, body.role, session.user.id);
-      if (result.isSuccess()) {
-        return formatDatesList([result.value])[0];
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentMembersOrpcContract.updateExperimentMemberRole).handler(
+      async ({ input }) => {
+        const { id, memberId, ...body } = input;
+        const result = await this.updateExperimentMemberRoleUseCase.execute(
+          id,
+          memberId,
+          body.role,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDatesList([result.value])[0];
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentMembersOrpcContract.transferExperimentAdmin)
   transferAdmin(@Session() session: UserSession) {
-    return implement(experimentMembersOrpcContract.transferExperimentAdmin).handler(async ({ input }) => {
-      const result = await this.transferExperimentAdminUseCase.execute(input.transfers, session.user.id);
-      if (result.isSuccess()) {
-        return { results: result.value };
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentMembersOrpcContract.transferExperimentAdmin).handler(
+      async ({ input }) => {
+        const result = await this.transferExperimentAdminUseCase.execute(
+          input.transfers,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return { results: result.value };
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

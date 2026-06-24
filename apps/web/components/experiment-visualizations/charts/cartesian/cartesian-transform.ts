@@ -1,4 +1,7 @@
-import type { ExperimentDataSourceConfig, ExperimentSeriesTraceType } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataSourceConfig,
+  ExperimentSeriesTraceType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { MarkerConfig } from "@repo/ui/components/charts/types";

@@ -3,7 +3,10 @@
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { ExperimentDataColumn, ExperimentRole } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentRole,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {

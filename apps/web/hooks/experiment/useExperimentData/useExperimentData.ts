@@ -235,7 +235,9 @@ export interface UseExperimentDataParams {
   enabled?: boolean;
 }
 
-function compactFilters(filters: ExperimentDataFilter[] | undefined): ExperimentDataFilter[] | undefined {
+function compactFilters(
+  filters: ExperimentDataFilter[] | undefined,
+): ExperimentDataFilter[] | undefined {
   if (!filters || filters.length === 0) {
     return undefined;
   }

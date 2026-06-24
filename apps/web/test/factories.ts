@@ -74,7 +74,9 @@ export function createExperiment(overrides: Partial<Experiment> = {}): Experimen
 
 let transferSeq = 0;
 
-export function createTransferRequest(overrides: Partial<ExperimentTransferRequest> = {}): ExperimentTransferRequest {
+export function createTransferRequest(
+  overrides: Partial<ExperimentTransferRequest> = {},
+): ExperimentTransferRequest {
   transferSeq++;
   return {
     requestId: `req-${transferSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -280,7 +282,9 @@ export function createExperimentTable(
 
 let placeSeq = 0;
 
-export function createPlace(overrides: Partial<ExperimentPlaceSearchResult> = {}): ExperimentPlaceSearchResult {
+export function createPlace(
+  overrides: Partial<ExperimentPlaceSearchResult> = {},
+): ExperimentPlaceSearchResult {
   placeSeq++;
   return {
     label: `Place ${placeSeq}`,
@@ -402,7 +406,9 @@ export function createFlow(
 
 let exportSeq = 0;
 
-export function createExportRecord(overrides: Partial<ExperimentExportRecord> = {}): ExperimentExportRecord {
+export function createExportRecord(
+  overrides: Partial<ExperimentExportRecord> = {},
+): ExperimentExportRecord {
   exportSeq++;
   return {
     exportId: `export-${exportSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -536,7 +542,9 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
-export function createRichTextWidget(overrides: Partial<ExperimentRichTextWidget> = {}): ExperimentRichTextWidget {
+export function createRichTextWidget(
+  overrides: Partial<ExperimentRichTextWidget> = {},
+): ExperimentRichTextWidget {
   dashboardWidgetSeq++;
   return {
     id: uuid(),
@@ -565,7 +573,9 @@ export function createVisualizationWidget(
   };
 }
 
-export function createTableWidget(overrides: Partial<ExperimentTableWidget> = {}): ExperimentTableWidget {
+export function createTableWidget(
+  overrides: Partial<ExperimentTableWidget> = {},
+): ExperimentTableWidget {
   dashboardWidgetSeq++;
   const { config: configOverride, ...rest } = overrides;
   return {
@@ -604,7 +614,9 @@ export function createFilterWidget(overrides: FilterWidgetOverrides = {}): Exper
   };
 }
 
-export function createDashboardLayout(overrides: Partial<ExperimentDashboardLayout> = {}): ExperimentDashboardLayout {
+export function createDashboardLayout(
+  overrides: Partial<ExperimentDashboardLayout> = {},
+): ExperimentDashboardLayout {
   return {
     columns: 12,
     rowHeight: 80,
@@ -656,7 +668,9 @@ export function createWorkbookVersionSummary(
 
 let uploadSeq = 0;
 
-export function createUpload(overrides: Partial<ExperimentUploadMetadata> = {}): ExperimentUploadMetadata {
+export function createUpload(
+  overrides: Partial<ExperimentUploadMetadata> = {},
+): ExperimentUploadMetadata {
   uploadSeq++;
   return {
     uploadId: `upload-${uploadSeq}`,

@@ -7,8 +7,16 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experime
 
 import { AddFilterPopover } from "./add-filter-popover";
 
-const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: ExperimentDataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
+const numericColumn: ExperimentDataColumn = {
+  name: "value",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
 
 const columns: ExperimentDataColumn[] = [stringColumn, numericColumn];
 

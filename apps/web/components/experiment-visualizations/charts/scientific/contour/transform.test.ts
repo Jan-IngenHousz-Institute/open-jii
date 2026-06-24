@@ -7,7 +7,10 @@ import { transformContourData } from "./transform";
 
 const baseConfig: ChartFormConfig = {};
 
-function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
+function ds(
+  role: ExperimentDataSourceConfig["role"],
+  columnName: string,
+): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

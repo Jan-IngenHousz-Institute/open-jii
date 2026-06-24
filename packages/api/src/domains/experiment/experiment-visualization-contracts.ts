@@ -1,3 +1,5 @@
+import type { ColumnKind } from "../../transforms/column-type-utils";
+import { getColumnKind } from "../../transforms/column-type-utils";
 import type {
   ExperimentChartDataConfig,
   ExperimentChartType,
@@ -5,8 +7,6 @@ import type {
   ExperimentDataSourceConfig,
   ExperimentRole,
 } from "./experiment.schema";
-import type { ColumnKind } from "../../transforms/column-type-utils";
-import { getColumnKind } from "../../transforms/column-type-utils";
 
 /**
  * Registry-driven role contracts for chart `dataConfig`. The wire format
@@ -330,7 +330,10 @@ export function validateDataConfig(
     sourcesByRole.set(role, list);
   }
 
-  for (const [roleKey, entry] of Object.entries(contract) as [ExperimentRole, RoleContractEntry][]) {
+  for (const [roleKey, entry] of Object.entries(contract) as [
+    ExperimentRole,
+    RoleContractEntry,
+  ][]) {
     const sources = sourcesByRole.get(roleKey) ?? [];
     const configured = sources.filter(isConfigured);
 
@@ -368,6 +371,9 @@ export function validateDataConfig(
   return { ok: true };
 }
 
-export function isDataConfigRenderable(chartType: ExperimentChartType, dataConfig: ExperimentChartDataConfig): boolean {
+export function isDataConfigRenderable(
+  chartType: ExperimentChartType,
+  dataConfig: ExperimentChartDataConfig,
+): boolean {
   return validateDataConfig(chartType, dataConfig).ok;
 }

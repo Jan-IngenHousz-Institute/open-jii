@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 
+import { zWebhookAuthHeader } from "../user/user.schema";
 import {
   zMacro,
   zMacroList,
@@ -18,7 +19,6 @@ import {
   zMacroBatchExecutionResponse,
   zMacroBatchWebhookErrorResponse,
 } from "./macro.schema";
-import { zWebhookAuthHeader } from "../user/user.schema";
 
 const c = initContract();
 

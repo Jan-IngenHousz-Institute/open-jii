@@ -13,7 +13,11 @@ export const experimentWorkbooksOrpcContract = {
     .input(zExperimentIdPathParam)
     .output(zExperiment.omit({ anonymizeContributors: true })),
   upgradeWorkbookVersion: oc
-    .route({ method: "POST", path: "/api/v1/experiments/{id}/workbook/upgrade", successStatus: 200 })
+    .route({
+      method: "POST",
+      path: "/api/v1/experiments/{id}/workbook/upgrade",
+      successStatus: 200,
+    })
     .input(zExperimentIdPathParam)
     .output(zAttachWorkbookResponse),
 };

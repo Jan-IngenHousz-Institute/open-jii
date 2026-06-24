@@ -12,7 +12,10 @@ import {
   widgetTypeForTool,
 } from "./dashboard-grid-helpers";
 
-function richText(id: string, layout: ExperimentDashboardWidget["layout"]): ExperimentDashboardWidget {
+function richText(
+  id: string,
+  layout: ExperimentDashboardWidget["layout"],
+): ExperimentDashboardWidget {
   return { id, type: "richText", layout, config: { html: "" } };
 }
 

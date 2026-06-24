@@ -3,11 +3,18 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterChipItem } from "./filter-chip-item";
 
-const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 const columns: ExperimentDataColumn[] = [stringColumn];
 
 const baseFilter: ExperimentDataFilter = { column: "label", operator: "equals", value: "hello" };

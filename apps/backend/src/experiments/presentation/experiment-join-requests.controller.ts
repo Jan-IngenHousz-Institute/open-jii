@@ -30,98 +30,113 @@ export class ExperimentJoinRequestsController {
 
   @Implement(experimentJoinRequestsOrpcContract.createJoinRequest)
   createJoinRequest(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.createJoinRequest).handler(async ({ input }) => {
-      const result = await this.requestJoinExperimentUseCase.execute(
-        input.id,
-        session.user.id,
-        input.message,
-      );
+    return implement(experimentJoinRequestsOrpcContract.createJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.requestJoinExperimentUseCase.execute(
+          input.id,
+          session.user.id,
+          input.message,
+        );
 
-      if (result.isSuccess()) {
-        return formatDates(result.value.joinRequest);
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value.joinRequest);
+        }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentJoinRequestsOrpcContract.listJoinRequests)
   listJoinRequests(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.listJoinRequests).handler(async ({ input }) => {
-      const result = await this.listExperimentJoinRequestsUseCase.execute(input.id, session.user.id);
+    return implement(experimentJoinRequestsOrpcContract.listJoinRequests).handler(
+      async ({ input }) => {
+        const result = await this.listExperimentJoinRequestsUseCase.execute(
+          input.id,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentJoinRequestsOrpcContract.getMyJoinRequest)
   getMyJoinRequest(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.getMyJoinRequest).handler(async ({ input }) => {
-      const result = await this.getMyJoinRequestUseCase.execute(input.id, session.user.id);
+    return implement(experimentJoinRequestsOrpcContract.getMyJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.getMyJoinRequestUseCase.execute(input.id, session.user.id);
 
-      if (result.isSuccess()) {
-        if (!result.value) {
-          return throwOrpcError(AppError.notFound("No pending join request"), this.logger);
+        if (result.isSuccess()) {
+          if (!result.value) {
+            return throwOrpcError(AppError.notFound("No pending join request"), this.logger);
+          }
+          return formatDates(result.value);
         }
-        return formatDates(result.value);
-      }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentJoinRequestsOrpcContract.approveJoinRequest)
   approveJoinRequest(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.approveJoinRequest).handler(async ({ input }) => {
-      const result = await this.approveJoinRequestUseCase.execute(
-        input.id,
-        input.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsOrpcContract.approveJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.approveJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return formatDates(result.value);
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentJoinRequestsOrpcContract.rejectJoinRequest)
   rejectJoinRequest(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.rejectJoinRequest).handler(async ({ input }) => {
-      const result = await this.rejectJoinRequestUseCase.execute(
-        input.id,
-        input.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsOrpcContract.rejectJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.rejectJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return formatDates(result.value);
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentJoinRequestsOrpcContract.cancelJoinRequest)
   cancelJoinRequest(@Session() session: UserSession) {
-    return implement(experimentJoinRequestsOrpcContract.cancelJoinRequest).handler(async ({ input }) => {
-      const result = await this.cancelJoinRequestUseCase.execute(
-        input.id,
-        input.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsOrpcContract.cancelJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.cancelJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return undefined;
-      }
+        if (result.isSuccess()) {
+          return undefined;
+        }
 
-      return throwOrpcFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

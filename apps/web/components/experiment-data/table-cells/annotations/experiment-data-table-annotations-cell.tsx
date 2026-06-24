@@ -15,7 +15,10 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
-const FLAG_TYPE_COLORS: Record<ExperimentAnnotationFlagType, { bg: string; text: string; border: string }> = {
+const FLAG_TYPE_COLORS: Record<
+  ExperimentAnnotationFlagType,
+  { bg: string; text: string; border: string }
+> = {
   outlier: {
     bg: "bg-amber-100 dark:bg-amber-950",
     text: "text-amber-900 dark:text-amber-300",
@@ -36,7 +39,9 @@ export function parseAnnotations(data: string): ExperimentAnnotation[] {
   }
 }
 
-export function groupAnnotations(annotations: ExperimentAnnotation[]): Record<ExperimentAnnotationType, ExperimentAnnotation[]> {
+export function groupAnnotations(
+  annotations: ExperimentAnnotation[],
+): Record<ExperimentAnnotationType, ExperimentAnnotation[]> {
   const annotationsPerType: Record<ExperimentAnnotationType, ExperimentAnnotation[]> = {
     comment: [],
     flag: [],
@@ -71,7 +76,11 @@ function FlagsBadge({ count }: { count: number }) {
   );
 }
 
-function AnnotationItem({ annotation }: { annotation: ExperimentAnnotation & { preview?: boolean } }) {
+function AnnotationItem({
+  annotation,
+}: {
+  annotation: ExperimentAnnotation & { preview?: boolean };
+}) {
   const { t } = useTranslation();
   const content = annotation.content;
   const isPreview = annotation.preview === true;

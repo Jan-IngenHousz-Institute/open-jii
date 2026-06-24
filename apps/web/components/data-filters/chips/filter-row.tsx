@@ -2,7 +2,10 @@
 
 import { X } from "lucide-react";
 
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -77,7 +80,9 @@ export function FilterRow({
 
         <Select
           value={filter.operator}
-          onValueChange={(op) => onChange({ ...filter, operator: op as ExperimentDataFilter["operator"] })}
+          onValueChange={(op) =>
+            onChange({ ...filter, operator: op as ExperimentDataFilter["operator"] })
+          }
         >
           <SelectTrigger className="h-9 w-[110px] shrink-0">
             <SelectValue />

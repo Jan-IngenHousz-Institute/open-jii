@@ -22,11 +22,19 @@ export const experimentMembersOrpcContract = {
     .input(zExperimentIdPathParam.merge(zAddExperimentMembersBody))
     .output(zExperimentMemberList),
   removeExperimentMember: oc
-    .route({ method: "DELETE", path: "/api/v1/experiments/{id}/members/{memberId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/experiments/{id}/members/{memberId}",
+      successStatus: 204,
+    })
     .input(zExperimentMemberPathParam)
     .output(z.void()),
   updateExperimentMemberRole: oc
-    .route({ method: "PATCH", path: "/api/v1/experiments/{id}/members/{memberId}", successStatus: 200 })
+    .route({
+      method: "PATCH",
+      path: "/api/v1/experiments/{id}/members/{memberId}",
+      successStatus: 200,
+    })
     .input(zExperimentMemberPathParam.merge(zUpdateExperimentMemberRoleBody))
     .output(zExperimentMember),
   transferExperimentAdmin: oc

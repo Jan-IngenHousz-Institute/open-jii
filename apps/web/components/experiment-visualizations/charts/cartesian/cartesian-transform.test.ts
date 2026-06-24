@@ -13,7 +13,10 @@ const baseOptions: CartesianTransformOptions = {
   supportsSize: false,
 };
 
-function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
+function ds(
+  role: ExperimentDataSourceConfig["role"],
+  columnName: string,
+): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 
@@ -180,8 +183,13 @@ describe("transformCartesianData", () => {
     ];
     const sources = [
       ds("x", "x"),
-      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
-      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+      { tableName: "t", columnName: "a", role: "y" } as ExperimentDataSourceConfig,
+      {
+        tableName: "t",
+        columnName: "b",
+        role: "y",
+        axis: "secondary",
+      } as ExperimentDataSourceConfig,
     ];
     const config: ChartFormConfig = { stackMode: "stacked" };
     const result = transformCartesianData(rows, sources, config, {

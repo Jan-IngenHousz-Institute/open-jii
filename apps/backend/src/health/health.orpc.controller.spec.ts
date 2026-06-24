@@ -4,6 +4,8 @@ import { Test } from "@nestjs/testing";
 import { ORPCModule } from "@orpc/nest";
 import request from "supertest";
 
+import { zHealthTimeResponse } from "@repo/api/domains/health/health.contract";
+
 import { HealthOrpcController } from "./health.orpc.controller";
 
 describe("HealthOrpcController (oRPC PoC)", () => {
@@ -27,10 +29,8 @@ describe("HealthOrpcController (oRPC PoC)", () => {
     const res = await request(app.getHttpServer()).get("/health/time");
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty("utcTimestampMs");
-    expect(res.body).toHaveProperty("utcTimestampSec");
-    expect(res.body).toHaveProperty("iso");
-    expect(res.body.utcTimestampSec).toBe(Math.floor(res.body.utcTimestampMs / 1000));
-    expect(new Date(res.body.iso).getTime()).toBe(res.body.utcTimestampMs);
+    const body = zHealthTimeResponse.parse(res.body);
+    expect(body.utcTimestampSec).toBe(Math.floor(body.utcTimestampMs / 1000));
+    expect(new Date(body.iso).getTime()).toBe(body.utcTimestampMs);
   });
 });

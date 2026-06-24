@@ -21,7 +21,9 @@ export const useTransferRequestCreate = (props?: TransferRequestCreateProps) => 
       await queryClient.cancelQueries({ queryKey: ["transferRequests"] });
 
       // Get the current transfer requests
-      const previousRequests = queryClient.getQueryData<ExperimentTransferRequest[]>(["transferRequests"]);
+      const previousRequests = queryClient.getQueryData<ExperimentTransferRequest[]>([
+        "transferRequests",
+      ]);
 
       // Return the previous requests to use in case of error
       return { previousRequests };

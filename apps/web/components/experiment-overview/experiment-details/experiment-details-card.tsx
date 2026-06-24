@@ -5,7 +5,11 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { Experiment, ExperimentMember, ExperimentLocation } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  Experiment,
+  ExperimentMember,
+  ExperimentLocation,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

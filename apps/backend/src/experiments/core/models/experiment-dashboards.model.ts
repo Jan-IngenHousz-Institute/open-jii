@@ -1,7 +1,10 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zExperimentDashboardLayout, zExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  zExperimentDashboardLayout,
+  zExperimentDashboardWidget,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { experimentDashboards } from "@repo/database";
 
 // Override the JSONB columns with the typed Zod schemas so DTOs flow through

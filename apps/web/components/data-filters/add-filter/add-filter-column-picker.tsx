@@ -70,7 +70,9 @@ function FilterColumnOption({ column, onPick }: FilterColumnOptionProps) {
   );
 }
 
-function groupColumnsByKind(columns: ExperimentDataColumn[]): Partial<Record<ColumnKind, ExperimentDataColumn[]>> {
+function groupColumnsByKind(
+  columns: ExperimentDataColumn[],
+): Partial<Record<ColumnKind, ExperimentDataColumn[]>> {
   const groups: Partial<Record<ColumnKind, ExperimentDataColumn[]>> = {};
   for (const col of columns) {
     const kind = getColumnKind(col.type_text) ?? "complex";

@@ -33,7 +33,12 @@ export class UserOrpcController {
     return implement(userOrpcContract.deleteUser).handler(async ({ input }) => {
       const result = await this.deleteUserUseCase.execute(input.id);
       if (result.isSuccess()) {
-        this.logger.log({ msg: "User deleted", operation: "deleteUser", userId: input.id, status: "success" });
+        this.logger.log({
+          msg: "User deleted",
+          operation: "deleteUser",
+          userId: input.id,
+          status: "success",
+        });
         return undefined;
       }
       return throwOrpcFailure(result, this.logger);
@@ -90,7 +95,12 @@ export class UserOrpcController {
     return implement(userOrpcContract.createUserProfile).handler(async ({ input }) => {
       const result = await this.createUserProfileUseCase.execute(input, session.user.id);
       if (result.isSuccess()) {
-        this.logger.log({ msg: "User profile created", operation: "createUserProfile", userId: session.user.id, status: "success" });
+        this.logger.log({
+          msg: "User profile created",
+          operation: "createUserProfile",
+          userId: session.user.id,
+          status: "success",
+        });
         return {};
       }
       return throwOrpcFailure(result, this.logger);

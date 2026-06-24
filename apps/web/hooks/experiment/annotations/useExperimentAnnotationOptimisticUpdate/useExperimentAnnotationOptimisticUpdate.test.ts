@@ -49,7 +49,10 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
     },
   ];
 
-  const mockAnnotationRequest: { type: ExperimentAnnotationType; content: ExperimentAnnotationContent } = {
+  const mockAnnotationRequest: {
+    type: ExperimentAnnotationType;
+    content: ExperimentAnnotationContent;
+  } = {
     type: "comment",
     content: { type: "comment", text: "Test annotation" },
   };

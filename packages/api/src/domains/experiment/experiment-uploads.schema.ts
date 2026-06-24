@@ -68,7 +68,9 @@ export const UPLOAD_KIND_CONSTANTS = {
  * the extension isn't supported by any configured kind. Used by the upload
  * modal to pick the source kind automatically and reject unknown formats.
  */
-export function inferUploadSourceKind(filename: string): z.infer<typeof zExperimentUploadSourceKind> | null {
+export function inferUploadSourceKind(
+  filename: string,
+): z.infer<typeof zExperimentUploadSourceKind> | null {
   const lower = filename.toLowerCase();
   for (const [kind, config] of Object.entries(UPLOAD_KIND_CONSTANTS)) {
     for (const ext of config.extensions) {
@@ -159,14 +161,26 @@ function bareBasenameSchema(label: string, extensions: readonly string[]) {
     });
 }
 
-export const zExperimentCsvFilename = bareBasenameSchema("CSV", UPLOAD_KIND_CONSTANTS.csv.extensions);
-export const zExperimentTsvFilename = bareBasenameSchema("TSV", UPLOAD_KIND_CONSTANTS.tsv.extensions);
+export const zExperimentCsvFilename = bareBasenameSchema(
+  "CSV",
+  UPLOAD_KIND_CONSTANTS.csv.extensions,
+);
+export const zExperimentTsvFilename = bareBasenameSchema(
+  "TSV",
+  UPLOAD_KIND_CONSTANTS.tsv.extensions,
+);
 export const zExperimentParquetFilename = bareBasenameSchema(
   "parquet",
   UPLOAD_KIND_CONSTANTS.parquet.extensions,
 );
-export const zExperimentXlsxFilename = bareBasenameSchema("Excel", UPLOAD_KIND_CONSTANTS.xlsx.extensions);
-export const zExperimentJsonFilename = bareBasenameSchema("JSON", UPLOAD_KIND_CONSTANTS.json.extensions);
+export const zExperimentXlsxFilename = bareBasenameSchema(
+  "Excel",
+  UPLOAD_KIND_CONSTANTS.xlsx.extensions,
+);
+export const zExperimentJsonFilename = bareBasenameSchema(
+  "JSON",
+  UPLOAD_KIND_CONSTANTS.json.extensions,
+);
 export const zExperimentNdjsonFilename = bareBasenameSchema(
   "NDJSON",
   UPLOAD_KIND_CONSTANTS.ndjson.extensions,

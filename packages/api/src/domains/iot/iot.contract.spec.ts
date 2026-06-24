@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import { zIotCredentials } from "./iot.schema";
 import { iotContract } from "./iot.contract";
+import { zIotCredentials } from "./iot.schema";
 
 describe("Iot Contract", () => {
   describe("iotContract", () => {

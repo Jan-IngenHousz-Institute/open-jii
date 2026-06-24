@@ -3,7 +3,10 @@
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { ExperimentChartFamily, ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentChartFamily,
+  ExperimentChartType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import { expect } from "vitest";
 import { Readable } from "stream";
+import { expect } from "vitest";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -157,7 +157,11 @@ describe("ExperimentDataExportsOrpcController", () => {
         .expect(200);
 
       expect(response.headers["content-disposition"]).toContain("raw_data.csv");
-      expect(downloadExportUseCase.execute).toHaveBeenCalledWith(experimentId, exportId, testUserId);
+      expect(downloadExportUseCase.execute).toHaveBeenCalledWith(
+        experimentId,
+        exportId,
+        testUserId,
+      );
     });
 
     it("should return 404 when export not found", async () => {

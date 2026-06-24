@@ -128,7 +128,8 @@ export function useDashboardFilterWidget(widgetId: string) {
   }
   return {
     value: ctx.getValueForWidget(widgetId),
-    setValue: (next: ExperimentDataFilterValue | undefined) => ctx.setValueForWidget(widgetId, next),
+    setValue: (next: ExperimentDataFilterValue | undefined) =>
+      ctx.setValueForWidget(widgetId, next),
     isOverridden: ctx.isOverridden(widgetId),
     reset: () => ctx.resetWidget(widgetId),
   };
@@ -139,7 +140,9 @@ function overrideKeyFor(widget: ExperimentFilterWidget): string {
   return `${widget.id}:${widget.config.column ?? ""}:${widget.config.operator ?? ""}`;
 }
 
-function indexFilterWidgets(widgets: ExperimentDashboardWidget[]): Map<string, ExperimentFilterWidget> {
+function indexFilterWidgets(
+  widgets: ExperimentDashboardWidget[],
+): Map<string, ExperimentFilterWidget> {
   const map = new Map<string, ExperimentFilterWidget>();
   for (const widget of widgets) {
     if (widget.type === "filter") {

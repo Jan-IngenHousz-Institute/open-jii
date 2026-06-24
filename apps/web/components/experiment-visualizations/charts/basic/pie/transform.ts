@@ -1,4 +1,7 @@
-import type { ExperimentDataAggregation, ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataAggregation,
+  ExperimentDataSourceConfig,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { PieSeriesData } from "@repo/ui/components/charts/pie-chart";
 
 import type { ChartFormConfig } from "../../chart-config";

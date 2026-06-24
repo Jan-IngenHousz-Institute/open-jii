@@ -4,8 +4,8 @@ import { Variable } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
-import type { ExperimentAggregationItem } from "@repo/api/domains/experiment/experiment.schema";
 import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
+import type { ExperimentAggregationItem } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { MultiColumnShelf } from "../../../../workspace/shelves/multi-column-shelf";

@@ -92,7 +92,8 @@ export function ExperimentDataTable({
   const [addAnnotationType, setAddAnnotationType] = useState<ExperimentAnnotationType>("comment");
   const [deleteAnnotationsDialogOpen, setDeleteAnnotationsDialogOpen] = useState(false);
   const [deleteAnnotationRowIds, setDeleteAnnotationRowIds] = useState<string[]>([]);
-  const [deleteAnnotationType, setDeleteAnnotationType] = useState<ExperimentAnnotationType>("comment");
+  const [deleteAnnotationType, setDeleteAnnotationType] =
+    useState<ExperimentAnnotationType>("comment");
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 

@@ -153,7 +153,10 @@ function filtersEqual(a: ExperimentDataFilter, b: ExperimentDataFilter): boolean
   return filterValuesEqual(a.value, b.value);
 }
 
-function filterValuesEqual(a: ExperimentDataFilter["value"], b: ExperimentDataFilter["value"]): boolean {
+function filterValuesEqual(
+  a: ExperimentDataFilter["value"],
+  b: ExperimentDataFilter["value"],
+): boolean {
   const bothArrays = Array.isArray(a) && Array.isArray(b);
   if (bothArrays) {
     return a.length === b.length && a.every((v, i) => v === b[i]);

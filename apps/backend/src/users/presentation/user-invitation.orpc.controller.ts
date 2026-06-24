@@ -43,7 +43,10 @@ export class InvitationOrpcController {
   @Implement(userOrpcContract.listInvitations)
   listInvitations() {
     return implement(userOrpcContract.listInvitations).handler(async ({ input }) => {
-      const result = await this.getInvitationsUseCase.execute(input.resourceType as "experiment", input.resourceId);
+      const result = await this.getInvitationsUseCase.execute(
+        input.resourceType as "experiment",
+        input.resourceId,
+      );
       if (result.isSuccess()) {
         return formatDatesList(result.value);
       }
@@ -69,7 +72,10 @@ export class InvitationOrpcController {
   @Implement(userOrpcContract.revokeInvitation)
   revokeInvitation(@Session() session: UserSession) {
     return implement(userOrpcContract.revokeInvitation).handler(async ({ input }) => {
-      const result = await this.revokeInvitationUseCase.execute(input.invitationId, session.user.id);
+      const result = await this.revokeInvitationUseCase.execute(
+        input.invitationId,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return undefined;
       }

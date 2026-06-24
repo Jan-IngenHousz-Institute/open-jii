@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import type { ErrorResponse } from "@repo/api/shared/errors";
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-return */
 import { StatusCodes } from "http-status-codes";
 
@@ -9,6 +8,7 @@ import type {
   AddExperimentLocationsBody,
   UpdateExperimentLocationsBody,
 } from "@repo/api/domains/experiment/experiment.schema";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";

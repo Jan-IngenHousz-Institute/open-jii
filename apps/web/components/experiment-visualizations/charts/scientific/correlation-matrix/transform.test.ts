@@ -5,7 +5,10 @@ import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/ex
 import { aliasForCorrelationPair } from "../../data/correlation-alias";
 import { transformCorrelationMatrixData } from "./transform";
 
-function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
+function ds(
+  role: ExperimentDataSourceConfig["role"],
+  columnName: string,
+): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

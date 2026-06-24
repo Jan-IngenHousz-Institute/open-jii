@@ -43,7 +43,11 @@ export const protocolOrpcContract = {
     .input(zProtocolIdPathParam.merge(zAddCompatibleMacrosBody))
     .output(zProtocolMacroList),
   removeCompatibleMacro: oc
-    .route({ method: "DELETE", path: "/api/v1/protocols/{id}/macros/{macroId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/protocols/{id}/macros/{macroId}",
+      successStatus: 204,
+    })
     .input(zProtocolMacroPathParams)
     .output(z.void()),
 };

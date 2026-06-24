@@ -24,7 +24,11 @@ export class ExperimentWorkbooksOrpcController {
   @Implement(experimentWorkbooksOrpcContract.attachWorkbook)
   attachWorkbook(@Session() session: UserSession) {
     return implement(experimentWorkbooksOrpcContract.attachWorkbook).handler(async ({ input }) => {
-      const result = await this.attachWorkbookUseCase.execute(input.id, input.workbookId, session.user.id);
+      const result = await this.attachWorkbookUseCase.execute(
+        input.id,
+        input.workbookId,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return result.value;
       }
@@ -45,12 +49,14 @@ export class ExperimentWorkbooksOrpcController {
 
   @Implement(experimentWorkbooksOrpcContract.upgradeWorkbookVersion)
   upgradeWorkbookVersion(@Session() session: UserSession) {
-    return implement(experimentWorkbooksOrpcContract.upgradeWorkbookVersion).handler(async ({ input }) => {
-      const result = await this.upgradeWorkbookVersionUseCase.execute(input.id, session.user.id);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentWorkbooksOrpcContract.upgradeWorkbookVersion).handler(
+      async ({ input }) => {
+        const result = await this.upgradeWorkbookVersionUseCase.execute(input.id, session.user.id);
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

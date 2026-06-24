@@ -5,7 +5,10 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Collapsible,

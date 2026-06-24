@@ -2,16 +2,15 @@ import { z } from "zod";
 
 import { zMacroLanguage } from "../macro/macro.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
-import {
+import type {
   zExperimentGeocodeQuery,
   zExperimentGeocodeResponse,
   zExperimentLocation,
-  zExperimentLocationInput,
-  zExperimentLocationList,
   zExperimentPlaceSearchQuery,
   zExperimentPlaceSearchResponse,
   zExperimentPlaceSearchResult,
 } from "./experiment-locations.schema";
+import { zExperimentLocationInput, zExperimentLocationList } from "./experiment-locations.schema";
 
 /**
  * Core table names that are always present in the centrum schema
@@ -32,7 +31,10 @@ export const zExperimentTableName = z.enum(["raw_data", "device"]);
 /**
  * Union type: core table names OR string (for dynamic macro tables)
  */
-export const zExperimentTableNameInput = z.union([zExperimentTableName, z.string().min(1).max(256)]);
+export const zExperimentTableNameInput = z.union([
+  zExperimentTableName,
+  z.string().min(1).max(256),
+]);
 
 // Fixed table name every ambyte upload lands in, shared by the FE picker and
 // the pipeline's UPLOAD_TABLE_NAME widget. Not a core table (only present once
@@ -1133,7 +1135,12 @@ export const zTransferExperimentAdminResponse = z.object({
   results: z.array(zTransferExperimentAdminResult),
 });
 
-export const zExperimentJoinRequestStatus = z.enum(["pending", "approved", "rejected", "cancelled"]);
+export const zExperimentJoinRequestStatus = z.enum([
+  "pending",
+  "approved",
+  "rejected",
+  "cancelled",
+]);
 
 export const zExperimentJoinRequest = z.object({
   id: z.string().uuid(),
@@ -1333,7 +1340,9 @@ export const zExperimentAnnotationsColumnType = z.literal(
   "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
 );
 
-export const zExperimentContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
+export const zExperimentContributorColumnType = z.literal(
+  "STRUCT<id: STRING, name: STRING, avatar: STRING>",
+);
 
 export type ExperimentAnnotationsColumnType = z.infer<typeof zExperimentAnnotationsColumnType>;
 export type ExperimentContributorColumnType = z.infer<typeof zExperimentContributorColumnType>;
@@ -1441,19 +1450,25 @@ export type ListExperimentDashboardsQuery = z.infer<typeof zListExperimentDashbo
 export type ExperimentAnnotationType = z.infer<typeof zExperimentAnnotationType>;
 export type ExperimentAnnotationFlagType = z.infer<typeof zExperimentAnnotationFlagType>;
 export type ExperimentAnnotationContent = z.infer<typeof zExperimentAnnotationContent>;
-export type ExperimentAnnotationCommentContent = z.infer<typeof zExperimentAnnotationCommentContent>;
+export type ExperimentAnnotationCommentContent = z.infer<
+  typeof zExperimentAnnotationCommentContent
+>;
 export type ExperimentAnnotationFlagContent = z.infer<typeof zExperimentAnnotationFlagContent>;
 export type ExperimentAnnotation = z.infer<typeof zExperimentAnnotation>;
 export type ExperimentAddAnnotationBody = z.infer<typeof zExperimentAddAnnotationBody>;
 export type ExperimentAddAnnotationsBulkBody = z.infer<typeof zExperimentAddAnnotationsBulkBody>;
 export type ExperimentUpdateAnnotationBody = z.infer<typeof zExperimentUpdateAnnotationBody>;
-export type ExperimentDeleteAnnotationsBulkBody = z.infer<typeof zExperimentAnnotationDeleteBulkBody>;
+export type ExperimentDeleteAnnotationsBulkBody = z.infer<
+  typeof zExperimentAnnotationDeleteBulkBody
+>;
 export type ExperimentAnnotationRowsAffected = z.infer<typeof zExperimentAnnotationRowsAffected>;
 
 // Transfer request types
 export type ExperimentTransferRequestStatus = z.infer<typeof zExperimentTransferRequestStatus>;
 export type ExperimentTransferRequest = z.infer<typeof zExperimentTransferRequest>;
-export type ExperimentCreateTransferRequestBody = z.infer<typeof zExperimentCreateTransferRequestBody>;
+export type ExperimentCreateTransferRequestBody = z.infer<
+  typeof zExperimentCreateTransferRequestBody
+>;
 export type ExperimentTransferRequestList = z.infer<typeof zExperimentTransferRequestList>;
 
 export const zExperimentProjectTransferQuestionInput = z.object({
@@ -1502,9 +1517,15 @@ export const zExperimentProjectTransferWebhookResponse = z.object({
   message: z.string().optional(),
 });
 
-export type ExperimentProjectTransferQuestionInput = z.infer<typeof zExperimentProjectTransferQuestionInput>;
-export type ExperimentProjectTransferWebhookPayload = z.infer<typeof zExperimentProjectTransferWebhookPayload>;
-export type ExperimentProjectTransferWebhookResponse = z.infer<typeof zExperimentProjectTransferWebhookResponse>;
+export type ExperimentProjectTransferQuestionInput = z.infer<
+  typeof zExperimentProjectTransferQuestionInput
+>;
+export type ExperimentProjectTransferWebhookPayload = z.infer<
+  typeof zExperimentProjectTransferWebhookPayload
+>;
+export type ExperimentProjectTransferWebhookResponse = z.infer<
+  typeof zExperimentProjectTransferWebhookResponse
+>;
 
 function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";

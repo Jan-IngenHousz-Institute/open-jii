@@ -5,7 +5,11 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.sc
 
 import { filterColumnPathFor, parentColumnName } from "./filter-column-path";
 
-const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
 const contributorColumn: ExperimentDataColumn = {
   name: "owner",

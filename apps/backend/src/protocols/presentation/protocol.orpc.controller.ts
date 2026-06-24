@@ -4,8 +4,8 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { protocolOrpcContract } from "@repo/api/domains/protocol/protocol.orpc";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
+import { protocolOrpcContract } from "@repo/api/domains/protocol/protocol.orpc";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";
@@ -159,7 +159,11 @@ export class ProtocolOrpcController {
   @Implement(protocolOrpcContract.createProtocol)
   createProtocol(@Session() session: UserSession) {
     return implement(protocolOrpcContract.createProtocol).handler(async ({ input }) => {
-      const validationResult = await validateProtocolCode(input.code, this.logger, this.analyticsPort);
+      const validationResult = await validateProtocolCode(
+        input.code,
+        this.logger,
+        this.analyticsPort,
+      );
       if (validationResult.isFailure()) {
         return throwOrpcFailure(validationResult, this.logger);
       }

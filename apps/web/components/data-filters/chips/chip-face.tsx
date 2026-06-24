@@ -3,7 +3,10 @@
 import { X } from "lucide-react";
 import { forwardRef } from "react";
 
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";

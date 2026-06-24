@@ -1,4 +1,7 @@
-import { ExperimentColumnPrimitiveType, WellKnownColumnTypes } from "../domains/experiment/experiment.schema";
+import {
+  ExperimentColumnPrimitiveType,
+  WellKnownColumnTypes,
+} from "../domains/experiment/experiment.schema";
 
 /**
  * Utility functions for checking column data types.
@@ -120,7 +123,10 @@ export function isSortableType(type?: string): boolean {
  */
 export function isTimestampType(type?: string): boolean {
   if (!type) return false;
-  return type === ExperimentColumnPrimitiveType.TIMESTAMP || type === ExperimentColumnPrimitiveType.TIMESTAMP_NTZ;
+  return (
+    type === ExperimentColumnPrimitiveType.TIMESTAMP ||
+    type === ExperimentColumnPrimitiveType.TIMESTAMP_NTZ
+  );
 }
 
 /**
@@ -140,7 +146,10 @@ export function isStringType(type?: string): boolean {
  */
 export function isDecimalType(type?: string): boolean {
   if (!type) return false;
-  return type === ExperimentColumnPrimitiveType.DECIMAL || type.startsWith(ExperimentColumnPrimitiveType.DECIMAL);
+  return (
+    type === ExperimentColumnPrimitiveType.DECIMAL ||
+    type.startsWith(ExperimentColumnPrimitiveType.DECIMAL)
+  );
 }
 
 /**

@@ -3,7 +3,10 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDashboardWidget, ExperimentRichTextWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDashboardWidget,
+  ExperimentRichTextWidget,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import type { ErrorResponse } from "@repo/api/shared/errors";
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
@@ -9,6 +8,7 @@ import type {
   ExperimentJoinRequestList,
   ExperimentMemberList,
 } from "@repo/api/domains/experiment/experiment.schema";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";

@@ -1,6 +1,9 @@
 import type { z } from "zod";
 
-import type { zExperimentFlowEdge, zExperimentFlowNode } from "../domains/experiment/experiment.schema";
+import type {
+  zExperimentFlowEdge,
+  zExperimentFlowNode,
+} from "../domains/experiment/experiment.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;

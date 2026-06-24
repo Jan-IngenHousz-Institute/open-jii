@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { zErrorResponse } from "../../shared/errors";
 
+import { zErrorResponse } from "../../shared/errors";
 import {
   // Enums / small schemas
   zExperimentStatus,
@@ -576,12 +576,16 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentAnnotationCommentContent rejects empty text", () => {
-      expect(() => zExperimentAnnotationCommentContent.parse({ type: "comment", text: "" })).toThrow();
+      expect(() =>
+        zExperimentAnnotationCommentContent.parse({ type: "comment", text: "" }),
+      ).toThrow();
     });
 
     it("zExperimentAnnotationCommentContent rejects text too long", () => {
       const longText = "a".repeat(256);
-      expect(() => zExperimentAnnotationCommentContent.parse({ type: "comment", text: longText })).toThrow();
+      expect(() =>
+        zExperimentAnnotationCommentContent.parse({ type: "comment", text: longText }),
+      ).toThrow();
     });
 
     it("zExperimentAnnotationFlagContent valid with text", () => {
@@ -602,9 +606,13 @@ describe("Experiment Schema", () => {
       expect(zExperimentAnnotationContent.parse(flag)).toEqual(flag);
 
       // Invalid type for comment
-      expect(() => zExperimentAnnotationContent.parse({ type: "comment", flagType: "outlier" })).toThrow();
+      expect(() =>
+        zExperimentAnnotationContent.parse({ type: "comment", flagType: "outlier" }),
+      ).toThrow();
       // Invalid type for flag
-      expect(() => zExperimentAnnotationContent.parse({ type: "flag", text: "no flagType" })).toThrow();
+      expect(() =>
+        zExperimentAnnotationContent.parse({ type: "flag", text: "no flagType" }),
+      ).toThrow();
     });
 
     it("zExperimentAnnotation valid complete", () => {
@@ -865,7 +873,9 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentInitiateExportBody rejects invalid format", () => {
-      expect(() => zExperimentInitiateExportBody.parse({ tableName: "t1", format: "xml" })).toThrow();
+      expect(() =>
+        zExperimentInitiateExportBody.parse({ tableName: "t1", format: "xml" }),
+      ).toThrow();
     });
 
     it("zExperimentInitiateExportBody rejects missing fields", () => {
@@ -1217,11 +1227,15 @@ describe("Experiment Schema", () => {
     });
 
     it("should reject invalid kind", () => {
-      expect(() => zExperimentProjectTransferQuestionInput.parse({ kind: "invalid", text: "Q" })).toThrow();
+      expect(() =>
+        zExperimentProjectTransferQuestionInput.parse({ kind: "invalid", text: "Q" }),
+      ).toThrow();
     });
 
     it("should reject empty text", () => {
-      expect(() => zExperimentProjectTransferQuestionInput.parse({ kind: "yes_no", text: "" })).toThrow();
+      expect(() =>
+        zExperimentProjectTransferQuestionInput.parse({ kind: "yes_no", text: "" }),
+      ).toThrow();
     });
 
     it("should reject text exceeding 64 characters", () => {
@@ -1362,7 +1376,10 @@ describe("Experiment Schema", () => {
     });
 
     it("should allow null flowId", () => {
-      const result = zExperimentProjectTransferWebhookResponse.parse({ ...validResponse, flowId: null });
+      const result = zExperimentProjectTransferWebhookResponse.parse({
+        ...validResponse,
+        flowId: null,
+      });
       expect(result.flowId).toBeNull();
     });
 
@@ -1445,42 +1462,47 @@ describe("Experiment Schema", () => {
       const base = { column: "temp" };
 
       it("requires a non-empty column", () => {
-        expect(zExperimentDataFilter.safeParse({ column: "", operator: "equals", value: "x" }).success).toBe(
-          false,
-        );
+        expect(
+          zExperimentDataFilter.safeParse({ column: "", operator: "equals", value: "x" }).success,
+        ).toBe(false);
       });
 
       it("'in' requires an array; accepts an array", () => {
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "in", value: "x" }).success).toBe(false);
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "in", value: ["a", "b"] }).success).toBe(
-          true,
-        );
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "in", value: "x" }).success,
+        ).toBe(false);
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "in", value: ["a", "b"] }).success,
+        ).toBe(true);
       });
 
       it("'between' requires a same-typed 2-tuple", () => {
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "between", value: 5 }).success).toBe(
-          false,
-        );
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1] }).success).toBe(
-          false,
-        );
         expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, "2"] }).success,
+          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: 5 }).success,
         ).toBe(false);
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, 9] }).success).toBe(
-          true,
-        );
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1] }).success,
+        ).toBe(false);
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, "2"] })
+            .success,
+        ).toBe(false);
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, 9] }).success,
+        ).toBe(true);
       });
 
       it("rejects array values for non-array operators", () => {
         expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "equals", value: ["a", "b"] }).success,
+          zExperimentDataFilter.safeParse({ ...base, operator: "equals", value: ["a", "b"] })
+            .success,
         ).toBe(false);
       });
 
       it("comparison operators require a number or ISO date string", () => {
         expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: true }).success,
+          zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: true })
+            .success,
         ).toBe(false);
         expect(
           zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: 10 }).success,
@@ -1493,17 +1515,21 @@ describe("Experiment Schema", () => {
           }).success,
         ).toBe(true);
         expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: "not-a-date" }).success,
+          zExperimentDataFilter.safeParse({
+            ...base,
+            operator: "greater_than",
+            value: "not-a-date",
+          }).success,
         ).toBe(false);
       });
 
       it("'contains' requires a string value", () => {
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: 5 }).success).toBe(
-          false,
-        );
-        expect(zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: "lf" }).success).toBe(
-          true,
-        );
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: 5 }).success,
+        ).toBe(false);
+        expect(
+          zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: "lf" }).success,
+        ).toBe(true);
       });
 
       it("accepts a plain equals filter", () => {
@@ -1515,20 +1541,27 @@ describe("Experiment Schema", () => {
 
     describe("zExperimentDistinctValuesQuery", () => {
       it("accepts a minimal query and leaves limit optional", () => {
-        const parsed = zExperimentDistinctValuesQuery.parse({ tableName: "raw_data", column: "site" });
+        const parsed = zExperimentDistinctValuesQuery.parse({
+          tableName: "raw_data",
+          column: "site",
+        });
         expect(parsed.limit).toBeUndefined();
       });
 
       it("coerces a numeric-string limit", () => {
         expect(
-          zExperimentDistinctValuesQuery.parse({ tableName: "raw_data", column: "site", limit: "50" }).limit,
+          zExperimentDistinctValuesQuery.parse({
+            tableName: "raw_data",
+            column: "site",
+            limit: "50",
+          }).limit,
         ).toBe(50);
       });
 
       it("rejects a missing column and an over-cap limit", () => {
-        expect(zExperimentDistinctValuesQuery.safeParse({ tableName: "raw_data", column: "" }).success).toBe(
-          false,
-        );
+        expect(
+          zExperimentDistinctValuesQuery.safeParse({ tableName: "raw_data", column: "" }).success,
+        ).toBe(false);
         expect(
           zExperimentDistinctValuesQuery.safeParse({
             tableName: "raw_data",
@@ -1630,16 +1663,21 @@ describe("Experiment Schema", () => {
 
       it("rejects an 'existing' target with a non-UUID uploadTableId", () => {
         expect(
-          zExperimentUploadTargetTable.safeParse({ kind: "existing", uploadTableId: "leaf_traits" }).success,
+          zExperimentUploadTargetTable.safeParse({ kind: "existing", uploadTableId: "leaf_traits" })
+            .success,
         ).toBe(false);
       });
 
       it("rejects an invalid kind", () => {
-        expect(zExperimentUploadTargetTable.safeParse({ kind: "other", name: "x" }).success).toBe(false);
+        expect(zExperimentUploadTargetTable.safeParse({ kind: "other", name: "x" }).success).toBe(
+          false,
+        );
       });
 
       it("rejects when name fails identifier validation", () => {
-        expect(zExperimentUploadTargetTable.safeParse({ kind: "new", name: "1bad" }).success).toBe(false);
+        expect(zExperimentUploadTargetTable.safeParse({ kind: "new", name: "1bad" }).success).toBe(
+          false,
+        );
       });
     });
 
@@ -1841,7 +1879,9 @@ describe("Experiment Schema", () => {
       });
 
       it("rejects unknown status values", () => {
-        expect(zExperimentUploadMetadata.safeParse({ ...valid, status: "halfway" }).success).toBe(false);
+        expect(zExperimentUploadMetadata.safeParse({ ...valid, status: "halfway" }).success).toBe(
+          false,
+        );
       });
     });
   });

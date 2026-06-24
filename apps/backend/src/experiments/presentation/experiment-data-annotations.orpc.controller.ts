@@ -23,69 +23,88 @@ export class ExperimentDataAnnotationsOrpcController {
 
   @Implement(experimentDataAnnotationsOrpcContract.addAnnotation)
   addAnnotation(@Session() session: UserSession) {
-    return implement(experimentDataAnnotationsOrpcContract.addAnnotation).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const addBody: ExperimentAddAnnotationsBulkBody = {
-        tableName: body.tableName,
-        annotation: body.annotation,
-        rowIds: [body.rowId],
-      };
-      const result = await this.addAnnotationsUseCase.execute(id, addBody, session.user.id);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsOrpcContract.addAnnotation).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const addBody: ExperimentAddAnnotationsBulkBody = {
+          tableName: body.tableName,
+          annotation: body.annotation,
+          rowIds: [body.rowId],
+        };
+        const result = await this.addAnnotationsUseCase.execute(id, addBody, session.user.id);
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentDataAnnotationsOrpcContract.addAnnotationsBulk)
   addAnnotationsBulk(@Session() session: UserSession) {
-    return implement(experimentDataAnnotationsOrpcContract.addAnnotationsBulk).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const result = await this.addAnnotationsUseCase.execute(id, body, session.user.id);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsOrpcContract.addAnnotationsBulk).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.addAnnotationsUseCase.execute(id, body, session.user.id);
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentDataAnnotationsOrpcContract.updateAnnotation)
   updateAnnotation(@Session() session: UserSession) {
-    return implement(experimentDataAnnotationsOrpcContract.updateAnnotation).handler(async ({ input }) => {
-      const { id, annotationId, ...body } = input;
-      const result = await this.updateAnnotationUseCase.execute(id, annotationId, body, session.user.id);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsOrpcContract.updateAnnotation).handler(
+      async ({ input }) => {
+        const { id, annotationId, ...body } = input;
+        const result = await this.updateAnnotationUseCase.execute(
+          id,
+          annotationId,
+          body,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentDataAnnotationsOrpcContract.deleteAnnotation)
   deleteAnnotation(@Session() session: UserSession) {
-    return implement(experimentDataAnnotationsOrpcContract.deleteAnnotation).handler(async ({ input }) => {
-      const result = await this.deleteAnnotationsUseCase.execute(input.id, { annotationId: input.annotationId }, session.user.id);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsOrpcContract.deleteAnnotation).handler(
+      async ({ input }) => {
+        const result = await this.deleteAnnotationsUseCase.execute(
+          input.id,
+          { annotationId: input.annotationId },
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentDataAnnotationsOrpcContract.deleteAnnotationsBulk)
   deleteAnnotationBulk(@Session() session: UserSession) {
-    return implement(experimentDataAnnotationsOrpcContract.deleteAnnotationsBulk).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const result = await this.deleteAnnotationsUseCase.execute(
-        id,
-        { tableName: body.tableName, rowIds: body.rowIds, type: body.type },
-        session.user.id,
-      );
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsOrpcContract.deleteAnnotationsBulk).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.deleteAnnotationsUseCase.execute(
+          id,
+          { tableName: body.tableName, rowIds: body.rowIds, type: body.type },
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

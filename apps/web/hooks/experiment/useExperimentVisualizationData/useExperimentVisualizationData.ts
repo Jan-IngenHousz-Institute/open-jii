@@ -2,7 +2,10 @@ import { shouldRetryQuery } from "@/util/query-retry";
 import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
 
-import type { ExperimentDataAggregation, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataAggregation,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 const STALE_TIME = 2 * 60 * 1000;
@@ -25,7 +28,9 @@ function hasAggregationContent(agg: ExperimentDataAggregation | undefined): bool
 }
 
 // Drop draft rows the inspector keeps around mid-edit; the API rejects them.
-function compactFilters(filters: ExperimentDataFilter[] | undefined): ExperimentDataFilter[] | undefined {
+function compactFilters(
+  filters: ExperimentDataFilter[] | undefined,
+): ExperimentDataFilter[] | undefined {
   if (!filters || filters.length === 0) {
     return undefined;
   }
@@ -44,7 +49,9 @@ function compactFilters(filters: ExperimentDataFilter[] | undefined): Experiment
   return compact.length > 0 ? compact : undefined;
 }
 
-function compactAggregation(agg: ExperimentDataAggregation | undefined): ExperimentDataAggregation | undefined {
+function compactAggregation(
+  agg: ExperimentDataAggregation | undefined,
+): ExperimentDataAggregation | undefined {
   if (!agg) {
     return undefined;
   }

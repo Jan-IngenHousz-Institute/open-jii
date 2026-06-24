@@ -8,7 +8,11 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.sc
 
 import { CategoricalMultiInput } from "./categorical-multi-input";
 
-const labelColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const labelColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
 const contributorColumn: ExperimentDataColumn = {
   name: "owner",

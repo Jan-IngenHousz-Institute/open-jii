@@ -4,7 +4,10 @@ import { useForm } from "react-hook-form";
 import { useExperimentAnnotationAdd } from "~/hooks/experiment/annotations/useExperimentAnnotationAdd/useExperimentAnnotationAdd";
 import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationAddBulk/useExperimentAnnotationAddBulk";
 
-import type { ExperimentAnnotationContent, ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentAnnotationContent,
+  ExperimentAnnotationType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { zExperimentAnnotationContent } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

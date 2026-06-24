@@ -91,7 +91,9 @@ export function operatorValueShape(op: ExperimentDataFilterOperator): OperatorVa
   return "scalar";
 }
 
-export function defaultValueForOperator(op: ExperimentDataFilterOperator): ExperimentDataFilterValue {
+export function defaultValueForOperator(
+  op: ExperimentDataFilterOperator,
+): ExperimentDataFilterValue {
   if (op === "between" || op === "in") {
     return [];
   }
@@ -99,7 +101,9 @@ export function defaultValueForOperator(op: ExperimentDataFilterOperator): Exper
 }
 
 /** Best-fit operator for a column based on its column kind. */
-export function defaultOperatorForColumn(column: ExperimentDataColumn | undefined): ExperimentDataFilterOperator {
+export function defaultOperatorForColumn(
+  column: ExperimentDataColumn | undefined,
+): ExperimentDataFilterOperator {
   const kind = column ? getColumnKind(column.type_text) : undefined;
   if (kind === "temporal") {
     return "between";

@@ -1,7 +1,9 @@
 import { initContract } from "@ts-rest/core";
-import { zErrorResponse } from "../../shared/errors";
 import { z } from "zod";
 
+import { zErrorResponse } from "../../shared/errors";
+import { zWebhookAuthHeader, zWebhookErrorResponse } from "../user/user.schema";
+import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../workbook/workbook-version.schema";
 import {
   zExperiment,
   zExperimentList,
@@ -83,8 +85,6 @@ import {
   zCreateExperimentDashboardResponse,
   zUpdateExperimentDashboardResponse,
 } from "./experiment.schema";
-import { zWebhookAuthHeader, zWebhookErrorResponse } from "../user/user.schema";
-import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../workbook/workbook-version.schema";
 
 const c = initContract();
 
@@ -598,7 +598,8 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "Reverse geocode coordinates",
-    description: "Get place information for given coordinates through AWS ExperimentLocation Service.",
+    description:
+      "Get place information for given coordinates through AWS ExperimentLocation Service.",
   },
   listExperimentVisualizations: {
     method: "GET",

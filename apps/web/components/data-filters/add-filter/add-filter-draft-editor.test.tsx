@@ -3,11 +3,18 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { AddFilterDraftEditor } from "./add-filter-draft-editor";
 
-const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {

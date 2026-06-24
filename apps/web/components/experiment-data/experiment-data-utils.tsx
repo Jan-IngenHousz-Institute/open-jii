@@ -9,7 +9,10 @@ import type {
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes, ExperimentColumnPrimitiveType } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  WellKnownColumnTypes,
+  ExperimentColumnPrimitiveType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import {
   isNumericType,
   isMapType,
@@ -101,8 +104,11 @@ export function formatValue(
     [ExperimentColumnPrimitiveType.BIGINT]: () => (
       <div className="text-right tabular-nums">{value as number}</div>
     ),
-    [ExperimentColumnPrimitiveType.TIMESTAMP]: () => (value as string).substring(0, 19).replace("T", " "),
-    [ExperimentColumnPrimitiveType.STRING]: () => <ExperimentDataTableTextCell text={value as string} />,
+    [ExperimentColumnPrimitiveType.TIMESTAMP]: () =>
+      (value as string).substring(0, 19).replace("T", " "),
+    [ExperimentColumnPrimitiveType.STRING]: () => (
+      <ExperimentDataTableTextCell text={value as string} />
+    ),
     [WellKnownColumnTypes.CONTRIBUTOR]: () => (
       <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
     ),

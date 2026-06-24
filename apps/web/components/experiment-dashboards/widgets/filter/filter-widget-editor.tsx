@@ -3,7 +3,10 @@
 import { Filter } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { ExperimentDataFilterValue, ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataFilterValue,
+  ExperimentFilterWidget,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { FilterValueInput } from "../../../data-filters/value-input";

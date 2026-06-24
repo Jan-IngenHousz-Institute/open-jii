@@ -1,4 +1,7 @@
-import type { ExperimentChartFamily, ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentChartFamily,
+  ExperimentChartType,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { areaChartType } from "./basic/area";
 import { barChartType } from "./basic/bar";

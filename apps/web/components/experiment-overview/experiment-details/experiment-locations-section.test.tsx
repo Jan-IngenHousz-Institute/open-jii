@@ -20,15 +20,47 @@ vi.mock("../../map", () => ({
 }));
 
 const mockLocations = {
-  one: [createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 })],
+  one: [
+    createLocation({
+      id: "loc-1",
+      name: "ExperimentLocation 1",
+      latitude: 40.7128,
+      longitude: -74.006,
+    }),
+  ],
   two: [
-    createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 }),
-    createLocation({ id: "loc-2", name: "ExperimentLocation 2", latitude: 34.0522, longitude: -118.2437 }),
+    createLocation({
+      id: "loc-1",
+      name: "ExperimentLocation 1",
+      latitude: 40.7128,
+      longitude: -74.006,
+    }),
+    createLocation({
+      id: "loc-2",
+      name: "ExperimentLocation 2",
+      latitude: 34.0522,
+      longitude: -118.2437,
+    }),
   ],
   three: [
-    createLocation({ id: "loc-1", name: "ExperimentLocation 1", latitude: 40.7128, longitude: -74.006 }),
-    createLocation({ id: "loc-2", name: "ExperimentLocation 2", latitude: 34.0522, longitude: -118.2437 }),
-    createLocation({ id: "loc-3", name: "ExperimentLocation 3", latitude: 41.8781, longitude: -87.6298 }),
+    createLocation({
+      id: "loc-1",
+      name: "ExperimentLocation 1",
+      latitude: 40.7128,
+      longitude: -74.006,
+    }),
+    createLocation({
+      id: "loc-2",
+      name: "ExperimentLocation 2",
+      latitude: 34.0522,
+      longitude: -118.2437,
+    }),
+    createLocation({
+      id: "loc-3",
+      name: "ExperimentLocation 3",
+      latitude: 41.8781,
+      longitude: -87.6298,
+    }),
   ],
 };
 

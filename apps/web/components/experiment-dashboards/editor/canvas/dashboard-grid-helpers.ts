@@ -117,7 +117,10 @@ export function widgetToLayoutItem(widget: ExperimentDashboardWidget): LayoutIte
  * Use this after any change that can leave a gap (delete, resize-shrink) so the
  * form's layout stays in sync with what RGL renders.
  */
-export function compactWidgets(widgets: ExperimentDashboardWidget[], columns: number): ExperimentDashboardWidget[] {
+export function compactWidgets(
+  widgets: ExperimentDashboardWidget[],
+  columns: number,
+): ExperimentDashboardWidget[] {
   const compacted = verticalCompactor.compact(widgets.map(widgetToLayoutItem), columns);
   const compactedById = new Map(compacted.map((item) => [item.i, item]));
   return widgets.map((w) => {

@@ -4,7 +4,10 @@ import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/ex
 
 import { dataSourcesByRole, firstDataSourceByRole, makeDataSource } from "./data-sources";
 
-function ds(role: ExperimentDataSourceConfig["role"], columnName: string): ExperimentDataSourceConfig {
+function ds(
+  role: ExperimentDataSourceConfig["role"],
+  columnName: string,
+): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 

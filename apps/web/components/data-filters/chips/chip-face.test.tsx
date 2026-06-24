@@ -3,13 +3,24 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDataColumn, ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterChipFace } from "./chip-face";
 
-const stringColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: ExperimentDataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
+const numericColumn: ExperimentDataColumn = {
+  name: "value",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
 
 describe("FilterChipFace", () => {
   it("shows the parent column name and the operator label for the column kind", () => {

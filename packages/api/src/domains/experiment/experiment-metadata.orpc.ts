@@ -19,11 +19,19 @@ export const experimentMetadataOrpcContract = {
     .input(zExperimentIdPathParam.merge(zCreateExperimentMetadataBody))
     .output(zExperimentMetadata),
   updateExperimentMetadata: oc
-    .route({ method: "PUT", path: "/api/v1/experiments/{id}/metadata/{metadataId}", successStatus: 200 })
+    .route({
+      method: "PUT",
+      path: "/api/v1/experiments/{id}/metadata/{metadataId}",
+      successStatus: 200,
+    })
     .input(zExperimentMetadataPathParam.merge(zUpdateExperimentMetadataBody))
     .output(zExperimentMetadata),
   deleteExperimentMetadata: oc
-    .route({ method: "DELETE", path: "/api/v1/experiments/{id}/metadata/{metadataId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/experiments/{id}/metadata/{metadataId}",
+      successStatus: 204,
+    })
     .input(zExperimentMetadataPathParam)
     .output(z.void()),
 };

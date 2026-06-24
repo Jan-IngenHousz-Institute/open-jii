@@ -1,4 +1,7 @@
-import type { ExperimentDataSourceConfig, ExperimentRole } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataSourceConfig,
+  ExperimentRole,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import type { ChartFormDataConfig } from "../chart-config";
 
@@ -23,6 +26,9 @@ export function firstDataSourceByRole(
   return dataSourcesByRole(sources, role)[0];
 }
 
-export function makeDataSource(tableName: string, role: ExperimentRole): ExperimentDataSourceConfig {
+export function makeDataSource(
+  tableName: string,
+  role: ExperimentRole,
+): ExperimentDataSourceConfig {
   return { tableName, columnName: "", role, alias: "" };
 }

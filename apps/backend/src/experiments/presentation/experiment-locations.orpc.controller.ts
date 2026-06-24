@@ -13,7 +13,7 @@ import { GetExperimentLocationsUseCase } from "../application/use-cases/experime
 import { SearchPlacesUseCase } from "../application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/update-experiment-locations";
 
-type DbLocation = {
+interface DbLocation {
   id: string;
   name: string;
   latitude: string;
@@ -23,7 +23,7 @@ type DbLocation = {
   municipality: string | null;
   postalCode: string | null;
   addressLabel: string | null;
-};
+}
 
 @Controller()
 export class ExperimentLocationsOrpcController {
@@ -56,45 +56,59 @@ export class ExperimentLocationsOrpcController {
 
   @Implement(experimentLocationsOrpcContract.getExperimentLocations)
   getLocations(@Session() session: UserSession) {
-    return implement(experimentLocationsOrpcContract.getExperimentLocations).handler(async ({ input }) => {
-      const result = await this.getExperimentLocationsUseCase.execute(input.id, session.user.id);
-      if (result.isSuccess()) {
-        return result.value.map((location) => this.toApiLocation(location));
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentLocationsOrpcContract.getExperimentLocations).handler(
+      async ({ input }) => {
+        const result = await this.getExperimentLocationsUseCase.execute(input.id, session.user.id);
+        if (result.isSuccess()) {
+          return result.value.map((location) => this.toApiLocation(location));
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentLocationsOrpcContract.addExperimentLocations)
   addLocations(@Session() session: UserSession) {
-    return implement(experimentLocationsOrpcContract.addExperimentLocations).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const locationsWithExperimentId = body.locations.map((location) => ({
-        ...location,
-        experimentId: id,
-      }));
-      const result = await this.addExperimentLocationsUseCase.execute(id, locationsWithExperimentId, session.user.id);
-      if (result.isSuccess()) {
-        return result.value.map((location) => this.toApiLocation(location));
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentLocationsOrpcContract.addExperimentLocations).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const locationsWithExperimentId = body.locations.map((location) => ({
+          ...location,
+          experimentId: id,
+        }));
+        const result = await this.addExperimentLocationsUseCase.execute(
+          id,
+          locationsWithExperimentId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value.map((location) => this.toApiLocation(location));
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentLocationsOrpcContract.updateExperimentLocations)
   updateLocations(@Session() session: UserSession) {
-    return implement(experimentLocationsOrpcContract.updateExperimentLocations).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const locationsWithExperimentId = body.locations.map((location) => ({
-        ...location,
-        experimentId: id,
-      }));
-      const result = await this.updateExperimentLocationsUseCase.execute(id, locationsWithExperimentId, session.user.id);
-      if (result.isSuccess()) {
-        return result.value.map((location) => this.toApiLocation(location));
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentLocationsOrpcContract.updateExperimentLocations).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const locationsWithExperimentId = body.locations.map((location) => ({
+          ...location,
+          experimentId: id,
+        }));
+        const result = await this.updateExperimentLocationsUseCase.execute(
+          id,
+          locationsWithExperimentId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value.map((location) => this.toApiLocation(location));
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentLocationsOrpcContract.searchPlaces)

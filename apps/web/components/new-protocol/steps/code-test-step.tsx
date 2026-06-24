@@ -3,7 +3,10 @@
 import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
 import type { ComponentType } from "react";
 
-import type { CreateProtocolRequestBody, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type {
+  CreateProtocolRequestBody,
+  SensorFamily,
+} from "@repo/api/domains/protocol/protocol.schema";
 import { zCreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { FormField } from "@repo/ui/components/form";

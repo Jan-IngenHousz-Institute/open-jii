@@ -27,62 +27,86 @@ export class ExperimentVisualizationsOrpcController {
 
   @Implement(experimentVisualizationsOrpcContract.listExperimentVisualizations)
   listVisualizations(@Session() session: UserSession) {
-    return implement(experimentVisualizationsOrpcContract.listExperimentVisualizations).handler(async ({ input }) => {
-      const result = await this.listExperimentVisualizationsUseCase.execute(input.id, session.user.id);
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsOrpcContract.listExperimentVisualizations).handler(
+      async ({ input }) => {
+        const result = await this.listExperimentVisualizationsUseCase.execute(
+          input.id,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentVisualizationsOrpcContract.createExperimentVisualization)
   createVisualization(@Session() session: UserSession) {
-    return implement(experimentVisualizationsOrpcContract.createExperimentVisualization).handler(async ({ input }) => {
-      const { id, ...body } = input;
-      const result = await this.createExperimentVisualizationUseCase.execute(id, body, session.user.id);
-      if (result.isSuccess()) {
-        return formatDates(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsOrpcContract.createExperimentVisualization).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.createExperimentVisualizationUseCase.execute(
+          id,
+          body,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentVisualizationsOrpcContract.getExperimentVisualization)
   getVisualization(@Session() session: UserSession) {
-    return implement(experimentVisualizationsOrpcContract.getExperimentVisualization).handler(async ({ input }) => {
-      const result = await this.getExperimentVisualizationUseCase.execute(
-        input.id,
-        input.visualizationId,
-        session.user.id,
-      );
-      if (result.isSuccess()) {
-        return formatDates(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsOrpcContract.getExperimentVisualization).handler(
+      async ({ input }) => {
+        const result = await this.getExperimentVisualizationUseCase.execute(
+          input.id,
+          input.visualizationId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentVisualizationsOrpcContract.updateExperimentVisualization)
   updateVisualization(@Session() session: UserSession) {
-    return implement(experimentVisualizationsOrpcContract.updateExperimentVisualization).handler(async ({ input }) => {
-      const { id, visualizationId, ...body } = input;
-      const result = await this.updateExperimentVisualizationUseCase.execute(visualizationId, body, session.user.id);
-      if (result.isSuccess()) {
-        return formatDates(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsOrpcContract.updateExperimentVisualization).handler(
+      async ({ input }) => {
+        const { id: _id, visualizationId, ...body } = input;
+        const result = await this.updateExperimentVisualizationUseCase.execute(
+          visualizationId,
+          body,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @Implement(experimentVisualizationsOrpcContract.deleteExperimentVisualization)
   deleteVisualization(@Session() session: UserSession) {
-    return implement(experimentVisualizationsOrpcContract.deleteExperimentVisualization).handler(async ({ input }) => {
-      const result = await this.deleteExperimentVisualizationUseCase.execute(input.visualizationId, session.user.id);
-      if (result.isSuccess()) {
-        return undefined;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsOrpcContract.deleteExperimentVisualization).handler(
+      async ({ input }) => {
+        const result = await this.deleteExperimentVisualizationUseCase.execute(
+          input.visualizationId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return undefined;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

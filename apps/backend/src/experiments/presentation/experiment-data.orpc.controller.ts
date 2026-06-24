@@ -45,13 +45,19 @@ export class ExperimentDataOrpcController {
 
   @Implement(experimentDataOrpcContract.getDistinctColumnValues)
   getDistinctColumnValues(@Session() session: UserSession) {
-    return implement(experimentDataOrpcContract.getDistinctColumnValues).handler(async ({ input }) => {
-      const { id, ...query } = input;
-      const result = await this.getDistinctColumnValuesUseCase.execute(id, session.user.id, query);
-      if (result.isSuccess()) {
-        return result.value;
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
+    return implement(experimentDataOrpcContract.getDistinctColumnValues).handler(
+      async ({ input }) => {
+        const { id, ...query } = input;
+        const result = await this.getDistinctColumnValuesUseCase.execute(
+          id,
+          session.user.id,
+          query,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

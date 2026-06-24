@@ -1,7 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
-import { healthOrpcContract } from "@repo/api/domains/health/health.orpc";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+
+import { healthOrpcContract } from "@repo/api/domains/health/health.orpc";
 
 @Controller()
 @AllowAnonymous()

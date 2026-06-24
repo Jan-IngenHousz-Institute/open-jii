@@ -97,7 +97,11 @@ export class ExperimentOrpcController {
         ...body,
         embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
       };
-      const result = await this.updateExperimentUseCase.execute(id, transformedBody, session.user.id);
+      const result = await this.updateExperimentUseCase.execute(
+        id,
+        transformedBody,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return formatDates(result.value);
       }

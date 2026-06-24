@@ -20,7 +20,9 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: ExperimentDataColumn[] = [{ name: "bearing", type_name: "DOUBLE", type_text: "DOUBLE" }];
+const columns: ExperimentDataColumn[] = [
+  { name: "bearing", type_name: "DOUBLE", type_text: "DOUBLE" },
+];
 
 function renderPanel(formDefaults?: ChartFormValues) {
   return renderWithForm<ChartFormValues>(

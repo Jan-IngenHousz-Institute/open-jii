@@ -19,7 +19,9 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
   };
 }
 
-const columns: ExperimentDataColumn[] = [{ name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" }];
+const columns: ExperimentDataColumn[] = [
+  { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+];
 
 describe("StyleTabContent", () => {
   it("renders the style panel for the active chart type", () => {

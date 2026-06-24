@@ -23,15 +23,27 @@ export const experimentVisualizationsOrpcContract = {
     .input(zExperimentIdPathParam.and(zCreateExperimentVisualizationBody))
     .output(zCreateExperimentVisualizationResponse),
   getExperimentVisualization: oc
-    .route({ method: "GET", path: "/api/v1/experiments/{id}/visualizations/{visualizationId}", successStatus: 200 })
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/visualizations/{visualizationId}",
+      successStatus: 200,
+    })
     .input(zExperimentVisualizationPathParam)
     .output(zExperimentVisualization),
   updateExperimentVisualization: oc
-    .route({ method: "PATCH", path: "/api/v1/experiments/{id}/visualizations/{visualizationId}", successStatus: 200 })
+    .route({
+      method: "PATCH",
+      path: "/api/v1/experiments/{id}/visualizations/{visualizationId}",
+      successStatus: 200,
+    })
     .input(zExperimentVisualizationPathParam.and(zUpdateExperimentVisualizationBody))
     .output(zUpdateExperimentVisualizationResponse),
   deleteExperimentVisualization: oc
-    .route({ method: "DELETE", path: "/api/v1/experiments/{id}/visualizations/{visualizationId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/experiments/{id}/visualizations/{visualizationId}",
+      successStatus: 204,
+    })
     .input(zExperimentVisualizationPathParam)
     .output(z.void()),
 };

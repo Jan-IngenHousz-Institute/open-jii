@@ -4,7 +4,10 @@ import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentData, ExperimentDataResponse } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentData,
+  ExperimentDataResponse,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 import { getColumnWidth, useExperimentData } from "./useExperimentData";

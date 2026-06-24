@@ -1,6 +1,9 @@
 import { tsr } from "@/lib/tsr";
 
-import { UPLOAD_KIND_CONSTANTS, inferUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  UPLOAD_KIND_CONSTANTS,
+  inferUploadSourceKind,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 export type UploadValidationError =
@@ -12,7 +15,9 @@ export type UploadValidationError =
   | { code: "ambyteInvalidStructure" }
   | { code: "ambyteOversizedFiles"; count: number };
 
-export type UploadValidationResult = UploadValidationError | { sourceKind: ExperimentUploadSourceKind };
+export type UploadValidationResult =
+  | UploadValidationError
+  | { sourceKind: ExperimentUploadSourceKind };
 
 const EXCLUDED_FILES = [".DS_Store"];
 
@@ -102,7 +107,10 @@ export const useExperimentDataUpload = () => {
     },
   });
 
-  const validate = (files: FileList, sourceKind: ExperimentUploadSourceKind): UploadValidationResult =>
+  const validate = (
+    files: FileList,
+    sourceKind: ExperimentUploadSourceKind,
+  ): UploadValidationResult =>
     sourceKind === "ambyte" ? validateAmbyte(files) : validateTabular(files, sourceKind);
 
   const stripExcluded = (files: FileList): File[] =>

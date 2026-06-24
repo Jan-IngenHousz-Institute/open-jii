@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 
+import { zWebhookAuthHeader, zWebhookErrorResponse } from "../user/user.schema";
 import {
   zExperimentProjectTransferWebhookPayload,
   zExperimentProjectTransferWebhookResponse,
 } from "./experiment.schema";
-import { zWebhookAuthHeader, zWebhookErrorResponse } from "../user/user.schema";
 
 describe("Experiment Contract Schemas", () => {
   describe("projectTransfer request", () => {

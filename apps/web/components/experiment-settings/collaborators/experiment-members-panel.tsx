@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentMember,
+  ExperimentMemberRole,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 

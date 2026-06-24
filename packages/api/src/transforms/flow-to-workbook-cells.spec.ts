@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import type { z } from "zod";
 
-import type { zExperimentFlowEdge, zExperimentFlowNode } from "../domains/experiment/experiment.schema";
+import type {
+  zExperimentFlowEdge,
+  zExperimentFlowNode,
+} from "../domains/experiment/experiment.schema";
 import { orderFlowNodes, flowNodesToWorkbookCells } from "./flow-to-workbook-cells";
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;

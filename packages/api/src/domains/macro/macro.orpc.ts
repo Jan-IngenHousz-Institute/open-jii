@@ -47,7 +47,11 @@ export const macroOrpcContract = {
     .input(zMacroIdPathParam.merge(zAddCompatibleProtocolsBody))
     .output(zMacroProtocolList),
   removeCompatibleProtocol: oc
-    .route({ method: "DELETE", path: "/api/v1/macros/{id}/protocols/{protocolId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/macros/{id}/protocols/{protocolId}",
+      successStatus: 204,
+    })
     .input(zMacroProtocolPathParams)
     .output(z.void()),
   executeMacro: oc

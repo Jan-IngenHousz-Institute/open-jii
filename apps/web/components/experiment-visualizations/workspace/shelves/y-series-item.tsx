@@ -3,7 +3,11 @@
 import { AlertTriangle, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentDataColumn, ExperimentSeriesAxis, ExperimentSeriesTraceType } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentSeriesAxis,
+  ExperimentSeriesTraceType,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";

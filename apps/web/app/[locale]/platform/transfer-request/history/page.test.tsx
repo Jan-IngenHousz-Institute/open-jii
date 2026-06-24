@@ -12,7 +12,11 @@ vi.mock("~/util/date", () => ({
   formatDate: (date: string) => `formatted-${date}`,
 }));
 
-const createRequest = (requestId: string, status: ExperimentTransferRequestStatus, projectIdOld: string) =>
+const createRequest = (
+  requestId: string,
+  status: ExperimentTransferRequestStatus,
+  projectIdOld: string,
+) =>
   createTransferRequest({
     requestId,
     status,

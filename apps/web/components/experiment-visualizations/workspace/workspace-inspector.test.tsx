@@ -1,7 +1,10 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentDataColumn, ExperimentTableMetadata } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentDataColumn,
+  ExperimentTableMetadata,
+} from "@repo/api/domains/experiment/experiment.schema";
 
 import { lineChartType } from "../charts/basic/line";
 import type { ChartFormValues } from "../charts/chart-config";

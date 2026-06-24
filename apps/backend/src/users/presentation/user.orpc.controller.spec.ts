@@ -2,13 +2,13 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ErrorResponse } from "@repo/api/shared/errors";
 import type {
   UserList,
   UserProfileList,
   User,
   DeletionBlockersResponse,
 } from "@repo/api/domains/user/user.schema";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";

@@ -8,7 +8,9 @@ interface WidgetDimensionConstraints {
   defaultH?: number;
 }
 
-export function getWidgetMinDimensions(type: ExperimentDashboardWidget["type"]): WidgetDimensionConstraints {
+export function getWidgetMinDimensions(
+  type: ExperimentDashboardWidget["type"],
+): WidgetDimensionConstraints {
   switch (type) {
     case "visualization":
       return { minW: 3, minH: 4 };

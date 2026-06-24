@@ -23,15 +23,27 @@ export const experimentDashboardsOrpcContract = {
     .input(zExperimentIdPathParam.merge(zCreateExperimentDashboardBody))
     .output(zCreateExperimentDashboardResponse),
   getExperimentDashboard: oc
-    .route({ method: "GET", path: "/api/v1/experiments/{id}/dashboards/{dashboardId}", successStatus: 200 })
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/dashboards/{dashboardId}",
+      successStatus: 200,
+    })
     .input(zExperimentDashboardPathParam)
     .output(zExperimentDashboard),
   updateExperimentDashboard: oc
-    .route({ method: "PATCH", path: "/api/v1/experiments/{id}/dashboards/{dashboardId}", successStatus: 200 })
+    .route({
+      method: "PATCH",
+      path: "/api/v1/experiments/{id}/dashboards/{dashboardId}",
+      successStatus: 200,
+    })
     .input(zExperimentDashboardPathParam.merge(zUpdateExperimentDashboardBody))
     .output(zUpdateExperimentDashboardResponse),
   deleteExperimentDashboard: oc
-    .route({ method: "DELETE", path: "/api/v1/experiments/{id}/dashboards/{dashboardId}", successStatus: 204 })
+    .route({
+      method: "DELETE",
+      path: "/api/v1/experiments/{id}/dashboards/{dashboardId}",
+      successStatus: 204,
+    })
     .input(zExperimentDashboardPathParam)
     .output(z.void()),
 };

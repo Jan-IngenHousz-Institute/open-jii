@@ -41,7 +41,11 @@ export const workbookOrpcContract = {
     .input(zWorkbookIdPathParam)
     .output(zWorkbookVersionList),
   getWorkbookVersion: oc
-    .route({ method: "GET", path: "/api/v1/workbooks/{id}/versions/{versionId}", successStatus: 200 })
+    .route({
+      method: "GET",
+      path: "/api/v1/workbooks/{id}/versions/{versionId}",
+      successStatus: 200,
+    })
     .input(zWorkbookVersionIdPathParam)
     .output(zWorkbookVersion),
 };

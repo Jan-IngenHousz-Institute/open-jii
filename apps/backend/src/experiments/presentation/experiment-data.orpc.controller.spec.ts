@@ -65,7 +65,10 @@ describe("ExperimentDataOrpcController", () => {
         failure(AppError.notFound("Experiment not found")),
       );
 
-      await testApp.get(`/api/v1/experiments/${experimentId}/tables`).withAuth(testUserId).expect(404);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(404);
     });
   });
 
@@ -144,7 +147,9 @@ describe("ExperimentDataOrpcController", () => {
       vi.spyOn(getDistinctColumnValuesUseCase, "execute").mockResolvedValue(success(body));
 
       const response = await testApp
-        .get(`/api/v1/experiments/${experimentId}/data/distinct?tableName=raw_data&column=site&limit=50`)
+        .get(
+          `/api/v1/experiments/${experimentId}/data/distinct?tableName=raw_data&column=site&limit=50`,
+        )
         .withAuth(testUserId)
         .expect(200);
 

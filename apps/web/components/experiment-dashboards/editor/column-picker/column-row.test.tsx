@@ -7,7 +7,11 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experime
 
 import { ColumnRow } from "./column-row";
 
-const column: ExperimentDataColumn = { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" };
+const column: ExperimentDataColumn = {
+  name: "temperature",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
 
 function setup(opts: { column?: ExperimentDataColumn | undefined } = {}) {
   const onRemove = vi.fn();

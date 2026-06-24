@@ -5,7 +5,11 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.sc
 
 import { useExperimentDistinctValues } from "../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 
-export function useDistinctOptions(column: ExperimentDataColumn, experimentId: string, tableName: string) {
+export function useDistinctOptions(
+  column: ExperimentDataColumn,
+  experimentId: string,
+  tableName: string,
+) {
   const { values, truncated, isLoading, error } = useExperimentDistinctValues({
     experimentId,
     tableName,

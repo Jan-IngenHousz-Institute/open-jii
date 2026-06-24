@@ -12,7 +12,11 @@ import {
   useDistinctOptions,
 } from "./use-distinct-options";
 
-const labelColumn: ExperimentDataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const labelColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",

@@ -4,7 +4,10 @@ import { HelpCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { sanitizeQuestionLabel, stripSpecialCharacters } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  sanitizeQuestionLabel,
+  stripSpecialCharacters,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";

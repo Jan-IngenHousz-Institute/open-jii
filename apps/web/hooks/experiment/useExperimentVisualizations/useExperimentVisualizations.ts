@@ -14,7 +14,9 @@ export const useExperimentVisualizations = ({
   initialLimit?: number;
   initialOffset?: number;
 }) => {
-  const [chartFamily, setChartFamily] = useState<ExperimentChartFamily | undefined>(initialChartFamily);
+  const [chartFamily, setChartFamily] = useState<ExperimentChartFamily | undefined>(
+    initialChartFamily,
+  );
   const [limit, setLimit] = useState<number>(initialLimit);
   const [offset, setOffset] = useState<number>(initialOffset);
 
