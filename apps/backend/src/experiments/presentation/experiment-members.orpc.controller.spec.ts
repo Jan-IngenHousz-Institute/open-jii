@@ -15,7 +15,7 @@ import type { UserDto } from "../../users/core/models/user.model";
 import type { EmailPort } from "../core/ports/email.port";
 import { EMAIL_PORT } from "../core/ports/email.port";
 
-describe("ExperimentMembersController", () => {
+describe("ExperimentMembersOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let emailPort: EmailPort;
