@@ -143,7 +143,7 @@ describe("ColorDimensionShelf", () => {
     // its own colorScale combobox underneath. The column picker is the
     // first combobox in DOM order.
     await user.click(screen.getAllByRole("combobox")[0]);
-    await user.click(await screen.findByText("workspace.shelves.noColorMapping"));
+    await user.click(await screen.findByText("workspace.shelves.groupByNone"));
 
     const sources = form.getValues("dataConfig.dataSources");
     expect(sources.find((d) => d.role === "color")).toBeUndefined();
