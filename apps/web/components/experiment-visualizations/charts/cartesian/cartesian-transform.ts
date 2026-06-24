@@ -393,7 +393,6 @@ function applyManualStacking(
   const result = [...series];
   for (const indices of groups.values()) {
     const first = result[indices[0]];
-    if (!first) continue;
     const xLen = Array.isArray(first.y) ? first.y.length : 0;
     if (xLen === 0) continue;
 
@@ -401,7 +400,6 @@ function applyManualStacking(
     if (stackMode === "percent") {
       for (const idx of indices) {
         const trace = result[idx];
-        if (!trace?.y) continue;
         for (let xi = 0; xi < xLen; xi++) {
           const v = Number(trace.y[xi]);
           if (Number.isFinite(v)) totals[xi] += v;
@@ -413,7 +411,6 @@ function applyManualStacking(
     for (let pos = 0; pos < indices.length; pos++) {
       const idx = indices[pos];
       const trace = result[idx];
-      if (!trace?.y) continue;
       const newY: number[] = [];
       for (let xi = 0; xi < xLen; xi++) {
         let v = Number(trace.y[xi]);

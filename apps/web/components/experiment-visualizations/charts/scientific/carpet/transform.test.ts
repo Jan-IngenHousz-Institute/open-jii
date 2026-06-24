@@ -124,7 +124,7 @@ describe("transformCarpetData", () => {
   it("emits z as a [b][a]-shaped 2D matrix (plotly carpet/heatmap convention)", () => {
     const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
     const result = transformCarpetData(wellShaped, sources, baseConfig);
-    const z = result.contourData[0].z as number[][];
+    const z = result.contourData[0].z;
     expect(z).toHaveLength(2);
     expect(z[0]).toHaveLength(2);
   });

@@ -102,12 +102,12 @@ export function transformCarpetData(
   const expandedB: number[] = [];
   const expandedX: number[] = [];
   const expandedY: number[] = [];
-  for (let i = 0; i < aValuesNumeric.length; i++) {
-    for (let j = 0; j < bValuesNumeric.length; j++) {
-      expandedA.push(aValuesNumeric[i]);
-      expandedB.push(bValuesNumeric[j]);
-      expandedX.push(aValuesNumeric[i]);
-      expandedY.push(bValuesNumeric[j]);
+  for (const a of aValuesNumeric) {
+    for (const b of bValuesNumeric) {
+      expandedA.push(a);
+      expandedB.push(b);
+      expandedX.push(a);
+      expandedY.push(b);
     }
   }
 

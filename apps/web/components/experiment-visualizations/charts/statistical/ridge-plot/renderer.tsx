@@ -54,8 +54,8 @@ export function RidgePlotRenderer({
   // No axis-title shelf on this chart; default to the picked column names.
   const ridgeConfig = {
     ...chartConfig,
-    xAxisTitle: chartConfig.xAxisTitle || yColumn || "",
-    yAxisTitle: chartConfig.yAxisTitle || colorColumn || "",
+    xAxisTitle: chartConfig.xAxisTitle?.length ? chartConfig.xAxisTitle : (yColumn ?? ""),
+    yAxisTitle: chartConfig.yAxisTitle?.length ? chartConfig.yAxisTitle : (colorColumn ?? ""),
   };
 
   return (

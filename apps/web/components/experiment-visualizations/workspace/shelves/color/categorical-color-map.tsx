@@ -50,11 +50,11 @@ interface Category {
 export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
   const { t } = useTranslation("experimentVisualizations");
   const params = useParams<{ id?: string }>();
-  const experimentId = params?.id;
+  const experimentId = params.id;
   const tableName = useWatch({ control: form.control, name: "dataConfig.tableName" });
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const colorMapValue = useWatch({ control: form.control, name: "config.colorMap" });
-  const colorMap = (colorMapValue ?? {}) as Record<string, string>;
+  const colorMap: Record<string, string> = colorMapValue ?? {};
 
   const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
@@ -72,7 +72,7 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     isLoading,
   } = useExperimentDistinctValues({
     experimentId: experimentId ?? "",
-    tableName: tableName ?? "",
+    tableName: tableName,
     column: colorColumn,
     limit: MAX_CATEGORIES,
     enabled: Boolean(experimentId) && Boolean(tableName) && Boolean(colorColumn),
@@ -112,17 +112,13 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground text-xs">
-        {t("workspace.shelves.colorMap.loading")}
-      </div>
+      <div className="text-muted-foreground text-xs">{t("workspace.shelves.colorMap.loading")}</div>
     );
   }
 
   if (categories.length === 0) {
     return (
-      <div className="text-muted-foreground text-xs">
-        {t("workspace.shelves.colorMap.empty")}
-      </div>
+      <div className="text-muted-foreground text-xs">{t("workspace.shelves.colorMap.empty")}</div>
     );
   }
 
@@ -216,16 +212,15 @@ function CategorySwatchList({
   const { t } = useTranslation("experimentVisualizations");
   return (
     <div className="space-y-1.5">
-      {heading && (
-        <div className="text-foreground text-xs font-semibold">{heading}</div>
-      )}
+      {heading && <div className="text-foreground text-xs font-semibold">{heading}</div>}
       <div className="bg-muted/30 max-h-[220px] overflow-y-auto rounded-md border p-2">
         <ul className="space-y-1">
           {categories.map((c, i) => {
             const mapKey = keyFor(c);
-            const explicit = colorMap[mapKey];
+            const lookup: Partial<Record<string, string>> = colorMap;
+            const explicit = lookup[mapKey];
             const fallbackKey = fallbackKeyFor?.(c);
-            const fallbackHit = fallbackKey ? colorMap[fallbackKey] : undefined;
+            const fallbackHit = fallbackKey ? lookup[fallbackKey] : undefined;
             const effective =
               explicit ?? fallbackHit ?? getCategoryColor(paletteIndexFor(c, i), colorMap, c.key);
             const isOverridden = Boolean(explicit);

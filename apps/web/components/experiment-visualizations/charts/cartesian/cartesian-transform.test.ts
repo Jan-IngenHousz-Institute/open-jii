@@ -166,11 +166,7 @@ describe("transformCartesianData", () => {
       { v: 1, g: "Arabidopsis", site: "A" },
       { v: 2, g: "Tomato", site: "B" },
     ];
-    const sources = [
-      ds("y", "v"),
-      ds("color", "g"),
-      ds("facet", "site"),
-    ];
+    const sources = [ds("y", "v"), ds("color", "g"), ds("facet", "site")];
     const config: ChartFormConfig = { colorMode: "categorical" };
     const result = transformCartesianData(rows, sources, config, baseOptions);
     const visibleInLegend = result.chartSeries.filter((s) => s.showlegend !== false);

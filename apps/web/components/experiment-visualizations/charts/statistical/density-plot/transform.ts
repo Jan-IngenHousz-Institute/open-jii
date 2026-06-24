@@ -107,14 +107,14 @@ export function transformDensityPlotData(
       const cellIndicesByCategory = bucketIndicesByColumn(cellRows, colorColumn);
 
       // Pre-collect values so the union range is known before KDE runs.
-      type Bucket = {
+      interface Bucket {
         values: number[];
         source: (typeof yEntries)[number]["source"];
         yIndex: number;
         catIndex: number;
-        categoryValue: unknown;
+        categoryValue: string | number | null;
         key: string;
-      };
+      }
       const buckets: Bucket[] = yEntries.flatMap(({ source }, yIndex) =>
         globalCategoryValues.map((categoryValue, catIndex) => {
           const key = globalCategoryKeys[catIndex];

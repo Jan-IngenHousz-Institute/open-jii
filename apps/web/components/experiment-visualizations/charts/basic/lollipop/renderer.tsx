@@ -10,7 +10,7 @@ import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
 import { rowKeyForSource } from "../../data/aggregation";
 import { toBucketKey } from "../../data/cell-coercion";
-import { dataSourcesByRole } from "../../data/data-sources";
+import { firstDataSourceByRole } from "../../data/data-sources";
 import { useChartData } from "../../hooks/use-chart-data";
 import type { ChartRendererProps } from "../../types";
 
@@ -21,9 +21,9 @@ export function LollipopRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const xColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source
+  const xColumn = firstDataSourceByRole(visualization.dataConfig.dataSources, "x")?.source
     .columnName;
-  const yEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0];
+  const yEntry = firstDataSourceByRole(visualization.dataConfig.dataSources, "y");
   const yColumn = yEntry?.source.columnName;
   const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
