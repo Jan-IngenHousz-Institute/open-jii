@@ -6,8 +6,8 @@ import { useId } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { FormSlider } from "@repo/ui/components/form-slider";
-import { Input } from "@repo/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -187,21 +187,12 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
                 {t("workspace.style.violinBoxColor")}
               </FormLabel>
               <FormControl>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    className="h-9 w-12 shrink-0 p-1"
-                    value={typeof field.value === "string" ? field.value : "#ffffff"}
-                    onChange={field.onChange}
-                  />
-                  <Input
-                    type="text"
-                    className="min-w-0 font-mono text-sm"
-                    placeholder="#ffffff"
-                    value={typeof field.value === "string" ? field.value : ""}
-                    onChange={field.onChange}
-                  />
-                </div>
+                <FormColorInput
+                  value={typeof field.value === "string" ? field.value : undefined}
+                  fallback="#ffffff"
+                  onCommit={field.onChange}
+                  placeholder="#ffffff"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -270,21 +261,11 @@ function ViolinOptions({ form, flat }: ChartPanelProps) {
                 {t("workspace.style.markerColor")}
               </FormLabel>
               <FormControl>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    className="h-9 w-12 shrink-0 p-1"
-                    value={typeof field.value === "string" ? field.value : "#3b82f6"}
-                    onChange={field.onChange}
-                  />
-                  <Input
-                    type="text"
-                    className="min-w-0 font-mono text-sm"
-                    placeholder="#000000"
-                    value={typeof field.value === "string" ? field.value : ""}
-                    onChange={field.onChange}
-                  />
-                </div>
+                <FormColorInput
+                  value={typeof field.value === "string" ? field.value : undefined}
+                  fallback="#3b82f6"
+                  onCommit={field.onChange}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

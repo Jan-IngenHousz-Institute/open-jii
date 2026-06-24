@@ -7,6 +7,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel } from "@repo/ui/components/form";
+import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { Input } from "@repo/ui/components/input";
 import {
   Select,
@@ -106,11 +107,11 @@ export function ReferenceLineRow({ form, index, onRemove }: ReferenceLineRowProp
                 {t("workspace.style.referenceLineColor")}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="color"
-                  className="h-9 w-12 p-1"
-                  value={typeof field.value === "string" ? field.value : DEFAULT_COLOR}
-                  onChange={field.onChange}
+                <FormColorInput
+                  value={typeof field.value === "string" ? field.value : undefined}
+                  fallback={DEFAULT_COLOR}
+                  onCommit={field.onChange}
+                  showHex={false}
                 />
               </FormControl>
             </FormItem>
