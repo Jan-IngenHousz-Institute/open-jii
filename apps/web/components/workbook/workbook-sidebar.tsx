@@ -17,7 +17,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Asterisk, GripVertical, List, PanelRightClose } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Asterisk,
+  Code,
+  FileText,
+  GitBranch,
+  GripVertical,
+  HelpCircle,
+  List,
+  Microscope,
+  PanelRightClose,
+} from "lucide-react";
 import { useCallback } from "react";
 import { stripHtml } from "~/util/strip-html";
 
@@ -37,11 +48,20 @@ const cellTypeLabels: Record<string, string> = {
   output: "Output",
 };
 
+/** Type icon per cell type, matching the icons on the cell components. */
+const cellIcons: Partial<Record<string, LucideIcon>> = {
+  question: HelpCircle,
+  protocol: Microscope,
+  macro: Code,
+  branch: GitBranch,
+  markdown: FileText,
+};
+
 /** Extract a short subtitle for the sidebar row. */
 function getCellSubtitle(cell: WorkbookCell): string {
   switch (cell.type) {
     case "question":
-      return cell.question.text || "Untitled";
+      return cell.question.text || "No question yet";
     case "protocol":
       return cell.payload.name ?? "JSON";
     case "macro":
@@ -98,6 +118,11 @@ function SidebarRow({
 
   const color = CELL_ACCENT[cell.type];
   const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
+  const Icon = cellIcons[cell.type];
+  // Show the question's label (its data column name) rather than repeating the
+  // type; the icon + color already signal that it's a question.
+  const primaryText =
+    cell.type === "question" ? cell.name : (cellTypeLabels[cell.type] ?? cell.type);
 
   return (
     <button
@@ -134,17 +159,16 @@ function SidebarRow({
 
         {/* Type + subtitle */}
         <div className="flex min-w-0 flex-col" style={{ gap: 2, maxWidth: 160 }}>
-          <span className="flex items-center gap-0.5">
+          <span className="flex items-center gap-1">
+            {Icon && <Icon className="size-3.5 shrink-0" style={{ color }} aria-hidden="true" />}
             <span
               className={cn(
                 "truncate text-[13px] leading-[18px] tracking-[0.02em]",
                 isActive ? "font-semibold" : "font-medium",
               )}
-              style={
-                cell.type === "question" ? { color } : isActive ? { color } : { color: "#011111" }
-              }
+              style={{ color: isActive ? color : "#011111" }}
             >
-              {cellTypeLabels[cell.type] ?? cell.type}
+              {primaryText}
             </span>
             {isRequiredQuestion && (
               <Asterisk

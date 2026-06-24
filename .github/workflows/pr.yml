@@ -82,6 +82,25 @@ jobs:
         shell: bash
         run: pnpm format:check
 
+  workspace_lint:
+    name: Workspace Dependency Lint
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Sherif (workspace dependency lint)
+        shell: bash
+        run: pnpm lint:ws
+
   mobile_styling_guard:
     name: Mobile Styling Guard
     runs-on: ubuntu-latest

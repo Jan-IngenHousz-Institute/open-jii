@@ -6,7 +6,9 @@ import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetac
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
+import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import {
   ArrowUpCircle,
   BookOpen,
@@ -14,11 +16,13 @@ import {
   ExternalLink,
   LinkIcon,
   Loader2,
+  Pencil,
   Sparkles,
   Unlink,
+  X,
 } from "lucide-react";
 import NextLink from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
 import {
@@ -33,15 +37,11 @@ import {
   AlertDialogTrigger,
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
+import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
+
+import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface LinkedWorkbookCardProps {
   experimentId: string;
@@ -49,6 +49,8 @@ interface LinkedWorkbookCardProps {
   workbookId: string;
   workbookVersionId: string;
   hasAccess: boolean;
+  /** Whether the current user owns the workbook (renaming is owner-only). */
+  isWorkbookOwner?: boolean;
 }
 
 export function LinkedWorkbookCard({
@@ -57,6 +59,7 @@ export function LinkedWorkbookCard({
   workbookId,
   workbookVersionId,
   hasAccess,
+  isWorkbookOwner = false,
 }: LinkedWorkbookCardProps) {
   const { t } = useTranslation("experiments");
 
@@ -71,12 +74,57 @@ export function LinkedWorkbookCard({
 
   const hasNewerPublished =
     !!pinnedVersion && versions.length > 0 && latestVersion.version > pinnedVersion.version;
-  const hasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
+
+  // Freeze the upgrade indicator while any workbook read/write is mid-flight
+  // (autosave, auto-apply upgrade, refetch); otherwise the recomputed
+  // `isUpgradable` flag flips transiently and flashes the banner on and off.
+  const fetchingWorkbook = useIsFetching({ queryKey: ["workbook", workbookId] });
+  const fetchingVersions = useIsFetching({ queryKey: ["workbookVersions", workbookId] });
+  const savingWorkbook = useIsMutating({ mutationKey: ["workbook", workbookId, "update"] });
+  const upgradingWorkbook = useIsMutating({
+    mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
+  });
+  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook > 0;
+
+  const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
+  const settledHasUpgradeRef = useRef(liveHasUpgrade);
+  if (!isSyncing) settledHasUpgradeRef.current = liveHasUpgrade;
+  const hasUpgrade = settledHasUpgradeRef.current;
 
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
   const { data: workbooks = [] } = useWorkbookList();
   const [isChanging, setIsChanging] = useState(false);
+
+  const renameWorkbook = useWorkbookUpdate(workbookId);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const canRename = hasAccess && isWorkbookOwner;
+
+  const startRename = () => {
+    setNameDraft(workbook?.name ?? "");
+    setIsRenaming(true);
+  };
+
+  const handleRename = () => {
+    const next = nameDraft.trim();
+    if (!next || next === workbook?.name) {
+      setIsRenaming(false);
+      return;
+    }
+    renameWorkbook.mutate(
+      { params: { id: workbookId }, body: { name: next } },
+      {
+        onSuccess: () => {
+          toast({ description: t("flow.workbookRenamed") });
+          setIsRenaming(false);
+        },
+        onError: () => {
+          toast({ description: t("flow.renameFailed"), variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
@@ -111,7 +159,7 @@ export function LinkedWorkbookCard({
     );
   };
 
-  const upgradeVersion = useUpgradeWorkbookVersion();
+  const upgradeVersion = useUpgradeWorkbookVersion(experimentId);
   const [upgradeState, setUpgradeState] = useState<"idle" | "upgrading" | "success">("idle");
 
   useEffect(() => {
@@ -128,7 +176,6 @@ export function LinkedWorkbookCard({
       {
         onSuccess: () => {
           setUpgradeState("success");
-          toast({ description: t("flow.versionUpgraded") });
         },
         onError: () => {
           setUpgradeState("idle");
@@ -147,22 +194,76 @@ export function LinkedWorkbookCard({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <NextLink
-                href={`/${locale}/platform/workbooks/${workbookId}`}
-                target="_blank"
-                className="text-foreground truncate text-sm font-semibold hover:underline"
-              >
-                {workbook?.name ?? t("flow.title")}
-                <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
-              </NextLink>
-              {pinnedVersion && (
-                <span className={upgradeState === "success" ? "animate-version-pop" : ""}>
-                  <WorkbookVersionBadge
-                    currentVersion={pinnedVersion.version}
-                    latestVersion={latestVersion.version}
-                    showUpgrade={false}
+              {isRenaming ? (
+                <>
+                  <Input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleRename();
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        setIsRenaming(false);
+                      }
+                    }}
+                    className="h-7 w-56 text-sm font-semibold"
+                    autoFocus
+                    disabled={renameWorkbook.isPending}
+                    aria-label={t("flow.renameWorkbook")}
                   />
-                </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0"
+                    onClick={handleRename}
+                    disabled={renameWorkbook.isPending}
+                    aria-label={t("flow.saveRename")}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => setIsRenaming(false)}
+                    disabled={renameWorkbook.isPending}
+                    aria-label={t("cancel")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NextLink
+                    href={`/${locale}/platform/workbooks/${workbookId}`}
+                    target="_blank"
+                    className="text-foreground truncate text-sm font-semibold hover:underline"
+                  >
+                    {workbook?.name ?? t("flow.title")}
+                    <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
+                  </NextLink>
+                  {pinnedVersion && (
+                    <span className={upgradeState === "success" ? "animate-version-pop" : ""}>
+                      <WorkbookVersionBadge
+                        currentVersion={pinnedVersion.version}
+                        latestVersion={latestVersion.version}
+                        showUpgrade={false}
+                      />
+                    </span>
+                  )}
+                  {canRename && (
+                    <button
+                      type="button"
+                      onClick={startRename}
+                      aria-label={t("flow.renameWorkbook")}
+                      className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <p className="text-muted-foreground text-xs">{t("flow.description")}</p>
@@ -286,18 +387,15 @@ export function LinkedWorkbookCard({
 
       {isChanging && hasAccess && (
         <div className="flex items-center gap-2 border-t px-4 py-3">
-          <Select value={selectedWorkbookId} onValueChange={setSelectedWorkbookId}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder={t("newExperiment.workbookPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {workbooks.map((wb) => (
-                <SelectItem key={wb.id} value={wb.id}>
-                  {wb.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <WorkbookSelect
+            workbooks={workbooks}
+            value={selectedWorkbookId || undefined}
+            onChange={(id) => setSelectedWorkbookId(id ?? "")}
+            triggerPlaceholder={t("flow.selectWorkbook")}
+            searchPlaceholder={t("flow.searchWorkbook")}
+            emptyText={t("flow.noWorkbooksFound")}
+            triggerClassName="w-64"
+          />
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button disabled={!selectedWorkbookId || attachWorkbook.isPending} size="sm">

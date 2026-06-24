@@ -3,9 +3,13 @@
  * Decodes a PhotosynQ/MultispeQ measurement (sample_raw + protocol JSON) into
  * input (LED) and output (detector) timeseries records.
  *
- * Timing model: for a phase with N pulses, D µs pulse_distance, and K active
- * detectors, each pulse emits one timestamp; phase duration is N*D, not N*K*D.
+ * Timing model: a phase fires one pulse per detector channel, each spaced by
+ * pulse_distance, so a phase with N pulses, K detector channels and D µs
+ * pulse_distance lasts N*K*D µs. Variable resolution (`@nX:Y` / `@sX`) lives in
+ * `@repo/iot` (`resolveProtocolVariables`), a single origin shared with the
+ * mobile protocol estimator.
  */
+import { resolveProtocolVariables } from "@repo/iot";
 
 export const LED_NAMES: Record<number, string> = {
   1: "530 nm (green, body)",
@@ -122,41 +126,24 @@ function isFiniteNumber(v: unknown): v is number {
  * `@sX` is the "set parameter" used in scalar contexts (e.g. `pulses`).
  * When a protocol declares `set_repeats: N`, the device picks a different value
  * per repeat by indexing `v_arrays[X]` with the occurrence number. We mirror
- * that — `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
+ * that, `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
  * runs 20 pulses on repeat 0 and 100 on repeat 1.
  *
  * If the indexed slot is in-range but non-numeric (e.g. the `"p_light"`
  * placeholder in `["p_light", 2500]`), we leave `@sX` unset so the caller can
- * fall back to the runtime `pi` brightness — that placeholder means "use the
+ * fall back to the runtime `pi` brightness, that placeholder means "use the
  * measured ambient PAR", which is only known from the device's recorded `pi`
  * field, not from the protocol JSON.
  *
  * If the indexed slot is *out-of-range* (iteration past the array length), we
- * clamp to the last numeric value — this is the @s8 / `[20, 100]` style
+ * clamp to the last numeric value, this is the @s8 / `[20, 100]` style
  * pattern where the caller is asking for a value beyond the declared repeats.
  */
 export function resolveVariables(
   protocolJson: ProtocolJson,
   occurrence = 0,
 ): Record<string, number> {
-  const lookup: Record<string, number> = {};
-  const arrs = protocolJson.v_arrays ?? [];
-  arrs.forEach((arr, i) => {
-    if (!Array.isArray(arr) || arr.length === 0) return;
-    arr.forEach((val, j) => {
-      if (isFiniteNumber(val)) lookup[`@n${i}:${j}`] = Math.trunc(val);
-    });
-    let chosen: number | null = null;
-    if (occurrence < arr.length) {
-      const indexed = arr[occurrence];
-      if (isFiniteNumber(indexed)) chosen = Math.trunc(indexed);
-    } else {
-      // Out-of-range: clamp to the last numeric in the array.
-      for (const val of arr) if (isFiniteNumber(val)) chosen = Math.trunc(val);
-    }
-    if (chosen != null) lookup[`@s${i}`] = chosen;
-  });
-  return lookup;
+  return resolveProtocolVariables(protocolJson.v_arrays ?? [], occurrence);
 }
 
 function resolveInt(val: unknown, variables: Record<string, number>): number | null {
@@ -225,7 +212,7 @@ export function outputRecords(
     const pDist = getSafe(r.pulse_distance, phase, 0);
     const nChannels = Math.max(1, dets.length);
     const nPulses = r.pulses[phase] ?? 0;
-    // Each (detector, light) entry in dets/lights is a SEPARATE pulse — the
+    // Each (detector, light) entry in dets/lights is a SEPARATE pulse, the
     // device fires them sequentially across pulses, not simultaneously within
     // a single pulse. So a phase declared as N pulses with K channels emits
     // N × K pulses total, advancing time by pulse_distance per emission.
@@ -502,7 +489,7 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
 export interface MeasurementTimeseries {
   inputs: InputRecord[];
   outputs: OutputRecord[];
-  /** Total duration in microseconds — sum of declared sub-protocol durations
+  /** Total duration in microseconds, sum of declared sub-protocol durations
    * plus any `protocols_delay` waits. The device's e_time wall-clock markers
    * are intentionally ignored (they vary with device-internal autogain/env
    * work that doesn't map to user-meaningful chart time). */
@@ -590,7 +577,7 @@ export function measurementToTimeseries(
   }
 
   // The device holds actinic LEDs at their last nonpulsed brightness through
-  // wall-clock gaps (autogain, env sensors, etc.) — there is no break in the
+  // wall-clock gaps (autogain, env sensors, etc.), there is no break in the
   // actinic light, only in data acquisition. Extend the last-phase actinic
   // records of each sub-protocol to the start of the next so the input chart
   // is continuous. Measuring/pulsed lights are NOT extended; those really are

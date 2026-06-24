@@ -130,7 +130,7 @@
       "fallbackMessage": "An error occurred during measurement"
     },
     "noDevice": {
-      "disconnected": "Device disconnected — {{name}}",
+      "disconnected": "Device disconnected, {{name}}",
       "reconnect": "Reconnect to {{name}}",
       "connectDifferent": "Connect a different device",
       "connectFirst": "Please connect to a device first"
@@ -148,12 +148,14 @@
       "measuring": "Measuring…",
       "elapsed": "{{elapsed}} elapsed",
       "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}",
-      "expected": "~{{estimate}} expected"
+      "expected": "~{{estimate}} expected",
+      "interactionTitle": "Follow the instrument",
+      "interactionHint": "This protocol pauses for you to open and close the clamp. Watch the device and act when its lights prompt you."
     },
     "toast": {
       "notConnected": "Not connected to sensor",
       "noProtocol": "No protocol selected",
-      "protocolUnavailable": "Protocol unavailable — connect to the internet and try again",
+      "protocolUnavailable": "Protocol unavailable, connect to the internet and try again",
       "scanError": "Scan error"
     },
     "privacyNote": "Your (gps)location and full name will be stored amongst other measurements data. Note that these are publicly available.",
@@ -234,7 +236,7 @@
       "removeAlertMessage": "\"{{experimentName}}\" is already uploaded to the cloud. Remove it from this phone? The cloud copy stays intact.",
       "deleteAlertTitle": "Delete unsynced measurement",
       "deleteAlertMessage": "\"{{experimentName}}\" has not been uploaded yet. Deleting it now means the measurement will be lost permanently.",
-      "deleteBlockedUploading": "Can't delete while uploading — try again in a moment."
+      "deleteBlockedUploading": "Can't delete while uploading, try again in a moment."
     },
     "empty": "No steps available.",
     "error": "Failed to load experiment. Please try again.",

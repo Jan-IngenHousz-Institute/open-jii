@@ -6,6 +6,42 @@ If you have suggestions, feel free to do a [feature request](../data-platform/re
 
 ---
 
+## Workbook authoring polish (in review)
+
+Hands-on feedback from field researchers (`OJD-588`) drove a set of workbook editor refinements that
+make building and reusing data-collection flows less fiddly.
+
+<video controls width="100%" poster="/img/workbooks/ux-sidebar.png" preload="metadata">
+  <source src="/img/workbooks/workbook-ux-improvements.webm" type="video/webm" />
+  Your browser does not support embedded video — see the screenshots below.
+</video>
+
+### Highlights
+
+- **Searchable workbook picker** — choosing a workbook when creating or changing an experiment is now
+  a type-to-filter combobox instead of a long scroll through everyone's workbooks.
+
+  ![Searchable workbook picker filtered as the user types](/img/workbooks/ux-picker.png)
+
+- **Rename in place** — the workbook owner can rename a linked workbook straight from the experiment's
+  Design tab, instead of going back to the Workbooks list.
+
+  ![Renaming a linked workbook in place](/img/workbooks/ux-rename.png)
+
+- **Clearer cell sidebar** — each cell shows its own name with a per-type icon and colour, rather than
+  a repeated "Question / Question / Question".
+
+  ![Cell sidebar with names and per-type icons](/img/workbooks/ux-sidebar.png)
+
+- **Prominent question field** — the required **Question text** field stands out from the cell's
+  data-column name, and multiple-choice options explain the 64-character limit.
+
+  ![Question editor and the explained option character limit](/img/workbooks/ux-question.png)
+
+See [Workbooks](../data-platform/web-platform/workbooks) for the full guide.
+
+---
+
 ## Platform Chrome Refresh (in review)
 
 A refresh of the web platform's navigation shell (`OJD-1510`): a collapsible, resizable sidebar, a command palette, Linear-style keyboard shortcuts, and an activity hub in the top bar. The walkthrough below shows every piece end to end.

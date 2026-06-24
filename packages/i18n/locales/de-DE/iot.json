@@ -17,6 +17,8 @@
       "version": "Version",
       "runProtocol": "Protokoll ausführen",
       "running": "Wird ausgeführt...",
+      "interactionTitle": "Folgen Sie dem Instrument",
+      "interactionHint": "Dieses Protokoll pausiert, damit Sie die Klammer öffnen und schließen können. Beachten Sie das Gerät und handeln Sie, wenn seine LEDs Sie dazu auffordern.",
       "results": "Ergebnisse",
       "success": "Erfolg",
       "failed": "Fehlgeschlagen",
