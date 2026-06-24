@@ -71,7 +71,7 @@ const createMockVisualizationDto = (
   ...overrides,
 });
 
-describe("ExperimentVisualizationsController", () => {
+describe("ExperimentVisualizationsOrpcController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let listExperimentVisualizationsUseCase: ListExperimentVisualizationsUseCase;
