@@ -135,9 +135,14 @@ export function ProtocolCellComponent({
   // with the device silent until the user acts. Surface a prompt while the cell
   // runs so it does not look hung. See OJD-1643.
   const requiresInteraction = useMemo(() => {
-    const code = getCurrentCode();
-    return code ? protocolRequiresInteraction(code) : false;
-  }, [getCurrentCode, localCode]);
+    const raw = localCode ?? protocolCode;
+    if (raw == null) return false;
+    try {
+      return protocolRequiresInteraction(JSON.parse(raw));
+    } catch {
+      return false;
+    }
+  }, [localCode, protocolCode]);
 
   const handleCopy = () => {
     void copy(localCode ?? protocolCode ?? "");

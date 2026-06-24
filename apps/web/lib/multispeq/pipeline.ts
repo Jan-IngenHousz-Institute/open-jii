@@ -6,10 +6,9 @@
  * Timing model: a phase fires one pulse per detector channel, each spaced by
  * pulse_distance, so a phase with N pulses, K detector channels and D µs
  * pulse_distance lasts N*K*D µs. Variable resolution (`@nX:Y` / `@sX`) lives in
- * `@repo/iot` (`resolveProtocolVariables`) — a single origin shared with the
+ * `@repo/iot` (`resolveProtocolVariables`), a single origin shared with the
  * mobile protocol estimator.
  */
-
 import { resolveProtocolVariables } from "@repo/iot";
 
 export const LED_NAMES: Record<number, string> = {
@@ -127,17 +126,17 @@ function isFiniteNumber(v: unknown): v is number {
  * `@sX` is the "set parameter" used in scalar contexts (e.g. `pulses`).
  * When a protocol declares `set_repeats: N`, the device picks a different value
  * per repeat by indexing `v_arrays[X]` with the occurrence number. We mirror
- * that — `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
+ * that, `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
  * runs 20 pulses on repeat 0 and 100 on repeat 1.
  *
  * If the indexed slot is in-range but non-numeric (e.g. the `"p_light"`
  * placeholder in `["p_light", 2500]`), we leave `@sX` unset so the caller can
- * fall back to the runtime `pi` brightness — that placeholder means "use the
+ * fall back to the runtime `pi` brightness, that placeholder means "use the
  * measured ambient PAR", which is only known from the device's recorded `pi`
  * field, not from the protocol JSON.
  *
  * If the indexed slot is *out-of-range* (iteration past the array length), we
- * clamp to the last numeric value — this is the @s8 / `[20, 100]` style
+ * clamp to the last numeric value, this is the @s8 / `[20, 100]` style
  * pattern where the caller is asking for a value beyond the declared repeats.
  */
 export function resolveVariables(
@@ -213,7 +212,7 @@ export function outputRecords(
     const pDist = getSafe(r.pulse_distance, phase, 0);
     const nChannels = Math.max(1, dets.length);
     const nPulses = r.pulses[phase] ?? 0;
-    // Each (detector, light) entry in dets/lights is a SEPARATE pulse — the
+    // Each (detector, light) entry in dets/lights is a SEPARATE pulse, the
     // device fires them sequentially across pulses, not simultaneously within
     // a single pulse. So a phase declared as N pulses with K channels emits
     // N × K pulses total, advancing time by pulse_distance per emission.
@@ -490,7 +489,7 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
 export interface MeasurementTimeseries {
   inputs: InputRecord[];
   outputs: OutputRecord[];
-  /** Total duration in microseconds — sum of declared sub-protocol durations
+  /** Total duration in microseconds, sum of declared sub-protocol durations
    * plus any `protocols_delay` waits. The device's e_time wall-clock markers
    * are intentionally ignored (they vary with device-internal autogain/env
    * work that doesn't map to user-meaningful chart time). */
@@ -578,7 +577,7 @@ export function measurementToTimeseries(
   }
 
   // The device holds actinic LEDs at their last nonpulsed brightness through
-  // wall-clock gaps (autogain, env sensors, etc.) — there is no break in the
+  // wall-clock gaps (autogain, env sensors, etc.), there is no break in the
   // actinic light, only in data acquisition. Extend the last-phase actinic
   // records of each sub-protocol to the start of the next so the input chart
   // is continuous. Measuring/pulsed lights are NOT extended; those really are
