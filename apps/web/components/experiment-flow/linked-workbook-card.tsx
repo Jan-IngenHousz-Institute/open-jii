@@ -75,15 +75,16 @@ export function LinkedWorkbookCard({
   const hasNewerPublished =
     !!pinnedVersion && versions.length > 0 && latestVersion.version > pinnedVersion.version;
 
-  // The upgrade indicator must reflect only fully-settled state. While the
-  // draft is autosaving or its queries are refetching, the server-computed
-  // `isUpgradable` flag is mid-flight and briefly flips, flashing the banner
-  // on and off. Freeze the last settled value until every read and the save
-  // mutation have come to rest, so the banner only changes once state is current.
+  // Freeze the upgrade indicator while any workbook read/write is mid-flight
+  // (autosave, auto-apply upgrade, refetch); otherwise the recomputed
+  // `isUpgradable` flag flips transiently and flashes the banner on and off.
   const fetchingWorkbook = useIsFetching({ queryKey: ["workbook", workbookId] });
   const fetchingVersions = useIsFetching({ queryKey: ["workbookVersions", workbookId] });
   const savingWorkbook = useIsMutating({ mutationKey: ["workbook", workbookId, "update"] });
-  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook > 0;
+  const upgradingWorkbook = useIsMutating({
+    mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
+  });
+  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook > 0;
 
   const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
   const settledHasUpgradeRef = useRef(liveHasUpgrade);
@@ -158,7 +159,7 @@ export function LinkedWorkbookCard({
     );
   };
 
-  const upgradeVersion = useUpgradeWorkbookVersion();
+  const upgradeVersion = useUpgradeWorkbookVersion(experimentId);
   const [upgradeState, setUpgradeState] = useState<"idle" | "upgrading" | "success">("idle");
 
   useEffect(() => {

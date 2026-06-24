@@ -333,9 +333,25 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
-    // No edit/view toggle anymore — owners edit in place.
+    // No edit/view toggle anymore; owners edit in place.
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
+  });
+
+  it("shows the read-only editor (not the draft editor) for a non-admin workbook owner", async () => {
+    // Owner of the workbook, but NOT an experiment admin. Auto-apply on save is
+    // admin-only, so editing here must be blocked to avoid a failing upgrade.
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook({ isAdmin: false });
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
   });
 
   it("auto-upgrades the experiment's pinned version when the owner saves a draft edit", async () => {

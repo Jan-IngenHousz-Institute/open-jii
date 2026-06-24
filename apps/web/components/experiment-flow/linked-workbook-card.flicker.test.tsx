@@ -2,13 +2,13 @@
  * Anti-flicker behaviour for the linked-workbook upgrade banner.
  *
  * Lives in its own file because it stubs React Query's `useIsFetching` /
- * `useIsMutating` to place the card mid-save / mid-refetch deterministically —
- * something the MSW-backed suite in `linked-workbook-card.test.tsx` can't do,
- * since React Query swaps query data atomically when a fetch settles (there is
- * no real frame where the *new* value is present while still fetching).
+ * `useIsMutating` to place the card mid-save / mid-refetch deterministically.
+ * The MSW-backed suite in `linked-workbook-card.test.tsx` can't do this, since
+ * React Query swaps query data atomically when a fetch settles (there is no
+ * real frame where the new value is present while still fetching).
  *
  * The stubs also assert the card subscribes with the exact keys the workbook
- * queries/mutation use, so wrong wiring fails the freeze tests.
+ * queries/mutations use, so wrong wiring fails the freeze tests.
  */
 import { createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LinkedWorkbookCard } from "./linked-workbook-card";
 
 const { syncState } = vi.hoisted(() => ({
-  syncState: { workbook: 0, versions: 0, mutating: 0 },
+  syncState: { workbook: 0, versions: 0, mutating: 0, upgrading: 0 },
 }));
 
 vi.mock("@tanstack/react-query", async (importActual) => {
@@ -33,7 +33,9 @@ vi.mock("@tanstack/react-query", async (importActual) => {
     },
     useIsMutating: (filters?: { mutationKey?: unknown[] }) => {
       const key = filters?.mutationKey;
-      return key?.[0] === "workbook" && key[2] === "update" ? syncState.mutating : 0;
+      if (key?.[0] === "workbook" && key[2] === "update") return syncState.mutating;
+      if (key?.[0] === "experiment" && key[2] === "upgradeWorkbook") return syncState.upgrading;
+      return 0;
     },
   };
 });
@@ -90,6 +92,7 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
     syncState.workbook = 0;
     syncState.versions = 0;
     syncState.mutating = 0;
+    syncState.upgrading = 0;
     mockUseWorkbookVersions.mockReturnValue({ data: { body: [pinnedVersion] } });
   });
 
@@ -100,7 +103,7 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
   });
 
   it("does not flash the banner when isUpgradable briefly reads true during a save", () => {
-    // Settled, not upgradable — no banner.
+    // Settled, not upgradable: no banner.
     setUpgradable(false);
     const { rerender } = render(card());
     expect(upgradeButton()).not.toBeInTheDocument();
@@ -113,9 +116,29 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
     rerender(card());
     expect(upgradeButton()).not.toBeInTheDocument();
 
-    // Everything settles back to not-upgradable — the banner never appeared.
+    // Everything settles back to not-upgradable: the banner never appeared.
     syncState.mutating = 0;
     syncState.workbook = 0;
+    setUpgradable(false);
+    rerender(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+  });
+
+  it("does not flash the banner while an auto-apply upgrade is in flight", () => {
+    // Settled, not upgradable (just re-pinned): no banner.
+    setUpgradable(false);
+    const { rerender } = render(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+
+    // The save refetch has settled showing isUpgradable=true, but the auto-apply
+    // upgrade that re-pins the version is still running. Stay frozen (hidden).
+    syncState.upgrading = 1;
+    setUpgradable(true);
+    rerender(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+
+    // Upgrade settles and re-pins; isUpgradable is false again. Never flashed.
+    syncState.upgrading = 0;
     setUpgradable(false);
     rerender(card());
     expect(upgradeButton()).not.toBeInTheDocument();
@@ -127,13 +150,13 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
     expect(upgradeButton()).not.toBeInTheDocument();
 
     // New (genuinely upgradable) value arrives while a versions refetch is in
-    // flight — held back so it can't blink in mid-sync.
+    // flight, held back so it can't blink in mid-sync.
     syncState.versions = 1;
     setUpgradable(true);
     rerender(card());
     expect(upgradeButton()).not.toBeInTheDocument();
 
-    // Once settled the banner appears and stays — a single, clean transition.
+    // Once settled the banner appears and stays: a single, clean transition.
     syncState.versions = 0;
     rerender(card());
     expect(upgradeButton()).toBeInTheDocument();
