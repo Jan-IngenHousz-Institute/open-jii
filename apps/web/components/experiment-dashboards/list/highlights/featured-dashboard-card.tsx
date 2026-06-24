@@ -27,7 +27,7 @@ export function FeaturedDashboardCard({ dashboard, href }: FeaturedDashboardCard
           <h3 className="text-sm font-semibold">
             <Link
               href={href}
-              className="hover:text-foreground focus-visible:ring-primary/40 inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2"
+              className="hover:text-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline focus-visible:ring-2"
             >
               <span className="truncate">{dashboard.name}</span>
               <ExternalLink className="text-muted-foreground size-3.5 shrink-0" />

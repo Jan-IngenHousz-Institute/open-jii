@@ -44,7 +44,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
       <div
         ref={ref}
         className={cn(
-          "bg-background inline-flex h-7 items-center rounded-md border text-xs shadow-sm",
+          "bg-background shadow-xs inline-flex h-7 items-center rounded-md border text-xs",
           fullWidth && "flex w-full",
           className,
         )}

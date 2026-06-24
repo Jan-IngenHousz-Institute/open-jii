@@ -2,7 +2,6 @@ import { cva } from "class-variance-authority";
 import { AlertTriangle, ArrowRight, Info, Sparkles, Wrench, X } from "lucide-react-native";
 import React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
-import { useEnvVar } from "~/shared/stores/environment-store";
 import { CtfRichText } from "~/shared/ui/ctf-rich-text";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -58,20 +57,9 @@ export interface AlertBannerProps {
   topPadding?: number;
 }
 
-/**
- * Resolves a CMS alert link to an absolute URL openable by `Linking`.
- * Absolute URLs pass through; relative paths (e.g. `/about`) are joined onto
- * the web base URL.
- */
-function resolveLinkUrl(url: string, webBaseUrl: string): string {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
-  return `${webBaseUrl.replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
-}
-
 export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
   const severity = getSeverity(alert);
   const themeColors = useThemeColors();
-  const webBaseUrl = useEnvVar("NEXT_AUTH_URI");
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;
 
@@ -106,7 +94,7 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
             className={actionButtonVariants({ severity })}
             onPress={() => {
               if (alert.link?.url) {
-                void Linking.openURL(resolveLinkUrl(alert.link.url, webBaseUrl));
+                void Linking.openURL(alert.link.url);
               }
             }}
           >

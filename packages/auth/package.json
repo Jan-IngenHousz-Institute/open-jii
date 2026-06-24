@@ -43,13 +43,5 @@
     "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:"
-  },
-  "peerDependencies": {
-    "expo-secure-store": "*"
-  },
-  "peerDependenciesMeta": {
-    "expo-secure-store": {
-      "optional": true
-    }
   }
 }

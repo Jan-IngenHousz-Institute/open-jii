@@ -71,7 +71,7 @@ function JoinRequestRow({
           </span>
           {request.user.email && (
             <span className="flex min-w-0 items-center gap-x-1">
-              <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+              <Mail className="text-muted-foreground h-3 w-3 shrink-0" />
               <span className="text-muted-foreground truncate text-xs" title={request.user.email}>
                 {request.user.email}
               </span>

@@ -1,53 +1,40 @@
 import { renderHook } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { enrichPathSegments } from "~/app/actions/breadcrumbs";
 
 import { useBreadcrumbs } from "./useBreadcrumbs";
-
-vi.mock("~/app/actions/breadcrumbs", () => ({
-  enrichPathSegments: vi.fn(),
-}));
-
-const mockEnrich = vi.mocked(enrichPathSegments);
 
 describe("useBreadcrumbs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(usePathname).mockReturnValue("/en/platform/experiments/new");
   });
 
-  it("calls enrichPathSegments with pathname and locale", () => {
-    mockEnrich.mockResolvedValue([]);
-    renderHook(() => useBreadcrumbs("en"));
-    expect(mockEnrich).toHaveBeenCalledWith("/en/platform/experiments/new", "en");
-  });
-
-  it("returns loading state initially", () => {
-    mockEnrich.mockResolvedValue([]);
+  it("returns the ancestor trail for the current pathname, synchronously", () => {
+    vi.mocked(usePathname).mockReturnValue("/en/platform/experiments/exp-1");
     const { result } = renderHook(() => useBreadcrumbs("en"));
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toBeUndefined();
+    expect(result.current).toEqual([
+      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+    ]);
   });
 
-  it("handles different locales", () => {
-    mockEnrich.mockResolvedValue([]);
-    renderHook(() => useBreadcrumbs("de"));
-    expect(mockEnrich).toHaveBeenCalledWith("/en/platform/experiments/new", "de");
+  it("returns an empty trail for a section root", () => {
+    vi.mocked(usePathname).mockReturnValue("/en/platform/experiments");
+    const { result } = renderHook(() => useBreadcrumbs("en"));
+    expect(result.current).toEqual([]);
   });
 
-  it("uses correct pathname", () => {
-    vi.mocked(usePathname).mockReturnValue("/en/platform");
-    mockEnrich.mockResolvedValue([]);
-    renderHook(() => useBreadcrumbs("en"));
-    expect(mockEnrich).toHaveBeenCalledWith("/en/platform", "en");
+  it("propagates the locale into hrefs", () => {
+    vi.mocked(usePathname).mockReturnValue("/de/platform/experiments/new");
+    const { result } = renderHook(() => useBreadcrumbs("de"));
+    expect(result.current[0]?.href).toBe("/de/platform/experiments");
   });
 
   it("handles entity paths with UUIDs", () => {
     const uuid = "a1b2c3d4-e5f6-4890-abcd-ef1234567890";
     vi.mocked(usePathname).mockReturnValue(`/en/platform/experiments/${uuid}`);
-    mockEnrich.mockResolvedValue([]);
-    renderHook(() => useBreadcrumbs("en"));
-    expect(mockEnrich).toHaveBeenCalledWith(`/en/platform/experiments/${uuid}`, "en");
+    const { result } = renderHook(() => useBreadcrumbs("en"));
+    expect(result.current).toEqual([
+      { segment: "experiments", title: "experiments", href: "/en/platform/experiments" },
+    ]);
   });
 });

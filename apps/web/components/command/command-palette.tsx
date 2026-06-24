@@ -105,7 +105,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "Pages",
         icon: iconMap.Settings,
         shortcut: "G S",
-        run: () => navigate(`/${locale}/platform/account/settings`),
+        run: () => navigate(`/${locale}/platform/account`),
       },
       {
         id: "action.create-experiment",
