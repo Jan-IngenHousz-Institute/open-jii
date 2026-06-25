@@ -23,7 +23,7 @@ function findExperimentRef(
 
 /**
  * Resolves the protocol/macro ids an experiment references, from its workbook
- * version (preferred — also caches the cells for offline branch evaluation) or
+ * version (preferred, also caches the cells for offline branch evaluation) or
  * from the legacy flow graph.
  */
 async function resolveAssetIds(
@@ -60,6 +60,37 @@ async function resolveAssetIds(
   };
 }
 
+// Refetch window: a successful precache won't churn on reconnect, but a
+// stale/failed one becomes eligible to retry once online (with refetchOnReconnect).
+const PRECACHE_STALE_TIME = 5 * 60 * 1000;
+
+// fetchQuery (not prefetchQuery) so a failed asset rejects instead of being
+// swallowed; throw if any fail so the precache reports incomplete and retries on
+// reconnect rather than falsely succeeding and leaving an offline hole.
+async function cacheAssets<T>(
+  ids: string[],
+  queryKeyPrefix: string,
+  queryFn: (id: string) => Promise<{ body: T }>,
+  queryClient: ReturnType<typeof useQueryClient>,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    ids.map((id) =>
+      queryClient.fetchQuery({
+        queryKey: [queryKeyPrefix, id],
+        queryFn: () => queryFn(id),
+        meta: { suppressToast: true },
+      }),
+    ),
+  );
+
+  const failed = ids.filter((_, i) => results[i].status === "rejected");
+  if (failed.length > 0) {
+    throw new Error(
+      `Failed to cache ${failed.length}/${ids.length} ${queryKeyPrefix}(s): ${failed.join(", ")}`,
+    );
+  }
+}
+
 async function precacheExperimentDataFn(
   experimentId: string,
   queryClient: ReturnType<typeof useQueryClient>,
@@ -70,23 +101,23 @@ async function precacheExperimentDataFn(
   const uniqueMacroIds = uniq<string>(macroIds);
 
   await Promise.all([
-    ...uniqueProtocolIds.map((protocolId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
-        queryFn: async () => {
-          const response = await tsr.protocols.getProtocol.query({ params: { id: protocolId } });
-          return { body: response.body };
-        },
-      }),
+    cacheAssets(
+      uniqueProtocolIds,
+      "protocol",
+      async (id) => {
+        const response = await tsr.protocols.getProtocol.query({ params: { id } });
+        return { body: response.body };
+      },
+      queryClient,
     ),
-    ...uniqueMacroIds.map((macroId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
-        queryFn: async () => {
-          const response = await tsr.macros.getMacro.query({ params: { id: macroId } });
-          return { body: response.body };
-        },
-      }),
+    cacheAssets(
+      uniqueMacroIds,
+      "macro",
+      async (id) => {
+        const response = await tsr.macros.getMacro.query({ params: { id } });
+        return { body: response.body };
+      },
+      queryClient,
     ),
   ]);
 
@@ -100,7 +131,12 @@ export function usePrecachedExperimentData(experimentId: string | undefined) {
     queryKey: ["precache-experiment-data", experimentId],
     queryFn: () => precacheExperimentDataFn(experimentId ?? "", queryClient),
     enabled: !!experimentId,
-    staleTime: Infinity,
+    // Incomplete precache (offline/failed assets) is expected and retried on
+    // reconnect; don't blare a technical toast.
+    meta: { suppressToast: true },
+    // Finite (not Infinity) so an incomplete precache becomes eligible to
+    // refetch when connectivity returns and fill the missing assets.
+    staleTime: PRECACHE_STALE_TIME,
     gcTime: Infinity,
   });
 }

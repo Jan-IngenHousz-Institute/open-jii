@@ -6,6 +6,7 @@ import { toast } from "sonner-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
+import { classifyScanError } from "~/features/connection/utils/classify-scan-error";
 import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
@@ -33,7 +34,7 @@ interface MeasurementNodeProps {
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { protocol } = useProtocol(content.protocolId);
+  const { protocol, isLoading: isProtocolLoading } = useProtocol(content.protocolId);
   const {
     executeScan,
     isScanning,
@@ -45,7 +46,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     scanStartedAt,
     estimatedMs,
   } = useScanner();
-  const { data: device } = useConnectedDevice();
+  const { data: device, refetch: refetchConnectedDevice } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
     useMeasurementFlowStore();
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
@@ -103,6 +104,16 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       return;
     }
 
+    // The cached `device` flag is polled (~3s) and lags a real BLE drop. Probe
+    // the live connection before committing so we fail with a clear reconnect
+    // prompt instead of a generic scan error or a long timeout.
+    const { data: liveDevice } = await refetchConnectedDevice();
+    if (!liveDevice) {
+      log.warn("scan blocked: device not connected");
+      toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+      return;
+    }
+
     resetScan();
     try {
       const result = await executeScan(protocol);
@@ -111,6 +122,16 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       await playSound();
       nextStep();
     } catch (error) {
+      const kind = classifyScanError(error);
+      // Cancellation is user-initiated and handled by the cancel path.
+      if (kind === "cancelled") {
+        return;
+      }
+      if (kind === "disconnected") {
+        log.error("scan error: device disconnected", { err: (error as Error)?.message });
+        toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+        return;
+      }
       log.error("scan error", { err: (error as Error)?.message });
       toast.error(t("measurementFlow:measurementNode.toast.scanError"));
     }
@@ -183,6 +204,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <Button
             title={t("measurementFlow:measurementNode.startMeasurement")}
             onPress={handleStartScan}
+            disabled={isProtocolLoading}
             style={{ height: 44 }}
           />
         </View>
