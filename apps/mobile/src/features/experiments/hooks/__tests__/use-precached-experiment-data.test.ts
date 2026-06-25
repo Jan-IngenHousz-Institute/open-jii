@@ -6,32 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usePrecachedExperimentData } from "../use-precached-experiment-data";
 
-const { mockGetFlow, mockGetProtocol, mockGetMacro } = vi.hoisted(() => ({
-  mockGetFlow: vi.fn(),
-  mockGetProtocol: vi.fn(),
-  mockGetMacro: vi.fn(),
+const { mockListExperiments, mockGetWorkbookVersion } = vi.hoisted(() => ({
+  mockListExperiments: vi.fn(),
+  mockGetWorkbookVersion: vi.fn(),
 }));
 
 vi.mock("~/shared/api/tsr", () => ({
   tsr: {
-    experiments: { getFlow: { query: (...a: unknown[]) => mockGetFlow(...a) } },
-    protocols: { getProtocol: { query: (...a: unknown[]) => mockGetProtocol(...a) } },
-    macros: { getMacro: { query: (...a: unknown[]) => mockGetMacro(...a) } },
+    experiments: { listExperiments: { query: (...a: unknown[]) => mockListExperiments(...a) } },
+    workbooks: { getWorkbookVersion: { query: (...a: unknown[]) => mockGetWorkbookVersion(...a) } },
   },
 }));
 
-function flowWith(protocolIds: string[], macroIds: string[] = []) {
-  return {
-    body: {
-      graph: {
-        nodes: [
-          ...protocolIds.map((id) => ({ type: "measurement", content: { protocolId: id } })),
-          ...macroIds.map((id) => ({ type: "analysis", content: { macroId: id } })),
-        ],
-      },
-    },
-  };
-}
+const REF = { id: "exp-1", workbookId: "wb-1", workbookVersionId: "wv-1" };
 
 let queryClient: QueryClient;
 
@@ -42,11 +29,9 @@ function wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  mockGetProtocol.mockImplementation(({ params }: any) =>
-    Promise.resolve({ body: { id: params.id, name: `protocol ${params.id}` } }),
-  );
-  mockGetMacro.mockImplementation(({ params }: any) =>
-    Promise.resolve({ body: { id: params.id } }),
+  mockListExperiments.mockResolvedValue({ body: [REF] });
+  mockGetWorkbookVersion.mockImplementation(({ params }: any) =>
+    Promise.resolve({ body: { id: params.versionId, cells: [], entitySnapshots: {} } }),
   );
 });
 
@@ -55,26 +40,29 @@ afterEach(() => {
 });
 
 describe("usePrecachedExperimentData", () => {
-  it("succeeds and caches every protocol when all fetches resolve", async () => {
-    mockGetFlow.mockResolvedValue(flowWith(["proto-1", "proto-2"], ["macro-1"]));
+  it("caches the workbook version when the experiments list is already cached", async () => {
+    queryClient.setQueryData(["experiments"], { body: [REF] });
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.protocolIds).toEqual(["proto-1", "proto-2"]);
-    expect(queryClient.getQueryData(["protocol", "proto-1"])).toEqual({
-      body: { id: "proto-1", name: "protocol proto-1" },
-    });
-    expect(queryClient.getQueryData(["protocol", "proto-2"])).toBeDefined();
+    expect(result.current.data?.workbookVersionId).toBe("wv-1");
+    expect(queryClient.getQueryData(["workbook-version", "wb-1", "wv-1"])).toBeDefined();
+    // No separate protocol/macro fetches: the workbook version carries them.
+    expect(mockListExperiments).not.toHaveBeenCalled();
   });
 
-  it("ends in an error state when any protocol fetch fails", async () => {
-    mockGetFlow.mockResolvedValue(flowWith(["proto-1", "proto-2"]));
-    mockGetProtocol.mockImplementation(({ params }: any) =>
-      params.id === "proto-2"
-        ? Promise.reject(new Error("offline"))
-        : Promise.resolve({ body: { id: params.id } }),
-    );
+  it("fetches the experiments list to resolve the ref when it isn't cached", async () => {
+    const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockListExperiments).toHaveBeenCalledTimes(1);
+    expect(queryClient.getQueryData(["workbook-version", "wb-1", "wv-1"])).toBeDefined();
+  });
+
+  it("ends in an error state when the workbook version fetch fails", async () => {
+    queryClient.setQueryData(["experiments"], { body: [REF] });
+    mockGetWorkbookVersion.mockRejectedValue(new Error("offline"));
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
 
@@ -82,34 +70,27 @@ describe("usePrecachedExperimentData", () => {
     expect(queryClient.getQueryData(["precache-experiment-data", "exp-1"])).toBeUndefined();
   });
 
-  it("recovers on refetch once the failing fetch succeeds (reconnect path)", async () => {
-    mockGetFlow.mockResolvedValue(flowWith(["proto-1", "proto-2"]));
-    mockGetProtocol.mockImplementation(({ params }: any) =>
-      params.id === "proto-2"
-        ? Promise.reject(new Error("offline"))
-        : Promise.resolve({ body: { id: params.id } }),
-    );
+  it("recovers on refetch once the version fetch succeeds (reconnect path)", async () => {
+    queryClient.setQueryData(["experiments"], { body: [REF] });
+    mockGetWorkbookVersion.mockRejectedValueOnce(new Error("offline"));
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    // Simulate connectivity returning: the previously-failing fetch now resolves.
-    mockGetProtocol.mockImplementation(({ params }: any) =>
-      Promise.resolve({ body: { id: params.id } }),
-    );
     await result.current.refetch();
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(queryClient.getQueryData(["protocol", "proto-2"])).toBeDefined();
+    expect(queryClient.getQueryData(["workbook-version", "wb-1", "wv-1"])).toBeDefined();
   });
 
-  it("deduplicates repeated protocol ids before fetching", async () => {
-    mockGetFlow.mockResolvedValue(flowWith(["proto-1", "proto-1", "proto-1"]));
+  it("errors when the experiment has no workbook version", async () => {
+    queryClient.setQueryData(["experiments"], {
+      body: [{ id: "exp-1", workbookId: null, workbookVersionId: null }],
+    });
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.protocolIds).toEqual(["proto-1"]);
-    expect(mockGetProtocol).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockGetWorkbookVersion).not.toHaveBeenCalled();
   });
 });

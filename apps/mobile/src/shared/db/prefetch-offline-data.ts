@@ -1,17 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { tsr } from "~/shared/api/tsr";
 import { createLogger } from "~/shared/observability/logger";
-import { uniq } from "~/shared/utils/uniq";
-import { extractAssetIdsFromCells } from "~/shared/utils/workbook-assets";
-
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 const log = createLogger("prefetch");
 
 /**
  * Prefetches all experiment data needed for offline use.
- * Called after login to ensure measurements can run without network.
+ * Called after login (and on foreground/reconnect) so measurements run offline.
  */
 export async function prefetchOfflineData(
   queryClient: QueryClient,
@@ -27,7 +22,7 @@ export async function prefetchOfflineData(
 }
 
 async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): Promise<void> {
-  // Kick off the profile prefetch in parallel — it's independent of experiments.
+  // Kick off the profile prefetch in parallel; it's independent of experiments.
   // 404 is expected for accounts that haven't completed registration on web yet.
   const profilePromise = userId
     ? queryClient
@@ -44,15 +39,10 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
         })
     : Promise.resolve();
 
-  // 1. Fetch all user experiments
+  // 1. Fetch all user experiments.
   const experimentsResponse = await queryClient.fetchQuery({
     queryKey: ["experiments"],
-    queryFn: async () => {
-      const response = await tsr.experiments.listExperiments.query({
-        query: { filter: "member" },
-      });
-      return response;
-    },
+    queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
     staleTime: 0,
   });
 
@@ -62,131 +52,43 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     workbookVersionId: string | null;
   }[];
 
-  // 2. For each experiment, cache its run source and extract protocol/macro IDs.
-  //    Workbook-backed experiments cache the workbook version (cells carry the
-  //    branch conditions needed for offline evaluation); legacy experiments
-  //    cache the flow graph as before.
-  const allProtocolIds: string[] = [];
-  const allMacroIds: string[] = [];
-
-  const flowResults = await Promise.allSettled(
+  // 2. Cache each experiment's workbook version. The version carries everything
+  //    the offline flow needs: cells (branch routing) and entitySnapshots
+  //    (pinned protocol/macro code), so there are no per-asset fetches.
+  const versionResults = await Promise.allSettled(
     experiments.map(async (experiment) => {
-      try {
-        if (experiment.workbookId && experiment.workbookVersionId) {
-          const workbookId = experiment.workbookId;
-          const workbookVersionId = experiment.workbookVersionId;
-          try {
-            const versionResponse = await queryClient.fetchQuery({
-              queryKey: ["workbook-version", workbookId, workbookVersionId],
-              queryFn: async () =>
-                tsr.workbooks.getWorkbookVersion.query({
-                  params: { id: workbookId, versionId: workbookVersionId },
-                }),
-              staleTime: 0,
-            });
-
-            const cells =
-              (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
-            const { protocolIds, macroIds } = extractAssetIdsFromCells(cells);
-            allProtocolIds.push(...protocolIds);
-            allMacroIds.push(...macroIds);
-            return;
-          } catch {
-            // Fall through to legacy flow-graph resolution below.
-          }
-        }
-
-        const flowResponse: any = await queryClient.fetchQuery({
-          queryKey: ["experiment-flow", experiment.id],
-          queryFn: async () => {
-            const response = await tsr.experiments.getFlow.query({
-              params: { id: experiment.id },
-            });
-            return response;
-          },
-          staleTime: 0,
-        });
-
-        const nodes = flowResponse?.body?.graph?.nodes ?? [];
-
-        const protocolIds = nodes
-          .filter((node: FlowNode) => node.type === "measurement" && node.content?.protocolId)
-          .map((node: FlowNode) => node.content.protocolId as string);
-
-        const macroIds = nodes
-          .filter((node: FlowNode) => node.type === "analysis" && node.content?.macroId)
-          .map((node: FlowNode) => node.content.macroId as string);
-
-        allProtocolIds.push(...protocolIds);
-        allMacroIds.push(...macroIds);
-      } catch (err) {
-        throw new Error(
-          `Run-source fetch failed for experiment ${experiment.id}: ${err instanceof Error ? err.message : String(err)}`,
-        );
+      const { workbookId, workbookVersionId } = experiment;
+      if (!workbookId || !workbookVersionId) {
+        throw new Error(`Experiment ${experiment.id} has no workbook version`);
       }
+      await queryClient.fetchQuery({
+        queryKey: ["workbook-version", workbookId, workbookVersionId],
+        queryFn: () =>
+          tsr.workbooks.getWorkbookVersion.query({
+            params: { id: workbookId, versionId: workbookVersionId },
+          }),
+        staleTime: 0,
+        meta: { suppressToast: true },
+      });
     }),
   );
 
-  const flowFailures = flowResults.filter(
+  const failures = versionResults.filter(
     (r): r is PromiseRejectedResult => r.status === "rejected",
   );
-  if (flowFailures.length > 0) {
-    log.warn("experiment flow(s) failed", {
-      failures: flowFailures.length,
+  if (failures.length > 0) {
+    log.warn("workbook version(s) failed to cache", {
+      failures: failures.length,
       total: experiments.length,
-      reasons: flowFailures.map((r) => r.reason?.message ?? String(r.reason)),
-    });
-  }
-
-  // 3. Fetch all unique protocols and macros
-  const uniqueProtocolIds = uniq(allProtocolIds);
-  const uniqueMacroIds = uniq(allMacroIds);
-
-  const assetResults = await Promise.allSettled([
-    ...uniqueProtocolIds.map((protocolId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
-        queryFn: async () => {
-          const response = await tsr.protocols.getProtocol.query({
-            params: { id: protocolId },
-          });
-          return { body: response.body };
-        },
-        staleTime: 0,
-      }),
-    ),
-    ...uniqueMacroIds.map((macroId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
-        queryFn: async () => {
-          const response = await tsr.macros.getMacro.query({
-            params: { id: macroId },
-          });
-          return { body: response.body };
-        },
-        staleTime: 0,
-      }),
-    ),
-  ]);
-
-  const assetFailures = assetResults.filter((r) => r.status === "rejected");
-  if (assetFailures.length > 0) {
-    log.warn("protocol/macro prefetch failures", {
-      failures: assetFailures.length,
-      total: uniqueProtocolIds.length + uniqueMacroIds.length,
+      reasons: failures.map((r) => r.reason?.message ?? String(r.reason)),
     });
   }
 
   // Make sure the parallel profile prefetch has settled before returning.
   await profilePromise;
 
-  const flowsCached = experiments.length - flowFailures.length;
-  const assetsCached = uniqueProtocolIds.length + uniqueMacroIds.length - assetFailures.length;
-
   log.info("cached", {
-    experiments_cached: flowsCached,
+    experiments_cached: experiments.length - failures.length,
     experiments_total: experiments.length,
-    assets_cached: assetsCached,
-    assets_total: uniqueProtocolIds.length + uniqueMacroIds.length,
   });
 }

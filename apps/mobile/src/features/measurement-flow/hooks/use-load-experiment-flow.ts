@@ -57,10 +57,13 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   // Workbook path: derive the graph locally in document order (NOT orderFlowNodes,
   // which collapses branches by following only the first outgoing edge).
   useEffect(() => {
-    const cells = versionData?.body?.cells;
+    const body = versionData?.body;
+    const cells = body?.cells;
     if (!cells) return;
     const { nodes, edges } = cellsToFlowGraph(cells);
-    setFlowGraph(nodes, edges, cells);
+    // Snapshots carry the pinned protocol/macro code so the scan + macro upload
+    // read offline from the store instead of fetching live rows.
+    setFlowGraph(nodes, edges, cells, body?.entitySnapshots);
   }, [versionData, setFlowGraph]);
 
   // Legacy path: linearize the stored flow graph (branch-free).

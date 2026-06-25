@@ -8,6 +8,7 @@ import {
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 
 /** The branch path the flow last routed through, surfaced inline in the hero. */
 export interface MatchedPath {
@@ -38,6 +39,9 @@ interface MeasurementFlowStore {
   // legacy flow-only experiments (no workbook attached).
   cells: WorkbookCell[];
   edges: FlowEdge[];
+  // Pinned protocol/macro code snapshots from the workbook version, so the scan
+  // and macro upload read code offline from here instead of fetching live rows.
+  entitySnapshots?: EntitySnapshots;
   // Which branch path was last taken (for the inline hero chip).
   lastMatchedPath?: MatchedPath;
   // Per-node visit counter that caps branch goto-loops (mirrors web's MAX_VISITS_PER_CELL).
@@ -55,7 +59,12 @@ interface MeasurementFlowStore {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
-  setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
+  setFlowGraph: (
+    nodes: FlowNode[],
+    edges: FlowEdge[],
+    cells: WorkbookCell[],
+    entitySnapshots?: EntitySnapshots,
+  ) => void;
   setLastMatchedPath: (path: MatchedPath | undefined) => void;
   incrementBranchVisit: (nodeId: string) => void;
   recordBranchJump: (landing: number) => void;
@@ -69,12 +78,9 @@ interface MeasurementFlowStore {
   returnToOverview: () => void;
 }
 
-// The store is persisted so a mid-flow blur (background, kill, tab switch)
-// is itself the "pause": the next launch rehydrates the same active flow
-// and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed. The workbook cells/edges and
-// branch state are persisted too so a resumed branching flow keeps evaluating
-// offline.
+// Persisted so a mid-flow blur (background/kill) is itself the "pause": the next
+// launch rehydrates the active flow. Cells/edges/snapshots/branch state persist
+// too so a resumed branching flow keeps evaluating (and scanning) offline.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
@@ -198,11 +204,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
-      setFlowGraph: (nodes, edges, cells) =>
+      setFlowGraph: (nodes, edges, cells, entitySnapshots) =>
         set({
           flowNodes: nodes,
           edges,
           cells,
+          entitySnapshots,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -252,6 +259,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFromOverview: false,
           cells: [],
           edges: [],
+          entitySnapshots: undefined,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
@@ -342,6 +350,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,
+        entitySnapshots: state.entitySnapshots,
         branchVisitCounts: state.branchVisitCounts,
         lastMatchedPath: state.lastMatchedPath,
         branchReturnStack: state.branchReturnStack,
