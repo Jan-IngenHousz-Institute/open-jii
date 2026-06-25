@@ -24,6 +24,7 @@ interface MockFlowState {
   currentFlowStep: number;
   iterationCount: number;
   scanResult?: unknown;
+  producerCellId?: string;
   cells: WorkbookCell[];
   branchVisitCounts: Record<string, number>;
   setCurrentFlowStep: typeof mockSetCurrentFlowStep;
@@ -38,6 +39,7 @@ const flowState: MockFlowState = {
   currentFlowStep: 0,
   iterationCount: 0,
   scanResult: undefined,
+  producerCellId: undefined,
   cells: [],
   branchVisitCounts: {},
   setCurrentFlowStep: mockSetCurrentFlowStep,
@@ -125,6 +127,7 @@ beforeEach(() => {
   flowState.currentFlowStep = 0;
   flowState.iterationCount = 0;
   flowState.scanResult = undefined;
+  flowState.producerCellId = undefined;
   flowState.cells = [];
   flowState.branchVisitCounts = {};
 });
@@ -214,6 +217,7 @@ describe("evaluateAndRoute", () => {
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
+    flowState.producerCellId = "p1";
     flowState.scanResult = { sample: [{ phi2: 0.8 }] };
     flowState.cells = [
       qCell("q1"),
@@ -242,6 +246,7 @@ describe("evaluateAndRoute", () => {
 
   it("does not match a path when one AND condition fails", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
+    flowState.producerCellId = "p1";
     flowState.scanResult = { sample: [{ phi2: 0.3 }] }; // fails the > 0.5 check
     flowState.cells = [
       qCell("q1"),

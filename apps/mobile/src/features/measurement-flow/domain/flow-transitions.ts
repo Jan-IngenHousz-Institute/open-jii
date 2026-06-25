@@ -32,6 +32,9 @@ export interface FlowState {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: ScanResult;
+  // Cell id of the producer (protocol or command) that yielded scanResult;
+  // keys the synthetic output cell in hydrateCells for branch evaluation.
+  producerCellId?: string;
   isFromOverview: boolean;
   // Workbook-derived data for on-device branch evaluation; empty for legacy
   // flow-only experiments. Persisted so a resumed branching flow keeps routing.
@@ -52,6 +55,7 @@ export const initialFlowState: FlowState = {
   isFlowFinished: false,
   isQuestionsSubmitPending: false,
   scanResult: undefined,
+  producerCellId: undefined,
   isFromOverview: false,
   cells: [],
   edges: [],
@@ -147,6 +151,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      producerCellId: undefined,
       cells: [],
       edges: [],
       ...clearedBranchIteration,
@@ -165,6 +170,7 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     iterationCount: state.iterationCount + 1,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -175,6 +181,7 @@ export function retryIterationState(): Partial<FlowState> {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -195,6 +202,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
     scanResult: undefined,
+    producerCellId: undefined,
     ...clearedBranchIteration,
   };
 }
