@@ -1,10 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  FlowEdge,
-  FlowNode,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
@@ -12,21 +7,16 @@ import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 import { hydrateFlowNodes } from "../../utils/hydrate-flow-nodes";
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
-const { listUseQuery, flowUseQuery, versionUseQuery, setFlowGraph, setFlowNodes } = vi.hoisted(
-  () => ({
-    listUseQuery: vi.fn(),
-    flowUseQuery: vi.fn(),
-    versionUseQuery: vi.fn(),
-    setFlowGraph: vi.fn(),
-    setFlowNodes: vi.fn(),
-  }),
-);
+const { listUseQuery, versionUseQuery, setFlowGraph } = vi.hoisted(() => ({
+  listUseQuery: vi.fn(),
+  versionUseQuery: vi.fn(),
+  setFlowGraph: vi.fn(),
+}));
 
 vi.mock("~/shared/api/tsr", () => ({
   tsr: {
     experiments: {
       listExperiments: { useQuery: listUseQuery },
-      getFlow: { useQuery: flowUseQuery },
     },
     workbooks: {
       getWorkbookVersion: { useQuery: versionUseQuery },
@@ -35,19 +25,17 @@ vi.mock("~/shared/api/tsr", () => ({
 }));
 
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: (selector: (s: unknown) => unknown) =>
-    selector({ setFlowGraph, setFlowNodes }),
+  useMeasurementFlowStore: (selector: (s: unknown) => unknown) => selector({ setFlowGraph }),
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   listUseQuery.mockReturnValue({ data: undefined, isLoading: false });
-  flowUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: null });
   versionUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: null });
 });
 
 describe("useLoadExperimentFlow", () => {
-  it("derives the graph from the workbook version (document order) when one is attached", async () => {
+  it("derives the graph from the workbook version (document order)", async () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
@@ -84,31 +72,21 @@ describe("useLoadExperimentFlow", () => {
       expected.edges,
       cells,
     );
-    expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });
 
-  it("falls back to the legacy flow when no workbook is attached", async () => {
-    const nodes: FlowNode[] = [
-      { id: "q1", type: "question", name: "q1", content: { kind: "number" }, isStart: true },
-    ];
-    const edges: FlowEdge[] = [];
+  it("surfaces an error when the experiment has no workbook", () => {
     listUseQuery.mockReturnValue({
       data: { body: [{ id: "e1", workbookId: null, workbookVersionId: null }] },
       isLoading: false,
     });
-    flowUseQuery.mockReturnValue({
-      data: { body: { graph: { nodes, edges } } },
-      isLoading: false,
-      error: null,
-    });
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
-    await waitFor(() => expect(setFlowNodes).toHaveBeenCalled());
-    expect(setFlowNodes).toHaveBeenCalledWith(orderFlowNodes(nodes, edges));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isReady).toBe(false);
+    expect((result.current.error as Error)?.message).toContain("no workbook version");
     expect(setFlowGraph).not.toHaveBeenCalled();
-    expect(result.current.isReady).toBe(true);
   });
 
   it("surfaces a listExperiments error instead of hanging in loading", () => {
@@ -121,6 +99,5 @@ describe("useLoadExperimentFlow", () => {
     expect(result.current.error).toBe(err);
     expect(result.current.isReady).toBe(false);
     expect(setFlowGraph).not.toHaveBeenCalled();
-    expect(setFlowNodes).not.toHaveBeenCalled();
   });
 });
