@@ -9,6 +9,12 @@ import { createDriverCommandExecutor } from "./driver-command-executor";
 import { bluetoothClassicTransport } from "./transports/bluetooth-classic-transport";
 import { serialPortTransport } from "./transports/serial-port-transport";
 
+// The transport subscribes to the native disconnect event; stub it so the
+// emitter isn't touched in the node test env.
+vi.mock("react-native-bluetooth-classic", () => ({
+  default: { onDeviceDisconnected: vi.fn(() => ({ remove: vi.fn() })) },
+}));
+
 const CANCEL_FRAME = `-1+${MULTISPEQ_FRAMING.LINE_ENDING}`;
 
 /** Generic mock ITransportAdapter with a hook to feed device data. */
@@ -155,8 +161,10 @@ describe("bluetoothClassicTransport", () => {
   function mockBtDevice(reply: string) {
     let dataCb: ((event: { data: string }) => void) | undefined;
     return {
+      address: "aa:bb:cc:dd:ee:ff",
       onDataReceived: (cb: (event: { data: string }) => void) => {
         dataCb = cb;
+        return { remove: vi.fn() };
       },
       write: vi.fn().mockImplementation(() => {
         // The lib delivers complete messages with the "\n" delimiter stripped.
@@ -183,8 +191,10 @@ describe("bluetoothClassicTransport", () => {
   function controllableBtDevice(writeOk = true) {
     let dataCb: ((event: { data: unknown }) => void) | undefined;
     return {
+      address: "aa:bb:cc:dd:ee:ff",
       onDataReceived: (cb: (event: { data: unknown }) => void) => {
         dataCb = cb;
+        return { remove: vi.fn() };
       },
       write: vi.fn().mockResolvedValue(writeOk),
       disconnect: vi.fn().mockResolvedValue(undefined),

@@ -67,13 +67,23 @@ describe("useLoadExperimentFlow", () => {
       data: { body: [{ id: "e1", workbookId: "w1", workbookVersionId: "v1" }] },
       isLoading: false,
     });
-    versionUseQuery.mockReturnValue({ data: { body: { cells } }, isLoading: false, error: null });
+    const entitySnapshots = { protocols: {}, macros: {} };
+    versionUseQuery.mockReturnValue({
+      data: { body: { cells, entitySnapshots } },
+      isLoading: false,
+      error: null,
+    });
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
     await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
     const expected = cellsToFlowGraph(cells);
-    expect(setFlowGraph).toHaveBeenCalledWith(expected.nodes, expected.edges, cells);
+    expect(setFlowGraph).toHaveBeenCalledWith(
+      expected.nodes,
+      expected.edges,
+      cells,
+      entitySnapshots,
+    );
     expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });
