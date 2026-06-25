@@ -4,21 +4,37 @@ import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("prefetch");
 
+let inFlight: Promise<void> | null = null;
+let lastRunAt = 0;
+const MIN_RERUN_INTERVAL_MS = 2 * 60 * 1000;
+
 /**
- * Prefetches all experiment data needed for offline use.
- * Called after login (and on foreground/reconnect) so measurements run offline.
+ * Prefetches all experiment data needed for offline use. Called after login and
+ * (throttled) on foreground/reconnect so a precache left incomplete while
+ * offline heals without a re-login. Concurrent calls share the in-flight run.
  */
 export async function prefetchOfflineData(
   queryClient: QueryClient,
   userId?: string,
+  options?: { throttle?: boolean },
 ): Promise<void> {
-  try {
-    await _prefetchOfflineData(queryClient, userId);
-  } catch (err) {
-    log.error("Failed to prefetch offline data", {
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+  if (inFlight) return inFlight;
+  if (options?.throttle && Date.now() - lastRunAt < MIN_RERUN_INTERVAL_MS) return;
+
+  inFlight = (async () => {
+    try {
+      await _prefetchOfflineData(queryClient, userId);
+      lastRunAt = Date.now();
+    } catch (err) {
+      log.error("Failed to prefetch offline data", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      inFlight = null;
+    }
+  })();
+
+  return inFlight;
 }
 
 async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): Promise<void> {
