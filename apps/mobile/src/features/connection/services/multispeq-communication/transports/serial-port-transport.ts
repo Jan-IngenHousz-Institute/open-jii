@@ -26,9 +26,8 @@ export function serialPortTransport(emitter: Emitter<SerialPortEvents>): ITransp
       try {
         await emitter.emit("sendDataToDevice", data);
       } catch (err) {
-        // A closed USB port surfaces as "device not open" on write. Treat it as
-        // a drop so the in-flight command aborts immediately instead of hanging
-        // (mirrors the bluetooth transport's onDeviceDisconnected wiring).
+        // A closed USB port throws "device not open" on write; treat it as a
+        // drop so the in-flight command aborts instead of hanging.
         connected = false;
         onStatus?.(false);
         throw err;

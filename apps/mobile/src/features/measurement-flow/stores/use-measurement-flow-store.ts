@@ -69,9 +69,8 @@ interface MeasurementFlowStore {
   returnToOverview: () => void;
 }
 
-// Persisted so a mid-flow blur (background/kill) is itself the "pause": the next
-// launch rehydrates the active flow. Cells/edges/snapshots/branch state persist
-// too so a resumed branching flow keeps evaluating (and scanning) offline.
+// Persisted so a background/kill is itself the pause: the next launch rehydrates
+// the active flow (cells/edges/branch state) and keeps evaluating offline.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({

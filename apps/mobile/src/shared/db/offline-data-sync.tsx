@@ -5,16 +5,13 @@ import { prefetchOfflineData } from "~/shared/db/prefetch-offline-data";
 import { useAppState } from "~/shared/ui/hooks/use-app-state";
 
 /**
- * Re-runs the offline prefetch when connectivity returns or the app foregrounds,
- * so a precache left incomplete at login (offline) heals without a re-login.
- * The login path already prefetches once; this keeps it fresh. Deduped and
- * throttled inside prefetchOfflineData. No-op until signed in.
+ * Re-runs the offline prefetch on reconnect/foreground so a precache left
+ * incomplete at login heals without a re-login. Throttled + deduped downstream.
  */
 export function useOfflineDataSync(): void {
   const queryClient = useQueryClient();
   const { user } = useSession();
-  // Read the id through a ref so the always-on subscriptions don't re-bind when
-  // the session object identity changes.
+  // Via a ref so the always-on subscriptions don't re-bind on session identity change.
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
 

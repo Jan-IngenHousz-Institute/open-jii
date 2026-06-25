@@ -21,23 +21,9 @@ import { listSerialPortDevices } from "../services/multispeq-communication/andro
 const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
 
 /**
- * Bind once-per-app-lifetime listeners that keep the scanner executor in
- * sync with the connected-device cache:
- *
- *   1. Native onDeviceDisconnected — fires immediately when the OS reports
- *      a disconnect (when it bothers to). Invalidates the query so the UI
- *      flips to the disconnect state ASAP.
- *   2. QueryCache subscriber on the connected-device key — catches the
- *      polling-detected disconnect case (common on Android when the device
- *      is simply powered off and no native event fires) AND the native
- *      event case after the invalidation refetches null. Either way, the
- *      scanner executor store gets cleared exactly when data transitions
- *      from non-null → null.
- *
- * Previously the QueryCache-subscriber path lived as a useEffect inside
- * useConnectedDevice, which ran once per consumer. The module-level
- * subscription is one listener for the whole app, and removes the only
- * useEffect that lived in this hook file.
+ * Binds two app-wide listeners that clear the scanner executor when the device
+ * goes null: the native onDeviceDisconnected, and a QueryCache subscriber that
+ * also catches the polled-disconnect case Android gives instead of an event.
  */
 let listenersBound = false;
 function initConnectedDeviceListeners(client: QueryClient) {
@@ -68,11 +54,7 @@ export function useConnectedDevice() {
     queryKey: CONNECTED_DEVICE_KEY,
     queryFn: getConnectedDevice,
     networkMode: "always",
-    // Poll so we catch disconnects even when the native
-    // onDeviceDisconnected event doesn't fire (common on Android
-    // when the device is simply powered off). The module-level
-    // QueryCache subscriber turns these polling-detected transitions
-    // into the scanner-store cleanup.
+    // Poll to catch disconnects the native event misses (common on Android).
     refetchInterval: 3000,
   });
 }
@@ -123,10 +105,9 @@ export function useConnectToDevice() {
 }
 
 /**
- * Streams nearby devices as the OS discovers them instead of blocking on the
- * full (~12s) scan. Seeds instantly with attached serial + bonded/connected BLE
- * devices, then merges each onDeviceDiscovered event. refetch() restarts a scan;
- * isFetching tracks it. Return shape matches the previous useQuery consumers.
+ * Streams nearby devices as the OS discovers them instead of blocking on the full
+ * scan. Seeds with attached serial + bonded/connected BLE, then merges each
+ * discovery event. Return shape matches the previous useQuery consumers.
  */
 export function useAllDevices() {
   const [data, setData] = useState<Device[]>([]);
@@ -145,8 +126,7 @@ export function useAllDevices() {
   const refetch = useCallback(async () => {
     setIsFetching(true);
     await RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
-    // Seed with already-known devices (serial first) so the list isn't empty
-    // while discovery streams the rest in.
+    // Seed with already-known devices (serial first) so the list isn't empty.
     const [serial, bonded, connected] = await Promise.allSettled([
       listSerialPortDevices(),
       RNBluetoothClassic.getBondedDevices(),

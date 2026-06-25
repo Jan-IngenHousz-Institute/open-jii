@@ -16,8 +16,7 @@ export function isMultispeqDevice(device: Device): boolean {
 }
 
 function rank(device: Device): number {
-  // A cabled USB/serial device is the most intentional choice, so surface it
-  // above any over-the-air device.
+  // Cabled USB/serial is the most intentional choice, so rank it above wireless.
   if (device.type === "usb") return 0;
   if (isMultispeqDevice(device)) return 1;
   if (isNamedDevice(device)) return 2;
@@ -32,10 +31,7 @@ export function sortDevices(devices: Device[]): Device[] {
   });
 }
 
-/**
- * Adds a device to the list, or refreshes it (name/rssi) if already present, so
- * streamed discovery results dedupe by id+type instead of piling up duplicates.
- */
+// Add or refresh (name/rssi) by id+type so streamed discovery dedupes in place.
 export function mergeDevice(list: Device[], device: Device): Device[] {
   const i = list.findIndex((d) => d.id === device.id && d.type === device.type);
   if (i === -1) return [...list, device];

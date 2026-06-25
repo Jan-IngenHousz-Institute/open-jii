@@ -1,22 +1,16 @@
 export type ScanErrorKind = "cancelled" | "disconnected" | "scanError";
 
-// Messages thrown by the driver/transport/executor when the BLE link is dead.
-// The cached "connected" flag is polled (~3s) and lags a real drop, so a scan
-// can fire against a dead device and surface as one of these.
+// Messages thrown by the driver/transport when the link is dead. The polled
+// "connected" flag lags a real drop, so a scan can fire at a dead device.
 const DISCONNECTED_MARKERS = [
   "Failed to write to device",
-  // USB-serial write to a closed port (e.g. the device was unplugged).
-  "device not open",
+  "device not open", // USB-serial write to a closed (unplugged) port
   "Command timeout",
   "Command executor not initialized",
   "Transport not initialized",
-  // The driver aborts the in-flight command with this when the transport reports
-  // a disconnect (or is torn down); user-cancel is "Measurement cancelled".
-  "Command cancelled",
+  "Command cancelled", // driver aborts in-flight on disconnect/teardown
 ];
 
-// "Measurement cancelled" is user-initiated (handled by the cancel path), so it
-// is not an error toast.
 export function classifyScanError(error: unknown): ScanErrorKind {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("Measurement cancelled")) {

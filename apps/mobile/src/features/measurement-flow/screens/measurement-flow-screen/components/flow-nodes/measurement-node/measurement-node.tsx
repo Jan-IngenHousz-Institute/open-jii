@@ -102,9 +102,8 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       return;
     }
 
-    // The cached `device` flag is polled (~3s) and lags a real BLE drop. Probe
-    // the live connection before committing so we fail with a clear reconnect
-    // prompt instead of a generic scan error or a long timeout.
+    // The cached `device` flag is polled (~3s) and lags a real drop; probe the
+    // live connection first so we fail with a reconnect prompt, not a long hang.
     const { data: liveDevice } = await refetchConnectedDevice();
     if (!liveDevice) {
       log.warn("scan blocked: device not connected");

@@ -4,9 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MeasurementNode } from "./measurement-node";
 
-// Only the network / native boundaries and the deep state children are mocked;
-// MeasurementNode's own logic (the start-scan guards) runs unmocked. The
-// protocol is hydrated onto the node, so it's passed via content (no hook).
+// Only the network/native boundaries and deep state children are mocked; the
+// start-scan guards run unmocked, and the protocol is passed via content.
 const {
   executeScan,
   resetScan,

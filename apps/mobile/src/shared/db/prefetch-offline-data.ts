@@ -38,8 +38,7 @@ export async function prefetchOfflineData(
 }
 
 async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): Promise<void> {
-  // Kick off the profile prefetch in parallel; it's independent of experiments.
-  // 404 is expected for accounts that haven't completed registration on web yet.
+  // 404 is expected for accounts that haven't finished web registration.
   const profilePromise = userId
     ? queryClient
         .prefetchQuery({
@@ -55,7 +54,6 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
         })
     : Promise.resolve();
 
-  // 1. Fetch all user experiments.
   const experimentsResponse = await queryClient.fetchQuery({
     queryKey: ["experiments"],
     queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
@@ -68,9 +66,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     workbookVersionId: string | null;
   }[];
 
-  // 2. Cache each experiment's workbook version. The version carries everything
-  //    the offline flow needs: cells (branch routing) and entitySnapshots
-  //    (pinned protocol/macro code), so there are no per-asset fetches.
+  // Cache each workbook version (cells + pinned snapshots); no per-asset fetches.
   const versionResults = await Promise.allSettled(
     experiments.map(async (experiment) => {
       const { workbookId, workbookVersionId } = experiment;
@@ -100,7 +96,6 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     });
   }
 
-  // Make sure the parallel profile prefetch has settled before returning.
   await profilePromise;
 
   log.info("cached", {

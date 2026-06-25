@@ -16,15 +16,12 @@ function findExperimentRef(
   return cached?.body?.find((e) => e.id === experimentId);
 }
 
-// Refetch window: a successful precache won't churn on reconnect, but a
-// stale/failed one becomes eligible to retry once online (with refetchOnReconnect).
+// Finite so an incomplete (offline/failed) precache can retry on reconnect.
 const PRECACHE_STALE_TIME = 5 * 60 * 1000;
 
 /**
- * Warms the offline cache for an experiment's measurement flow. The workbook
- * version carries everything the flow needs offline: cells (branch routing) and
- * entitySnapshots (pinned protocol/macro code), so there are no per-protocol or
- * per-macro fetches. Throws if the version can't be resolved/cached so the
+ * Warms the offline cache for an experiment's flow by caching its workbook
+ * version (cells + pinned protocol/macro snapshots). Throws if it can't, so the
  * precache reports incomplete and retries on reconnect.
  */
 async function precacheExperimentWorkbookFn(
@@ -33,7 +30,6 @@ async function precacheExperimentWorkbookFn(
 ): Promise<{ workbookVersionId: string }> {
   let ref = findExperimentRef(queryClient, experimentId);
   if (!ref) {
-    // The experiments list isn't cached yet; fetch it so we can resolve the ref.
     await queryClient.fetchQuery({
       queryKey: ["experiments"],
       queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
@@ -66,11 +62,7 @@ export function usePrecachedExperimentData(experimentId: string | undefined) {
     queryKey: ["precache-experiment-data", experimentId],
     queryFn: () => precacheExperimentWorkbookFn(experimentId ?? "", queryClient),
     enabled: !!experimentId,
-    // Incomplete precache (offline/failed) is expected and retried on reconnect;
-    // don't blare a technical toast.
     meta: { suppressToast: true },
-    // Finite (not Infinity) so an incomplete precache becomes eligible to refetch
-    // when connectivity returns.
     staleTime: PRECACHE_STALE_TIME,
     gcTime: Infinity,
   });

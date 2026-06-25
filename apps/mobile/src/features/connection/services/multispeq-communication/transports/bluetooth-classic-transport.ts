@@ -22,10 +22,8 @@ export function bluetoothClassicTransport(device: BluetoothDevice): ITransportAd
     onData?.(event.data.endsWith("\n") ? event.data : `${event.data}\n`);
   });
 
-  // Catch an unexpected drop the instant the OS reports it, rather than waiting
-  // for the ~3s connected-device poll: flip our state and notify so the executor
-  // can abort an in-flight scan immediately instead of hanging until its
-  // (multi-minute) timeout.
+  // Notify on the OS drop event so the executor aborts an in-flight scan at once,
+  // instead of waiting out the ~3s poll and then a multi-minute command timeout.
   const disconnectSub = RNBluetoothClassic.onDeviceDisconnected((event) => {
     if (event.device?.address !== device.address) return;
     connected = false;

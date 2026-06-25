@@ -18,11 +18,9 @@ export function getConnectedSerialPortDevice() {
 }
 
 /**
- * The USB-serial lib emits no detach event, so a stale connection would keep
- * reporting "connected" after unplug (and the battery poller would keep hitting
- * a closed port with "device not open"). Drop the connection if the device is
- * no longer enumerated. Leaves it intact if the list can't be read, so a
- * transient failure doesn't false-disconnect a live device.
+ * The USB-serial lib has no detach event, so a stale connection keeps reporting
+ * "connected" after unplug. Drop it if the device is no longer enumerated; keep
+ * it if the list can't be read, so a transient failure won't false-disconnect.
  */
 export async function verifyConnectedSerialPortDevice(): Promise<void> {
   const device = connectedSerialPortDevice;
@@ -36,10 +34,8 @@ export async function verifyConnectedSerialPortDevice(): Promise<void> {
 }
 
 export async function setSerialPortConnection(device: Device | undefined) {
-  // Always tear down any existing connection first. Otherwise a reconnect (e.g.
-  // after a cable replug) would open a new port while leaking the old, possibly
-  // half-open handle, leaving the app "connected" but failing every command with
-  // "device not open" until a manual disconnect.
+  // Tear down any existing connection first; otherwise a reconnect leaks the old
+  // half-open port and every command fails "device not open" until a manual reset.
   serialPortConnection?.emit("destroy");
   serialPortConnection = undefined;
   connectedSerialPortDevice = undefined;
