@@ -1,10 +1,12 @@
-import { BluetoothDevice } from "react-native-bluetooth-classic";
+import type { BluetoothNativeDevice } from "react-native-bluetooth-classic";
 import type { Device } from "~/shared/types/device";
 
 const MULTISPEQ_VENDOR_ID = 5824;
 const MULTISPEQ_PRODUCT_ID = 1155;
 
-export function bluetoothDeviceToDevice(d: BluetoothDevice): Device {
+// Accepts both a bonded/connected BluetoothDevice and a discovered
+// BluetoothNativeDevice (the onDeviceDiscovered payload); both carry these fields.
+export function bluetoothDeviceToDevice(d: BluetoothNativeDevice): Device {
   // Keep the raw name even when it's just the MAC: many MultispeQs have no
   // friendly name, and the row still surfaces the bracketed sticker ID below it.
   return {

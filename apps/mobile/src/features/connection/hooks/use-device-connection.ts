@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
@@ -10,10 +10,13 @@ import {
   disconnectFromDevice,
   unpairDevice,
 } from "../services/device-connection-manager/device-connection";
+import { getConnectedDevice } from "../services/device-connection-manager/device-queries";
+import { mergeDevice } from "../services/device-connection-manager/device-sort";
 import {
-  getConnectedDevice,
-  getAllDevices,
-} from "../services/device-connection-manager/device-queries";
+  bluetoothDeviceToDevice,
+  serialDeviceToDevice,
+} from "../services/device-connection-manager/device-utils";
+import { listSerialPortDevices } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 
 const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
 
@@ -119,11 +122,50 @@ export function useConnectToDevice() {
   };
 }
 
+/**
+ * Streams nearby devices as the OS discovers them instead of blocking on the
+ * full (~12s) scan. Seeds instantly with attached serial + bonded/connected BLE
+ * devices, then merges each onDeviceDiscovered event. refetch() restarts a scan;
+ * isFetching tracks it. Return shape matches the previous useQuery consumers.
+ */
 export function useAllDevices() {
-  return useQuery({
-    queryKey: ["all-devices"],
-    queryFn: () => getAllDevices(),
-    enabled: false,
-    networkMode: "always",
-  });
+  const [data, setData] = useState<Device[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    const sub = RNBluetoothClassic.onDeviceDiscovered((event) => {
+      setData((prev) => mergeDevice(prev, bluetoothDeviceToDevice(event.device)));
+    });
+    return () => {
+      sub.remove();
+      void RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
+    };
+  }, []);
+
+  const refetch = useCallback(async () => {
+    setIsFetching(true);
+    await RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
+    // Seed with already-known devices (serial first) so the list isn't empty
+    // while discovery streams the rest in.
+    const [serial, bonded, connected] = await Promise.allSettled([
+      listSerialPortDevices(),
+      RNBluetoothClassic.getBondedDevices(),
+      RNBluetoothClassic.getConnectedDevices(),
+    ]);
+    const seed = [
+      ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
+      ...(bonded.status === "fulfilled" ? bonded.value.map(bluetoothDeviceToDevice) : []),
+      ...(connected.status === "fulfilled" ? connected.value.map(bluetoothDeviceToDevice) : []),
+    ].reduce<Device[]>(mergeDevice, []);
+    setData(seed);
+    try {
+      await RNBluetoothClassic.startDiscovery();
+    } catch {
+      // No permission or scan failure; seeded/streamed results stay.
+    } finally {
+      setIsFetching(false);
+    }
+  }, []);
+
+  return { data, refetch, isFetching };
 }

@@ -16,9 +16,12 @@ export function isMultispeqDevice(device: Device): boolean {
 }
 
 function rank(device: Device): number {
-  if (isMultispeqDevice(device)) return 0;
-  if (isNamedDevice(device)) return 1;
-  return 2;
+  // A cabled USB/serial device is the most intentional choice, so surface it
+  // above any over-the-air device.
+  if (device.type === "usb") return 0;
+  if (isMultispeqDevice(device)) return 1;
+  if (isNamedDevice(device)) return 2;
+  return 3;
 }
 
 export function sortDevices(devices: Device[]): Device[] {
@@ -29,10 +32,22 @@ export function sortDevices(devices: Device[]): Device[] {
   });
 }
 
+/**
+ * Adds a device to the list, or refreshes it (name/rssi) if already present, so
+ * streamed discovery results dedupe by id+type instead of piling up duplicates.
+ */
+export function mergeDevice(list: Device[], device: Device): Device[] {
+  const i = list.findIndex((d) => d.id === device.id && d.type === device.type);
+  if (i === -1) return [...list, device];
+  const next = list.slice();
+  next[i] = { ...next[i], ...device };
+  return next;
+}
+
 export function partitionDevices(devices: Device[]): { named: Device[]; unnamed: Device[] } {
   const sorted = sortDevices(devices);
   return {
-    named: sorted.filter((d) => rank(d) < 2),
-    unnamed: sorted.filter((d) => rank(d) === 2),
+    named: sorted.filter((d) => rank(d) < 3),
+    unnamed: sorted.filter((d) => rank(d) === 3),
   };
 }
