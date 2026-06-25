@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
 import { useElementSize } from "@repo/ui/hooks/use-element-size";
@@ -22,6 +22,21 @@ interface DashboardThumbnailProps {
 const INNER_WIDTH_PX = 1280;
 const FALLBACK_ROW_COUNT = 4;
 
+const SCROLLBAR_TOLERANCE_PX = 24;
+
+// Height is derived from width, so a scrollbar toggling on a width change
+// would feed back into an infinite resize loop. Ignore sub-scrollbar wobble.
+export function useStableWidth(measured: number | null): number | null {
+  const ref = useRef<number | null>(null);
+  if (
+    measured !== null &&
+    (ref.current === null || Math.abs(measured - ref.current) > SCROLLBAR_TOLERANCE_PX)
+  ) {
+    ref.current = measured;
+  }
+  return ref.current;
+}
+
 export function DashboardThumbnail({
   dashboard,
   experimentId,
@@ -29,7 +44,7 @@ export function DashboardThumbnail({
 }: DashboardThumbnailProps) {
   const [widthRef, size] = useElementSize<HTMLDivElement>();
   const [inViewRef, mounted] = useInView<HTMLDivElement>({ rootMargin: "200px" });
-  const width = size?.width ?? null;
+  const width = useStableWidth(size?.width ?? null);
   const everLoaded = useEverLoaded(experimentId, mounted);
 
   const setRefs = (node: HTMLDivElement | null) => {

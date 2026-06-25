@@ -1,9 +1,9 @@
 import { createExperimentDashboard, createRichTextWidget } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { render, renderHook, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DashboardThumbnail } from "./dashboard-thumbnail";
+import { DashboardThumbnail, useStableWidth } from "./dashboard-thumbnail";
 
 vi.mock("@repo/ui/hooks/use-element-size", () => ({
   useElementSize: () => {
@@ -65,5 +65,31 @@ describe("DashboardThumbnail", () => {
     const dashboard = createExperimentDashboard({ widgets: [] });
     render(<DashboardThumbnail dashboard={dashboard} experimentId="exp-1" />);
     expect(screen.getByText("widget.emptyDashboardDescription")).toBeInTheDocument();
+  });
+});
+
+describe("useStableWidth", () => {
+  const mount = (w: number | null) =>
+    renderHook(({ width }: { width: number | null }) => useStableWidth(width), {
+      initialProps: { width: w },
+    });
+
+  it("stays null until a width is measured, then latches it", () => {
+    const { result, rerender } = mount(null);
+    expect(result.current).toBeNull();
+    rerender({ width: 640 });
+    expect(result.current).toBe(640);
+  });
+
+  it("ignores sub-scrollbar width wobble (the resize-loop guard)", () => {
+    const { result, rerender } = mount(640);
+    rerender({ width: 624 }); // 16px shrink, within a scrollbar's width
+    expect(result.current).toBe(640);
+  });
+
+  it("follows a resize beyond the scrollbar tolerance", () => {
+    const { result, rerender } = mount(640);
+    rerender({ width: 500 });
+    expect(result.current).toBe(500);
   });
 });
