@@ -50,6 +50,9 @@ async function precacheExperimentWorkbookFn(
         params: { id: workbookId, versionId: workbookVersionId },
       }),
     meta: { suppressToast: true },
+    // A pinned version is immutable, so reuse the cache instead of refetching
+    // (a stale refetch would fail offline even with the version already cached).
+    staleTime: Infinity,
   });
 
   return { workbookVersionId };

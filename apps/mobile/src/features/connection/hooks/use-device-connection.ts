@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
@@ -112,12 +112,15 @@ export function useConnectToDevice() {
 export function useAllDevices() {
   const [data, setData] = useState<Device[]>([]);
   const [isFetching, setIsFetching] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     const sub = RNBluetoothClassic.onDeviceDiscovered((event) => {
       setData((prev) => mergeDevice(prev, bluetoothDeviceToDevice(event.device)));
     });
     return () => {
+      mountedRef.current = false;
       sub.remove();
       void RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
     };
@@ -132,6 +135,9 @@ export function useAllDevices() {
       RNBluetoothClassic.getBondedDevices(),
       RNBluetoothClassic.getConnectedDevices(),
     ]);
+    // Bail if the sheet closed during the await: don't seed or restart a scan
+    // with no active subscriber.
+    if (!mountedRef.current) return;
     const seed = [
       ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
       ...(bonded.status === "fulfilled" ? bonded.value.map(bluetoothDeviceToDevice) : []),
@@ -143,7 +149,7 @@ export function useAllDevices() {
     } catch {
       // No permission or scan failure; seeded/streamed results stay.
     } finally {
-      setIsFetching(false);
+      if (mountedRef.current) setIsFetching(false);
     }
   }, []);
 

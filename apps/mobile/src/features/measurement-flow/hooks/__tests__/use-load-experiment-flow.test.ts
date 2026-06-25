@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
-import { hydrateFlowNodes } from "../../utils/hydrate-flow-nodes";
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
 const { listUseQuery, versionUseQuery, setFlowGraph } = vi.hoisted(() => ({
@@ -66,12 +66,17 @@ describe("useLoadExperimentFlow", () => {
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
     await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
-    const expected = cellsToFlowGraph(cells);
-    expect(setFlowGraph).toHaveBeenCalledWith(
-      hydrateFlowNodes(expected.nodes, cells, entitySnapshots),
-      expected.edges,
-      cells,
-    );
+    const [nodesArg, edgesArg, cellsArg] = setFlowGraph.mock.calls[0] as [
+      FlowNode[],
+      unknown,
+      unknown,
+    ];
+    // Graph derived from the version's cells, with the protocol node hydrated
+    // (assert the outcome directly, not via the helper under test).
+    const measurement = nodesArg.find((n) => n.type === "measurement");
+    expect(measurement?.content?.protocol).toBeDefined();
+    expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
+    expect(cellsArg).toBe(cells);
     expect(result.current.isReady).toBe(true);
   });
 

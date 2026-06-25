@@ -36,7 +36,14 @@ export function mergeDevice(list: Device[], device: Device): Device[] {
   const i = list.findIndex((d) => d.id === device.id && d.type === device.type);
   if (i === -1) return [...list, device];
   const next = list.slice();
-  next[i] = { ...next[i], ...device };
+  const prev = next[i];
+  // A partial rediscovery (empty name / no rssi) must not downgrade richer seeded data.
+  next[i] = {
+    ...prev,
+    ...device,
+    name: device.name.trim() ? device.name : prev.name,
+    rssi: device.rssi ?? prev.rssi,
+  };
   return next;
 }
 

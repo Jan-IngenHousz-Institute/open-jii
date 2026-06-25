@@ -27,7 +27,11 @@ export async function verifyConnectedSerialPortDevice(): Promise<void> {
   if (!device) return;
   try {
     const attached = (await listSerialPortDevices()).some((d) => String(d.deviceId) === device.id);
-    if (!attached) await setSerialPortConnection(undefined);
+    // Re-check after the await: a reconnect may have swapped in a new port, which
+    // we must not tear down based on this stale check.
+    if (!attached && connectedSerialPortDevice?.id === device.id) {
+      await setSerialPortConnection(undefined);
+    }
   } catch {
     // Can't determine; keep the (possibly live) connection.
   }

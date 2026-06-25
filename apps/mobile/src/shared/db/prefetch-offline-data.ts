@@ -23,8 +23,10 @@ export async function prefetchOfflineData(
 
   inFlight = (async () => {
     try {
-      await _prefetchOfflineData(queryClient, userId);
-      lastRunAt = Date.now();
+      const { failures } = await _prefetchOfflineData(queryClient, userId);
+      // Only a fully-successful run counts as "recent"; a partial run stays
+      // eligible for an immediate retry on the next reconnect/foreground.
+      if (failures === 0) lastRunAt = Date.now();
     } catch (err) {
       log.error("Failed to prefetch offline data", {
         err: err instanceof Error ? err.message : String(err),
@@ -37,7 +39,10 @@ export async function prefetchOfflineData(
   return inFlight;
 }
 
-async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): Promise<void> {
+async function _prefetchOfflineData(
+  queryClient: QueryClient,
+  userId?: string,
+): Promise<{ failures: number }> {
   // 404 is expected for accounts that haven't finished web registration.
   const profilePromise = userId
     ? queryClient
@@ -81,7 +86,8 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
           tsr.workbooks.getWorkbookVersion.query({
             params: { id: workbookId, versionId: workbookVersionId },
           }),
-        staleTime: 0,
+        // Immutable pinned version: reuse the cache rather than refetch.
+        staleTime: Infinity,
         meta: { suppressToast: true },
       });
     }),
@@ -104,4 +110,6 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     experiments_cached: experiments.length - failures.length,
     experiments_total: experiments.length,
   });
+
+  return { failures: failures.length };
 }

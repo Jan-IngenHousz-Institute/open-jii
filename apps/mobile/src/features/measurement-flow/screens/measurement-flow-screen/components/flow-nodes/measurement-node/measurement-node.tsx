@@ -59,6 +59,10 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   const cancelCommandRef = useRef(cancelCommand);
   cancelCommandRef.current = cancelCommand;
 
+  // Re-entry guard: the liveness probe is awaited before executeScan flips
+  // isScanning, so without this a double-tap could launch two scans.
+  const isStartingRef = useRef(false);
+
   // When the device unexpectedly disconnects while a scan is in progress, abort
   // the in-flight command (so it doesn't keep running until its timeout) and
   // reset the scan so the user can reconnect and retry cleanly rather than
@@ -84,53 +88,66 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   };
 
   const handleCancelMeasurement = () => {
-    void cancelCommand();
-    resetScan();
+    // Await the cancel before resetting so the command settles as
+    // "Measurement cancelled", not a raw error the scan catch would misread.
+    void (async () => {
+      try {
+        await cancelCommandRef.current();
+      } finally {
+        resetScanRef.current();
+      }
+    })();
   };
 
   const handleStartScan = async () => {
-    if (!device) {
-      toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
-      return;
-    }
-    if (!content.protocolId) {
-      toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
-      return;
-    }
-    if (!protocol) {
-      toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
-      return;
-    }
-
-    // The cached `device` flag is polled (~3s) and lags a real drop; probe the
-    // live connection first so we fail with a reconnect prompt, not a long hang.
-    const { data: liveDevice } = await refetchConnectedDevice();
-    if (!liveDevice) {
-      log.warn("scan blocked: device not connected");
-      toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
-      return;
-    }
-
-    resetScan();
+    if (isScanning || isStartingRef.current) return;
+    isStartingRef.current = true;
     try {
-      const result = await executeScan(protocol);
-      setScanResult(result);
-      // Play system notification sound when measurement completes
-      await playSound();
-      nextStep();
-    } catch (error) {
-      const kind = classifyScanError(error);
-      // Cancellation is user-initiated and handled by the cancel path.
-      if (kind === "cancelled") {
+      if (!device) {
+        toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
         return;
       }
-      if (kind === "disconnected") {
-        log.error("scan error: device disconnected", { err: (error as Error)?.message });
+      if (!content.protocolId) {
+        toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
+        return;
+      }
+      if (!protocol) {
+        toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+        return;
+      }
+
+      // The cached `device` flag is polled (~3s) and lags a real drop; probe the
+      // live connection first so we fail with a reconnect prompt, not a long hang.
+      const { data: liveDevice } = await refetchConnectedDevice();
+      if (!liveDevice) {
+        log.warn("scan blocked: device not connected");
         toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
         return;
       }
-      log.error("scan error", { err: (error as Error)?.message });
-      toast.error(t("measurementFlow:measurementNode.toast.scanError"));
+
+      resetScan();
+      try {
+        const result = await executeScan(protocol);
+        setScanResult(result);
+        // Play system notification sound when measurement completes
+        await playSound();
+        nextStep();
+      } catch (error) {
+        const kind = classifyScanError(error);
+        // Cancellation is user-initiated and handled by the cancel path.
+        if (kind === "cancelled") {
+          return;
+        }
+        if (kind === "disconnected") {
+          log.error("scan error: device disconnected", { err: (error as Error)?.message });
+          toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+          return;
+        }
+        log.error("scan error", { err: (error as Error)?.message });
+        toast.error(t("measurementFlow:measurementNode.toast.scanError"));
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   };
 

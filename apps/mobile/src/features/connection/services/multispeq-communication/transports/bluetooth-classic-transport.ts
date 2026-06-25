@@ -27,6 +27,9 @@ export function bluetoothClassicTransport(device: BluetoothDevice): ITransportAd
   const disconnectSub = RNBluetoothClassic.onDeviceDisconnected((event) => {
     if (event.device?.address !== device.address) return;
     connected = false;
+    // Drop both listeners so reconnecting the same device can't stack stale ones.
+    dataSub.remove();
+    disconnectSub.remove();
     onStatus?.(false);
   });
 
