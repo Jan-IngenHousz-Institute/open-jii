@@ -99,7 +99,9 @@ export function OTPInput({
                 ref={(ref) => {
                   inputRefs.current[index] = ref;
                 }}
-                className="text-on-surface h-full w-full text-center text-2xl font-semibold"
+                // textAlign stays inline: NativeWind 5 crashes when text-center + font-semibold are both classes here.
+                className="text-on-surface h-full w-full text-2xl font-semibold"
+                style={{ textAlign: "center" }}
                 value={digit}
                 onChangeText={(text) => handleChange(text, index)}
                 onKeyPress={(e) => handleKeyPress(e, index)}

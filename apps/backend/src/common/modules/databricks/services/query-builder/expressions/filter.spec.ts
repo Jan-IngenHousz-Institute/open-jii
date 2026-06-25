@@ -76,4 +76,21 @@ describe("buildFilterCondition", () => {
       buildFilterCondition({ column: "n", operator: "between", value: [1] }, builder),
     ).toThrow(/\[start, end\] array/);
   });
+
+  it("wraps the column in the contributor pseudonym when a salt is set", () => {
+    expect(
+      buildFilterCondition(
+        {
+          column: "contributor.id",
+          operator: "in",
+          value: ["Contributor-AB12CD"],
+          contributorPseudonymSalt: "exp-1",
+        },
+        builder,
+      ),
+      // Mirrors ContributorAnonymizerService.pseudonymFor recomputed in SQL.
+    ).toBe(
+      "concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) IN ('Contributor-AB12CD')",
+    );
+  });
 });
