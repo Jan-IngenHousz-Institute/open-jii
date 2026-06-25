@@ -9,6 +9,7 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { Input } from "@repo/ui/components/input";
 import {
   Select,
@@ -202,23 +203,12 @@ export function MultiColumnShelf({
                           <FormControl>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="color"
-                                    className="h-9 w-12 shrink-0 p-1"
-                                    value={field.value ?? "#3b82f6"}
-                                    onChange={field.onChange}
-                                    disabled={isColorMapped}
-                                  />
-                                  <Input
-                                    type="text"
-                                    className="min-w-0 font-mono text-sm"
-                                    placeholder="#000000"
-                                    value={field.value ?? ""}
-                                    onChange={field.onChange}
-                                    disabled={isColorMapped}
-                                  />
-                                </div>
+                                <FormColorInput
+                                  value={typeof field.value === "string" ? field.value : undefined}
+                                  fallback="#3b82f6"
+                                  onCommit={field.onChange}
+                                  disabled={isColorMapped}
+                                />
                               </TooltipTrigger>
                               {isColorMapped && (
                                 <TooltipContent>

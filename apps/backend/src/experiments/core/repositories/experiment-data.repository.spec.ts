@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { expect } from "vitest";
 
+import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+
 import {
   AppError,
   success,
@@ -9,6 +11,7 @@ import {
   assertFailure,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
@@ -132,6 +135,92 @@ describe("ExperimentDataRepository", () => {
         limit: 5,
         offset: 0,
       });
+    });
+
+    it("tags contributor id filters with the pseudonym salt when anonymizing", async () => {
+      const pseudo = new ContributorAnonymizerService().pseudonymFor(mockExperiment.id, "u1");
+
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          rowCount: 10,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+      );
+
+      const result = await repository.getTableData({
+        ...baseParams,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+        filters: [
+          { column: "contributor.id", operator: "in", value: [pseudo] },
+          { column: "site", operator: "equals", value: "field-a" },
+        ],
+        limit: 50,
+      });
+
+      assertSuccess(result);
+
+      // No extra lookup query: the pseudonym is recomputed in SQL, not reversed.
+      expect(databricksPort.executeSqlQuery).toHaveBeenCalledTimes(1);
+      // The contributor filter carries the salt; the plain column filter does not.
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: [
+            {
+              column: "contributor.id",
+              operator: "in",
+              value: [pseudo],
+              contributorPseudonymSalt: mockExperiment.id,
+            },
+            { column: "site", operator: "equals", value: "field-a" },
+          ],
+        }),
+      );
+    });
+
+    it("leaves filters untouched when the experiment does not anonymize", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          rowCount: 10,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+      );
+
+      await repository.getTableData({
+        ...baseParams,
+        experiment: { ...mockExperiment, anonymizeContributors: false },
+        filters: [{ column: "contributor.id", operator: "in", value: ["u1"] }],
+        limit: 50,
+      });
+
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: [{ column: "contributor.id", operator: "in", value: ["u1"] }],
+        }),
+      );
     });
 
     it("should return failure when table not found", async () => {
@@ -573,7 +662,13 @@ describe("ExperimentDataRepository", () => {
 
   describe("getDistinctColumnValues", () => {
     const experimentId = faker.string.uuid();
-    const baseParams = { experimentId, tableName: "raw_data", column: "site", limit: 3 };
+    const baseParams = {
+      experimentId,
+      experiment: mockExperiment,
+      tableName: "raw_data",
+      column: "site",
+      limit: 3,
+    };
     const metadata: ExperimentTableMetadata[] = [
       {
         identifier: "raw_data",
@@ -643,6 +738,31 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual({ values: ["a", "b", "c"], truncated: true });
+    });
+
+    it("pseudonymises contributor names when the experiment anonymizes contributors", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success(
+          mockRows(
+            [JSON.stringify({ id: "u1", name: "Alice", avatar: "https://a" })],
+            WellKnownColumnTypes.CONTRIBUTOR,
+          ),
+        ),
+      );
+
+      const result = await repository.getDistinctColumnValues({
+        ...baseParams,
+        experiment: { ...mockExperiment, anonymizeContributors: true },
+      });
+
+      assertSuccess(result);
+      const [value] = result.value.values;
+      const parsed = JSON.parse(String(value)) as { id: string; name: string; avatar: null };
+      expect(parsed.id).toMatch(/^Contributor-[0-9A-F]{6}$/);
+      expect(parsed.name).toBe(parsed.id);
+      expect(parsed.avatar).toBeNull();
     });
 
     it("propagates a metadata lookup failure", async () => {

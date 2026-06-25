@@ -7,6 +7,7 @@ import { cn, cva } from "@repo/ui/lib/utils";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { CtfImage } from "../contentful/ctf-image";
+import { ArticleMediaCaption } from "./article-media-caption";
 
 interface ArticleImageProps {
   image: ComponentRichImage;
@@ -58,7 +59,9 @@ export const ArticleImage = ({ image, imageClassName }: ArticleImageProps): Reac
         />
       </div>
       {image.caption && (
-        <figcaption {...inspectorProps({ fieldId: "caption" })}>{image.caption}</figcaption>
+        <ArticleMediaCaption {...inspectorProps({ fieldId: "caption" })}>
+          {image.caption}
+        </ArticleMediaCaption>
       )}
     </figure>
   );

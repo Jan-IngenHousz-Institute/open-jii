@@ -8,7 +8,7 @@ import { useWatch } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
+import { FormColorInput } from "@repo/ui/components/form-color-input";
 
 import { useExperimentDistinctValues } from "../../../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 import type { ChartFormValues } from "../../../charts/chart-config";
@@ -92,12 +92,16 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     return out;
   }, [rawValues, t]);
 
+  // Read the live colorMap at commit time, not the render-time snapshot:
+  // debounced swatch commits from different rows can land close together and
+  // a closed-over snapshot would drop a sibling row's just-committed color.
   const setOverride = (mapKey: string, hex: string) => {
-    form.setValue("config.colorMap", { ...colorMap, [mapKey]: hex }, { shouldDirty: true });
+    const current = form.getValues("config.colorMap") ?? {};
+    form.setValue("config.colorMap", { ...current, [mapKey]: hex }, { shouldDirty: true });
   };
 
   const clearOverride = (mapKey: string) => {
-    const next = { ...colorMap };
+    const next = { ...(form.getValues("config.colorMap") ?? {}) };
     delete next[mapKey];
     form.setValue("config.colorMap", next, { shouldDirty: true });
   };
@@ -236,20 +240,13 @@ function CategorySwatchList({
                   aria-hidden
                   className="border-muted-foreground/25 min-w-3 flex-1 border-b border-dotted"
                 />
-                <Input
-                  type="color"
-                  className="h-7 w-9 shrink-0 p-1"
+                <FormColorInput
                   value={effective}
-                  onChange={(e) => onSet(mapKey, e.target.value)}
-                  aria-label={t("workspace.shelves.colorMap.pickerLabel", { name: c.label })}
-                />
-                <Input
-                  type="text"
-                  className="h-7 w-[74px] shrink-0 px-1.5 font-mono text-[11px] uppercase"
-                  placeholder="#000000"
-                  value={effective}
-                  onChange={(e) => onSet(mapKey, e.target.value)}
-                  aria-label={t("workspace.shelves.colorMap.pickerLabel", { name: c.label })}
+                  fallback={effective}
+                  onCommit={(v) => onSet(mapKey, v)}
+                  swatchClassName="h-7 w-9"
+                  hexClassName="h-7 w-[74px] shrink-0 px-1.5 text-[11px] uppercase"
+                  ariaLabel={t("workspace.shelves.colorMap.pickerLabel", { name: c.label })}
                 />
                 {isOverridden ? (
                   <Button
