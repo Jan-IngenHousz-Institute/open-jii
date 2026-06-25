@@ -42,7 +42,9 @@ export function useBatteryPoller() {
       setBatteryLevel(pct);
       return pct;
     },
-    enabled: !!connectedDevice && !isExecuting,
+    // `battery` is a MultispeQ console command; a cabled serial device (e.g. an
+    // Ambit) doesn't speak it, so don't poll it over serial.
+    enabled: !!connectedDevice && !isExecuting && connectedDevice.type !== "usb",
     // Background poll: a failure (e.g. executor not ready right after a cold
     // start, or the device dropping) must never surface the global error toast.
     meta: { suppressToast: true },
