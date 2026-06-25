@@ -61,3 +61,16 @@ describe("verifyConnectedSerialPortDevice", () => {
     expect(mockList).not.toHaveBeenCalled();
   });
 });
+
+describe("setSerialPortConnection reconnect", () => {
+  it("tears down the previous connection before opening a new one", async () => {
+    const firstEmit = vi.fn();
+    mockOpen.mockResolvedValueOnce({ emit: firstEmit });
+
+    await setSerialPortConnection(device); // open #1 (the leaked/stale one on replug)
+    await setSerialPortConnection({ ...device, id: "1003" }); // reconnect
+
+    expect(firstEmit).toHaveBeenCalledWith("destroy");
+    expect(getConnectedSerialPortDevice()?.id).toBe("1003");
+  });
+});

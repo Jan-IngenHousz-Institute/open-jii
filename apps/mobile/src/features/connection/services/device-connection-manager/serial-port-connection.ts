@@ -36,12 +36,15 @@ export async function verifyConnectedSerialPortDevice(): Promise<void> {
 }
 
 export async function setSerialPortConnection(device: Device | undefined) {
-  if (device === undefined) {
-    connectedSerialPortDevice = undefined;
-    serialPortConnection?.emit("destroy");
-    serialPortConnection = undefined;
-    return;
-  }
+  // Always tear down any existing connection first. Otherwise a reconnect (e.g.
+  // after a cable replug) would open a new port while leaking the old, possibly
+  // half-open handle, leaving the app "connected" but failing every command with
+  // "device not open" until a manual disconnect.
+  serialPortConnection?.emit("destroy");
+  serialPortConnection = undefined;
+  connectedSerialPortDevice = undefined;
+
+  if (device === undefined) return;
 
   serialPortConnection = await openSerialPortConnection(parseInt(device.id));
   connectedSerialPortDevice = device;
