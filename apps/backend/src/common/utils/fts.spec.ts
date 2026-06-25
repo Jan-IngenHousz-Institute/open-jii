@@ -1,4 +1,4 @@
-import { buildTsQuery } from "./fts";
+import { buildTsQuery, escapeLike } from "./fts";
 
 describe("fts buildTsQuery", () => {
   it("appends :* to a single term for prefix matching", () => {
@@ -28,5 +28,20 @@ describe("fts buildTsQuery", () => {
   it("returns an empty string when nothing usable remains", () => {
     expect(buildTsQuery("   ")).toBe("");
     expect(buildTsQuery("!@#$%")).toBe("");
+  });
+});
+
+describe("fts escapeLike", () => {
+  it("escapes LIKE wildcards so they match literally", () => {
+    expect(escapeLike("100%")).toBe("100\\%");
+    expect(escapeLike("a_b")).toBe("a\\_b");
+  });
+
+  it("escapes backslashes", () => {
+    expect(escapeLike("a\\b")).toBe("a\\\\b");
+  });
+
+  it("leaves ordinary text untouched", () => {
+    expect(escapeLike("photosynthesis study")).toBe("photosynthesis study");
   });
 });

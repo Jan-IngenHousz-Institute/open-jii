@@ -16,7 +16,7 @@ import {
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
-import { ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -82,16 +82,16 @@ export class MacroRepository {
       const conditions: (SQL | undefined)[] = [];
 
       const search = filter?.search;
-      // Creator name + language enum are matched at query time (alongside the name/description vector).
-      // Deactivated ("Unknown User") and deleted creators are excluded from name matching.
+      // Creator name + language enum matched at query time (alongside the name/description vector).
+      // Deactivated/deleted creators are excluded from name matching.
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
-        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${term}%`)})`;
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
       const languageText = sql<string>`${macros.language}::text`;
 
       if (search) {
         conditions.push(
-          sql`(${ftsMatch(macros.searchVector, macros.name, search)} OR ${creatorMatch(search)} OR ${ilike(languageText, `%${search}%`)})`,
+          sql`(${ftsMatch(macros.searchVector, macros.name, search)} OR ${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)})`,
         );
       }
 
@@ -109,7 +109,7 @@ export class MacroRepository {
       }
 
       if (search) {
-        const rank = sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(languageText, `%${search}%`)}) THEN 1 ELSE 0 END))`;
+        const rank = sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)}) THEN 1 ELSE 0 END))`;
         query = query.orderBy(desc(rank), asc(macros.name));
       } else {
         query = query.orderBy(asc(macros.sortOrder), asc(macros.name));

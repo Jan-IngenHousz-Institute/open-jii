@@ -20,7 +20,6 @@ export const zSearchResult = z.object({
    * sensor family). `null` when the type has no such label (experiments).
    */
   meta: z.string().nullable(),
-  score: z.number(),
 });
 
 /** Flat, cross-type relevance-ordered results. The client groups by `type` for display. */

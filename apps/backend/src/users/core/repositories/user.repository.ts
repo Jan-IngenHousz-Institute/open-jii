@@ -23,7 +23,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { trigramMatch } from "../../../common/utils/fts";
+import { escapeLike, trigramMatch } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -119,9 +119,8 @@ export class UserRepository {
         .innerJoin(users, eq(profiles.userId, users.id))
         .$dynamic();
 
-      // If a search query is provided, match activated/non-deleted profiles by name or email.
-      // Substring (ILIKE) handles prefixes; trigram (%) adds typo tolerance; results are ranked
-      // by name/email similarity so the closest match comes first.
+      // Match activated/non-deleted profiles by name or email: substring (ILIKE) handles prefixes,
+      // trigram (%) adds typo tolerance; ranked by name/email similarity so the closest match leads.
       if (params.query) {
         const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
         query = query
@@ -132,8 +131,8 @@ export class UserRepository {
               or(
                 trigramMatch(profiles.firstName, params.query),
                 trigramMatch(profiles.lastName, params.query),
-                ilike(fullName, `%${params.query}%`),
-                ilike(users.email, `%${params.query}%`),
+                ilike(fullName, `%${escapeLike(params.query)}%`),
+                ilike(users.email, `%${escapeLike(params.query)}%`),
               ),
             ),
           )

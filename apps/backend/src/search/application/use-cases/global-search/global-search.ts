@@ -50,8 +50,9 @@ export class GlobalSearchUseCase {
 
     // Each `findAll` ranks within its own type, but those scores aren't exposed (or comparable)
     // across types, so we merge by rank position: the top hit of every type scores ~1, and items
-    // interleave by their standing within their type.
-    const results = [
+    // interleave by their standing within their type. `score` is an internal sort key only — a
+    // positional rank, not a true cross-type relevance — so it is stripped before returning.
+    const ranked = [
       ...toResults(experiments.value, "experiment", () => null),
       ...toResults(protocols.value, "protocol", (p) => p.family),
       ...toResults(macros.value, "macro", (m) => m.language),
@@ -59,9 +60,14 @@ export class GlobalSearchUseCase {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
+    const results: SearchResult[] = ranked.map(({ score: _score, ...result }) => result);
+
     return success({ results });
   }
 }
+
+/** A `SearchResult` plus the internal positional sort key used to merge across entity types. */
+type RankedResult = SearchResult & { score: number };
 
 /**
  * Score already-relevance-ordered rows by rank position (the repo caps the count via `limit`).
@@ -71,7 +77,7 @@ function toResults<T extends SearchableEntity>(
   rows: T[],
   type: SearchResultType,
   meta: (row: T) => string | null,
-): SearchResult[] {
+): RankedResult[] {
   return rows.map((row, index) => ({
     type,
     id: row.id,

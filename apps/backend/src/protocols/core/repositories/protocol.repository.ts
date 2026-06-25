@@ -18,7 +18,7 @@ import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
-import { ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -70,16 +70,16 @@ export class ProtocolRepository {
 
       const conditions: (SQL | undefined)[] = [];
 
-      // Creator name + family enum are matched at query time (alongside the name/description vector).
-      // Deactivated ("Unknown User") and deleted creators are excluded from name matching.
+      // Creator name + family enum matched at query time (alongside the name/description vector).
+      // Deactivated/deleted creators are excluded from name matching.
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
-        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${term}%`)})`;
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
       const familyText = sql<string>`${protocols.family}::text`;
 
       if (search) {
         conditions.push(
-          sql`(${ftsMatch(protocols.searchVector, protocols.name, search)} OR ${creatorMatch(search)} OR ${ilike(familyText, `%${search}%`)})`,
+          sql`(${ftsMatch(protocols.searchVector, protocols.name, search)} OR ${creatorMatch(search)} OR ${ilike(familyText, `%${escapeLike(search)}%`)})`,
         );
       }
 
@@ -92,7 +92,7 @@ export class ProtocolRepository {
       }
 
       if (search) {
-        const rank = sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(familyText, `%${search}%`)}) THEN 1 ELSE 0 END))`;
+        const rank = sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(familyText, `%${escapeLike(search)}%`)}) THEN 1 ELSE 0 END))`;
         query = query.orderBy(desc(rank), asc(protocols.name));
       } else {
         query = query.orderBy(asc(protocols.sortOrder), asc(protocols.name));

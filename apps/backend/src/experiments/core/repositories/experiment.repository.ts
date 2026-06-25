@@ -21,7 +21,7 @@ import {
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -127,14 +127,13 @@ export class ExperimentRepository {
         conditions.push(eq(experiments.status, status));
       }
 
-      // Cross-table fields matched at query time (can't live in the generated search_vector).
-      // Creator via the `profiles` join; one-to-many members/locations via `exists` subqueries.
-      // `memberProfiles` is aliased so it doesn't collide with the creator `profiles` join.
-      // Deactivated ("Unknown User") and deleted accounts are excluded from name matching entirely.
+      // Cross-table fields matched at query time (can't live in the generated search_vector):
+      // creator via the `profiles` join, members/locations via `exists` subqueries. `memberProfiles`
+      // is aliased to avoid colliding with the creator join. Deactivated/deleted accounts are excluded.
       const memberProfiles = alias(profiles, "member_profiles");
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
-        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${term}%`)})`;
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
       const memberMatch = (term: string) =>
         exists(
           this.database
@@ -148,13 +147,14 @@ export class ExperimentRepository {
                 isNull(memberProfiles.deletedAt),
                 ilike(
                   sql<string>`(${memberProfiles.firstName} || ' ' || ${memberProfiles.lastName})`,
-                  `%${term}%`,
+                  `%${escapeLike(term)}%`,
                 ),
               ),
             ),
         );
-      const locationMatch = (term: string) =>
-        exists(
+      const locationMatch = (term: string) => {
+        const like = `%${escapeLike(term)}%`;
+        return exists(
           this.database
             .select()
             .from(experimentLocations)
@@ -162,15 +162,16 @@ export class ExperimentRepository {
               and(
                 eq(experimentLocations.experimentId, experiments.id),
                 or(
-                  ilike(experimentLocations.name, `%${term}%`),
-                  ilike(experimentLocations.country, `%${term}%`),
-                  ilike(experimentLocations.region, `%${term}%`),
-                  ilike(experimentLocations.municipality, `%${term}%`),
-                  ilike(experimentLocations.addressLabel, `%${term}%`),
+                  ilike(experimentLocations.name, like),
+                  ilike(experimentLocations.country, like),
+                  ilike(experimentLocations.region, like),
+                  ilike(experimentLocations.municipality, like),
+                  ilike(experimentLocations.addressLabel, like),
                 ),
               ),
             ),
         );
+      };
 
       if (search) {
         // Match name/description (weighted vector) + name typos, plus creator/member/location names.
@@ -179,8 +180,8 @@ export class ExperimentRepository {
         );
       }
 
-      // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus so an
-      // experiment whose NAME matches always ranks above one matched only by a related field.
+      // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus, so a
+      // name match always outranks one matched only by a related field.
       const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + 0.05 * (CASE WHEN ${creatorMatch(search ?? "")} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN (${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")}) THEN 1 ELSE 0 END))`;
 
       let query = this.database

@@ -63,6 +63,24 @@ describe("GlobalSearchUseCase", () => {
     expect(byTypo.value.results.some((r) => r.title === "Bioluminescence")).toBe(true);
   });
 
+  it("finds names containing punctuation (hyphens/colons) via the literal substring fallback", async () => {
+    // FTS sanitizes "ridge-01" to "ridge01" (misses the stored 'ridg'+'-01' lexemes) and the long
+    // name keeps trigram similarity below threshold — only the substring ILIKE branch catches it.
+    await testApp.createProtocol({
+      name: "Ridge-01 canopy reflectance measurement protocol",
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(userId, "ridge-01", 20);
+
+    assertSuccess(result);
+    expect(
+      result.value.results.some(
+        (r) => r.title === "Ridge-01 canopy reflectance measurement protocol",
+      ),
+    ).toBe(true);
+  });
+
   it("matches the macro language and protocol family enums (parity with focused search)", async () => {
     // Names/descriptions deliberately omit the enum value — only the enum should match.
     await testApp.createMacro({ name: "Data analysis", language: "python", createdBy: userId });
