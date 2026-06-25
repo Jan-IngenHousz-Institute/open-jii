@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MeasurementNode } from "./measurement-node";
 
 // Only the network / native boundaries and the deep state children are mocked;
-// MeasurementNode's own logic (the start-scan guards) runs unmocked.
+// MeasurementNode's own logic (the start-scan guards) runs unmocked. The
+// protocol is hydrated onto the node, so it's passed via content (no hook).
 const {
-  useProtocol,
   executeScan,
   resetScan,
   cancelCommand,
@@ -21,7 +21,6 @@ const {
   toastError,
   playSound,
 } = vi.hoisted(() => ({
-  useProtocol: vi.fn(),
   executeScan: vi.fn(),
   resetScan: vi.fn(),
   cancelCommand: vi.fn(),
@@ -34,10 +33,6 @@ const {
   openDeviceSheet: vi.fn(),
   toastError: vi.fn(),
   playSound: vi.fn(),
-}));
-
-vi.mock("~/features/measurement-flow/hooks/use-protocol", () => ({
-  useProtocol: (id: string | undefined) => useProtocol(id),
 }));
 
 vi.mock("~/features/connection/hooks/use-scan-manager", () => ({
@@ -102,32 +97,21 @@ const PROTOCOL_UNAVAILABLE_KEY = "measurementFlow:measurementNode.toast.protocol
 const DEVICE_DISCONNECTED_KEY = "measurementFlow:measurementNode.toast.deviceDisconnected";
 const SCAN_ERROR_KEY = "measurementFlow:measurementNode.toast.scanError";
 
-const content = { params: {}, protocolId: "proto-1" };
+const content = { params: {}, protocolId: "proto-1", protocol: PROTOCOL };
 
 beforeEach(() => {
   vi.clearAllMocks();
   useConnectedDevice.mockReturnValue({ data: { id: "dev-1" }, refetch: refetchConnectedDevice });
   refetchConnectedDevice.mockResolvedValue({ data: { id: "dev-1" } });
-  useProtocol.mockReturnValue({ protocol: PROTOCOL, isLoading: false });
 });
 
 describe("MeasurementNode start-scan guards", () => {
-  it("shows the protocol-unavailable toast (not scan error) when the protocol is uncached", () => {
-    useProtocol.mockReturnValue({ protocol: undefined, isLoading: false });
-
-    render(<MeasurementNode content={content} />);
+  it("shows the protocol-unavailable toast (not scan error) when the node has no protocol", () => {
+    render(<MeasurementNode content={{ ...content, protocol: undefined }} />);
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
     expect(executeScan).not.toHaveBeenCalled();
-  });
-
-  it("disables the Start button while the protocol is still loading", () => {
-    useProtocol.mockReturnValue({ protocol: undefined, isLoading: true });
-
-    render(<MeasurementNode content={content} />);
-
-    expect(screen.getByText(START_KEY)).toBeDisabled();
   });
 
   it("blocks the scan and shows device-disconnected when the liveness probe finds no device", async () => {

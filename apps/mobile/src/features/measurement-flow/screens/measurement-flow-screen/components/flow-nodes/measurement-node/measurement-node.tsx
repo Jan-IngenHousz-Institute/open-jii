@@ -7,7 +7,7 @@ import { useConnectedDevice } from "~/features/connection/hooks/use-device-conne
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { classifyScanError } from "~/features/connection/utils/classify-scan-error";
-import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
+import type { MeasurementContent } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
@@ -25,16 +25,14 @@ import { ScanningState } from "./components/scanning-state";
 const log = createLogger("measurement-node");
 
 interface MeasurementNodeProps {
-  content: {
-    params: Record<string, unknown>;
-    protocolId: string;
-  };
+  content: MeasurementContent;
 }
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { protocol, isLoading: isProtocolLoading } = useProtocol(content.protocolId);
+  // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
+  const protocol = content.protocol;
   const {
     executeScan,
     isScanning,
@@ -204,7 +202,6 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <Button
             title={t("measurementFlow:measurementNode.startMeasurement")}
             onPress={handleStartScan}
-            disabled={isProtocolLoading}
             style={{ height: 44 }}
           />
         </View>

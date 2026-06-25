@@ -9,6 +9,7 @@ import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nod
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
+import { hydrateFlowNodes } from "../../utils/hydrate-flow-nodes";
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
 const { listUseQuery, flowUseQuery, versionUseQuery, setFlowGraph, setFlowNodes } = vi.hoisted(
@@ -79,10 +80,9 @@ describe("useLoadExperimentFlow", () => {
     await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
     const expected = cellsToFlowGraph(cells);
     expect(setFlowGraph).toHaveBeenCalledWith(
-      expected.nodes,
+      hydrateFlowNodes(expected.nodes, cells, entitySnapshots),
       expected.edges,
       cells,
-      entitySnapshots,
     );
     expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);

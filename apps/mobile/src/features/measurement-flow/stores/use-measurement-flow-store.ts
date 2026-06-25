@@ -8,7 +8,6 @@ import {
 } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 
 /** The branch path the flow last routed through, surfaced inline in the hero. */
 export interface MatchedPath {
@@ -39,9 +38,6 @@ interface MeasurementFlowStore {
   // legacy flow-only experiments (no workbook attached).
   cells: WorkbookCell[];
   edges: FlowEdge[];
-  // Pinned protocol/macro code snapshots from the workbook version, so the scan
-  // and macro upload read code offline from here instead of fetching live rows.
-  entitySnapshots?: EntitySnapshots;
   // Which branch path was last taken (for the inline hero chip).
   lastMatchedPath?: MatchedPath;
   // Per-node visit counter that caps branch goto-loops (mirrors web's MAX_VISITS_PER_CELL).
@@ -59,12 +55,7 @@ interface MeasurementFlowStore {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
-  setFlowGraph: (
-    nodes: FlowNode[],
-    edges: FlowEdge[],
-    cells: WorkbookCell[],
-    entitySnapshots?: EntitySnapshots,
-  ) => void;
+  setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
   setLastMatchedPath: (path: MatchedPath | undefined) => void;
   incrementBranchVisit: (nodeId: string) => void;
   recordBranchJump: (landing: number) => void;
@@ -204,12 +195,11 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
-      setFlowGraph: (nodes, edges, cells, entitySnapshots) =>
+      setFlowGraph: (nodes, edges, cells) =>
         set({
           flowNodes: nodes,
           edges,
           cells,
-          entitySnapshots,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -259,7 +249,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFromOverview: false,
           cells: [],
           edges: [],
-          entitySnapshots: undefined,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
@@ -350,7 +339,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,
-        entitySnapshots: state.entitySnapshots,
         branchVisitCounts: state.branchVisitCounts,
         lastMatchedPath: state.lastMatchedPath,
         branchReturnStack: state.branchReturnStack,

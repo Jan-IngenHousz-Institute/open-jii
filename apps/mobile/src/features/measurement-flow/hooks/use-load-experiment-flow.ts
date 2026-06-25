@@ -4,6 +4,7 @@ import {
   useWorkbookVersionQuery,
 } from "~/features/experiments/hooks/use-experiment-flow-query";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 import { tsr } from "~/shared/api/tsr";
 
@@ -61,9 +62,9 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     const cells = body?.cells;
     if (!cells) return;
     const { nodes, edges } = cellsToFlowGraph(cells);
-    // Snapshots carry the pinned protocol/macro code so the scan + macro upload
-    // read offline from the store instead of fetching live rows.
-    setFlowGraph(nodes, edges, cells, body?.entitySnapshots);
+    // Hydrate each node with its protocol/macro (snapshot code + cell name) so
+    // the scan + macro upload read offline straight off the node.
+    setFlowGraph(hydrateFlowNodes(nodes, cells, body?.entitySnapshots), edges, cells);
   }, [versionData, setFlowGraph]);
 
   // Legacy path: linearize the stored flow graph (branch-free).

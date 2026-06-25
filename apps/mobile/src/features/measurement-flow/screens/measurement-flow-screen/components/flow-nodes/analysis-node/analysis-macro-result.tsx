@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
 import { MeasurementResult } from "~/features/measurement-flow/components/measurement-result/measurement-result";
-import type { ResolvedMacro } from "~/features/measurement-flow/hooks/use-macro";
+import type { ResolvedMacro } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
