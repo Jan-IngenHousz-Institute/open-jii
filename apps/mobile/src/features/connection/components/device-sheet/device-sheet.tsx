@@ -162,7 +162,11 @@ export function DeviceSheet() {
                   <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
                     {batteryLevel != null
                       ? t("deviceSheet.currentSubMultispeQNoFirmware", { battery: batteryLevel })
-                      : "MultispeQ"}
+                      : t(
+                          connectedDevice.type === "usb"
+                            ? "deviceSheet.connectedViaCable"
+                            : "deviceSheet.connectedViaBluetooth",
+                        )}
                   </Text>
                 </>
               ) : lastConnectedDevice ? (

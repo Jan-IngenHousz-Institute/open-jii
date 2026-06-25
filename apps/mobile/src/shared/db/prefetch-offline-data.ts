@@ -58,6 +58,8 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     queryKey: ["experiments"],
     queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
     staleTime: 0,
+    // Reachable from a background reconnect/foreground refetch; stay silent.
+    meta: { suppressToast: true },
   });
 
   const experiments = (experimentsResponse?.body ?? []) as {

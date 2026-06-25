@@ -36,9 +36,17 @@ export async function verifyConnectedSerialPortDevice(): Promise<void> {
 export async function setSerialPortConnection(device: Device | undefined) {
   // Tear down any existing connection first; otherwise a reconnect leaks the old
   // half-open port and every command fails "device not open" until a manual reset.
-  serialPortConnection?.emit("destroy");
+  const previous = serialPortConnection;
   serialPortConnection = undefined;
   connectedSerialPortDevice = undefined;
+  if (previous) {
+    // emit() is async and rethrows; closing an already-dead port can reject.
+    try {
+      await previous.emit("destroy");
+    } catch {
+      // already closed; nothing to do.
+    }
+  }
 
   if (device === undefined) return;
 
