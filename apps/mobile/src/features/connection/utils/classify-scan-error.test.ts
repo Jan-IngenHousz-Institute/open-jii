@@ -8,11 +8,12 @@ describe("classifyScanError", () => {
     "Command timeout",
     "Command executor not initialized. No device connected.",
     "Transport not initialized",
+    "Command cancelled",
   ])("classifies %s as disconnected", (message) => {
     expect(classifyScanError(new Error(message))).toBe("disconnected");
   });
 
-  it("classifies a cancelled measurement as cancelled", () => {
+  it("classifies a user-cancelled measurement as cancelled (not disconnected)", () => {
     expect(classifyScanError(new Error("Measurement cancelled"))).toBe("cancelled");
   });
 

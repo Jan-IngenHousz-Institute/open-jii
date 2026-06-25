@@ -117,6 +117,12 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     // `initialize()` may return void or a promise; normalize so callers can
     // always await it. Errors are swallowed here and re-surface per-command.
     this.initPromise = Promise.resolve(this.driver.initialize(transport));
+    // A mid-scan disconnect (surfaced by the transport the instant the OS
+    // reports it) aborts the in-flight command immediately instead of hanging
+    // until its timeout. User-cancel is a separate path (it sets isCancelled).
+    transport.onStatusChanged((isConnected) => {
+      if (!isConnected) void this.driver.cancel();
+    });
   }
 
   /**

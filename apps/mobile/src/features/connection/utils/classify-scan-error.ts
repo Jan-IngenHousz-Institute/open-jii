@@ -8,6 +8,9 @@ const DISCONNECTED_MARKERS = [
   "Command timeout",
   "Command executor not initialized",
   "Transport not initialized",
+  // The driver aborts the in-flight command with this when the transport reports
+  // a disconnect (or is torn down); user-cancel is "Measurement cancelled".
+  "Command cancelled",
 ];
 
 // "Measurement cancelled" is user-initiated (handled by the cancel path), so it
