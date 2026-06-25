@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from "react-native";
 import { toast } from "sonner-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
+import type { ScanResult } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
@@ -13,12 +14,14 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { resolveInlineCommand } from "@repo/api/utils/command-payload";
 
-import type { InlineCommandContent } from "../../../types";
+import type { InlineCommandContent } from "~/shared/measurements/flow-node";
 
 const log = createLogger("command-node");
 
 interface CommandNodeProps {
   content: InlineCommandContent;
+  /** Flow node id (== cell id); keys the result so a downstream branch can read it. */
+  nodeId: string;
 }
 
 function formatResponse(result: unknown): string {
@@ -30,12 +33,12 @@ function formatResponse(result: unknown): string {
   }
 }
 
-export function CommandNode({ content }: CommandNodeProps) {
+export function CommandNode({ content, nodeId }: CommandNodeProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { executeCommand } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { nextStep } = useMeasurementFlowStore();
+  const { nextStep, setScanResult } = useMeasurementFlowStore();
 
   const [isRunning, setIsRunning] = useState(false);
   const [response, setResponse] = useState<string>();
@@ -51,6 +54,9 @@ export function CommandNode({ content }: CommandNodeProps) {
     try {
       const result = await executeCommand(resolveInlineCommand(content));
       setResponse(formatResponse(result));
+      // Persist so a downstream branch can read this command's output and it
+      // uploads as a measurement, mirroring MeasurementNode.
+      setScanResult(result as ScanResult | undefined, nodeId);
     } catch (err) {
       log.error("command error", { err: (err as Error)?.message });
       setError((err as Error)?.message);
@@ -90,7 +96,11 @@ export function CommandNode({ content }: CommandNodeProps) {
 
       <View className="gap-3 px-4 py-3">
         <Button
-          title={isRunning ? t("measurementFlow:commandNode.running") : t("measurementFlow:commandNode.run")}
+          title={
+            isRunning
+              ? t("measurementFlow:commandNode.running")
+              : t("measurementFlow:commandNode.run")
+          }
           onPress={handleRun}
           disabled={isRunning}
           style={{ height: 44 }}
