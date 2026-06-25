@@ -300,4 +300,18 @@ describe("serialPortTransport", () => {
     await transport.disconnect();
     expect(destroyed).toHaveBeenCalled();
   });
+
+  it("treats a send failure (closed port) as a disconnect", async () => {
+    const emitter = new Emitter<SerialPortEvents>();
+    emitter.on("sendDataToDevice", () => {
+      throw new Error("device not open");
+    });
+    const transport = serialPortTransport(emitter);
+    const onStatus = vi.fn();
+    transport.onStatusChanged(onStatus);
+
+    await expect(transport.send("x")).rejects.toThrow("device not open");
+    expect(onStatus).toHaveBeenCalledWith(false);
+    expect(transport.isConnected()).toBe(false);
+  });
 });

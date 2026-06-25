@@ -3,9 +3,15 @@ import { listSerialPortDevices } from "~/features/connection/services/multispeq-
 import type { Device } from "~/shared/types/device";
 
 import { bluetoothDeviceToDevice, serialDeviceToDevice } from "./device-utils";
-import { getConnectedSerialPortDevice } from "./serial-port-connection";
+import {
+  getConnectedSerialPortDevice,
+  verifyConnectedSerialPortDevice,
+} from "./serial-port-connection";
 
 export async function getConnectedDevice(): Promise<Device | null> {
+  // Drop a stale serial connection if the USB device was unplugged (the lib has
+  // no detach event), so this polled query reflects a real disconnect.
+  await verifyConnectedSerialPortDevice();
   const serialDevice = getConnectedSerialPortDevice();
   if (serialDevice) {
     return serialDevice;

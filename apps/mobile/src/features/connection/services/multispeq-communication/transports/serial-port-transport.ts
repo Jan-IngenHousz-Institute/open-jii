@@ -15,21 +15,33 @@ import type { SerialPortEvents } from "../android-serial-port-connection/serial-
  */
 export function serialPortTransport(emitter: Emitter<SerialPortEvents>): ITransportAdapter {
   let onData: ((data: string) => void) | undefined;
+  let onStatus: ((connected: boolean, error?: Error) => void) | undefined;
+  let connected = true;
 
   emitter.on("dataReceivedFromDevice", (data) => onData?.(data));
 
   return {
-    isConnected: () => true,
+    isConnected: () => connected,
     async send(data: string) {
-      await emitter.emit("sendDataToDevice", data);
+      try {
+        await emitter.emit("sendDataToDevice", data);
+      } catch (err) {
+        // A closed USB port surfaces as "device not open" on write. Treat it as
+        // a drop so the in-flight command aborts immediately instead of hanging
+        // (mirrors the bluetooth transport's onDeviceDisconnected wiring).
+        connected = false;
+        onStatus?.(false);
+        throw err;
+      }
     },
     onDataReceived(callback: (data: string) => void) {
       onData = callback;
     },
-    onStatusChanged() {
-      // No status channel on the serial emitter.
+    onStatusChanged(callback: (connected: boolean, error?: Error) => void) {
+      onStatus = callback;
     },
     async disconnect() {
+      connected = false;
       await emitter.emit("destroy");
     },
   };

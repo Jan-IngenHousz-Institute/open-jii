@@ -5,6 +5,7 @@ import { classifyScanError } from "./classify-scan-error";
 describe("classifyScanError", () => {
   it.each([
     "Failed to write to device",
+    "device not open",
     "Command timeout",
     "Command executor not initialized. No device connected.",
     "Transport not initialized",

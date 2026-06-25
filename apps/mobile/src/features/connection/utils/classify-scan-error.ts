@@ -5,6 +5,8 @@ export type ScanErrorKind = "cancelled" | "disconnected" | "scanError";
 // can fire against a dead device and surface as one of these.
 const DISCONNECTED_MARKERS = [
   "Failed to write to device",
+  // USB-serial write to a closed port (e.g. the device was unplugged).
+  "device not open",
   "Command timeout",
   "Command executor not initialized",
   "Transport not initialized",
