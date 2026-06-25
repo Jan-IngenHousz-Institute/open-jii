@@ -15,6 +15,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   isReady: boolean;
 } {
   const setFlowGraph = useMeasurementFlowStore((s) => s.setFlowGraph);
+  const setFlowNodes = useMeasurementFlowStore((s) => s.setFlowNodes);
 
   // Shares the ["experiments"] cache key with useExperiments(), so this reads
   // from cache (no extra fetch) in the normal flow.
@@ -54,6 +55,13 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   const noWorkbook = !!experimentId && experimentsData != null && !hasWorkbook;
 
   const isReady = !!versionData?.body?.cells;
+
+  // Clear a previously-loaded graph when this load fails, so consumers don't keep
+  // rendering the prior experiment's nodes.
+  useEffect(() => {
+    if (!isReady && (noWorkbook || versionError)) setFlowNodes([]);
+  }, [isReady, noWorkbook, versionError, setFlowNodes]);
+
   const isLoading =
     !noWorkbook &&
     (isExperimentsLoading ||

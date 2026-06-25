@@ -7,10 +7,11 @@ import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
-const { listUseQuery, versionUseQuery, setFlowGraph } = vi.hoisted(() => ({
+const { listUseQuery, versionUseQuery, setFlowGraph, setFlowNodes } = vi.hoisted(() => ({
   listUseQuery: vi.fn(),
   versionUseQuery: vi.fn(),
   setFlowGraph: vi.fn(),
+  setFlowNodes: vi.fn(),
 }));
 
 vi.mock("~/shared/api/tsr", () => ({
@@ -25,7 +26,8 @@ vi.mock("~/shared/api/tsr", () => ({
 }));
 
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: (selector: (s: unknown) => unknown) => selector({ setFlowGraph }),
+  useMeasurementFlowStore: (selector: (s: unknown) => unknown) =>
+    selector({ setFlowGraph, setFlowNodes }),
 }));
 
 beforeEach(() => {
@@ -77,6 +79,7 @@ describe("useLoadExperimentFlow", () => {
     expect(measurement?.content?.protocol).toBeDefined();
     expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
     expect(cellsArg).toBe(cells);
+    expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });
 
@@ -92,6 +95,8 @@ describe("useLoadExperimentFlow", () => {
     expect(result.current.isReady).toBe(false);
     expect((result.current.error as Error)?.message).toContain("no workbook version");
     expect(setFlowGraph).not.toHaveBeenCalled();
+    // Stale graph from a prior experiment is cleared on a failed load.
+    expect(setFlowNodes).toHaveBeenCalledWith([]);
   });
 
   it("surfaces a listExperiments error instead of hanging in loading", () => {
