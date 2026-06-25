@@ -42,11 +42,11 @@ function renderNode(currentNode: FlowNode) {
       // A measurement node carries either a protocol reference or an inline
       // device command; the latter runs through the lightweight CommandNode.
       if (currentNode.content?.command) {
-        return <CommandNode content={currentNode.content.command} />;
+        return <CommandNode content={currentNode.content.command} nodeId={currentNode.id} />;
       }
       return (
         <ScrollableNode>
-          <MeasurementNode content={currentNode.content} />
+          <MeasurementNode content={currentNode.content} nodeId={currentNode.id} />
         </ScrollableNode>
       );
     default:

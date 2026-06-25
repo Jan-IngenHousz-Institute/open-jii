@@ -32,6 +32,8 @@ interface MeasurementFlowStore {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: any;
+  // Cell id of the producer (protocol or command) that yielded scanResult; keys the synthetic output in hydrateCells.
+  producerCellId?: string;
   isFromOverview: boolean;
 
   // Workbook-derived data, used to evaluate branch cells on-device. Empty for
@@ -64,17 +66,16 @@ interface MeasurementFlowStore {
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   setScanResult: (result: any) => void;
+  setProducerCellId: (cellId: string) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
 }
 
-// The store is persisted so a mid-flow blur (background, kill, tab switch)
-// is itself the "pause": the next launch rehydrates the same active flow
-// and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed. The workbook cells/edges and
-// branch state are persisted too so a resumed branching flow keeps evaluating
-// offline.
+// Persisted, so a mid-flow blur (background, kill, tab switch) is itself the
+// "pause": the next launch rehydrates the active flow and the home screen shows
+// the resume card from experimentId. Cells/edges/branch state persist too, so a
+// resumed branching flow keeps evaluating offline. No separate snapshot store.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
@@ -88,6 +89,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      producerCellId: undefined,
       isFromOverview: false,
       cells: [],
       edges: [],
@@ -171,6 +173,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 isFlowFinished: false,
                 isQuestionsSubmitPending: false,
                 scanResult: undefined,
+                producerCellId: undefined,
                 protocolId: undefined,
                 cells: [],
                 edges: [],
@@ -248,6 +251,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFlowFinished: false,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          producerCellId: undefined,
           protocolId: undefined,
           isFromOverview: false,
           cells: [],
@@ -263,6 +267,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           iterationCount: state.iterationCount + 1,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          producerCellId: undefined,
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -274,6 +279,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: 0,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          producerCellId: undefined,
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -289,6 +295,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         })),
 
       setScanResult: (result) => set({ scanResult: result }),
+      setProducerCellId: (producerCellId) => set({ producerCellId }),
 
       dismissQuestionsSubmit: () =>
         set((state) => ({
@@ -296,6 +303,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: 0,
           iterationCount: state.iterationCount + 1,
           scanResult: undefined,
+          producerCellId: undefined,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
@@ -339,6 +347,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
+        producerCellId: state.producerCellId,
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,

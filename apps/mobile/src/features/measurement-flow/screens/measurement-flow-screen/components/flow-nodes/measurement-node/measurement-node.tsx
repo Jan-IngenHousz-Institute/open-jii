@@ -28,9 +28,11 @@ interface MeasurementNodeProps {
     params: Record<string, unknown>;
     protocolId: string;
   };
+  /** Flow node id (== cell id); keys the result so a downstream branch can read it. */
+  nodeId: string;
 }
 
-export function MeasurementNode({ content }: MeasurementNodeProps) {
+export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const { protocol } = useProtocol(content.protocolId);
@@ -46,7 +48,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     estimatedMs,
   } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
+  const { nextStep, setScanResult, setProducerCellId, setProtocolId, navigateToQuestionFromOverview } =
     useMeasurementFlowStore();
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
   useEffect(() => {
@@ -107,6 +109,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     try {
       const result = await executeScan(protocol);
       setScanResult(result);
+      setProducerCellId(nodeId);
       // Play system notification sound when measurement completes
       await playSound();
       nextStep();

@@ -49,7 +49,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     iterationCount: flow.iterationCount,
     getAnswer,
     scanResult: flow.scanResult,
-    protocolId: flow.protocolId,
+    producerCellId: flow.producerCellId,
   });
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");
@@ -70,7 +70,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     if (idx >= 0 && idx !== flow.currentFlowStep) {
       // Only a forward jump skips over un-visited nodes that Back must unwind
       // past. A backward (loop-back) jump skips nothing, so Back steps linearly
-      // from the target — recording a return there would push Back forward.
+      // from the target, so recording a return there would push Back forward.
       if (idx > flow.currentFlowStep) flow.recordBranchJump(idx);
       flow.setCurrentFlowStep(idx);
       return;
