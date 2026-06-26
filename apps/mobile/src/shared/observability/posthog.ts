@@ -1,8 +1,12 @@
+import { onlineManager } from "@tanstack/react-query";
 import PostHog from "posthog-react-native";
+import { createLogger } from "~/shared/observability/logger";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
+const log = createLogger("posthog");
+
 /**
- * PostHog host — use the official endpoint directly.
+ * PostHog host - use the official endpoint directly.
  * The reverse-proxy (/ingest) is only useful for the web app
  * (to dodge ad-blockers). On mobile there's no need for it.
  */
@@ -31,12 +35,25 @@ export function getPostHogClient(): PostHog {
     },
     // Capture app lifecycle events (install, update, open, background)
     captureAppLifecycleEvents: true,
-    // Don't preload feature flags — we're focused on crash logging
+    // Don't preload feature flags - we're focused on crash logging
     preloadFeatureFlags: false,
     // Flush quickly so crash events aren't lost
     flushAt: 5,
     flushInterval: 5000,
   });
+
+  // The SDK has no netinfo to detect offline, so it keeps retrying the flush
+  // with no network. Gate its one network primitive (this.fetch, used for
+  // events/flush/flags) on connectivity: reject while offline so nothing hits
+  // the wire; events stay queued for the next online flush.
+  const baseFetch = client.fetch.bind(client);
+  client.fetch = (url, options) => {
+    if (!onlineManager.isOnline()) {
+      log.debug("offline - skipping request");
+      return Promise.reject(new Error("offline: PostHog request skipped"));
+    }
+    return baseFetch(url, options);
+  };
 
   return client;
 }
