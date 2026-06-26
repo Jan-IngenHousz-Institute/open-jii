@@ -4,8 +4,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import { useMacro } from "~/features/measurement-flow/hooks/use-macro";
-import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
+import type { AnalysisContent } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
@@ -25,16 +24,14 @@ import { AnalysisSummaryCard } from "./analysis-summary-card";
 const log = createLogger("analysis-node");
 
 interface AnalysisNodeProps {
-  content: {
-    params: Record<string, any>;
-    macroId: string;
-  };
+  content: AnalysisContent;
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { macro, isLoading } = useMacro(content.macroId);
+  // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
+  const macro = content.macro;
   const {
     scanResult,
     previousStep,
@@ -47,6 +44,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { experiments } = useExperiments();
   const { session } = useSession();
 
+  // Name of the active measurement's protocol, read off its hydrated flow node.
+  const activeProtocolName = flowNodes.find(
+    (n) => n.type === "measurement" && n.content?.protocolId === protocolId,
+  )?.content?.protocol?.name as string | undefined;
+
   const experimentName =
     experiments.find((experiment) => experiment.value === experimentId)?.label ??
     t("measurementFlow:analysis.node.defaultExperimentName");
@@ -57,7 +59,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
-  const { protocol } = useProtocol(protocolId);
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -78,12 +79,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         measurementResult: { ...(scanResult ?? {}), questions },
         metadata: {
           experimentName,
-          protocolName: protocol?.name ?? "",
+          protocolName: activeProtocolName ?? "",
           timestamp: displayTimestamp,
         },
       },
     }),
-    [displayTimestamp, experimentName, questions, protocol?.name, scanResult],
+    [displayTimestamp, experimentName, questions, activeProtocolName, scanResult],
   );
 
   const handleUploadMeasurement = async () => {
@@ -127,7 +128,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       },
       questions,
       commentText: measurementComment.trim() || undefined,
-      protocolName: protocol?.name ?? protocolId,
+      protocolName: activeProtocolName ?? protocolId,
     });
     nextStep();
   };
@@ -155,7 +156,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
         <AnalysisSummaryCard
           experimentName={experimentName}
-          protocolName={protocol?.name ?? t("measurementFlow:analysis.node.defaultProtocolName")}
+          protocolName={
+            activeProtocolName ?? t("measurementFlow:analysis.node.defaultProtocolName")
+          }
           questions={questions}
           displayTimestamp={displayTimestamp}
           onPress={() => setQuestionsModalVisible(true)}
@@ -163,7 +166,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
         <AnalysisMacroResult
           macro={macro}
-          isLoading={isLoading}
+          isLoading={false}
           macroId={content.macroId}
           scanResult={scanResult}
           onCommentPress={() => setCommentModalVisible(true)}

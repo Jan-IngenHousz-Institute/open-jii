@@ -4,7 +4,7 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scanner-command-executor";
 
 /**
- * `battery` is a trivial console command — a healthy device answers in well
+ * `battery` is a trivial console command - a healthy device answers in well
  * under a second. Cap its wait far below the 60s protocol base timeout so an
  * unresponsive device can't hog the (serialized) command queue, which would
  * otherwise block a measurement queued behind it.
@@ -20,7 +20,7 @@ const BATTERY_TIMEOUT_MS = 5_000;
  * Battery and measurements share one serialized command queue. Polls run as
  * `background` commands (they don't flip `isExecuting`), so the `!isExecuting`
  * gate below reflects measurements only and pauses polling for their whole
- * duration — a battery refetch must never jump the queue ahead of, or stall, a
+ * duration - a battery refetch must never jump the queue ahead of, or stall, a
  * running measurement, nor reset its on-screen timer/estimate.
  */
 export function useBatteryPoller() {
@@ -42,6 +42,9 @@ export function useBatteryPoller() {
       setBatteryLevel(pct);
       return pct;
     },
-    enabled: !!connectedDevice && !isExecuting,
+    // A cabled serial device (e.g. an Ambit) doesn't speak `battery`, so skip it.
+    enabled: !!connectedDevice && !isExecuting && connectedDevice.type !== "usb",
+    // A background-poll failure must never surface the global error toast.
+    meta: { suppressToast: true },
   });
 }

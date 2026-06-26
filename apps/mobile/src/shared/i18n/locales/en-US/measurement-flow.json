@@ -156,6 +156,7 @@
       "notConnected": "Not connected to sensor",
       "noProtocol": "No protocol selected",
       "protocolUnavailable": "Protocol unavailable, connect to the internet and try again",
+      "deviceDisconnected": "Device disconnected, reconnect and try again",
       "scanError": "Scan error"
     },
     "privacyNote": "Your (gps)location and full name will be stored amongst other measurements data. Note that these are publicly available.",

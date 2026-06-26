@@ -156,6 +156,7 @@
       "notConnected": "Geen verbinding met sensor",
       "noProtocol": "Geen protocol geselecteerd",
       "protocolUnavailable": "Protocol niet beschikbaar, maak verbinding met internet en probeer opnieuw",
+      "deviceDisconnected": "Apparaat losgekoppeld, maak opnieuw verbinding en probeer het opnieuw",
       "scanError": "Scanfout"
     },
     "privacyNote": "Je (gps-)locatie en volledige naam worden samen met de meetgegevens opgeslagen. Houd er rekening mee dat deze openbaar zijn.",

@@ -127,7 +127,9 @@ export function ExperimentSelectionStep() {
               {t("experimentSelection.loadingExperiments")}
             </Text>
           </View>
-        ) : error ? (
+        ) : error && experiments.length === 0 ? (
+          // Only a hard failure with nothing cached shows the error; offline we
+          // keep rendering the persisted list even though the refetch errored.
           <View className="items-center py-10">
             <Text className="text-error text-center">{t("experimentSelection.loadFailed")}</Text>
           </View>

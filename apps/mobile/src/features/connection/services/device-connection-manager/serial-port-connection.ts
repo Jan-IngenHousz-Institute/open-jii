@@ -1,4 +1,7 @@
-import { openSerialPortConnection } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import {
+  listSerialPortDevices,
+  openSerialPortConnection,
+} from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 import type { SerialPortEvents } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/serial-port-events";
 import { Emitter } from "~/features/connection/utils/emitter";
 import type { Device } from "~/shared/types/device";
@@ -14,13 +17,42 @@ export function getConnectedSerialPortDevice() {
   return connectedSerialPortDevice;
 }
 
-export async function setSerialPortConnection(device: Device | undefined) {
-  if (device === undefined) {
-    connectedSerialPortDevice = undefined;
-    serialPortConnection?.emit("destroy");
-    serialPortConnection = undefined;
-    return;
+/**
+ * The USB-serial lib has no detach event, so a stale connection keeps reporting
+ * "connected" after unplug. Drop it if the device is no longer enumerated; keep
+ * it if the list can't be read, so a transient failure won't false-disconnect.
+ */
+export async function verifyConnectedSerialPortDevice(): Promise<void> {
+  const device = connectedSerialPortDevice;
+  if (!device) return;
+  try {
+    const attached = (await listSerialPortDevices()).some((d) => String(d.deviceId) === device.id);
+    // Re-check after the await: a reconnect may have swapped in a new port, which
+    // we must not tear down based on this stale check.
+    if (!attached && connectedSerialPortDevice?.id === device.id) {
+      await setSerialPortConnection(undefined);
+    }
+  } catch {
+    // Can't determine; keep the (possibly live) connection.
   }
+}
+
+export async function setSerialPortConnection(device: Device | undefined) {
+  // Tear down any existing connection first; otherwise a reconnect leaks the old
+  // half-open port and every command fails "device not open" until a manual reset.
+  const previous = serialPortConnection;
+  serialPortConnection = undefined;
+  connectedSerialPortDevice = undefined;
+  if (previous) {
+    // emit() is async and rethrows; closing an already-dead port can reject.
+    try {
+      await previous.emit("destroy");
+    } catch {
+      // already closed; nothing to do.
+    }
+  }
+
+  if (device === undefined) return;
 
   serialPortConnection = await openSerialPortConnection(parseInt(device.id));
   connectedSerialPortDevice = device;

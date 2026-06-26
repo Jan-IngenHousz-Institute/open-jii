@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Device } from "~/shared/types/device";
 
-import { isNamedDevice, looksLikeMac, partitionDevices, sortDevices } from "./device-sort";
+import {
+  isNamedDevice,
+  looksLikeMac,
+  mergeDevice,
+  partitionDevices,
+  sortDevices,
+} from "./device-sort";
 
 const ble = (name: string, id: string, rssi?: number): Device => ({
   type: "bluetooth-classic",
@@ -51,6 +57,28 @@ describe("sortDevices", () => {
   it("breaks ties within a rank by stronger signal", () => {
     const devices = [ble("Speaker", "AA:01", -80), ble("Watch", "AA:02", -50)];
     expect(sortDevices(devices).map((d) => d.id)).toEqual(["AA:02", "AA:01"]);
+  });
+
+  it("orders a cabled USB/serial device ahead of bluetooth devices", () => {
+    const usb: Device = { type: "usb", name: "1a86:55d4", id: "1002" };
+    const devices = [ble("MultispeQ-X", "AA:00:00:00:00:03"), usb];
+    expect(sortDevices(devices).map((d) => d.id)).toEqual(["1002", "AA:00:00:00:00:03"]);
+  });
+});
+
+describe("mergeDevice", () => {
+  it("appends a new device and refreshes an existing one by id+type", () => {
+    const a = ble("MultispeQ", "AA:01", -70);
+    const list = mergeDevice([], a);
+    expect(list).toHaveLength(1);
+
+    // Same id+type re-discovered with a stronger signal: refreshed in place.
+    const refreshed = mergeDevice(list, ble("MultispeQ", "AA:01", -55));
+    expect(refreshed).toHaveLength(1);
+    expect(refreshed[0].rssi).toBe(-55);
+
+    // Different id: appended.
+    expect(mergeDevice(refreshed, ble("Watch", "AA:02"))).toHaveLength(2);
   });
 });
 

@@ -30,6 +30,7 @@ import { mountOutboxBridge } from "~/features/recent-measurements/services/outbo
 import { getOutbox } from "~/shared/composition/upload";
 import { db } from "~/shared/db/client";
 import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
+import { OfflineDataSync } from "~/shared/db/offline-data-sync";
 import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
@@ -202,6 +203,7 @@ function AllowedAppServices({ children }: { children: React.ReactNode }) {
     <PostHogProvider>
       <TimeSyncProvider>
         <OutboxBootstrap />
+        <OfflineDataSync />
         {__DEV__ && <EventLoopLagMonitor />}
         <PythonMacroProvider>{children}</PythonMacroProvider>
       </TimeSyncProvider>
