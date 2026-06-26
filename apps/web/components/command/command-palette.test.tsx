@@ -130,7 +130,6 @@ describe("CommandPalette", () => {
           title: "Photosynthesis trial",
           subtitle: "A leaf study",
           meta: null,
-          score: 1,
         },
         {
           type: "protocol",
@@ -138,7 +137,6 @@ describe("CommandPalette", () => {
           title: "Photosynthesis protocol",
           subtitle: null,
           meta: "multispeq",
-          score: 0.8,
         },
       ],
     });
