@@ -14,6 +14,7 @@ import { getConnectedDevice } from "../services/device-connection-manager/device
 import { mergeDevice } from "../services/device-connection-manager/device-sort";
 import {
   bluetoothDeviceToDevice,
+  discoveredEventToDevice,
   serialDeviceToDevice,
 } from "../services/device-connection-manager/device-utils";
 import { listSerialPortDevices } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
@@ -117,7 +118,9 @@ export function useAllDevices() {
   useEffect(() => {
     mountedRef.current = true;
     const sub = RNBluetoothClassic.onDeviceDiscovered((event) => {
-      setData((prev) => mergeDevice(prev, bluetoothDeviceToDevice(event.device)));
+      const device = discoveredEventToDevice(event);
+      if (!device) return;
+      setData((prev) => mergeDevice(prev, device));
     });
     return () => {
       mountedRef.current = false;
@@ -140,8 +143,12 @@ export function useAllDevices() {
     if (!mountedRef.current) return;
     const seed = [
       ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
-      ...(bonded.status === "fulfilled" ? bonded.value.map(bluetoothDeviceToDevice) : []),
-      ...(connected.status === "fulfilled" ? connected.value.map(bluetoothDeviceToDevice) : []),
+      ...(bonded.status === "fulfilled"
+        ? bonded.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        : []),
+      ...(connected.status === "fulfilled"
+        ? connected.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        : []),
     ].reduce<Device[]>(mergeDevice, []);
     setData(seed);
     try {

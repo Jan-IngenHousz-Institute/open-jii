@@ -17,6 +17,19 @@ export function bluetoothDeviceToDevice(d: BluetoothNativeDevice): Device {
   };
 }
 
+// The onDeviceDiscovered payload from react-native-bluetooth-classic is
+// unreliable: the device may sit on `event.device`, be the event object itself,
+// or be absent (a discovery-finished tick). Returns null for anything without a
+// usable address so callers never deref undefined.
+export function discoveredEventToDevice(event: unknown): Device | null {
+  const e = event as { device?: BluetoothNativeDevice } | undefined;
+  const native = (e?.device ?? e) as BluetoothNativeDevice | undefined;
+  if (!native || typeof native.address !== "string" || native.address.length === 0) {
+    return null;
+  }
+  return bluetoothDeviceToDevice(native);
+}
+
 export function serialDeviceToDevice(d: {
   deviceId: number;
   vendorId: number;
