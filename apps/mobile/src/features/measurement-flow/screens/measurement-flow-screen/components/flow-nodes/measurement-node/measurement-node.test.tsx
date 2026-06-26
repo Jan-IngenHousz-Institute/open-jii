@@ -19,6 +19,7 @@ const {
   openDeviceSheet,
   toastError,
   playSound,
+  scanState,
 } = vi.hoisted(() => ({
   executeScan: vi.fn(),
   resetScan: vi.fn(),
@@ -32,12 +33,13 @@ const {
   openDeviceSheet: vi.fn(),
   toastError: vi.fn(),
   playSound: vi.fn(),
+  scanState: { isScanning: false },
 }));
 
 vi.mock("~/features/connection/hooks/use-scan-manager", () => ({
   useScanner: () => ({
     executeScan,
-    isScanning: false,
+    isScanning: scanState.isScanning,
     reset: resetScan,
     result: undefined,
     error: undefined,
@@ -92,6 +94,7 @@ vi.mock("./components/no-device-state", () => ({ NoDeviceState: () => null }));
 
 const PROTOCOL = { name: "Photosynthesis", code: [{ foo: 1 }] };
 const START_KEY = "measurementFlow:measurementNode.startMeasurement";
+const CANCEL_KEY = "measurementFlow:measurementNode.cancelMeasurement";
 const PROTOCOL_UNAVAILABLE_KEY = "measurementFlow:measurementNode.toast.protocolUnavailable";
 const DEVICE_DISCONNECTED_KEY = "measurementFlow:measurementNode.toast.deviceDisconnected";
 const SCAN_ERROR_KEY = "measurementFlow:measurementNode.toast.scanError";
@@ -100,6 +103,7 @@ const content = { params: {}, protocolId: "proto-1", protocol: PROTOCOL };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  scanState.isScanning = false;
   useConnectedDevice.mockReturnValue({ data: { id: "dev-1" }, refetch: refetchConnectedDevice });
   refetchConnectedDevice.mockResolvedValue({ data: { id: "dev-1" } });
 });
@@ -110,6 +114,14 @@ describe("MeasurementNode start-scan guards", () => {
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
+    expect(executeScan).not.toHaveBeenCalled();
+  });
+
+  it("shows the no-protocol toast when the node has no protocolId", () => {
+    render(<MeasurementNode content={{ ...content, protocolId: "" }} />);
+    fireEvent.press(screen.getByText(START_KEY));
+
+    expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol");
     expect(executeScan).not.toHaveBeenCalled();
   });
 
@@ -173,5 +185,49 @@ describe("MeasurementNode start-scan guards", () => {
     render(<MeasurementNode content={content} />);
 
     expect(screen.queryByText(START_KEY)).toBeNull();
+  });
+
+  it("ignores a second Start tap while the first scan is starting", async () => {
+    let resolveScan: (value: unknown) => void = () => undefined;
+    executeScan.mockReturnValue(
+      new Promise((resolve) => {
+        resolveScan = resolve;
+      }),
+    );
+
+    render(<MeasurementNode content={content} />);
+    const button = screen.getByText(START_KEY);
+    fireEvent.press(button);
+    fireEvent.press(button);
+
+    await waitFor(() => expect(executeScan).toHaveBeenCalledTimes(1));
+    resolveScan({ result: 1 });
+  });
+});
+
+describe("MeasurementNode in-scan controls", () => {
+  it("awaits cancel before resetting when the measurement is cancelled", async () => {
+    scanState.isScanning = true;
+    cancelCommand.mockResolvedValue(undefined);
+
+    render(<MeasurementNode content={content} />);
+    fireEvent.press(screen.getByText(CANCEL_KEY));
+
+    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
+    expect(resetScan).toHaveBeenCalled();
+  });
+
+  it("aborts and resets the scan when the device drops mid-measurement", async () => {
+    scanState.isScanning = true;
+    cancelCommand.mockResolvedValue(undefined);
+
+    const { rerender } = render(<MeasurementNode content={content} />);
+    expect(cancelCommand).not.toHaveBeenCalled();
+
+    useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
+    rerender(<MeasurementNode content={content} />);
+
+    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
+    expect(resetScan).toHaveBeenCalled();
   });
 });

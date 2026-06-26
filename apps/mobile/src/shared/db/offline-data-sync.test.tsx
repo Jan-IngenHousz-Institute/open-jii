@@ -1,9 +1,9 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react-native";
+import { render, renderHook } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useOfflineDataSync } from "./offline-data-sync";
+import { OfflineDataSync, useOfflineDataSync } from "./offline-data-sync";
 
 const { prefetchOfflineData, useSession, appStateHandler } = vi.hoisted(() => ({
   prefetchOfflineData: vi.fn(),
@@ -63,5 +63,18 @@ describe("useOfflineDataSync", () => {
     appStateHandler.current?.("active");
 
     expect(prefetchOfflineData).not.toHaveBeenCalled();
+  });
+});
+
+describe("OfflineDataSync", () => {
+  it("mounts the sync hook as a render-free service", () => {
+    const { toJSON } = render(React.createElement(OfflineDataSync), { wrapper });
+
+    expect(toJSON()).toBeNull();
+    // The mounted hook wired up the foreground trigger.
+    appStateHandler.current?.("active");
+    expect(prefetchOfflineData).toHaveBeenCalledWith(expect.anything(), "user-1", {
+      throttle: true,
+    });
   });
 });
