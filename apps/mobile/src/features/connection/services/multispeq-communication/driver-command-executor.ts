@@ -25,7 +25,7 @@ export interface ExecuteOptions {
 /**
  * Live progress of an in-flight command. A MultispeQ runs a protocol silently
  * and returns ONE response at the end, so `rx chunk`s are fragments of that
- * final burst — `chunks`/`bytes` climb while the reply transfers, not during
+ * final burst, so `chunks`/`bytes` climb while the reply transfers, not during
  * the measurement itself. The measuring phase is conveyed by elapsed time
  * against an estimate (see the UI), not by this stream. Hence there is
  * deliberately no chunk-silence watchdog: silence is normal mid-measurement.
@@ -39,7 +39,7 @@ export interface CommandProgress {
   bytes: number;
   /** ms since the command was sent. */
   elapsedMs: number;
-  /** Epoch ms of the most recent tx/rx event — drives a "last signal Xs ago" readout. */
+  /** Epoch ms of the most recent tx/rx event; drives a "last signal Xs ago" readout. */
   lastEventAt: number;
 }
 
@@ -73,7 +73,7 @@ const HEARTBEAT_MS = 15_000;
  * Adapts the shared `@repo/iot` `MultispeqDriver` to the app's command-executor
  * contract: unwraps `CommandResult` to raw data (throwing on failure) and
  * exposes a preemptive `cancel()`. All framing, command queueing, dynamic
- * timeout sizing and cancel-on-timeout behaviour live in the driver — there is
+ * timeout sizing and cancel-on-timeout behaviour live in the driver; there is
  * no app-side reimplementation. See OJD-1565.
  *
  * Each execute() is captured as ONE wide trace event (`multispeq.command`):
@@ -86,14 +86,14 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   /**
    * Resolves once the driver has been initialized. `initialize()` is currently
    * synchronous, but the interface allows it to be async (handshake/probe), so
-   * every public op awaits this first — that keeps execute/cancel/destroy from
+   * every public op awaits this first; that keeps execute/cancel/destroy from
    * racing setup and turns any init failure into a controlled command error
    * rather than an unhandled rejection.
    */
   private readonly initPromise: Promise<void>;
   private activeTrace: Trace | null = null;
 
-  // Per-chunk events would bloat the wide event on long measurements —
+  // Per-chunk events would bloat the wide event on long measurements, so
   // aggregate them and attach one "rx" summary on message completion.
   private chunkCount = 0;
 
@@ -104,12 +104,9 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
   private cmdStartedAt = 0;
   private lastEmitAt = 0;
 
-  // execute() callers can overlap (a battery poll and a measurement), but the
-  // driver runs them one at a time. `activeTrace` is a single field, so setting
-  // it eagerly per-call let a later call clobber the trace of the command still
-  // on the wire — cross-contaminating events. Chain runs so trace ownership is
-  // handed over only when the previous command settles, matching the driver's
-  // serial execution.
+  // Callers can overlap (battery poll vs measurement) but the driver runs them
+  // serially; chain runs so each command owns `activeTrace` only while on the
+  // wire, instead of a later call clobbering the in-flight command's trace.
   private commandTail: Promise<unknown> = Promise.resolve();
 
   constructor(transport: ITransportAdapter) {
@@ -117,6 +114,11 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     // `initialize()` may return void or a promise; normalize so callers can
     // always await it. Errors are swallowed here and re-surface per-command.
     this.initPromise = Promise.resolve(this.driver.initialize(transport));
+    // A transport-reported disconnect aborts the in-flight command at once;
+    // user-cancel is a separate path (it sets isCancelled).
+    transport.onStatusChanged((isConnected) => {
+      if (!isConnected) void this.driver.cancel();
+    });
   }
 
   /**
@@ -131,7 +133,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
       const fields = args[0] as LogFields | undefined;
 
       if (msg === "tx") {
-        // Command is on the wire — start the clock and announce "sent".
+        // Command is on the wire; start the clock and announce "sent".
         this.cmdStartedAt = Date.now();
         this.bytes = 0;
         this.lastEmitAt = 0;
