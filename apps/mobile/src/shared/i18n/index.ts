@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Localization from "expo-localization";
 import i18next from "i18next";
 import { useEffect, useState } from "react";
 import { initReactI18next } from "react-i18next";
@@ -58,23 +57,10 @@ const bundledResources = {
   },
 } as const;
 
-function pickDeviceLocale(): SupportedLocale {
-  const deviceLocales = Localization.getLocales();
-  for (const { languageTag } of deviceLocales) {
-    if ((SUPPORTED_LOCALES as readonly string[]).includes(languageTag)) {
-      return languageTag as SupportedLocale;
-    }
-    // Match language code only (e.g. "nl" -> "nl-NL").
-    const langOnly = languageTag.split("-")[0];
-    const match = (SUPPORTED_LOCALES as readonly string[]).find((l) => l.startsWith(langOnly));
-    if (match) return match as SupportedLocale;
-  }
-  return FALLBACK_LOCALE;
-}
-
 /**
- * Resolves the active locale at boot:
- *   user preference (AsyncStorage) > device locale > fallback.
+ * Resolves the active locale at boot: a saved user preference if present,
+ * otherwise English. Device locale is deliberately ignored so the app
+ * defaults to English everywhere; Dutch is opt-in via app settings.
  */
 async function resolveInitialLocale(): Promise<SupportedLocale> {
   try {
@@ -83,9 +69,9 @@ async function resolveInitialLocale(): Promise<SupportedLocale> {
       return saved as SupportedLocale;
     }
   } catch {
-    /* ignore — fall through to device locale */
+    /* ignore and fall back to the default locale */
   }
-  return pickDeviceLocale();
+  return FALLBACK_LOCALE;
 }
 
 let initPromise: Promise<typeof i18next> | null = null;

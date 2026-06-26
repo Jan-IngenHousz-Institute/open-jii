@@ -34,6 +34,8 @@
   "footer": "openJII Mobile · v{{version}} ({{build}})",
   "appSettingsSheet": {
     "title": "App settings",
-    "themeLabel": "Theme"
+    "themeLabel": "Theme",
+    "languageLabel": "Language",
+    "dutchTranslationNote": "Dutch translations are still being refined and may contain errors."
   }
 }
