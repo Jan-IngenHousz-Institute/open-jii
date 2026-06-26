@@ -1,8 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { Result } from "../../../../common/utils/fp-utils";
-import { failure, success } from "../../../../common/utils/fp-utils";
-import { AppError } from "../../../../common/utils/fp-utils";
+import { success } from "../../../../common/utils/fp-utils";
 import { DEVICE_REPOSITORY } from "../../../core/repositories/device.repository";
 import type { DeviceRepository } from "../../../core/repositories/device.repository";
 

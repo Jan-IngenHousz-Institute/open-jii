@@ -218,6 +218,13 @@
       "when": 1780050152410,
       "tag": "0030_aberrant_joshua_kane",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1782463759920,
+      "tag": "0031_certain_black_panther",
+      "breakpoints": true
     }
   ]
 }
