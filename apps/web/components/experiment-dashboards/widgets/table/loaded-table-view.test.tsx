@@ -142,4 +142,39 @@ describe("LoadedTableView", () => {
     // The column is projected into the rendered table head.
     expect(screen.getByRole("columnheader", { name: /value/i })).toBeInTheDocument();
   });
+
+  it("survives a re-render while data is still loading (no autoReset loop)", async () => {
+    server.mount(contract.experiments.getExperimentTables, {
+      body: [createExperimentTable({ identifier: "raw_data" })],
+    });
+    // Hold the data in a loading state briefly so the re-render lands while
+    // `tableRows` is undefined — the window where an unstable `[]` data ref
+    // used to send react-table's autoReset into an infinite microtask loop.
+    server.mount(contract.experiments.getExperimentData, {
+      delay: 50,
+      body: [
+        createExperimentDataTable({
+          name: "raw_data",
+          page: 1,
+          pageSize: 25,
+          totalPages: 1,
+          totalRows: 1,
+          data: {
+            columns: [{ name: "value", type_name: "DOUBLE", type_text: "DOUBLE" }],
+            rows: [{ value: 9 }],
+            totalRows: 1,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+
+    const { rerender } = render(
+      <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />,
+    );
+    rerender(<LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />);
+
+    // Reaching the loaded row (not timing out) is the regression assertion.
+    await waitFor(() => expect(screen.getByText("9")).toBeInTheDocument());
+  });
 });
