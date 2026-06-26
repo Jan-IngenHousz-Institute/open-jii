@@ -81,8 +81,10 @@ export function ConfiguredQueryClientProvider({ children }) {
       onError: (error: any, query) => {
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
         log.warn("query error", { message, status: error?.status });
-        // Offline failures are expected (the cache serves the UI); never toast.
-        if (!onlineManager.isOnline()) return;
+        // Don't toast connection failures. A network/timeout error never got an
+        // HTTP response, so it has no status; that's the reliable signal because
+        // onlineManager lags a fast wifi-off. The cached UI stays usable.
+        if (!onlineManager.isOnline() || error?.status == null) return;
         // Queries that gracefully fall back (e.g. user profile) opt out of the
         // global toast via meta.suppressToast so a 404 doesn't blare at the user.
         if (query.meta?.suppressToast) return;
