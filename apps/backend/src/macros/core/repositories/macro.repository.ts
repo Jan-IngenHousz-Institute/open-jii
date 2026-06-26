@@ -61,7 +61,7 @@ export class MacroRepository {
           filename: generateHashedFilename(macroId),
           createdBy: userId,
         })
-        .returning();
+        .returning(macroColumns);
       return results as MacroDto[];
     });
   }
@@ -216,7 +216,7 @@ export class MacroRepository {
           updatedAt: new Date(),
         })
         .where(eq(macros.id, id))
-        .returning();
+        .returning(macroColumns);
 
       // Best-effort cache invalidation — must not mask a successful write
       void this.cachePort.invalidate(id).catch(() => {
@@ -229,7 +229,10 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
+      const results = await this.database
+        .delete(macros)
+        .where(eq(macros.id, id))
+        .returning(macroColumns);
 
       // Best-effort cache invalidation — must not mask a successful write
       void this.cachePort.invalidate(id).catch(() => {

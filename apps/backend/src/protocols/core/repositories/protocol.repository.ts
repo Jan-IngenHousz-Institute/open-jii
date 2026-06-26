@@ -46,7 +46,7 @@ export class ProtocolRepository {
           ...createProtocolDto,
           createdBy: userId,
         })
-        .returning();
+        .returning(protocolColumns);
       return results as ProtocolDto[];
     });
   }
@@ -179,7 +179,7 @@ export class ProtocolRepository {
           updatedAt: new Date(),
         })
         .where(eq(protocols.id, id))
-        .returning();
+        .returning(protocolColumns);
 
       return results as unknown as ProtocolDto[];
     });
@@ -187,7 +187,10 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(protocols).where(eq(protocols.id, id)).returning();
+      const results = await this.database
+        .delete(protocols)
+        .where(eq(protocols.id, id))
+        .returning(protocolColumns);
 
       return results as unknown as ProtocolDto[];
     });

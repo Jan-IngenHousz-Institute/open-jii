@@ -54,7 +54,7 @@ export class ExperimentRepository {
           ...createExperimentDto,
           createdBy: userId,
         })
-        .returning(),
+        .returning(experimentColumns),
     );
   }
 
@@ -245,7 +245,7 @@ export class ExperimentRepository {
         .update(experiments)
         .set(updateExperimentDto)
         .where(eq(experiments.id, id))
-        .returning(),
+        .returning(experimentColumns),
     );
   }
 
