@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { FaqContent } from "@repo/cms";
 import type { PageFaqFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -17,22 +18,24 @@ const getFaqData = cache(async (locale: string, preview: boolean) => {
   return faqQuery.pageFaqCollection?.items[0] as PageFaqFieldsFragment;
 });
 
-export async function generateMetadata({ params }: FaqPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const faq = await getFaqData(locale, preview);
+export function generateMetadata({ params }: FaqPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { isEnabled: preview } = await draftMode();
+    const faq = await getFaqData(locale, preview);
 
-  const metadata: Metadata = {};
+    const metadata: Metadata = {};
 
-  if (faq.pageTitle) {
-    metadata.title = faq.pageTitle;
-  }
+    if (faq.pageTitle) {
+      metadata.title = faq.pageTitle;
+    }
 
-  if (faq.pageDescription) {
-    metadata.description = faq.pageDescription;
-  }
+    if (faq.pageDescription) {
+      metadata.description = faq.pageDescription;
+    }
 
-  return metadata;
+    return metadata;
+  });
 }
 
 export default async function FaqPage({ params }: FaqPageProps) {

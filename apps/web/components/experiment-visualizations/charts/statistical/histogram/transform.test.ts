@@ -63,11 +63,11 @@ describe("transformHistogramData", () => {
     expect(result.chartSeries[1].x).toEqual([2]);
   });
 
-  it("forces probability density histnorm when showNormalFit is on", () => {
+  it("preserves the user's histnorm when showNormalFit is on (fit scales to match)", () => {
     const rows = [{ v: 1 }, { v: 2 }];
     const config: ChartFormConfig = { showNormalFit: true, histnorm: "percent" };
     const result = transformHistogramData(rows, [ds("y", "v")], config);
-    expect(result.chartSeries[0].histnorm).toBe("probability density");
+    expect(result.chartSeries[0].histnorm).toBe("percent");
   });
 
   it("passes nbinsx through on vertical orientation, nbinsy on horizontal", () => {
@@ -98,5 +98,21 @@ describe("transformHistogramData", () => {
     const result = transformHistogramData(rows, sources, baseConfig);
     expect(result.subplots).toBeDefined();
     expect(result.subplots?.cells.map((c) => c.title)).toEqual(["X", "Y"]);
+  });
+
+  it("stamps bingroup per facet cell so categories share bin edges within a cell", () => {
+    const rows = [
+      { v: 1, g: "A", site: "X" },
+      { v: 2, g: "B", site: "X" },
+      { v: 3, g: "A", site: "Y" },
+      { v: 4, g: "B", site: "Y" },
+    ];
+    const sources = [ds("y", "v"), ds("color", "g"), ds("facet", "site")];
+    const result = transformHistogramData(rows, sources, baseConfig);
+    const cellX = result.chartSeries.filter((s) => s.xaxisId === "x");
+    const cellY = result.chartSeries.filter((s) => s.xaxisId === "x2");
+    expect(new Set(cellX.map((s) => s.bingroup))).toHaveProperty("size", 1);
+    expect(new Set(cellY.map((s) => s.bingroup))).toHaveProperty("size", 1);
+    expect(cellX[0]?.bingroup).not.toEqual(cellY[0]?.bingroup);
   });
 });

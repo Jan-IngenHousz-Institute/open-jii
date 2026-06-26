@@ -17,6 +17,8 @@
       "version": "Versie",
       "runProtocol": "Protocol uitvoeren",
       "running": "Wordt uitgevoerd...",
+      "interactionTitle": "Volg het instrument",
+      "interactionHint": "Dit protocol pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen.",
       "results": "Resultaten",
       "success": "Succes",
       "failed": "Mislukt",

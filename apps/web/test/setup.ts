@@ -38,6 +38,51 @@ Element.prototype.scrollIntoView = vi.fn();
 Element.prototype.hasPointerCapture = vi.fn(() => false);
 Element.prototype.setPointerCapture = vi.fn();
 Element.prototype.releasePointerCapture = vi.fn();
+
+// jsdom lacks canvas + SVGPathElement.getTotalLength; Plotly probes both.
+if (typeof SVGPathElement !== "undefined") {
+  Object.defineProperty(SVGPathElement.prototype, "getTotalLength", {
+    configurable: true,
+    value: vi.fn(() => 0),
+  });
+}
+Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", {
+  configurable: true,
+  value: vi.fn(() => "data:,"),
+});
+Object.defineProperty(HTMLCanvasElement.prototype, "toBlob", {
+  configurable: true,
+  value: vi.fn((cb: (blob: Blob | null) => void) => cb(new Blob())),
+});
+Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+  configurable: true,
+  value: vi.fn(() => ({
+    fillStyle: "",
+    fillRect: vi.fn(),
+    clearRect: vi.fn(),
+    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray() })),
+    createImageData: vi.fn(() => ({ data: new Uint8ClampedArray() })),
+    putImageData: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    stroke: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    rotate: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    measureText: vi.fn(() => ({ width: 0 })),
+    transform: vi.fn(),
+    setTransform: vi.fn(),
+    rect: vi.fn(),
+    clip: vi.fn(),
+  })),
+});
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -115,19 +160,18 @@ vi.mock("next/navigation", () => ({
   ReadonlyURLSearchParams: URLSearchParams,
 }));
 
-// `clearAllMocks` leaves per-test `mockReturnValue(...)` in place, so
-// re-apply defaults here. The try/catch handles files that override
-// `next/navigation` with a partial mock — vitest's mock proxy throws
-// on access to exports the factory didn't return.
+// clearAllMocks leaves per-test mockReturnValue(...) in place; re-apply
+// defaults here. Files that partially re-mock next/navigation get caught
+// because the proxy throws on access to exports the factory didn't return.
 beforeEach(async () => {
   try {
     const nav = await import("next/navigation");
-    vi.mocked(nav.useRouter).mockReturnValue(mockRouter as never);
+    vi.mocked(nav.useRouter).mockReturnValue(mockRouter);
     vi.mocked(nav.usePathname).mockReturnValue("/platform/experiments");
-    vi.mocked(nav.useSearchParams).mockReturnValue(new URLSearchParams() as never);
+    vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams());
     vi.mocked(nav.useParams).mockReturnValue({ locale: "en-US" });
   } catch {
-    // Partial override of next/navigation; leave it alone.
+    // Partial override; leave it alone.
   }
 });
 

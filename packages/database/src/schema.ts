@@ -435,25 +435,25 @@ export const workbookVersions = pgTable(
   ],
 );
 
-export const iotDevices = pgTable(
-  "iot_devices",
+export const experimentDashboards = pgTable(
+  "experiment_dashboards",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    thingName: text("thing_name").unique().notNull(),
-    serialNumber: text("serial_number").unique().notNull(),
-    deviceClass: text("device_class").notNull(),
-    certificateId: text("certificate_id").notNull(),
-    certificateArn: text("certificate_arn").notNull(),
-    status: text("status").notNull().default("active"),
-    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
-    provisionedAt: timestamp("provisioned_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    layout: jsonb("layout")
+      .notNull()
+      .default(sql`'{"columns":12,"rowHeight":80,"gap":16}'::jsonb`),
+    widgets: jsonb("widgets")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
       .notNull(),
-    rotatedAt: timestamp("rotated_at"),
-    revokedAt: timestamp("revoked_at"),
     ...timestamps,
   },
-  (table) => [
-    check("iot_devices_status_check", sql`${table.status} IN ('active', 'rotating', 'revoked')`),
-  ],
+  (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );

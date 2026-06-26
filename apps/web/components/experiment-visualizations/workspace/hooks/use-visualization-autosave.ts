@@ -12,6 +12,9 @@ import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-statu
 import type { ChartFormValues } from "../../charts/chart-config";
 import { sanitizeDataConfigForSave } from "../../charts/data/aggregation";
 
+// Module-scoped: inline arrows churn useAutosave's memo every render.
+const stringifyChart = (v: ChartFormValues) => JSON.stringify(v);
+
 interface UseVisualizationAutosaveOptions {
   form: UseFormReturn<ChartFormValues>;
   experimentId: string;
@@ -40,7 +43,7 @@ export function useVisualizationAutosave({
 
   const autosave = useAutosave<ChartFormValues>({
     value: values,
-    toKey: (v) => JSON.stringify(v),
+    toKey: stringifyChart,
     save,
   });
   useReportAutosaveStatus(autosave);

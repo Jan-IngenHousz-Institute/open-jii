@@ -783,6 +783,16 @@ describe("utils", () => {
     it("ignores null gaps when classifying", () => {
       expect(detectAxisType([null, "2025-08-26", null, "2025-08-27"])).toBe("date");
     });
+
+    it("returns 'date' for year-month strings (e.g. date_trunc('month'))", () => {
+      // Stack mode on area charts only works on numeric/date axes; if
+      // these read as 'category' Plotly silently drops the stack call.
+      expect(detectAxisType(["2025-01", "2025-02", "2025-03"])).toBe("date");
+    });
+
+    it("returns 'date' for year-only strings", () => {
+      expect(detectAxisType(["2023", "2024", "2025"])).toBe("date");
+    });
   });
 
   describe("refineAxisType", () => {

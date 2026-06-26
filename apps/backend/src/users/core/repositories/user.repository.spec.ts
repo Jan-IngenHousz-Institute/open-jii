@@ -415,6 +415,34 @@ describe("UserRepository", () => {
       expect(result.value).toBe(true);
     });
 
+    it("should return true when the only other admin is deactivated", async () => {
+      // Arrange
+      const activeAdminId = await testApp.createTestUser({
+        email: "activeadmin@example.com",
+      });
+      const deactivatedAdminId = await testApp.createTestUser({
+        email: "deactivatedadmin@example.com",
+        activated: false,
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Deactivated Co-Admin Experiment",
+        userId: activeAdminId,
+      });
+
+      // A second admin exists but is deactivated, so the active user is effectively the sole
+      // admin and deletion must stay blocked.
+      await testApp.addExperimentMember(experiment.id, deactivatedAdminId, "admin");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(activeAdminId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
     it("should return false when user is only a member, not an admin", async () => {
       // Arrange
       const adminId = await testApp.createTestUser({
@@ -789,6 +817,18 @@ describe("UserRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual([]);
+    });
+
+    it("should ignore malformed (non-uuid) user IDs without erroring", async () => {
+      // A non-uuid id would otherwise raise a Postgres uuid cast error and fail
+      // the whole batch.
+      const result = await repository.findUsersByIds([testUser1Id, "dev-user"]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]?.userId).toBe(testUser1Id);
     });
 
     it("should handle duplicate user IDs", async () => {

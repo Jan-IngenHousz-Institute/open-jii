@@ -921,6 +921,116 @@ export const zExperimentVisualizationPathParam = z.object({
 export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
 export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
 
+export const zWidgetLayout = z.object({
+  col: z.number().int().min(0),
+  row: z.number().int().min(0),
+  colSpan: z.number().int().min(1).max(24),
+  rowSpan: z.number().int().min(1).max(48),
+});
+
+const zWidgetBase = z.object({
+  id: z.string().uuid(),
+  layout: zWidgetLayout,
+});
+
+export const zVisualizationWidget = zWidgetBase.extend({
+  type: z.literal("visualization"),
+  config: z.object({
+    visualizationId: z.string().uuid().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(false),
+    title: z.string().optional(),
+    description: z.string().optional(),
+  }),
+});
+
+export const zRichTextWidget = zWidgetBase.extend({
+  type: z.literal("richText"),
+  config: z.object({
+    html: z.string().default(""),
+  }),
+});
+
+export const zTableWidget = zWidgetBase.extend({
+  type: z.literal("table"),
+  config: z.object({
+    tableName: z.string().optional(),
+    columns: z.array(z.string().min(1)).optional(),
+    pageSize: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]).default(25),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(true),
+    // AND-merged with dashboard-level filter widgets targeting the same table.
+    filters: z.array(zDataFilter).optional(),
+  }),
+});
+
+// Single-column control card; AND-merges into widgets whose `tableName` matches.
+export const zFilterWidget = zWidgetBase.extend({
+  type: z.literal("filter"),
+  config: z.object({
+    tableName: z.string().optional(),
+    column: z.string().optional(),
+    operator: zDataFilterOperator.optional(),
+    defaultValue: zDataFilterValue.optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    showTitle: z.boolean().optional().default(true),
+    showDescription: z.boolean().optional().default(true),
+  }),
+});
+
+export const zDashboardWidget = z.discriminatedUnion("type", [
+  zVisualizationWidget,
+  zRichTextWidget,
+  zTableWidget,
+  zFilterWidget,
+]);
+
+export const zDashboardLayout = z.object({
+  columns: z.number().int().min(1).max(24).default(12),
+  rowHeight: z.number().int().min(20).max(400).default(80),
+  gap: z.number().int().min(0).max(64).default(16),
+});
+
+export const zExperimentDashboard = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  layout: zDashboardLayout,
+  widgets: z.array(zDashboardWidget),
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentDashboardList = z.array(zExperimentDashboard);
+
+export const zCreateExperimentDashboardBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  layout: zDashboardLayout.partial().optional(),
+  widgets: z.array(zDashboardWidget).optional(),
+});
+
+export const zUpdateExperimentDashboardBody = zCreateExperimentDashboardBody.partial();
+
+export const zListExperimentDashboardsQuery = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+export const zExperimentDashboardPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  dashboardId: z.string().uuid().describe("ID of the dashboard"),
+});
+
+export const zCreateExperimentDashboardResponse = zExperimentDashboard;
+export const zUpdateExperimentDashboardResponse = zExperimentDashboard;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -1081,6 +1191,30 @@ export const zAddExperimentMembersBody = z.object({
 
 export const zUpdateExperimentMemberRoleBody = z.object({
   role: zExperimentMemberRole.describe("New role to assign to the member"),
+});
+
+// Bulk hand-off of admin rights used by the account-deletion flow: each entry promotes (or adds)
+// the target user as an admin of one experiment the caller is currently sole admin of.
+export const zTransferExperimentAdminBody = z.object({
+  transfers: z
+    .array(
+      z.object({
+        experimentId: z.string().uuid().describe("Experiment to transfer admin rights on"),
+        targetUserId: z.string().uuid().describe("User to make an admin of the experiment"),
+      }),
+    )
+    .min(1)
+    .describe("Per-experiment admin assignments"),
+});
+
+export const zTransferExperimentAdminResult = z.object({
+  experimentId: z.string().uuid(),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+
+export const zTransferExperimentAdminResponse = z.object({
+  results: z.array(zTransferExperimentAdminResult),
 });
 
 // --- Experiment Join Request Schemas ---
@@ -1687,6 +1821,9 @@ export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
 export type UpdateExperimentMemberRoleBody = z.infer<typeof zUpdateExperimentMemberRoleBody>;
+export type TransferExperimentAdminBody = z.infer<typeof zTransferExperimentAdminBody>;
+export type TransferExperimentAdminResult = z.infer<typeof zTransferExperimentAdminResult>;
+export type TransferExperimentAdminResponse = z.infer<typeof zTransferExperimentAdminResponse>;
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
@@ -1743,6 +1880,20 @@ export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizatio
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
 export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
 export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Dashboard types
+export type WidgetLayout = z.infer<typeof zWidgetLayout>;
+export type VisualizationWidget = z.infer<typeof zVisualizationWidget>;
+export type RichTextWidget = z.infer<typeof zRichTextWidget>;
+export type TableWidget = z.infer<typeof zTableWidget>;
+export type FilterWidget = z.infer<typeof zFilterWidget>;
+export type DashboardWidget = z.infer<typeof zDashboardWidget>;
+export type DashboardLayout = z.infer<typeof zDashboardLayout>;
+export type ExperimentDashboard = z.infer<typeof zExperimentDashboard>;
+export type ExperimentDashboardList = z.infer<typeof zExperimentDashboardList>;
+export type CreateExperimentDashboardBody = z.infer<typeof zCreateExperimentDashboardBody>;
+export type UpdateExperimentDashboardBody = z.infer<typeof zUpdateExperimentDashboardBody>;
+export type ListExperimentDashboardsQuery = z.infer<typeof zListExperimentDashboardsQuery>;
 
 // Annotation types
 export type AnnotationType = z.infer<typeof zAnnotationType>;

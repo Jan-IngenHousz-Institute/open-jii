@@ -1,10 +1,12 @@
 import { Injectable, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import {
   eq,
   ilike,
   or,
   and,
+  count,
   inArray,
   organizations,
   profiles,
@@ -12,6 +14,7 @@ import {
   accounts,
   sessions,
   // authenticators table removed - Better Auth uses accounts table
+  experiments,
   experimentMembers,
   sql,
   isNull,
@@ -35,6 +38,7 @@ import {
   UserProfileDto,
   CreateUserProfileDto,
   UserProfileMetadata,
+  SoleAdminExperiment,
 } from "../models/user.model";
 
 @Injectable()
@@ -70,7 +74,10 @@ export class UserRepository {
 
   async findUsersByIds(userIds: string[]): Promise<Result<UserProfileMetadata[]>> {
     return tryCatch(async () => {
-      if (userIds.length === 0) {
+      // users.id is a uuid column; a non-uuid id would raise a Postgres cast
+      // error and fail the whole batch, so drop malformed ids here.
+      const validIds = userIds.filter((id) => z.string().uuid().safeParse(id).success);
+      if (validIds.length === 0) {
         return [];
       }
 
@@ -83,7 +90,7 @@ export class UserRepository {
         })
         .from(users)
         .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(inArray(users.id, userIds));
+        .where(inArray(users.id, validIds));
 
       return result;
     });
@@ -147,37 +154,60 @@ export class UserRepository {
     );
   }
 
-  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+  /**
+   * Returns the experiments where this user is the *only* admin. These block account deletion,
+   * since deleting the user would leave the experiment without an admin.
+   */
+  async findSoleAdminExperiments(userId: string): Promise<Result<SoleAdminExperiment[]>> {
     return tryCatch(async () => {
-      // Find all experiments where this user is an admin
-      const adminRows = await this.database
-        .select({ experimentId: experimentMembers.experimentId })
+      // 1. Find all experiments where this user is an admin
+      const adminExperiments = await this.database
+        .select({
+          id: experiments.id,
+          name: experiments.name,
+          status: experiments.status,
+        })
         .from(experimentMembers)
+        .innerJoin(experiments, eq(experiments.id, experimentMembers.experimentId))
         .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
 
-      if (adminRows.length === 0) {
-        return false;
+      if (adminExperiments.length === 0) {
+        return [];
       }
 
-      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
-      for (const row of adminRows) {
-        const admins = await this.database
-          .select()
-          .from(experimentMembers)
-          .where(
-            and(
-              eq(experimentMembers.experimentId, row.experimentId),
-              eq(experimentMembers.role, "admin"),
-            ),
-          );
+      // 2. Active-admin count per experiment. Deactivated admins can't own an experiment (the same
+      //    rule the transfer flow enforces on its targets), so they don't count toward keeping one
+      //    staffed — otherwise a sole active admin could delete their account and orphan it.
+      const experimentIds = adminExperiments.map((e) => e.id);
+      const adminCounts = await this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          total: count(),
+        })
+        .from(experimentMembers)
+        .innerJoin(profiles, eq(profiles.userId, experimentMembers.userId))
+        .where(
+          and(
+            inArray(experimentMembers.experimentId, experimentIds),
+            eq(experimentMembers.role, "admin"),
+            eq(profiles.activated, true),
+          ),
+        )
+        .groupBy(experimentMembers.experimentId);
 
-        if (admins.length === 1) {
-          return true;
-        }
-      }
+      const soleAdminIds = new Set(
+        adminCounts.filter((c) => Number(c.total) === 1).map((c) => c.experimentId),
+      );
 
-      return false;
+      return adminExperiments.filter((e) => soleAdminIds.has(e.id));
     });
+  }
+
+  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+    const result = await this.findSoleAdminExperiments(userId);
+    return result.map(
+      (soleAdminExperiments: SoleAdminExperiment[]) => soleAdminExperiments.length > 0,
+    );
   }
 
   async delete(id: string): Promise<Result<void>> {

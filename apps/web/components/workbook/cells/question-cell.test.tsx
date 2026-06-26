@@ -94,9 +94,19 @@ describe("QuestionCellComponent", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: /add option/i }));
+    await user.click(screen.getByRole("button", { name: "questionCard.addOption" }));
     const updated = onUpdate.mock.calls[0][0] as QuestionCell;
     expect(updated.question.kind === "multi_choice" && updated.question.options).toHaveLength(2);
+  });
+
+  it("collapses options to a summary when there are many (>25)", () => {
+    const options = Array.from({ length: 30 }, (_, i) => `Plot ${i + 1}`);
+    renderQuestion({
+      question: { kind: "multi_choice", text: "Pick a plot", required: false, options },
+    });
+    // The per-option inputs are replaced by a summary (count + preview).
+    expect(screen.getByText("questionCard.optionCount")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Plot 1")).not.toBeInTheDocument();
   });
 
   it("toggles the required switch", async () => {
@@ -164,7 +174,7 @@ describe("QuestionCellComponent", () => {
       expect(yesNoButton).toBeDisabled();
     });
 
-    it("disables multi-choice option inputs and hides add/remove buttons", () => {
+    it("disables multi-choice option inputs and the add button", () => {
       renderQuestion(
         {
           question: {
@@ -178,7 +188,7 @@ describe("QuestionCellComponent", () => {
       );
       expect(screen.getByDisplayValue("Red")).toBeDisabled();
       expect(screen.getByDisplayValue("Blue")).toBeDisabled();
-      expect(screen.queryByRole("button", { name: /add option/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "questionCard.addOption" })).toBeDisabled();
     });
   });
 });

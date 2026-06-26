@@ -1,51 +1,7 @@
-// Tailwind config in plain CJS for Metro/EAS compatibility
-const nativewind = require("nativewind/preset");
-const baseConfig = require("@repo/tailwind-config/native");
+// Tailwind v4 reads its theme/colors from global.css (@theme).
+// Only the content globs live here, for Metro/EAS compatibility.
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{ts,tsx}"],
-  presets: [baseConfig, nativewind],
-  // The shared base uses `darkMode: ['class']` which NativeWind v4 silently
-  // ignores (its dark-mode plugin requires the selector as the array's
-  // second item, or a plain string). Override here so `dark:` variants and
-  // CSS-var swapping under `.dark:root` actually fire on native.
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        // JII-specific semantic tokens layered on top of the shared base
-        // (background/card/border/foreground/muted/etc. come from baseConfig).
-        surface: "hsl(var(--surface))",
-        "on-surface": "hsl(var(--on-surface))",
-        "on-background": "hsl(var(--on-background))",
-        "on-primary": "hsl(var(--on-primary))",
-        divider: "hsl(var(--divider))",
-        inactive: "hsl(var(--inactive))",
-        "gray-background": "hsl(var(--gray-background))",
-        "jii-primary": {
-          DEFAULT: "hsl(var(--jii-primary))",
-          bright: "hsl(var(--jii-primary-bright))",
-        },
-        "jii-secondary": {
-          blue: "hsl(var(--jii-secondary-blue))",
-          yellow: "hsl(var(--jii-secondary-yellow))",
-        },
-        "jii-darker-green": "hsl(var(--jii-darker-green))",
-        "jii-yellow": "hsl(var(--jii-yellow))",
-        "jii-yellow-light": "hsl(var(--jii-yellow-light))",
-        "jii-mint": "hsl(var(--jii-mint))",
-        "jii-mint-light": "hsl(var(--jii-mint-light))",
-        "muted-body": "hsl(var(--muted-body))",
-        "badge-active": "hsl(var(--badge-active))",
-        "badge-stale": "hsl(var(--badge-stale))",
-        "badge-published": "hsl(var(--badge-published))",
-        "badge-featured": "hsl(var(--badge-featured))",
-        success: "hsl(var(--success))",
-        warning: "hsl(var(--warning))",
-        error: "hsl(var(--error))",
-        info: "hsl(var(--info))",
-      },
-    },
-  },
+  content: ["./src/**/*.{ts,tsx}", "./index.tsx"],
 };

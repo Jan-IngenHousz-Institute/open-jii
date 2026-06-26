@@ -6,6 +6,7 @@ import { useId } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
+import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { FormSlider } from "@repo/ui/components/form-slider";
 import { Input } from "@repo/ui/components/input";
 
@@ -23,10 +24,31 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
   const fillId = useId();
   const showColorbarId = useId();
+  const showMarkersId = useId();
 
   return (
     <CollapsibleStyleSection title={t("workspace.style.densityPlot2dOptions")} flat={flat}>
       <StyleSubsection title={t("workspace.style.densityPlot2dPoints")}>
+        <FormField
+          control={form.control}
+          name="config.density2dShowMarkers"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox
+                  id={showMarkersId}
+                  // Default-on: treat undefined as checked.
+                  checked={field.value !== false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel htmlFor={showMarkersId} className="text-xs font-medium">
+                {t("workspace.style.density2dShowMarkers")}
+              </FormLabel>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="config.density2dMarkerSize"
@@ -58,6 +80,26 @@ function DensityPlot2DOptions({ form, flat }: ChartPanelProps) {
               onCommit={field.onChange}
               formatBadge={(v) => `${Math.round(v * 100)}%`}
             />
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="config.color.0"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-medium">
+                {t("workspace.style.markerColor")}
+              </FormLabel>
+              <FormControl>
+                <FormColorInput
+                  value={typeof field.value === "string" ? field.value : undefined}
+                  fallback="#3b82f6"
+                  onCommit={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
       </StyleSubsection>

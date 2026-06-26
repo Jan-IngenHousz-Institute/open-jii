@@ -24,6 +24,11 @@ import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/a
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { DetachWorkbookUseCase } from "./application/use-cases/detach-workbook/detach-workbook";
+import { CreateExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/create-experiment-dashboard";
+import { DeleteExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/delete-experiment-dashboard";
+import { GetExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/get-experiment-dashboard";
+import { ListExperimentDashboardsUseCase } from "./application/use-cases/experiment-dashboards/list-experiment-dashboards";
+import { UpdateExperimentDashboardUseCase } from "./application/use-cases/experiment-dashboards/update-experiment-dashboard";
 import { AddAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "./application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "./application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
@@ -49,6 +54,7 @@ import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experi
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
+import { TransferExperimentAdminUseCase } from "./application/use-cases/experiment-members/transfer-experiment-admin";
 import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
@@ -75,6 +81,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
+import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
@@ -89,6 +96,7 @@ import { ExperimentVisualizationRepository } from "./core/repositories/experimen
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
+import { ExperimentDashboardsController } from "./presentation/experiment-dashboards.controller";
 // Controllers
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
 import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
@@ -125,6 +133,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentJoinRequestsController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
+    ExperimentDashboardsController,
     ExperimentLocationsController,
     ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,
@@ -157,6 +166,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentMetadataRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
+    ExperimentDashboardRepository,
     ExperimentDataRepository,
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
@@ -199,6 +209,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
     UpdateExperimentMemberRoleUseCase,
+    TransferExperimentAdminUseCase,
 
     // Experiment join request use cases
     RequestJoinExperimentUseCase,
@@ -221,6 +232,13 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentVisualizationUseCase,
     UpdateExperimentVisualizationUseCase,
     DeleteExperimentVisualizationUseCase,
+
+    // Experiment dashboard use cases
+    ListExperimentDashboardsUseCase,
+    CreateExperimentDashboardUseCase,
+    GetExperimentDashboardUseCase,
+    UpdateExperimentDashboardUseCase,
+    DeleteExperimentDashboardUseCase,
 
     // Flow use cases
     GetFlowUseCase,

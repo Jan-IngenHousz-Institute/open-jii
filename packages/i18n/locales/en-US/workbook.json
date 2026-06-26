@@ -22,6 +22,8 @@
     "filterWorkbooks": "Filter workbooks",
     "clearSearch": "Clear search",
     "lastUpdate": "Last update",
+    "version": "Version",
+    "draftVersion": "Draft",
     "noCells": "No cells yet. Open the workbook to start building your notebook.",
     "saving": "Saving...",
     "allChangesSaved": "All changes saved",

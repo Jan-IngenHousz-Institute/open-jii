@@ -596,4 +596,30 @@ describe("IotProtocolRunner", () => {
     // run button is only rendered when isConnected is true. This results in
     // 93.75% branch coverage, which is acceptable for this component.
   });
+
+  describe("interaction prompt (clamp open/close gates)", () => {
+    const GATED_PROTOCOL = [{ _protocol_set_: [{ par_led_start_on_open: 2 }] }];
+
+    it("shows the open/close prompt when connected to a gated protocol", () => {
+      mockIsConnected = true;
+      render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
+
+      expect(screen.getByText("iot.protocolRunner.interactionTitle")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.interactionHint")).toBeInTheDocument();
+    });
+
+    it("hides the prompt for a protocol without clamp gates", () => {
+      mockIsConnected = true;
+      render(<IotProtocolRunner {...defaultProps} />);
+
+      expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+    });
+
+    it("hides the prompt until a device is connected", () => {
+      mockIsConnected = false;
+      render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
+
+      expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+    });
+  });
 });

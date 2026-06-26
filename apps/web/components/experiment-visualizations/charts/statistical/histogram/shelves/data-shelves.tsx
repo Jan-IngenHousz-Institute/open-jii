@@ -68,7 +68,7 @@ export const histogramDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: HistogramColorShelf,
     summary: (form) => {

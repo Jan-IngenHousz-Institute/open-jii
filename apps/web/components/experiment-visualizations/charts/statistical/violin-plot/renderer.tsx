@@ -43,6 +43,8 @@ export function ViolinPlotRenderer({
     chartConfig.violinShowMeanline,
     chartConfig.violinSide,
     chartConfig.violinScalemode,
+    chartConfig.violinBoxColor,
+    chartConfig.violinMarkerColor,
     chartConfig.facetColumns,
     chartConfig.facetSharedX,
     chartConfig.facetSharedY,

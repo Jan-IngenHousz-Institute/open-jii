@@ -92,6 +92,58 @@ vulnerabilities:
   - id: CVE-2026-31790
     statement: "RSASVE info disclosure. No RSA key encapsulation."
 
+  - id: CVE-2026-34180
+    statement: >-
+      Heap buffer over-read in ASN.1 decoding. Sandbox parses no
+      certificates and has no TLS. Fixed in amzn2023.0.5; awaiting
+      AWS base image republish.
+    expired_at: 2026-11-05
+
+  # openssl batch fixed in amzn2023.0.5; awaiting AWS base image republish.
+  # Sandbox is VPC-isolated: no TLS, no network, no certificate/CMS processing.
+  - id: CVE-2026-34181
+    statement: "PKCS#12 PBMAC1 short-salt acceptance. Sandbox parses no PKCS#12."
+    expired_at: 2026-11-05
+  - id: CVE-2026-34182
+    statement: "CMS AuthEnvelopedData forgery. No CMS processing."
+    expired_at: 2026-11-05
+  - id: CVE-2026-34183
+    statement: "QUIC PATH_CHALLENGE memory growth. No QUIC; sandbox has no network."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42764
+    statement: "QUIC server NULL deref. No QUIC; sandbox has no network."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42766
+    statement: "Password-based CMS NULL deref. No CMS processing."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42767
+    statement: "CRMF EncryptedValue NULL deref. No CMP/CRMF."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42768
+    statement: "Multi-RecipientInfo Bleichenbacher oracle. No CMS decryption."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42769
+    statement: "Trust-anchor substitution in cert verification. Sandbox verifies no certs."
+    expired_at: 2026-11-05
+  - id: CVE-2026-42770
+    statement: "FFC-DH peer validation flaw. No DH key exchange."
+    expired_at: 2026-11-05
+  - id: CVE-2026-45445
+    statement: "AES-OCB IV ignored on EVP_Cipher path. Sandbox does no OCB encryption."
+    expired_at: 2026-11-05
+  - id: CVE-2026-45446
+    statement: "Empty-message tag mis-processing. Sandbox does no AEAD on untrusted input."
+    expired_at: 2026-11-05
+  - id: CVE-2026-45447
+    statement: "Heap UAF in PKCS7_verify. Sandbox verifies no PKCS7."
+    expired_at: 2026-11-05
+  - id: CVE-2026-7383
+    statement: "Heap overflow via signed integer. No untrusted crypto input in sandbox."
+    expired_at: 2026-11-05
+  - id: CVE-2026-9076
+    statement: "DoS via heap. No untrusted TLS/crypto input in sandbox."
+    expired_at: 2026-11-05
+
   # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
   # CVE is in Go's html/template package. Sandbox does not render HTML.
   - id: CVE-2026-27142
@@ -130,6 +182,23 @@ vulnerabilities:
       TextDecoder, require, or Function, and Buffer.transcode
       would not accept these charsets anyway. Fix is in
       amzn2023.0.4; awaiting AWS base image republish.
+    expired_at: 2026-11-05
+
+  # form-data in Lambda runtime (/var/runtime/node_modules/form-data).
+  # Used by AWS SDK for multipart HTTP uploads. Fix requires AWS to republish the base image.
+  - id: CVE-2026-12143
+    statement: >-
+      form-data multipart-stream vulnerability in AWS Lambda runtime SDK.
+      Sandbox has no outbound HTTP and no IAM creds; SDK upload paths are unreachable.
+    expired_at: 2026-11-05
+
+  # ws in Lambda runtime (/var/runtime/node_modules/).
+  # Used by AWS SDK for WebSocket-based APIs. Fix requires AWS to republish the base image.
+  - id: CVE-2026-48779
+    statement: >-
+      ws memory-exhaustion DoS via tiny WebSocket fragments.
+      Lambda is invoked via the runtime API, not inbound WebSocket connections;
+      no attacker-controlled frames can reach this library.
     expired_at: 2026-11-05
 
   # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.

@@ -10,7 +10,7 @@ import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
 import { rowKeyForSource } from "../../data/aggregation";
 import { toBucketKey } from "../../data/cell-coercion";
-import { dataSourcesByRole } from "../../data/data-sources";
+import { firstDataSourceByRole } from "../../data/data-sources";
 import { useChartData } from "../../hooks/use-chart-data";
 import type { ChartRendererProps } from "../../types";
 
@@ -21,15 +21,11 @@ export function LollipopRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const xColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "x")[0]?.source
+  const xColumn = firstDataSourceByRole(visualization.dataConfig.dataSources, "x")?.source
     .columnName;
-  const yEntry = dataSourcesByRole(visualization.dataConfig.dataSources, "y")[0];
-  const yColumn = yEntry.source.columnName;
-  // When the Y series carries a per-series aggregate (sum/avg/cumsum/…),
-  // the SQL projects it under `aggregateAliasForSource`'s alias scheme,
-  // not under the bare column name. Reading via `rowKeyForSource` keeps
-  // raw + aggregated rows working without a special-case branch here.
-  const yRowKey = rowKeyForSource(yEntry.source, yEntry.index);
+  const yEntry = firstDataSourceByRole(visualization.dataConfig.dataSources, "y");
+  const yColumn = yEntry?.source.columnName;
+  const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
     orderBy: xColumn,
@@ -38,8 +34,7 @@ export function LollipopRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
 
-  // Lollipop is strictly single-series; the wrapper takes scalar
-  // categories[]/values[] and synthesises N stems + 1 dot internally.
+  // Single-series; the wrapper takes scalar arrays and emits stems + dots.
   const categories = useMemo<string[]>(() => {
     if (!xColumn) {
       return [];
@@ -51,17 +46,13 @@ export function LollipopRenderer({
     if (!yRowKey) {
       return [];
     }
-    // Plotly tolerates NaN as missing data on numeric axes, so coercing a
-    // non-numeric Y cell to NaN is preferable to silently dropping the row
-    // (which would misalign the categories array). The role contract
-    // restricts Y to numeric kinds, so this case is rare in practice.
+    // Coerce non-numeric to NaN (Plotly treats it as a gap); dropping the row
+    // would misalign categories[].
     return rows.map((row) => Number(row[yRowKey]));
   }, [rows, yRowKey]);
 
-  // Per-category error magnitudes when the Y series has an `errorColumn`
-  // set. `undefined` when unset so the wrapper skips the error block.
   const errors = useMemo<number[] | undefined>(() => {
-    const errorColumn = yEntry.source.errorColumn;
+    const errorColumn = yEntry?.source.errorColumn;
     if (!errorColumn) {
       return undefined;
     }
@@ -70,7 +61,7 @@ export function LollipopRenderer({
       const n = typeof v === "number" ? v : Number(v);
       return Number.isFinite(n) ? n : 0;
     });
-  }, [rows, yEntry.source.errorColumn]);
+  }, [rows, yEntry?.source.errorColumn]);
 
   const seriesColor = Array.isArray(chartConfig.color) ? chartConfig.color[0] : chartConfig.color;
   const dotSize = typeof chartConfig.marker?.size === "number" ? chartConfig.marker.size : 12;
@@ -79,11 +70,8 @@ export function LollipopRenderer({
     return <ChartConfigError message={t("errors.invalidConfiguration")} />;
   }
 
-  // Swap axis titles/types when horizontal so the form's "X axis" label
-  // (the user's mental model: X = categories) follows the category axis to
-  // the left side. Same convention used by bar/dot-plot. The LollipopChart
-  // wrapper falls back to placeholder titles ("Category" / "Value") when
-  // empty, which fills in nicely if the user hasn't named anything.
+  // Swap axis title/type when horizontal so the form's "X axis" still maps
+  // to the category axis (same convention as bar / dot-plot).
   const effectiveConfig: PlotlyChartConfig =
     orientation === "h"
       ? {
@@ -95,7 +83,7 @@ export function LollipopRenderer({
         }
       : chartConfig;
 
-  const hasRows = rows.length > 0 && Boolean(xColumn) && Boolean(yColumn);
+  const hasRows = rows.length > 0 && Boolean(xColumn) && Boolean(yColumn) && Boolean(yEntry);
 
   return (
     <ChartFrame
@@ -109,7 +97,7 @@ export function LollipopRenderer({
         <LollipopChart
           categories={categories}
           values={values}
-          name={yEntry.source.alias ?? yColumn}
+          name={yEntry?.source.alias ?? yColumn}
           color={seriesColor}
           orientation={orientation}
           stemWidth={chartConfig.stemWidth}

@@ -1,0 +1,160 @@
+{
+  "ui": {
+    "title": "Dashboards",
+    "subtitle": "Compose visualizations and narrative into a single layout.",
+    "actions": {
+      "create": "Nieuw dashboard",
+      "delete": "Dashboard verwijderen",
+      "edit": "Dashboard bewerken",
+      "done": "Klaar",
+      "back": "Terug naar dashboards"
+    },
+    "messages": {
+      "noDashboards": "Nog geen dashboards",
+      "noDashboardsDescription": "Maak je eerste dashboard of bekijk losse visualisaties.",
+      "browseVisualizations": "Visualisaties bekijken",
+      "createSuccess": "Dashboard aangemaakt",
+      "deleteSuccess": "Dashboard verwijderd",
+      "deleteConfirm": "\"{{name}}\" definitief verwijderen? Visualisaties waarnaar dit dashboard verwijst, worden niet beïnvloed.",
+      "loading": "Dashboard wordt geladen…",
+      "loadFailed": "Dashboard kon niet worden geladen",
+      "emptyDashboard": "Nog niets hier"
+    },
+    "labels": {
+      "createdBy": "Aangemaakt door",
+      "createdAt": "Aangemaakt",
+      "updatedAt": "Bijgewerkt",
+      "updatedAgo": "Bijgewerkt {{date}}",
+      "widgetCount_one": "{{count}} widget",
+      "widgetCount_other": "{{count}} widgets",
+      "columns": {
+        "name": "Naam",
+        "widgets": "Widgets",
+        "user": "Gebruiker",
+        "updated": "Bijgewerkt"
+      }
+    }
+  },
+  "form": {
+    "name": "Naam",
+    "namePlaceholder": "Naamloos dashboard",
+    "description": "Beschrijving",
+    "descriptionPlaceholder": "Beschrijving toevoegen"
+  },
+  "editor": {
+    "addWidget": "Widget toevoegen",
+    "modebar": {
+      "cursor": "Selecteren",
+      "dropHint": "Klik om te plaatsen"
+    },
+    "widgetTypes": {
+      "visualization": "Visualisatie",
+      "visualizationDescription": "Een bestaande grafiek per referentie insluiten",
+      "richText": "Markdown",
+      "richTextDescription": "Tekst of instructies toevoegen",
+      "table": "Tabel",
+      "tableDescription": "Toon gepagineerde rijen uit een experimenttabel",
+      "filter": "Filter",
+      "filterDescription": "Laat kijkers de getoonde gegevens van widgets beperken"
+    },
+    "inspector": {
+      "title": "Widget-instellingen",
+      "noSelection": "Selecteer een widget om de instellingen te bewerken.",
+      "layout": "Lay-out",
+      "col": "Kolom",
+      "row": "Rij",
+      "colSpan": "Breedte",
+      "rowSpan": "Hoogte",
+      "delete": "Widget verwijderen",
+      "actions": "Acties",
+      "display": "Weergave",
+      "chartType": "Grafiektype",
+      "visualization": "Visualisatie",
+      "more": "Meer",
+      "comingSoon": "Binnenkort",
+      "tabs": {
+        "widget": "Widget",
+        "data": "Gegevens",
+        "style": "Stijl"
+      },
+      "viz": {
+        "pickVisualizationFirst": "Kies eerst een visualisatie"
+      },
+      "moreShelves": "Meer"
+    },
+    "vizDataStrip": {
+      "dataset": "Dataset",
+      "fields": "Velden"
+    },
+    "vizStyleStrip": {
+      "style": "Stijl"
+    },
+    "visualizationConfig": {
+      "pickVisualization": "Visualisatie kiezen",
+      "pickHint": "Gebruik de inspector rechts om een grafiek te kiezen.",
+      "changeVisualization": "Visualisatie wijzigen",
+      "noneAvailable": "Nog geen visualisaties voor dit experiment.",
+      "newVisualization": "Nieuwe visualisatie",
+      "untitledViz": "Naamloze visualisatie",
+      "editVisualization": "Openen in editor",
+      "openInEditor": "Openen in editor",
+      "showTitle": "Titel tonen",
+      "showDescription": "Beschrijving tonen"
+    },
+    "filterConfig": {
+      "configureLabel": "Configureer dit filter",
+      "configureHint": "Gebruik de inspector om een tabel, kolom en operator te kiezen.",
+      "defaultValueHint": "Stelt de standaardwaarde van het dashboard in. Kijkers kunnen deze per sessie overschrijven."
+    },
+    "richTextConfig": {
+      "placeholder": "Schrijf iets…",
+      "emptyHint": "Klik om tekst toe te voegen"
+    },
+    "tableConfig": {
+      "pickTable": "Tabel kiezen",
+      "pickHint": "Gebruik de inspector rechts om een tabel te kiezen.",
+      "noneAvailable": "Geen tabellen beschikbaar voor dit experiment.",
+      "pageSize": "Paginagrootte",
+      "columns": "Kolommen",
+      "allColumns": "Alle",
+      "filters": "Filters",
+      "filtersHint": "Met AND samengevoegd met dashboard-filterwidgets die dezelfde tabel raken."
+    },
+    "widgetHeader": {
+      "title": "Titel",
+      "description": "Beschrijving",
+      "titlePlaceholder": "Titel toevoegen",
+      "descriptionPlaceholder": "Beschrijving toevoegen"
+    }
+  },
+  "widget": {
+    "missingVisualization": "Visualisatie niet gevonden",
+    "missingVisualizationDescription": "De grafiek waarnaar dit widget verwijst, is mogelijk verwijderd.",
+    "emptyVisualization": "Geen visualisatie gekozen",
+    "emptyVisualizationDescription": "Dit widget is nog niet aan een grafiek gekoppeld.",
+    "emptyRichText": "Leeg tekstblok",
+    "emptyRichTextDescription": "Dit tekst-widget heeft nog geen inhoud.",
+    "emptyTable": "Geen tabel gekozen",
+    "emptyTableDescription": "Dit widget is nog niet aan een tabel gekoppeld.",
+    "emptyFilter": "Filter niet geconfigureerd",
+    "emptyFilterDescription": "Open de inspector om een kolom en operator te kiezen.",
+    "emptyDashboard": "Leeg dashboard",
+    "emptyDashboardDescription": "Er zijn nog geen widgets toegevoegd.",
+    "filterReset": "Resetten",
+    "filterResetTitle": "Terugzetten op standaard",
+    "expand": "Vergroten",
+    "expandedPreview": "Voorbeeld",
+    "expandedPreviewDescription": "Full-size preview of the widget content.",
+    "tableLoadFailed": "Tabel kon niet worden geladen",
+    "tableLoadFailedDescription": "De tabel waarnaar dit widget verwijst, is mogelijk verwijderd of niet beschikbaar.",
+    "tablePageOf": "Pagina {{page}} van {{totalPages}}"
+  },
+  "overview": {
+    "title": "Dashboards",
+    "viewAll": "Alles bekijken",
+    "createDashboard": "Dashboard maken",
+    "browseVisualizations": "Visualisaties bekijken",
+    "emptyTitle": "Nog geen dashboards",
+    "emptyDescription": "Stel visualisaties en tekst samen in één lay-out, of ga direct naar losse grafieken."
+  }
+}

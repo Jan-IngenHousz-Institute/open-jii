@@ -1,25 +1,14 @@
 "use client";
 
-import {
-  AreaChart,
-  BarChart3,
-  Circle,
-  LayoutGrid,
-  Minus,
-  MoveVertical,
-  Settings2,
-  Spline,
-} from "lucide-react";
+import { AreaChart, LayoutGrid, Minus, MoveVertical, Settings2, Spline } from "lucide-react";
 
 import { AreaStyleSection } from "../../../../workspace/style-sections/area-style-section";
-import { BarStyleSection } from "../../../../workspace/style-sections/bar-style-section";
 import { DisplayOptionsSection } from "../../../../workspace/style-sections/display-options-section";
 import { ErrorBarStyleSection } from "../../../../workspace/style-sections/error-bar-style-section";
 import { FacetStyleSection } from "../../../../workspace/style-sections/facet-style-section";
 import { LineStyleSection } from "../../../../workspace/style-sections/line-style-section";
-import { MarkerStyleSection } from "../../../../workspace/style-sections/marker-style-section";
 import { ReferenceLinesSection } from "../../../../workspace/style-sections/reference-lines-section";
-import { hasTraceType } from "../../../shelf-visibility";
+import { hasAnyErrorColumn, hasFacetSource } from "../../../shelf-visibility";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
 function AreaDisplay({ form, flat }: ChartPanelProps) {
@@ -31,32 +20,8 @@ function AreaPrimaryStyle({ form, flat }: ChartPanelProps) {
 }
 
 function AreaLineStyle({ form, flat }: ChartPanelProps) {
-  // Area's outline + markers are styled via the line/marker controls;
-  // mirrors the standalone area panel.
+  // The outline above the area fill.
   return <LineStyleSection form={form} titleKey="workspace.style.lineOptions" flat={flat} />;
-}
-
-function AreaScatterSeries({ form, flat }: ChartPanelProps) {
-  return (
-    <MarkerStyleSection
-      form={form}
-      titleKey="workspace.style.scatterSeriesOptions"
-      defaultTitle="Scatter series"
-      flat={flat}
-    />
-  );
-}
-
-function AreaBarSeries({ form, flat }: ChartPanelProps) {
-  return (
-    <BarStyleSection
-      form={form}
-      titleKey="workspace.style.barSeriesOptions"
-      defaultTitle="Bar series"
-      showOrientation={false}
-      flat={flat}
-    />
-  );
 }
 
 function AreaErrorBar({ form, flat }: ChartPanelProps) {
@@ -91,24 +56,11 @@ export const areaStyleShelves: ShelfDef[] = [
     Component: AreaLineStyle,
   },
   {
-    key: "scatter",
-    labelKey: "workspace.style.scatterSeriesOptions",
-    icon: Circle,
-    Component: AreaScatterSeries,
-    visible: (form) => hasTraceType(form, "scatter"),
-  },
-  {
-    key: "bar",
-    labelKey: "workspace.style.barSeriesOptions",
-    icon: BarChart3,
-    Component: AreaBarSeries,
-    visible: (form) => hasTraceType(form, "bar"),
-  },
-  {
     key: "errorBar",
     labelKey: "workspace.style.errorBarOptions",
     icon: MoveVertical,
     Component: AreaErrorBar,
+    visible: hasAnyErrorColumn,
   },
   {
     key: "referenceLines",
@@ -121,5 +73,6 @@ export const areaStyleShelves: ShelfDef[] = [
     labelKey: "workspace.style.facetOptions",
     icon: LayoutGrid,
     Component: AreaFacetStyle,
+    visible: hasFacetSource,
   },
 ];

@@ -103,7 +103,9 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
 
     for path in matched_files:
         try:
-            local_path = path.replace("dbfs:", "/dbfs") if path.startswith("dbfs:") else path
+            # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
+            # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
+            local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
             df = parser(local_path)
             df = df.where(pd.notnull(df), None)
             rows = df.to_dict(orient="records")
@@ -233,8 +235,10 @@ def process_ambyte_upload() -> dict:
     if not UPLOAD_ID:
         raise Exception("UPLOAD_ID is required for source_kind=ambyte")
 
+    # Ambyte files land under the shared "uploads" volume dir (the backend uses
+    # volumeSourceType="uploads" for every kind), not a dedicated ambyte dir.
     ambyte_base_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
     )
     processed_output_path = (
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"

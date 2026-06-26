@@ -31,7 +31,7 @@ export function DataTable({ table }: DataTableProps) {
   return (
     <>
       <TouchableOpacity
-        className="bg-surface mb-4 rounded-lg p-4 shadow-sm shadow-black/10"
+        className="bg-surface shadow-xs mb-4 rounded-lg p-4 shadow-black/10"
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
       >

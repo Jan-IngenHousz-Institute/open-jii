@@ -71,7 +71,7 @@ export const boxPlotDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: BoxPlotColorShelf,
     summary: (form) => {

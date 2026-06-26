@@ -174,6 +174,22 @@ describe("FileUpload", () => {
     expect(input).not.toHaveAttribute("webkitdirectory");
   });
 
+  it("applies the accept attribute when provided", () => {
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} accept=".csv,.tsv" />,
+    );
+
+    const input = getFileInput(container);
+    expect(input).toHaveAttribute("accept", ".csv,.tsv");
+  });
+
+  it("omits the accept attribute when not provided", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
+
+    const input = getFileInput(container);
+    expect(input).not.toHaveAttribute("accept");
+  });
+
   it("shows validation errors when provided", () => {
     const validationErrors = ["File too large", "Invalid file type"];
 

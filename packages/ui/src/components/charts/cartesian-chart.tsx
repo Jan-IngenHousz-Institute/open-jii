@@ -391,7 +391,9 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
             line: series.marker?.line,
           }
         : undefined,
-    fill: series.fill ?? (isArea ? "tozeroy" : "none"),
+    // Plotly's stackgroup-implies-tonexty default doesn't render in
+    // plotly.js v3; set it explicitly.
+    fill: series.fill ?? (series.stackgroup ? "tonexty" : isArea ? "tozeroy" : "none"),
     fillcolor: series.fillcolor,
     connectgaps: series.connectgaps !== false,
     stackgroup: series.stackgroup,

@@ -76,10 +76,6 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       await queryClient.invalidateQueries({
         queryKey: ["macros"],
       });
-      // Invalidate breadcrumbs to update entity names
-      await queryClient.invalidateQueries({
-        queryKey: ["breadcrumbs"],
-      });
     },
     onSuccess: (data) => {
       // Call the provided onSuccess callback if it exists

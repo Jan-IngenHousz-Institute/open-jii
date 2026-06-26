@@ -128,4 +128,17 @@ describe("MacroCellComponent", () => {
       typeof useSession
     >);
   });
+
+  it("renders the pinned snapshot code instead of the live macro row", async () => {
+    // The live row has different code; with a snapshot present the live fetch is
+    // disabled and the pinned snapshot must win.
+    renderMacroCell(
+      { snapshot: { code: btoa("print('pinned')") } },
+      { code: btoa("print('live edit')") },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox")).toHaveValue("print('pinned')");
+    });
+  });
 });

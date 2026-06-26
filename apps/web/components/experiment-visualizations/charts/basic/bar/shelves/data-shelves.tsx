@@ -5,8 +5,8 @@ import { useMemo } from "react";
 
 import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
 
+import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";
 import { FacetShelf } from "../../../../workspace/shelves/facet-shelf";
-import { GroupByShelf } from "../../../../workspace/shelves/group-by-shelf";
 import { XAxisShelf } from "../../../../workspace/shelves/x-axis-shelf";
 import { YAxisShelf } from "../../../../workspace/shelves/y-axis-shelf";
 import { dataSourcesByRole, firstDataSourceByRole } from "../../../data/data-sources";
@@ -40,7 +40,7 @@ function BarGroupShelf({ form, columns, flat }: ChartPanelProps) {
   // Seaborn `hue=` slot: splits each X category into one bar per unique
   // value. The chart-level barmode picks how the sub-bars lay out.
   const groupColumns = useMemo(() => filterColumnsForRole(columns, "bar", "color"), [columns]);
-  return <GroupByShelf form={form} columns={groupColumns} flat={flat} />;
+  return <ColorDimensionShelf form={form} columns={groupColumns} categoricalOnly flat={flat} />;
 }
 
 function BarFacetShelfWrapper({ form, columns, flat }: ChartPanelProps) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { forwardRef } from "react";
 
 import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
@@ -22,62 +23,60 @@ interface FilterChipFaceProps {
   className?: string;
 }
 
-export function FilterChipFace({
-  filter,
-  column,
-  experimentId,
-  tableName,
-  onClick,
-  onRemove,
-  fullWidth = false,
-  className,
-}: FilterChipFaceProps) {
-  const { t } = useTranslation("common");
-  const operators = operatorsForColumn(column);
-  const opLabel = operators.find((o) => o.value === filter.operator)?.label ?? filter.operator;
-  const isContributor = column?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
-  const displayColumn = parentColumnName(filter.column);
+// forwardRef so Radix PopoverTrigger asChild can slot its positioning ref.
+export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
+  function FilterChipFace(
+    { filter, column, experimentId, tableName, onClick, onRemove, fullWidth = false, className },
+    ref,
+  ) {
+    const { t } = useTranslation("common");
+    const operators = operatorsForColumn(column);
+    const opLabel = operators.find((o) => o.value === filter.operator)?.label ?? filter.operator;
+    const isContributor = column?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
+    const displayColumn = parentColumnName(filter.column);
 
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onRemove();
-  };
+    const handleRemove = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onRemove();
+    };
 
-  return (
-    <div
-      className={cn(
-        "bg-background inline-flex h-7 items-center rounded-md border text-xs shadow-sm",
-        fullWidth && "flex w-full",
-        className,
-      )}
-    >
-      <button
-        type="button"
-        onClick={onClick}
+    return (
+      <div
+        ref={ref}
         className={cn(
-          "hover:bg-muted/50 inline-flex h-full items-center gap-1.5 rounded-l-md px-2",
-          fullWidth ? "min-w-0 flex-1 justify-start" : "min-w-0",
+          "bg-background shadow-xs inline-flex h-7 items-center rounded-md border text-xs",
+          fullWidth && "flex w-full",
+          className,
         )}
       >
-        <span className="truncate font-medium">{displayColumn}</span>
-        <span className="text-muted-foreground shrink-0">{opLabel}</span>
-        <ChipValue
-          filter={filter}
-          isContributor={isContributor}
-          fullWidth={fullWidth}
-          parentColumn={displayColumn}
-          experimentId={experimentId}
-          tableName={tableName}
-        />
-      </button>
-      <button
-        type="button"
-        onClick={handleRemove}
-        className="text-muted-foreground hover:bg-muted/50 hover:text-destructive inline-flex h-full w-6 shrink-0 items-center justify-center rounded-r-md border-l"
-        aria-label={t("dataFilters.removeFilterOn", { name: displayColumn })}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </div>
-  );
-}
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn(
+            "hover:bg-muted/50 inline-flex h-full cursor-pointer items-center gap-1.5 rounded-l-md px-2",
+            fullWidth ? "min-w-0 flex-1 justify-start" : "min-w-0",
+          )}
+        >
+          <span className="truncate font-medium">{displayColumn}</span>
+          <span className="text-muted-foreground shrink-0">{opLabel}</span>
+          <ChipValue
+            filter={filter}
+            isContributor={isContributor}
+            fullWidth={fullWidth}
+            parentColumn={displayColumn}
+            experimentId={experimentId}
+            tableName={tableName}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="text-muted-foreground hover:bg-muted/50 hover:text-destructive inline-flex h-full w-6 shrink-0 cursor-pointer items-center justify-center rounded-r-md border-l"
+          aria-label={t("dataFilters.removeFilterOn", { name: displayColumn })}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  },
+);

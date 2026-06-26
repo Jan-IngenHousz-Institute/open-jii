@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   CATEGORY_PALETTE,
+  COLOR_MAP_KEY_SEPARATOR,
   DEFAULT_PRIMARY_COLOR,
+  composeColorMapKey,
   getCategoryColor,
   getDefaultSeriesColor,
   withAlpha,
@@ -38,6 +40,35 @@ describe("getCategoryColor", () => {
 
   it("ignores the colorMap when no key is supplied", () => {
     expect(getCategoryColor(0, { A: "#abcdef" })).toBe(CATEGORY_PALETTE[0]);
+  });
+
+  it("prefers a composite series::category override over the plain key", () => {
+    const composite = composeColorMapKey("revenue_eur", "Hardware");
+    const colorMap = { [composite]: "#purple_per_series", Hardware: "#blue_all_series" };
+    expect(getCategoryColor(0, colorMap, "Hardware", "revenue_eur")).toBe("#purple_per_series");
+  });
+
+  it("falls back to the plain key when the composite has no entry", () => {
+    const colorMap = { Hardware: "#blue_all_series" };
+    expect(getCategoryColor(0, colorMap, "Hardware", "revenue_eur")).toBe("#blue_all_series");
+  });
+
+  it("falls back to the palette when neither composite nor plain hits", () => {
+    expect(getCategoryColor(3, {}, "Hardware", "revenue_eur")).toBe(CATEGORY_PALETTE[3]);
+  });
+
+  it("does not probe composite lookup when seriesKey is omitted", () => {
+    const composite = composeColorMapKey("revenue_eur", "Hardware");
+    const colorMap = { [composite]: "#purple_per_series" };
+    expect(getCategoryColor(0, colorMap, "Hardware")).toBe(CATEGORY_PALETTE[0]);
+  });
+});
+
+describe("composeColorMapKey", () => {
+  it("joins seriesKey and categoryKey with the documented separator", () => {
+    expect(composeColorMapKey("revenue_eur", "Hardware")).toBe(
+      `revenue_eur${COLOR_MAP_KEY_SEPARATOR}Hardware`,
+    );
   });
 });
 

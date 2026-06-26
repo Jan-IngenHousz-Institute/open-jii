@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Hash, HelpCircle, List, Pencil, Plus, Send, X } from "lucide-react";
+import { CheckCircle2, Hash, HelpCircle, List, Pencil, Send, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import type {
@@ -14,6 +14,7 @@ import { Switch } from "@repo/ui/components/switch";
 import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
 
+import { SelectOptionsEditor } from "../../question-card/select-options-editor/select-options-editor";
 import { CellWrapper } from "../cell-wrapper";
 import { QuestionNameEditor } from "../question-name-editor";
 
@@ -125,18 +126,12 @@ export function QuestionCellComponent({
 
   const handleAddOption = useCallback(() => {
     if (question.kind !== "multi_choice") return;
-    onUpdate({
-      ...cell,
-      question: {
-        ...question,
-        options: [...question.options, `Option ${question.options.length + 1}`],
-      },
-    });
+    onUpdate({ ...cell, question: { ...question, options: [...question.options, ""] } });
   }, [cell, question, onUpdate]);
 
   const handleRemoveOption = useCallback(
     (index: number) => {
-      if (question.kind !== "multi_choice" || question.options.length <= 1) return;
+      if (question.kind !== "multi_choice") return;
       onUpdate({
         ...cell,
         question: { ...question, options: question.options.filter((_, i) => i !== index) },
@@ -144,6 +139,22 @@ export function QuestionCellComponent({
     },
     [cell, question, onUpdate],
   );
+
+  const handleBulkAddOptions = useCallback(
+    (newOptions: string[]) => {
+      if (question.kind !== "multi_choice") return;
+      onUpdate({
+        ...cell,
+        question: { ...question, options: [...question.options, ...newOptions] },
+      });
+    },
+    [cell, question, onUpdate],
+  );
+
+  const handleDeleteAllOptions = useCallback(() => {
+    if (question.kind !== "multi_choice") return;
+    onUpdate({ ...cell, question: { ...question, options: [] } });
+  }, [cell, question, onUpdate]);
 
   const handleRunClick = () => {
     setIsAnswering(true);
@@ -319,7 +330,7 @@ export function QuestionCellComponent({
               <button
                 type="button"
                 aria-label={`Rename question (current: ${cell.name})`}
-                className="cursor-pointer rounded px-0.5 hover:underline focus:outline-none focus-visible:underline"
+                className="focus:outline-hidden cursor-pointer rounded px-0.5 hover:underline focus-visible:underline"
                 style={{ color: "#C58AAE" }}
               >
                 {cell.name}
@@ -349,7 +360,7 @@ export function QuestionCellComponent({
                 className={cn(
                   "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
                   question.kind === kind
-                    ? "shadow-sm"
+                    ? "shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                   readOnly && "pointer-events-none",
                 )}
@@ -365,13 +376,27 @@ export function QuestionCellComponent({
             ))}
           </div>
 
-          <Input
-            value={question.text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Type your question here..."
-            className="border-[#CDD5DB] bg-white text-sm placeholder:text-[#CDD5DB]"
-            disabled={readOnly}
-          />
+          <div className="space-y-1.5">
+            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#011111]">
+              Question text
+              <span className="text-[#C58AAE]" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <Input
+              value={question.text}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="Type your question here..."
+              className="border-[#C58AAE]/40 bg-white text-sm placeholder:text-[#CDD5DB] focus-visible:ring-[#C58AAE]/30"
+              disabled={readOnly}
+              aria-label="Question text"
+            />
+            {!readOnly && (
+              <p className="text-muted-foreground text-xs">
+                Shown to participants when they answer. The label above is the data column name.
+              </p>
+            )}
+          </div>
 
           {!readOnly && (
             <label className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -385,48 +410,15 @@ export function QuestionCellComponent({
           )}
 
           {question.kind === "multi_choice" && (
-            <div className="space-y-1.5 pl-1">
-              {question.options.map((option, index) => (
-                <div key={index} className="group/opt flex items-center gap-2">
-                  <div
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                    style={{
-                      backgroundColor: "rgba(197, 138, 174, 0.15)",
-                      color: "#C58AAE",
-                    }}
-                  >
-                    {index + 1}
-                  </div>
-                  <Input
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${index + 1}`}
-                    className="focus-visible:border-input focus-visible:bg-background h-8 flex-1 border-transparent bg-transparent text-sm shadow-none"
-                    disabled={readOnly}
-                  />
-                  {!readOnly && question.options.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive h-6 w-6 p-0 opacity-0 transition-opacity group-hover/opt:opacity-100"
-                      onClick={() => handleRemoveOption(index)}
-                    >
-                      <X className="size-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {!readOnly && (
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg bg-[#EDF2F6] px-3 py-2 text-xs font-medium text-[#011111] transition-colors"
-                  onClick={handleAddOption}
-                >
-                  <Plus className="size-3.5" />
-                  Add option
-                </button>
-              )}
-            </div>
+            <SelectOptionsEditor
+              options={question.options}
+              onAddOption={handleAddOption}
+              onUpdateOption={handleOptionChange}
+              onDeleteOption={handleRemoveOption}
+              onBulkAddOptions={handleBulkAddOptions}
+              onDeleteAllOptions={handleDeleteAllOptions}
+              disabled={readOnly}
+            />
           )}
         </div>
       </CellWrapper>

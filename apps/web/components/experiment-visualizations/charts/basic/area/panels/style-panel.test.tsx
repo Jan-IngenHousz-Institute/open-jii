@@ -75,35 +75,4 @@ describe("AreaStylePanel", () => {
     expect(screen.queryByText("workspace.style.lineWidth")).not.toBeInTheDocument();
     expect(screen.queryByText("workspace.style.markerOpacity")).not.toBeInTheDocument();
   });
-
-  it("renders the scatter-series subsection when any Y source has traceType=scatter", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "readings",
-          dataSources: [
-            { tableName: "readings", columnName: "time", role: "x" },
-            { tableName: "readings", columnName: "temp", role: "y" },
-            { tableName: "readings", columnName: "humidity", role: "y", traceType: "scatter" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.scatterSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the bar-series subsection when any Y source has traceType=bar", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "readings",
-          dataSources: [
-            { tableName: "readings", columnName: "time", role: "x" },
-            { tableName: "readings", columnName: "temp", role: "y", traceType: "bar" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.barSeriesOptions")).toBeInTheDocument();
-  });
 });

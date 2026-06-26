@@ -1,12 +1,15 @@
 import { expoClient } from "@better-auth/expo/client";
 import { emailOTPClient, genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import * as SecureStore from "expo-secure-store";
 
 const SCHEME = "openjii";
 const STORAGE_PREFIX = "openjii";
 
-export function createOpenJiiAuthClient(backendUrl: string) {
+// The native secure-storage impl (e.g. expo-secure-store) is injected by the
+// consumer so this server/web-shared package never depends on a native module.
+type SecureStorage = Parameters<typeof expoClient>[0]["storage"];
+
+export function createOpenJiiAuthClient(backendUrl: string, storage: SecureStorage) {
   return createAuthClient({
     baseURL: `${backendUrl}/api/v1/auth`,
     plugins: [
@@ -15,7 +18,7 @@ export function createOpenJiiAuthClient(backendUrl: string) {
       expoClient({
         scheme: SCHEME,
         storagePrefix: STORAGE_PREFIX,
-        storage: SecureStore,
+        storage,
       }),
     ],
   });

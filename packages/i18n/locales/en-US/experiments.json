@@ -48,6 +48,9 @@
     "lastProcessed": "Last Processed",
     "seeAll": "See all"
   },
+  "dashboards": {
+    "tabLabel": "Dashboards"
+  },
   "flow": {
     "title": "Workbook",
     "legend": "Legend",
@@ -56,6 +59,8 @@
     "tabLabel": "Design",
     "viewList": "List",
     "viewGraph": "Graph",
+    "editWorkbook": "Edit workbook",
+    "viewPinned": "View pinned version",
     "noWorkbookLinked": "No workbook linked to this experiment.",
     "linkWorkbookPrompt": "Attach a workbook to define the experiment's data collection flow.",
     "attach": "Attach",
@@ -74,6 +79,13 @@
     "workbookDetached": "Workbook detached successfully",
     "detachFailed": "Failed to detach workbook",
     "changeWorkbook": "Change",
+    "selectWorkbook": "Select a workbook",
+    "searchWorkbook": "Search workbooks...",
+    "noWorkbooksFound": "No workbooks found",
+    "renameWorkbook": "Rename workbook",
+    "saveRename": "Save name",
+    "workbookRenamed": "Workbook renamed",
+    "renameFailed": "Failed to rename workbook",
     "confirmChangeTitle": "Change workbook?",
     "confirmChangeMessage": "Switching workbooks replaces this experiment's measurement protocol. Existing measurements and results are preserved, but all future measurements will follow the new workbook. Changing the flow mid-experiment can affect how comparable your data is.",
     "confirmChange": "Switch workbook",
@@ -226,12 +238,15 @@
       "BOOLEAN": "Yes/No"
     },
     "answerOptionsLabel": "Answer Options",
+    "optionCharLimitHint": "Up to {{max}} characters each, so choices stay readable as buttons in the mobile app.",
     "answerOptionPlaceholder": "Enter an answer option",
     "noAnswerOptions": "No answer options yet",
     "addOption": "Add Option",
     "removeOption": "Remove option",
     "bulkAddOptions": "Bulk Add",
     "deleteAllOptions": "Delete All",
+    "optionCount_one": "{{count}} option",
+    "optionCount_other": "{{count}} options",
     "textResponseLabel": "Text Response",
     "textResponseDescription": "Participants can write their own answer",
     "numberResponseLabel": "Number Response",

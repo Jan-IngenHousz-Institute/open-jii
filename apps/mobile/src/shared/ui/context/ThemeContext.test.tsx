@@ -19,13 +19,9 @@ const { colorSchemeSetMock, asyncStorageStore } = vi.hoisted(() => ({
 vi.mock("nativewind", () => ({
   useColorScheme: () => ({
     colorScheme: "light",
-    setColorScheme: () => undefined,
+    setColorScheme: colorSchemeSetMock,
     toggleColorScheme: () => undefined,
   }),
-  colorScheme: {
-    get: () => "light",
-    set: colorSchemeSetMock,
-  },
   vars: (input: Record<string, string>) => input,
   cssInterop: () => undefined,
   remapProps: () => undefined,
@@ -78,6 +74,7 @@ beforeEach(() => {
   asyncStorageStore.getError = null;
   asyncStorageStore.setError = null;
   vi.spyOn(Appearance, "getColorScheme").mockReturnValue("light");
+  vi.spyOn(Appearance, "setColorScheme").mockImplementation(colorSchemeSetMock);
   colorSchemeSetMock.mockClear();
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();

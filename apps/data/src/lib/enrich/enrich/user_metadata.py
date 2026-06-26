@@ -6,10 +6,21 @@ from the openJII backend API.
 """
 
 from typing import Dict, Any, List
+from uuid import UUID
 import pandas as pd
 from pyspark.sql.types import StructType, StructField, StringType
 
 from .backend_client import BackendClient
+
+
+def _is_uuid(value: str) -> bool:
+    """The backend keys users by uuid; a non-uuid id 400s the whole batch."""
+    try:
+        UUID(value)
+        return True
+    except ValueError:
+        return False
+
 
 # Define user struct schema: STRUCT<id: STRING, name: STRING, avatar: STRING>
 user_schema = StructType([
@@ -75,7 +86,7 @@ def add_user_column(df, environment: str, dbutils):
     def get_user_profiles(user_ids: pd.Series) -> pd.DataFrame:
         """Fetch all profile fields in a single API call"""
         worker_client = BackendClient(base_url, api_key_id, webhook_secret)
-        unique_users = user_ids.dropna().unique().tolist()
+        unique_users = [uid for uid in user_ids.dropna().unique().tolist() if _is_uuid(uid)]
         user_metadata = _fetch_user_metadata(unique_users, worker_client)
         
         def extract_profile(uid):

@@ -101,8 +101,36 @@ function gaussianPdf(x: number, mean: number, std: number): number {
   return Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
 }
 
-/** Compute the (x, y) samples of a fitted normal PDF for a numeric series. */
-function buildNormalFit(values: ReadonlyArray<string | number | Date | undefined>): {
+/** Scale factor that aligns a unit-area PDF with the histogram's bars
+ *  for a given Plotly histnorm. `nbins` is approximate (Sturges' rule)
+ *  when the user hasn't pinned it explicitly. */
+function fitScaleFor(
+  histnorm: HistogramSeriesData["histnorm"],
+  n: number,
+  binWidth: number,
+): number {
+  switch (histnorm) {
+    case "percent":
+      return 100 * binWidth;
+    case "probability":
+      return binWidth;
+    case "density":
+      return n;
+    case "probability density":
+      return 1;
+    default:
+      return n * binWidth;
+  }
+}
+
+/** Compute the (x, y) samples of a fitted normal curve (PDF, or CDF when
+ *  `cumulative` is true) scaled to match the histogram's histnorm. */
+function buildNormalFit(
+  values: ReadonlyArray<string | number | Date | undefined>,
+  cumulative: boolean,
+  histnorm: HistogramSeriesData["histnorm"],
+  nbins: number | undefined,
+): {
   xs: number[];
   ys: number[];
   mean: number;
@@ -124,14 +152,30 @@ function buildNormalFit(values: ReadonlyArray<string | number | Date | undefined
   const start = Math.min(dataMin, mean - FIT_OVERLAY_TAIL_SIGMAS * std);
   const end = Math.max(dataMax, mean + FIT_OVERLAY_TAIL_SIGMAS * std);
   const step = (end - start) / (FIT_OVERLAY_SAMPLES - 1);
+  // Sturges' rule when nbinsx isn't pinned; close enough to Plotly's auto.
+  const sturges = Math.max(1, Math.ceil(Math.log2(numeric.length) + 1));
+  const effectiveNbins = nbins && nbins > 0 ? nbins : sturges;
+  const binWidth = Math.max((dataMax - dataMin) / effectiveNbins, 1e-9);
+  const scale = fitScaleFor(histnorm, numeric.length, binWidth);
+
   const xs: number[] = [];
-  const ys: number[] = [];
+  const pdf: number[] = [];
   for (let i = 0; i < FIT_OVERLAY_SAMPLES; i++) {
     const x = start + i * step;
     xs.push(x);
-    ys.push(gaussianPdf(x, mean, std));
+    pdf.push(gaussianPdf(x, mean, std) * scale);
   }
-  return { xs, ys, mean, std };
+  if (!cumulative) return { xs, ys: pdf, mean, std };
+  const cdf: number[] = [0];
+  let running = 0;
+  let prev = pdf[0] ?? 0;
+  for (let i = 1; i < FIT_OVERLAY_SAMPLES; i++) {
+    const next = pdf[i] ?? 0;
+    running += ((next + prev) / 2) * step;
+    cdf.push(running);
+    prev = next;
+  }
+  return { xs, ys: cdf, mean, std };
 }
 
 export function Histogram({
@@ -157,8 +201,9 @@ export function Histogram({
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
-        x: (series.orientation || orientation) === "v" ? series.x : series.y,
-        y: (series.orientation || orientation) === "h" ? series.x : series.y,
+        // Transform sets x or y per orientation; don't swap.
+        x: series.x,
+        y: series.y,
         // Per-trace subplot routing for facets. Plotly reads `xaxis` /
         // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
         // matches them to the numbered axis configs in `layout`.
@@ -216,28 +261,32 @@ export function Histogram({
       }) as any as PlotData,
   );
 
-  // Fitted-distribution overlays: one smooth line trace per histogram
-  // series. Requires histnorm "probability density" for the curve and
-  // bars to share a Y scale; the renderer enforces this.
   if (fitOverlay === "normal") {
     for (let i = 0; i < data.length; i++) {
       const series = data[i];
+      if (!series) continue;
       const seriesOrientation = series.orientation || orientation;
       const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
       if (!valuesForFit || valuesForFit.length === 0) continue;
-      const fit = buildNormalFit(valuesForFit);
+      const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
+      const fit = buildNormalFit(
+        valuesForFit,
+        Boolean(series.cumulative?.enabled),
+        series.histnorm,
+        seriesNbins,
+      );
       if (!fit) continue;
       const lineColor = series.marker?.color || series.color;
       const fitTrace = {
         x: seriesOrientation === "v" ? fit.xs : fit.ys,
         y: seriesOrientation === "v" ? fit.ys : fit.xs,
+        xaxis: series.xaxisId,
+        yaxis: series.yaxisId,
         name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
         type: "scatter",
         mode: "lines",
         line: { color: lineColor, width: 2 },
-        // Bind the overlay to its parent series's legend toggle so users
-        // can hide both at once, but keep its own legend entry visible
-        // so the fit can be read independently.
+        // Share legendgroup so the parent's toggle hides the fit too.
         legendgroup: series.legendgroup ?? series.name,
         showlegend: series.showlegend !== false,
         hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -451,49 +451,5 @@ describe("useSidebar hook", () => {
     }).toThrow("useSidebar must be used within a SidebarProvider.");
 
     consoleSpy.mockRestore();
-  });
-});
-
-describe("Keyboard shortcuts", () => {
-  it("toggles sidebar with Cmd+B on Mac", () => {
-    render(
-      <SidebarProvider>
-        <SidebarConsumer />
-      </SidebarProvider>,
-    );
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("expanded");
-
-    fireEvent.keyDown(window, { key: "b", metaKey: true });
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("collapsed");
-  });
-
-  it("toggles sidebar with Ctrl+B", () => {
-    render(
-      <SidebarProvider>
-        <SidebarConsumer />
-      </SidebarProvider>,
-    );
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("expanded");
-
-    fireEvent.keyDown(window, { key: "b", ctrlKey: true });
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("collapsed");
-  });
-
-  it("does not toggle without modifier key", () => {
-    render(
-      <SidebarProvider>
-        <SidebarConsumer />
-      </SidebarProvider>,
-    );
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("expanded");
-
-    fireEvent.keyDown(window, { key: "b" });
-
-    expect(screen.getByTestId("sidebar-state")).toHaveTextContent("expanded");
   });
 });

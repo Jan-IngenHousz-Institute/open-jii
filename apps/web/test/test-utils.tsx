@@ -33,6 +33,8 @@ import type { ReactElement } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import type { FieldValues, UseFormProps } from "react-hook-form";
 
+import { TooltipProvider } from "@repo/ui/components/tooltip";
+
 // ── Provider wrapper ────────────────────────────────────────────
 
 /**
@@ -67,7 +69,9 @@ function AllProviders({ children, queryClient }: WrapperProps) {
   return (
     <QueryClientProvider client={client}>
       <tsr.ReactQueryProvider>
-        <ActivityProvider>{children}</ActivityProvider>
+        <TooltipProvider delayDuration={0}>
+          <ActivityProvider>{children}</ActivityProvider>
+        </TooltipProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );
@@ -154,7 +158,7 @@ function renderHook<TResult, TProps = undefined>(
  * import { renderWithForm, screen } from "@/test/test-utils";
  *
  * renderWithForm<CreateUserProfileBody>(
- *   (form) => <ProfileCard form={form} />,
+ *   (form) => <ProfileInformationCard form={form} />,
  *   { useFormProps: { defaultValues: { firstName: "", lastName: "" } } },
  * );
  * ```

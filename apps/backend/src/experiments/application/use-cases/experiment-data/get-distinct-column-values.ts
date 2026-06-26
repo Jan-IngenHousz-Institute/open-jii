@@ -71,6 +71,7 @@ export class GetDistinctColumnValuesUseCase {
 
         return this.experimentDataRepository.getDistinctColumnValues({
           experimentId,
+          experiment,
           tableName: query.tableName,
           column: query.column,
           limit: query.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT,

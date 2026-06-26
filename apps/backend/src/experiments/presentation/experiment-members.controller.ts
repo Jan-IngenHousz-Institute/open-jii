@@ -11,6 +11,7 @@ import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
+import { TransferExperimentAdminUseCase } from "../application/use-cases/experiment-members/transfer-experiment-admin";
 import { UpdateExperimentMemberRoleUseCase } from "../application/use-cases/experiment-members/update-experiment-member-role";
 
 @Controller()
@@ -22,6 +23,7 @@ export class ExperimentMembersController {
     private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
     private readonly updateExperimentMemberRoleUseCase: UpdateExperimentMemberRoleUseCase,
+    private readonly transferExperimentAdminUseCase: TransferExperimentAdminUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
@@ -124,5 +126,28 @@ export class ExperimentMembersController {
         return handleFailure(result, this.logger);
       },
     );
+  }
+
+  @TsRestHandler(contract.experiments.transferExperimentAdmin)
+  transferAdmin(@Session() session: UserSession) {
+    return tsRestHandler(contract.experiments.transferExperimentAdmin, async ({ body }) => {
+      const result = await this.transferExperimentAdminUseCase.execute(
+        body.transfers,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        this.logger.log(
+          `Admin transfer across ${body.transfers.length} experiment(s) processed by user ${session.user.id}`,
+        );
+
+        return {
+          status: StatusCodes.OK,
+          body: { results: result.value },
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
   }
 }

@@ -37,33 +37,11 @@ function expandSection(name: string) {
 }
 
 describe("ScatterStylePanel", () => {
-  it("hides the line subsection by default (markers-only)", () => {
-    renderPanel();
-    expandSection("workspace.style.lineOptions");
-    expect(screen.queryByText("workspace.style.lineWidth")).not.toBeInTheDocument();
-    expect(screen.queryByText("workspace.style.lineDash")).not.toBeInTheDocument();
-  });
-
-  it("renders the marker subsection unconditionally", () => {
+  it("renders the marker subsection with size and shape controls", () => {
     renderPanel();
     expandSection("workspace.style.scatterOptions");
     expect(screen.getByText("workspace.style.markerSize")).toBeInTheDocument();
-    expandSection("workspace.style.lineOptions");
-    expect(screen.getByText("workspace.style.markerOpacity")).toBeInTheDocument();
-    // markerShape lives inside MarkerStyleSection (Markers / scatter); the
-    // trigger above already opened it.
     expect(screen.getByText("workspace.style.markerShape")).toBeInTheDocument();
-  });
-
-  it("renders the line subsection when mode includes lines", () => {
-    renderPanel(
-      defaults({
-        config: { ...scatterChartType.defaultConfig(), mode: "lines+markers" },
-      }),
-    );
-    expandSection("workspace.style.lineOptions");
-    expect(screen.getByText("workspace.style.lineWidth")).toBeInTheDocument();
-    expect(screen.getByText("workspace.style.lineDash")).toBeInTheDocument();
   });
 
   it("renders the marker symbol options including the extended set", () => {
@@ -74,35 +52,5 @@ describe("ScatterStylePanel", () => {
     // current value shows the schema -> form -> trigger wiring works.
     const triggers = screen.getAllByRole("combobox");
     expect(triggers.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders the bar-series subsection when any Y source has traceType=bar", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "points",
-          dataSources: [
-            { tableName: "points", columnName: "x", role: "x" },
-            { tableName: "points", columnName: "y", role: "y", traceType: "bar" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.barSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the area-series subsection when any Y source has traceType=area", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "points",
-          dataSources: [
-            { tableName: "points", columnName: "x", role: "x" },
-            { tableName: "points", columnName: "y", role: "y", traceType: "area" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.areaSeriesOptions")).toBeInTheDocument();
   });
 });

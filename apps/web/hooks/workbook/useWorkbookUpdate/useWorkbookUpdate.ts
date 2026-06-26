@@ -10,6 +10,9 @@ export const useWorkbookUpdate = (workbookId: string, props: WorkbookUpdateProps
   const queryClient = tsr.useQueryClient();
 
   return tsr.workbooks.updateWorkbook.useMutation({
+    // Keyed so consumers (e.g. the linked-workbook upgrade banner) can detect
+    // an in-flight autosave via `useIsMutating` and hold transient state.
+    mutationKey: ["workbook", workbookId, "update"],
     onMutate: async (variables) => {
       await queryClient.cancelQueries({
         queryKey: ["workbook", workbookId],
@@ -61,9 +64,6 @@ export const useWorkbookUpdate = (workbookId: string, props: WorkbookUpdateProps
       });
       await queryClient.invalidateQueries({
         queryKey: ["workbooks"],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["breadcrumbs"],
       });
     },
     onSuccess: (data) => {

@@ -40,7 +40,7 @@ const NavTabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "focus-visible:ring-ring group relative -mb-px inline-flex shrink-0 select-none items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
+      "focus-visible:ring-ring outline-hidden group relative -mb-px inline-flex shrink-0 select-none items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
 
       // active — brand teal underline + brand teal text
       "data-[state=active]:border-primary data-[state=active]:text-primary",
