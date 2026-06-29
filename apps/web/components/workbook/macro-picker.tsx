@@ -93,18 +93,16 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
     setIsCreating(true);
     try {
       const result = await createMacro.mutateAsync({
-        body: {
-          name: newName.trim(),
-          language: newLanguage,
-          code: encodeBase64(getDefaultCode(newLanguage, session?.user.name ?? "Unknown")),
-        },
+        name: newName.trim(),
+        language: newLanguage,
+        code: encodeBase64(getDefaultCode(newLanguage, session?.user.name ?? "Unknown")),
       });
       const cell: MacroCell = {
         id: crypto.randomUUID(),
         type: "macro",
         isCollapsed: false,
         payload: {
-          macroId: result.body.id,
+          macroId: result.id,
           language: newLanguage,
           name: newName.trim(),
         },

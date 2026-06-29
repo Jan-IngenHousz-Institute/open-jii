@@ -44,7 +44,7 @@ export function MacroInfoCard({ macroId, macro }: MacroInfoCardProps) {
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION);
 
   const handleDeleteMacro = async () => {
-    await deleteMacro({ params: { id: macroId } });
+    await deleteMacro({ id: macroId });
     setIsDeleteDialogOpen(false);
     // Navigate to macros list
     router.push(`/${locale}/platform/macros`);

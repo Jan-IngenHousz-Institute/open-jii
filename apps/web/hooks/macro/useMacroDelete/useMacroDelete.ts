@@ -1,52 +1,26 @@
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to delete a macro
  * @returns Mutation object for deleting macros
  */
 export const useMacroDelete = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.macros.deleteMacro.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["macros"],
-      });
+  return useMutation(
+    orpc.macros.deleteMacro.mutationOptions({
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: orpc.macros.listMacros.key() });
 
-      // Get the current macros list
-      const previousMacros = queryClient.getQueryData<{
-        body: Macro[];
-      }>(["macros"]);
-
-      // Optimistically remove the macro from the list
-      if (previousMacros?.body) {
-        queryClient.setQueryData(["macros"], {
-          ...previousMacros,
-          body: previousMacros.body.filter((macro) => macro.id !== variables.params.id),
+        queryClient.removeQueries({
+          queryKey: orpc.macros.getMacro.queryKey({ input: { id: variables.id } }),
         });
-      }
-
-      // Remove the single macro from cache as well
-      queryClient.removeQueries({
-        queryKey: ["macro", variables.params.id],
-      });
-
-      return { previousMacros };
-    },
-    onError: (error, variables, context) => {
-      // Restore the previous data if there was an error
-      if (context?.previousMacros) {
-        queryClient.setQueryData(["macros"], context.previousMacros);
-      }
-    },
-    onSettled: async () => {
-      // Always invalidate to ensure cache is in sync with server
-      await queryClient.invalidateQueries({
-        queryKey: ["macros"],
-      });
-    },
-  });
+      },
+      onSettled: async () => {
+        await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+      },
+    }),
+  );
 };

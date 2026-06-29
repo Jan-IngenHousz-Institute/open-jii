@@ -1,9 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
 import { useDebounce } from "../../useDebounce";
 
 export type MacroFilter = "my" | "all";
@@ -53,16 +54,15 @@ export function useMacros({
     [pathname, router, createQueryString],
   );
 
-  const query = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: {
+  const query = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: {
         filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
         language,
       },
-    },
-    queryKey: ["macros", filter, debouncedSearch, language],
-  });
+    }),
+  );
 
   // Auto-switch to "all" if user has no macros of their own on initial load
   const hasAutoSwitched = useRef(false);
@@ -70,17 +70,17 @@ export function useMacros({
     if (
       !hasAutoSwitched.current &&
       filter === "my" &&
-      query.data?.body.length === 0 &&
+      query.data?.length === 0 &&
       !debouncedSearch &&
       !language
     ) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, query.data?.body, setFilter, debouncedSearch, language]);
+  }, [filter, query.data, setFilter, debouncedSearch, language]);
 
   return {
-    data: query.data?.body,
+    data: query.data,
     isLoading: query.isLoading,
     error: query.error,
     filter,

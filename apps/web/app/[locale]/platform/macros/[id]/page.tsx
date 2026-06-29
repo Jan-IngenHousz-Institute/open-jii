@@ -35,7 +35,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const save = useCallback(
     async (code: string) => {
       try {
-        await updateMacro({ params: { id }, body: { code: encodeBase64(code) } });
+        await updateMacro({ id, code: encodeBase64(code) });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
@@ -77,7 +77,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateMacro(
-      { params: { id }, body: { description: newDescription } },
+      { id, description: newDescription },
       {
         onSuccess: () => {
           toast({ description: t("macros.macroUpdated") });

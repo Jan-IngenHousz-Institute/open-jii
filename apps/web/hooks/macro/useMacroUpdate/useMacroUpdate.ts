@@ -1,6 +1,8 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
 
 interface MacroUpdateProps {
   onSuccess?: (macro: Macro) => void;
@@ -13,75 +15,30 @@ interface MacroUpdateProps {
  * @returns Mutation result for updating a macro
  */
 export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
+  const macroKey = orpc.macros.getMacro.queryKey({ input: { id: macroId } });
 
-  return tsr.macros.updateMacro.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches to avoid overwrites
-      await queryClient.cancelQueries({
-        queryKey: ["macro", macroId],
-      });
-      await queryClient.cancelQueries({
-        queryKey: ["macros"],
-      });
+  return useMutation(
+    orpc.macros.updateMacro.mutationOptions({
+      onMutate: async () => {
+        await queryClient.cancelQueries({ queryKey: macroKey });
+        await queryClient.cancelQueries({ queryKey: orpc.macros.listMacros.key() });
 
-      // Get the current macro data
-      const previousMacro = queryClient.getQueryData<{
-        body: Macro;
-      }>(["macro", macroId]);
-
-      // Optimistically update the cache
-      if (previousMacro) {
-        queryClient.setQueryData(["macro", macroId], {
-          ...previousMacro,
-          body: {
-            ...previousMacro.body,
-            ...variables.body,
-          },
-        });
-      }
-
-      // Also update in any macro lists in the cache
-      const macrosKey = ["macros"];
-      const previousMacros = queryClient.getQueryData<{
-        body: Macro[];
-      }>(macrosKey);
-
-      if (previousMacros?.body) {
-        queryClient.setQueryData(macrosKey, {
-          ...previousMacros,
-          body: previousMacros.body.map((macro) =>
-            macro.id === macroId ? { ...macro, ...variables.body } : macro,
-          ),
-        });
-      }
-
-      return { previousMacro, previousMacros };
-    },
-    onError: (error, variables, context) => {
-      // Revert updates on error
-      if (context?.previousMacro) {
-        queryClient.setQueryData(["macro", macroId], context.previousMacro);
-      }
-
-      if (context?.previousMacros) {
-        queryClient.setQueryData(["macros"], context.previousMacros);
-      }
-    },
-    onSettled: async () => {
-      // Always refetch after error or success
-      await queryClient.invalidateQueries({
-        queryKey: ["macro", macroId],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["macros"],
-      });
-    },
-    onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
-      if (props.onSuccess) {
-        props.onSuccess(data.body);
-      }
-    },
-  });
+        const previousMacro = queryClient.getQueryData(macroKey);
+        return { previousMacro };
+      },
+      onError: (_error, _variables, context) => {
+        if (context?.previousMacro) {
+          queryClient.setQueryData(macroKey, context.previousMacro);
+        }
+      },
+      onSettled: async () => {
+        await queryClient.invalidateQueries({ queryKey: macroKey });
+        await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+      },
+      onSuccess: (data) => {
+        props.onSuccess?.(data);
+      },
+    }),
+  );
 };

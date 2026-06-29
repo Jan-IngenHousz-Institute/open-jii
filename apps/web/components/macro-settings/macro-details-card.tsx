@@ -72,11 +72,9 @@ export function MacroDetailsCard({
     data: UpdateMacroRequestBody & { name: string; language: MacroLanguage },
   ) {
     await updateMacro({
-      params: { id: macroId },
-      body: {
-        ...data,
-        code: encodeBase64(data.code ?? ""),
-      },
+      id: macroId,
+      ...data,
+      code: encodeBase64(data.code ?? ""),
     });
     toast({ description: t("macros.macroUpdated") });
   }

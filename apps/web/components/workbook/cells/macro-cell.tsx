@@ -95,7 +95,7 @@ export function MacroCellComponent({
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveMacro(
-          { params: { id: macroId }, body: { code: encodeBase64(code) } },
+          { id: macroId, code: encodeBase64(code) },
           {
             onSuccess: () => {
               savedKeyRef.current = code;
@@ -114,7 +114,7 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      saveMacro({ params: { id: macroId }, body: { language: lang } });
+      saveMacro({ id: macroId, language: lang });
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
     [macroId, saveMacro, cell, onUpdate],

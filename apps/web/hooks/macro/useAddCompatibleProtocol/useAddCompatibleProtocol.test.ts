@@ -16,8 +16,8 @@ describe("useAddCompatibleProtocol", () => {
 
     act(() => {
       result.current.mutate({
-        body: { protocolIds: ["p-1", "p-2"] },
-        params: { id: "macro-1" },
+        id: "macro-1",
+        protocolIds: ["p-1", "p-2"],
       });
     });
 
@@ -33,8 +33,8 @@ describe("useAddCompatibleProtocol", () => {
 
     act(() => {
       result.current.mutate({
-        body: { protocolIds: ["p-1"] },
-        params: { id: "macro-1" },
+        id: "macro-1",
+        protocolIds: ["p-1"],
       });
     });
 

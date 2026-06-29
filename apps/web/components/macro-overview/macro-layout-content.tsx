@@ -26,7 +26,7 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
 
   const handleTitleSave = async (newName: string) => {
     await updateMacro(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("macros.macroUpdated") });

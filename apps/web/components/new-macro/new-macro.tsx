@@ -54,13 +54,13 @@ export function NewMacroForm() {
 
   const { mutate: createMacro, isPending } = useMacroCreate({
     onSuccess: (data) => {
-      const id = data.body.id;
+      const id = data.id;
       // Link selected protocols after macro creation, then redirect
       if (selectedProtocols.length > 0 && addProtocolsMutationRef.current) {
         addProtocolsMutationRef.current
           .mutateAsync({
-            params: { id },
-            body: { protocolIds: selectedProtocols.map((p) => p.id) },
+            id,
+            protocolIds: selectedProtocols.map((p) => p.id),
           })
           .catch(() => {
             // Macro was created successfully, protocol linking failed - still redirect
@@ -97,12 +97,10 @@ export function NewMacroForm() {
     const code = encodeBase64(data.code);
 
     createMacro({
-      body: {
-        name: data.name,
-        description: data.description,
-        language: data.language,
-        code: code,
-      },
+      name: data.name,
+      description: data.description,
+      language: data.language,
+      code: code,
     });
   }
 

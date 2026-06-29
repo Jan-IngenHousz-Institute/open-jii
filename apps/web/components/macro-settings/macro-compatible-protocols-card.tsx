@@ -52,7 +52,7 @@ export function MacroCompatibleProtocolsCard({
   const compatibleQuery = useMacroCompatibleProtocols(macroId);
   const isLoading = compatibleQuery.isLoading;
   const compatibleProtocols: MacroProtocolEntry[] = useMemo(
-    () => (compatibleQuery.data?.body as MacroProtocolEntry[] | undefined) ?? [],
+    () => compatibleQuery.data ?? [],
     [compatibleQuery.data],
   );
 

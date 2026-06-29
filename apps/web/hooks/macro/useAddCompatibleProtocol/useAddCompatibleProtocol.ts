@@ -1,17 +1,21 @@
-import { tsr } from "../../../lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to add compatible protocols to a macro
  * @param macroId The macro ID (used for cache invalidation)
  */
 export const useAddCompatibleProtocol = (macroId: string) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.macros.addCompatibleProtocols.useMutation({
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["macro-compatible-protocols", macroId],
-      });
-    },
-  });
+  return useMutation(
+    orpc.macros.addCompatibleProtocols.mutationOptions({
+      onSettled: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.macros.listCompatibleProtocols.queryKey({ input: { id: macroId } }),
+        });
+      },
+    }),
+  );
 };
