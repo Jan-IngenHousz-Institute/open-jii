@@ -219,6 +219,7 @@ export const zTransferRequestStatus = z.enum([
   "completed",
   "rejected",
   "failed",
+  "no_data",
 ]);
 
 export const zTransferRequest = z.object({

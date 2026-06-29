@@ -26,6 +26,16 @@ ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT").lower()
 VOLUME_BASE = f"/Volumes/{CATALOG_NAME}/centrum/data-imports"
 TRANSFER_TABLE = f"{CATALOG_NAME}.{CENTRUM_SCHEMA}.openjii_project_transfer_requests"
 
+
+def set_request_status(request_id: str, status: str, error: str = None) -> None:
+    """Single place to set a request's terminal status + error detail + timestamp."""
+    err_lit = "NULL" if error is None else "'" + str(error)[:4000].replace("'", "''") + "'"
+    spark.sql(f"""
+        UPDATE {TRANSFER_TABLE}
+        SET status = '{status}', error_message = {err_lit}, updated_at = current_timestamp()
+        WHERE request_id = '{request_id}'
+    """)
+
 # COMMAND ----------
 
 # DBTITLE 1,Parquet Schemas
@@ -137,7 +147,7 @@ if requests.count() == 0:
     dbutils.notebook.exit(json.dumps({"status": "success", "transfers": []}))
 
 # Split: requests whose experiment_id is already populated had their backend call
-# succeed on a previous run — skip the backend for those and re-use stored columns.
+# succeed on a previous run - skip the backend for those and re-use stored columns.
 # Snapshot request_id lists so the mid-notebook MERGE (which writes experiment_id back
 # to the table) doesn't cause the recovery split to pick up newly-updated rows.
 _new_ids = [r["request_id"] for r in requests.filter(F.col("experiment_id").isNull()).select("request_id").collect()]
@@ -257,7 +267,7 @@ def to_json_string(value: str) -> str:
     """Convert a Python repr string (single quotes) to valid JSON (double quotes).
     
     If the parsed result is a single-element list, unwrap it to return just the
-    object — macro output should always be a single JSON object, not an array.
+    object - macro output should always be a single JSON object, not an array.
     """
     if value is None:
         return None
@@ -269,7 +279,7 @@ def to_json_string(value: str) -> str:
             obj = ast.literal_eval(value)
         except Exception:
             return None
-    # Unwrap single-element arrays — macro output is always one object
+    # Unwrap single-element arrays - macro output is always one object
     if isinstance(obj, list) and len(obj) == 1:
         obj = obj[0]
     return json.dumps(obj)
@@ -343,7 +353,7 @@ if new_requests.count() > 0:
 
     transfers = (
         metadata
-        # Only send new transfers to the backend — not recovery ones
+        # Only send new transfers to the backend - not recovery ones
         .filter(
             F.col("transfer_id").isin(
                 [r["request_id"] for r in new_requests.select("request_id").collect()]
@@ -392,16 +402,20 @@ if new_requests.count() > 0:
         """)
         log("Persisted backend response columns")
 
-    # Mark failed ones immediately
+    # Mark failed ones immediately, carrying the backend error for diagnosis
     new_failed = new_results.filter(F.col("success") == False)
     if new_failed.count() > 0:
         new_failed.select(
             F.col("transfer_id").alias("request_id"),
+            F.col("error"),
         ).createOrReplaceTempView("_failed_updates")
         spark.sql(f"""
             MERGE INTO {TRANSFER_TABLE} t
             USING _failed_updates u ON t.request_id = u.request_id
-            WHEN MATCHED THEN UPDATE SET t.status = 'failed'
+            WHEN MATCHED THEN UPDATE SET
+                t.status = 'failed',
+                t.error_message = u.error,
+                t.updated_at = current_timestamp()
         """)
 
     transfer_results = new_results
@@ -458,42 +472,47 @@ enriched = (
     )
 )
 
+# Cache once so the per-experiment filter/write below does not recompute the full
+# measurement join on every loop iteration.
+enriched = enriched.cache()
+enriched.count()
+
 written_experiments = set()
 
 for row in successful.select("experiment_id", "transfer_id").collect():
     experiment_id = row["experiment_id"]
     transfer_id = row["transfer_id"]
-    output_path = f"{VOLUME_BASE}/{experiment_id}/photosynq_transfer"
+    # Write to a run-unique subpath instead of overwriting in place: the continuous
+    # centrum pipeline lists this volume (recursiveFileLookup), so an in-place
+    # mode("overwrite") that deletes files mid-read can fail the write.
+    output_path = f"{VOLUME_BASE}/{experiment_id}/photosynq_transfer/run={transfer_id}"
 
-    # Guard: skip duplicate experiment_id within this run — the downstream Auto Loader
-    # stream will crash if files are overwritten mid-read.
+    # Guard: skip duplicate experiment_id within this run.
     if experiment_id in written_experiments:
         log(f"  {transfer_id}: skipped (already written {experiment_id} this run)")
-        spark.sql(f"""
-            UPDATE {TRANSFER_TABLE}
-            SET status = 'completed'
-            WHERE request_id = '{transfer_id}'
-        """)
+        set_request_status(transfer_id, "completed")
         log(f"  {transfer_id}: completed")
         continue
 
+    exp_df = enriched.filter(F.col("experiment_id") == experiment_id)
+    # Empty source project (no measurements): classify as no_data rather than letting
+    # an empty parquet write throw into partial_failed.
+    if exp_df.limit(1).count() == 0:
+        log(f"  {transfer_id}: no measurements for {experiment_id} - marking no_data")
+        set_request_status(transfer_id, "no_data")
+        continue
+
     try:
-        enriched.filter(F.col("experiment_id") == experiment_id).write.mode("overwrite").parquet(output_path)
+        exp_df.repartition(8).write.mode("overwrite").parquet(output_path)
         written_experiments.add(experiment_id)
         log(f"Wrote import data to {output_path}")
-        spark.sql(f"""
-            UPDATE {TRANSFER_TABLE}
-            SET status = 'completed'
-            WHERE request_id = '{transfer_id}'
-        """)
+        set_request_status(transfer_id, "completed")
         log(f"  {transfer_id}: completed")
     except Exception as e:
         log(f"  {transfer_id}: parquet write failed - {e}")
-        spark.sql(f"""
-            UPDATE {TRANSFER_TABLE}
-            SET status = 'partial_failed'
-            WHERE request_id = '{transfer_id}'
-        """)
+        set_request_status(transfer_id, "partial_failed", error=str(e))
+
+enriched.unpersist()
 
 for row in transfer_results.filter(F.col("success") == False).select("transfer_id", "error").collect():
     error_msg = row["error"] or "Unknown error"

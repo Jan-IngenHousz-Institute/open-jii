@@ -818,6 +818,8 @@ module "openjii_project_transfer_requests_table" {
     { name = "macro_filename", type = "STRING" },
     { name = "macro_name", type = "STRING" },
     { name = "flow_id", type = "STRING" },
+    { name = "error_message", type = "STRING", comment = "Last failure detail from the transfer job" },
+    { name = "updated_at", type = "TIMESTAMP", comment = "Last time the transfer job mutated this row" },
   ]
 
   grants = {
