@@ -49,7 +49,7 @@ export function AnalysisPanel({
   );
 
   const compatibleMacroIds = useMemo(
-    () => new Set((compatibleData?.body ?? []).map((entry) => entry.macro.id)),
+    () => new Set((compatibleData ?? []).map((entry) => entry.macro.id)),
     [compatibleData],
   );
   const hasCompatibilityData = !!upstreamProtocolId && !!compatibleData;
@@ -65,7 +65,7 @@ export function AnalysisPanel({
     });
   }, [macroList, hasCompatibilityData, compatibleMacroIds]);
 
-  const upstreamProtocolName = upstreamProtocol?.body.name;
+  const upstreamProtocolName = upstreamProtocol?.name;
   const recommendedReason =
     hasCompatibilityData && compatibleMacroIds.size > 0 && upstreamProtocolName
       ? t("common.compatibleWithProtocol", { protocolName: upstreamProtocolName })

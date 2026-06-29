@@ -1,6 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 
-import { tsr } from "../../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to fetch a single protocol by ID
@@ -8,10 +9,11 @@ import { tsr } from "../../../lib/tsr";
  * @returns Query result containing the protocol details
  */
 export const useProtocol = (protocolId: string, enabled = true) => {
-  return tsr.protocols.getProtocol.useQuery({
-    queryData: { params: { id: protocolId } },
-    queryKey: ["protocol", protocolId],
-    retry: shouldRetryQuery,
-    enabled: enabled && !!protocolId,
-  });
+  return useQuery(
+    orpc.protocols.getProtocol.queryOptions({
+      input: { id: protocolId },
+      retry: shouldRetryQuery,
+      enabled: enabled && !!protocolId,
+    }),
+  );
 };

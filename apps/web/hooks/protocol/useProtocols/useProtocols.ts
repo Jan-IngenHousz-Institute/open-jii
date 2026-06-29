@@ -1,7 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
 import { useDebounce } from "../../useDebounce";
 
 export type ProtocolFilter = "my" | "all";
@@ -48,32 +49,26 @@ export const useProtocols = ({
     [pathname, router, createQueryString],
   );
 
-  const { data } = tsr.protocols.listProtocols.useQuery({
-    queryData: {
-      query: {
+  const { data } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: {
         filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
-    },
-    queryKey: ["protocols", filter, debouncedSearch],
-  });
+    }),
+  );
 
   // Auto-switch to "all" if user has no protocols of their own on initial load
   const hasAutoSwitched = useRef(false);
   useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      data?.body.length === 0 &&
-      !debouncedSearch
-    ) {
+    if (!hasAutoSwitched.current && filter === "my" && data?.length === 0 && !debouncedSearch) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, data?.body, setFilter, debouncedSearch]);
+  }, [filter, data, setFilter, debouncedSearch]);
 
   return {
-    protocols: data?.body,
+    protocols: data,
     filter,
     setFilter,
     search,

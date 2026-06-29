@@ -86,8 +86,8 @@ export function ProtocolDetailsCard({
     data: UpdateProtocolRequestBody & { name: string; family: SensorFamily },
   ) {
     await updateProtocol({
-      params: { id: protocolId },
-      body: data,
+      id: protocolId,
+      ...data,
     });
     toast({ description: t("protocols.protocolUpdated") });
   }

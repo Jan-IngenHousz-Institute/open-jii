@@ -69,18 +69,16 @@ export function ProtocolPicker({
     setIsCreating(true);
     try {
       const result = await createProtocol.mutateAsync({
-        body: {
-          name: newName.trim(),
-          family: newFamily,
-          code: [],
-        },
+        name: newName.trim(),
+        family: newFamily,
+        code: [],
       });
       const cell: ProtocolCell = {
         id: crypto.randomUUID(),
         type: "protocol",
         isCollapsed: false,
         payload: {
-          protocolId: result.body.id,
+          protocolId: result.id,
           version: 1,
           name: newName.trim(),
         },

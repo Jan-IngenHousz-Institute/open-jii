@@ -11,7 +11,6 @@ import { useCallback, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -25,7 +24,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const { data: session } = useSession();
   const { t } = useTranslation();
 
-  const family = (protocolData?.body as { family?: SensorFamily } | undefined)?.family;
+  const family = protocolData?.family;
   const browserSupport = useIotBrowserSupport(family);
 
   const { mutateAsync: updateProtocol } = useProtocolUpdate(protocolId);
@@ -37,8 +36,8 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     async (code: ProtocolCode) => {
       try {
         await updateProtocol({
-          params: { id: protocolId },
-          body: { code: code as Record<string, unknown>[] },
+          id: protocolId,
+          code: code as Record<string, unknown>[],
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -65,7 +64,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     setIsEditing(false);
   };
 
-  const protocol = protocolData?.body;
+  const protocol = protocolData;
   const isCreator = session?.user.id === protocol?.createdBy;
 
   if (isLoading) {

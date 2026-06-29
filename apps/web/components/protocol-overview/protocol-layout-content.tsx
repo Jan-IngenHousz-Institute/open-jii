@@ -32,7 +32,7 @@ export function ProtocolLayoutContent({
 
   const handleTitleSave = async (newName: string) => {
     await updateProtocol(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("protocols.protocolUpdated") });

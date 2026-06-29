@@ -63,7 +63,7 @@ export function ProtocolCompatibleMacrosCard({
   const locale = useLocale();
 
   const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
-  const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
+  const compatibleMacros = useMemo(() => compatibleData ?? [], [compatibleData]);
 
   const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);
   const { mutateAsync: removeMacro, isPending: isRemoving } = useRemoveCompatibleMacro(protocolId);
@@ -92,15 +92,16 @@ export function ProtocolCompatibleMacrosCard({
 
   const handleAddMacro = async (macroId: string) => {
     await addMacros({
-      params: { id: protocolId },
-      body: { macroIds: [macroId] },
+      id: protocolId,
+      macroIds: [macroId],
     });
     setMacroSearch("");
   };
 
   const handleRemoveMacro = async (macroId: string) => {
     await removeMacro({
-      params: { id: protocolId, macroId },
+      id: protocolId,
+      macroId,
     });
   };
 

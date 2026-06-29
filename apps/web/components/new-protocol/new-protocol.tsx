@@ -52,13 +52,13 @@ export function NewProtocolForm() {
       setIsSubmitting(false);
     },
     onSuccess: (data) => {
-      const id = data.body.id;
+      const id = data.id;
       // Link selected macros after protocol creation, then redirect
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
-            params: { id },
-            body: { macroIds: selectedMacros.map((m) => m.id) },
+            id,
+            macroIds: selectedMacros.map((m) => m.id),
           })
           .catch(() => {
             // Protocol created successfully, macro linking failed - still redirect
@@ -159,12 +159,10 @@ export function NewProtocolForm() {
   function onSubmit(data: CreateProtocolRequestBody) {
     setIsSubmitting(true);
     createProtocol({
-      body: {
-        name: data.name,
-        description: data.description,
-        code: data.code,
-        family: data.family,
-      },
+      name: data.name,
+      description: data.description,
+      code: data.code,
+      family: data.family,
     });
   }
 

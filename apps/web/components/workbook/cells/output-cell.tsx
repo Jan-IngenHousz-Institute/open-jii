@@ -198,8 +198,8 @@ export function OutputCellComponent({
     sourceProtocolId ?? "",
     !!sourceProtocolId,
   );
-  const protocolFamily = protocolResponse?.body.family;
-  const protocolCode = protocolResponse?.body.code;
+  const protocolFamily = protocolResponse?.family;
+  const protocolCode = protocolResponse?.code;
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (

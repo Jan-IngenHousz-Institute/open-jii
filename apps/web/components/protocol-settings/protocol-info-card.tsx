@@ -43,7 +43,7 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
 
   const handleDeleteProtocol = async () => {
-    await deleteProtocol({ params: { id: protocolId } });
+    await deleteProtocol({ id: protocolId });
     setIsDeleteDialogOpen(false);
     // Navigate to protocols list
     router.push(`/${locale}/platform/protocols`);

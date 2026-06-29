@@ -55,17 +55,17 @@ export function ProtocolCellComponent({
   const useSnapshot = snapshot != null;
   const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
   const protocolLoading = !useSnapshot && liveLoading;
-  const protocolName = protocolData?.body.name;
+  const protocolName = protocolData?.name;
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
   // rather than treating it as a load failure.
   const protocolCode = useSnapshot
     ? JSON.stringify(snapshot.code ?? [], null, 2)
-    : protocolData?.body.code
-      ? JSON.stringify(protocolData.body.code, null, 2)
+    : protocolData?.code
+      ? JSON.stringify(protocolData.code, null, 2)
       : null;
 
-  const protocolFamily = useSnapshot ? snapshot.family : protocolData?.body.family;
-  const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
+  const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
+  const isOwner = !!session?.user.id && session.user.id === protocolData?.createdBy;
   const isEditable = isOwner && !readOnly;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
@@ -86,8 +86,8 @@ export function ProtocolCellComponent({
     async (code: string) => {
       try {
         await saveProtocol({
-          params: { id: protocolId },
-          body: { code: JSON.parse(code) as Record<string, unknown>[] },
+          id: protocolId,
+          code: JSON.parse(code) as Record<string, unknown>[],
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });

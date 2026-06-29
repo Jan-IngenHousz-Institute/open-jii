@@ -22,7 +22,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
   const { data, isLoading, error } = useProtocol(id);
-  const browserSupport = useIotBrowserSupport(data?.body.family);
+  const browserSupport = useIotBrowserSupport(data?.family);
 
   const isOverview = pathname === `/${locale}/platform/protocols/${id}`;
   const isRun = pathname === `/${locale}/platform/protocols/${id}/run`;
@@ -65,12 +65,12 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
     <EntityLayoutShell
       isLoading={isLoading}
       error={error}
-      hasData={!!data?.body}
+      hasData={!!data}
       loadingMessage={t("protocols.loadingProtocols")}
       errorDescription={t("protocols.notFoundDescription")}
     >
-      {data?.body && (
-        <ProtocolLayoutContent id={id} protocol={data.body} actions={actions}>
+      {data && (
+        <ProtocolLayoutContent id={id} protocol={data} actions={actions}>
           {children}
         </ProtocolLayoutContent>
       )}
