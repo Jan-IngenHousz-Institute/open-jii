@@ -539,12 +539,6 @@ importers:
       '@tanstack/react-query-persist-client':
         specifier: catalog:react-query
         version: 5.95.2(@tanstack/react-query@5.95.2(react@19.2.4))(react@19.2.4)
-      '@ts-rest/core':
-        specifier: ^3.52.1
-        version: 3.52.1(@types/node@25.5.0)(zod@3.25.76)
-      '@ts-rest/react-query':
-        specifier: ^3.52.1
-        version: 3.52.1(@tanstack/react-query@5.95.2(react@19.2.4))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76))(react@19.2.4)(zod@3.25.76)
       axios:
         specifier: 'catalog:'
         version: 1.16.1
@@ -26634,11 +26628,6 @@ snapshots:
       '@types/node': 22.19.15
       zod: 3.25.76
 
-  '@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76)':
-    optionalDependencies:
-      '@types/node': 25.5.0
-      zod: 3.25.76
-
   '@ts-rest/nest@3.52.1(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)':
     dependencies:
       '@nestjs/common': 11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -26659,14 +26648,6 @@ snapshots:
     dependencies:
       '@tanstack/react-query': 5.95.2(react@19.2.4)
       '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
-      react: 19.2.4
-    optionalDependencies:
-      zod: 3.25.76
-
-  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.95.2(react@19.2.4))(@ts-rest/core@3.52.1(@types/node@25.5.0)(zod@3.25.76))(react@19.2.4)(zod@3.25.76)':
-    dependencies:
-      '@tanstack/react-query': 5.95.2(react@19.2.4)
-      '@ts-rest/core': 3.52.1(@types/node@25.5.0)(zod@3.25.76)
       react: 19.2.4
     optionalDependencies:
       zod: 3.25.76

@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { contentKeys } from "~/shared/api/content-query-keys";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 
 interface ExperimentRef {
   id: string;
@@ -13,8 +12,10 @@ function findExperimentRef(
   queryClient: ReturnType<typeof useQueryClient>,
   experimentId: string,
 ): ExperimentRef | undefined {
-  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(contentKeys.experiments);
-  return cached?.body?.find((e) => e.id === experimentId);
+  const cached = queryClient.getQueryData(
+    orpc.experiments.listExperiments.queryKey({ input: { filter: "member" } }),
+  );
+  return cached?.find((e) => e.id === experimentId);
 }
 
 // Finite so an incomplete (offline/failed) precache can retry on reconnect.
@@ -31,11 +32,12 @@ async function precacheExperimentWorkbookFn(
 ): Promise<{ workbookVersionId: string }> {
   let ref = findExperimentRef(queryClient, experimentId);
   if (!ref) {
-    await queryClient.fetchQuery({
-      queryKey: contentKeys.experiments,
-      queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
-      meta: { suppressToast: true },
-    });
+    await queryClient.fetchQuery(
+      orpc.experiments.listExperiments.queryOptions({
+        input: { filter: "member" },
+        meta: { suppressToast: true },
+      }),
+    );
     ref = findExperimentRef(queryClient, experimentId);
   }
 
@@ -44,17 +46,15 @@ async function precacheExperimentWorkbookFn(
   }
 
   const { workbookId, workbookVersionId } = ref;
-  await queryClient.fetchQuery({
-    queryKey: ["workbook-version", workbookId, workbookVersionId],
-    queryFn: () =>
-      tsr.workbooks.getWorkbookVersion.query({
-        params: { id: workbookId, versionId: workbookVersionId },
-      }),
-    meta: { suppressToast: true },
-    // A pinned version is immutable, so reuse the cache instead of refetching
-    // (a stale refetch would fail offline even with the version already cached).
-    staleTime: Infinity,
-  });
+  await queryClient.fetchQuery(
+    orpc.workbooks.getWorkbookVersion.queryOptions({
+      input: { id: workbookId, versionId: workbookVersionId },
+      meta: { suppressToast: true },
+      // A pinned version is immutable, so reuse the cache instead of refetching
+      // (a stale refetch would fail offline even with the version already cached).
+      staleTime: Infinity,
+    }),
+  );
 
   return { workbookVersionId };
 }

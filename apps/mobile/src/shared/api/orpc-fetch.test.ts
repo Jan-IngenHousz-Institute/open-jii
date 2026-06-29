@@ -1,17 +1,11 @@
-import type { ApiFetcherArgs } from "@ts-rest/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { refreshSession } from "~/features/auth/api/refresh.api";
-import { configureAuthRefresh, customApiFetcher } from "~/shared/api/fetcher";
+import { orpcFetch } from "~/shared/api/orpc-fetch";
 
-const { mockTsRestFetch, mockGetSession, mockSignOut, mockGetCookie } = vi.hoisted(() => ({
-  mockTsRestFetch: vi.fn(),
+const { mockFetch, mockGetSession, mockSignOut, mockGetCookie } = vi.hoisted(() => ({
+  mockFetch: vi.fn(),
   mockGetSession: vi.fn(),
   mockSignOut: vi.fn(),
   mockGetCookie: vi.fn(() => "sessionToken=cookie"),
-}));
-
-vi.mock("@ts-rest/core", () => ({
-  tsRestFetchApi: (args: unknown) => mockTsRestFetch(args),
 }));
 
 vi.mock("~/features/auth/services/auth", () => ({
@@ -22,39 +16,25 @@ vi.mock("~/features/auth/services/auth", () => ({
   }),
 }));
 
-vi.mock("~/shared/stores/environment-store", () => ({
-  getEnvVar: (k: string) => (k === "BACKEND_URI" ? "https://api.test/" : ""),
-}));
+vi.stubGlobal("fetch", mockFetch);
 
-describe("customApiFetcher", () => {
+function makeRequest() {
+  return new Request("https://api.test/v1/x", { method: "GET" });
+}
+
+describe("orpcFetch", () => {
   beforeEach(() => {
-    mockTsRestFetch.mockReset();
+    mockFetch.mockReset();
     mockGetSession.mockReset();
     mockSignOut.mockReset();
     mockGetCookie.mockReset();
     mockGetCookie.mockReturnValue("sessionToken=cookie");
-    // Same wiring as shared/composition/auth-wiring.ts, with the mocked client.
-    configureAuthRefresh({
-      getCookie: () => mockGetCookie(),
-      refreshSession,
-      signOut: async () => {
-        await mockSignOut();
-      },
-    });
   });
 
-  const args = {
-    path: "/v1/x",
-    method: "GET",
-    body: undefined,
-    headers: {},
-    route: {} as never,
-  } as unknown as ApiFetcherArgs;
-
   it("passes through a 200 response without touching auth", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 200, body: { ok: true } });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    const result = await customApiFetcher(args);
+    const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(200);
     expect(mockGetSession).not.toHaveBeenCalled();
@@ -62,51 +42,53 @@ describe("customApiFetcher", () => {
   });
 
   it("retries the request after a successful silent refresh on 401", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 401 }).mockResolvedValueOnce({ status: 200 });
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s1" } } });
 
-    const result = await customApiFetcher(args);
+    const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(200);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
-    expect(mockTsRestFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it("signs out when the refresh succeeds but the retry is still 401", async () => {
-    mockTsRestFetch.mockResolvedValue({ status: 401 });
+    mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
     mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s1" } } });
 
-    const result = await customApiFetcher(args);
+    const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(401);
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
   it("signs out when refresh itself fails (no session)", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 401 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
     mockGetSession.mockResolvedValueOnce({ data: null });
 
-    const result = await customApiFetcher(args);
+    const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(401);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
-    expect(mockTsRestFetch).toHaveBeenCalledTimes(1); // no retry when refresh fails
+    expect(mockFetch).toHaveBeenCalledTimes(1); // no retry when refresh fails
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
   it("signs out when refresh throws", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 401 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
     mockGetSession.mockRejectedValueOnce(new Error("offline"));
 
-    const result = await customApiFetcher(args);
+    const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(401);
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
   it("dedupes concurrent refreshes (single-flight lock)", async () => {
-    mockTsRestFetch.mockResolvedValue({ status: 401 });
+    mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
     let resolveRefresh!: (v: { data: { session: { id: string } } }) => void;
     mockGetSession.mockImplementationOnce(
       () =>
@@ -115,9 +97,9 @@ describe("customApiFetcher", () => {
         }),
     );
 
-    const p1 = customApiFetcher(args);
-    const p2 = customApiFetcher(args);
-    const p3 = customApiFetcher(args);
+    const p1 = orpcFetch(makeRequest(), undefined);
+    const p2 = orpcFetch(makeRequest(), undefined);
+    const p3 = orpcFetch(makeRequest(), undefined);
 
     // Let the initial 401 reads settle, then resolve the shared refresh.
     await new Promise((r) => setTimeout(r, 0));
@@ -130,36 +112,36 @@ describe("customApiFetcher", () => {
   });
 
   it("attaches the Cookie header when a session cookie is present", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 200 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockGetCookie.mockReturnValue("sessionToken=abc");
 
-    await customApiFetcher(args);
+    await orpcFetch(makeRequest(), undefined);
 
-    const sent = mockTsRestFetch.mock.calls[0][0];
-    expect(sent.headers.Cookie).toBe("sessionToken=abc");
+    const sentInit = mockFetch.mock.calls[0][1] as { headers: Headers };
+    expect(sentInit.headers.get("Cookie")).toBe("sessionToken=abc");
   });
 
   it("omits the Cookie header when getCookie returns empty", async () => {
-    mockTsRestFetch.mockResolvedValueOnce({ status: 200 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
     mockGetCookie.mockReturnValue("");
 
-    await customApiFetcher(args);
+    await orpcFetch(makeRequest(), undefined);
 
-    const sent = mockTsRestFetch.mock.calls[0][0];
-    expect(sent.headers.Cookie).toBeUndefined();
+    const sentInit = mockFetch.mock.calls[0][1] as { headers: Headers };
+    expect(sentInit.headers.get("Cookie")).toBeNull();
   });
 
   it("aborts the underlying fetch when the upstream signal aborts", async () => {
     const upstream = new AbortController();
-    mockTsRestFetch.mockImplementation((sentArgs: { signal: AbortSignal }) => {
+    mockFetch.mockImplementation((_req: Request, init: { signal: AbortSignal }) => {
       return new Promise((_resolve, reject) => {
-        sentArgs.signal.addEventListener("abort", () =>
+        init.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
         );
       });
     });
 
-    const p = customApiFetcher({ ...args, signal: upstream.signal } as ApiFetcherArgs);
+    const p = orpcFetch(makeRequest(), { signal: upstream.signal });
     upstream.abort();
 
     await expect(p).rejects.toThrow();
@@ -168,17 +150,15 @@ describe("customApiFetcher", () => {
   it("aborts a hung fetch via its internal timeout", async () => {
     vi.useFakeTimers();
     try {
-      mockTsRestFetch.mockImplementation((sentArgs: { signal: AbortSignal }) => {
+      mockFetch.mockImplementation((_req: Request, init: { signal: AbortSignal }) => {
         return new Promise((_resolve, reject) => {
-          sentArgs.signal.addEventListener("abort", () =>
+          init.signal.addEventListener("abort", () =>
             reject(new DOMException("aborted", "AbortError")),
           );
         });
       });
 
-      const p = customApiFetcher(args);
-      // Catch the rejection synchronously so the unhandled-rejection check passes
-      // while we still advance the clock to trigger the timeout abort.
+      const p = orpcFetch(makeRequest(), undefined);
       const settled = p.catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(10_000);
       const err = await settled;
@@ -191,12 +171,11 @@ describe("customApiFetcher", () => {
   it("does not abort a request that resolves within the timeout", async () => {
     vi.useFakeTimers();
     try {
-      mockTsRestFetch.mockResolvedValueOnce({ status: 200 });
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-      const result = await customApiFetcher(args);
+      const result = await orpcFetch(makeRequest(), undefined);
 
       expect(result.status).toBe(200);
-      // The internal timeout would have fired had it not been cleared on success.
       await vi.advanceTimersByTimeAsync(15_000);
       expect(mockSignOut).not.toHaveBeenCalled();
     } finally {

@@ -7,20 +7,27 @@ import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
-const { listUseQuery, versionUseQuery, setFlowGraph, setFlowNodes } = vi.hoisted(() => ({
-  listUseQuery: vi.fn(),
-  versionUseQuery: vi.fn(),
+const { useQueryMock, setFlowGraph, setFlowNodes } = vi.hoisted(() => ({
+  useQueryMock: vi.fn(),
   setFlowGraph: vi.fn(),
   setFlowNodes: vi.fn(),
 }));
 
-vi.mock("~/shared/api/tsr", () => ({
-  tsr: {
+// The hook calls `useQuery(orpc.<endpoint>.queryOptions(...))` (listExperiments
+// directly, getWorkbookVersion via useWorkbookVersionQuery); tag each endpoint's
+// options so the single useQuery mock can return per-endpoint data.
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: (opts: unknown) => useQueryMock(opts) };
+});
+
+vi.mock("~/shared/api/orpc", () => ({
+  orpc: {
     experiments: {
-      listExperiments: { useQuery: listUseQuery },
+      listExperiments: { queryOptions: (o: object) => ({ __kind: "list", ...o }) },
     },
     workbooks: {
-      getWorkbookVersion: { useQuery: versionUseQuery },
+      getWorkbookVersion: { queryOptions: (o: object) => ({ __kind: "version", ...o }) },
     },
   },
 }));
@@ -30,10 +37,16 @@ vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => (
     selector({ setFlowGraph, setFlowNodes }),
 }));
 
+const results = {
+  list: { data: undefined, isLoading: false } as Record<string, unknown>,
+  version: { data: undefined, isLoading: false, error: null } as Record<string, unknown>,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
-  listUseQuery.mockReturnValue({ data: undefined, isLoading: false });
-  versionUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: null });
+  results.list = { data: undefined, isLoading: false };
+  results.version = { data: undefined, isLoading: false, error: null };
+  useQueryMock.mockImplementation((opts: { __kind: "list" | "version" }) => results[opts.__kind]);
 });
 
 describe("useLoadExperimentFlow", () => {
@@ -54,16 +67,16 @@ describe("useLoadExperimentFlow", () => {
         isAnswered: false,
       },
     ];
-    listUseQuery.mockReturnValue({
-      data: { body: [{ id: "e1", workbookId: "w1", workbookVersionId: "v1" }] },
+    results.list = {
+      data: [{ id: "e1", workbookId: "w1", workbookVersionId: "v1" }],
       isLoading: false,
-    });
+    };
     const entitySnapshots = { protocols: {}, macros: {} };
-    versionUseQuery.mockReturnValue({
-      data: { body: { cells, entitySnapshots } },
+    results.version = {
+      data: { cells, entitySnapshots },
       isLoading: false,
       error: null,
-    });
+    };
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
@@ -84,10 +97,10 @@ describe("useLoadExperimentFlow", () => {
   });
 
   it("surfaces an error when the experiment has no workbook", () => {
-    listUseQuery.mockReturnValue({
-      data: { body: [{ id: "e1", workbookId: null, workbookVersionId: null }] },
+    results.list = {
+      data: [{ id: "e1", workbookId: null, workbookVersionId: null }],
       isLoading: false,
-    });
+    };
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
@@ -101,7 +114,7 @@ describe("useLoadExperimentFlow", () => {
 
   it("surfaces a listExperiments error instead of hanging in loading", () => {
     const err = new Error("list failed");
-    listUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: err });
+    results.list = { data: undefined, isLoading: false, error: err };
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 

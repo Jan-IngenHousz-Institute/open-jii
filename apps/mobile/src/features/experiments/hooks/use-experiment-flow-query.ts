@@ -1,4 +1,5 @@
-import { tsr } from "~/shared/api/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/shared/api/orpc";
 
 /**
  * Loads a published workbook version (with full cell data, including branch
@@ -11,10 +12,11 @@ export function useWorkbookVersionQuery(
   workbookId: string | undefined,
   workbookVersionId: string | undefined,
 ) {
-  return tsr.workbooks.getWorkbookVersion.useQuery({
-    queryKey: ["workbook-version", workbookId, workbookVersionId],
-    queryData: { params: { id: workbookId ?? "", versionId: workbookVersionId ?? "" } },
-    enabled: !!workbookId && !!workbookVersionId,
-    networkMode: "offlineFirst",
-  });
+  return useQuery(
+    orpc.workbooks.getWorkbookVersion.queryOptions({
+      input: { id: workbookId ?? "", versionId: workbookVersionId ?? "" },
+      enabled: !!workbookId && !!workbookVersionId,
+      networkMode: "offlineFirst",
+    }),
+  );
 }

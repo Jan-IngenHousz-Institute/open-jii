@@ -122,11 +122,7 @@ async function fetchServerTime(): Promise<number> {
   const client = getApiClient();
   const result = await client.health.getTime();
 
-  if (result.status !== 200) {
-    throw new Error(`Server time request failed: ${result.status}`);
-  }
-
-  return result.body.utcTimestampMs;
+  return result.utcTimestampMs;
 }
 
 async function performSync(isInitial = false): Promise<void> {

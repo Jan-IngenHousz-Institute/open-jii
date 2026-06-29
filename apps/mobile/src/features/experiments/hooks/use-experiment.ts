@@ -1,17 +1,17 @@
-import { tsr } from "~/shared/api/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/shared/api/orpc";
 
 export function useExperiment(experimentId: string | undefined) {
-  const { data, isLoading, error } = tsr.experiments.getExperiment.useQuery({
-    queryKey: ["experiment", experimentId],
-    queryData: { params: { id: experimentId ?? "" } },
-    enabled: !!experimentId,
-    networkMode: "offlineFirst",
-  });
-
-  const experiment = data?.body;
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperiment.queryOptions({
+      input: { id: experimentId ?? "" },
+      enabled: !!experimentId,
+      networkMode: "offlineFirst",
+    }),
+  );
 
   return {
-    experiment,
+    experiment: data,
     isLoading,
     error,
   };

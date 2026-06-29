@@ -138,13 +138,8 @@ export async function getCredentials() {
   }
 
   inflightCredentialsPromise = (async () => {
-    const result = await getApiClient().iot.getCredentials();
-
-    if (result.status !== 200) {
-      throw new Error(`Failed to fetch IoT credentials: ${result.status}`);
-    }
-
-    const { accessKeyId, secretAccessKey, sessionToken, expiration } = result.body;
+    const { accessKeyId, secretAccessKey, sessionToken, expiration } =
+      await getApiClient().iot.getCredentials();
 
     if (!accessKeyId || !secretAccessKey || !sessionToken) {
       throw new Error("Missing one or more required AWS credential fields.");
