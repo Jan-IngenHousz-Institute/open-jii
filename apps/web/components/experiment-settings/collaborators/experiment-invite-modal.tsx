@@ -71,8 +71,8 @@ export function ExperimentInviteModal({
   const isSubmitDisabled = !selection || isAddingMember || isCreatingInvitation || isArchived;
 
   const availableUsers = useMemo(() => {
-    if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId));
+    if (userSearchData && Array.isArray(userSearchData)) {
+      return userSearchData.filter((user) => !members.some((m) => m.user.id === user.userId));
     }
     return [];
   }, [userSearchData, members]);
@@ -108,12 +108,10 @@ export function ExperimentInviteModal({
     } else {
       await createInvitation(
         {
-          body: {
-            resourceType: "experiment",
-            resourceId: experimentId,
-            email: selection.email,
-            role: selectedRole,
-          },
+          resourceType: "experiment",
+          resourceId: experimentId,
+          email: selection.email,
+          role: selectedRole,
         },
         {
           onSuccess: () => {

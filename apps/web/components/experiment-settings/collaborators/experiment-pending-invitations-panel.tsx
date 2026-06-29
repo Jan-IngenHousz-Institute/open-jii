@@ -36,7 +36,7 @@ export function ExperimentPendingInvitationsPanel({
   const handleInvitationValueChange = (value: string, invitation: Invitation) => {
     if (value === "revoke") {
       revokeInvitation(
-        { params: { invitationId: invitation.id } },
+        { invitationId: invitation.id },
         {
           onSuccess: () => {
             toast({ description: t("experimentSettings.invitationRevoked") });
@@ -46,8 +46,8 @@ export function ExperimentPendingInvitationsPanel({
     } else {
       updateInvitationRole(
         {
-          params: { invitationId: invitation.id },
-          body: { role: value as ExperimentMemberRole },
+          invitationId: invitation.id,
+          role: value as ExperimentMemberRole,
         },
         {
           onSuccess: () => {

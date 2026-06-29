@@ -1,6 +1,8 @@
-import { tsr } from "@/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
 
 import type { InvitationResourceType } from "@repo/api/domains/user/user.schema";
+
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to fetch pending invitations for a resource.
@@ -8,13 +10,12 @@ import type { InvitationResourceType } from "@repo/api/domains/user/user.schema"
  * @param resourceId The ID of the resource
  */
 export const useUserInvitations = (resourceType: InvitationResourceType, resourceId: string) => {
-  return tsr.users.listInvitations.useQuery({
-    queryData: {
-      query: {
+  return useQuery(
+    orpc.users.listInvitations.queryOptions({
+      input: {
         resourceType,
         resourceId,
       },
-    },
-    queryKey: ["experiment-invitations", resourceType, resourceId],
-  });
+    }),
+  );
 };

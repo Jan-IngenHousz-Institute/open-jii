@@ -1,4 +1,6 @@
-import { tsr } from "@/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to search users by name or email
@@ -12,15 +14,14 @@ export const useUserSearch = (
   queryString: string,
   options?: { limit?: number; offset?: number },
 ) => {
-  return tsr.users.searchUsers.useQuery({
-    queryData: {
-      query: {
+  return useQuery(
+    orpc.users.searchUsers.queryOptions({
+      input: {
         query: queryString,
         limit: options?.limit,
         offset: options?.offset,
       },
-    },
-    queryKey: ["user-search", queryString, options?.limit, options?.offset],
-    enabled: queryString.trim().length > 0,
-  });
+      enabled: queryString.trim().length > 0,
+    }),
+  );
 };

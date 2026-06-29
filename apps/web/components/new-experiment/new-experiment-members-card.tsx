@@ -55,7 +55,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   // Filter available users (exclude already added and current user)
   const availableProfiles = useMemo(
     () =>
-      userSearchData?.body.filter(
+      userSearchData?.filter(
         (profile: UserProfile) =>
           !members.some((m) => m.userId === profile.userId) && profile.userId !== currentUserId,
       ) ?? [],

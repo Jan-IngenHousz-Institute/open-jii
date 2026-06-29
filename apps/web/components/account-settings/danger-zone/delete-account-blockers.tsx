@@ -305,7 +305,7 @@ function TransferUserPicker({
 
   const availableUsers = useMemo<UserProfile[]>(() => {
     if (!isSearching) return [];
-    const results = Array.isArray(data?.body) ? data.body : [];
+    const results = Array.isArray(data) ? data : [];
     return results.filter((user) => user.userId !== excludeUserId);
   }, [isSearching, data, excludeUserId]);
 
