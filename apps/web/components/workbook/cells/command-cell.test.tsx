@@ -17,7 +17,7 @@ function inlineCell(overrides: Partial<CommandCell["payload"]> = {}): CommandCel
 describe("CommandCellComponent", () => {
   it("renders the command content in an editable field", () => {
     render(<CommandCellComponent cell={inlineCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.getByLabelText("Device command")).toHaveValue("battery");
+    expect(screen.getByRole("textbox")).toHaveValue("battery");
   });
 
   it("calls onUpdate when the command text changes", async () => {
@@ -30,7 +30,7 @@ describe("CommandCellComponent", () => {
         onDelete={vi.fn()}
       />,
     );
-    await user.type(screen.getByLabelText("Device command"), "h");
+    await user.type(screen.getByRole("textbox"), "h");
     expect(onUpdate).toHaveBeenCalled();
     const updated = onUpdate.mock.lastCall?.[0] as CommandCell;
     expect(updated.payload).toMatchObject({ content: "h" });

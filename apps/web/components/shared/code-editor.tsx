@@ -14,7 +14,7 @@ import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { useCallback, useMemo } from "react";
 
-export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown" | "yaml";
+export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown" | "yaml" | "text";
 export type { Diagnostic };
 
 export type LintSource = (doc: string) => Diagnostic[];
@@ -33,6 +33,9 @@ const getLanguageExtension = (language: CodeLanguage) => {
       return markdown();
     case "yaml":
       return yaml();
+    case "text":
+      // Plain text (e.g. a free-form device command); no language extension.
+      return [];
   }
 };
 
