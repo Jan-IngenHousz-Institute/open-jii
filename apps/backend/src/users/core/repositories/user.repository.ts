@@ -133,7 +133,6 @@ export class UserRepository {
                 trigramMatch(profiles.lastName, params.query),
                 ilike(fullName, `%${escapeLike(params.query)}%`),
                 ilike(users.email, `%${escapeLike(params.query)}%`),
-                trigramMatch(users.email, params.query),
               ),
             ),
           )
