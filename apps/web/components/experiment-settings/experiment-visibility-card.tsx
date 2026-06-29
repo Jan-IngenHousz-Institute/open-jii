@@ -76,11 +76,9 @@ export function ExperimentVisibilityCard({
     if (!currentVisibilityValue) return;
 
     await updateExperiment({
-      params: { id: experimentId },
-      body: {
-        visibility: currentVisibilityValue,
-        embargoUntil: iso ?? "",
-      },
+      id: experimentId,
+      visibility: currentVisibilityValue,
+      embargoUntil: iso ?? "",
     });
 
     toast({ description: t("experiments.experimentUpdated") });
@@ -98,8 +96,8 @@ export function ExperimentVisibilityCard({
     };
 
     await updateExperiment({
-      params: { id: experimentId },
-      body: updateData,
+      id: experimentId,
+      ...updateData,
     });
 
     form.setValue("visibility", pendingVisibility);

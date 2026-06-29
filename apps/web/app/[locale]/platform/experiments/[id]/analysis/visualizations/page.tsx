@@ -19,8 +19,8 @@ export default function ExperimentVisualizationsPage() {
   const locale = useLocale();
 
   const { data: accessData } = useExperimentAccess(experimentId);
-  const experimentData = accessData?.body.experiment;
-  const hasAccess = accessData?.body.isAdmin;
+  const experimentData = accessData?.experiment;
+  const hasAccess = accessData?.isAdmin;
 
   if (experimentData?.status === "archived") {
     notFound();

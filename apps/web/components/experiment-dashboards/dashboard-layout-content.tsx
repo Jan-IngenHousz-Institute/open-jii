@@ -37,7 +37,7 @@ export function DashboardLayoutContent({
   const { mode, toggleMode } = useDashboardMode();
 
   const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = accessData?.body.isAdmin ?? false;
+  const canEdit = accessData?.isAdmin ?? false;
   const isEditing = canEdit && mode === "edit";
 
   const name = useWatch({ control: form.control, name: "name" });

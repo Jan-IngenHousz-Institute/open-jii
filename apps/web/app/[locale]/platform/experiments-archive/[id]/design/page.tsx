@@ -27,7 +27,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const { t } = useTranslation("experiments");
 
   // Get existing flow for this experiment
-  const experimentData = experiment?.body;
+  const experimentData = experiment;
   const { data: existingFlow } = useExperimentFlow(id);
 
   // Flow state / editor ref
@@ -41,7 +41,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     return <ErrorDisplay error={error ?? accessError} title={t("failedToLoad")} />;
   }
 
-  if (!experimentData || !accessData?.body.experiment) {
+  if (!experimentData || !accessData?.experiment) {
     return <div>{t("notFound")}</div>;
   }
 

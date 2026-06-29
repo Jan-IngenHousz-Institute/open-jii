@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import { orpc } from "@/lib/orpc";
 import { useExperimentUpdate } from "./useExperimentUpdate";
 
 describe("useExperimentUpdate", () => {
@@ -18,8 +19,8 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "Updated" },
+        id: "exp-1",
+        name: "Updated",
       });
     });
 
@@ -34,10 +35,13 @@ describe("useExperimentUpdate", () => {
       defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
     });
 
+    const experimentKey = orpc.experiments.getExperiment.queryKey({ input: { id: "exp-1" } });
+
     // Pre-populate the single experiment cache
-    queryClient.setQueryData(["experiment", "exp-1"], {
-      body: createExperiment({ id: "exp-1", name: "Old Name", description: "Old desc" }),
-    });
+    queryClient.setQueryData(
+      experimentKey,
+      createExperiment({ id: "exp-1", name: "Old Name", description: "Old desc" }),
+    );
 
     // Delay the response so we can observe optimistic state
     server.mount(contract.experiments.updateExperiment, {
@@ -49,24 +53,25 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "New Name" },
+        id: "exp-1",
+        name: "New Name",
       });
     });
 
     // Optimistic update should apply immediately
     await waitFor(() => {
-      const cached = queryClient.getQueryData<{ body: { name: string } }>(["experiment", "exp-1"]);
-      expect(cached?.body.name).toBe("New Name");
+      const cached = queryClient.getQueryData<{ name: string }>(experimentKey);
+      expect(cached?.name).toBe("New Name");
     });
   });
 
   it("reverts cache on error", async () => {
     const queryClient = createTestQueryClient();
 
-    queryClient.setQueryData(["experiment", "exp-1"], {
-      body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
-    });
+    queryClient.setQueryData(
+      orpc.experiments.getExperiment.queryKey({ input: { id: "exp-1" } }),
+      createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
+    );
 
     server.mount(contract.experiments.updateExperiment, { status: 500 });
 
@@ -78,8 +83,8 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "Should Revert" },
+        id: "exp-1",
+        name: "Should Revert",
       });
     });
 

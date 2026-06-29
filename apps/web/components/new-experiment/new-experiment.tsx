@@ -110,9 +110,7 @@ export function NewExperimentForm() {
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
     pendingWorkbookId.current = data.workbookId ?? undefined;
-    createExperiment({
-      body: data,
-    });
+    createExperiment(data);
   }
 
   // Track if user has entered any data

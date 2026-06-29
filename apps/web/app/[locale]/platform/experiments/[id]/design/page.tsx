@@ -50,8 +50,8 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: session } = useSession();
   const { t } = useTranslation("experiments");
 
-  const experimentData = experiment?.body;
-  const hasAccess = accessData?.body.isAdmin ?? false;
+  const experimentData = experiment;
+  const hasAccess = accessData?.isAdmin ?? false;
   const workbookId = experimentData?.workbookId;
   const workbookVersionId = experimentData?.workbookVersionId;
 
@@ -119,7 +119,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     return <ErrorDisplay error={error ?? accessError} title={t("failedToLoad")} />;
   }
 
-  if (!experimentData || !accessData?.body.experiment) {
+  if (!experimentData || !accessData?.experiment) {
     return <div>{t("notFound")}</div>;
   }
 

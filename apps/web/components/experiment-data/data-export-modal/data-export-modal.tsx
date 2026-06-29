@@ -42,7 +42,7 @@ export function DataExportModal({
 
   // Toggle inherits the experiment's stored setting; user can override per-export.
   const { data: experimentData } = useExperiment(experimentId);
-  const experimentAnonymize = experimentData?.body.anonymizeContributors;
+  const experimentAnonymize = experimentData?.anonymizeContributors;
   const [anonymizeOverride, setAnonymizeOverride] = React.useState<boolean | undefined>();
   const effectiveAnonymize = anonymizeOverride ?? experimentAnonymize;
 

@@ -32,7 +32,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
   const { data: accessData } = useExperimentAccess(experimentId);
   const { data, isLoading, error } = useExperimentVisualization(visualizationId, experimentId);
 
-  if (accessData?.body.experiment.status === "archived") {
+  if (accessData?.experiment.status === "archived") {
     notFound();
   }
 

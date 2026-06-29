@@ -1,54 +1,31 @@
-import { tsr } from "@/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to delete an experiment
  * @returns Mutation object for deleting experiments
  */
 export const useExperimentDelete = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.experiments.deleteExperiment.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["experiments"],
-      });
+  return useMutation(
+    orpc.experiments.deleteExperiment.mutationOptions({
+      onMutate: async (variables) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: orpc.experiments.listExperiments.key() });
 
-      // Get the current experiments list
-      const previousExperiments = queryClient.getQueryData<{
-        body: Experiment[];
-      }>(["experiments"]);
-
-      // Optimistically remove the experiment from the list
-      if (previousExperiments?.body) {
-        queryClient.setQueryData(["experiments"], {
-          ...previousExperiments,
-          body: previousExperiments.body.filter(
-            (experiment) => experiment.id !== variables.params.id,
-          ),
+        // Remove the single experiment from cache as well
+        queryClient.removeQueries({
+          queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.id } }),
         });
-      }
-
-      // Remove the single experiment from cache as well
-      queryClient.removeQueries({
-        queryKey: ["experiment", variables.params.id],
-      });
-
-      return { previousExperiments };
-    },
-    onError: (error, variables, context) => {
-      // Restore the previous data if there was an error
-      if (context?.previousExperiments) {
-        queryClient.setQueryData(["experiments"], context.previousExperiments);
-      }
-    },
-    onSettled: async () => {
-      // Always invalidate to ensure cache is in sync with server
-      await queryClient.invalidateQueries({
-        queryKey: ["experiments"],
-      });
-    },
-  });
+      },
+      onSettled: async () => {
+        // Always invalidate to ensure cache is in sync with server
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperiments.key(),
+        });
+      },
+    }),
+  );
 };

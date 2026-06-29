@@ -1,4 +1,6 @@
-import { tsr } from "@/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to fetch a single experiment by ID
@@ -7,8 +9,5 @@ import { tsr } from "@/lib/tsr";
  * @returns Query result containing the experiment details
  */
 export const useExperiment = (experimentId: string) => {
-  return tsr.experiments.getExperiment.useQuery({
-    queryData: { params: { id: experimentId } },
-    queryKey: ["experiment", experimentId],
-  });
+  return useQuery(orpc.experiments.getExperiment.queryOptions({ input: { id: experimentId } }));
 };

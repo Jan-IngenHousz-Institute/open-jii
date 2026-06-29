@@ -20,8 +20,8 @@ export default function ExperimentDashboardsPage() {
   const locale = useLocale();
 
   const { data: accessData } = useExperimentAccess(experimentId);
-  const experimentData = accessData?.body.experiment;
-  const isAdmin = accessData?.body.isAdmin;
+  const experimentData = accessData?.experiment;
+  const isAdmin = accessData?.isAdmin;
 
   if (experimentData?.status === "archived") {
     notFound();

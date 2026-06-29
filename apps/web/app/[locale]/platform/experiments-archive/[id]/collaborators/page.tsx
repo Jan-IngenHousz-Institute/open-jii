@@ -28,7 +28,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const { t } = useTranslation();
 
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
-  const experiment = accessData?.body.experiment;
+  const experiment = accessData?.experiment;
 
   const { data: membersData, isError: isMembersError } = useExperimentMembers(id);
   const members = useMemo(() => membersData?.body ?? [], [membersData]);
