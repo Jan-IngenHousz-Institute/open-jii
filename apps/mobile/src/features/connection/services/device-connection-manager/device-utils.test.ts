@@ -1,6 +1,32 @@
+import type { BluetoothNativeDevice } from "react-native-bluetooth-classic";
 import { describe, expect, it } from "vitest";
 
-import { discoveredEventToDevice } from "./device-utils";
+import { bluetoothDeviceToDevice, discoveredEventToDevice } from "./device-utils";
+
+describe("bluetoothDeviceToDevice", () => {
+  it("maps a device with a usable address", () => {
+    const native = {
+      address: "AA:BB:CC",
+      name: "MultispeQ",
+      rssi: -50,
+    } as unknown as BluetoothNativeDevice;
+    expect(bluetoothDeviceToDevice(native)).toEqual({
+      id: "AA:BB:CC",
+      type: "bluetooth-classic",
+      name: "MultispeQ",
+      rssi: -50,
+    });
+  });
+
+  it("returns null for nullish or address-less entries instead of crashing", () => {
+    expect(bluetoothDeviceToDevice(undefined)).toBeNull();
+    expect(bluetoothDeviceToDevice(null)).toBeNull();
+    // @ts-expect-error - exercising the runtime guard against malformed payloads
+    expect(bluetoothDeviceToDevice({})).toBeNull();
+    // @ts-expect-error - exercising the runtime guard against an empty address
+    expect(bluetoothDeviceToDevice({ address: "" })).toBeNull();
+  });
+});
 
 describe("discoveredEventToDevice", () => {
   it("reads the device from a well-formed { device } event", () => {

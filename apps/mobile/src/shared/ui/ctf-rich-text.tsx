@@ -4,11 +4,33 @@ import type { Block, Document, Node } from "@contentful/rich-text-types";
 import { BLOCKS, INLINES, MARKS } from "@contentful/rich-text-types";
 import React from "react";
 import { Linking, Text, View } from "react-native";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 export interface CtfRichTextProps {
   json: Document;
   textClass?: string;
   inline?: boolean;
+}
+
+// Contentful hyperlinks can be relative (e.g. "/about"). Passing those straight
+// to Linking.openURL throws on Android ("No Activity found to handle Intent"),
+// so resolve site-relative paths against the web base URL and swallow failures.
+function openHyperlink(uri: string): void {
+  let target = uri;
+  if (uri.startsWith("/")) {
+    // Defensive path: getEnvVar throws when the var is unset or storage hasn't
+    // rehydrated yet, so treat the base as optional and never let resolving a
+    // relative link crash the tap. Drop the link if we can't build a full URL.
+    let base: string | undefined;
+    try {
+      base = getEnvVar("NEXT_AUTH_URI", false);
+    } catch {
+      base = undefined;
+    }
+    if (!base) return;
+    target = `${base.replace(/\/$/, "")}${uri}`;
+  }
+  void Linking.openURL(target).catch((e) => console.warn("[ctf] failed to open url", e));
 }
 
 const makeInlineOptions = (textClass: string): Options => ({
@@ -60,7 +82,7 @@ const makeInlineOptions = (textClass: string): Options => ({
       const uri = (node.data as { uri?: string }).uri;
       if (!uri) return null;
       return (
-        <Text className={`${textClass} underline`} onPress={() => void Linking.openURL(uri)}>
+        <Text className={`${textClass} underline`} onPress={() => openHyperlink(uri)}>
           {children}
         </Text>
       );
@@ -159,9 +181,7 @@ const makeOptions = (textClass: string): Options => ({
       return (
         <Text
           className="text-primary text-sm font-medium leading-5"
-          onPress={() =>
-            Linking.openURL(uri).catch((e) => console.warn("[ctf] failed to open url", e))
-          }
+          onPress={() => openHyperlink(uri)}
         >
           {children}
         </Text>

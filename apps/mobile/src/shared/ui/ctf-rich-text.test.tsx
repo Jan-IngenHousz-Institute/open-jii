@@ -3,9 +3,13 @@ import type { Document } from "@contentful/rich-text-types";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { Linking } from "react-native";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getEnvVar } from "~/shared/stores/environment-store";
 
 import { CtfRichText } from "./ctf-rich-text";
+
+vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: vi.fn() }));
+const mockedGetEnvVar = vi.mocked(getEnvVar);
 
 // Minimal builders for Contentful rich-text nodes — enough to exercise the
 // renderers without pulling in the full type machinery.
@@ -30,6 +34,10 @@ const doc = (...content: RtNode[]): Document =>
   ({ nodeType: BLOCKS.DOCUMENT, data: {}, content }) as unknown as Document;
 
 describe("CtfRichText", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders paragraph text", () => {
     render(<CtfRichText json={doc(block(BLOCKS.PARAGRAPH, text("Hello world")))} />);
 
@@ -185,5 +193,44 @@ describe("CtfRichText", () => {
     expect(screen.getByText("Heading 6")).toBeTruthy();
     expect(screen.getByText("Header cell")).toBeTruthy();
     expect(screen.getByText("Body cell")).toBeTruthy();
+  });
+
+  it("resolves a site-relative hyperlink against the web base url", () => {
+    mockedGetEnvVar.mockReturnValue("https://app.openjii.org");
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+
+    render(<CtfRichText json={doc(block(BLOCKS.PARAGRAPH, hyperlink("/about", text("About"))))} />);
+    fireEvent.press(screen.getByText("About"));
+
+    expect(mockedGetEnvVar).toHaveBeenCalledWith("NEXT_AUTH_URI", false);
+    expect(openURL).toHaveBeenCalledWith("https://app.openjii.org/about");
+  });
+
+  it("drops a site-relative hyperlink without crashing when the base url is unavailable", () => {
+    mockedGetEnvVar.mockImplementation(() => {
+      throw new Error("Env variable NEXT_AUTH_URI is required");
+    });
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+
+    render(<CtfRichText json={doc(block(BLOCKS.PARAGRAPH, hyperlink("/about", text("About"))))} />);
+
+    expect(() => fireEvent.press(screen.getByText("About"))).not.toThrow();
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  it("handles a rejected openURL without throwing", async () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockRejectedValue(new Error("No Activity found"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(
+      <CtfRichText
+        json={doc(block(BLOCKS.PARAGRAPH, hyperlink("https://example.com", text("Read more"))))}
+      />,
+    );
+
+    expect(() => fireEvent.press(screen.getByText("Read more"))).not.toThrow();
+    expect(openURL).toHaveBeenCalledWith("https://example.com");
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    warn.mockRestore();
   });
 });
