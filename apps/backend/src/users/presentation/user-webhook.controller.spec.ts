@@ -331,8 +331,8 @@ describe("UserWebhookController", () => {
     });
 
     it("should reject requests with too many user IDs", async () => {
-      // Define webhook payload with more than 100 user IDs (max limit)
-      const tooManyUserIds = Array.from({ length: 101 }, () => faker.string.uuid());
+      // Define webhook payload with more than 500 user IDs (max limit)
+      const tooManyUserIds = Array.from({ length: 501 }, () => faker.string.uuid());
       const webhookPayload: UserMetadataWebhookPayload = {
         userIds: tooManyUserIds,
       };
