@@ -1,42 +1,22 @@
-import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
 
 export const useWorkbookDelete = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.workbooks.deleteWorkbook.useMutation({
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries({
-        queryKey: ["workbooks"],
-      });
+  return useMutation(
+    orpc.workbooks.deleteWorkbook.mutationOptions({
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
 
-      const previousWorkbooks = queryClient.getQueryData<{
-        body: Workbook[];
-      }>(["workbooks"]);
-
-      if (previousWorkbooks?.body) {
-        queryClient.setQueryData(["workbooks"], {
-          ...previousWorkbooks,
-          body: previousWorkbooks.body.filter((workbook) => workbook.id !== variables.params.id),
+        queryClient.removeQueries({
+          queryKey: orpc.workbooks.getWorkbook.queryKey({ input: { id: variables.id } }),
         });
-      }
-
-      queryClient.removeQueries({
-        queryKey: ["workbook", variables.params.id],
-      });
-
-      return { previousWorkbooks };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousWorkbooks) {
-        queryClient.setQueryData(["workbooks"], context.previousWorkbooks);
-      }
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["workbooks"],
-      });
-    },
-  });
+      },
+      onSettled: async () => {
+        await queryClient.invalidateQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+      },
+    }),
+  );
 };

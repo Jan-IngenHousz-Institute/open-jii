@@ -64,7 +64,7 @@ export function WorkbookDraftEditor({
   const save = useCallback(
     async (next: WorkbookCell[]) => {
       try {
-        await updateWorkbook({ params: { id }, body: { cells: next } });
+        await updateWorkbook({ id, cells: next });
       } catch (err) {
         const message = parseApiError(err)?.message;
         if (message) toast({ description: message, variant: "destructive" });

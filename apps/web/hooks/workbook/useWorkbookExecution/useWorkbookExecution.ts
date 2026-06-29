@@ -1,10 +1,11 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
-import { tsr } from "~/lib/tsr";
+import { orpc, orpcClient } from "~/lib/orpc";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
@@ -44,11 +45,8 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
   if (live && live.length > 0) return live;
 
   try {
-    const result = await tsr.protocols.getProtocol.query({
-      params: { id: cell.payload.protocolId },
-    });
-    if (result.status !== 200) return null;
-    const code = result.body.code;
+    const protocol = await orpcClient.protocols.getProtocol({ id: cell.payload.protocolId });
+    const code = protocol.code;
     if (code.length > 0) {
       return code;
     }
@@ -137,7 +135,7 @@ export function useWorkbookExecution({
     useIotCommunication(sensorFamily, connectionType);
 
   const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
-  const executeMacroMutation = tsr.macros.executeMacro.useMutation();
+  const executeMacroMutation = useMutation(orpc.macros.executeMacro.mutationOptions());
 
   const isConnectedRef = useRef(isConnected);
   isConnectedRef.current = isConnected;
@@ -228,14 +226,14 @@ export function useWorkbookExecution({
 
       try {
         const result = await executeMacroMutationRef.current.mutateAsync({
-          params: { id: cell.payload.macroId },
-          body: { data: inputData },
+          id: cell.payload.macroId,
+          data: inputData,
         });
 
         const executionTime = performance.now() - startTime;
 
-        if (!result.body.success) {
-          const error = result.body.error ?? "Macro execution failed";
+        if (!result.success) {
+          const error = result.error ?? "Macro execution failed";
           setCellState(cell.id, { status: "error", error });
           return insertOutputAfterCell(
             currentCells,
@@ -248,7 +246,7 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeOutputCell(cell.id, result.body.output, executionTime, []),
+          makeOutputCell(cell.id, result.output, executionTime, []),
         );
       } catch (err) {
         const executionTime = performance.now() - startTime;

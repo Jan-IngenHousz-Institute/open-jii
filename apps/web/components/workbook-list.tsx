@@ -146,12 +146,12 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
 
   const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
   const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({
-    onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.body.id}`),
+    onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.id}`),
   });
 
   const handleDelete = () => {
     deleteWorkbook(
-      { params: { id: workbook.id } },
+      { id: workbook.id },
       {
         onSuccess: () => {
           toast({ title: t("workbooks.messages.deleteSuccess") });
@@ -164,12 +164,10 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const handleDuplicate = () => {
     createWorkbook(
       {
-        body: {
-          name: t("workbooks.duplicateName", { name: workbook.name }),
-          description: workbook.description ?? undefined,
-          cells: workbook.cells,
-          metadata: workbook.metadata,
-        },
+        name: t("workbooks.duplicateName", { name: workbook.name }),
+        description: workbook.description ?? undefined,
+        cells: workbook.cells,
+        metadata: workbook.metadata,
       },
       {
         onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),

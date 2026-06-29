@@ -1,38 +1,39 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { getContractError, tsr } from "../../../lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "../../../lib/tsr";
+import { getOrpcError, orpc } from "@/lib/orpc";
 
-const route = tsr.workbooks.createWorkbook;
-
-export type UseWorkbookCreateOptions = TsRestMutationOptions<
-  TsrRoute<typeof route>,
+export type UseWorkbookCreateOptions = Pick<
+  ReturnType<typeof orpc.workbooks.createWorkbook.mutationOptions>,
   "onSuccess" | "onError"
 >;
 
-export function useWorkbookCreate(options?: UseWorkbookCreateOptions) {
-  const queryClient = tsr.useQueryClient();
+export function useWorkbookCreate(options: UseWorkbookCreateOptions = {}) {
+  const queryClient = useQueryClient();
   const { t } = useTranslation(["workbook", "common"]);
 
-  return route.useMutation({
-    ...options,
-    onSuccess: (...args) => {
-      void queryClient.invalidateQueries({ queryKey: ["workbooks"] });
-      // No success toast: creation navigates straight to the new workbook page,
-      // so a toast would be redundant noise.
-      options?.onSuccess?.(...args);
-    },
-    onError: (error, ...rest) => {
-      const contractError = getContractError(route, error);
+  return useMutation(
+    orpc.workbooks.createWorkbook.mutationOptions({
+      onSuccess: (...args) => {
+        void queryClient.invalidateQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+        // No success toast: creation navigates straight to the new workbook page,
+        // so a toast would be redundant noise.
+        options.onSuccess?.(...args);
+      },
+      onError: (...args) => {
+        const [error] = args;
+        const contractError = getOrpcError(error);
 
-      if (!contractError) {
-        toast({ description: t("common.errors.serverError"), variant: "destructive" });
-        return;
-      }
+        if (!contractError) {
+          toast({ description: t("common.errors.serverError"), variant: "destructive" });
+          return;
+        }
 
-      toast({ description: t("workbooks.createError"), variant: "destructive" });
-      options?.onError?.(contractError, ...rest);
-    },
-  });
+        toast({ description: t("workbooks.createError"), variant: "destructive" });
+        options.onError?.(...args);
+      },
+    }),
+  );
 }

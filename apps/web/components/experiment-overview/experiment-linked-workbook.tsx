@@ -36,7 +36,7 @@ export function ExperimentLinkedWorkbook({
   });
 
   // Find the version number for the pinned version
-  const versionsList = versionsData?.body;
+  const versionsList = versionsData;
   const pinnedVersion = versionsList?.find((v) => v.id === workbookVersionId);
   const latestVersion = versionsList?.[0];
 

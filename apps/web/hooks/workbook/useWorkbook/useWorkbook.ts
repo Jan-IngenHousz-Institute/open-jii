@@ -1,19 +1,21 @@
-import { shouldRetryQuery } from "@/util/query-retry";
+import { useQuery } from "@tanstack/react-query";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { shouldRetryQuery } from "@/util/query-retry";
 
 export function useWorkbook(id: string, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? !!id;
 
-  const query = tsr.workbooks.getWorkbook.useQuery({
-    queryData: { params: { id } },
-    queryKey: ["workbook", id],
-    retry: shouldRetryQuery,
-    enabled,
-  });
+  const query = useQuery(
+    orpc.workbooks.getWorkbook.queryOptions({
+      input: { id },
+      retry: shouldRetryQuery,
+      enabled,
+    }),
+  );
 
   return {
-    data: enabled ? query.data?.body : undefined,
+    data: enabled ? query.data : undefined,
     isLoading: query.isLoading,
     error: query.error,
   };

@@ -1,13 +1,12 @@
-import { tsr } from "../../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 
 export function useWorkbookList() {
-  const query = tsr.workbooks.listWorkbooks.useQuery({
-    queryData: { query: {} },
-    queryKey: ["workbooks", "list"],
-  });
+  const query = useQuery(orpc.workbooks.listWorkbooks.queryOptions({ input: {} }));
 
   return {
-    data: query.data?.body,
+    data: query.data,
     isLoading: query.isLoading,
     error: query.error,
   };

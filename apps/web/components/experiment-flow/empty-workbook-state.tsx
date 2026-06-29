@@ -42,7 +42,7 @@ export function EmptyWorkbookState({
   // is linked to this experiment and the user can start adding cells.
   const createWorkbook = useWorkbookCreate({
     onSuccess: (data) => {
-      const workbookId = data.body.id;
+      const workbookId = data.id;
       attachWorkbook.mutate(
         { params: { id: experimentId }, body: { workbookId } },
         {
@@ -73,7 +73,7 @@ export function EmptyWorkbookState({
   };
 
   const handleCreate = () => {
-    createWorkbook.mutate({ body: { name: t("flow.newWorkbookName", { name: experimentName }) } });
+    createWorkbook.mutate({ name: t("flow.newWorkbookName", { name: experimentName }) });
   };
 
   return (

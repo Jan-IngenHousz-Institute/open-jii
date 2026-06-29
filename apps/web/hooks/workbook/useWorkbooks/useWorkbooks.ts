@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
+
 import { useDebounce } from "../../useDebounce";
 
 export type WorkbookFilter = "my" | "all";
@@ -48,15 +50,14 @@ export function useWorkbooks({
     [pathname, router, createQueryString],
   );
 
-  const query = tsr.workbooks.listWorkbooks.useQuery({
-    queryData: {
-      query: {
+  const query = useQuery(
+    orpc.workbooks.listWorkbooks.queryOptions({
+      input: {
         filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
-    },
-    queryKey: ["workbooks", filter, debouncedSearch],
-  });
+    }),
+  );
 
   // Auto-switch to "all" if user has no workbooks of their own on initial load
   const hasAutoSwitched = useRef(false);
@@ -64,16 +65,16 @@ export function useWorkbooks({
     if (
       !hasAutoSwitched.current &&
       filter === "my" &&
-      query.data?.body.length === 0 &&
+      query.data?.length === 0 &&
       !debouncedSearch
     ) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, query.data?.body, setFilter, debouncedSearch]);
+  }, [filter, query.data, setFilter, debouncedSearch]);
 
   return {
-    data: query.data?.body,
+    data: query.data,
     isLoading: query.isLoading,
     error: query.error,
     filter,

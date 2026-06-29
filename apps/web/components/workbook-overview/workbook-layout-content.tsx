@@ -35,13 +35,13 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
 
   // Versions are returned newest-first; the live page is the draft, so the
   // latest published version is the meaningful number to surface here.
-  const latestVersion = versionsData?.body[0]?.version;
+  const latestVersion = versionsData?.[0]?.version;
   const isCreator = session?.user.id === workbook.createdBy;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
     await updateWorkbook(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("workbooks.workbookUpdated") });

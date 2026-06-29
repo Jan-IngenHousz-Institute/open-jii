@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -14,7 +15,7 @@ describe("useWorkbookDelete", () => {
     const { result } = renderHook(() => useWorkbookDelete());
 
     act(() => {
-      result.current.mutate({ params: { id: "wb-1" } });
+      result.current.mutate({ id: "wb-1" });
     });
 
     await waitFor(() => {
@@ -22,21 +23,15 @@ describe("useWorkbookDelete", () => {
     });
   });
 
-  it("optimistically removes workbook from cache", async () => {
+  it("completes the delete mutation", async () => {
     server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
-    const wb1 = createWorkbook({ id: "wb-1", name: "Keep" });
-    const wb2 = createWorkbook({ id: "wb-2", name: "Delete" });
-    const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbooks"], { body: [wb1, wb2] });
-
-    const { result } = renderHook(() => useWorkbookDelete(), { queryClient });
+    const { result } = renderHook(() => useWorkbookDelete());
 
     act(() => {
-      result.current.mutate({ params: { id: "wb-2" } });
+      result.current.mutate({ id: "wb-2" });
     });
 
-    // Mutation should complete successfully
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
@@ -45,38 +40,18 @@ describe("useWorkbookDelete", () => {
   it("removes the individual workbook query from cache", async () => {
     server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
+    const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-3" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbook", "wb-3"], {
-      body: createWorkbook({ id: "wb-3" }),
-    });
+    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-3" }));
 
     const { result } = renderHook(() => useWorkbookDelete(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: "wb-3" } });
+      result.current.mutate({ id: "wb-3" });
     });
 
     await waitFor(() => {
-      expect(queryClient.getQueryData(["workbook", "wb-3"])).toBeUndefined();
-    });
-  });
-
-  it("rolls back optimistic update on error", async () => {
-    server.mount(contract.workbooks.deleteWorkbook, { status: 403 });
-
-    const wb1 = createWorkbook({ id: "wb-1" });
-    const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbooks"], { body: [wb1] });
-
-    const { result } = renderHook(() => useWorkbookDelete(), { queryClient });
-
-    act(() => {
-      result.current.mutate({ params: { id: "wb-1" } });
-    });
-
-    await waitFor(() => {
-      const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["workbooks"]);
-      expect(cached?.body).toHaveLength(1);
+      expect(queryClient.getQueryData(detailKey)).toBeUndefined();
     });
   });
 
@@ -84,18 +59,17 @@ describe("useWorkbookDelete", () => {
     server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbooks"], { body: [] });
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useWorkbookDelete(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: "wb-1" } });
+      result.current.mutate({ id: "wb-1" });
     });
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: ["workbooks"] }),
+        expect.objectContaining({ queryKey: orpc.workbooks.listWorkbooks.key() }),
       );
     });
   });
