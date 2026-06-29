@@ -13,6 +13,7 @@ import {
 import { getConnectedDevice } from "../services/device-connection-manager/device-queries";
 import { mergeDevice } from "../services/device-connection-manager/device-sort";
 import {
+  bluetoothDeviceToDevice,
   discoveredEventToDevice,
   serialDeviceToDevice,
 } from "../services/device-connection-manager/device-utils";
@@ -142,13 +143,13 @@ export function useAllDevices() {
     if (!mountedRef.current) return;
     const seed = [
       ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
-      // Use the address-guarded mapper: bonded/connected entries can be truthy
-      // yet lack a usable `address`, which crashed bluetoothDeviceToDevice.
+      // bluetoothDeviceToDevice is address-guarded and returns null for entries
+      // without a usable address, so drop those rather than seeding bad rows.
       ...(bonded.status === "fulfilled"
-        ? bonded.value.map(discoveredEventToDevice).filter((d): d is Device => d !== null)
+        ? bonded.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
       ...(connected.status === "fulfilled"
-        ? connected.value.map(discoveredEventToDevice).filter((d): d is Device => d !== null)
+        ? connected.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
     ].reduce<Device[]>(mergeDevice, []);
     setData(seed);
