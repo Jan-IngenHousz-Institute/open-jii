@@ -6,6 +6,10 @@
       "types": "./dist/contract.d.ts",
       "default": "./dist/contract.js"
     },
+    "./orpc-contract": {
+      "types": "./dist/orpc-contract.d.ts",
+      "default": "./dist/orpc-contract.js"
+    },
     "./domains/*": {
       "types": "./dist/domains/*.d.ts",
       "default": "./dist/domains/*.js"
@@ -34,7 +38,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@orpc/contract": "^1",
+    "@orpc/contract": "catalog:orpc",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/open-api": "^3.52.1",
     "zod": "catalog:"
