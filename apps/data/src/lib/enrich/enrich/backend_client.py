@@ -154,63 +154,66 @@ class BackendClient:
                     print(f"[BackendClient] HTTP {err_response.status_code} body: {body}")
             raise BackendIntegrationError(error_msg)
             
+    USER_METADATA_BATCH_SIZE = 100
+
     def get_user_metadata(self, user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
         """
         Fetch user metadata for multiple user IDs with robust error handling.
-        
+
+        Requests larger than the API's per-call limit are chunked and merged.
+
         Args:
             user_ids: List of user IDs to fetch metadata for
-            
+
         Returns:
             Dictionary mapping user_id to user metadata
-            
+
         Raises:
             BackendIntegrationError: If request fails or validation errors occur
         """
         if not user_ids:
             return {}
-            
+
         # Validate input
         if not isinstance(user_ids, list):
             raise BackendIntegrationError("user_ids must be a list")
-            
-        # Limit batch size to avoid API limits
-        if len(user_ids) > 100:
-            raise BackendIntegrationError(f"Too many user IDs in batch: {len(user_ids)} (max 100)")
-            
+
         # Filter out None/empty values
         valid_user_ids = [uid for uid in user_ids if uid is not None and str(uid).strip()]
         if not valid_user_ids:
             return {}
-            
-        payload = {"userIds": valid_user_ids}
-        
-        try:
-            result = self._make_request(self.webhook_path, payload)
-        except BackendIntegrationError:
-            # Re-raise BackendIntegrationError as-is
-            raise
-        except Exception as e:
-            # Wrap other exceptions
-            raise BackendIntegrationError(f"Unexpected error fetching user metadata: {str(e)}")
-        
-        # Convert list to dictionary for easier lookup
-        user_metadata = {}
-        users_list = result.get('users', [])
-        
-        if not isinstance(users_list, list):
-            raise BackendIntegrationError(f"Invalid response format: expected 'users' to be a list, got {type(users_list)}")
-        
-        for user in users_list:
-            if not isinstance(user, dict) or 'userId' not in user:
-                continue  # Skip malformed user entries
-                
-            user_metadata[user['userId']] = {
-                'firstName': user.get('firstName'),
-                'lastName': user.get('lastName'),
-                'avatarUrl': user.get('avatarUrl')
-            }
-            
+
+        user_metadata: Dict[str, Dict[str, Any]] = {}
+
+        # Chunk to the API's per-request limit and merge the responses.
+        for i in range(0, len(valid_user_ids), self.USER_METADATA_BATCH_SIZE):
+            chunk = valid_user_ids[i : i + self.USER_METADATA_BATCH_SIZE]
+            payload = {"userIds": chunk}
+
+            try:
+                result = self._make_request(self.webhook_path, payload)
+            except BackendIntegrationError:
+                # Re-raise BackendIntegrationError as-is
+                raise
+            except Exception as e:
+                # Wrap other exceptions
+                raise BackendIntegrationError(f"Unexpected error fetching user metadata: {str(e)}")
+
+            users_list = result.get('users', [])
+
+            if not isinstance(users_list, list):
+                raise BackendIntegrationError(f"Invalid response format: expected 'users' to be a list, got {type(users_list)}")
+
+            for user in users_list:
+                if not isinstance(user, dict) or 'userId' not in user:
+                    continue  # Skip malformed user entries
+
+                user_metadata[user['userId']] = {
+                    'firstName': user.get('firstName'),
+                    'lastName': user.get('lastName'),
+                    'avatarUrl': user.get('avatarUrl')
+                }
+
         return user_metadata
 
 
