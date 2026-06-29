@@ -18,7 +18,15 @@ export interface CtfRichTextProps {
 function openHyperlink(uri: string): void {
   let target = uri;
   if (uri.startsWith("/")) {
-    const base = getEnvVar("NEXT_AUTH_URI");
+    // Defensive path: getEnvVar throws when the var is unset or storage hasn't
+    // rehydrated yet, so treat the base as optional and never let resolving a
+    // relative link crash the tap. Drop the link if we can't build a full URL.
+    let base: string | undefined;
+    try {
+      base = getEnvVar("NEXT_AUTH_URI", false);
+    } catch {
+      base = undefined;
+    }
     if (!base) return;
     target = `${base.replace(/\/$/, "")}${uri}`;
   }
