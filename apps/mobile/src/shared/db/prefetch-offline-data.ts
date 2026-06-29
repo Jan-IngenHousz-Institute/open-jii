@@ -67,7 +67,12 @@ async function _prefetchOfflineData(
     meta: { suppressToast: true },
   });
 
-  const experiments = (experimentsResponse?.body ?? []) as {
+  // The contract response shape can vary (paginated envelope, error body, or a
+  // bare array); only an actual array is iterable, so guard before `.map` to
+  // avoid "experiments.map is not a function" crashes seen in production.
+  const experiments = (
+    Array.isArray(experimentsResponse?.body) ? experimentsResponse.body : []
+  ) as {
     id: string;
     workbookId: string | null;
     workbookVersionId: string | null;

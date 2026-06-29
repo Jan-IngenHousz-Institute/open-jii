@@ -143,11 +143,13 @@ export function useAllDevices() {
     if (!mountedRef.current) return;
     const seed = [
       ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
+      // bluetoothDeviceToDevice is address-guarded and returns null for entries
+      // without a usable address, so drop those rather than seeding bad rows.
       ...(bonded.status === "fulfilled"
-        ? bonded.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        ? bonded.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
       ...(connected.status === "fulfilled"
-        ? connected.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        ? connected.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
     ].reduce<Device[]>(mergeDevice, []);
     setData(seed);
