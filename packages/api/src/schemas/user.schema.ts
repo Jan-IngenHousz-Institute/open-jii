@@ -76,7 +76,7 @@ export const zWebhookAuthHeader = z.object({
 export const zUserMetadataWebhookPayload = z.object({
   // Accept any string so one malformed id can't 400 the whole batch; the
   // backend filters to valid uuids and omits the rest.
-  userIds: z.array(z.string()).min(1).max(100),
+  userIds: z.array(z.string()).min(1).max(500),
 });
 
 export const zUserMetadata = z.object({
