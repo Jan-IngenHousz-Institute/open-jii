@@ -69,12 +69,8 @@ interface MeasurementFlowStore {
   returnToOverview: () => void;
 }
 
-// The store is persisted so a mid-flow blur (background, kill, tab switch)
-// is itself the "pause": the next launch rehydrates the same active flow
-// and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed. The workbook cells/edges and
-// branch state are persisted too so a resumed branching flow keeps evaluating
-// offline.
+// Persisted so a background/kill is itself the pause: the next launch rehydrates
+// the active flow (cells/edges/branch state) and keeps evaluating offline.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({

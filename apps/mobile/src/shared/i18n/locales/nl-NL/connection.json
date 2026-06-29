@@ -26,6 +26,8 @@
     "title": "Apparaten",
     "currentSubMultispeQ": "MultispeQ · Batterij {{battery}}% · v{{firmware}}",
     "currentSubMultispeQNoFirmware": "MultispeQ · Batterij {{battery}}%",
+    "connectedViaCable": "Verbonden via kabel",
+    "connectedViaBluetooth": "Verbonden via Bluetooth",
     "noDeviceTitle": "Geen apparaat verbonden",
     "noDeviceSub": "Koppel een MultispeQ om te beginnen met meten.",
     "reconnectTitle": "Verbind {{name}} opnieuw",

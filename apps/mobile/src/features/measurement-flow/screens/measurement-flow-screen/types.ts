@@ -44,14 +44,32 @@ export interface QuestionContent {
   max?: number;
 }
 
+// Hydrated onto the node from the workbook version (snapshot code + cell name)
+// so scan + upload read offline off the node. See hydrate-flow-nodes.
+export interface ResolvedProtocol {
+  code: Record<string, unknown>[];
+  name?: string;
+  family?: unknown;
+}
+
+export interface ResolvedMacro {
+  id: string;
+  name: string;
+  filename: string;
+  language: string;
+  code: string;
+}
+
 export interface MeasurementContent {
   params: Record<string, any>;
   protocolId: string;
+  protocol?: ResolvedProtocol;
 }
 
 export interface AnalysisContent {
   params: Record<string, any>;
   macroId: string;
+  macro?: ResolvedMacro;
 }
 
 export interface FlowEdge {

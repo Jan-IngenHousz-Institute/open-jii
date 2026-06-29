@@ -6,7 +6,8 @@ import { toast } from "sonner-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
-import { useProtocol } from "~/features/measurement-flow/hooks/use-protocol";
+import { classifyScanError } from "~/features/connection/utils/classify-scan-error";
+import type { MeasurementContent } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
@@ -24,16 +25,14 @@ import { ScanningState } from "./components/scanning-state";
 const log = createLogger("measurement-node");
 
 interface MeasurementNodeProps {
-  content: {
-    params: Record<string, unknown>;
-    protocolId: string;
-  };
+  content: MeasurementContent;
 }
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const { protocol } = useProtocol(content.protocolId);
+  // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
+  const protocol = content.protocol;
   const {
     executeScan,
     isScanning,
@@ -45,7 +44,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     scanStartedAt,
     estimatedMs,
   } = useScanner();
-  const { data: device } = useConnectedDevice();
+  const { data: device, refetch: refetchConnectedDevice } = useConnectedDevice();
   const { nextStep, setScanResult, setProtocolId, navigateToQuestionFromOverview } =
     useMeasurementFlowStore();
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
@@ -59,6 +58,10 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   resetScanRef.current = resetScan;
   const cancelCommandRef = useRef(cancelCommand);
   cancelCommandRef.current = cancelCommand;
+
+  // Re-entry guard: the liveness probe is awaited before executeScan flips
+  // isScanning, so without this a double-tap could launch two scans.
+  const isStartingRef = useRef(false);
 
   // When the device unexpectedly disconnects while a scan is in progress, abort
   // the in-flight command (so it doesn't keep running until its timeout) and
@@ -85,34 +88,66 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   };
 
   const handleCancelMeasurement = () => {
-    void cancelCommand();
-    resetScan();
+    // Await the cancel before resetting so the command settles as
+    // "Measurement cancelled", not a raw error the scan catch would misread.
+    void (async () => {
+      try {
+        await cancelCommandRef.current();
+      } finally {
+        resetScanRef.current();
+      }
+    })();
   };
 
   const handleStartScan = async () => {
-    if (!device) {
-      toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
-      return;
-    }
-    if (!content.protocolId) {
-      toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
-      return;
-    }
-    if (!protocol) {
-      toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
-      return;
-    }
-
-    resetScan();
+    if (isScanning || isStartingRef.current) return;
+    isStartingRef.current = true;
     try {
-      const result = await executeScan(protocol);
-      setScanResult(result);
-      // Play system notification sound when measurement completes
-      await playSound();
-      nextStep();
-    } catch (error) {
-      log.error("scan error", { err: (error as Error)?.message });
-      toast.error(t("measurementFlow:measurementNode.toast.scanError"));
+      if (!device) {
+        toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
+        return;
+      }
+      if (!content.protocolId) {
+        toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
+        return;
+      }
+      if (!protocol) {
+        toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+        return;
+      }
+
+      // The cached `device` flag is polled (~3s) and lags a real drop; probe the
+      // live connection first so we fail with a reconnect prompt, not a long hang.
+      const { data: liveDevice } = await refetchConnectedDevice();
+      if (!liveDevice) {
+        log.warn("scan blocked: device not connected");
+        toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+        return;
+      }
+
+      resetScan();
+      try {
+        const result = await executeScan(protocol);
+        setScanResult(result);
+        // Play system notification sound when measurement completes
+        await playSound();
+        nextStep();
+      } catch (error) {
+        const kind = classifyScanError(error);
+        // Cancellation is user-initiated and handled by the cancel path.
+        if (kind === "cancelled") {
+          return;
+        }
+        if (kind === "disconnected") {
+          log.error("scan error: device disconnected", { err: (error as Error)?.message });
+          toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+          return;
+        }
+        log.error("scan error", { err: (error as Error)?.message });
+        toast.error(t("measurementFlow:measurementNode.toast.scanError"));
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   };
 

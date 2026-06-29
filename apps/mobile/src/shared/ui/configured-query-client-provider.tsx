@@ -1,6 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient, QueryCache, onlineManager, focusManager } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryCache,
+  onlineManager,
+  focusManager,
+  defaultShouldDehydrateQuery,
+} from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import React, { useEffect, useRef } from "react";
 import { AppState } from "react-native";
@@ -17,11 +23,9 @@ const CHECK_INTERVAL = 10 * 1000;
 // the tabs layout doesn't assume online on cold start.
 onlineManager.setOnline(false);
 
-// RN has no window focus events, so React Query's `refetchOnWindowFocus`
-// never fires on its own. Point focusManager at AppState — now "focus" means
-// the app returning to the foreground. setFocused is edge-triggered (only a
-// real false→true flip refetches), so boot-time active→inactive→active flaps
-// don't trigger refetch storms. Symmetric with onlineManager above.
+// RN has no window focus events, so point focusManager at AppState: "focus"
+// means the app returning to the foreground (edge-triggered, so boot-time
+// flaps don't trigger refetch storms). Symmetric with onlineManager above.
 focusManager.setEventListener((handleFocus) => {
   const sub = AppState.addEventListener("change", (state) => {
     handleFocus(state === "active");
@@ -77,6 +81,10 @@ export function ConfiguredQueryClientProvider({ children }) {
       onError: (error: any, query) => {
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
         log.warn("query error", { message, status: error?.status });
+        // Don't toast connection failures. A network/timeout error never got an
+        // HTTP response, so it has no status; that's the reliable signal because
+        // onlineManager lags a fast wifi-off. The cached UI stays usable.
+        if (!onlineManager.isOnline() || error?.status == null) return;
         // Queries that gracefully fall back (e.g. user profile) opt out of the
         // global toast via meta.suppressToast so a 404 doesn't blare at the user.
         if (query.meta?.suppressToast) return;
@@ -96,10 +104,16 @@ export function ConfiguredQueryClientProvider({ children }) {
       persistOptions={{
         persister: asyncStoragePersister,
         maxAge: Infinity,
-        // Bump when a query's stored shape changes (e.g. useQuery →
+        // Bump when a query's stored shape changes (e.g. useQuery to
         // useInfiniteQuery). On mismatch the persisted cache is dropped, so
         // hydrating code doesn't see an old shape and crash.
         buster: "v3-workbook-version-cache",
+        // Persist any query that holds data, not just success-status ones, so an
+        // offline refetch error can't evict the cached list/flow we need offline.
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            defaultShouldDehydrateQuery(query) || query.state.data !== undefined,
+        },
       }}
     >
       {children}

@@ -26,6 +26,8 @@
     "title": "Devices",
     "currentSubMultispeQ": "MultispeQ · Battery {{battery}}% · v{{firmware}}",
     "currentSubMultispeQNoFirmware": "MultispeQ · Battery {{battery}}%",
+    "connectedViaCable": "Connected via cable",
+    "connectedViaBluetooth": "Connected via Bluetooth",
     "noDeviceTitle": "No device connected",
     "noDeviceSub": "Pair a MultispeQ to start measuring.",
     "reconnectTitle": "Reconnect to {{name}}",

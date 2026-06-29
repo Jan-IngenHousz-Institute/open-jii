@@ -1,5 +1,5 @@
 import { AsyncQueuer } from "@tanstack/pacer/async-queuer";
-import { addNetworkStateListener } from "expo-network";
+import { onlineManager } from "@tanstack/react-query";
 import { isRetryableMqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 import {
@@ -16,21 +16,10 @@ import { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS } from "./upload-constants"
 
 const log = createLogger("outbox");
 
-// Transactional Outbox (Chris Richardson pattern). The `measurements`
-// SQLite table is the queue: rows with status="pending" or "failed" are
-// the work list. This module is the in-memory scheduler that drains them,
-// and the single source of upload-progress reactivity for the UI.
-//
-// Responsibilities (single concept, deliberately not split):
-// - Discover work: rehydrate `pending`/`failed` rows on cold start and on
-//   app foreground.
-// - Schedule: per-row retry via AsyncRetryer (3 attempts, [1, 4, 15]s).
-// - Pause on offline, resume on reconnect.
-// - Status transitions: pending|failed → successful on PUBACK; pending|
-//   failed → failed on terminal error.
-// - Reactive surface for the UI: per-id processing, snapshot, and
-//   settled-burst events carrying terminal status (no DB round-trip
-//   needed downstream).
+// Transactional Outbox (Chris Richardson pattern): the `measurements` SQLite
+// table is the queue (pending/failed rows = work list); this module drains it,
+// retries per-row (AsyncRetryer), pauses offline, and is the single source of
+// upload-progress reactivity for the UI.
 
 export type SettledStatus = "successful" | "failed";
 
@@ -54,7 +43,7 @@ export interface Outbox {
   subscribeSnapshot(listener: () => void): () => void;
   // Detach external wiring (network + foreground listeners) and halt the
   // queue so a discarded instance goes inert. Called by the composition
-  // root on hot-reload dispose — see shared/composition/upload.ts.
+  // root on hot-reload dispose - see shared/composition/upload.ts.
   destroy(): void;
 }
 
@@ -77,7 +66,7 @@ class OutboxImpl implements Outbox {
   // listening would re-rehydrate and re-publish every pending row forever.
   private readonly subscriptions: (() => void)[] = [];
 
-  // Progress state — single source of truth for the UI.
+  // Progress state - single source of truth for the UI.
   private readonly enqueued = new Set<string>();
   private readonly idListeners = new Map<string, Set<() => void>>();
   private readonly snapshotListeners = new Set<() => void>();
@@ -102,17 +91,15 @@ class OutboxImpl implements Outbox {
         baseWait: (retryer) => backoff[retryer.store.state.currentAttempt - 1] ?? 0,
         throwOnError: "last",
         onRetry: (attempt, err) => {
-          log.warn("worker error — retrying", { attempt, err: err.message });
+          log.warn("worker error - retrying", { attempt, err: err.message });
         },
       },
       onError: (err, id) => {
-        // Reached only when retryable errors exhaust every attempt — terminal
-        // errors are handled inline in runItem and never rethrow. The row is
-        // still "pending" with no terminal settle emitted, so terminalize it
-        // here. End the trace synchronously: onError fires before onSettled,
-        // which would otherwise close the trace as "ok".
+        // Reached only when retryable errors exhaust every attempt (terminal
+        // errors settle inline in runItem). Terminalize and end the trace here,
+        // before onSettled would otherwise close it as "ok".
         if (this.destroyed) return;
-        log.error("worker exhausted retries — marking failed", { id, err: err.message });
+        log.error("worker exhausted retries - marking failed", { id, err: err.message });
         getTrace(id)?.end("error", { err: err.message, closed_by: "retry_exhausted" });
         this.scheduleSettled({ id, status: "failed" });
         void this.markFailedAfterExhaustion(id);
@@ -136,7 +123,7 @@ class OutboxImpl implements Outbox {
   enqueue(id: string): void {
     if (this.destroyed) return;
     if (!this.markEnqueued(id)) {
-      log.debug("enqueue skipped — already in outbox", { id });
+      log.debug("enqueue skipped - already in outbox", { id });
       return;
     }
     log.info("enqueue", { id });
@@ -195,7 +182,7 @@ class OutboxImpl implements Outbox {
 
   // Detach every external event source and halt the queue. Idempotent. The
   // transport is injected (owned by the composition root), so it is NOT
-  // destroyed here — the root disposes it alongside this Outbox.
+  // destroyed here - the root disposes it alongside this Outbox.
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -240,7 +227,7 @@ class OutboxImpl implements Outbox {
     return added;
   }
 
-  // Called from AsyncQueuer's onSettled. Cleanup only — removes the id
+  // Called from AsyncQueuer's onSettled. Cleanup only - removes the id
   // from the enqueued set, wakes per-id + snapshot listeners. The
   // SettledItem (with terminal status) is emitted by runItem inline at
   // the PUBACK / retry-exhaust point so the fact lives where it's known.
@@ -284,29 +271,22 @@ class OutboxImpl implements Outbox {
     Array.from(set).forEach((listener) => listener());
   }
 
-  // Per-item worker. Reads the row, builds the payload, calls
-  // transport.publish, marks final status.
-  //
-  // Retry classification:
-  // - Throw → AsyncRetryer catches, schedules the next attempt. Used for
-  //   transient transport errors (Timeout, PublishError, Disconnected
-  //   while in flight) and any non-MqttError.
-  // - markAsFailed + return → terminal, no further retry from this
-  //   enqueue. Used when the publisher rejects on a bad payload or a
-  //   credential failure. The row can still be retried later via a fresh
-  //   enqueue (e.g. user-driven retry on the Recent screen).
+  // Per-item worker: read the row, build the payload, publish, mark status. A
+  // throw lets AsyncRetryer retry (transient transport errors); markAsFailed +
+  // return is terminal (bad payload / credential failure) and only retries via
+  // a fresh enqueue.
   private async runItem(id: string): Promise<void> {
     if (this.destroyed) return;
     const trace = startTrace("upload", id, { source: "outbox" });
     trace.event("outbox_pickup");
     const row = await getMeasurementById(id);
     if (!row) {
-      log.debug("skip — row gone", { id });
+      log.debug("skip - row gone", { id });
       trace?.end("ok", { skipped: "row_gone" });
       return;
     }
     if (row.status === "successful") {
-      log.debug("skip — already successful", { id });
+      log.debug("skip - already successful", { id });
       trace?.end("ok", { skipped: "already_successful" });
       return;
     }
@@ -323,7 +303,7 @@ class OutboxImpl implements Outbox {
     trace?.event("publish_start");
     log.info("publish start", { id, topic: row.data.topic });
 
-    // Phase 1 — deliver. Only transport errors are classified here, so a
+    // Phase 1 - deliver. Only transport errors are classified here, so a
     // later DB-write failure can't be mistaken for a publish failure.
     try {
       await this.transport.publish(row.data.topic, payload, { traceId: id });
@@ -336,11 +316,11 @@ class OutboxImpl implements Outbox {
         // Rethrow so the AsyncRetryer schedules the next attempt. When every
         // attempt is exhausted the error escapes to the queue's onError,
         // which marks the row failed + emits the terminal settle.
-        log.warn("publish failed (retryable) — rethrowing for retry", { id, kind });
+        log.warn("publish failed (retryable) - rethrowing for retry", { id, kind });
         trace?.event("publish_failed_retryable", { kind });
         throw err;
       }
-      log.error("publish failed (terminal) — marking failed", {
+      log.error("publish failed (terminal) - marking failed", {
         id,
         kind,
         err: (err as Error)?.message,
@@ -352,16 +332,15 @@ class OutboxImpl implements Outbox {
       return;
     }
 
-    // Phase 2 — record. PUBACK is in: the message is delivered. A failure
-    // here must NOT mark the row failed (that would misclassify a delivered
-    // upload and trigger a needless re-publish). Emit the successful settle
-    // regardless; if the DB write throws the row stays "pending" and is
-    // re-published on the next drain, deduped downstream via _client_id.
+    // Phase 2 - record. PUBACK is in (message delivered), so a DB-write failure
+    // must NOT mark the row failed. Emit the successful settle regardless; if the
+    // write throws the row stays "pending" and re-publishes next drain (deduped
+    // downstream via _client_id).
     try {
       await markAsSuccessful(id);
       trace?.event("marked_successful");
     } catch (dbErr) {
-      log.error("publish ok but markAsSuccessful failed — leaving row for re-publish", {
+      log.error("publish ok but markAsSuccessful failed - leaving row for re-publish", {
         id,
         err: (dbErr as Error)?.message,
       });
@@ -387,26 +366,27 @@ class OutboxImpl implements Outbox {
   }
 
   private wireNetworkListener() {
-    const subscription = addNetworkStateListener(({ isInternetReachable }) => {
+    // Gate on the app's onlineManager (the source the rest of the app uses), not
+    // expo-network: it never treats "unknown" as online, so the queue stays
+    // paused offline and never attempts a publish or IoT credential load.
+    const apply = (online: boolean) => {
       if (this.destroyed) return;
-      // expo-network can transiently report null/undefined around state
-      // transitions; treat anything not explicitly false as "connected" so
-      // the queue doesn't pause on flaps.
-      if (isInternetReachable === false) {
-        log.info("network offline — pausing");
-        this.queue.stop();
-      } else {
-        log.info("network online — resuming", { isInternetReachable });
+      if (online) {
+        log.info("online - resuming uploads");
         this.queue.start();
+      } else {
+        log.info("offline - pausing uploads");
+        this.queue.stop();
       }
-    });
-    this.subscriptions.push(() => subscription.remove());
+    };
+    apply(onlineManager.isOnline());
+    this.subscriptions.push(onlineManager.subscribe(apply));
   }
 
   private wireForegroundListener() {
     const unsubscribe = onAppForeground(() => {
       if (this.destroyed) return;
-      log.info("app foregrounded — rehydrating");
+      log.info("app foregrounded - rehydrating");
       void this.rehydrate();
     });
     this.subscriptions.push(unsubscribe);
@@ -416,7 +396,7 @@ class OutboxImpl implements Outbox {
     if (this.destroyed) return;
     if (this.rehydrating) return;
     if (Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
-      log.debug("rehydrate skipped — recent");
+      log.debug("rehydrate skipped - recent");
       return;
     }
     this.rehydrating = true;
