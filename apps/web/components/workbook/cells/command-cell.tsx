@@ -8,7 +8,6 @@ import type { CommandFormat } from "@repo/api/schemas/experiment.schema";
 import type { CommandCell as CommandCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { validateInlineCommand } from "@repo/api/utils/command-payload";
 import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -17,13 +16,21 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { buildCommandExtensions } from "../../shared/command-completions";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+import type { EditorLanguage } from "../workbook-code-editor";
 
 const FORMAT_LABELS: Record<CommandFormat, string> = {
   string: "String",
   json: "JSON",
   yaml: "YAML",
+};
+
+const FORMAT_LANGUAGE: Record<CommandFormat, EditorLanguage> = {
+  string: "text",
+  json: "json",
+  yaml: "yaml",
 };
 
 interface CommandCellProps {
@@ -49,6 +56,34 @@ export function CommandCellComponent({
   const { format, content } = cell.payload;
 
   const validation = useMemo(() => validateInlineCommand({ format, content }), [format, content]);
+
+  // Known-command autocomplete + hover hints only apply to the free-text `string`
+  // format; json/yaml payloads are structured, not a single command word.
+  const commandExtensions = useMemo(
+    () =>
+      format === "string"
+        ? buildCommandExtensions({
+            singleLine: true,
+            placeholder: "Type a command, e.g. battery",
+            readOnly,
+          })
+        : undefined,
+    [format, readOnly],
+  );
+
+  // A single-line command reads as an input, not a code block — drop the gutter.
+  const commandBasicSetup = useMemo(
+    () =>
+      format === "string"
+        ? {
+            lineNumbers: false,
+            foldGutter: false,
+            highlightActiveLine: false,
+            highlightActiveLineGutter: false,
+          }
+        : undefined,
+    [format],
+  );
 
   const update = (patch: Partial<CommandCellType["payload"]>) =>
     onUpdate({ ...cell, payload: { ...cell.payload, ...patch } });
@@ -97,25 +132,16 @@ export function CommandCellComponent({
       }
     >
       <div className="space-y-2">
-        {format === "string" ? (
-          <Input
-            value={content}
-            onChange={(e) => update({ content: e.target.value })}
-            placeholder="Type a command, e.g. battery"
-            aria-label="Device command"
-            className="font-mono text-sm"
-            readOnly={readOnly}
-          />
-        ) : (
-          <WorkbookCodeEditor
-            value={content}
-            onChange={readOnly ? undefined : (v) => update({ content: v })}
-            language={format === "json" ? "json" : "yaml"}
-            minHeight={readOnly ? "80px" : "120px"}
-            maxHeight="400px"
-            readOnly={readOnly}
-          />
-        )}
+        <WorkbookCodeEditor
+          value={content}
+          onChange={readOnly ? undefined : (v) => update({ content: v })}
+          language={FORMAT_LANGUAGE[format]}
+          minHeight={format === "string" ? "44px" : readOnly ? "80px" : "120px"}
+          maxHeight="400px"
+          readOnly={readOnly}
+          extraExtensions={commandExtensions}
+          basicSetup={commandBasicSetup}
+        />
         {!validation.ok ? <p className="text-xs text-red-500">{validation.error}</p> : null}
       </div>
     </CellWrapper>
