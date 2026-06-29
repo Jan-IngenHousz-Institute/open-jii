@@ -35,6 +35,23 @@ export const zMacroCell = zBaseCell.extend({
   payload: zMacroPayload,
 });
 
+// An instrument console command (e.g. `hello`, `battery`) sent verbatim to the
+// device. Unlike protocols/macros the cell is self-contained — there is no
+// persisted entity to reference. `command` is free text: the known commands
+// (see KNOWN_DEVICE_COMMANDS) are offered as editor autocomplete/hints, but
+// parameterised or custom commands are also accepted (OJD-1603).
+const zCommandPayload = z
+  .object({
+    command: z.string().min(1),
+    name: z.string().optional(),
+  })
+  .strict();
+
+export const zCommandCell = zBaseCell.extend({
+  type: z.literal("command"),
+  payload: zCommandPayload,
+});
+
 export const zQuestionCell = zBaseCell.extend({
   type: z.literal("question"),
   // Data pipeline canonicalises this into a column key in `questions_data`; must be unique within the workbook.
@@ -88,6 +105,7 @@ export const zMarkdownCell = zBaseCell.extend({
 export const zWorkbookCell = z.union([
   zProtocolCell,
   zMacroCell,
+  zCommandCell,
   zQuestionCell,
   zBranchCell,
   zOutputCell,
@@ -114,6 +132,7 @@ export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx
 
 export type ProtocolCell = z.infer<typeof zProtocolCell>;
 export type MacroCell = z.infer<typeof zMacroCell>;
+export type CommandCell = z.infer<typeof zCommandCell>;
 export type QuestionCell = z.infer<typeof zQuestionCell>;
 export type BranchCell = z.infer<typeof zBranchCell>;
 export type BranchCondition = z.infer<typeof zBranchCondition>;
@@ -124,6 +143,7 @@ export type MarkdownCell = z.infer<typeof zMarkdownCell>;
 export type WorkbookCell =
   | ProtocolCell
   | MacroCell
+  | CommandCell
   | QuestionCell
   | BranchCell
   | OutputCell

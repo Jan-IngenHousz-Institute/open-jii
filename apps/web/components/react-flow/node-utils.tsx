@@ -12,6 +12,7 @@ const DEFAULT_STEP_SPECIFICATIONS = {
   QUESTION: { kind: "open_ended", text: "" },
   MEASUREMENT: { protocolId: undefined },
   ANALYSIS: { macroId: undefined },
+  COMMAND: { command: undefined },
 } as const;
 
 // Utility: map a possibly persisted string to a Position enum

@@ -86,6 +86,20 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
         content: typeof content.text === "string" ? content.text : "",
       };
 
+    case "command": {
+      const command = content.command as string;
+      return {
+        id: node.id,
+        type: "command",
+        isCollapsed: false,
+        payload: {
+          command,
+          // Drop the auto-derived name so a round-trip doesn't fabricate one.
+          ...(node.name && node.name !== command ? { name: node.name } : {}),
+        },
+      };
+    }
+
     default:
       return null;
   }

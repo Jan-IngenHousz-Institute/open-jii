@@ -12,6 +12,7 @@ import {
 } from "@repo/ui/components/tooltip";
 
 import { AnalysisPanel } from "./analysis-panel";
+import { CommandPanel } from "./command-panel";
 import { EdgeSidePanel } from "./edge-panel";
 import { InstructionPanel } from "./instruction-panel";
 import { MeasurementPanel } from "./measurement-panel";
@@ -350,6 +351,23 @@ export function ExperimentSidePanel({
               }}
               disabled={isDisabled}
               upstreamProtocolId={findUpstreamProtocolId(selectedNode.id, nodes, edges)}
+            />
+          )}
+          {/* CommandPanel for command node */}
+          {displayNodeType === "COMMAND" && selectedNode && (
+            <CommandPanel
+              selectedCommand={
+                typeof selectedNode.data.command === "string" ? selectedNode.data.command : ""
+              }
+              onChange={(command) => {
+                if (onNodeDataChange) {
+                  onNodeDataChange(selectedNode.id, {
+                    ...selectedNode.data,
+                    command,
+                  });
+                }
+              }}
+              disabled={isDisabled}
             />
           )}
         </div>

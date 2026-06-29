@@ -58,6 +58,8 @@
       "protocol_other": "{{count}} Protokolle",
       "macro_one": "{{count}} Makro",
       "macro_other": "{{count}} Makros",
+      "command_one": "{{count}} Befehl",
+      "command_other": "{{count}} Befehle",
       "question_one": "{{count}} Frage",
       "question_other": "{{count}} Fragen",
       "branch_one": "{{count}} Verzweigung",
@@ -65,6 +67,10 @@
       "markdown_one": "{{count}} Notiz",
       "markdown_other": "{{count}} Notizen"
     }
+  },
+  "command": {
+    "editorAriaLabel": "Gerätebefehl",
+    "editorPlaceholder": "Befehl eingeben, z. B. battery"
   },
   "output": {
     "label": "Ausgabe",

@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   zProtocolCell,
   zMacroCell,
+  zCommandCell,
   zQuestionCell,
   zBranchCell,
   zOutputCell,
@@ -107,6 +108,53 @@ describe("Workbook Cells Schema", () => {
         payload: { macroId: uuidA, language: "python", bonus: 42 },
       };
       expect(() => zMacroCell.parse(cell)).toThrow();
+    });
+  });
+
+  describe("zCommandCell", () => {
+    it("accepts a known command", () => {
+      const cell = {
+        id: "c1",
+        type: "command",
+        payload: { command: "battery" },
+      };
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+    });
+
+    it("accepts optional name", () => {
+      const cell = {
+        id: "c2",
+        type: "command",
+        payload: { command: "hello", name: "Handshake" },
+      };
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+    });
+
+    it("accepts a custom / parameterised command", () => {
+      const cell = {
+        id: "c3",
+        type: "command",
+        payload: { command: "set_led_delay+1" },
+      };
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+    });
+
+    it("rejects an empty command", () => {
+      const cell = {
+        id: "c3b",
+        type: "command",
+        payload: { command: "" },
+      };
+      expect(() => zCommandCell.parse(cell)).toThrow();
+    });
+
+    it("rejects payload with extra keys (strict)", () => {
+      const cell = {
+        id: "c4",
+        type: "command",
+        payload: { command: "hello", extra: true },
+      };
+      expect(() => zCommandCell.parse(cell)).toThrow();
     });
   });
 
@@ -335,6 +383,11 @@ describe("Workbook Cells Schema", () => {
           payload: { macroId: uuidA, language: "python" },
         },
         {
+          id: "c1",
+          type: "command",
+          payload: { command: "battery" },
+        },
+        {
           id: "q1",
           type: "question",
           name: "why",
@@ -344,7 +397,7 @@ describe("Workbook Cells Schema", () => {
         { id: "o1", type: "output", producedBy: "p1" },
       ];
       const parsed = zWorkbookCellArray.parse(cells);
-      expect(parsed).toHaveLength(5);
+      expect(parsed).toHaveLength(6);
     });
 
     it("rejects unknown cell type", () => {

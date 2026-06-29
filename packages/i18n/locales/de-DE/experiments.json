@@ -73,7 +73,12 @@
       "INSTRUCTION": "Anleitung",
       "QUESTION": "Frage",
       "MEASUREMENT": "Messung",
-      "ANALYSIS": "Analyse"
+      "ANALYSIS": "Analyse",
+      "COMMAND": "Befehl"
+    },
+    "commandPanel": {
+      "title": "Gerätebefehl",
+      "placeholder": "Befehl auswählen"
     },
     "questionTooltip": {
       "title": "Datenspaltenname",

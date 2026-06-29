@@ -1,6 +1,14 @@
 "use client";
 
-import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope } from "lucide-react";
+import {
+  BookOpen,
+  Code,
+  FileText,
+  GitBranch,
+  HelpCircle,
+  Microscope,
+  Terminal,
+} from "lucide-react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
@@ -12,6 +20,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
+import { CELL_ACCENT } from "./cell-theme";
 import { MacroPicker } from "./macro-picker";
 import { ProtocolPicker } from "./protocol-picker";
 import { QuestionPicker } from "./question-picker";
@@ -35,11 +44,12 @@ const cellOptions: {
   icon: typeof FileText;
   color: string;
 }[] = [
-  { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
-  { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
-  { type: "macro", label: "Macro", icon: Code, color: "#6C5CE7" },
-  { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
-  { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
+  { type: "markdown", label: "Markdown", icon: FileText, color: CELL_ACCENT.markdown },
+  { type: "protocol", label: "Protocol", icon: Microscope, color: CELL_ACCENT.protocol },
+  { type: "macro", label: "Macro", icon: Code, color: CELL_ACCENT.macro },
+  { type: "command", label: "Command", icon: Terminal, color: CELL_ACCENT.command },
+  { type: "question", label: "Question", icon: HelpCircle, color: CELL_ACCENT.question },
+  { type: "branch", label: "Branch", icon: GitBranch, color: CELL_ACCENT.branch },
 ];
 
 export function AddCellButton({

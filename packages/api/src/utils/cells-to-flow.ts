@@ -78,6 +78,17 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         isStart,
       );
 
+    case "command":
+      return makeNode(
+        cell.id,
+        "command",
+        // Derived node names are capped at 64 chars by zFlowNode.name; command
+        // text is free-form and may exceed that, so clamp the fallback label.
+        (cell.payload.name ?? cell.payload.command).slice(0, 64),
+        { command: cell.payload.command } as Content,
+        isStart,
+      );
+
     case "output":
       return null;
 

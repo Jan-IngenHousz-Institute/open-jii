@@ -10,6 +10,7 @@ export type StepTypeKey =
   | "question"
   | "measurement"
   | "analysis"
+  | "command"
   | "review"
   | "completed";
 
@@ -30,6 +31,7 @@ const TYPE_TO_KEY: Record<FlowNodeType, StepTypeKey> = {
   measurement: "measurement",
   analysis: "analysis",
   branch: "instruction",
+  command: "command",
 };
 
 function deriveStepInfo(

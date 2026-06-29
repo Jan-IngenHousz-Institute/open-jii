@@ -4,6 +4,7 @@ import { View, ScrollView } from "react-native";
 import { FlowNode } from "../../types";
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
 import { BranchNode } from "../flow-nodes/branch-node/branch-node";
+import { CommandNode } from "../flow-nodes/command-node/command-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
@@ -29,6 +30,8 @@ function renderNode(currentNode: FlowNode) {
       return <QuestionNode node={currentNode} />;
     case "analysis":
       return <AnalysisNode content={currentNode.content} />;
+    case "command":
+      return <CommandNode content={currentNode.content} />;
     case "branch":
       return <BranchNode node={currentNode} />;
     case "instruction":
@@ -50,5 +53,11 @@ function renderNode(currentNode: FlowNode) {
 
 export function ActiveState({ currentNode }: ActiveStateProps) {
   // Each node controls its own navigation/actions; no shared footer here.
-  return <View className="flex-1">{renderNode(currentNode)}</View>;
+  // Key on the node id so React remounts (and resets local state) when the
+  // flow advances between same-type nodes — e.g. two command cells in a row.
+  return (
+    <View key={currentNode.id} className="flex-1">
+      {renderNode(currentNode)}
+    </View>
+  );
 }

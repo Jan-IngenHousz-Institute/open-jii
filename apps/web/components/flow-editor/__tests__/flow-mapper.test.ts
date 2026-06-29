@@ -170,7 +170,7 @@ describe("FlowMapper branch + sourceHandle", () => {
     const data = n.data as FlowNodeDataWithSpec & {
       stepSpecification?: { paths: { id: string }[]; defaultPathId?: string };
     };
-    expect(data.stepSpecification?.paths.map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(data.stepSpecification?.paths.map((p: { id: string }) => p.id)).toEqual(["p1", "p2"]);
     expect(data.stepSpecification?.defaultPathId).toBe("p2");
   });
 
@@ -444,5 +444,46 @@ describe("FlowMapper.toApiGraph validation", () => {
     expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
       "A valid macro must be selected for analysis nodes",
     );
+  });
+});
+
+describe("FlowMapper command nodes", () => {
+  function buildCommandFlow(): Flow {
+    return buildApiFlow({
+      nodes: [
+        {
+          id: "cmd-node",
+          type: "command" as const,
+          name: "Battery",
+          content: { command: "battery" },
+          isStart: true,
+        },
+      ],
+    });
+  }
+
+  it("maps an API command node to a COMMAND React Flow node carrying the device command", () => {
+    const { nodes } = FlowMapper.toReactFlow(buildCommandFlow());
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].type).toBe("COMMAND");
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    expect(data.command).toBe("battery");
+  });
+
+  it("round-trips a command node back to API command content", () => {
+    const react = FlowMapper.toReactFlow(buildCommandFlow());
+    const result = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(result.nodes[0].type).toBe("command");
+    expect(result.nodes[0].content).toEqual({ command: "battery" });
+  });
+
+  it("reads the command from stepSpecification when not set directly on node data", () => {
+    const react = FlowMapper.toReactFlow(buildCommandFlow());
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    // Simulate a node whose command lives only in the step specification.
+    data.command = undefined;
+    data.stepSpecification = { command: "hello" };
+    const result = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(result.nodes[0].content).toEqual({ command: "hello" });
   });
 });

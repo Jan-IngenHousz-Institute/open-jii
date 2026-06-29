@@ -189,4 +189,32 @@ describe("flowNodesToWorkbookCells", () => {
     expect(cells).toHaveLength(1);
     expect((cells[0] as { content: string }).content).toBe("");
   });
+
+  it("converts a command node to a command cell, dropping an auto-derived name", () => {
+    // Node name equals the command (auto-derived); the cell should not fabricate a name.
+    const nodes = [
+      makeNode({ id: "c1", type: "command", name: "battery", content: { command: "battery" } }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toMatchObject({ id: "c1", type: "command", payload: { command: "battery" } });
+    expect((cells[0] as { payload: { name?: string } }).payload.name).toBeUndefined();
+  });
+
+  it("keeps a custom command-node name on the command cell", () => {
+    const nodes = [
+      makeNode({
+        id: "c2",
+        type: "command",
+        name: "Check charge",
+        content: { command: "battery" },
+      }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells[0]).toMatchObject({
+      id: "c2",
+      type: "command",
+      payload: { command: "battery", name: "Check charge" },
+    });
+  });
 });

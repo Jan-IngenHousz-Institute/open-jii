@@ -15,6 +15,7 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
 
 import { SelectOptionsEditor } from "../../question-card/select-options-editor/select-options-editor";
+import { CELL_ACCENT } from "../cell-theme";
 import { CellWrapper } from "../cell-wrapper";
 import { QuestionNameEditor } from "../question-name-editor";
 
@@ -331,7 +332,7 @@ export function QuestionCellComponent({
                 type="button"
                 aria-label={`Rename question (current: ${cell.name})`}
                 className="focus:outline-hidden cursor-pointer rounded px-0.5 hover:underline focus-visible:underline"
-                style={{ color: "#C58AAE" }}
+                style={{ color: CELL_ACCENT.question }}
               >
                 {cell.name}
               </button>
@@ -339,7 +340,7 @@ export function QuestionCellComponent({
           )
         }
         labelText="Question"
-        accentColor="#C58AAE"
+        accentColor={CELL_ACCENT.question}
         isCollapsed={cell.isCollapsed}
         onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
         onDelete={onDelete}

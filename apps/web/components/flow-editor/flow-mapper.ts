@@ -11,6 +11,7 @@ import {
   zMeasurementContent,
   zAnalysisContent,
   zBranchContent,
+  zCommandContent,
 } from "@repo/api/schemas/experiment.schema";
 import type { zQuestionKind } from "@repo/api/schemas/experiment.schema";
 
@@ -23,6 +24,7 @@ type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
 type AnalysisContent = z.infer<typeof zAnalysisContent>;
 type BranchContent = z.infer<typeof zBranchContent>;
+type CommandContent = z.infer<typeof zCommandContent>;
 type QuestionKind = z.infer<typeof zQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
@@ -38,7 +40,8 @@ type StepSpecification =
   | InstructionContent
   | MeasurementContent
   | AnalysisContent
-  | BranchContent;
+  | BranchContent
+  | CommandContent;
 
 export interface FlowNodeDataBase extends Record<string, unknown> {
   title: string;
@@ -50,6 +53,7 @@ export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
   stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
   protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
   macroId?: string; // analysis convenience field (when not yet set in stepSpecification)
+  command?: string; // command convenience field (the selected device command)
 }
 
 export interface FlowEdgeData extends Record<string, unknown> {
@@ -67,6 +71,7 @@ const REACT_FLOW_TO_API_NODE_TYPE = {
   MEASUREMENT: "measurement",
   ANALYSIS: "analysis",
   BRANCH: "branch",
+  COMMAND: "command",
 } as const;
 
 const QUESTION_KIND_TO_ANSWER_TYPE: Record<QuestionKind, QuestionUI["answerType"]> = {
@@ -110,7 +115,7 @@ export class FlowMapper {
   static toReactFlow(apiFlow: Flow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
       const reactFlowTypeMapping: Record<
-        "question" | "instruction" | "measurement" | "analysis" | "branch",
+        "question" | "instruction" | "measurement" | "analysis" | "branch" | "command",
         NodeType
       > = {
         question: "QUESTION",
@@ -118,6 +123,7 @@ export class FlowMapper {
         measurement: "MEASUREMENT",
         analysis: "ANALYSIS",
         branch: "BRANCH",
+        command: "COMMAND",
       };
 
       const nodeType = reactFlowTypeMapping[apiNode.type];
@@ -152,6 +158,11 @@ export class FlowMapper {
         if (analysisContent.macroId) {
           nodeData.macroId = analysisContent.macroId;
         }
+      }
+
+      // For command nodes, also set the device command directly on the node data
+      if (apiNode.type === "command" && isObject(apiNode.content)) {
+        nodeData.command = (apiNode.content as CommandContent).command;
       }
 
       return {
@@ -283,6 +294,18 @@ export class FlowMapper {
           paths: spec.paths ?? [],
           defaultPathId: spec.defaultPathId,
         });
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
+      } else if (nodeType === "command") {
+        const command =
+          data.command ??
+          (isObject(data.stepSpecification)
+            ? (data.stepSpecification as { command?: string }).command
+            : undefined);
+        // Let Zod validate the command against the known device-command enum.
+        const parsed = zCommandContent.safeParse({ command });
         if (!parsed.success) {
           throw new Error(parsed.error.errors[0].message);
         }
