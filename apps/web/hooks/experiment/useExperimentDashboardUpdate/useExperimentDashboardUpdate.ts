@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -8,19 +9,26 @@ interface ExperimentDashboardUpdateProps {
 }
 
 export const useExperimentDashboardUpdate = (props: ExperimentDashboardUpdateProps) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.experiments.updateExperimentDashboard.useMutation({
-    onSuccess: (data) => {
-      queryClient.setQueryData(["experiment-dashboard", props.experimentId, data.body.id], {
-        body: data.body,
-      });
-      props.onSuccess?.(data.body);
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["experiment-dashboards", props.experimentId],
-      });
-    },
-  });
+  return useMutation(
+    orpc.experiments.updateExperimentDashboard.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.setQueryData(
+          orpc.experiments.getExperimentDashboard.queryKey({
+            input: { id: props.experimentId, dashboardId: data.id },
+          }),
+          data,
+        );
+        props.onSuccess?.(data);
+      },
+      onSettled: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentDashboards.key({
+            input: { id: props.experimentId },
+          }),
+        });
+      },
+    }),
+  );
 };

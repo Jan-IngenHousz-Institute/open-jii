@@ -34,7 +34,7 @@ export default function ExperimentDashboardsDisplay({
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
   const { data, isLoading } = useExperimentDashboards({ experimentId });
-  const dashboards = data?.body ?? [];
+  const dashboards = data ?? [];
 
   const basePath = isArchived ? "experiments-archive" : "experiments";
   const dashboardsHref = `/${locale}/platform/${basePath}/${experimentId}/dashboards`;

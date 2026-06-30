@@ -67,9 +67,7 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
 
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
-    deleteDashboard({
-      params: { id: experimentId, dashboardId: dashboard.id },
-    });
+    deleteDashboard({ id: experimentId, dashboardId: dashboard.id });
   };
 
   return (

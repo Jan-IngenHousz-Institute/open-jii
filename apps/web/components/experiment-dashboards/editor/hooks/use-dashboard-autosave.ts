@@ -36,7 +36,7 @@ export function useDashboardAutosave({
         layout: snapshot.layout,
         widgets: snapshot.widgets,
       };
-      await mutateAsync({ params: { id: experimentId, dashboardId }, body });
+      await mutateAsync({ id: experimentId, dashboardId, ...body });
     },
     [mutateAsync, experimentId, dashboardId],
   );

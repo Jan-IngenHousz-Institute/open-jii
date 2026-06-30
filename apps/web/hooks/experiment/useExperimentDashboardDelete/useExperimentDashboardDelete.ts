@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 
 interface ExperimentDashboardDeleteProps {
   experimentId: string;
@@ -6,16 +7,20 @@ interface ExperimentDashboardDeleteProps {
 }
 
 export const useExperimentDashboardDelete = (props: ExperimentDashboardDeleteProps) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.experiments.deleteExperimentDashboard.useMutation({
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["experiment-dashboards", props.experimentId],
-      });
-    },
-    onSuccess: () => {
-      props.onSuccess?.();
-    },
-  });
+  return useMutation(
+    orpc.experiments.deleteExperimentDashboard.mutationOptions({
+      onSettled: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentDashboards.key({
+            input: { id: props.experimentId },
+          }),
+        });
+      },
+      onSuccess: () => {
+        props.onSuccess?.();
+      },
+    }),
+  );
 };

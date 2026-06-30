@@ -44,10 +44,7 @@ export default function ExperimentDashboardsPage() {
       day: "numeric",
       year: "numeric",
     })}`;
-    createDashboard({
-      params: { id: experimentId },
-      body: { name: defaultName },
-    });
+    createDashboard({ id: experimentId, name: defaultName });
   };
 
   return (
@@ -68,13 +65,13 @@ export default function ExperimentDashboardsPage() {
       </div>
 
       <ExperimentDashboardsHighlights
-        dashboards={dashboardsData?.body ?? []}
+        dashboards={dashboardsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
       />
 
       <ExperimentDashboardsList
-        dashboards={dashboardsData?.body ?? []}
+        dashboards={dashboardsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
       />

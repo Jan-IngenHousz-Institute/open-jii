@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -8,16 +9,20 @@ interface ExperimentDashboardCreateProps {
 }
 
 export const useExperimentDashboardCreate = (props: ExperimentDashboardCreateProps) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.experiments.createExperimentDashboard.useMutation({
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["experiment-dashboards", props.experimentId],
-      });
-    },
-    onSuccess: (data) => {
-      props.onSuccess?.(data.body);
-    },
-  });
+  return useMutation(
+    orpc.experiments.createExperimentDashboard.mutationOptions({
+      onSettled: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentDashboards.key({
+            input: { id: props.experimentId },
+          }),
+        });
+      },
+      onSuccess: (data) => {
+        props.onSuccess?.(data);
+      },
+    }),
+  );
 };

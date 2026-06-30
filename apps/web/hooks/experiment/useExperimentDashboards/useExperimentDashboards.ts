@@ -1,5 +1,6 @@
-import { tsr } from "@/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { orpc } from "@/lib/orpc";
 
 // Contract max is 100; the +1 probe needs room within it.
 const MAX_BACKEND_LIMIT = 100;
@@ -27,20 +28,15 @@ export const useExperimentDashboards = ({
     data: rawData,
     isLoading,
     error,
-  } = tsr.experiments.listExperimentDashboards.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: { limit: requestedLimit, offset },
-    },
-    queryKey: ["experiment-dashboards", experimentId, requestedLimit, offset],
-  });
-
-  const data = useMemo(
-    () => (rawData ? { ...rawData, body: rawData.body.slice(0, limit) } : rawData),
-    [rawData, limit],
+  } = useQuery(
+    orpc.experiments.listExperimentDashboards.queryOptions({
+      input: { id: experimentId, limit: requestedLimit, offset },
+    }),
   );
 
-  const hasNextPage = (rawData?.body.length ?? 0) > limit;
+  const data = useMemo(() => (rawData ? rawData.slice(0, limit) : rawData), [rawData, limit]);
+
+  const hasNextPage = (rawData?.length ?? 0) > limit;
   const hasPreviousPage = offset > 0;
 
   const nextPage = () => {
