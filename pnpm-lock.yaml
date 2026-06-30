@@ -253,12 +253,6 @@ importers:
       '@thallesp/nestjs-better-auth':
         specifier: ^2.5.3
         version: 2.5.3(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(better-auth@1.5.6(@opentelemetry/api@1.9.1)(better-sqlite3@12.8.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.8.0)(expo-sqlite@55.0.15(expo@55.0.15)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(kysely@0.28.17)(postgres@3.4.8))(next@16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.4))(express@5.2.1)(graphql@16.13.2)(qs@6.15.2)(typescript@5.9.3)
-      '@ts-rest/core':
-        specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
-      '@ts-rest/nest':
-        specifier: ^3.52.1
-        version: 3.52.1(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)
       '@types/busboy':
         specifier: ^1.5.4
         version: 1.5.4
@@ -8022,18 +8016,6 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
-      zod:
-        optional: true
-
-  '@ts-rest/nest@3.52.1':
-    resolution: {integrity: sha512-6Abk9tRu0yxBv6PORAU6RIRizRQTQow7VeZ41j9vfEXXYUcR6DnkltGVIGSBepkg50wwJ9ygr0fplwNoWUUkBw==}
-    peerDependencies:
-      '@nestjs/common': ^9.0.0 || ^10.0.0 || ^11.0.0
-      '@nestjs/core': ^9.0.0 || ^10.0.0 || ^11.0.0
-      '@ts-rest/core': ~3.52.0
-      rxjs: ^7.1.0
-      zod: ^3.22.3
-    peerDependenciesMeta:
       zod:
         optional: true
 
@@ -26609,15 +26591,6 @@ snapshots:
   '@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76)':
     optionalDependencies:
       '@types/node': 22.19.15
-      zod: 3.25.76
-
-  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(rxjs@7.8.2)(zod@3.25.76)':
-    dependencies:
-      '@nestjs/common': 11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core': 11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.18)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
-      rxjs: 7.8.2
-    optionalDependencies:
       zod: 3.25.76
 
   '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(zod@3.25.76)':
