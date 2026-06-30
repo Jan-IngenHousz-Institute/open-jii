@@ -7,24 +7,31 @@ import { contract } from "@repo/api/contract";
 
 import { useListUploads } from "./useListUploads";
 
+// The ts-rest contract still carries the stale `/uploads` path; the live
+// backend (and the oRPC contract the hook now uses) serve `/data/uploads`.
+const listUploadsEndpoint = {
+  ...contract.experiments.listUploads,
+  path: "/api/v1/experiments/:id/data/uploads",
+};
+
 describe("useListUploads", () => {
   it("returns the upload list when enabled", async () => {
     const uploads = [
       createUpload({ uploadId: "u1", status: "running" }),
       createUpload({ uploadId: "u2", status: "completed" }),
     ];
-    server.mount(contract.experiments.listUploads, { body: { uploads } });
+    server.mount(listUploadsEndpoint, { body: { uploads } });
 
     const { result } = renderHook(() => useListUploads("exp-1", { enabled: true }));
 
     await waitFor(() => {
-      expect(result.current.data?.body.uploads).toHaveLength(2);
+      expect(result.current.data?.uploads).toHaveLength(2);
     });
-    expect(result.current.data?.body.uploads[0].uploadId).toBe("u1");
+    expect(result.current.data?.uploads[0].uploadId).toBe("u1");
   });
 
   it("does not fetch when disabled", () => {
-    const spy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
+    const spy = server.mount(listUploadsEndpoint, { body: { uploads: [] } });
 
     const { result } = renderHook(() => useListUploads("exp-1", { enabled: false }));
 
@@ -34,7 +41,7 @@ describe("useListUploads", () => {
   });
 
   it("forwards the uploadTableName filter to the request", async () => {
-    const spy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
+    const spy = server.mount(listUploadsEndpoint, { body: { uploads: [] } });
 
     renderHook(() => useListUploads("exp-1", { uploadTableName: "leaf_traits", enabled: true }));
 

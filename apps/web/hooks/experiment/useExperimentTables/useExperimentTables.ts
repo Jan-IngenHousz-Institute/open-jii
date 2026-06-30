@@ -1,4 +1,5 @@
-import { tsr } from "~/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/lib/orpc";
 
 import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -14,13 +15,12 @@ const STALE_TIME = 2 * 60 * 1000;
  * @returns Query result containing the tables metadata
  */
 export const useExperimentTables = (experimentId: string) => {
-  const { data, isLoading, error } = tsr.experiments.getExperimentTables.useQuery({
-    queryData: {
-      params: { id: experimentId },
-    },
-    queryKey: ["experiment", experimentId, "tables"],
-    staleTime: STALE_TIME,
-  });
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperimentTables.queryOptions({
+      input: { id: experimentId },
+      staleTime: STALE_TIME,
+    }),
+  );
 
-  return { tables: data?.body, isLoading, error };
+  return { tables: data, isLoading, error };
 };

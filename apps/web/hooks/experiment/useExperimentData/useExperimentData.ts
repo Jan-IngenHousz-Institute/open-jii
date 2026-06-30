@@ -1,8 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
+import { orpc } from "~/lib/orpc";
 
 import type {
   ExperimentData,
@@ -291,10 +292,10 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     [cleanedFilters],
   );
 
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperimentData.queryOptions({
+      input: {
+        id: experimentId,
         tableName,
         page,
         pageSize,
@@ -302,22 +303,12 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
         orderDirection,
         filters: filtersJson,
       },
-    },
-    queryKey: [
-      "experiment",
-      experimentId,
-      tableName,
-      orderBy,
-      orderDirection,
-      filtersJson,
-      page,
-      pageSize,
-    ],
-    staleTime: STALE_TIME,
-    enabled,
-  });
+      staleTime: STALE_TIME,
+      enabled,
+    }),
+  );
 
-  const tableData = data?.body[0];
+  const tableData = data?.[0];
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData

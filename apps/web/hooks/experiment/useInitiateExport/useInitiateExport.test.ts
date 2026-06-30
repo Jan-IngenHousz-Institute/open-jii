@@ -15,10 +15,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-1" },
-        body: { tableName: "raw_data", format: "csv" },
-      });
+      result.current.mutate({ id: "exp-1", tableName: "raw_data", format: "csv" });
     });
 
     await waitFor(() => {
@@ -41,10 +38,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "csv" },
-      });
+      result.current.mutate({ id: "exp-123", tableName: "raw_data", format: "csv" });
     });
 
     await waitFor(() => {
@@ -60,10 +54,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-123" },
-        body: { tableName: "device", format: "ndjson" },
-      });
+      result.current.mutate({ id: "exp-123", tableName: "device", format: "ndjson" });
     });
 
     await waitFor(() => {
@@ -81,10 +72,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport({ onSuccess }));
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "csv" },
-      });
+      result.current.mutate({ id: "exp-123", tableName: "raw_data", format: "csv" });
     });
 
     await waitFor(() => {
@@ -100,10 +88,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "parquet" },
-      });
+      result.current.mutate({ id: "exp-123", tableName: "raw_data", format: "parquet" });
     });
 
     await waitFor(() => {
@@ -117,10 +102,7 @@ describe("useInitiateExport", () => {
     const { result } = renderHook(() => useInitiateExport());
 
     act(() => {
-      result.current.mutate({
-        params: { id: "exp-123" },
-        body: { tableName: "raw_data", format: "csv" },
-      });
+      result.current.mutate({ id: "exp-123", tableName: "raw_data", format: "csv" });
     });
 
     await waitFor(() => {

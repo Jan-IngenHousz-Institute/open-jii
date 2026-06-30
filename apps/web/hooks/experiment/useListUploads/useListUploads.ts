@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Lists the upload history for an experiment (active + failed + completed,
@@ -9,13 +10,11 @@ export const useListUploads = (
   experimentId: string,
   opts: { uploadTableName?: string; enabled: boolean },
 ) => {
-  return tsr.experiments.listUploads.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: { uploadTableName: opts.uploadTableName },
-    },
-    queryKey: ["experiments", experimentId, "uploads", opts.uploadTableName ?? "all"],
-    enabled: opts.enabled,
-    refetchInterval: opts.enabled ? 3_000 : false,
-  });
+  return useQuery(
+    orpc.experiments.listUploads.queryOptions({
+      input: { id: experimentId, uploadTableName: opts.uploadTableName },
+      enabled: opts.enabled,
+      refetchInterval: opts.enabled ? 3_000 : false,
+    }),
+  );
 };

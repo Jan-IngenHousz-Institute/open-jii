@@ -252,7 +252,7 @@ export function ExportListStep({
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
   const { downloadExport, isDownloading, downloadingExportId } = useDownloadExport(experimentId);
-  const exports = data?.body.exports ?? [];
+  const exports = data?.exports ?? [];
 
   // Mirror every poll into the global activity context so the topbar bell
   // shows export status without the user keeping this modal open.

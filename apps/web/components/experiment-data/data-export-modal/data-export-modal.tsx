@@ -72,15 +72,13 @@ export function DataExportModal({
 
     initiateExport(
       {
-        params: { id: experimentId },
-        body: {
-          tableName,
-          format: format as "csv" | "ndjson" | "json-array" | "parquet",
-          // Omit when not overridden so backend falls back to the stored setting.
-          ...(anonymizeOverride !== undefined && {
-            anonymizeContributors: anonymizeOverride,
-          }),
-        },
+        id: experimentId,
+        tableName,
+        format: format as "csv" | "ndjson" | "json-array" | "parquet",
+        // Omit when not overridden so backend falls back to the stored setting.
+        ...(anonymizeOverride !== undefined && {
+          anonymizeContributors: anonymizeOverride,
+        }),
       },
       {
         onError: (error) => {
