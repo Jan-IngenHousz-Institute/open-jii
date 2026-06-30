@@ -50,14 +50,12 @@ export default function ExperimentVisualizationsPage() {
       },
     )}`;
     createVisualization({
-      params: { id: experimentId },
-      body: {
-        name: defaultName,
-        chartFamily: lineChartType.family,
-        chartType: lineChartType.type,
-        config: { ...lineChartType.defaultConfig() },
-        dataConfig: lineChartType.defaultDataConfig(),
-      },
+      id: experimentId,
+      name: defaultName,
+      chartFamily: lineChartType.family,
+      chartType: lineChartType.type,
+      config: { ...lineChartType.defaultConfig() },
+      dataConfig: lineChartType.defaultDataConfig(),
     });
   };
 
@@ -75,7 +73,7 @@ export default function ExperimentVisualizationsPage() {
       </div>
 
       <ExperimentVisualizationsList
-        visualizations={visualizationsData?.body ?? []}
+        visualizations={visualizationsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
       />

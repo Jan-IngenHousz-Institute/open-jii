@@ -41,15 +41,15 @@ export function EmbeddedVisualizationBuilder({
     );
   }
 
-  if (error || !data?.body) {
+  if (error || !data) {
     return <div className="text-destructive p-4 text-sm">{t("errors.failedToLoadData")}</div>;
   }
 
   return (
     <BuilderShell
-      key={data.body.id}
+      key={data.id}
       experimentId={experimentId}
-      visualization={data.body}
+      visualization={data}
       renderWidgetTab={renderWidgetTab}
     />
   );

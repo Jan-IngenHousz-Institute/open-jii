@@ -66,7 +66,7 @@ export function VisualizationSettingsMenu({
 
   const handleConfirmDelete = () => {
     deleteVisualization(
-      { params: { id: experimentId, visualizationId: visualization.id } },
+      { id: experimentId, visualizationId: visualization.id },
       {
         onError: (err) => {
           const message = parseApiError(err)?.message ?? tCommon("ui.actions.error");

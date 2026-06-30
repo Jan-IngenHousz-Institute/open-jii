@@ -41,14 +41,14 @@ export default function VisualizationLayout({ children }: LayoutProps) {
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
-        hasData={Boolean(data?.body)}
+        hasData={Boolean(data)}
         loadingMessage={t("common.loading")}
       >
-        {data?.body && (
+        {data && (
           <VisualizationFormShell
-            key={data.body.id}
+            key={data.id}
             experimentId={experimentId}
-            visualization={data.body}
+            visualization={data}
           >
             {children}
           </VisualizationFormShell>

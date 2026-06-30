@@ -84,7 +84,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
         <ExperimentVisualizationsDisplay
           experimentId={id}
-          visualizations={visualizationsData?.body ?? []}
+          visualizations={visualizationsData ?? []}
           isLoading={visualizationsLoading}
           isArchived
         />

@@ -1,6 +1,7 @@
 import { shouldRetryQuery } from "@/util/query-retry";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
+import { orpc } from "~/lib/orpc";
 
 import type {
   ExperimentDataAggregation,
@@ -199,10 +200,10 @@ export const useExperimentVisualizationData = (
       : dataConfig.orderBy;
   const effectiveOrderDirection = effectiveOrderBy ? dataConfig.orderDirection : undefined;
 
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperimentData.queryOptions({
+      input: {
+        id: experimentId,
         tableName: dataConfig.tableName,
         columns: columnsCsv,
         filters: filtersJson,
@@ -210,25 +211,15 @@ export const useExperimentVisualizationData = (
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
-    },
-    queryKey: [
-      "experiment-visualization-data",
-      experimentId,
-      dataConfig.tableName,
-      columnsCsv,
-      filtersJson,
-      aggregationJson,
-      effectiveOrderBy,
-      effectiveOrderDirection,
-    ],
-    staleTime: STALE_TIME,
-    enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: shouldRetryQuery,
-  });
+      staleTime: STALE_TIME,
+      enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: shouldRetryQuery,
+    }),
+  );
 
-  const tableData = data?.body[0];
+  const tableData = data?.[0];
 
   const remappedData = useMemo(() => {
     if (!tableData?.data) {

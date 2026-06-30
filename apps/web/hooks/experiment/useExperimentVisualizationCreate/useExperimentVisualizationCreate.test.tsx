@@ -18,14 +18,12 @@ describe("useExperimentVisualizationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          name: "New Viz",
-          chartFamily: "basic",
-          chartType: "line",
-          config: {},
-          dataConfig: viz.dataConfig,
-        },
+        id: "exp-1",
+        name: "New Viz",
+        chartFamily: "basic",
+        chartType: "line",
+        config: {},
+        dataConfig: viz.dataConfig,
       });
     });
 
@@ -45,14 +43,12 @@ describe("useExperimentVisualizationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          name: "Test Viz",
-          chartFamily: "basic",
-          chartType: "bar",
-          config: {},
-          dataConfig: viz.dataConfig,
-        },
+        id: "exp-1",
+        name: "Test Viz",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: {},
+        dataConfig: viz.dataConfig,
       });
     });
 
@@ -72,14 +68,12 @@ describe("useExperimentVisualizationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          name: viz.name,
-          chartFamily: "basic",
-          chartType: "line",
-          config: {},
-          dataConfig: viz.dataConfig,
-        },
+        id: "exp-1",
+        name: viz.name,
+        chartFamily: "basic",
+        chartType: "line",
+        config: {},
+        dataConfig: viz.dataConfig,
       });
     });
 
@@ -97,14 +91,12 @@ describe("useExperimentVisualizationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          name: "Fail",
-          chartFamily: "basic",
-          chartType: "line",
-          config: {},
-          dataConfig: { tableName: "t", dataSources: [] },
-        },
+        id: "exp-1",
+        name: "Fail",
+        chartFamily: "basic",
+        chartType: "line",
+        config: {},
+        dataConfig: { tableName: "t", dataSources: [] },
       });
     });
 

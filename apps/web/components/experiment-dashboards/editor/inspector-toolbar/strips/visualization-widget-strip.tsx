@@ -54,7 +54,7 @@ export function VisualizationWidgetStrip({
   const locale = useLocale();
   const form = useFormContext<DashboardFormValues>();
   const { data, isLoading } = useExperimentVisualizations({ experimentId });
-  const visualizations = data?.body ?? [];
+  const visualizations = data ?? [];
   const { setDatasetOpen } = useDashboardEditor();
 
   const setConfig = (next: Partial<ExperimentVisualizationWidget["config"]>) => {
@@ -82,14 +82,12 @@ export function VisualizationWidgetStrip({
       { month: "short", day: "numeric", year: "numeric" },
     )}`;
     createVisualization({
-      params: { id: experimentId },
-      body: {
-        name: defaultName,
-        chartFamily: def.family,
-        chartType: def.type,
-        config: { ...def.defaultConfig() },
-        dataConfig: def.defaultDataConfig(),
-      },
+      id: experimentId,
+      name: defaultName,
+      chartFamily: def.family,
+      chartType: def.type,
+      config: { ...def.defaultConfig() },
+      dataConfig: def.defaultDataConfig(),
     });
     setPickerOpen(false);
   };

@@ -36,7 +36,7 @@ export function useVisualizationAutosave({
         dataConfig: sanitizeDataConfigForSave(snapshot.dataConfig),
         config: { ...snapshot.config },
       };
-      await mutateAsync({ params: { id: experimentId, visualizationId }, body });
+      await mutateAsync({ id: experimentId, visualizationId, ...body });
     },
     [mutateAsync, experimentId, visualizationId],
   );

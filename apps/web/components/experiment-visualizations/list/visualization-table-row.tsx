@@ -77,7 +77,8 @@ export function VisualizationTableRow({
   const handleConfirmDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     deleteVisualization({
-      params: { id: experimentId, visualizationId: visualization.id },
+      id: experimentId,
+      visualizationId: visualization.id,
     });
   };
 

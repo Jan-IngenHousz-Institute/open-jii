@@ -35,7 +35,7 @@ export function LoadedVisualizationView({
   // is editing this viz, so edits land instantly without waiting for
   // autosave + network round-trip.
   const body = useMemo<ExperimentVisualization | undefined>(() => {
-    const server = data?.body;
+    const server = data;
     if (!server) return undefined;
     if (live?.vizId !== visualizationId) return server;
     // Drop draft data sources so the renderer's query doesn't 400
@@ -52,7 +52,7 @@ export function LoadedVisualizationView({
       config: { ...live.values.config },
       dataConfig: { ...live.values.dataConfig, dataSources: configuredSources },
     };
-  }, [data?.body, live, visualizationId]);
+  }, [data, live, visualizationId]);
 
   if (isLoading) {
     return (

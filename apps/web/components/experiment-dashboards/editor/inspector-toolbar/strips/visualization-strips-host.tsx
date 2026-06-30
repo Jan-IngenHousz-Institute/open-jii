@@ -71,11 +71,11 @@ function Loader({ visualizationId, experimentId, section }: LoaderProps) {
     );
   }
 
-  if (error || !data?.body) {
+  if (error || !data) {
     return <HintChip text={tViz("errors.failedToLoadData")} />;
   }
 
-  return <FormHost visualization={data.body} experimentId={experimentId} section={section} />;
+  return <FormHost visualization={data} experimentId={experimentId} section={section} />;
 }
 
 interface FormHostProps {
