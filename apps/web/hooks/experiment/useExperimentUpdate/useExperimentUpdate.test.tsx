@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -6,7 +7,6 @@ import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { orpc } from "@/lib/orpc";
 import { useExperimentUpdate } from "./useExperimentUpdate";
 
 describe("useExperimentUpdate", () => {

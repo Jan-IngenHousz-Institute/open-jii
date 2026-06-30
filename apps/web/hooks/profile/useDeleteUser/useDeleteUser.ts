@@ -1,9 +1,8 @@
 import { getOrpcError, orpc } from "@/lib/orpc";
+import { parseApiError } from "@/util/apiError";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { parseApiError } from "@/util/apiError";
 
 export type UseDeleteUserOptions = Pick<
   ReturnType<typeof orpc.users.deleteUser.mutationOptions>,

@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
-
-import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to update an existing experiment

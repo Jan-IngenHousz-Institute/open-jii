@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
-
-import { orpc } from "@/lib/orpc";
 
 interface WorkbookUpdateProps {
   onSuccess?: (workbook: Workbook) => void;

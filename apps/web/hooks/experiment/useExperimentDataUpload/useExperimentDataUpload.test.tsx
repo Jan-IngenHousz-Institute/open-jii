@@ -40,12 +40,14 @@ describe("useExperimentDataUpload (mutation)", () => {
   // uploadData is a native streaming endpoint posted via a raw fetch (off the
   // oRPC contract), so the request is asserted against the mocked global fetch.
   it("posts a multipart upload to the generic uploads endpoint", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/x/y" }] }),
-        { status: 201, headers: { "content-type": "application/json" } },
-      ),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/x/y" }] }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        ),
+      );
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
@@ -57,10 +59,11 @@ describe("useExperimentDataUpload (mutation)", () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toContain("/api/v1/experiments/exp-1/data/uploads");
-    expect(init?.method).toBe("POST");
-    expect(init?.body).toBeInstanceOf(FormData);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/experiments/exp-1/data/uploads"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetchSpy.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
   });
 
   it("surfaces a failed response on the mutation result", async () => {

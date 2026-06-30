@@ -1,6 +1,6 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { orpc } from "@/lib/orpc";
 
 import type { ExperimentChartFamily } from "@repo/api/domains/experiment/experiment.schema";
 

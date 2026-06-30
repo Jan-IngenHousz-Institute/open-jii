@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
-
-import { orpc } from "@/lib/orpc";
 
 interface ProtocolUpdateProps {
   onSuccess?: (protocol: Protocol) => void;

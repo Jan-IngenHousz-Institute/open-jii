@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
 import type { InvitationResourceType } from "@repo/api/domains/user/user.schema";
-
-import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to fetch pending invitations for a resource.

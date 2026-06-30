@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
-
-import { orpc } from "@/lib/orpc";
 
 interface MacroUpdateProps {
   onSuccess?: (macro: Macro) => void;

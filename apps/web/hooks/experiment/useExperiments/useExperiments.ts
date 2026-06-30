@@ -1,10 +1,10 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 
-import { orpc } from "@/lib/orpc";
 import { useDebounce } from "../../useDebounce";
 
 export type ExperimentFilter = "member" | "all";

@@ -1,13 +1,12 @@
 "use client";
 
+import { getOrpcError } from "@/lib/orpc";
+import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { env } from "~/env";
 
 import { toast } from "@repo/ui/hooks/use-toast";
-
-import { getOrpcError } from "@/lib/orpc";
-import { parseApiError } from "@/util/apiError";
 
 // Create a client-side QueryClient instance
 const queryClient = new QueryClient({

@@ -2,10 +2,9 @@ import { createORPCClient, ORPCError } from "@orpc/client";
 import type { ContractRouterClient } from "@orpc/contract";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { env } from "~/env";
 
 import { orpcContract } from "@repo/api/orpc-contract";
-
-import { env } from "~/env";
 
 const link = new OpenAPILink(orpcContract, {
   url: env.NEXT_PUBLIC_API_URL,

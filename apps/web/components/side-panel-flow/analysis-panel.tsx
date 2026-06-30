@@ -3,6 +3,8 @@
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -10,9 +12,6 @@ import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
-import { useQuery } from "@tanstack/react-query";
-
-import { orpc } from "@/lib/orpc";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface AnalysisPanelProps {

@@ -1,10 +1,10 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 
-import { orpc } from "@/lib/orpc";
 import { useDebounce } from "../../useDebounce";
 
 export type MacroFilter = "my" | "all";

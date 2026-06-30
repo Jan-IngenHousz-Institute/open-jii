@@ -1,6 +1,6 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
-import { orpc } from "@/lib/orpc";
 
 // Contract max is 100; the +1 probe needs room within it.
 const MAX_BACKEND_LIMIT = 100;

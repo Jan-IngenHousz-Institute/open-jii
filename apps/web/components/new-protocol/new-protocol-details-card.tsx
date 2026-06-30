@@ -1,7 +1,9 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
@@ -28,9 +30,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { useQuery } from "@tanstack/react-query";
-
-import { orpc } from "@/lib/orpc";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface NewProtocolDetailsCardProps {

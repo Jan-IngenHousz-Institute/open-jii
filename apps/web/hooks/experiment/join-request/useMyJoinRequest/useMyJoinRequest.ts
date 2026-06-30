@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { getOrpcError, orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook that returns the signed-in user's pending join request for an experiment.

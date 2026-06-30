@@ -1,7 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
+import { useQuery } from "@tanstack/react-query";
 
 export function useMacro(id: string, enabled = true) {
   const query = useQuery(

@@ -45,11 +45,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
         loadingMessage={t("common.loading")}
       >
         {data && (
-          <VisualizationFormShell
-            key={data.id}
-            experimentId={experimentId}
-            visualization={data}
-          >
+          <VisualizationFormShell key={data.id} experimentId={experimentId} visualization={data}>
             {children}
           </VisualizationFormShell>
         )}

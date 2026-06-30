@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 export const useExperimentDashboard = (dashboardId: string, experimentId: string) => {
   return useQuery(

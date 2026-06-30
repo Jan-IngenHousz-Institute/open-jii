@@ -28,7 +28,7 @@ vi.mock("@tanstack/react-query", async (importActual) => {
     useIsFetching: (filters?: { queryKey?: unknown[] }) => {
       // oRPC query keys look like [["workbooks", "<endpoint>"], { input }].
       const path = filters?.queryKey?.[0];
-      const endpoint = Array.isArray(path) ? path[1] : undefined;
+      const endpoint: unknown = Array.isArray(path) ? path[1] : undefined;
       if (endpoint === "getWorkbook") return syncState.workbook;
       if (endpoint === "listWorkbookVersions") return syncState.versions;
       return 0;

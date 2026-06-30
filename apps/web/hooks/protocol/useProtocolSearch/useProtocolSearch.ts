@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
-
-import { orpc } from "@/lib/orpc";
 
 /**
  * Hook to fetch a list of protocols with optional search functionality

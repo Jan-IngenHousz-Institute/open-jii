@@ -1,6 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
 import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /**
  * Hook to revoke a pending invitation.

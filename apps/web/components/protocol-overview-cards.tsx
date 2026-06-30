@@ -39,10 +39,7 @@ const cardVariants = cva(
 
 function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
   const { data } = useProtocolCompatibleMacros(protocolId, enabled);
-  const macros: ProtocolMacroEntry[] = useMemo(
-    () => data ?? [],
-    [data],
-  );
+  const macros: ProtocolMacroEntry[] = useMemo(() => data ?? [], [data]);
 
   if (macros.length === 0) return null;
 

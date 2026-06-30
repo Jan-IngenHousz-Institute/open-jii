@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to search users by name or email

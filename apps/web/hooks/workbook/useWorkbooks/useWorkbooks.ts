@@ -1,8 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
-
-import { orpc } from "@/lib/orpc";
 
 import { useDebounce } from "../../useDebounce";
 
