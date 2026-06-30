@@ -48,8 +48,6 @@
     "@tanstack/react-hotkeys": "0.10.0",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-table": "^8.21.3",
-    "@ts-rest/core": "^3.52.1",
-    "@ts-rest/react-query": "^3.52.1",
     "@uiw/react-codemirror": "^4.25.9",
     "@xyflow/react": "^12.10.2",
     "date-fns": "^4.1.0",
