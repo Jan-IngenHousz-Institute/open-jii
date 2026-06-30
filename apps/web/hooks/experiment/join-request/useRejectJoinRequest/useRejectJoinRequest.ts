@@ -1,41 +1,43 @@
-import { getContractError, tsr } from "@/lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "@/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { getOrpcError, orpc } from "@/lib/orpc";
 import { parseApiError } from "@/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-const route = tsr.experiments.rejectJoinRequest;
-
-export type UseRejectJoinRequestOptions = TsRestMutationOptions<
-  TsrRoute<typeof route>,
+export type UseRejectJoinRequestOptions = Pick<
+  ReturnType<typeof orpc.experiments.rejectJoinRequest.mutationOptions>,
   "onSuccess" | "onError" | "onSettled"
 >;
 
 export const useRejectJoinRequest = (options?: UseRejectJoinRequestOptions) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  return route.useMutation({
-    ...options,
-    onSuccess: (...args) => {
-      toast({ description: t("experimentSettings.joinRequestRejected") });
-      options?.onSuccess?.(...args);
-    },
-    onError: (error, ...rest) => {
-      toast({
-        description:
-          parseApiError(error)?.message ?? t("experimentSettings.joinRequestRejectedError"),
-        variant: "destructive",
-      });
-      const contractError = getContractError(route, error);
-      if (contractError) {
-        options?.onError?.(contractError, ...rest);
-      }
-    },
-    onSettled: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ["experiment-join-requests"] });
-      options?.onSettled?.(...args);
-    },
-  });
+  return useMutation(
+    orpc.experiments.rejectJoinRequest.mutationOptions({
+      onSuccess: (...args) => {
+        toast({ description: t("experimentSettings.joinRequestRejected") });
+        options?.onSuccess?.(...args);
+      },
+      onError: (...args) => {
+        const [error] = args;
+        const orpcError = getOrpcError(error);
+        toast({
+          description:
+            parseApiError(orpcError?.data)?.message ??
+            t("experimentSettings.joinRequestRejectedError"),
+          variant: "destructive",
+        });
+        options?.onError?.(...args);
+      },
+      onSettled: async (...args) => {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listJoinRequests.key(),
+        });
+        options?.onSettled?.(...args);
+      },
+    }),
+  );
 };

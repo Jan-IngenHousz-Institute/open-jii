@@ -37,10 +37,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const invitations = useMemo(() => invitationsData ?? [], [invitationsData]);
 
   const { data: joinRequestsData } = useExperimentJoinRequests(id);
-  const joinRequests = useMemo(
-    () => (joinRequestsData?.status === 200 ? joinRequestsData.body : []),
-    [joinRequestsData],
-  );
+  const joinRequests = useMemo(() => joinRequestsData ?? [], [joinRequestsData]);
 
   const { data: session } = useSession();
   const currentUserId = session?.user.id;

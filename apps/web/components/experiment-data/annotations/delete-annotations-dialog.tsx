@@ -41,8 +41,10 @@ export function DeleteAnnotationsDialog({
 
   async function onDelete() {
     await deleteAnnotationsBulk({
-      params: { id: experimentId },
-      body: { tableName, rowIds, type },
+      id: experimentId,
+      tableName,
+      rowIds,
+      type,
     });
     toast({ description: t(`experimentDataAnnotations.deleted.${type}s`) });
     clearSelection();

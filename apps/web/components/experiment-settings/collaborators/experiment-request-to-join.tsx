@@ -51,7 +51,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
     return null;
   }
 
-  const pendingRequest = myRequestData?.status === 200 ? myRequestData.body : null;
+  const pendingRequest = myRequestData ?? null;
 
   const handleDialogOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
@@ -64,12 +64,12 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
   const handleSubmit = (data: ExperimentCreateJoinRequestBody) => {
     const trimmedMessage = data.message?.trim();
     const message = trimmedMessage === "" ? undefined : trimmedMessage;
-    requestJoin({ params: { id: experimentId }, body: { message: message ?? undefined } });
+    requestJoin({ id: experimentId, message: message ?? undefined });
   };
 
   const handleCancel = () => {
     if (!pendingRequest) return;
-    cancelRequest({ params: { id: experimentId, requestId: pendingRequest.id } });
+    cancelRequest({ id: experimentId, requestId: pendingRequest.id });
   };
 
   if (pendingRequest) {

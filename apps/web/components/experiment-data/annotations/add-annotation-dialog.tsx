@@ -92,26 +92,22 @@ export function AddAnnotationDialog({
   async function handleSubmit(content: ExperimentAnnotationContent) {
     if (isBulk) {
       await addAnnotationsBulk({
-        params: { id: experimentId },
-        body: {
-          tableName,
-          rowIds,
-          annotation: {
-            type,
-            content,
-          },
+        id: experimentId,
+        tableName,
+        rowIds,
+        annotation: {
+          type,
+          content,
         },
       });
     } else {
       await addAnnotation({
-        params: { id: experimentId },
-        body: {
-          tableName,
-          rowId: rowIds[0],
-          annotation: {
-            type,
-            content,
-          },
+        id: experimentId,
+        tableName,
+        rowId: rowIds[0],
+        annotation: {
+          type,
+          content,
         },
       });
     }

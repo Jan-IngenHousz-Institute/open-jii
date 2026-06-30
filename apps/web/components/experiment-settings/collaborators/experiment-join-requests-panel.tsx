@@ -145,8 +145,7 @@ export function ExperimentJoinRequestsPanel({
 }: ExperimentJoinRequestsPanelProps) {
   const { t } = useTranslation();
   const { data: joinRequestsData } = useExperimentJoinRequests(experimentId);
-  const joinRequests: ExperimentJoinRequest[] =
-    providedJoinRequests ?? (joinRequestsData?.status === 200 ? joinRequestsData.body : []);
+  const joinRequests: ExperimentJoinRequest[] = providedJoinRequests ?? joinRequestsData ?? [];
 
   const [pendingJoinRequestId, setPendingJoinRequestId] = useState<string | null>(null);
 
@@ -159,12 +158,12 @@ export function ExperimentJoinRequestsPanel({
 
   const handleApprove = (requestId: string) => {
     setPendingJoinRequestId(requestId);
-    approveJoinRequest({ params: { id: experimentId, requestId }, body: {} });
+    approveJoinRequest({ id: experimentId, requestId });
   };
 
   const handleReject = (requestId: string) => {
     setPendingJoinRequestId(requestId);
-    rejectJoinRequest({ params: { id: experimentId, requestId }, body: {} });
+    rejectJoinRequest({ id: experimentId, requestId });
   };
 
   if (joinRequests.length === 0) {

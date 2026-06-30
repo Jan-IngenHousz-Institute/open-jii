@@ -1,53 +1,42 @@
-import { tsr } from "~/lib/tsr";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { orpc } from "~/lib/orpc";
 
 import type { ExperimentDataResponse } from "@repo/api/domains/experiment/experiment.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "../useExperimentAnnotationOptimisticUpdate/useExperimentAnnotationOptimisticUpdate";
 
 export const useExperimentAnnotationDeleteBulk = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
   const { removeBulk } = useExperimentAnnotationOptimisticUpdate();
 
-  return tsr.experiments.deleteAnnotationsBulk.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["experiment", variables.params.id] });
+  const dataKey = orpc.experiments.getExperimentData.key();
 
-      // Snapshot the previous value
-      const previousData = queryClient.getQueriesData({
-        queryKey: ["experiment", variables.params.id],
-      });
+  return useMutation(
+    orpc.experiments.deleteAnnotationsBulk.mutationOptions({
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: dataKey });
 
-      // Optimistically update the cache by removing the annotations
-      queryClient.setQueriesData(
-        { queryKey: ["experiment", variables.params.id] },
-        (oldData: { body?: ExperimentDataResponse } | undefined) => {
-          // Return early if no data in cache or no experiment data
-          if (!oldData?.body?.[0]?.data) return oldData;
-
-          const updatedBody = removeBulk(
-            oldData.body,
-            variables.body.tableName,
-            variables.body.rowIds,
-            variables.body.type,
-          );
-
-          return { ...oldData, body: updatedBody };
-        },
-      );
-
-      // Return context object with snapshotted value
-      return { previousData };
-    },
-    onError: async (err, variables, context) => {
-      // If the mutation fails, use the context to roll back
-      if (context?.previousData) {
-        context.previousData.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
+        const previousData = queryClient.getQueriesData<ExperimentDataResponse>({
+          queryKey: dataKey,
         });
-      }
-      // Only refetch on error to restore server state
-      await queryClient.invalidateQueries({ queryKey: ["experiment", variables.params.id] });
-    },
-  });
+
+        queryClient.setQueriesData<ExperimentDataResponse>({ queryKey: dataKey }, (oldData) => {
+          if (!oldData?.[0]?.data) return oldData;
+
+          return removeBulk(oldData, variables.tableName, variables.rowIds, variables.type);
+        });
+
+        return { previousData };
+      },
+      onError: async (_err, _variables, context) => {
+        if (context?.previousData) {
+          context.previousData.forEach(([queryKey, data]) => {
+            queryClient.setQueryData(queryKey, data);
+          });
+        }
+        await queryClient.invalidateQueries({ queryKey: dataKey });
+      },
+    }),
+  );
 };
