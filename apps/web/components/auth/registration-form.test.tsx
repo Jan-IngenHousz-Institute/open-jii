@@ -128,7 +128,10 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", organization: "Acme", avatarUrl: null },
+        firstName: "Jane",
+        lastName: "Doe",
+        organization: "Acme",
+        avatarUrl: null,
       });
     });
   });

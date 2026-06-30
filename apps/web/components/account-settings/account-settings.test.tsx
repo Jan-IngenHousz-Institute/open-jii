@@ -157,7 +157,7 @@ describe("<AccountSettings />", () => {
     expect(within(pictureCard).getByTestId("avatarUrl")).toHaveTextContent(
       "https://example.com/ada.png",
     );
-    expect(within(pictureCard).getByTestId("email")).toHaveTextContent("test@example.com");
+    expect(within(pictureCard).getByTestId("email")).toHaveTextContent("hello@example.com");
   });
 
   it("saves an inline name edit", async () => {

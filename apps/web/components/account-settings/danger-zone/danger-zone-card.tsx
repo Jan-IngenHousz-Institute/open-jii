@@ -60,7 +60,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
       activated: false,
       avatarUrl: profile?.avatarUrl,
     };
-    updateProfile({ body }, { onSuccess: () => handleClose() });
+    updateProfile(body, { onSuccess: () => handleClose() });
   };
 
   const isDeactivateConfirmed = confirmation === t("dangerZone.deactivate.confirmWord");

@@ -1,5 +1,6 @@
 "use client";
 
+import { getOrpcError } from "@/lib/orpc";
 import { useState } from "react";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
@@ -33,14 +34,14 @@ export function AccountSettings({ session }: { session: Session | null }) {
     return <ErrorDisplay error={error} title={t("settings.errorTitle")} />;
   }
 
-  const initialValues: CreateUserProfileBody = userProfile?.body
+  const initialValues: CreateUserProfileBody = userProfile
     ? {
-        firstName: userProfile.body.firstName,
-        lastName: userProfile.body.lastName,
-        bio: userProfile.body.bio ?? "",
-        organization: userProfile.body.organization ?? "",
-        activated: userProfile.body.activated ?? true,
-        avatarUrl: userProfile.body.avatarUrl ?? user?.image ?? null,
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        bio: userProfile.bio ?? "",
+        organization: userProfile.organization ?? "",
+        activated: userProfile.activated ?? true,
+        avatarUrl: userProfile.avatarUrl ?? user?.image ?? null,
       }
     : {
         firstName: "",
@@ -55,7 +56,7 @@ export function AccountSettings({ session }: { session: Session | null }) {
     <AccountSettingsContent
       initialValues={initialValues}
       userId={user?.id ?? ""}
-      email={userProfile?.body.email ?? user?.email ?? null}
+      email={user?.email ?? null}
     />
   );
 }
@@ -79,10 +80,13 @@ function AccountSettingsContent({
 
   const saveProfile = async (nextProfile: CreateUserProfileBody) => {
     try {
-      await updateProfile({ body: nextProfile });
+      await updateProfile(nextProfile);
       setProfile(nextProfile);
     } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
+      toast({
+        description: parseApiError(getOrpcError(err)?.data)?.message,
+        variant: "destructive",
+      });
       throw err;
     }
   };

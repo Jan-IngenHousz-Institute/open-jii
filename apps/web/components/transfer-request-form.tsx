@@ -51,7 +51,7 @@ export function TransferRequestForm() {
   });
 
   const onSubmit = (data: TransferRequestFormValues) => {
-    createRequest({ body: data });
+    createRequest(data);
   };
 
   if (isSuccess) {

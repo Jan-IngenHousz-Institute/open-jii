@@ -217,7 +217,7 @@ export function NewMacroForm() {
                 value={field.value}
                 onChange={field.onChange}
                 language={form.watch("language")}
-                username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
+                username={`${userProfile?.firstName} ${userProfile?.lastName}`}
                 label=""
                 error={form.formState.errors.code?.message?.toString()}
                 height="500px"

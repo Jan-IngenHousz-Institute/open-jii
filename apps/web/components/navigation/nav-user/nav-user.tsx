@@ -45,7 +45,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
   const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(user.id);
-  const userProfileBody = userProfile?.body;
+  const userProfileBody = userProfile;
   const displayName =
     userProfileBody?.firstName && userProfileBody.lastName
       ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
