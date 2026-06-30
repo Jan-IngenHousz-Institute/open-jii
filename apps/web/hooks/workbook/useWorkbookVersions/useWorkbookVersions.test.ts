@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookVersions } from "./useWorkbookVersions";
 
@@ -11,7 +11,7 @@ const workbookId = "11111111-1111-1111-1111-111111111111";
 
 describe("useWorkbookVersions", () => {
   it("returns versions for a workbook", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, {
+    server.mount(orpcContract.workbooks.listWorkbookVersions, {
       body: [
         createWorkbookVersionSummary({ workbookId, version: 2 }),
         createWorkbookVersionSummary({ workbookId, version: 1 }),
@@ -27,7 +27,7 @@ describe("useWorkbookVersions", () => {
   });
 
   it("returns empty array when no versions exist", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     const { result } = renderHook(() => useWorkbookVersions(workbookId));
 
@@ -37,7 +37,7 @@ describe("useWorkbookVersions", () => {
   });
 
   it("handles loading state", () => {
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [], delay: 999_999 });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [], delay: 999_999 });
 
     const { result } = renderHook(() => useWorkbookVersions(workbookId));
 
@@ -53,7 +53,7 @@ describe("useWorkbookVersions", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, { status: 500 });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { status: 500 });
 
     const { result } = renderHook(() => useWorkbookVersions(workbookId));
 

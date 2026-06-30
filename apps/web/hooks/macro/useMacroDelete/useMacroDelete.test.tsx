@@ -4,13 +4,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useMacroDelete } from "./useMacroDelete";
 
 describe("useMacroDelete", () => {
   it("sends DELETE request", async () => {
-    const spy = server.mount(contract.macros.deleteMacro);
+    const spy = server.mount(orpcContract.macros.deleteMacro);
 
     const { result } = renderHook(() => useMacroDelete());
 
@@ -29,7 +29,7 @@ describe("useMacroDelete", () => {
 
     queryClient.setQueryData(detailKey, createMacro({ id: "macro-1" }));
 
-    server.mount(contract.macros.deleteMacro);
+    server.mount(orpcContract.macros.deleteMacro);
 
     const { result } = renderHook(() => useMacroDelete(), { queryClient });
 
@@ -46,7 +46,7 @@ describe("useMacroDelete", () => {
 
   it("does not fail when cache is empty", async () => {
     const queryClient = createTestQueryClient();
-    server.mount(contract.macros.deleteMacro);
+    server.mount(orpcContract.macros.deleteMacro);
 
     const { result } = renderHook(() => useMacroDelete(), { queryClient });
 

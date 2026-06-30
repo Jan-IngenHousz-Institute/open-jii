@@ -5,7 +5,7 @@ import { useParams, notFound } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { useSession } from "@repo/auth/client";
 
 import MacroLayout from "../layout";
@@ -80,21 +80,21 @@ describe("<MacroLayout />", () => {
 
   describe("Loading State", () => {
     it("renders loading indicator when isLoading is true", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(orpcContract.macros.getMacro, { body: createMacro(), delay: 999_999 });
       renderLayout();
 
       expect(screen.getByText("common.loading")).toBeInTheDocument();
     });
 
     it("does not render children when loading", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(orpcContract.macros.getMacro, { body: createMacro(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
     it("does not render the inline editable title when loading", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(orpcContract.macros.getMacro, { body: createMacro(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("<MacroLayout />", () => {
 
   describe("Error Handling", () => {
     it("calls notFound for 404 errors", async () => {
-      server.mount(contract.macros.getMacro, { status: 404 });
+      server.mount(orpcContract.macros.getMacro, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -112,7 +112,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("calls notFound for 404 errors (invalid UUID)", async () => {
-      server.mount(contract.macros.getMacro, { status: 404 });
+      server.mount(orpcContract.macros.getMacro, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -121,7 +121,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("renders error display for 500 server errors", async () => {
-      server.mount(contract.macros.getMacro, { status: 500 });
+      server.mount(orpcContract.macros.getMacro, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -136,7 +136,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("renders error display for 500 server errors (forbidden)", async () => {
-      server.mount(contract.macros.getMacro, { status: 500 });
+      server.mount(orpcContract.macros.getMacro, { status: 500 });
       renderLayout();
 
       await waitFor(() => {
@@ -147,7 +147,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("does not render children when an error is present", async () => {
-      server.mount(contract.macros.getMacro, { status: 500 });
+      server.mount(orpcContract.macros.getMacro, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -162,7 +162,7 @@ describe("<MacroLayout />", () => {
 
   describe("Success State - Layout Structure", () => {
     it("renders children when macro data is available", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
       await waitFor(() => {
@@ -171,7 +171,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("renders with space-y-6 container class", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
       await waitFor(() => {
@@ -181,7 +181,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("renders the InlineEditableTitle component", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
       await waitFor(() => {
@@ -192,7 +192,7 @@ describe("<MacroLayout />", () => {
 
   describe("InlineEditableTitle Props", () => {
     it("passes the macro name to InlineEditableTitle", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, name: "My Test Macro" }),
       });
       renderLayout();
@@ -203,7 +203,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("passes hasAccess=true when the session user is the creator", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, createdBy: "user-123" }),
       });
       renderLayout({
@@ -216,7 +216,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("passes hasAccess=false when the session user is not the creator", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, createdBy: "other-user" }),
       });
       renderLayout({
@@ -229,7 +229,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("passes hasAccess=false when there is no session", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout({
         session: { data: null },
       });
@@ -240,8 +240,8 @@ describe("<MacroLayout />", () => {
     });
 
     it("passes isPending from useMacroUpdate", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
-      server.mount(contract.macros.updateMacro, { body: defaultMacro, delay: 999_999 });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.updateMacro, { body: defaultMacro, delay: 999_999 });
       const user = userEvent.setup();
       renderLayout();
 
@@ -257,7 +257,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("passes isPending=false when not updating", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout();
 
       await waitFor(() => {
@@ -268,7 +268,7 @@ describe("<MacroLayout />", () => {
 
   describe("Preferred Badge", () => {
     it("renders preferred badge when sortOrder is not null", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, sortOrder: 1 }),
       });
       renderLayout();
@@ -280,7 +280,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("does not render preferred badge when sortOrder is null", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, sortOrder: null }),
       });
       renderLayout();
@@ -292,7 +292,7 @@ describe("<MacroLayout />", () => {
     });
 
     it("renders preferred badge with correct classes when sortOrder is 0", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, sortOrder: 0 }),
       });
       renderLayout();
@@ -306,8 +306,8 @@ describe("<MacroLayout />", () => {
 
   describe("Title Save Handler", () => {
     it("sends update request when title is saved", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
-      const updateSpy = server.mount(contract.macros.updateMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
+      const updateSpy = server.mount(orpcContract.macros.updateMacro, { body: defaultMacro });
       const user = userEvent.setup();
       renderLayout();
 
@@ -325,10 +325,10 @@ describe("<MacroLayout />", () => {
     });
 
     it("uses the macro id from useParams when calling update", async () => {
-      server.mount(contract.macros.getMacro, {
+      server.mount(orpcContract.macros.getMacro, {
         body: createMacro({ ...defaultMacro, id: "custom-macro-id" }),
       });
-      const updateSpy = server.mount(contract.macros.updateMacro, { body: defaultMacro });
+      const updateSpy = server.mount(orpcContract.macros.updateMacro, { body: defaultMacro });
       const user = userEvent.setup();
       renderLayout({ macroId: "custom-macro-id" });
 
@@ -347,7 +347,7 @@ describe("<MacroLayout />", () => {
 
   describe("Component Structure", () => {
     it("renders InlineEditableTitle before children", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      server.mount(orpcContract.macros.getMacro, { body: defaultMacro });
       renderLayout({ children: <div data-testid="child-node">Child</div> });
 
       await waitFor(() => {

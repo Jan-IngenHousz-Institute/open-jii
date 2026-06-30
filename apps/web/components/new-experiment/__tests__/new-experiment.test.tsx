@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -51,7 +51,7 @@ describe("NewExperimentForm", () => {
 
   it("submits experiment and navigates on success", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(contract.experiments.createExperiment, {
+    const spy = server.mount(orpcContract.experiments.createExperiment, {
       body: { id: "exp-123" },
     });
 

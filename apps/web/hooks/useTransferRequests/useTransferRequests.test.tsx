@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useTransferRequests } from "./useTransferRequests";
 
@@ -18,7 +18,7 @@ describe("useTransferRequests", () => {
       createTransferRequest({ status: "completed" }),
     ];
 
-    server.mount(contract.experiments.listTransferRequests, { body: transferRequests });
+    server.mount(orpcContract.experiments.listTransferRequests, { body: transferRequests });
 
     const { result } = renderHook(() => useTransferRequests());
 
@@ -36,7 +36,7 @@ describe("useTransferRequests", () => {
   });
 
   it("returns an empty list when there are no transfer requests", async () => {
-    server.mount(contract.experiments.listTransferRequests, { body: [] });
+    server.mount(orpcContract.experiments.listTransferRequests, { body: [] });
 
     const { result } = renderHook(() => useTransferRequests());
 
@@ -48,7 +48,7 @@ describe("useTransferRequests", () => {
   });
 
   it("exposes an error when the API returns a server error", async () => {
-    server.mount(contract.experiments.listTransferRequests, { status: 500 });
+    server.mount(orpcContract.experiments.listTransferRequests, { status: 500 });
 
     const { result } = renderHook(() => useTransferRequests());
 

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -23,7 +23,7 @@ function renderCard(props: { profile?: CreateUserProfileBody | null; userId?: st
 describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(contract.users.getDeletionBlockers, {
+    server.mount(orpcContract.users.getDeletionBlockers, {
       body: { experiments: [] },
       status: 200,
     });
@@ -81,7 +81,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("calls updateProfile with activated: false", async () => {
-      const spy = server.mount(contract.users.createUserProfile);
+      const spy = server.mount(orpcContract.users.createUserProfile);
       const user = userEvent.setup();
       const profile = {
         firstName: "Ada",
@@ -110,7 +110,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows success toast and signs out after deactivation", async () => {
-      server.mount(contract.users.createUserProfile);
+      server.mount(orpcContract.users.createUserProfile);
       const user = userEvent.setup();
       renderCard();
 
@@ -130,7 +130,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows saving state when pending", async () => {
-      server.mount(contract.users.createUserProfile, { delay: 999_999 });
+      server.mount(orpcContract.users.createUserProfile, { delay: 999_999 });
       const user = userEvent.setup();
       renderCard();
 
@@ -175,7 +175,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("calls deleteAccount with correct userId", async () => {
-      const spy = server.mount(contract.users.deleteUser);
+      const spy = server.mount(orpcContract.users.deleteUser);
       const user = userEvent.setup();
       renderCard({ userId: "user-456" });
 
@@ -191,7 +191,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows success toast and signs out after deletion", async () => {
-      server.mount(contract.users.deleteUser);
+      server.mount(orpcContract.users.deleteUser);
       const user = userEvent.setup();
       renderCard();
 
@@ -211,7 +211,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows destructive toast on deletion error", async () => {
-      server.mount(contract.users.deleteUser, {
+      server.mount(orpcContract.users.deleteUser, {
         status: 403,
         body: { message: "Network error" },
       });
@@ -234,7 +234,7 @@ describe("DangerZoneCard", () => {
     });
 
     it("shows deleting state when pending", async () => {
-      server.mount(contract.users.deleteUser, { delay: 999_999 });
+      server.mount(orpcContract.users.deleteUser, { delay: 999_999 });
       const user = userEvent.setup();
       renderCard();
 

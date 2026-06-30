@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbook } from "./useWorkbook";
 
 describe("useWorkbook", () => {
   it("returns a workbook by id", async () => {
     const workbook = createWorkbook({ id: "wb-1", name: "My Workbook" });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
 
     const { result } = renderHook(() => useWorkbook("wb-1"));
 
@@ -21,7 +21,7 @@ describe("useWorkbook", () => {
   });
 
   it("shows loading state initially", () => {
-    server.mount(contract.workbooks.getWorkbook, { body: createWorkbook() });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: createWorkbook() });
 
     const { result } = renderHook(() => useWorkbook("wb-1"));
 
@@ -30,7 +30,7 @@ describe("useWorkbook", () => {
   });
 
   it("returns undefined data when disabled", () => {
-    server.mount(contract.workbooks.getWorkbook, { body: createWorkbook() });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: createWorkbook() });
 
     const { result } = renderHook(() => useWorkbook("wb-1", { enabled: false }));
 
@@ -38,7 +38,7 @@ describe("useWorkbook", () => {
   });
 
   it("returns undefined data when id is empty", () => {
-    server.mount(contract.workbooks.getWorkbook, { body: createWorkbook() });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: createWorkbook() });
 
     const { result } = renderHook(() => useWorkbook(""));
 
@@ -46,7 +46,7 @@ describe("useWorkbook", () => {
   });
 
   it("returns error state on failure", async () => {
-    server.mount(contract.workbooks.getWorkbook, { status: 404 });
+    server.mount(orpcContract.workbooks.getWorkbook, { status: 404 });
 
     const { result } = renderHook(() => useWorkbook("wb-missing"));
 

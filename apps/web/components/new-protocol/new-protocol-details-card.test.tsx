@@ -3,7 +3,7 @@ import { render, screen } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { Form } from "@repo/ui/components/form";
 
@@ -68,7 +68,7 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
 
 describe("NewProtocolDetailsCard", () => {
   beforeEach(() => {
-    server.mount(contract.macros.listMacros, { body: [] });
+    server.mount(orpcContract.macros.listMacros, { body: [] });
   });
 
   it("should render name input with label", () => {

@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentTables } from "./useExperimentTables";
 
 describe("useExperimentTables", () => {
   it("returns empty tables by default", async () => {
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
     const { result } = renderHook(() => useExperimentTables("exp-1"));
 
@@ -39,7 +39,7 @@ describe("useExperimentTables", () => {
       }),
     ];
 
-    server.mount(contract.experiments.getExperimentTables, { body: mockTables });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTables });
 
     const { result } = renderHook(() => useExperimentTables("exp-1"));
 
@@ -56,7 +56,7 @@ describe("useExperimentTables", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(contract.experiments.getExperimentTables, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentTables, { status: 404 });
 
     const { result } = renderHook(() => useExperimentTables("bad-id"));
 
@@ -68,7 +68,7 @@ describe("useExperimentTables", () => {
   });
 
   it("uses experiment ID in the request path", async () => {
-    const spy = server.mount(contract.experiments.getExperimentTables, { body: [] });
+    const spy = server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
     const { result } = renderHook(() => useExperimentTables("specific-exp-id"));
 

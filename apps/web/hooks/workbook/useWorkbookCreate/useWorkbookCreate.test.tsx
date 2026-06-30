@@ -4,13 +4,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookCreate } from "./useWorkbookCreate";
 
 describe("useWorkbookCreate", () => {
   it("calls POST /workbooks and invokes onSuccess", async () => {
-    server.mount(contract.workbooks.createWorkbook, {
+    server.mount(orpcContract.workbooks.createWorkbook, {
       body: createWorkbook({ id: "wb-1", name: "New WB" }),
     });
 
@@ -31,7 +31,7 @@ describe("useWorkbookCreate", () => {
   });
 
   it("captures the request body sent to the API", async () => {
-    const spy = server.mount(contract.workbooks.createWorkbook, {
+    const spy = server.mount(orpcContract.workbooks.createWorkbook, {
       body: createWorkbook({ id: "wb-2", name: "Test" }),
     });
 
@@ -47,7 +47,7 @@ describe("useWorkbookCreate", () => {
   });
 
   it("calls onError when the API returns an error", async () => {
-    server.mount(contract.workbooks.createWorkbook, { status: 400 });
+    server.mount(orpcContract.workbooks.createWorkbook, { status: 400 });
 
     const onError = vi.fn();
     const { result } = renderHook(() => useWorkbookCreate({ onError }));
@@ -62,7 +62,7 @@ describe("useWorkbookCreate", () => {
   });
 
   it("invalidates workbooks query cache on success", async () => {
-    server.mount(contract.workbooks.createWorkbook, {
+    server.mount(orpcContract.workbooks.createWorkbook, {
       body: createWorkbook({ id: "wb-3" }),
     });
 

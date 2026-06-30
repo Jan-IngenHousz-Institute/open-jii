@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentVisualizationReadOnly from "./experiment-visualization-read-only";
 
@@ -28,7 +28,7 @@ function dataTable() {
 
 describe("ExperimentVisualizationReadOnly", () => {
   it("shows the loading message while the visualization request is in flight", () => {
-    server.mount(contract.experiments.getExperimentVisualization, {
+    server.mount(orpcContract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-1" }),
       delay: 100,
     });
@@ -39,7 +39,7 @@ describe("ExperimentVisualizationReadOnly", () => {
   });
 
   it("shows the failure card with a back button when the request errors", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentVisualization, { status: 500 });
 
     render(<ExperimentVisualizationReadOnly experimentId="exp-1" visualizationId="viz-1" />);
 
@@ -50,10 +50,10 @@ describe("ExperimentVisualizationReadOnly", () => {
   });
 
   it("renders the visualization name once data arrives", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, {
+    server.mount(orpcContract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-42", name: "My Chart" }),
     });
-    server.mount(contract.experiments.getExperimentData, { body: [dataTable()] });
+    server.mount(orpcContract.experiments.getExperimentData, { body: [dataTable()] });
 
     render(<ExperimentVisualizationReadOnly experimentId="exp-1" visualizationId="viz-42" />);
 
@@ -63,10 +63,10 @@ describe("ExperimentVisualizationReadOnly", () => {
   });
 
   it("renders the description when present on the visualization", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, {
+    server.mount(orpcContract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-1", description: "Some description" }),
     });
-    server.mount(contract.experiments.getExperimentData, { body: [dataTable()] });
+    server.mount(orpcContract.experiments.getExperimentData, { body: [dataTable()] });
 
     render(<ExperimentVisualizationReadOnly experimentId="exp-1" visualizationId="viz-1" />);
 
@@ -76,7 +76,7 @@ describe("ExperimentVisualizationReadOnly", () => {
   });
 
   it("navigates back to the experiments-archive overview when the back button is clicked", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentVisualization, { status: 500 });
 
     const { router } = render(
       <ExperimentVisualizationReadOnly experimentId="exp-99" visualizationId="viz-1" />,

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ChipValue } from "./chip-value";
@@ -52,7 +52,7 @@ describe("ChipValue", () => {
 
   it("delegates to ContributorChipValue when isContributor is true", () => {
     // The contributor chip fetches distinct values; mount a stub so it doesn't warn.
-    server.mount(contract.experiments.getDistinctColumnValues, {
+    server.mount(orpcContract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
     render(

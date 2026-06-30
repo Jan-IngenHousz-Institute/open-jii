@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useUserInvitationRoleUpdate } from "./useUserInvitationRoleUpdate";
 
 describe("useUserInvitationRoleUpdate", () => {
   it("sends PATCH request with correct params and body", async () => {
     const updated = createInvitation({ role: "admin" });
-    const spy = server.mount(contract.users.updateInvitationRole, {
+    const spy = server.mount(orpcContract.users.updateInvitationRole, {
       body: updated,
     });
 
@@ -39,7 +39,7 @@ describe("useUserInvitationRoleUpdate", () => {
   });
 
   it("reports pending state while request is in-flight", async () => {
-    server.mount(contract.users.updateInvitationRole, {
+    server.mount(orpcContract.users.updateInvitationRole, {
       body: createInvitation(),
       delay: 100,
     });
@@ -63,7 +63,7 @@ describe("useUserInvitationRoleUpdate", () => {
   });
 
   it("reports error on failure", async () => {
-    server.mount(contract.users.updateInvitationRole, { status: 404 });
+    server.mount(orpcContract.users.updateInvitationRole, { status: 404 });
 
     const { result } = renderHook(() => useUserInvitationRoleUpdate());
 
@@ -80,8 +80,8 @@ describe("useUserInvitationRoleUpdate", () => {
   });
 
   it("invalidates experiment-invitations queries on success", async () => {
-    server.mount(contract.users.listInvitations, { body: [createInvitation()] });
-    server.mount(contract.users.updateInvitationRole, {
+    server.mount(orpcContract.users.listInvitations, { body: [createInvitation()] });
+    server.mount(orpcContract.users.updateInvitationRole, {
       body: createInvitation({ role: "admin" }),
     });
 

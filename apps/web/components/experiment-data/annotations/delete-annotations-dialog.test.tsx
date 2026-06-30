@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -19,7 +19,7 @@ const mockProps = {
 };
 
 function mountDeleteEndpoint(options = {}) {
-  return server.mount(contract.experiments.deleteAnnotationsBulk, {
+  return server.mount(orpcContract.experiments.deleteAnnotationsBulk, {
     body: { rowsAffected: 3 },
     status: 204,
     ...options,

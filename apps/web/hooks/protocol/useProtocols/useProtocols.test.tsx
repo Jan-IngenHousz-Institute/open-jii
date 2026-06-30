@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useProtocols } from "./useProtocols";
 
 describe("useProtocols", () => {
   it("returns protocols list", async () => {
-    server.mount(contract.protocols.listProtocols, {
+    server.mount(orpcContract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1", name: "P1" }), createProtocol({ id: "p-2", name: "P2" })],
     });
 
@@ -24,7 +24,7 @@ describe("useProtocols", () => {
   });
 
   it("passes filter and search as query parameters", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, {
+    const spy = server.mount(orpcContract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1" })],
     });
 
@@ -41,7 +41,7 @@ describe("useProtocols", () => {
   });
 
   it("omits filter when set to all", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
+    const spy = server.mount(orpcContract.protocols.listProtocols, { body: [] });
 
     const { result } = renderHook(() => useProtocols({ initialFilter: "all" }));
 
@@ -53,7 +53,7 @@ describe("useProtocols", () => {
   });
 
   it("auto-switches to all when user has no protocols", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(orpcContract.protocols.listProtocols, { body: [] });
 
     const { result } = renderHook(() => useProtocols({ initialFilter: "my" }));
 
@@ -63,7 +63,7 @@ describe("useProtocols", () => {
   });
 
   it("keeps my filter when user has protocols", async () => {
-    server.mount(contract.protocols.listProtocols, {
+    server.mount(orpcContract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1" })],
     });
 
@@ -77,7 +77,7 @@ describe("useProtocols", () => {
   });
 
   it("does not auto-switch when there is a search term", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(orpcContract.protocols.listProtocols, { body: [] });
 
     const { result } = renderHook(() =>
       useProtocols({ initialFilter: "my", initialSearch: "test" }),
@@ -91,7 +91,7 @@ describe("useProtocols", () => {
   });
 
   it("does not pass empty search to query", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, {
+    const spy = server.mount(orpcContract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1" })],
     });
 
@@ -105,7 +105,7 @@ describe("useProtocols", () => {
   });
 
   it("does not pass whitespace-only search to query", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, {
+    const spy = server.mount(orpcContract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1" })],
     });
 

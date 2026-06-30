@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentMetadataCreate } from "./useExperimentMetadataCreate";
 
@@ -28,7 +28,7 @@ const metadataKey = orpc.experiments.listExperimentMetadata.queryKey({ input: { 
 
 describe("useExperimentMetadataCreate", () => {
   it("sends POST request with correct params and body", async () => {
-    const spy = server.mount(contract.experiments.createExperimentMetadata, {
+    const spy = server.mount(orpcContract.experiments.createExperimentMetadata, {
       body: metadataResponse,
     });
 
@@ -51,7 +51,7 @@ describe("useExperimentMetadataCreate", () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(metadataKey, []);
 
-    server.mount(contract.experiments.createExperimentMetadata, {
+    server.mount(orpcContract.experiments.createExperimentMetadata, {
       body: metadataResponse,
     });
 
@@ -75,7 +75,7 @@ describe("useExperimentMetadataCreate", () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(metadataKey, [metadataResponse]);
 
-    server.mount(contract.experiments.createExperimentMetadata, { status: 500 });
+    server.mount(orpcContract.experiments.createExperimentMetadata, { status: 500 });
 
     const { result } = renderHook(() => useExperimentMetadataCreate(), {
       queryClient,
@@ -96,7 +96,7 @@ describe("useExperimentMetadataCreate", () => {
   it("does not fail when cache is empty", async () => {
     const queryClient = createTestQueryClient();
 
-    server.mount(contract.experiments.createExperimentMetadata, {
+    server.mount(orpcContract.experiments.createExperimentMetadata, {
       body: metadataResponse,
     });
 

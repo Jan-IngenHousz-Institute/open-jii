@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDelete } from "./experiment-delete";
@@ -23,7 +23,7 @@ describe("ExperimentDelete", () => {
 
   it("opens dialog, confirms delete, redirects on success", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    const spy = server.mount(contract.experiments.deleteExperiment);
+    const spy = server.mount(orpcContract.experiments.deleteExperiment);
     const user = userEvent.setup();
 
     const { router } = render(<ExperimentDelete experimentId="exp-1" experimentName="Test" />);
@@ -44,7 +44,7 @@ describe("ExperimentDelete", () => {
 
   it("shows error toast on failure", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    server.mount(contract.experiments.deleteExperiment, {
+    server.mount(orpcContract.experiments.deleteExperiment, {
       status: 500,
       body: { message: "Nope" },
     });

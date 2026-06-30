@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { DeletionBlocker, UserMetadata } from "@repo/api/domains/user/user.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -135,7 +135,7 @@ describe("DeleteAccountBlockers", () => {
   describe("transferring admin", () => {
     it("selecting a candidate enables the transfer and posts the assignment", async () => {
       const user = userEvent.setup();
-      const spy = server.mount(contract.experiments.transferExperimentAdmin, {
+      const spy = server.mount(orpcContract.experiments.transferExperimentAdmin, {
         status: 200,
         body: { results: [{ experimentId: ID_1, success: true }] },
       });
@@ -168,7 +168,7 @@ describe("DeleteAccountBlockers", () => {
 
     it("warns when some transfers fail", async () => {
       const user = userEvent.setup();
-      server.mount(contract.experiments.transferExperimentAdmin, {
+      server.mount(orpcContract.experiments.transferExperimentAdmin, {
         status: 200,
         body: { results: [{ experimentId: ID_1, success: false, error: "boom" }] },
       });
@@ -190,7 +190,7 @@ describe("DeleteAccountBlockers", () => {
 
     it("shows the transferring label and keeps the button disabled while the transfer is in flight", async () => {
       const user = userEvent.setup();
-      server.mount(contract.experiments.transferExperimentAdmin, {
+      server.mount(orpcContract.experiments.transferExperimentAdmin, {
         status: 200,
         body: { results: [{ experimentId: ID_1, success: true }] },
         delay: 200,
@@ -263,7 +263,7 @@ describe("DeleteAccountBlockers", () => {
   describe("platform search", () => {
     it("searches all users and assigns a found user to a blocker", async () => {
       const user = userEvent.setup();
-      server.mount(contract.users.searchUsers, {
+      server.mount(orpcContract.users.searchUsers, {
         status: 200,
         body: [createUserProfile({ userId: BOB.userId, firstName: "Bob", lastName: "Jones" })],
       });

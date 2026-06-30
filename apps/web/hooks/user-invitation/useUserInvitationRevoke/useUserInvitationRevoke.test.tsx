@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useUserInvitationRevoke } from "./useUserInvitationRevoke";
 
 describe("useUserInvitationRevoke", () => {
   it("sends DELETE request with correct params", async () => {
-    const spy = server.mount(contract.users.revokeInvitation, { status: 204 });
+    const spy = server.mount(orpcContract.users.revokeInvitation, { status: 204 });
 
     const { result } = renderHook(() => useUserInvitationRevoke());
 
@@ -32,7 +32,7 @@ describe("useUserInvitationRevoke", () => {
   });
 
   it("reports pending state while request is in-flight", async () => {
-    server.mount(contract.users.revokeInvitation, { status: 204, delay: 100 });
+    server.mount(orpcContract.users.revokeInvitation, { status: 204, delay: 100 });
 
     const { result } = renderHook(() => useUserInvitationRevoke());
 
@@ -50,7 +50,7 @@ describe("useUserInvitationRevoke", () => {
   });
 
   it("reports error on failure", async () => {
-    server.mount(contract.users.revokeInvitation, { status: 403 });
+    server.mount(orpcContract.users.revokeInvitation, { status: 403 });
 
     const { result } = renderHook(() => useUserInvitationRevoke());
 
@@ -64,8 +64,8 @@ describe("useUserInvitationRevoke", () => {
   });
 
   it("invalidates experiment-invitations queries on success", async () => {
-    server.mount(contract.users.listInvitations, { body: [createInvitation()] });
-    server.mount(contract.users.revokeInvitation, { status: 204 });
+    server.mount(orpcContract.users.listInvitations, { body: [createInvitation()] });
+    server.mount(orpcContract.users.revokeInvitation, { status: 204 });
 
     const { result } = renderHook(() => useUserInvitationRevoke());
 

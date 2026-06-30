@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useProtocol } from "./useProtocol";
 
@@ -18,7 +18,7 @@ describe("useProtocol", () => {
 
   it("returns protocol data", async () => {
     const protocol = createProtocol({ id: "protocol-123" });
-    server.mount(contract.protocols.getProtocol, { body: protocol });
+    server.mount(orpcContract.protocols.getProtocol, { body: protocol });
 
     const { result } = renderHook(() => useProtocol("protocol-123"));
 
@@ -35,7 +35,7 @@ describe("useProtocol", () => {
   });
 
   it("handles 404 error for non-existent protocol", async () => {
-    server.mount(contract.protocols.getProtocol, { status: 404 });
+    server.mount(orpcContract.protocols.getProtocol, { status: 404 });
 
     const { result } = renderHook(() => useProtocol("non-existent"));
 
@@ -47,7 +47,7 @@ describe("useProtocol", () => {
   });
 
   it("uses different query keys per protocol ID", async () => {
-    server.mount(contract.protocols.getProtocol, { body: createProtocol() });
+    server.mount(orpcContract.protocols.getProtocol, { body: createProtocol() });
 
     // Render same hook with two different IDs — they should fire separate queries
     const { result: r1 } = renderHook(() => useProtocol("p-1"));

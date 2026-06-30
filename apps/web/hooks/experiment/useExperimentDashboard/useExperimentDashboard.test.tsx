@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentDashboard } from "./useExperimentDashboard";
 
@@ -17,7 +17,7 @@ describe("useExperimentDashboard", () => {
       experimentId,
       name: "Yield by site",
     });
-    server.mount(contract.experiments.getExperimentDashboard, { body: dashboard });
+    server.mount(orpcContract.experiments.getExperimentDashboard, { body: dashboard });
 
     const { result } = renderHook(() => useExperimentDashboard(dashboardId, experimentId));
     expect(result.current.isLoading).toBe(true);
@@ -27,7 +27,7 @@ describe("useExperimentDashboard", () => {
   });
 
   it("surfaces 404 as an error on result.current", async () => {
-    server.mount(contract.experiments.getExperimentDashboard, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentDashboard, { status: 404 });
 
     const { result } = renderHook(() => useExperimentDashboard(dashboardId, experimentId));
 
@@ -37,7 +37,7 @@ describe("useExperimentDashboard", () => {
   });
 
   it("starts in a loading state before the network resolves", () => {
-    server.mount(contract.experiments.getExperimentDashboard, {
+    server.mount(orpcContract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard(),
     });
 
@@ -47,7 +47,7 @@ describe("useExperimentDashboard", () => {
   });
 
   it("passes id + dashboardId through to the API request", async () => {
-    const spy = server.mount(contract.experiments.getExperimentDashboard, {
+    const spy = server.mount(orpcContract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard({ id: dashboardId, experimentId }),
     });
 

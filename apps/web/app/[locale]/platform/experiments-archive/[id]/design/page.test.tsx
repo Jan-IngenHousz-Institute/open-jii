@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { useEffect, useImperativeHandle, forwardRef, use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentFlowPage from "./page";
 
@@ -64,9 +64,9 @@ beforeEach(() => {
 
 describe("<ExperimentFlowPage />", () => {
   it("shows loading when experiment or access is loading", () => {
-    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
-    server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
-    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(orpcContract.experiments.getExperiment, { delay: "infinite" });
+    server.mount(orpcContract.experiments.getExperimentAccess, { delay: "infinite" });
+    server.mount(orpcContract.experiments.getFlow, { status: 404 });
 
     render(<ExperimentFlowPage params={PARAMS} />);
 
@@ -74,9 +74,9 @@ describe("<ExperimentFlowPage />", () => {
   });
 
   it("renders ErrorDisplay when there is an error loading", async () => {
-    server.mount(contract.experiments.getExperiment, { status: 500 });
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(orpcContract.experiments.getExperiment, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getFlow, { status: 404 });
 
     render(<ExperimentFlowPage params={PARAMS} />);
 
@@ -86,11 +86,11 @@ describe("<ExperimentFlowPage />", () => {
   });
 
   it("shows notFound text when experiment data or access experiment is missing", async () => {
-    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: { ...createExperimentAccess(), experiment: null } as never,
     });
-    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(orpcContract.experiments.getFlow, { status: 404 });
 
     render(<ExperimentFlowPage params={PARAMS} />);
 
@@ -100,13 +100,13 @@ describe("<ExperimentFlowPage />", () => {
   });
 
   it("calls notFound when experiment is not archived", async () => {
-    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: createExperimentAccess({
         experiment: { id: EXP_ID, status: "active" },
       }),
     });
-    server.mount(contract.experiments.getFlow, { status: 404 });
+    server.mount(orpcContract.experiments.getFlow, { status: 404 });
 
     render(<ExperimentFlowPage params={PARAMS} />);
 

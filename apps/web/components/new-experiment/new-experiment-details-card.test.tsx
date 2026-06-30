@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderWithForm, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 
 function renderCard(workbooks = [createWorkbook({ id: "wb-1", name: "Field Study Workbook" })]) {
-  server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
+  server.mount(orpcContract.workbooks.listWorkbooks, { body: workbooks });
 
   return renderWithForm<CreateExperimentBody>((form) => <NewExperimentDetailsCard form={form} />, {
     useFormProps: {

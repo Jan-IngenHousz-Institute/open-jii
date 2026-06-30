@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentLocationsAdd } from "./useExperimentLocationsAdd";
 
 describe("useExperimentLocationsAdd", () => {
   it("sends POST request", async () => {
-    const spy = server.mount(contract.experiments.addExperimentLocations, {
+    const spy = server.mount(orpcContract.experiments.addExperimentLocations, {
       body: [createLocation()],
     });
 
@@ -28,7 +28,7 @@ describe("useExperimentLocationsAdd", () => {
   });
 
   it("sends the correct params and body", async () => {
-    const spy = server.mount(contract.experiments.addExperimentLocations, {
+    const spy = server.mount(orpcContract.experiments.addExperimentLocations, {
       body: [createLocation()],
     });
 
@@ -47,7 +47,7 @@ describe("useExperimentLocationsAdd", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(contract.experiments.addExperimentLocations, { status: 500 });
+    server.mount(orpcContract.experiments.addExperimentLocations, { status: 500 });
 
     const { result } = renderHook(() => useExperimentLocationsAdd());
 

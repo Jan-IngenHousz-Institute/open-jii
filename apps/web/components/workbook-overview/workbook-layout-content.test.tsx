@@ -4,7 +4,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookLayoutContent } from "./workbook-layout-content";
@@ -25,7 +25,7 @@ describe("WorkbookLayoutContent", () => {
     } as ReturnType<typeof useSession>);
     // Default: an unpublished workbook (no versions). Tests that need a
     // published version re-mount the handler.
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
   });
 
   function renderContent(overrides: Partial<typeof workbook> = {}) {
@@ -54,7 +54,7 @@ describe("WorkbookLayoutContent", () => {
 
   it("lets the creator rename the workbook by clicking the title", async () => {
     const user = userEvent.setup();
-    const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
+    const updateSpy = server.mount(orpcContract.workbooks.updateWorkbook, {
       body: createWorkbook({ ...workbook, name: "Soil Analysis" }),
     });
 
@@ -79,7 +79,7 @@ describe("WorkbookLayoutContent", () => {
   });
 
   it("shows the latest published version number", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, {
+    server.mount(orpcContract.workbooks.listWorkbookVersions, {
       body: [
         createWorkbookVersionSummary({ workbookId: "wb-1", version: 3 }),
         createWorkbookVersionSummary({ workbookId: "wb-1", version: 2 }),
@@ -97,7 +97,7 @@ describe("WorkbookLayoutContent", () => {
   });
 
   it("falls back to a dash (not 'Draft') when the versions fetch fails", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, { status: 500 });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { status: 500 });
 
     renderContent({ createdByName: "Test User" });
 

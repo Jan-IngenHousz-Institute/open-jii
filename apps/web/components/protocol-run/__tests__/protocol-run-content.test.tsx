@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { useSession } from "@repo/auth/client";
 
 import { ProtocolRunContent } from "../protocol-run-content";
@@ -102,8 +102,8 @@ describe("<ProtocolRunContent />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedOnChange = null;
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
-    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
     mockBrowserSupport = {
       bluetooth: true,
       serial: true,
@@ -116,7 +116,7 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show loading state", () => {
-    server.mount(contract.protocols.getProtocol, { delay: 999_999 });
+    server.mount(orpcContract.protocols.getProtocol, { delay: 999_999 });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
@@ -124,7 +124,7 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show not found when no data", async () => {
-    server.mount(contract.protocols.getProtocol, { status: 404 });
+    server.mount(orpcContract.protocols.getProtocol, { status: 404 });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
@@ -213,7 +213,7 @@ describe("<ProtocolRunContent />", () => {
   it("autosaves the edited protocol code after the debounce window", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
     const user = userEvent.setup();
 
     render(<ProtocolRunContent protocolId="proto-1" />);

@@ -15,7 +15,7 @@ import {
   registerProtocolCodeSource,
 } from "~/lib/protocol-code-registry";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { useWorkbookExecution } from "./useWorkbookExecution";
@@ -98,7 +98,7 @@ describe("useWorkbookExecution", () => {
         id: proto.payload.protocolId,
         code: [],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(orpcContract.protocols.getProtocol, { body: protocol });
 
       const { result, onCellsChange } = renderExecution([proto]);
 
@@ -116,7 +116,7 @@ describe("useWorkbookExecution", () => {
         id: proto.payload.protocolId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(orpcContract.protocols.getProtocol, { body: protocol });
       mockIsConnected = false;
 
       const { result, onCellsChange } = renderExecution([proto]);
@@ -136,7 +136,7 @@ describe("useWorkbookExecution", () => {
         id: proto.payload.protocolId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(orpcContract.protocols.getProtocol, { body: protocol });
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValue({ measurement: 42 });
 
@@ -158,7 +158,7 @@ describe("useWorkbookExecution", () => {
       const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
 
       // The server holds a different (older) version that must NOT be read.
-      const getProtocolSpy = server.mount(contract.protocols.getProtocol, {
+      const getProtocolSpy = server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({
           id: proto.payload.protocolId,
           code: [{ _protocol_set_: [{ label: "old" }] }],
@@ -180,7 +180,7 @@ describe("useWorkbookExecution", () => {
     it("falls back to fetching the saved protocol when no editor is mounted", async () => {
       const proto = createProtocolCell();
       const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
       });
       mockIsConnected = true;
@@ -200,7 +200,7 @@ describe("useWorkbookExecution", () => {
         id: proto.payload.protocolId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(orpcContract.protocols.getProtocol, { body: protocol });
       mockIsConnected = true;
       mockExecuteProtocol.mockRejectedValue(new Error("Device timed out"));
 
@@ -236,7 +236,7 @@ describe("useWorkbookExecution", () => {
       });
       const macro = createMacroCell();
 
-      server.mount(contract.macros.executeMacro, {
+      server.mount(orpcContract.macros.executeMacro, {
         body: {
           macro_id: macro.payload.macroId,
           success: true,
@@ -261,7 +261,7 @@ describe("useWorkbookExecution", () => {
       });
       const macro = createMacroCell();
 
-      server.mount(contract.macros.executeMacro, {
+      server.mount(orpcContract.macros.executeMacro, {
         body: {
           macro_id: macro.payload.macroId,
           success: false,

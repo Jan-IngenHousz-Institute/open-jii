@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { EmptyWorkbookState } from "./empty-workbook-state";
@@ -16,7 +16,7 @@ const workbooks = [
 describe("EmptyWorkbookState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: workbooks });
   });
 
   it("renders title and description", () => {
@@ -51,7 +51,7 @@ describe("EmptyWorkbookState", () => {
   });
 
   it("attaches workbook and shows success toast", async () => {
-    const spy = server.mount(contract.experiments.attachWorkbook, {
+    const spy = server.mount(orpcContract.experiments.attachWorkbook, {
       body: { workbookId: "wb-1", workbookVersionId: "ver-1", version: 1 },
     });
     const user = userEvent.setup();
@@ -70,7 +70,7 @@ describe("EmptyWorkbookState", () => {
   });
 
   it("shows error toast on attach failure", async () => {
-    server.mount(contract.experiments.attachWorkbook, { status: 500 });
+    server.mount(orpcContract.experiments.attachWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<EmptyWorkbookState experimentId="exp-1" experimentName="My Experiment" hasAccess />);
 
@@ -87,11 +87,11 @@ describe("EmptyWorkbookState", () => {
   });
 
   it("creates a new workbook and attaches it", async () => {
-    const createSpy = server.mount(contract.workbooks.createWorkbook, {
+    const createSpy = server.mount(orpcContract.workbooks.createWorkbook, {
       body: createWorkbook({ id: "wb-new", name: "My Experiment - Workbook" }),
       status: 201,
     });
-    const attachSpy = server.mount(contract.experiments.attachWorkbook, {
+    const attachSpy = server.mount(orpcContract.experiments.attachWorkbook, {
       body: { workbookId: "wb-new", workbookVersionId: "ver-1", version: 1 },
     });
     const user = userEvent.setup();
@@ -106,7 +106,7 @@ describe("EmptyWorkbookState", () => {
   });
 
   it("shows error toast when workbook creation fails", async () => {
-    server.mount(contract.workbooks.createWorkbook, { status: 500 });
+    server.mount(orpcContract.workbooks.createWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<EmptyWorkbookState experimentId="exp-1" experimentName="My Experiment" hasAccess />);
 

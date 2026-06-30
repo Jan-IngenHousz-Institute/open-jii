@@ -8,7 +8,7 @@ import { renderWithForm, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFormContext } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardLayoutContent } from "./dashboard-layout-content";
@@ -54,7 +54,7 @@ function renderLayout({
   dashboard?: ReturnType<typeof createExperimentDashboard>;
   formDefaults?: DashboardFormValues;
 } = {}) {
-  server.mount(contract.experiments.getExperimentAccess, {
+  server.mount(orpcContract.experiments.getExperimentAccess, {
     body: createExperimentAccess({ isAdmin }),
   });
 

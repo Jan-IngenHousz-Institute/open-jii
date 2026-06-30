@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { Table, TableBody } from "@repo/ui/components/table";
 
 import { DashboardTableRow } from "./dashboard-table-row";
@@ -78,7 +78,7 @@ describe("DashboardTableRow", () => {
 
   it("opens the delete confirmation when delete is selected, and fires the DELETE on confirm", async () => {
     const dashboard = createExperimentDashboard({ id: "dash-del", name: "To delete" });
-    const deleteSpy = server.mount(contract.experiments.deleteExperimentDashboard, { status: 204 });
+    const deleteSpy = server.mount(orpcContract.experiments.deleteExperimentDashboard, { status: 204 });
     renderRow({ dashboard });
 
     const user = userEvent.setup();

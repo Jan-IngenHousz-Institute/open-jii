@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useMacro } from "./useMacro";
 
 describe("useMacro", () => {
   it("returns unwrapped macro data", async () => {
     const macro = createMacro({ id: "m-1", name: "My Macro", code: 'print("hi")' });
-    server.mount(contract.macros.getMacro, { body: macro });
+    server.mount(orpcContract.macros.getMacro, { body: macro });
 
     const { result } = renderHook(() => useMacro("m-1"));
 
@@ -25,7 +25,7 @@ describe("useMacro", () => {
   });
 
   it("returns error when API fails", async () => {
-    server.mount(contract.macros.getMacro, { status: 404 });
+    server.mount(orpcContract.macros.getMacro, { status: 404 });
 
     const { result } = renderHook(() => useMacro("bad"));
 

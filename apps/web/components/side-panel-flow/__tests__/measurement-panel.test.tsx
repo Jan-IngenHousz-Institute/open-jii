@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { MeasurementPanel } from "../measurement-panel";
 
@@ -68,7 +68,7 @@ function renderPanel(overrides?: Partial<React.ComponentProps<typeof Measurement
 
 describe("<MeasurementPanel />", () => {
   it("renders title and search placeholder", () => {
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
     renderPanel();
 
     expect(screen.getByText("experiments.measurementPanelTitle")).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("<MeasurementPanel />", () => {
   });
 
   it("displays protocols from the server", async () => {
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
     renderPanel();
 
     await waitFor(() => {
@@ -87,7 +87,7 @@ describe("<MeasurementPanel />", () => {
   });
 
   it("selects a protocol, fires onChange, and clears search", async () => {
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
     const onChange = vi.fn<(id: string) => void>();
     renderPanel({ onChange });
 
@@ -100,7 +100,7 @@ describe("<MeasurementPanel />", () => {
   });
 
   it("does not emit onChange when disabled", async () => {
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
     const onChange = vi.fn<(id: string) => void>();
     renderPanel({ onChange, disabled: true });
 
@@ -113,7 +113,7 @@ describe("<MeasurementPanel />", () => {
   });
 
   it("shows empty list when server returns no protocols", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(orpcContract.protocols.listProtocols, { body: [] });
     renderPanel();
 
     await waitFor(() => {

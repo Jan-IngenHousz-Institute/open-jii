@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentMetadataDelete } from "./useExperimentMetadataDelete";
 
@@ -11,7 +11,7 @@ const metadataKey = orpc.experiments.listExperimentMetadata.queryKey({ input: { 
 
 describe("useExperimentMetadataDelete", () => {
   it("sends DELETE request with correct params", async () => {
-    const spy = server.mount(contract.experiments.deleteExperimentMetadata);
+    const spy = server.mount(orpcContract.experiments.deleteExperimentMetadata);
 
     const { result } = renderHook(() => useExperimentMetadataDelete());
 
@@ -32,7 +32,7 @@ describe("useExperimentMetadataDelete", () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(metadataKey, []);
 
-    server.mount(contract.experiments.deleteExperimentMetadata);
+    server.mount(orpcContract.experiments.deleteExperimentMetadata);
 
     const { result } = renderHook(() => useExperimentMetadataDelete(), {
       queryClient,
@@ -54,7 +54,7 @@ describe("useExperimentMetadataDelete", () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(metadataKey, []);
 
-    server.mount(contract.experiments.deleteExperimentMetadata, { status: 500 });
+    server.mount(orpcContract.experiments.deleteExperimentMetadata, { status: 500 });
 
     const { result } = renderHook(() => useExperimentMetadataDelete(), {
       queryClient,
@@ -74,7 +74,7 @@ describe("useExperimentMetadataDelete", () => {
 
   it("does not fail when cache is empty", async () => {
     const queryClient = createTestQueryClient();
-    server.mount(contract.experiments.deleteExperimentMetadata);
+    server.mount(orpcContract.experiments.deleteExperimentMetadata);
 
     const { result } = renderHook(() => useExperimentMetadataDelete(), {
       queryClient,

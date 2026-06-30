@@ -4,13 +4,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookDelete } from "./useWorkbookDelete";
 
 describe("useWorkbookDelete", () => {
   it("calls DELETE /workbooks/:id", async () => {
-    const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
+    const spy = server.mount(orpcContract.workbooks.deleteWorkbook, { status: 204 });
 
     const { result } = renderHook(() => useWorkbookDelete());
 
@@ -24,7 +24,7 @@ describe("useWorkbookDelete", () => {
   });
 
   it("completes the delete mutation", async () => {
-    server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
+    server.mount(orpcContract.workbooks.deleteWorkbook, { status: 204 });
 
     const { result } = renderHook(() => useWorkbookDelete());
 
@@ -38,7 +38,7 @@ describe("useWorkbookDelete", () => {
   });
 
   it("removes the individual workbook query from cache", async () => {
-    server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
+    server.mount(orpcContract.workbooks.deleteWorkbook, { status: 204 });
 
     const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-3" } });
     const queryClient = createTestQueryClient();
@@ -56,7 +56,7 @@ describe("useWorkbookDelete", () => {
   });
 
   it("invalidates workbooks query on settled", async () => {
-    server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
+    server.mount(orpcContract.workbooks.deleteWorkbook, { status: 204 });
 
     const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

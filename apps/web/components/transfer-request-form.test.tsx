@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { TransferRequestForm } from "./transfer-request-form";
 
@@ -51,7 +51,7 @@ describe("TransferRequestForm", () => {
   });
 
   it("submits valid form data", async () => {
-    const spy = server.mount(contract.experiments.createTransferRequest, {
+    const spy = server.mount(orpcContract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-1" }),
     });
     const user = userEvent.setup();
@@ -79,7 +79,7 @@ describe("TransferRequestForm", () => {
   });
 
   it("shows success state and allows submitting another", async () => {
-    server.mount(contract.experiments.createTransferRequest, {
+    server.mount(orpcContract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-2" }),
     });
     const user = userEvent.setup();

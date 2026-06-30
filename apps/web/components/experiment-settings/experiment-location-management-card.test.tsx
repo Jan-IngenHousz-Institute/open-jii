@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { ExperimentLocationManagement } from "./experiment-location-management-card";
 
@@ -37,16 +37,16 @@ vi.mock("../map", () => ({
 const experimentId = "exp-123";
 
 function mountLocations(locations = [createLocation(), createLocation()]) {
-  return server.mount(contract.experiments.getExperimentLocations, { body: locations });
+  return server.mount(orpcContract.experiments.getExperimentLocations, { body: locations });
 }
 
 function mountUpdate() {
-  return server.mount(contract.experiments.updateExperimentLocations, { body: [] });
+  return server.mount(orpcContract.experiments.updateExperimentLocations, { body: [] });
 }
 
 describe("ExperimentLocationManagement", () => {
   it("renders loading skeleton while fetching locations", () => {
-    server.mount(contract.experiments.getExperimentLocations, {
+    server.mount(orpcContract.experiments.getExperimentLocations, {
       body: [],
       delay: 999_999,
     });

@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderWithForm, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
@@ -80,14 +80,14 @@ const users = [
 
 describe("<NewExperimentMembersCard />", () => {
   it("renders title and description", () => {
-    server.mount(contract.users.searchUsers, { body: [] });
+    server.mount(orpcContract.users.searchUsers, { body: [] });
     renderMembersCard([]);
     expect(screen.getByText("newExperiment.addMembersTitle")).toBeInTheDocument();
     expect(screen.getByText("newExperiment.addMembersDescription")).toBeInTheDocument();
   });
 
   it("adds a member after selecting from popover and clicking Add", async () => {
-    server.mount(contract.users.searchUsers, { body: users });
+    server.mount(orpcContract.users.searchUsers, { body: users });
     renderMembersCard([]);
 
     const searchInput = screen.getByPlaceholderText("experiments.searchUsersPlaceholder");
@@ -113,7 +113,7 @@ describe("<NewExperimentMembersCard />", () => {
   });
 
   it("removes a member when remove button is clicked", async () => {
-    server.mount(contract.users.searchUsers, { body: users });
+    server.mount(orpcContract.users.searchUsers, { body: users });
     renderMembersCard([{ userId: "user-1", role: "member", firstName: "Alice" }]);
 
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("<NewExperimentMembersCard />", () => {
   });
 
   it("computes adminCount correctly", () => {
-    server.mount(contract.users.searchUsers, { body: [] });
+    server.mount(orpcContract.users.searchUsers, { body: [] });
     renderMembersCard([
       { userId: "u1", role: "admin", firstName: "Admin1" },
       { userId: "u2", role: "admin", firstName: "Admin2" },

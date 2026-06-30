@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useInitiateExport } from "./useInitiateExport";
 
 describe("useInitiateExport", () => {
   it("sends POST request", async () => {
-    const spy = server.mount(contract.experiments.initiateExport, {
+    const spy = server.mount(orpcContract.experiments.initiateExport, {
       body: { status: "initiated" },
     });
 
@@ -31,7 +31,7 @@ describe("useInitiateExport", () => {
   });
 
   it("forwards the correct request body", async () => {
-    const spy = server.mount(contract.experiments.initiateExport, {
+    const spy = server.mount(orpcContract.experiments.initiateExport, {
       body: { status: "initiated" },
     });
 
@@ -47,7 +47,7 @@ describe("useInitiateExport", () => {
   });
 
   it("forwards different table names and formats", async () => {
-    const spy = server.mount(contract.experiments.initiateExport, {
+    const spy = server.mount(orpcContract.experiments.initiateExport, {
       body: { status: "initiated" },
     });
 
@@ -63,7 +63,7 @@ describe("useInitiateExport", () => {
   });
 
   it("calls custom onSuccess callback after mutation succeeds", async () => {
-    server.mount(contract.experiments.initiateExport, {
+    server.mount(orpcContract.experiments.initiateExport, {
       body: { status: "initiated" },
     });
 
@@ -81,7 +81,7 @@ describe("useInitiateExport", () => {
   });
 
   it("does not throw when custom onSuccess is not provided", async () => {
-    server.mount(contract.experiments.initiateExport, {
+    server.mount(orpcContract.experiments.initiateExport, {
       body: { status: "initiated" },
     });
 
@@ -97,7 +97,7 @@ describe("useInitiateExport", () => {
   });
 
   it("sets error state when the server returns an error", async () => {
-    server.mount(contract.experiments.initiateExport, { status: 500 });
+    server.mount(orpcContract.experiments.initiateExport, { status: 500 });
 
     const { result } = renderHook(() => useInitiateExport());
 

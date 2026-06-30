@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useAddCompatibleProtocol } from "./useAddCompatibleProtocol";
 
 describe("useAddCompatibleProtocol", () => {
   it("sends add request with protocol IDs", async () => {
-    const spy = server.mount(contract.macros.addCompatibleProtocols, {
+    const spy = server.mount(orpcContract.macros.addCompatibleProtocols, {
       body: [],
     });
 
@@ -27,7 +27,7 @@ describe("useAddCompatibleProtocol", () => {
   });
 
   it("completes mutation successfully", async () => {
-    server.mount(contract.macros.addCompatibleProtocols, { body: [] });
+    server.mount(orpcContract.macros.addCompatibleProtocols, { body: [] });
 
     const { result } = renderHook(() => useAddCompatibleProtocol("macro-1"));
 

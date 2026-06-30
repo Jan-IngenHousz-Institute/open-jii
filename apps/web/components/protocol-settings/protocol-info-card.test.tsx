@@ -5,7 +5,7 @@ import { formatDate } from "@/util/date";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { ProtocolInfoCard } from "./protocol-info-card";
 
@@ -27,7 +27,7 @@ describe("ProtocolInfoCard", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
     // Default: mount the delete endpoint so the real hook works
-    server.mount(contract.protocols.deleteProtocol, { status: 204 });
+    server.mount(orpcContract.protocols.deleteProtocol, { status: 204 });
   });
 
   it("should render the protocol info card with correct data", () => {
@@ -101,7 +101,7 @@ describe("ProtocolInfoCard", () => {
 
   it("should handle delete when confirmed", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(contract.protocols.deleteProtocol, { status: 204 });
+    const spy = server.mount(orpcContract.protocols.deleteProtocol, { status: 204 });
 
     const { router } = render(
       <ProtocolInfoCard protocolId="protocol-123" protocol={mockProtocol} />,

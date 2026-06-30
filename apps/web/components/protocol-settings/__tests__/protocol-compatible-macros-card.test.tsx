@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
 
@@ -67,12 +67,12 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     vi.clearAllMocks();
     lastDropdownProps = null;
 
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(orpcContract.protocols.listCompatibleMacros, {
       body: defaultCompatibleMacros,
     });
-    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
-    server.mount(contract.protocols.removeCompatibleMacro, {});
-    server.mount(contract.macros.listMacros, {
+    server.mount(orpcContract.protocols.addCompatibleMacros, { body: [] });
+    server.mount(orpcContract.protocols.removeCompatibleMacro, {});
+    server.mount(orpcContract.macros.listMacros, {
       body: [
         createMacro({ id: MACRO_ID_1, name: "Temperature Plot", language: "python" }),
         createMacro({ id: MACRO_ID_2, name: "Humidity Analysis", language: "r" }),
@@ -82,7 +82,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should show loading state", () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [], delay: 999_999 });
+    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [], delay: 999_999 });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -90,7 +90,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should show 'no compatible macros' when list is empty", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -124,7 +124,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should call remove mutation when X button is clicked", async () => {
-    const removeSpy = server.mount(contract.protocols.removeCompatibleMacro, {});
+    const removeSpy = server.mount(orpcContract.protocols.removeCompatibleMacro, {});
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -142,7 +142,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should call remove mutation for specific macro when its X button is clicked", async () => {
-    const removeSpy = server.mount(contract.protocols.removeCompatibleMacro, {});
+    const removeSpy = server.mount(orpcContract.protocols.removeCompatibleMacro, {});
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -181,7 +181,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should call add mutation when a macro is added via the dropdown", async () => {
-    const addSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
+    const addSpy = server.mount(orpcContract.protocols.addCompatibleMacros, { body: [] });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -201,7 +201,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should pass isAdding state to MacroSearchWithDropdown", async () => {
-    server.mount(contract.protocols.addCompatibleMacros, { body: [], delay: 999_999 });
+    server.mount(orpcContract.protocols.addCompatibleMacros, { body: [], delay: 999_999 });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 
@@ -218,7 +218,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should disable remove buttons while removal is pending", async () => {
-    server.mount(contract.protocols.removeCompatibleMacro, { delay: 999_999 });
+    server.mount(orpcContract.protocols.removeCompatibleMacro, { delay: 999_999 });
 
     render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
 

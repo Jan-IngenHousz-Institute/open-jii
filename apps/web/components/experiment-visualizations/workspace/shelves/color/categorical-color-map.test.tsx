@@ -3,7 +3,7 @@ import { fireEvent, renderWithForm, screen, waitFor } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { lineChartType } from "../../../charts/basic/line";
 import type { ChartFormValues } from "../../../charts/chart-config";
@@ -30,7 +30,7 @@ describe("CategoricalColorMap", () => {
   beforeEach(() => {
     // The component bails to a palette preview without an experiment id.
     vi.mocked(useParams).mockReturnValue({ id: "exp-1", locale: "en-US" });
-    server.mount(contract.experiments.getDistinctColumnValues, {
+    server.mount(orpcContract.experiments.getDistinctColumnValues, {
       body: { values: ["alpha", "beta"], truncated: false },
     });
   });

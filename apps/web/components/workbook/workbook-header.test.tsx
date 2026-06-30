@@ -11,7 +11,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
@@ -256,7 +256,7 @@ describe("WorkbookHeader — export menu", () => {
   });
 
   it("exports each protocol as its own JSON file containing the raw protocol code", async () => {
-    server.mount(contract.protocols.getProtocol, {
+    server.mount(orpcContract.protocols.getProtocol, {
       body: createProtocol({
         id: "proto-1",
         name: "Light Sensor",
@@ -277,7 +277,7 @@ describe("WorkbookHeader — export menu", () => {
   });
 
   it("triggers one download per protocol cell when multiple protocols are present", async () => {
-    server.mount(contract.protocols.getProtocol, {
+    server.mount(orpcContract.protocols.getProtocol, {
       body: createProtocol({ id: "any", name: "Shared", code: [{ a: 1 }] }),
     });
 
@@ -304,7 +304,7 @@ describe("WorkbookHeader — export menu", () => {
   });
 
   it("exports each macro as its own source file named after the macro with a language extension", async () => {
-    server.mount(contract.macros.getMacro, {
+    server.mount(orpcContract.macros.getMacro, {
       body: createMacro({
         id: "macro-1",
         name: "Chlorophyll Calc",

@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentVisualizationsPage from "./page";
 
@@ -33,7 +33,7 @@ beforeEach(() => {
 
 describe("<ExperimentVisualizationsPage />", () => {
   it("renders page title without create button", async () => {
-    server.mount(contract.experiments.listExperimentVisualizations, {
+    server.mount(orpcContract.experiments.listExperimentVisualizations, {
       body: [],
     });
 
@@ -59,7 +59,7 @@ describe("<ExperimentVisualizationsPage />", () => {
       }),
     ];
 
-    server.mount(contract.experiments.listExperimentVisualizations, {
+    server.mount(orpcContract.experiments.listExperimentVisualizations, {
       body: mockVisualizations,
     });
 
@@ -73,7 +73,7 @@ describe("<ExperimentVisualizationsPage />", () => {
   });
 
   it("shows loading state while fetching", () => {
-    server.mount(contract.experiments.listExperimentVisualizations, { delay: "infinite" });
+    server.mount(orpcContract.experiments.listExperimentVisualizations, { delay: "infinite" });
 
     render(<ExperimentVisualizationsPage />);
 
@@ -81,7 +81,7 @@ describe("<ExperimentVisualizationsPage />", () => {
   });
 
   it("handles empty visualizations data", async () => {
-    server.mount(contract.experiments.listExperimentVisualizations, {
+    server.mount(orpcContract.experiments.listExperimentVisualizations, {
       body: [],
     });
 

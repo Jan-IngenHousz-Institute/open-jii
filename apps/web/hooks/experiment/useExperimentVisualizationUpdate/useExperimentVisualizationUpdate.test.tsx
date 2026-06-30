@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualizationUpdate } from "./useExperimentVisualizationUpdate";
 
@@ -22,7 +22,7 @@ const baseBody = {
 describe("useExperimentVisualizationUpdate", () => {
   it("sends PATCH request", async () => {
     const viz = createVisualization({ id: "viz-1", experimentId: "exp-1" });
-    const spy = server.mount(contract.experiments.updateExperimentVisualization, { body: viz });
+    const spy = server.mount(orpcContract.experiments.updateExperimentVisualization, { body: viz });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationUpdate({ experimentId: "exp-1" }),
@@ -46,7 +46,7 @@ describe("useExperimentVisualizationUpdate", () => {
 
   it("sends correct body", async () => {
     const viz = createVisualization({ id: "viz-1", experimentId: "exp-1", name: "Updated" });
-    const spy = server.mount(contract.experiments.updateExperimentVisualization, { body: viz });
+    const spy = server.mount(orpcContract.experiments.updateExperimentVisualization, { body: viz });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationUpdate({ experimentId: "exp-1" }),
@@ -69,7 +69,7 @@ describe("useExperimentVisualizationUpdate", () => {
 
   it("calls onSuccess callback with visualization data", async () => {
     const viz = createVisualization({ id: "viz-1", experimentId: "exp-1", name: "Updated" });
-    server.mount(contract.experiments.updateExperimentVisualization, { body: viz });
+    server.mount(orpcContract.experiments.updateExperimentVisualization, { body: viz });
 
     const onSuccess = vi.fn();
     const { result } = renderHook(() =>
@@ -91,7 +91,7 @@ describe("useExperimentVisualizationUpdate", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(contract.experiments.updateExperimentVisualization, { status: 500 });
+    server.mount(orpcContract.experiments.updateExperimentVisualization, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationUpdate({ experimentId: "exp-1" }),

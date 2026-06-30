@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import { DetailsSection } from "./details-section";
@@ -40,7 +40,7 @@ describe("DetailsSection", () => {
 
   it("fetches and shows workbook name when workbookId is set", async () => {
     const wb = createWorkbook({ id: "wb-1", name: "My Workbook" });
-    server.mount(contract.workbooks.getWorkbook, { body: wb });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: wb });
 
     render(<DetailsSection formData={{ ...baseFormData, workbookId: "wb-1" }} onEdit={onEdit} />);
 

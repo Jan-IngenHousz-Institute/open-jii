@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentRequestToJoin } from "./experiment-request-to-join";
@@ -29,21 +29,21 @@ const MOCK_JOIN_REQUEST = {
 
 describe("ExperimentRequestToJoin", () => {
   it("renders nothing while loading", () => {
-    server.mount(contract.experiments.getMyJoinRequest, { delay: "infinite" });
+    server.mount(orpcContract.experiments.getMyJoinRequest, { delay: "infinite" });
     const { container } = render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
     expect(container.firstChild).toBeNull();
   });
 
   describe("no pending request", () => {
     it("renders request to join prompt", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
       render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
       await screen.findByText("experimentSettings.requestToJoinPrompt");
       expect(screen.getByText("experimentSettings.requestToJoin")).toBeInTheDocument();
     });
 
     it("opens dialog when clicking the request link", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
       const user = userEvent.setup();
       render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
 
@@ -53,8 +53,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("submits request and shows success toast", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
-      const spy = server.mount(contract.experiments.createJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+      const spy = server.mount(orpcContract.experiments.createJoinRequest, {
         status: 201,
         body: MOCK_JOIN_REQUEST,
       });
@@ -75,8 +75,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("submits request with message", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
-      const spy = server.mount(contract.experiments.createJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+      const spy = server.mount(orpcContract.experiments.createJoinRequest, {
         status: 201,
         body: MOCK_JOIN_REQUEST,
       });
@@ -95,8 +95,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("closes dialog and resets form on success", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
-      server.mount(contract.experiments.createJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.createJoinRequest, {
         status: 201,
         body: MOCK_JOIN_REQUEST,
       });
@@ -114,8 +114,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("shows error toast on submission failure", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
-      server.mount(contract.experiments.createJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.createJoinRequest, {
         status: 500,
         body: { message: "Server error" },
       });
@@ -131,8 +131,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("shows API error message on known error", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
-      server.mount(contract.experiments.createJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.createJoinRequest, {
         status: 409,
         body: { message: "You already have a pending request" },
       });
@@ -151,7 +151,7 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("closes dialog when cancel button is clicked", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+      server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
       const user = userEvent.setup();
       render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
 
@@ -165,7 +165,7 @@ describe("ExperimentRequestToJoin", () => {
 
   describe("pending request exists", () => {
     it("renders cancel request prompt", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
+      server.mount(orpcContract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
       render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
 
       await screen.findByText("experimentSettings.requestPendingDescription");
@@ -173,8 +173,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("cancels request and shows success toast", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
-      const spy = server.mount(contract.experiments.cancelJoinRequest);
+      server.mount(orpcContract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
+      const spy = server.mount(orpcContract.experiments.cancelJoinRequest);
       const user = userEvent.setup();
       render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
 
@@ -191,8 +191,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("shows error toast when cancel fails", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
-      server.mount(contract.experiments.cancelJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
+      server.mount(orpcContract.experiments.cancelJoinRequest, {
         status: 500,
         body: { message: "Could not cancel" },
       });
@@ -207,8 +207,8 @@ describe("ExperimentRequestToJoin", () => {
     });
 
     it("shows API error message when cancel fails with known error", async () => {
-      server.mount(contract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
-      server.mount(contract.experiments.cancelJoinRequest, {
+      server.mount(orpcContract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
+      server.mount(orpcContract.experiments.cancelJoinRequest, {
         status: 404,
         body: { message: "Request not found" },
       });

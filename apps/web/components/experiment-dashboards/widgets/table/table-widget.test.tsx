@@ -7,12 +7,12 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { TableWidgetView } from "./table-widget";
 
 function mountDataAndTables(opts: { tableName: string }) {
-  server.mount(contract.experiments.getExperimentData, {
+  server.mount(orpcContract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
         name: opts.tableName,
@@ -32,7 +32,7 @@ function mountDataAndTables(opts: { tableName: string }) {
       }),
     ],
   });
-  server.mount(contract.experiments.getExperimentTables, {
+  server.mount(orpcContract.experiments.getExperimentTables, {
     body: [createExperimentTable({ identifier: opts.tableName })],
   });
 }

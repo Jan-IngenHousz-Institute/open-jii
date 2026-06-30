@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentOverviewPage from "./page";
 
@@ -33,10 +33,10 @@ const accessPayload = createExperimentAccess({
 });
 
 function mountDefaults() {
-  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(contract.experiments.getExperimentLocations, { body: [] });
-  server.mount(contract.experiments.listExperimentMembers, { body: [] });
-  server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+  server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
+  server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
+  server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
 }
 
 describe("ExperimentOverviewPage", () => {
@@ -54,10 +54,10 @@ describe("ExperimentOverviewPage", () => {
   });
 
   it("shows error display on failure", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
-    server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
     render(<ExperimentOverviewPage {...props} />);
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");

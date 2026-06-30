@@ -9,7 +9,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { ExperimentLinkedWorkbook } from "./experiment-linked-workbook";
 
@@ -22,16 +22,16 @@ describe("ExperimentLinkedWorkbook", () => {
   });
 
   it("shows skeleton while loading", () => {
-    server.mount(contract.workbooks.getWorkbook, { body: createWorkbook(), delay: 999_999 });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [], delay: 999_999 });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: createWorkbook(), delay: 999_999 });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [], delay: 999_999 });
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
     expect(screen.getByText("workbooks.workbook")).toBeInTheDocument();
   });
 
   it("renders workbook name and view link", async () => {
     const workbook = createWorkbook({ id: workbookId, name: "Field Protocol v2" });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
@@ -46,8 +46,8 @@ describe("ExperimentLinkedWorkbook", () => {
       id: workbookId,
       description: "Measures chlorophyll fluorescence",
     });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
@@ -64,8 +64,8 @@ describe("ExperimentLinkedWorkbook", () => {
       createOutputCell({ id: "c4", producedBy: "c1" }),
     ];
     const workbook = createWorkbook({ id: workbookId, cells });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
@@ -78,8 +78,8 @@ describe("ExperimentLinkedWorkbook", () => {
 
   it("shows empty cells message when workbook has no cells", async () => {
     const workbook = createWorkbook({ id: workbookId, cells: [] });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
@@ -89,8 +89,8 @@ describe("ExperimentLinkedWorkbook", () => {
   });
 
   it("returns null when workbook is not found", async () => {
-    server.mount(contract.workbooks.getWorkbook, { status: 404 });
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    server.mount(orpcContract.workbooks.getWorkbook, { status: 404 });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [] });
 
     const { container } = render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
@@ -103,8 +103,8 @@ describe("ExperimentLinkedWorkbook", () => {
   it("renders version badge when workbookVersionId matches a version", async () => {
     const versionId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
     const workbook = createWorkbook({ id: workbookId, name: "Versioned WB" });
-    server.mount(contract.workbooks.getWorkbook, { body: workbook });
-    server.mount(contract.workbooks.listWorkbookVersions, {
+    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
+    server.mount(orpcContract.workbooks.listWorkbookVersions, {
       body: [
         createWorkbookVersionSummary({ id: versionId, workbookId, version: 2 }),
         createWorkbookVersionSummary({ workbookId, version: 1 }),

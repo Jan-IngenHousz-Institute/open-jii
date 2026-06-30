@@ -4,13 +4,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookUpdate } from "./useWorkbookUpdate";
 
 describe("useWorkbookUpdate", () => {
   it("calls PATCH /workbooks/:id with the body", async () => {
-    const spy = server.mount(contract.workbooks.updateWorkbook, {
+    const spy = server.mount(orpcContract.workbooks.updateWorkbook, {
       body: createWorkbook({ id: "wb-1", name: "Updated" }),
     });
 
@@ -26,7 +26,7 @@ describe("useWorkbookUpdate", () => {
   });
 
   it("invokes onSuccess callback with the workbook", async () => {
-    server.mount(contract.workbooks.updateWorkbook, {
+    server.mount(orpcContract.workbooks.updateWorkbook, {
       body: createWorkbook({ id: "wb-1", name: "Updated" }),
     });
 
@@ -45,7 +45,7 @@ describe("useWorkbookUpdate", () => {
   });
 
   it("optimistically updates the workbook detail cache", async () => {
-    server.mount(contract.workbooks.updateWorkbook, {
+    server.mount(orpcContract.workbooks.updateWorkbook, {
       body: createWorkbook({ id: "wb-1", name: "Updated" }),
     });
 
@@ -65,7 +65,7 @@ describe("useWorkbookUpdate", () => {
   });
 
   it("rolls back the detail cache on error", async () => {
-    server.mount(contract.workbooks.updateWorkbook, { status: 400 });
+    server.mount(orpcContract.workbooks.updateWorkbook, { status: 400 });
 
     const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
     const queryClient = createTestQueryClient();

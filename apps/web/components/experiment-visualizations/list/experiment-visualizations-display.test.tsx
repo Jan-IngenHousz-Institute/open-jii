@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { beforeEach, describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentVisualizationsDisplay from "./experiment-visualizations-display";
 
@@ -11,7 +11,7 @@ describe("ExperimentVisualizationsDisplay", () => {
   beforeEach(() => {
     // The auto-selected viz mounts the real chart renderer, which fetches
     // via useChartData; provide an empty default so MSW stops warning.
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
   });

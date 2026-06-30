@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useUpgradeWorkbookVersion } from "./useUpgradeWorkbookVersion";
 
@@ -12,7 +12,7 @@ const versionId = "33333333-3333-3333-3333-333333333333";
 
 describe("useUpgradeWorkbookVersion", () => {
   it("calls upgrade endpoint and returns new version info", async () => {
-    const spy = server.mount(contract.experiments.upgradeWorkbookVersion, {
+    const spy = server.mount(orpcContract.experiments.upgradeWorkbookVersion, {
       body: { workbookId, workbookVersionId: versionId, version: 2 },
     });
 
@@ -30,7 +30,7 @@ describe("useUpgradeWorkbookVersion", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(contract.experiments.upgradeWorkbookVersion, { status: 500 });
+    server.mount(orpcContract.experiments.upgradeWorkbookVersion, { status: 500 });
 
     const { result } = renderHook(() => useUpgradeWorkbookVersion());
 

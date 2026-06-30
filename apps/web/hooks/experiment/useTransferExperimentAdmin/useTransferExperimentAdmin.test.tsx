@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { act, renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useTransferExperimentAdmin } from "./useTransferExperimentAdmin";
@@ -17,7 +17,7 @@ const transferBody = {
 describe("useTransferExperimentAdmin", () => {
   it("shows a success toast and runs the caller's onSuccess when all transfers succeed", async () => {
     const onSuccess = vi.fn();
-    server.mount(contract.experiments.transferExperimentAdmin, {
+    server.mount(orpcContract.experiments.transferExperimentAdmin, {
       status: 200,
       body: { results: [{ experimentId: EXPERIMENT_ID, success: true }] },
     });
@@ -37,7 +37,7 @@ describe("useTransferExperimentAdmin", () => {
   });
 
   it("shows a destructive partial toast when some transfers fail", async () => {
-    server.mount(contract.experiments.transferExperimentAdmin, {
+    server.mount(orpcContract.experiments.transferExperimentAdmin, {
       status: 200,
       body: { results: [{ experimentId: EXPERIMENT_ID, success: false, error: "boom" }] },
     });
@@ -58,7 +58,7 @@ describe("useTransferExperimentAdmin", () => {
 
   it("surfaces the API error message and forwards the contract error to onError", async () => {
     const onError = vi.fn();
-    server.mount(contract.experiments.transferExperimentAdmin, {
+    server.mount(orpcContract.experiments.transferExperimentAdmin, {
       status: 403,
       body: { message: "Not allowed to transfer" },
     });
@@ -82,7 +82,7 @@ describe("useTransferExperimentAdmin", () => {
   });
 
   it("falls back to the generic error toast when the response has no message", async () => {
-    server.mount(contract.experiments.transferExperimentAdmin, {
+    server.mount(orpcContract.experiments.transferExperimentAdmin, {
       status: 500,
       // No `message` field, so parseApiError yields undefined and the hook
       // uses its translated fallback.

@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { MacroInfoCard } from "./macro-info-card";
 
@@ -43,7 +43,7 @@ describe("MacroInfoCard", () => {
 
   it("opens delete dialog and deletes macro", async () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    const spy = server.mount(contract.macros.deleteMacro);
+    const spy = server.mount(orpcContract.macros.deleteMacro);
     const user = userEvent.setup();
 
     const { router } = render(<MacroInfoCard macroId="macro-1" macro={macro} />);

@@ -5,7 +5,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { lineChartType } from "../../../experiment-visualizations/charts/basic/line";
 import { scatterChartType } from "../../../experiment-visualizations/charts/basic/scatter";
@@ -41,7 +41,7 @@ interface SetupOpts {
 }
 
 function setup({ renderWidgetTab = () => <div>widget-pane</div> }: SetupOpts = {}) {
-  server.mount(contract.experiments.getExperimentTables, {
+  server.mount(orpcContract.experiments.getExperimentTables, {
     body: [createExperimentTable({ identifier: "raw_data", displayName: "Raw data" })],
   });
 
@@ -116,10 +116,10 @@ describe("BuilderBody", () => {
         ],
       },
     };
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "raw_data", displayName: "Raw" })],
     });
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
     const { form } = renderInProvider(
@@ -147,10 +147,10 @@ describe("BuilderBody", () => {
         dataSources: [{ tableName: "raw_data", columnName: "time", role: "x" }],
       },
     };
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "raw_data", displayName: "Raw" })],
     });
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
     const { form } = renderInProvider(
@@ -177,13 +177,13 @@ describe("BuilderBody", () => {
         dataSources: [{ tableName: "raw_data", columnName: "time", role: "x", aggregate: "avg" }],
       },
     };
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: [
         createExperimentTable({ identifier: "raw_data", displayName: "Raw" }),
         createExperimentTable({ identifier: "other_table", displayName: "Other" }),
       ],
     });
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
     const { form } = renderInProvider(

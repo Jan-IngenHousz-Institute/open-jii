@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import type { Session } from "@repo/auth/types";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -92,7 +92,7 @@ const profile = createUserProfile({
 });
 
 function mountGetProfile(options = {}) {
-  return server.mount(contract.users.getUserProfile, {
+  return server.mount(orpcContract.users.getUserProfile, {
     body: profile,
     status: 200,
     ...options,
@@ -100,7 +100,7 @@ function mountGetProfile(options = {}) {
 }
 
 function mountCreateProfile(options = {}) {
-  return server.mount(contract.users.createUserProfile, {
+  return server.mount(orpcContract.users.createUserProfile, {
     body: {},
     status: 201,
     ...options,
@@ -119,7 +119,7 @@ describe("<AccountSettings />", () => {
   });
 
   it("shows error display when profile fetch fails", async () => {
-    server.mount(contract.users.getUserProfile, {
+    server.mount(orpcContract.users.getUserProfile, {
       status: 404,
       body: { message: "Not found" },
     });

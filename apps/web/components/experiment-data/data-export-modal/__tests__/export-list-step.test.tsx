@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ExportListStep } from "../steps/export-list-step";
@@ -44,7 +44,7 @@ const runningExport = createExportRecord({
 });
 
 const mountExports = (exports: ExperimentExportRecord[]) =>
-  server.mount(contract.experiments.listExports, {
+  server.mount(orpcContract.experiments.listExports, {
     body: { exports },
   });
 
@@ -57,7 +57,7 @@ const defaultProps = {
 
 describe("ExportListStep", () => {
   it("renders loading state", () => {
-    server.mount(contract.experiments.listExports, {
+    server.mount(orpcContract.experiments.listExports, {
       body: { exports: [] },
       delay: 999_999,
     });
@@ -67,7 +67,7 @@ describe("ExportListStep", () => {
   });
 
   it("renders error state", async () => {
-    server.mount(contract.experiments.listExports, {
+    server.mount(orpcContract.experiments.listExports, {
       body: { message: "Server error" } as never,
       status: 500,
     });

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { ExperimentTableName } from "@repo/api/domains/experiment/experiment.schema";
 
 import ExperimentDataPage from "./page";
@@ -100,8 +100,8 @@ describe("ExperimentDataPage", () => {
   ];
 
   function mountDefaults() {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
   }
 
   beforeEach(() => {
@@ -109,7 +109,7 @@ describe("ExperimentDataPage", () => {
     vi.mocked(use).mockReturnValue({ id: experimentId, locale: "en-US" });
     // The page fetches metadata too; default to "none" so tests that don't
     // care about metadata don't generate unhandled-request warnings.
-    server.mount(contract.experiments.listExperimentMetadata, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentMetadata, { body: [] });
   });
 
   it("renders the experiment data page with tabs when loaded", async () => {
@@ -124,11 +124,11 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays loading state when experiment is loading", () => {
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: accessPayload,
       delay: 999_999,
     });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -137,8 +137,8 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays loading state when tables are loading", () => {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: mockTablesData,
       delay: 999_999,
     });
@@ -150,8 +150,8 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays error state for experiment error", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(orpcContract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -161,8 +161,8 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays error state for tables error", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { status: 500 });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -202,8 +202,8 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays no data message when tables array is empty", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -213,8 +213,8 @@ describe("ExperimentDataPage", () => {
   });
 
   it("displays device table when it's the only table", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: [
         createExperimentTable({
           identifier: ExperimentTableName.DEVICE,
@@ -232,12 +232,12 @@ describe("ExperimentDataPage", () => {
   });
 
   it("calls notFound when experiment is archived", async () => {
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: createExperimentAccess({
         experiment: { id: experimentId, status: "archived" },
       }),
     });
-    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -271,8 +271,8 @@ describe("ExperimentDataPage", () => {
 
   it("truncates long table names in tabs", async () => {
     const longTableName = "very_long_table_name_that_should_be_truncated";
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, {
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, {
       body: [
         createExperimentTable({
           identifier: longTableName,
@@ -293,7 +293,7 @@ describe("ExperimentDataPage", () => {
 
   it("shows editMetadata text when metadata already exists", async () => {
     mountDefaults();
-    server.mount(contract.experiments.listExperimentMetadata, {
+    server.mount(orpcContract.experiments.listExperimentMetadata, {
       body: [
         {
           metadataId: "m1",
@@ -360,9 +360,9 @@ describe("ExperimentDataPage", () => {
   });
 
   it("shows editMetadata in no-data state when metadata exists", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
-    server.mount(contract.experiments.listExperimentMetadata, {
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentMetadata, {
       body: [
         {
           metadataId: "m1",
@@ -384,8 +384,8 @@ describe("ExperimentDataPage", () => {
 
   it("opens metadata upload from no-data state", async () => {
     const user = userEvent.setup();
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -403,8 +403,8 @@ describe("ExperimentDataPage", () => {
 
   it("opens sensor data upload from no-data state", async () => {
     const user = userEvent.setup();
-    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
     render(<ExperimentDataPage params={defaultProps.params} />);
 

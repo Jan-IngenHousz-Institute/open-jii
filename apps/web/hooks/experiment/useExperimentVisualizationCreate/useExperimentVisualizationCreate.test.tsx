@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualizationCreate } from "./useExperimentVisualizationCreate";
 
 describe("useExperimentVisualizationCreate", () => {
   it("sends POST request", async () => {
     const viz = createVisualization({ experimentId: "exp-1" });
-    const spy = server.mount(contract.experiments.createExperimentVisualization, { body: viz });
+    const spy = server.mount(orpcContract.experiments.createExperimentVisualization, { body: viz });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationCreate({ experimentId: "exp-1" }),
@@ -35,7 +35,7 @@ describe("useExperimentVisualizationCreate", () => {
 
   it("sends correct body", async () => {
     const viz = createVisualization({ experimentId: "exp-1" });
-    const spy = server.mount(contract.experiments.createExperimentVisualization, { body: viz });
+    const spy = server.mount(orpcContract.experiments.createExperimentVisualization, { body: viz });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationCreate({ experimentId: "exp-1" }),
@@ -59,7 +59,7 @@ describe("useExperimentVisualizationCreate", () => {
 
   it("calls onSuccess callback with visualization data", async () => {
     const viz = createVisualization({ id: "viz-1", experimentId: "exp-1" });
-    server.mount(contract.experiments.createExperimentVisualization, { body: viz });
+    server.mount(orpcContract.experiments.createExperimentVisualization, { body: viz });
 
     const onSuccess = vi.fn();
     const { result } = renderHook(() =>
@@ -83,7 +83,7 @@ describe("useExperimentVisualizationCreate", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(contract.experiments.createExperimentVisualization, { status: 500 });
+    server.mount(orpcContract.experiments.createExperimentVisualization, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationCreate({ experimentId: "exp-1" }),

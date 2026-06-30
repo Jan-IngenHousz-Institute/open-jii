@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbooks } from "./useWorkbooks";
 
 describe("useWorkbooks", () => {
   it("returns workbooks from the API with default 'my' filter", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Mine" })];
-    server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: workbooks });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -22,7 +22,7 @@ describe("useWorkbooks", () => {
   });
 
   it("shows loading state initially", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -30,7 +30,7 @@ describe("useWorkbooks", () => {
   });
 
   it("auto-switches to 'all' when user has no workbooks", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -40,7 +40,7 @@ describe("useWorkbooks", () => {
   });
 
   it("provides setFilter to change filter", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [createWorkbook()] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [createWorkbook()] });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -53,7 +53,7 @@ describe("useWorkbooks", () => {
   });
 
   it("provides search and setSearch", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -62,7 +62,7 @@ describe("useWorkbooks", () => {
   });
 
   it("returns error state on API failure", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { status: 400 });
+    server.mount(orpcContract.workbooks.listWorkbooks, { status: 400 });
 
     const { result } = renderHook(() => useWorkbooks());
 

@@ -5,7 +5,7 @@ import { notFound, useParams, usePathname } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -113,21 +113,21 @@ describe("ProtocolLayout", () => {
 
   describe("Loading State", () => {
     it("should display loading message when data is loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(orpcContract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
       renderLayout();
 
       expect(screen.getByText("protocols.loadingProtocols")).toBeInTheDocument();
     });
 
     it("should not render children when loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(orpcContract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByText("Children Content")).not.toBeInTheDocument();
     });
 
     it("should not render the inline editable title when loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(orpcContract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
@@ -136,7 +136,7 @@ describe("ProtocolLayout", () => {
 
   describe("Error Handling", () => {
     it("should call notFound for 404 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 404 });
+      server.mount(orpcContract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -145,7 +145,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should call notFound for 404 errors (invalid UUID)", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 404 });
+      server.mount(orpcContract.protocols.getProtocol, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -154,7 +154,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should display error display for 500 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(orpcContract.protocols.getProtocol, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -167,7 +167,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should display error heading and description for non-404/400 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(orpcContract.protocols.getProtocol, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -180,7 +180,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should not render children when there is an error", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(orpcContract.protocols.getProtocol, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -195,10 +195,10 @@ describe("ProtocolLayout", () => {
 
   describe("Success State", () => {
     it("should render InlineEditableTitle with protocol name", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, name: "My Protocol" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -208,10 +208,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should render children content", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -220,10 +220,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=true when current user is the creator", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -232,10 +232,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=false when current user is not the creator", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, createdBy: "different-user" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -244,10 +244,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=false when there is no session", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout({
         session: { data: null, isPending: false },
       });
@@ -258,10 +258,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should render preferred badge when sortOrder is not null", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, sortOrder: 1 }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -271,10 +271,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should not render preferred badge when sortOrder is null", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, sortOrder: null }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -284,10 +284,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should render the outer container with space-y-6 class", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {
@@ -299,10 +299,10 @@ describe("ProtocolLayout", () => {
 
   describe("Title Save Handler", () => {
     it("should call toast on successful title save", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       const user = userEvent.setup();
       renderLayout();
 
@@ -318,10 +318,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should call toast with destructive variant on title save error", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { status: 400 });
+      server.mount(orpcContract.protocols.updateProtocol, { status: 400 });
       const user = userEvent.setup();
       renderLayout();
 
@@ -340,10 +340,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass isPending=true while update is in progress", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol(), delay: 999_999 });
       const user = userEvent.setup();
       renderLayout();
 
@@ -359,10 +359,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass isPending=false when not updating", async () => {
-      server.mount(contract.protocols.getProtocol, {
+      server.mount(orpcContract.protocols.getProtocol, {
         body: createProtocol({ ...defaultProtocol }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(orpcContract.protocols.updateProtocol, { body: createProtocol() });
       renderLayout();
 
       await waitFor(() => {

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { act, renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import type { DashboardFormValues } from "../../dashboard-form-shell";
@@ -12,7 +12,7 @@ import { DashboardCanvas } from "./dashboard-canvas";
 type DashboardEditor = ReturnType<typeof useDashboardEditor>;
 
 function setup(opts: { widgets?: ExperimentDashboardWidget[] } = {}) {
-  server.mount(contract.experiments.getExperimentTables, { body: [] });
+  server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
 
   const editorRef: { current: DashboardEditor | null } = { current: null };
   function EditorCapture() {

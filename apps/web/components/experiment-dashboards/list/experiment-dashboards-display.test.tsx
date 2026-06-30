@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentDashboardsDisplay from "./experiment-dashboards-display";
 
@@ -44,7 +44,7 @@ vi.mock("./highlights/featured-dashboard-card", () => ({
 
 describe("ExperimentDashboardsDisplay", () => {
   it("renders the loading skeleton while dashboards are being fetched", () => {
-    server.mount(contract.experiments.listExperimentDashboards, {
+    server.mount(orpcContract.experiments.listExperimentDashboards, {
       body: [],
       delay: "infinite",
     });
@@ -55,13 +55,13 @@ describe("ExperimentDashboardsDisplay", () => {
   });
 
   it("renders the empty state when the API returns zero dashboards", async () => {
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
     render(<ExperimentDashboardsDisplay experimentId="exp-1" hasAccess />);
     expect(await screen.findByText("overview.emptyTitle")).toBeInTheDocument();
   });
 
   it("renders the carousel of featured cards when dashboards exist", async () => {
-    server.mount(contract.experiments.listExperimentDashboards, {
+    server.mount(orpcContract.experiments.listExperimentDashboards, {
       body: [
         createExperimentDashboard({ name: "Daily Overview" }),
         createExperimentDashboard({ name: "Photosynth" }),
@@ -75,7 +75,7 @@ describe("ExperimentDashboardsDisplay", () => {
   });
 
   it("shows the 'view all' link to the dashboards index when at least one dashboard exists", async () => {
-    server.mount(contract.experiments.listExperimentDashboards, {
+    server.mount(orpcContract.experiments.listExperimentDashboards, {
       body: [createExperimentDashboard()],
     });
     render(<ExperimentDashboardsDisplay experimentId="exp-1" />);
@@ -84,7 +84,7 @@ describe("ExperimentDashboardsDisplay", () => {
   });
 
   it("uses the archived base path when isArchived is set", async () => {
-    server.mount(contract.experiments.listExperimentDashboards, {
+    server.mount(orpcContract.experiments.listExperimentDashboards, {
       body: [createExperimentDashboard({ name: "Archived dash" })],
     });
     render(<ExperimentDashboardsDisplay experimentId="exp-2" isArchived />);
@@ -93,7 +93,7 @@ describe("ExperimentDashboardsDisplay", () => {
   });
 
   it("does not render the 'view all' link when the list is empty", async () => {
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
     render(<ExperimentDashboardsDisplay experimentId="exp-1" />);
     await screen.findByText("overview.emptyTitle");
     expect(screen.queryByRole("link", { name: "overview.viewAll" })).toBeNull();

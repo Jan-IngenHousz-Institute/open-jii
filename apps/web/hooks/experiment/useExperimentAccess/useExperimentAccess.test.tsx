@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentAccess } from "./useExperimentAccess";
 
 describe("useExperimentAccess", () => {
   it("returns experiment access data", async () => {
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: createExperimentAccess({ isAdmin: true }),
     });
 
@@ -27,7 +27,7 @@ describe("useExperimentAccess", () => {
   });
 
   it("handles 404 error", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentAccess, { status: 404 });
 
     const { result } = renderHook(() => useExperimentAccess("bad-id"));
 

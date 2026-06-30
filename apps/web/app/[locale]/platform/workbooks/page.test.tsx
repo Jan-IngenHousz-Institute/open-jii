@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import WorkbookPage from "./page";
 
 describe("WorkbookPage (list)", () => {
   it("renders the heading and description", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     render(await WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
 
@@ -18,7 +18,7 @@ describe("WorkbookPage (list)", () => {
   });
 
   it("renders the workbook list once data resolves", async () => {
-    server.mount(contract.workbooks.listWorkbooks, {
+    server.mount(orpcContract.workbooks.listWorkbooks, {
       body: [
         createWorkbook({ id: "wb-1", name: "Photosynthesis" }),
         createWorkbook({ id: "wb-2", name: "Respiration" }),

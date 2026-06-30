@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentAnnotationAdd } from "./useExperimentAnnotationAdd";
 
 describe("useExperimentAnnotationAdd", () => {
   it("sends POST request", async () => {
-    const spy = server.mount(contract.experiments.addAnnotation, {
+    const spy = server.mount(orpcContract.experiments.addAnnotation, {
       body: { rowsAffected: 1 },
     });
 
@@ -27,7 +27,7 @@ describe("useExperimentAnnotationAdd", () => {
   });
 
   it("sends correct params and body", async () => {
-    const spy = server.mount(contract.experiments.addAnnotation, {
+    const spy = server.mount(orpcContract.experiments.addAnnotation, {
       body: { rowsAffected: 1 },
     });
 
@@ -53,7 +53,7 @@ describe("useExperimentAnnotationAdd", () => {
   });
 
   it("handles error", async () => {
-    server.mount(contract.experiments.addAnnotation, { status: 400 });
+    server.mount(orpcContract.experiments.addAnnotation, { status: 400 });
 
     const { result } = renderHook(() => useExperimentAnnotationAdd());
 

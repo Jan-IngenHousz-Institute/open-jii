@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { AutosaveStatusProvider } from "../../../shared/autosave/autosave-status-context";
 import { lineChartType } from "../../charts/basic/line";
@@ -56,7 +56,7 @@ describe("useVisualizationAutosave", () => {
   });
 
   it("mounts without firing a save on the initial form value", () => {
-    const spy = server.mount(contract.experiments.updateExperimentVisualization, {
+    const spy = server.mount(orpcContract.experiments.updateExperimentVisualization, {
       status: 200,
       body: createVisualization({ id: "viz-1" }),
     });

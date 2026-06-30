@@ -4,14 +4,14 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound, useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentDashboardsPage from "./page";
 
 const experimentId = "exp-123";
 
 function mountAccess(isAdmin = true, status: "active" | "archived" = "active") {
-  return server.mount(contract.experiments.getExperimentAccess, {
+  return server.mount(orpcContract.experiments.getExperimentAccess, {
     body: createExperimentAccess({
       isAdmin,
       experiment: { id: experimentId, status },
@@ -26,7 +26,7 @@ describe("ExperimentDashboardsPage", () => {
 
   it("renders the page title and subtitle", () => {
     mountAccess();
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
 
     render(<ExperimentDashboardsPage />);
 
@@ -38,7 +38,7 @@ describe("ExperimentDashboardsPage", () => {
     const a = createExperimentDashboard({ experimentId, name: "Heatmap board" });
     const b = createExperimentDashboard({ experimentId, name: "Wellness board" });
     mountAccess();
-    server.mount(contract.experiments.listExperimentDashboards, { body: [a, b] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [a, b] });
 
     render(<ExperimentDashboardsPage />);
 
@@ -49,11 +49,11 @@ describe("ExperimentDashboardsPage", () => {
   });
 
   it("disables the create button while access is loading", () => {
-    server.mount(contract.experiments.getExperimentAccess, {
+    server.mount(orpcContract.experiments.getExperimentAccess, {
       body: createExperimentAccess({ isAdmin: true }),
       delay: 999_999,
     });
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
 
     render(<ExperimentDashboardsPage />);
 
@@ -62,7 +62,7 @@ describe("ExperimentDashboardsPage", () => {
 
   it("disables the create button when the caller is not an admin", async () => {
     mountAccess(false);
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
 
     render(<ExperimentDashboardsPage />);
 
@@ -74,9 +74,9 @@ describe("ExperimentDashboardsPage", () => {
   it("creates a dashboard and navigates to its edit view on click", async () => {
     const user = userEvent.setup();
     mountAccess();
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
     const created = createExperimentDashboard({ id: "new-board", experimentId });
-    const createSpy = server.mount(contract.experiments.createExperimentDashboard, {
+    const createSpy = server.mount(orpcContract.experiments.createExperimentDashboard, {
       status: 201,
       body: created,
     });
@@ -98,7 +98,7 @@ describe("ExperimentDashboardsPage", () => {
 
   it("calls notFound when the underlying experiment is archived", async () => {
     mountAccess(true, "archived");
-    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
 
     render(<ExperimentDashboardsPage />);
 

@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentLocations } from "./useExperimentLocations";
 
 describe("useExperimentLocations", () => {
   it("returns empty array when no locations exist", async () => {
-    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
 
     const { result } = renderHook(() => useExperimentLocations("exp-1"));
 
@@ -24,7 +24,7 @@ describe("useExperimentLocations", () => {
 
   it("returns locations on success", async () => {
     const locations = [createLocation(), createLocation()];
-    server.mount(contract.experiments.getExperimentLocations, { body: locations });
+    server.mount(orpcContract.experiments.getExperimentLocations, { body: locations });
 
     const { result } = renderHook(() => useExperimentLocations("exp-1"));
 
@@ -46,7 +46,7 @@ describe("useExperimentLocations", () => {
   });
 
   it("passes experiment ID in the request path", async () => {
-    const spy = server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    const spy = server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
 
     const { result } = renderHook(() => useExperimentLocations("specific-exp-id"));
 
@@ -58,7 +58,7 @@ describe("useExperimentLocations", () => {
   });
 
   it("handles 404 error", async () => {
-    server.mount(contract.experiments.getExperimentLocations, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentLocations, { status: 404 });
 
     const { result } = renderHook(() => useExperimentLocations("bad-id"));
 

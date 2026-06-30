@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualizationData } from "./useExperimentVisualizationData";
 
 describe("useExperimentVisualizationData", () => {
   it("should return successful data and table info", async () => {
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "measurements",
@@ -68,7 +68,7 @@ describe("useExperimentVisualizationData", () => {
     // Regression: groupBy on `pump`, orderBy on `timestamp` would generate
     // `ORDER BY \`timestamp\`` against an aggregated set that doesn't expose
     // `timestamp`; Databricks then errors with UNRESOLVED_COLUMN.
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "macro_xyz",
@@ -106,7 +106,7 @@ describe("useExperimentVisualizationData", () => {
     // orderBy whenever it wasn't in groupBy / functions; that left the
     // backend with no ordering signal and 400'd the request. Window-only
     // aggregations now pass orderBy through unchanged.
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable({ name: "device" })],
     });
 
@@ -133,7 +133,7 @@ describe("useExperimentVisualizationData", () => {
     // Mixed aggregation: cumsum + avg → not window-only, the outer
     // SELECT projects only groupBy/function aliases so a raw orderBy
     // can't resolve. Drop it to avoid UNRESOLVED_COLUMN.
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable({ name: "device" })],
     });
 
@@ -158,7 +158,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("resolves orderBy to the bucket alias when grouping by a time-bucketed column", async () => {
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable({ name: "measurements" })],
     });
 
@@ -186,7 +186,7 @@ describe("useExperimentVisualizationData", () => {
     // groupBy aliases (`timestamp_hour` → `timestamp`) because those are
     // unambiguous; function aliases stay verbatim and the renderer
     // resolves them via `aggregateAliasForSource` / `rowKeyForFunction`.
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "measurements",
@@ -234,7 +234,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should handle loading state", async () => {
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable({ name: "measurements" })],
       delay: 100,
     });
@@ -256,7 +256,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should handle error state", async () => {
-    server.mount(contract.experiments.getExperimentData, { status: 500 });
+    server.mount(orpcContract.experiments.getExperimentData, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationData("exp-123", {
@@ -275,7 +275,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should return undefined table info when body is empty", async () => {
-    server.mount(contract.experiments.getExperimentData, { body: [] });
+    server.mount(orpcContract.experiments.getExperimentData, { body: [] });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationData("exp-123", {
@@ -293,7 +293,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should not fetch when tableName is empty", async () => {
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
 
@@ -311,7 +311,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should not fetch when no columns and no aggregation are configured", async () => {
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
 
@@ -326,7 +326,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("should not fetch when enabled is false", async () => {
-    const spy = server.mount(contract.experiments.getExperimentData, {
+    const spy = server.mount(orpcContract.experiments.getExperimentData, {
       body: [createExperimentDataTable()],
     });
 
@@ -348,7 +348,7 @@ describe("useExperimentVisualizationData", () => {
     // Server returns the full struct (already pseudonymised when
     // educational mode is on); the hook unwraps `name` so the chart
     // category axis sees a plain string. Generic STRUCTs pass through.
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "measurements",
@@ -399,7 +399,7 @@ describe("useExperimentVisualizationData", () => {
     // attribution, so `contributor` may be NULL for every row. Plotly
     // would skip null-x bars; substitute "Unknown" so the bucket still
     // renders as a labeled bar.
-    server.mount(contract.experiments.getExperimentData, {
+    server.mount(orpcContract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "macro_table",

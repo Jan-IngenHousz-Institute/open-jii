@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useProtocolCompatibleMacros } from "./useProtocolCompatibleMacros";
 
 describe("useProtocolCompatibleMacros", () => {
   it("returns compatible macros for a protocol", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(orpcContract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "protocol-1",
@@ -29,7 +29,7 @@ describe("useProtocolCompatibleMacros", () => {
   });
 
   it("does not fetch when protocolId is empty", () => {
-    const spy = server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    const spy = server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
 
     renderHook(() => useProtocolCompatibleMacros(""));
 
@@ -37,7 +37,7 @@ describe("useProtocolCompatibleMacros", () => {
   });
 
   it("does not fetch when explicitly disabled", () => {
-    const spy = server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    const spy = server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
 
     renderHook(() => useProtocolCompatibleMacros("protocol-1", false));
 

@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import VisualizationWidgetView from "./visualization-widget";
 
@@ -25,7 +25,7 @@ describe("VisualizationWidgetView", () => {
 
   it("renders the linked visualization once data has loaded", async () => {
     const viz = createVisualization({ name: "My Chart" });
-    server.mount(contract.experiments.getExperimentVisualization, { body: viz });
+    server.mount(orpcContract.experiments.getExperimentVisualization, { body: viz });
     const widget = createVisualizationWidget({
       config: { visualizationId: viz.id, showTitle: true, showDescription: false },
     });
@@ -35,7 +35,7 @@ describe("VisualizationWidgetView", () => {
   });
 
   it("shows the missing-viz empty state when the fetch errors out", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentVisualization, { status: 404 });
     const widget = createVisualizationWidget({
       config: {
         visualizationId: "00000000-0000-0000-0000-000000000001",

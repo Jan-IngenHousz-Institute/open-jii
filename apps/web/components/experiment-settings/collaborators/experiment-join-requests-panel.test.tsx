@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentJoinRequestsPanel } from "./experiment-join-requests-panel";
@@ -42,7 +42,7 @@ const MOCK_REQUEST_NO_MESSAGE = {
 
 describe("ExperimentJoinRequestsPanel", () => {
   beforeEach(() => {
-    server.mount(contract.experiments.listJoinRequests, { body: [] });
+    server.mount(orpcContract.experiments.listJoinRequests, { body: [] });
   });
 
   it("renders empty state when no requests", () => {
@@ -120,7 +120,7 @@ describe("ExperimentJoinRequestsPanel", () => {
 
   describe("approve", () => {
     it("calls approve API with correct params and shows success toast", async () => {
-      const spy = server.mount(contract.experiments.approveJoinRequest, {
+      const spy = server.mount(orpcContract.experiments.approveJoinRequest, {
         status: 200,
         body: MOCK_REQUEST,
       });
@@ -148,7 +148,7 @@ describe("ExperimentJoinRequestsPanel", () => {
     });
 
     it("shows error toast when approve fails", async () => {
-      server.mount(contract.experiments.approveJoinRequest, {
+      server.mount(orpcContract.experiments.approveJoinRequest, {
         status: 500,
         body: { message: "Server error" },
       });
@@ -171,7 +171,7 @@ describe("ExperimentJoinRequestsPanel", () => {
     });
 
     it("shows API error message when approve fails with known error", async () => {
-      server.mount(contract.experiments.approveJoinRequest, {
+      server.mount(orpcContract.experiments.approveJoinRequest, {
         status: 409,
         body: { message: "User is already a member" },
       });
@@ -199,7 +199,7 @@ describe("ExperimentJoinRequestsPanel", () => {
 
   describe("reject", () => {
     it("calls reject API with correct params and shows success toast", async () => {
-      const spy = server.mount(contract.experiments.rejectJoinRequest, {
+      const spy = server.mount(orpcContract.experiments.rejectJoinRequest, {
         status: 200,
         body: MOCK_REQUEST,
       });
@@ -227,7 +227,7 @@ describe("ExperimentJoinRequestsPanel", () => {
     });
 
     it("shows error toast when reject fails", async () => {
-      server.mount(contract.experiments.rejectJoinRequest, {
+      server.mount(orpcContract.experiments.rejectJoinRequest, {
         status: 500,
         body: { message: "Server error" },
       });
@@ -250,7 +250,7 @@ describe("ExperimentJoinRequestsPanel", () => {
     });
 
     it("shows API error message when reject fails with known error", async () => {
-      server.mount(contract.experiments.rejectJoinRequest, {
+      server.mount(orpcContract.experiments.rejectJoinRequest, {
         status: 404,
         body: { message: "Request not found" },
       });

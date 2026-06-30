@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -19,7 +19,7 @@ const defaultProps = {
 };
 
 function mountAddSingle(options = {}) {
-  return server.mount(contract.experiments.addAnnotation, {
+  return server.mount(orpcContract.experiments.addAnnotation, {
     body: { rowsAffected: 1 },
     status: 201,
     ...options,
@@ -27,7 +27,7 @@ function mountAddSingle(options = {}) {
 }
 
 function mountAddBulk(options = {}) {
-  return server.mount(contract.experiments.addAnnotationsBulk, {
+  return server.mount(orpcContract.experiments.addAnnotationsBulk, {
     body: { rowsAffected: 3 },
     status: 201,
     ...options,

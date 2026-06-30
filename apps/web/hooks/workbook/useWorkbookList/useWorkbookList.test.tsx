@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookList } from "./useWorkbookList";
 
@@ -14,7 +14,7 @@ describe("useWorkbookList", () => {
       createWorkbook({ id: "wb-2", name: "Second" }),
     ];
 
-    server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: workbooks });
 
     const { result } = renderHook(() => useWorkbookList());
 
@@ -25,7 +25,7 @@ describe("useWorkbookList", () => {
   });
 
   it("returns loading state initially", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     const { result } = renderHook(() => useWorkbookList());
 
@@ -33,7 +33,7 @@ describe("useWorkbookList", () => {
   });
 
   it("returns empty array when no workbooks exist", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
 
     const { result } = renderHook(() => useWorkbookList());
 
@@ -44,7 +44,7 @@ describe("useWorkbookList", () => {
   });
 
   it("returns error state on failure", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { status: 400 });
+    server.mount(orpcContract.workbooks.listWorkbooks, { status: 400 });
 
     const { result } = renderHook(() => useWorkbookList());
 

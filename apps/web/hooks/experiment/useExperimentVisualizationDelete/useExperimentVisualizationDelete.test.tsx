@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualizationDelete } from "./useExperimentVisualizationDelete";
 
 describe("useExperimentVisualizationDelete", () => {
   it("sends DELETE request", async () => {
-    const spy = server.mount(contract.experiments.deleteExperimentVisualization);
+    const spy = server.mount(orpcContract.experiments.deleteExperimentVisualization);
 
     const { result } = renderHook(() =>
       useExperimentVisualizationDelete({ experimentId: "exp-1" }),
@@ -29,7 +29,7 @@ describe("useExperimentVisualizationDelete", () => {
   });
 
   it("calls onSuccess callback when provided", async () => {
-    server.mount(contract.experiments.deleteExperimentVisualization);
+    server.mount(orpcContract.experiments.deleteExperimentVisualization);
 
     const onSuccess = vi.fn();
     const { result } = renderHook(() =>
@@ -49,7 +49,7 @@ describe("useExperimentVisualizationDelete", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(contract.experiments.deleteExperimentVisualization, { status: 500 });
+    server.mount(orpcContract.experiments.deleteExperimentVisualization, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentVisualizationDelete({ experimentId: "exp-1" }),

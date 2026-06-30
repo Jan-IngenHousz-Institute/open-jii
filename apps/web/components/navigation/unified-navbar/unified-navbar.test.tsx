@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { authClient } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
@@ -96,7 +96,7 @@ function renderNavbar(
 ) {
   vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
   if (opts.session?.user) {
-    server.mount(contract.users.getUserProfile, {
+    server.mount(orpcContract.users.getUserProfile, {
       body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
     });
   }

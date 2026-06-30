@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useMacros } from "./useMacros";
 
 describe("useMacros", () => {
   it("returns empty array by default", async () => {
-    server.mount(contract.macros.listMacros, { body: [] });
+    server.mount(orpcContract.macros.listMacros, { body: [] });
 
     const { result } = renderHook(() => useMacros());
 
@@ -23,7 +23,7 @@ describe("useMacros", () => {
   });
 
   it("returns macros list", async () => {
-    server.mount(contract.macros.listMacros, {
+    server.mount(orpcContract.macros.listMacros, {
       body: [
         createMacro({ id: "1", name: "M1" }),
         createMacro({ id: "2", name: "M2", language: "javascript" }),
@@ -43,7 +43,7 @@ describe("useMacros", () => {
   });
 
   it("passes filter as query parameters", async () => {
-    const spy = server.mount(contract.macros.listMacros, { body: [] });
+    const spy = server.mount(orpcContract.macros.listMacros, { body: [] });
 
     const { result } = renderHook(() =>
       useMacros({ initialSearch: "test", initialLanguage: "python" }),

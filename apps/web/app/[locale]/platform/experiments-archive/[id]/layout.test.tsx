@@ -5,7 +5,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { usePathname, useParams, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import ExperimentLayout from "./layout";
 
@@ -38,7 +38,7 @@ describe("<ExperimentLayout />", () => {
 
   describe("Loading State", () => {
     it("shows loading message when data is loading", () => {
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: defaultAccess,
         delay: 999_999,
       });
@@ -51,7 +51,7 @@ describe("<ExperimentLayout />", () => {
 
   describe("Error States", () => {
     it("shows access denied error for 403 status", async () => {
-      server.mount(contract.experiments.getExperimentAccess, { status: 403 });
+      server.mount(orpcContract.experiments.getExperimentAccess, { status: 403 });
       renderLayout();
 
       await waitFor(() => {
@@ -62,7 +62,7 @@ describe("<ExperimentLayout />", () => {
     });
 
     it("shows generic error for non-403 errors", async () => {
-      server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+      server.mount(orpcContract.experiments.getExperimentAccess, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -76,7 +76,7 @@ describe("<ExperimentLayout />", () => {
     });
 
     it("calls notFound for 404 status", async () => {
-      server.mount(contract.experiments.getExperimentAccess, { status: 404 });
+      server.mount(orpcContract.experiments.getExperimentAccess, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -89,7 +89,7 @@ describe("<ExperimentLayout />", () => {
     it("shows not found message when no experiment data is returned", async () => {
       // Simulate a successful response whose `experiment` is null — the
       // layout defends against this even though it's outside the typed shape.
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: { experiment: null, hasAccess: false, isAdmin: false } as never,
       });
       renderLayout();
@@ -104,7 +104,7 @@ describe("<ExperimentLayout />", () => {
 
   describe("Tab Navigation", () => {
     it("renders all tabs with correct labels", async () => {
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
       });
       renderLayout();
@@ -118,7 +118,7 @@ describe("<ExperimentLayout />", () => {
     });
 
     it("all tabs render as links with correct hrefs", async () => {
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
       });
       renderLayout();
@@ -137,7 +137,7 @@ describe("<ExperimentLayout />", () => {
     });
 
     it("renders tabs when on root experiment path", async () => {
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {
@@ -148,7 +148,7 @@ describe("<ExperimentLayout />", () => {
 
     it("renders tabs when on data path", async () => {
       vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id/data");
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {
@@ -161,7 +161,7 @@ describe("<ExperimentLayout />", () => {
       vi.mocked(usePathname).mockReturnValue(
         "/en-US/platform/experiments/test-id/analysis/visualizations",
       );
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {
@@ -172,7 +172,7 @@ describe("<ExperimentLayout />", () => {
 
     it("renders tabs when on design path", async () => {
       vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments-archive/test-id/design");
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {
@@ -184,7 +184,7 @@ describe("<ExperimentLayout />", () => {
 
   describe("Layout Content", () => {
     it("renders children", async () => {
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {
@@ -198,7 +198,7 @@ describe("<ExperimentLayout />", () => {
       vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
       vi.mocked(usePathname).mockReturnValue("/de/platform/experiments-archive/test-id");
       vi.mocked(useLocale).mockReturnValue("de");
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: createExperimentAccess({ isAdmin: true, experiment: { id: "test-id" } }),
       });
       renderLayout();
@@ -220,7 +220,7 @@ describe("<ExperimentLayout />", () => {
       vi.mocked(usePathname).mockReturnValue("/de/platform/experiments/test-id/data/sensors");
       vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
       vi.mocked(useLocale).mockReturnValue("de");
-      server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();
 
       await waitFor(() => {

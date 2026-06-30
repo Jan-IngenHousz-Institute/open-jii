@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualization } from "./useExperimentVisualization";
 
 describe("useExperimentVisualization", () => {
   it("returns visualization data on success", async () => {
     const visualization = createVisualization();
-    server.mount(contract.experiments.getExperimentVisualization, {
+    server.mount(orpcContract.experiments.getExperimentVisualization, {
       body: visualization,
     });
 
@@ -34,7 +34,7 @@ describe("useExperimentVisualization", () => {
 
   it("passes correct path params", async () => {
     const visualization = createVisualization();
-    const spy = server.mount(contract.experiments.getExperimentVisualization, {
+    const spy = server.mount(orpcContract.experiments.getExperimentVisualization, {
       body: visualization,
     });
 
@@ -51,7 +51,7 @@ describe("useExperimentVisualization", () => {
   });
 
   it("handles 404 error", async () => {
-    server.mount(contract.experiments.getExperimentVisualization, { status: 404 });
+    server.mount(orpcContract.experiments.getExperimentVisualization, { status: 404 });
 
     const { result } = renderHook(() => useExperimentVisualization("bad-viz", "bad-exp"));
 

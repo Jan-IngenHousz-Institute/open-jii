@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -25,7 +25,7 @@ const contributorColumn: ExperimentDataColumn = {
 
 describe("useDistinctOptions", () => {
   it("returns the fetched values and exposes truncated state", async () => {
-    server.mount(contract.experiments.getDistinctColumnValues, {
+    server.mount(orpcContract.experiments.getDistinctColumnValues, {
       body: { values: ["alpha", "beta"], truncated: true },
     });
 
@@ -39,7 +39,7 @@ describe("useDistinctOptions", () => {
 
   it("builds a contributor id->json map for CONTRIBUTOR columns", async () => {
     const struct = JSON.stringify({ id: "u-1", name: "Alice", avatar: null });
-    server.mount(contract.experiments.getDistinctColumnValues, {
+    server.mount(orpcContract.experiments.getDistinctColumnValues, {
       body: { values: [struct], truncated: false },
     });
 
@@ -51,7 +51,7 @@ describe("useDistinctOptions", () => {
   });
 
   it("returns empty defaults while loading or when the request errors", async () => {
-    server.mount(contract.experiments.getDistinctColumnValues, { status: 404 });
+    server.mount(orpcContract.experiments.getDistinctColumnValues, { status: 404 });
 
     const { result } = renderHook(() => useDistinctOptions(labelColumn, "exp-1", "raw_data"));
 

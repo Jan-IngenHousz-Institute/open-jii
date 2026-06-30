@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentDashboardUpdate } from "./useExperimentDashboardUpdate";
 
@@ -17,7 +17,7 @@ describe("useExperimentDashboardUpdate", () => {
       experimentId,
       name: "Renamed",
     });
-    const spy = server.mount(contract.experiments.updateExperimentDashboard, { body: updated });
+    const spy = server.mount(orpcContract.experiments.updateExperimentDashboard, { body: updated });
 
     const { result } = renderHook(() => useExperimentDashboardUpdate({ experimentId }));
 
@@ -36,7 +36,7 @@ describe("useExperimentDashboardUpdate", () => {
       experimentId,
       name: "Renamed",
     });
-    server.mount(contract.experiments.updateExperimentDashboard, { body: updated });
+    server.mount(orpcContract.experiments.updateExperimentDashboard, { body: updated });
     const onSuccess = vi.fn();
 
     const { result } = renderHook(() => useExperimentDashboardUpdate({ experimentId, onSuccess }));
@@ -50,7 +50,7 @@ describe("useExperimentDashboardUpdate", () => {
   });
 
   it("sets isError when the server rejects", async () => {
-    server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
+    server.mount(orpcContract.experiments.updateExperimentDashboard, { status: 500 });
 
     const { result } = renderHook(() => useExperimentDashboardUpdate({ experimentId }));
 
@@ -62,7 +62,7 @@ describe("useExperimentDashboardUpdate", () => {
   });
 
   it("never invokes onSuccess on a failed update", async () => {
-    server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
+    server.mount(orpcContract.experiments.updateExperimentDashboard, { status: 500 });
     const onSuccess = vi.fn();
 
     const { result } = renderHook(() => useExperimentDashboardUpdate({ experimentId, onSuccess }));

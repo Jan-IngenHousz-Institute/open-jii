@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentArchive } from "./experiment-archive";
@@ -20,7 +20,7 @@ describe("ExperimentArchive", () => {
   });
 
   it("opens dialog and confirms archive", async () => {
-    const spy = server.mount(contract.experiments.updateExperiment, {
+    const spy = server.mount(orpcContract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-1", status: "archived" }),
     });
     const user = userEvent.setup();
@@ -44,7 +44,7 @@ describe("ExperimentArchive", () => {
   });
 
   it("opens dialog and confirms unarchive", async () => {
-    server.mount(contract.experiments.updateExperiment, {
+    server.mount(orpcContract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-1", status: "active" }),
     });
     const user = userEvent.setup();
@@ -59,7 +59,7 @@ describe("ExperimentArchive", () => {
   });
 
   it("shows error toast on failure", async () => {
-    server.mount(contract.experiments.updateExperiment, {
+    server.mount(orpcContract.experiments.updateExperiment, {
       status: 500,
       body: { message: "Oops" },
     });

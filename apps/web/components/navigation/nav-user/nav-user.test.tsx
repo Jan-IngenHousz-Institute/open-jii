@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { authClient } from "@repo/auth/client";
 import { SidebarProvider } from "@repo/ui/components/sidebar";
 
@@ -14,9 +14,9 @@ const baseUser = { id: "u-1", email: "ada@example.com" };
 
 function useProfileOverride(profile: { firstName?: string; lastName?: string } | null) {
   if (profile === null) {
-    server.mount(contract.users.getUserProfile, { status: 404 });
+    server.mount(orpcContract.users.getUserProfile, { status: 404 });
   } else {
-    server.mount(contract.users.getUserProfile, {
+    server.mount(orpcContract.users.getUserProfile, {
       body: createUserProfile({
         firstName: profile.firstName ?? "",
         lastName: profile.lastName ?? "",

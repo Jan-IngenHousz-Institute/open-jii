@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useWorkbookVersion } from "./useWorkbookVersion";
 
@@ -19,7 +19,7 @@ const versionBody = {
 
 describe("useWorkbookVersion", () => {
   beforeEach(() => {
-    server.mount(contract.workbooks.getWorkbookVersion, { body: versionBody });
+    server.mount(orpcContract.workbooks.getWorkbookVersion, { body: versionBody });
   });
 
   it("fetches a specific workbook version", async () => {
@@ -51,7 +51,7 @@ describe("useWorkbookVersion", () => {
   });
 
   it("returns error on API failure", async () => {
-    server.mount(contract.workbooks.getWorkbookVersion, { status: 500 });
+    server.mount(orpcContract.workbooks.getWorkbookVersion, { status: 500 });
 
     const { result } = renderHook(() => useWorkbookVersion(workbookId, versionId));
 

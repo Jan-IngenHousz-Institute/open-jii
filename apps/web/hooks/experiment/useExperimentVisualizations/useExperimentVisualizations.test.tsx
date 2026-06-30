@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentVisualizations } from "./useExperimentVisualizations";
 
@@ -18,7 +18,7 @@ describe("useExperimentVisualizations", () => {
       createVisualization({ experimentId: "exp-123", chartFamily: "basic", chartType: "scatter" }),
     ];
 
-    server.mount(contract.experiments.listExperimentVisualizations, {
+    server.mount(orpcContract.experiments.listExperimentVisualizations, {
       body: visualizations,
     });
 
@@ -35,7 +35,7 @@ describe("useExperimentVisualizations", () => {
   });
 
   it("should handle error state", async () => {
-    server.mount(contract.experiments.listExperimentVisualizations, { status: 500 });
+    server.mount(orpcContract.experiments.listExperimentVisualizations, { status: 500 });
 
     const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -47,7 +47,7 @@ describe("useExperimentVisualizations", () => {
   });
 
   it("should handle empty visualizations list", async () => {
-    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+    server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
     const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -60,7 +60,7 @@ describe("useExperimentVisualizations", () => {
 
   describe("chartFamily filter", () => {
     it("should allow setting chart family filter", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -76,7 +76,7 @@ describe("useExperimentVisualizations", () => {
 
   describe("pagination", () => {
     it("should have correct initial pagination state", async () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -95,7 +95,7 @@ describe("useExperimentVisualizations", () => {
         createVisualization({ experimentId: "exp-123" }),
       );
 
-      server.mount(contract.experiments.listExperimentVisualizations, {
+      server.mount(orpcContract.experiments.listExperimentVisualizations, {
         body: visualizations,
       });
 
@@ -113,7 +113,7 @@ describe("useExperimentVisualizations", () => {
         createVisualization({ experimentId: "exp-123" }),
       );
 
-      server.mount(contract.experiments.listExperimentVisualizations, {
+      server.mount(orpcContract.experiments.listExperimentVisualizations, {
         body: visualizations,
       });
 
@@ -131,7 +131,7 @@ describe("useExperimentVisualizations", () => {
         createVisualization({ experimentId: "exp-123" }),
       );
 
-      server.mount(contract.experiments.listExperimentVisualizations, {
+      server.mount(orpcContract.experiments.listExperimentVisualizations, {
         body: visualizations,
       });
 
@@ -150,7 +150,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should not go to next page when hasNextPage is false", async () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -166,7 +166,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should go to previous page", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() =>
         useExperimentVisualizations({
@@ -185,7 +185,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should not go to previous page when offset is 0", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -197,7 +197,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should reset pagination", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() =>
         useExperimentVisualizations({
@@ -216,7 +216,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should allow setting custom limit", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 
@@ -228,7 +228,7 @@ describe("useExperimentVisualizations", () => {
     });
 
     it("should allow setting custom offset", () => {
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       const { result } = renderHook(() => useExperimentVisualizations({ experimentId: "exp-123" }));
 

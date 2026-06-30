@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 
 import VisualizationsPage from "./page";
@@ -36,8 +36,8 @@ const accessPayload = createExperimentAccess({
 });
 
 function mountDefaults(visualizations: ExperimentVisualization[] = []) {
-  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(contract.experiments.listExperimentVisualizations, {
+  server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(orpcContract.experiments.listExperimentVisualizations, {
     body: visualizations,
   });
 }
@@ -93,7 +93,7 @@ describe("VisualizationsPage", () => {
     it("creates a draft visualization and navigates to its editor when Create is clicked", async () => {
       const user = userEvent.setup();
       mountDefaults();
-      server.mount(contract.experiments.createExperimentVisualization, {
+      server.mount(orpcContract.experiments.createExperimentVisualization, {
         body: createVisualization({ id: "new-viz-id" }),
       });
 
@@ -139,8 +139,8 @@ describe("VisualizationsPage", () => {
 
   describe("Loading state", () => {
     it("should pass loading state to list component", () => {
-      server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
-      server.mount(contract.experiments.listExperimentVisualizations, {
+      server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, {
         body: [],
         delay: 999_999,
       });
@@ -186,12 +186,12 @@ describe("VisualizationsPage", () => {
 
   describe("Archived experiment handling", () => {
     it("should call notFound when experiment is archived", async () => {
-      server.mount(contract.experiments.getExperimentAccess, {
+      server.mount(orpcContract.experiments.getExperimentAccess, {
         body: createExperimentAccess({
           experiment: { status: "archived" },
         }),
       });
-      server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
+      server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
 
       render(<VisualizationsPage />);
 

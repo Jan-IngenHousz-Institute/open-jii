@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { useExperimentDashboardDelete } from "./useExperimentDashboardDelete";
 
@@ -11,7 +11,7 @@ const dashboardId = "22222222-2222-2222-2222-222222222222";
 
 describe("useExperimentDashboardDelete", () => {
   it("issues the delete request and resolves success", async () => {
-    const spy = server.mount(contract.experiments.deleteExperimentDashboard, {
+    const spy = server.mount(orpcContract.experiments.deleteExperimentDashboard, {
       status: 204,
       body: null,
     });
@@ -27,7 +27,7 @@ describe("useExperimentDashboardDelete", () => {
   });
 
   it("calls onSuccess once when the delete resolves", async () => {
-    server.mount(contract.experiments.deleteExperimentDashboard, { status: 204, body: null });
+    server.mount(orpcContract.experiments.deleteExperimentDashboard, { status: 204, body: null });
     const onSuccess = vi.fn();
 
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId, onSuccess }));
@@ -40,7 +40,7 @@ describe("useExperimentDashboardDelete", () => {
   });
 
   it("sets isError when the API rejects", async () => {
-    server.mount(contract.experiments.deleteExperimentDashboard, { status: 500 });
+    server.mount(orpcContract.experiments.deleteExperimentDashboard, { status: 500 });
 
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId }));
 
@@ -52,7 +52,7 @@ describe("useExperimentDashboardDelete", () => {
   });
 
   it("does not invoke onSuccess on failure", async () => {
-    server.mount(contract.experiments.deleteExperimentDashboard, { status: 500 });
+    server.mount(orpcContract.experiments.deleteExperimentDashboard, { status: 500 });
     const onSuccess = vi.fn();
 
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId, onSuccess }));

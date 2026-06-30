@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useForm, FormProvider } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
@@ -158,7 +158,7 @@ describe("VisualizationLayoutContent", () => {
       data: { user: { id: "user-creator" } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const spy = server.mount(contract.experiments.deleteExperimentVisualization, {});
+    const spy = server.mount(orpcContract.experiments.deleteExperimentVisualization, {});
     const user = userEvent.setup();
 
     render(<Harness viz={makeViz({ id: "viz-9", createdBy: "user-creator" })} />);
