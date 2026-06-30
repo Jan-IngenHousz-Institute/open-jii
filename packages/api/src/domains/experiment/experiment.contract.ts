@@ -461,7 +461,7 @@ export const experimentContract = c.router({
 
   uploadData: {
     method: "POST",
-    path: "/api/v1/experiments/:id/uploads",
+    path: "/api/v1/experiments/:id/data/uploads",
     pathParams: zExperimentIdPathParam,
     contentType: "multipart/form-data",
     body: zExperimentUploadDataBody,
@@ -479,7 +479,7 @@ export const experimentContract = c.router({
 
   listUploads: {
     method: "GET",
-    path: "/api/v1/experiments/:id/uploads",
+    path: "/api/v1/experiments/:id/data/uploads",
     pathParams: zExperimentIdPathParam,
     query: zExperimentListUploadsQuery,
     responses: {
