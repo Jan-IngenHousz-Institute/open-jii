@@ -21,7 +21,9 @@ import {
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
-import { tsr } from "../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 const getLanguageDisplay = (language: string) => {
@@ -71,13 +73,12 @@ export function ProtocolCompatibleMacrosCard({
   // Macro search for the add dropdown
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
+  const { data: macroData } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: { search: debouncedMacroSearch || undefined },
+    }),
+  );
+  const macroList = macroData;
 
   const compatibleMacroIds = useMemo(
     () => new Set(compatibleMacros.map((entry) => entry.macro.id)),

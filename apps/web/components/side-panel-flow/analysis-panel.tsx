@@ -10,7 +10,9 @@ import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
-import { tsr } from "../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface AnalysisPanelProps {
@@ -31,13 +33,12 @@ export function AnalysisPanel({
   // Macro search state
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
+  const { data: macroData } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: { search: debouncedMacroSearch || undefined },
+    }),
+  );
+  const macroList = macroData;
 
   // Fetch the upstream protocol name for recommendation context
   const { data: upstreamProtocol } = useProtocol(upstreamProtocolId ?? "", !!upstreamProtocolId);

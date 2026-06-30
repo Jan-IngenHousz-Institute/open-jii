@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
+import { getOrpcError } from "@/lib/orpc";
 import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 import { parseApiError } from "~/util/apiError";
@@ -85,7 +86,8 @@ export function DataExportModal({
           setCreationStatus("idle");
           toast({
             description:
-              parseApiError(error)?.message ?? t("experimentData.exportModal.creationError"),
+              parseApiError(getOrpcError(error)?.data ?? error)?.message ??
+              t("experimentData.exportModal.creationError"),
             variant: "destructive",
           });
         },

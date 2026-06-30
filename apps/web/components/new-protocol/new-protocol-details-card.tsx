@@ -28,7 +28,9 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { tsr } from "../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+
+import { orpc } from "@/lib/orpc";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface NewProtocolDetailsCardProps {
@@ -49,13 +51,12 @@ export function NewProtocolDetailsCard({
   // Macro search
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
+  const { data: macroData } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: { search: debouncedMacroSearch || undefined },
+    }),
+  );
+  const macroList = macroData;
 
   const selectedMacroIds = useMemo(
     () => new Set(selectedMacros.map((m) => m.id)),

@@ -78,17 +78,12 @@ export function MacroCompatibleProtocolsCard({
   );
 
   const handleAddProtocol = async (protocolId: string) => {
-    await addMutation.mutateAsync({
-      params: { id: macroId },
-      body: { protocolIds: [protocolId] },
-    } as never);
+    await addMutation.mutateAsync({ id: macroId, protocolIds: [protocolId] });
     setProtocolSearch("");
   };
 
   const handleRemoveProtocol = async (protocolId: string) => {
-    await removeMutation.mutateAsync({
-      params: { id: macroId, protocolId },
-    } as never);
+    await removeMutation.mutateAsync({ id: macroId, protocolId });
   };
 
   const content = (
