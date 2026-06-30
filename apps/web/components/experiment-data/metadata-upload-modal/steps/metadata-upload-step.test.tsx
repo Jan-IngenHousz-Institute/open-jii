@@ -512,14 +512,12 @@ describe("MetadataUploadStep", () => {
   describe("experiment question options", () => {
     it("renders question options when flow data is available", async () => {
       mockFlowData = {
-        body: {
-          graph: {
-            nodes: [
-              { id: "1", type: "question", name: "Plot Number" },
-              { id: "2", type: "sensor", name: "Temperature" },
-              { id: "3", type: "question", name: "Location ID" },
-            ],
-          },
+        graph: {
+          nodes: [
+            { id: "1", type: "question", name: "Plot Number" },
+            { id: "2", type: "sensor", name: "Temperature" },
+            { id: "3", type: "question", name: "Location ID" },
+          ],
         },
       };
 

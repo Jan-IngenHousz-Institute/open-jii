@@ -28,7 +28,7 @@ export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStep
 
   const { data: flowData } = useExperimentFlow(experimentId);
   const questionOptions = useMemo<QuestionOption[]>(() => {
-    const nodes = flowData?.body.graph.nodes;
+    const nodes = flowData?.graph.nodes;
     if (!nodes) return [];
     return nodes
       .filter((node: { type: string }) => node.type === "question")

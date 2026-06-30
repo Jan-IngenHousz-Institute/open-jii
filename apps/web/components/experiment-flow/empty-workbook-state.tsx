@@ -44,7 +44,7 @@ export function EmptyWorkbookState({
     onSuccess: (data) => {
       const workbookId = data.id;
       attachWorkbook.mutate(
-        { params: { id: experimentId }, body: { workbookId } },
+        { id: experimentId, workbookId },
         {
           onSuccess: () => router.push(`/${locale}/platform/workbooks/${workbookId}`),
           onError: () => toast({ description: t("flow.attachFailed"), variant: "destructive" }),
@@ -59,7 +59,7 @@ export function EmptyWorkbookState({
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
     attachWorkbook.mutate(
-      { params: { id: experimentId }, body: { workbookId: selectedWorkbookId } },
+      { id: experimentId, workbookId: selectedWorkbookId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });

@@ -63,7 +63,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
         </div>
       </div>
 
-      <FlowEditor ref={flowEditorRef} initialFlow={existingFlow?.body} isDisabled={true} />
+      <FlowEditor ref={flowEditorRef} initialFlow={existingFlow} isDisabled={true} />
     </PageContainer>
   );
 }

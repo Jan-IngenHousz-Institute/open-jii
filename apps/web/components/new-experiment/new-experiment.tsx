@@ -90,7 +90,7 @@ export function NewExperimentForm() {
       // If a workbook was selected, attach it to create a version snapshot
       if (pendingWorkbookId.current) {
         attachWorkbook.mutate(
-          { params: { id: experimentId }, body: { workbookId: pendingWorkbookId.current } },
+          { id: experimentId, workbookId: pendingWorkbookId.current },
           {
             onSettled: () => {
               setIsSubmitting(true);

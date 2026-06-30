@@ -134,7 +134,7 @@ export function LinkedWorkbookCard({
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
     attachWorkbook.mutate(
-      { params: { id: experimentId }, body: { workbookId: selectedWorkbookId } },
+      { id: experimentId, workbookId: selectedWorkbookId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
@@ -152,7 +152,7 @@ export function LinkedWorkbookCard({
 
   const handleDetach = () => {
     detachWorkbook.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookDetached") });
@@ -177,7 +177,7 @@ export function LinkedWorkbookCard({
   const handleUpgrade = useCallback(() => {
     setUpgradeState("upgrading");
     upgradeVersion.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           setUpgradeState("success");

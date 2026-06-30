@@ -1,14 +1,13 @@
-import { getContractError, tsr } from "@/lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "@/lib/tsr";
-import { parseApiError } from "@/util/apiError";
+import { getOrpcError, orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-const route = tsr.experiments.transferExperimentAdmin;
+import { parseApiError } from "@/util/apiError";
 
-export type UseTransferExperimentAdminOptions = TsRestMutationOptions<
-  TsrRoute<typeof route>,
+export type UseTransferExperimentAdminOptions = Pick<
+  ReturnType<typeof orpc.experiments.transferExperimentAdmin.mutationOptions>,
   "onSuccess" | "onError" | "onSettled"
 >;
 
@@ -19,38 +18,42 @@ export type UseTransferExperimentAdminOptions = TsRestMutationOptions<
  * dialog automatically.
  */
 export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminOptions) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
   const { t } = useTranslation("account");
 
-  return route.useMutation({
-    ...options,
-    onSuccess: (...args) => {
-      const [data] = args;
-      const hasFailures = data.body.results.some((result) => !result.success);
-      if (hasFailures) {
+  return useMutation(
+    orpc.experiments.transferExperimentAdmin.mutationOptions({
+      ...options,
+      onSuccess: (...args) => {
+        const [data] = args;
+        const hasFailures = data.results.some((result) => !result.success);
+        if (hasFailures) {
+          toast({
+            description: t("dangerZone.delete.blockers.transferPartial"),
+            variant: "destructive",
+          });
+        } else {
+          toast({ description: t("dangerZone.delete.blockers.transferSuccess") });
+        }
+        options?.onSuccess?.(...args);
+      },
+      onError: (error, ...rest) => {
+        const orpcError = getOrpcError(error);
         toast({
-          description: t("dangerZone.delete.blockers.transferPartial"),
+          description:
+            parseApiError(orpcError?.data)?.message ??
+            t("dangerZone.delete.blockers.transferError"),
           variant: "destructive",
         });
-      } else {
-        toast({ description: t("dangerZone.delete.blockers.transferSuccess") });
-      }
-      options?.onSuccess?.(...args);
-    },
-    onError: (error, ...rest) => {
-      toast({
-        description: parseApiError(error)?.message ?? t("dangerZone.delete.blockers.transferError"),
-        variant: "destructive",
-      });
-      const contractError = getContractError(route, error);
-      if (contractError) {
-        options?.onError?.(contractError, ...rest);
-      }
-    },
-    onSettled: async (...args) => {
-      await queryClient.invalidateQueries({ queryKey: ["deletion-blockers"] });
-      await queryClient.invalidateQueries({ queryKey: ["experiment-members"] });
-      options?.onSettled?.(...args);
-    },
-  });
+        if (orpcError) {
+          options?.onError?.(orpcError, ...rest);
+        }
+      },
+      onSettled: async (...args) => {
+        await queryClient.invalidateQueries({ queryKey: ["deletion-blockers"] });
+        await queryClient.invalidateQueries({ queryKey: ["experiment-members"] });
+        options?.onSettled?.(...args);
+      },
+    }),
+  );
 };

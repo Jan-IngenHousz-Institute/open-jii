@@ -76,7 +76,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   // Each autosave re-pins the experiment to the latest version (OJD-1626).
   const upgradeVersion = useUpgradeWorkbookVersion(id);
   const handleDraftSaved = useCallback(() => {
-    upgradeVersion.mutate({ params: { id } });
+    upgradeVersion.mutate({ id });
   }, [id, upgradeVersion]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {

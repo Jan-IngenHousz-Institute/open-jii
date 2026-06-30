@@ -131,7 +131,7 @@ export function DeleteAccountBlockers({
 
   const handleTransfer = () => {
     if (transfers.length === 0 || isPending) return;
-    transferAdmin({ body: { transfers } });
+    transferAdmin({ transfers });
   };
 
   return (

@@ -20,8 +20,8 @@ describe("useAttachWorkbook", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: experimentId },
-        body: { workbookId },
+        id: experimentId,
+        workbookId,
       });
     });
 
@@ -40,8 +40,8 @@ describe("useAttachWorkbook", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: experimentId },
-        body: { workbookId },
+        id: experimentId,
+        workbookId,
       });
     });
 
