@@ -4,7 +4,6 @@ import reactConfig from "@repo/eslint-config/react";
 const FEATURES = [
   "alerts",
   "auth",
-  "calibration",
   "connection",
   "experiments",
   "home",
@@ -13,8 +12,8 @@ const FEATURES = [
   "recent-measurements",
 ];
 
-// Boundary ratchet: accepted exceptions only. Both lists are empty — keep
-// them that way; new violations are hard errors.
+// Boundary ratchet: accepted exceptions only. Both lists are empty; keep
+// them that way and new violations stay hard errors.
 const LEGACY_CROSS_FEATURE_FILES = [];
 
 const LEGACY_SHARED_TO_FEATURE_FILES = [];

@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { FlaskConical, House, Settings, Workflow } from "lucide-react-native";
+import { FlaskConical, House, Workflow } from "lucide-react-native";
 import { Easing, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DeviceSheet } from "~/features/connection/components/device-sheet";
@@ -105,14 +105,6 @@ export default function TabLayout() {
           options={{
             title: "Data",
             tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="calibration"
-          options={{
-            title: "Calibration",
-            tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
             href: null,
           }}
         />
