@@ -94,8 +94,8 @@ export function ExperimentInviteModal({
     if (selection.type === "user") {
       await addMember(
         {
-          params: { id: experimentId },
-          body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
+          id: experimentId,
+          members: [{ userId: selection.user.userId, role: selectedRole }],
         },
         {
           onSuccess: () => {

@@ -31,11 +31,11 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
-  const locations = locationsData?.body ?? [];
+  const locations = locationsData ?? [];
 
   // Members
   const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData?.body ?? [];
+  const members = membersData ?? [];
 
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 

@@ -39,7 +39,7 @@ export function ExperimentMembersPanel({
     setRemovingMemberId(memberId);
     try {
       await removeMember(
-        { params: { id: experimentId, memberId } },
+        { id: experimentId, memberId },
         {
           onSuccess: () => {
             toast({ description: t("experimentSettings.memberRemoved") });

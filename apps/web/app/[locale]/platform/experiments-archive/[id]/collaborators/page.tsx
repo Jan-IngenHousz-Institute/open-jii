@@ -31,7 +31,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const experiment = accessData?.experiment;
 
   const { data: membersData, isError: isMembersError } = useExperimentMembers(id);
-  const members = useMemo(() => membersData?.body ?? [], [membersData]);
+  const members = useMemo(() => membersData ?? [], [membersData]);
 
   const { data: invitationsData } = useUserInvitations("experiment", id);
   const invitations = useMemo(() => invitationsData ?? [], [invitationsData]);

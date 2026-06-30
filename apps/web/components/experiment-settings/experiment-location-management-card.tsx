@@ -33,7 +33,7 @@ export function ExperimentLocationManagement({
   const updateLocationsMutation = useExperimentLocationsUpdate();
 
   // Get experiment locations from API response
-  const locations = useMemo(() => locationsData?.body ?? [], [locationsData]);
+  const locations = useMemo(() => locationsData ?? [], [locationsData]);
 
   const mapLocations: LocationPoint[] = useMemo(
     () =>
@@ -99,8 +99,8 @@ export function ExperimentLocationManagement({
 
       updateLocationsMutation.mutate(
         {
-          params: { id: experimentId },
-          body: { locations: locationsToSave },
+          id: experimentId,
+          locations: locationsToSave,
         },
         {
           onSuccess: () => {

@@ -24,10 +24,7 @@ interface MetadataUploadStepProps {
 
 export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStepProps) {
   const { data: existingMetadataResponse } = useExperimentMetadata(experimentId);
-  const existingRecords = useMemo(
-    () => existingMetadataResponse?.body ?? [],
-    [existingMetadataResponse?.body],
-  );
+  const existingRecords = useMemo(() => existingMetadataResponse ?? [], [existingMetadataResponse]);
 
   const { data: flowData } = useExperimentFlow(experimentId);
   const questionOptions = useMemo<QuestionOption[]>(() => {

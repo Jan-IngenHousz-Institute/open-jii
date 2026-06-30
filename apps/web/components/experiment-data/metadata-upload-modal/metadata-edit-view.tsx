@@ -168,11 +168,12 @@ export function MetadataEditView({
       const body = toWirePayload(values, existingRecords);
       if (editingMetadataId) {
         await updateMutation.mutateAsync({
-          params: { id: experimentId, metadataId: editingMetadataId },
-          body,
+          id: experimentId,
+          metadataId: editingMetadataId,
+          ...body,
         });
       } else {
-        await createMutation.mutateAsync({ params: { id: experimentId }, body });
+        await createMutation.mutateAsync({ id: experimentId, ...body });
       }
       setSaveStatus("saved");
       setTimeout(onBack, 1500);

@@ -51,7 +51,7 @@ export function MetadataListView({
         });
       };
       try {
-        await deleteMutation.mutateAsync({ params: { id: experimentId, metadataId } });
+        await deleteMutation.mutateAsync({ id: experimentId, metadataId });
         setIsDeleting((prev) => ({ ...prev, [metadataId]: "deleted" }));
         await new Promise((r) => setTimeout(r, 600));
         cleanup();

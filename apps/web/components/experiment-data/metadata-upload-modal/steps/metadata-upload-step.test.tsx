@@ -66,7 +66,7 @@ vi.mock("@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDel
 
 vi.mock("@/hooks/experiment/useExperimentMetadata/useExperimentMetadata", () => ({
   useExperimentMetadata: () => ({
-    data: { body: mockExistingMetadata },
+    data: mockExistingMetadata,
     isLoading: false,
     error: null,
   }),
@@ -470,21 +470,19 @@ describe("MetadataUploadStep", () => {
 
       await waitFor(() => {
         expect(mockMutateAsync).toHaveBeenCalledWith({
-          params: { id: "test-experiment" },
-          body: {
-            metadata: {
-              name: "Test Metadata",
-              columns: [
-                { id: "ID", name: "ID", type: "number" },
-                { id: "Name", name: "Name", type: "string" },
-              ],
-              rows: [
-                { _id: "row_0", ID: 1, Name: "Test" },
-                { _id: "row_1", ID: 2, Name: "Test2" },
-              ],
-              identifierColumnId: "ID",
-              experimentQuestionId: "test_question",
-            },
+          id: "test-experiment",
+          metadata: {
+            name: "Test Metadata",
+            columns: [
+              { id: "ID", name: "ID", type: "number" },
+              { id: "Name", name: "Name", type: "string" },
+            ],
+            rows: [
+              { _id: "row_0", ID: 1, Name: "Test" },
+              { _id: "row_1", ID: 2, Name: "Test2" },
+            ],
+            identifierColumnId: "ID",
+            experimentQuestionId: "test_question",
           },
         });
       });

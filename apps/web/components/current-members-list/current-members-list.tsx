@@ -99,8 +99,9 @@ export function MemberList({
     setUpdatingMemberId(userId);
     updateMemberRole(
       {
-        params: { id: experimentId, memberId: userId },
-        body: { role: newRole },
+        id: experimentId,
+        memberId: userId,
+        role: newRole,
       },
       {
         onSuccess: () => {

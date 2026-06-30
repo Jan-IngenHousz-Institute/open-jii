@@ -34,7 +34,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   // Check if metadata already exists for this experiment
   const { data: metadataResponse } = useExperimentMetadata(id);
-  const hasMetadata = metadataResponse?.body != null && metadataResponse.body.length > 0;
+  const hasMetadata = metadataResponse != null && metadataResponse.length > 0;
 
   if (isLoading || isLoadingTables) {
     return (
