@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "~/features/recent-measurements/services/measurement-list-cache";
 import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
@@ -9,6 +10,7 @@ import {
   updateMeasurement,
 } from "~/shared/db/measurements-storage";
 import type { Measurement, MeasurementStatus } from "~/shared/db/measurements-storage";
+import { UNSYNCED_STATUSES } from "~/shared/db/measurements-storage";
 import {
   buildAnnotations,
   getFlagTypeFromMeasurementResult,
@@ -21,36 +23,36 @@ export function useMeasurements() {
     networkMode: "always",
     mutationFn: async () => {
       const outbox = getOutbox();
-      const rows = await getMeasurements(["pending", "failed"]);
+      const rows = await getMeasurements([...UNSYNCED_STATUSES]);
       for (const row of rows) outbox.enqueue(row.id);
-      await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
   });
 
   const uploadOne = async (key: string) => {
     getOutbox().enqueue(key);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
   const saveMeasurement = async (upload: Measurement, status: MeasurementStatus) => {
     const id = await saveMeasurementToStorage(upload, status);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     return id;
   };
 
   const markFailed = async (key: string) => {
     await markAsFailed(key);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
   const removeMeasurement = async (key: string) => {
     await removeMeasurementFromStorage(key);
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
   const clearSyncedMeasurements = async () => {
     await clearMeasurements("successful");
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
   const updateMeasurementComment = async (key: string, data: Measurement, commentText: string) => {
@@ -60,7 +62,7 @@ export function useMeasurements() {
     const annotations = buildAnnotations(commentText, flagType);
     const measurementResult = { ...data.measurementResult, annotations };
     await updateMeasurement(key, { ...data, measurementResult });
-    await queryClient.invalidateQueries({ queryKey: ["measurements"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
   return {

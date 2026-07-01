@@ -1,53 +1,35 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type {
+  FlowState,
+  MatchedPath,
+  ScanResult,
+} from "~/features/measurement-flow/domain/flow-transitions";
 import {
-  FlowEdge,
-  FlowNode,
-  isQuestionsOnlyFlow,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+  dismissQuestionsSubmitState,
+  finishFlowState,
+  initialFlowState,
+  navigateToQuestionFromOverviewState,
+  nextStepState,
+  previousStepState,
+  recordBranchJumpState,
+  resetFlowState,
+  retryIterationState,
+  returnToOverviewState,
+  startNewIterationState,
+} from "~/features/measurement-flow/domain/flow-transitions";
+import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
-/** The branch path the flow last routed through, surfaced inline in the hero. */
-export interface MatchedPath {
-  label: string;
-  color: string;
-}
-
-/** A branch jump: its landing node index and the step Back should return to. */
-export interface BranchReturn {
-  landing: number;
-  step: number;
-}
-
-interface MeasurementFlowStore {
-  experimentId?: string;
-  experimentLabel?: string;
-  protocolId?: string;
-  currentStep: number;
-  flowNodes: FlowNode[];
-  currentFlowStep: number;
-  iterationCount: number;
-  isFlowFinished: boolean;
-  isQuestionsSubmitPending: boolean;
-  scanResult?: any;
-  isFromOverview: boolean;
-
-  // Workbook-derived data, used to evaluate branch cells on-device. Empty for
-  // legacy flow-only experiments (no workbook attached).
-  cells: WorkbookCell[];
-  edges: FlowEdge[];
-  // Which branch path was last taken (for the inline hero chip).
-  lastMatchedPath?: MatchedPath;
-  // Per-node visit counter that caps branch goto-loops (mirrors web's MAX_VISITS_PER_CELL).
-  branchVisitCounts: Record<string, number>;
-  // Stack of branch jumps so Back unwinds non-linear routing instead of
-  // stepping into nodes the matched path skipped.
-  branchReturnStack: BranchReturn[];
+interface MeasurementFlowStore extends FlowState {
+  // AutoProceededSummary anchor: first manual question at the start of the
+  // current iteration (set by useIterationStateSync). Deliberately NOT
+  // persisted; on relaunch it is recomputed by the resume-path sync.
+  iterationAnchor?: { iteration: number; nodeId?: string };
 
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
-  setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
   setCurrentFlowStep: (step: number) => void;
   nextStep: () => void;
@@ -63,124 +45,32 @@ interface MeasurementFlowStore {
   startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
-  setScanResult: (result: any) => void;
+  setScanResult: (result: ScanResult | undefined) => void;
+  setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
 }
 
-// Persisted so a background/kill is itself the pause: the next launch rehydrates
-// the active flow (cells/edges/branch state) and keeps evaluating offline.
+// Persisted store: a mid-flow blur (background/kill/tab switch) is itself the
+// "pause"; relaunch rehydrates the active flow, incl. workbook cells/edges and
+// branch state so a resumed branching flow keeps routing offline. Progression
+// rules live in ../domain/flow-transitions.ts; the actions here just delegate.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
-      experimentId: undefined,
-      experimentLabel: undefined,
-      protocolId: undefined,
-      currentStep: 0,
-      flowNodes: [],
-      currentFlowStep: 0,
-      iterationCount: 0,
-      isFlowFinished: false,
-      isQuestionsSubmitPending: false,
-      scanResult: undefined,
-      isFromOverview: false,
-      cells: [],
-      edges: [],
-      lastMatchedPath: undefined,
-      branchVisitCounts: {},
-      branchReturnStack: [],
+      ...initialFlowState,
+      iterationAnchor: undefined,
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
-      setProtocolId: (protocolId) => set({ protocolId }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            const nextFlowStep = state.currentFlowStep + 1;
-            const isCompleted = nextFlowStep >= state.flowNodes.length;
-            if (isCompleted) {
-              if (isQuestionsOnlyFlow(state.flowNodes)) {
-                return {
-                  isQuestionsSubmitPending: true,
-                  currentFlowStep: state.flowNodes.length,
-                };
-              }
-              return {
-                currentFlowStep: 0,
-                iterationCount: state.iterationCount + 1,
-                branchVisitCounts: {},
-                lastMatchedPath: undefined,
-                branchReturnStack: [],
-              };
-            }
-            return { currentFlowStep: nextFlowStep };
-          }
-          return { currentStep: state.currentStep + 1 };
-        }),
+      nextStep: () => set(nextStepState),
+      previousStep: () => set(previousStepState),
 
-      previousStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            if (state.isQuestionsSubmitPending) {
-              return {
-                isQuestionsSubmitPending: false,
-                currentFlowStep: state.flowNodes.length - 1,
-              };
-            }
-            // If we arrived here via a branch jump, unwind the jump (return to
-            // the step before the branch) rather than stepping linearly into a
-            // node the matched path skipped.
-            const branchReturn = state.branchReturnStack[state.branchReturnStack.length - 1];
-            const isBranchReturn = !!branchReturn && branchReturn.landing === state.currentFlowStep;
-            if (isBranchReturn && branchReturn.step >= 0) {
-              return {
-                currentFlowStep: branchReturn.step,
-                branchReturnStack: state.branchReturnStack.slice(0, -1),
-              };
-            }
-            if (state.currentFlowStep > 0 && !isBranchReturn) {
-              return { currentFlowStep: state.currentFlowStep - 1 };
-            } else {
-              return {
-                experimentId: undefined,
-                experimentLabel: undefined,
-                currentStep: 0,
-                flowNodes: [],
-                currentFlowStep: 0,
-                iterationCount: 0,
-                isFlowFinished: false,
-                isQuestionsSubmitPending: false,
-                scanResult: undefined,
-                protocolId: undefined,
-                cells: [],
-                edges: [],
-                branchVisitCounts: {},
-                lastMatchedPath: undefined,
-                branchReturnStack: [],
-              };
-            }
-          }
-          return { currentStep: Math.max(0, state.currentStep - 1) };
-        }),
-
-      // Route through resetFlow so the persisted slice (flowNodes,
-      // currentFlowStep, iterationCount, scanResult, …) is cleared too.
+      // Route through resetFlow so the persisted slice is cleared too.
       reset: () => get().resetFlow(),
 
       setFlowNodes: (nodes) =>
@@ -215,119 +105,41 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           },
         })),
 
-      // Records where Back should land after a branch jumps to `landing`. Called
-      // with currentFlowStep still on the branch node. A branch reached via a
-      // prior jump (a transparent chained branch) inherits that jump's return
-      // and replaces it; otherwise Back returns to the step before this branch.
-      recordBranchJump: (landing) =>
-        set((state) => {
-          const stack = state.branchReturnStack;
-          const top = stack[stack.length - 1];
-          if (top?.landing === state.currentFlowStep) {
-            return {
-              branchReturnStack: [...stack.slice(0, -1), { landing, step: top.step }],
-            };
-          }
-          return {
-            branchReturnStack: [...stack, { landing, step: state.currentFlowStep - 1 }],
-          };
-        }),
+      recordBranchJump: (landing) => set((state) => recordBranchJumpState(state, landing)),
 
-      resetFlow: () =>
-        set({
-          experimentId: undefined,
-          experimentLabel: undefined,
-          currentStep: 0,
-          flowNodes: [],
-          currentFlowStep: 0,
-          iterationCount: 0,
-          isFlowFinished: false,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          protocolId: undefined,
-          isFromOverview: false,
-          cells: [],
-          edges: [],
-          branchVisitCounts: {},
-          lastMatchedPath: undefined,
-          branchReturnStack: [],
-        }),
+      resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      startNewIteration: () =>
-        set((state) => ({
-          currentFlowStep: 0,
-          iterationCount: state.iterationCount + 1,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          isFromOverview: false,
-          branchVisitCounts: {},
-          lastMatchedPath: undefined,
-          branchReturnStack: [],
-        })),
+      startNewIteration: () => set(startNewIterationState),
 
-      retryCurrentIteration: () =>
-        set(() => ({
-          currentFlowStep: 0,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          isFromOverview: false,
-          branchVisitCounts: {},
-          lastMatchedPath: undefined,
-          branchReturnStack: [],
-        })),
+      retryCurrentIteration: () => set(retryIterationState()),
 
-      finishFlow: () =>
-        set((state) => ({
-          currentFlowStep: state.flowNodes.length,
-          isFlowFinished: true,
-          isQuestionsSubmitPending: false,
-          isFromOverview: false,
-        })),
+      finishFlow: () => set(finishFlowState),
 
       setScanResult: (result) => set({ scanResult: result }),
+      setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () =>
-        set((state) => ({
-          isQuestionsSubmitPending: false,
-          currentFlowStep: 0,
-          iterationCount: state.iterationCount + 1,
-          scanResult: undefined,
-          branchVisitCounts: {},
-          lastMatchedPath: undefined,
-          branchReturnStack: [],
-        })),
+      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
 
       navigateToQuestionFromOverview: (questionIndex) =>
-        set({
-          currentFlowStep: questionIndex,
-          isFromOverview: true,
-          isQuestionsSubmitPending: false,
-          branchReturnStack: [],
-        }),
+        set(navigateToQuestionFromOverviewState(questionIndex)),
 
-      returnToOverview: () =>
-        set((state) => {
-          if (isQuestionsOnlyFlow(state.flowNodes)) {
-            return {
-              isQuestionsSubmitPending: true,
-              isFromOverview: false,
-              branchReturnStack: [],
-            };
-          }
-          return {
-            currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-            isFromOverview: false,
-            branchReturnStack: [],
-          };
-        }),
+      returnToOverview: () => set(returnToOverviewState),
     }),
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // v0 wire format, pinned by flow-store-persistence.test.ts. NEVER
+      // rename/remove a field without bumping `version` + a real `migrate`:
+      // zustand silently DROPS persisted state on version mismatch, wiping a
+      // researcher's paused flow.
+      version: 0,
+      migrate: (persisted) => persisted as MeasurementFlowStore,
+      // protocolId was dropped from the persisted slice (now derived from
+      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
+      // as an ignored extra key.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
-        protocolId: state.protocolId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

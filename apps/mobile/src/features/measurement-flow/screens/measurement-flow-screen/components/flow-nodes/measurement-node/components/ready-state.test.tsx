@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { ReadyState } from "./ready-state";
 
@@ -37,7 +37,6 @@ const makeInstruction = (id: string): FlowNode =>
 beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
-    protocolId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,

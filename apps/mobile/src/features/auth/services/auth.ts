@@ -18,3 +18,11 @@ export function getAuthClient() {
 
   return authClients[backendUri];
 }
+
+// Tests that swap BACKEND_URI or assert client construction reset here
+// (same convention as aws-iot-auth's _reset*ForTests).
+export function _resetAuthClientsForTests(): void {
+  for (const key of Object.keys(authClients)) {
+    delete authClients[key];
+  }
+}

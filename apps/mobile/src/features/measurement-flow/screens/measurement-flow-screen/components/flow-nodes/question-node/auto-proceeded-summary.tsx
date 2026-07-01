@@ -11,39 +11,21 @@ interface AutoProceededSummaryProps {
   iterationCount: number;
 }
 
-// The banner is anchored to whichever question node was the first not remembered question at the start of
-// the iteration. This anchor is cached so that toggling "remember answer" or navigating to the
-// overview and back does not move the banner to a different question mid-iteration.
-// The banner content (which auto-proceeded questions exist and their current answers) and its
-// visibility remain fully dynamic, so the banner disappears if there are no auto-proceeded answers.
-let cachedForIteration = -1;
-let cachedFirstManualNodeId: string | undefined;
-
-export function getCachedFirstManualNodeId(iterationCount: number): string | undefined {
-  if (cachedForIteration === iterationCount) {
-    return cachedFirstManualNodeId;
-  }
-
-  const { flowNodes } = useMeasurementFlowStore.getState();
-  const { isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore.getState();
-
-  const questionNodes = flowNodes.filter((n) => n.type === "question");
-  const manualNodes = questionNodes.filter(
-    (n) => !isAutoincrementEnabled(n.id) && !isRememberAnswerEnabled(n.id),
-  );
-
-  cachedForIteration = iterationCount;
-  cachedFirstManualNodeId = manualNodes[0]?.id;
-  return cachedFirstManualNodeId;
-}
-
+// The banner is anchored to whichever question node was the first manual
+// question at the start of the iteration. useIterationStateSync computes the
+// anchor once per iteration (store field `iterationAnchor`), so toggling
+// "remember answer" or navigating to the overview and back does not move the
+// banner mid-iteration. The banner content (which auto-proceeded questions
+// exist and their current answers) remains fully dynamic, so the banner
+// disappears if there are no auto-proceeded answers.
 export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProceededSummaryProps) {
   const { flowNodes } = useMeasurementFlowStore();
+  const anchor = useMeasurementFlowStore((s) => s.iterationAnchor);
   const { getAnswer, isAutoincrementEnabled } = useFlowAnswersStore();
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
 
-  const firstManualNodeId = getCachedFirstManualNodeId(iterationCount);
+  const firstManualNodeId = anchor?.iteration === iterationCount ? anchor.nodeId : undefined;
 
   const autoProceededWithAnswers = flowNodes
     .filter((n) => n.type === "question" && isAutoincrementEnabled(n.id))

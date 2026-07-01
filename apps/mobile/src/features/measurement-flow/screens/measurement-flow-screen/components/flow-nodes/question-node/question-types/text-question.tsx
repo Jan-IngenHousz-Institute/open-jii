@@ -1,9 +1,8 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { QuestionContent } from "~/shared/measurements/flow-node";
 import { Input } from "~/shared/ui/Input";
-
-import { QuestionContent } from "../../../../types";
 
 interface TextQuestionProps {
   content: QuestionContent;

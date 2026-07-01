@@ -22,6 +22,7 @@ vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementsList: mockGetMeasurementsList,
   countMeasurementsByStatus: mockCountMeasurementsByStatus,
   getMeasurementById: mockGetMeasurementById,
+  UNSYNCED_STATUSES: ["pending", "failed"],
 }));
 
 let queryClient: QueryClient;

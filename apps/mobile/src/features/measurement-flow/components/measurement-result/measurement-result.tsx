@@ -7,9 +7,9 @@ import { applyMacro } from "~/features/measurement-flow/utils/process-scan/proce
 import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { Chart } from "~/shared/ui/measurement/chart";
+import { KeyValue } from "~/shared/ui/measurement/key-value";
 
-import { Chart } from "./components/chart";
-import { KeyValue } from "./components/key-value";
 import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
 
 type TabKey = "result" | "raw";

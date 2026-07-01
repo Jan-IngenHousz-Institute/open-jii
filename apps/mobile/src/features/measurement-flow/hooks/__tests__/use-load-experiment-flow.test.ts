@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
