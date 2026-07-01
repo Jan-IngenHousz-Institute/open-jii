@@ -3,8 +3,8 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/experiment.schema";
 import { experimentTransferRequestsContract } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.contract";
+import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";

@@ -4,7 +4,7 @@ import {
   zExperimentCreateTransferRequestBody,
   zExperimentTransferRequest,
   zExperimentTransferRequestList,
-} from "../experiment.schema";
+} from "./experiment-transfer-requests.schema";
 
 export const experimentTransferRequestsContract = {
   createTransferRequest: oc

@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
 import TransferRequestHistoryPage from "./page";
 

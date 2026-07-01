@@ -4,7 +4,7 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentCreateTransferRequestBody,
   ExperimentTransferRequest,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
