@@ -2,7 +2,7 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { ExperimentChartFamily } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentChartFamily } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 export const useExperimentVisualizations = ({
   experimentId,

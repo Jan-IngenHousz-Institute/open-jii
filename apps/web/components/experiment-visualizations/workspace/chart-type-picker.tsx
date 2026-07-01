@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import type {
   ExperimentChartFamily,
   ExperimentChartType,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";

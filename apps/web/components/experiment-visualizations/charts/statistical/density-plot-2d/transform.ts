@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { coerceCell } from "../../data/cell-coercion";
 import { dataSourcesByRole } from "../../data/data-sources";

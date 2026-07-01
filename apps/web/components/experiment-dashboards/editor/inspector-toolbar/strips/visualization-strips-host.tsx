@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 

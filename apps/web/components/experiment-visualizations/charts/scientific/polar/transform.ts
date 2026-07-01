@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { PolarSeriesData } from "@repo/ui/components/charts/polar";
 
 import type { ChartFormConfig } from "../../chart-config";

@@ -7,7 +7,7 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/exp
 import type {
   ExperimentSeriesAxis,
   ExperimentSeriesTraceType,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";

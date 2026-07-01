@@ -19,7 +19,6 @@ import type {
   Experiment,
   ExperimentAccess,
   ExperimentDashboard,
-  ExperimentVisualization,
   ExperimentExportRecord,
   ExperimentFilterWidget,
   ExperimentFlowGraph,
@@ -32,6 +31,7 @@ import type {
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentChartType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {

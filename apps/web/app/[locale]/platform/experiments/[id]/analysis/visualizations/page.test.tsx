@@ -5,7 +5,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import VisualizationsPage from "./page";
 

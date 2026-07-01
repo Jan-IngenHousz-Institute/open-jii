@@ -1,7 +1,7 @@
 import type {
   ExperimentDataSourceConfig,
   ExperimentRole,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import type { ChartFormDataConfig } from "../chart-config";
 

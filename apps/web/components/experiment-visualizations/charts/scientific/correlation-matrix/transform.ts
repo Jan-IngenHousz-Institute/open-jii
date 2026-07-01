@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { aliasForCorrelationPair } from "../../data/correlation-alias";
 import { dataSourcesByRole } from "../../data/data-sources";

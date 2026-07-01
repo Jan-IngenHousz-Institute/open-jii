@@ -6,7 +6,7 @@ import type {
   ExperimentChartType,
   ExperimentDataSourceConfig,
   ExperimentRole,
-} from "../experiment.schema";
+} from "./experiment-visualizations.schema";
 
 /**
  * Registry-driven role contracts for chart `dataConfig`. The wire format

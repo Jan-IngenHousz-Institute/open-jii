@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentChartType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {

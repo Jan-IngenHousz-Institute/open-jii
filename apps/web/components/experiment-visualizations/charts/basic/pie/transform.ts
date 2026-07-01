@@ -1,5 +1,5 @@
 import type { ExperimentDataAggregation } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { PieSeriesData } from "@repo/ui/components/charts/pie-chart";
 
 import type { ChartFormConfig } from "../../chart-config";

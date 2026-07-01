@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { AlluvialSeriesData } from "@repo/ui/components/charts/parallel-coordinates";
 
 import type { ChartFormConfig } from "../../chart-config";

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { CartesianChart } from "@repo/ui/components/charts/cartesian-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 

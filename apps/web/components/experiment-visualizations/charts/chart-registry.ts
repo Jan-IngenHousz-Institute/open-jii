@@ -1,7 +1,7 @@
 import type {
   ExperimentChartFamily,
   ExperimentChartType,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { areaChartType } from "./basic/area";
 import { barChartType } from "./basic/bar";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import type { ChartFormConfig } from "../../chart-config";
 import { transformContourData } from "./transform";

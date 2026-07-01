@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 

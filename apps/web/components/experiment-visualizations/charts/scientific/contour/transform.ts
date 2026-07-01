@@ -1,4 +1,4 @@
-import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { ContourSeriesData } from "@repo/ui/components/charts/contour";
 
 import type { ChartFormConfig } from "../../chart-config";

@@ -11,7 +11,7 @@ import type {
   ExperimentChartFamily,
   ExperimentChartType,
   ExperimentVisualization,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,

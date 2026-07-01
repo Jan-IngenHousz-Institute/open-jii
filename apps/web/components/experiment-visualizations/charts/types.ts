@@ -6,7 +6,7 @@ import type {
   ExperimentChartFamily,
   ExperimentChartType,
   ExperimentVisualization,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./chart-config";
 

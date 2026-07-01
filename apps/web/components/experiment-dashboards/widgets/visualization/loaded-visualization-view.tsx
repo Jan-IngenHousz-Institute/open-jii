@@ -4,10 +4,8 @@ import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisu
 import { AlertCircle } from "lucide-react";
 import { useMemo } from "react";
 
-import type {
-  ExperimentVisualization,
-  ExperimentVisualizationWidget,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 import ExperimentVisualizationRenderer from "../../../experiment-visualizations/experiment-visualization-renderer";

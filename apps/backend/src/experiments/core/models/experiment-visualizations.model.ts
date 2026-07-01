@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   zExperimentChartConfig,
   zExperimentChartDataConfig,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { experimentVisualizations } from "@repo/database";
 
 // Create schemas for database operations

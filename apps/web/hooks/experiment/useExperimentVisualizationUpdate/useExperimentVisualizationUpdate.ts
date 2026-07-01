@@ -1,7 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 interface ExperimentVisualizationUpdateProps {
   experimentId: string;

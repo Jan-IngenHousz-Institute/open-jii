@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 import type { ChartFormValues } from "../../../experiment-visualizations/charts/chart-config";
