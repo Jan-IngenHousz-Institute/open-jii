@@ -375,12 +375,11 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name = "open-jii-${var.environment}-metastore-access"
-  role_name       = "open-jii-${var.environment}-uc-access"
-  environment     = var.environment
-  bucket_name     = var.centralized_metastore_bucket_name
-  isolation_mode  = "ISOLATION_MODE_OPEN"
-
+  credential_name        = "open-jii-${var.environment}-metastore-access"
+  role_name              = "open-jii-${var.environment}-uc-access"
+  environment            = var.environment
+  bucket_name            = var.centralized_metastore_bucket_name
+  isolation_mode         = "ISOLATION_MODE_OPEN"
   additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
 
   providers = {
@@ -388,6 +387,33 @@ module "storage_credential" {
   }
 
   depends_on = [module.databricks_workspace]
+}
+
+# UC external location for the large-iot/ S3 prefix so the DLT pipeline
+# can access it under Unity Catalog governance.
+module "large_iot_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "large-iot-${var.environment}"
+  bucket_name             = module.large_iot_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
 }
 
 # Create external location for this environment
@@ -401,6 +427,7 @@ module "external_location" {
   environment             = var.environment
   comment                 = "External location for ${var.environment} environment data"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
+  read_only               = true
 
   grants = {
     node_service_principal = {
@@ -409,32 +436,6 @@ module "external_location" {
         "READ_FILES",
         "WRITE_FILES"
       ]
-    }
-  }
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.storage_credential]
-}
-
-module "large_iot_external_location" {
-  source = "../../modules/databricks/external-location"
-
-  external_location_name  = "large-iot-${var.environment}"
-  bucket_name             = module.large_iot_s3.bucket_id
-  external_location_path  = ""
-  storage_credential_name = module.storage_credential.storage_credential_name
-  environment             = var.environment
-  comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
-  isolation_mode          = "ISOLATION_MODE_ISOLATED"
-  read_only               = true
-
-  grants = {
-    node_service_principal = {
-      principal  = module.node_service_principal.service_principal_application_id
-      privileges = ["READ_FILES"]
     }
   }
 
