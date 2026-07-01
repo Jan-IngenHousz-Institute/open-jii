@@ -1,0 +1,27 @@
+{
+  "name": "@repo/spike-xstate-workbook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Spike: turn an openJII workbook (passed as-is) into a dynamic XState v5 machine that drives the measurement flow.",
+  "scripts": {
+    "demo": "tsx src/run-demo.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/api": "workspace:*",
+    "@repo/iot": "workspace:*",
+    "xstate": "^5.18.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
+  }
+}

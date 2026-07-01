@@ -1503,6 +1503,40 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
 
+  spikes/xstate-workbook:
+    dependencies:
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@repo/iot':
+        specifier: workspace:*
+        version: link:../../packages/iot
+      xstate:
+        specifier: ^5.18.2
+        version: 5.32.2
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.19.15
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: catalog:testing
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0)(msw@2.13.3(@types/node@22.19.15)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
   tooling/eslint:
     dependencies:
       '@eslint/compat':
@@ -18347,6 +18381,9 @@ packages:
 
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
+
+  xstate@5.32.2:
+    resolution: {integrity: sha512-uDrojEQYYb4cEeB/SpKDBQlnL2969N5ltmVak4jUMUC6VVRuhi7PCnTBxe4YlQ8YLzdaOEOuVR48CRQPE2o0Uw==}
 
   xtend@2.2.0:
     resolution: {integrity: sha512-SLt5uylT+4aoXxXuwtQp5ZnMMzhDb1Xkg4pEqc00WUJCQifPfV9Ub1VrNhp9kXkrjZD2I2Hl8WnjP37jzZLPZw==}
@@ -38960,6 +38997,8 @@ snapshots:
   xmlbuilder@15.1.1: {}
 
   xmlchars@2.2.0: {}
+
+  xstate@5.32.2: {}
 
   xtend@2.2.0: {}
 
