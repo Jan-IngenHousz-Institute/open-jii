@@ -5,8 +5,8 @@ import type {
   MacroCell,
   ProtocolCell,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
-import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
 /**
  * Hydrates each measurement/analysis node with its protocol/macro (snapshot code

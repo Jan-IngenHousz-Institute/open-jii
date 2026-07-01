@@ -11,10 +11,35 @@ const { mockListExperiments, mockGetWorkbookVersion } = vi.hoisted(() => ({
   mockGetWorkbookVersion: vi.fn(),
 }));
 
-vi.mock("~/shared/api/tsr", () => ({
-  tsr: {
-    experiments: { listExperiments: { query: (...a: unknown[]) => mockListExperiments(...a) } },
-    workbooks: { getWorkbookVersion: { query: (...a: unknown[]) => mockGetWorkbookVersion(...a) } },
+// The hook fetches via `orpc.<endpoint>.queryOptions(...)` and reads the cache
+// via `orpc.<endpoint>.queryKey(...)`; the mock keeps both on stable keys so the
+// real QueryClient cache lines up with the hook's reads/writes.
+vi.mock("~/shared/api/orpc", () => ({
+  orpc: {
+    experiments: {
+      listExperiments: {
+        queryKey: () => ["experiments"],
+        queryOptions: ({ input, ...opts }: { input: unknown }) => ({
+          queryKey: ["experiments"],
+          queryFn: () => mockListExperiments(input),
+          ...opts,
+        }),
+      },
+    },
+    workbooks: {
+      getWorkbookVersion: {
+        queryKey: ({ input }: { input: { id: string; versionId: string } }) => [
+          "workbook-version",
+          input.id,
+          input.versionId,
+        ],
+        queryOptions: ({ input, ...opts }: { input: { id: string; versionId: string } }) => ({
+          queryKey: ["workbook-version", input.id, input.versionId],
+          queryFn: () => mockGetWorkbookVersion(input),
+          ...opts,
+        }),
+      },
+    },
   },
 }));
 
@@ -29,9 +54,9 @@ function wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  mockListExperiments.mockResolvedValue({ body: [REF] });
-  mockGetWorkbookVersion.mockImplementation(({ params }: any) =>
-    Promise.resolve({ body: { id: params.versionId, cells: [], entitySnapshots: {} } }),
+  mockListExperiments.mockResolvedValue([REF]);
+  mockGetWorkbookVersion.mockImplementation((input: { versionId: string }) =>
+    Promise.resolve({ id: input.versionId, cells: [], entitySnapshots: {} }),
   );
 });
 
@@ -41,7 +66,7 @@ afterEach(() => {
 
 describe("usePrecachedExperimentData", () => {
   it("caches the workbook version when the experiments list is already cached", async () => {
-    queryClient.setQueryData(["experiments"], { body: [REF] });
+    queryClient.setQueryData(["experiments"], [REF]);
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
 
@@ -61,7 +86,7 @@ describe("usePrecachedExperimentData", () => {
   });
 
   it("ends in an error state when the workbook version fetch fails", async () => {
-    queryClient.setQueryData(["experiments"], { body: [REF] });
+    queryClient.setQueryData(["experiments"], [REF]);
     mockGetWorkbookVersion.mockRejectedValue(new Error("offline"));
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
@@ -71,7 +96,7 @@ describe("usePrecachedExperimentData", () => {
   });
 
   it("recovers on refetch once the version fetch succeeds (reconnect path)", async () => {
-    queryClient.setQueryData(["experiments"], { body: [REF] });
+    queryClient.setQueryData(["experiments"], [REF]);
     mockGetWorkbookVersion.mockRejectedValueOnce(new Error("offline"));
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
@@ -84,9 +109,10 @@ describe("usePrecachedExperimentData", () => {
   });
 
   it("errors when the experiment has no workbook version", async () => {
-    queryClient.setQueryData(["experiments"], {
-      body: [{ id: "exp-1", workbookId: null, workbookVersionId: null }],
-    });
+    queryClient.setQueryData(
+      ["experiments"],
+      [{ id: "exp-1", workbookId: null, workbookVersionId: null }],
+    );
 
     const { result } = renderHook(() => usePrecachedExperimentData("exp-1"), { wrapper });
 
