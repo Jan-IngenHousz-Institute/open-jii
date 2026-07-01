@@ -29,9 +29,11 @@ catalogs:
     "@orpc/client": 1.14.6
     "@orpc/contract": 1.14.6
     "@orpc/nest": 1.14.6
+    "@orpc/openapi": 1.14.6
     "@orpc/openapi-client": 1.14.6
     "@orpc/server": 1.14.6
     "@orpc/tanstack-query": 1.14.6
+    "@orpc/zod": 1.14.6
   react19:
     react: 19.2.4
     react-dom: 19.2.4

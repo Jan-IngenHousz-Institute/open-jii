@@ -80,6 +80,9 @@ catalogs:
     '@orpc/nest':
       specifier: 1.14.6
       version: 1.14.6
+    '@orpc/openapi':
+      specifier: 1.14.6
+      version: 1.14.6
     '@orpc/openapi-client':
       specifier: 1.14.6
       version: 1.14.6
@@ -87,6 +90,9 @@ catalogs:
       specifier: 1.14.6
       version: 1.14.6
     '@orpc/tanstack-query':
+      specifier: 1.14.6
+      version: 1.14.6
+    '@orpc/zod':
       specifier: 1.14.6
       version: 1.14.6
   react-query:
@@ -1081,12 +1087,15 @@ importers:
       '@orpc/contract':
         specifier: catalog:orpc
         version: 1.14.6(@opentelemetry/api@1.9.1)
+      '@orpc/openapi':
+        specifier: catalog:orpc
+        version: 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/zod':
+        specifier: catalog:orpc
+        version: 1.14.6(@opentelemetry/api@1.9.1)(@orpc/contract@1.14.6(@opentelemetry/api@1.9.1))(@orpc/server@1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@3.25.76)
       '@ts-rest/core':
         specifier: ^3.52.1
         version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
-      '@ts-rest/open-api':
-        specifier: ^3.52.1
-        version: 3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(zod@3.25.76)
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -1790,12 +1799,6 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
-
-  '@anatine/zod-openapi@1.14.2':
-    resolution: {integrity: sha512-q0qHfnuNYVKu0Swrnnvfj9971AEyW7c8v9jCOZGCl5ZbyGMNG4RPyJkRcMi/JC8CRfdOe0IDfNm1nNsi2avprg==}
-    peerDependencies:
-      openapi3-ts: ^2.0.0 || ^3.0.0
-      zod: ^3.20.0
 
   '@angular-devkit/core@19.2.23':
     resolution: {integrity: sha512-RazHPQkUEsNU/OZ75w9UeHxGFMthRiuAW2B/uA7eXExBj/1meHrrBfoCA56ujW2GUxVjRtSrMjylKh4R4meiYA==}
@@ -5974,6 +5977,9 @@ packages:
   '@orpc/interop@1.14.6':
     resolution: {integrity: sha512-ZjNaHH9754uUkC98DHfm9HaGnniFnFRLdXXBWL2u+o1TVzEbiNX8dA5+oChxoSTUD3GiwpjLjAuTWXvrbhm4fA==}
 
+  '@orpc/json-schema@1.14.6':
+    resolution: {integrity: sha512-p79GOJ88DpOTsOaAQ8Ef/2J5455Yh2qp3KjY9q6858RozHuPSXHu7MSgE/bilkzbiuGNoen3frw7GSiKfYpKSA==}
+
   '@orpc/nest@1.14.6':
     resolution: {integrity: sha512-otuw0ixoneZ5gyglW0UervdPHfbLpjYh7Xnt13IQ4qFHrnV9v1IZLPGbhl5XE9EV7LTvhJooOd15ljsSYYAYWw==}
     peerDependencies:
@@ -6041,6 +6047,13 @@ packages:
     peerDependencies:
       '@orpc/client': 1.14.6
       '@tanstack/query-core': '>=5.80.2'
+
+  '@orpc/zod@1.14.6':
+    resolution: {integrity: sha512-skGc5Qj6BLy3ir+VgYZZBJFlxDVAYoJPVymVPEOLawEVSf2mje0/oMPiaQJE4+CyVRSIXUHG8MoQnW0X1OoQ5w==}
+    peerDependencies:
+      '@orpc/contract': 1.14.6
+      '@orpc/server': 1.14.6
+      zod: '>=3.25.0'
 
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
@@ -8018,12 +8031,6 @@ packages:
         optional: true
       zod:
         optional: true
-
-  '@ts-rest/open-api@3.52.1':
-    resolution: {integrity: sha512-VY91g6HFzCe1/fNgX4Y3HzaJbIdztCGHTg34drkh7bKgtNOizLJLXV0wwIkMwLGvjhRHojJxnwYxHjGMIkScwg==}
-    peerDependencies:
-      '@ts-rest/core': ~3.52.0
-      zod: ^3.22.3
 
   '@tsconfig/node10@1.0.12':
     resolution: {integrity: sha512-UCYBaeFvM11aU2y3YPZ//O5Rhj+xKyzy7mvcIoAjASbigy8mHMryP5cK7dgjlz2hWxh1g5pLw084E0a/wlUSFQ==}
@@ -14665,9 +14672,6 @@ packages:
   openapi-types@12.1.3:
     resolution: {integrity: sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw==}
 
-  openapi3-ts@2.0.2:
-    resolution: {integrity: sha512-TxhYBMoqx9frXyOgnRHufjQfPXomTIHYKhSKJ6jHfj13kS8OEIhvmE8CTuQyKtjjWttAjX5DPxM1vmalEpo8Qw==}
-
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
     hasBin: true
@@ -17608,10 +17612,6 @@ packages:
     resolution: {integrity: sha512-q5W7tVM71e2xjHZTlgfTDoPF/SmqKG5hddq9SzR49CH2hayqRKJtQ4mtRlSxKaJlR/+9rEM+mnBHf7I2/BQcpQ==}
     engines: {node: '>=6.10'}
 
-  ts-deepmerge@6.2.1:
-    resolution: {integrity: sha512-8CYSLazCyj0DJDpPIxOFzJG46r93uh6EynYjuey+bxcLltBeqZL7DMfaE5ZPzZNFlav7wx+2TDa/mBl8gkTYzw==}
-    engines: {node: '>=14.13.1'}
-
   ts-loader@9.5.4:
     resolution: {integrity: sha512-nCz0rEwunlTZiy6rXFByQU1kVVpCIgUpc/psFiKVrUwrizdnIbRFu8w7bxhUF0X613DYwT4XzrZHpVyMe758hQ==}
     engines: {node: '>=12.0.0'}
@@ -18338,6 +18338,9 @@ packages:
     resolution: {integrity: sha512-o0cyEG0e8GPzT4iGHphIOh0cJOV8fivsXxddQasHPHfoZf1ZexrfeA21w2NaEN1RHE+fXlfISmOE8R9N3u3Qig==}
     engines: {node: '>=12'}
 
+  wildcard-match@5.1.4:
+    resolution: {integrity: sha512-wldeCaczs8XXq7hj+5d/F38JE2r7EXgb6WQDM84RVwxy81T/sxB5e9+uZLK9Q9oNz1mlvjut+QtvgaOQFPVq/g==}
+
   wildcard@2.0.1:
     resolution: {integrity: sha512-CC1bOL87PIWSBhDcTrdeLo6eGT7mCFtrg0uIJtqJUFyK+eJnzl8A1niH56uu7KMa5XFrtiV+AQuHO3n7DsHnLQ==}
 
@@ -18719,12 +18722,6 @@ snapshots:
       '@algolia/client-common': 5.50.1
 
   '@alloc/quick-lru@5.2.0': {}
-
-  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@3.25.76)':
-    dependencies:
-      openapi3-ts: 2.0.2
-      ts-deepmerge: 6.2.1
-      zod: 3.25.76
 
   '@angular-devkit/core@19.2.23(chokidar@4.0.3)':
     dependencies:
@@ -24022,6 +24019,20 @@ snapshots:
 
   '@orpc/interop@1.14.6': {}
 
+  '@orpc/json-schema@1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)':
+    dependencies:
+      '@orpc/contract': 1.14.6(@opentelemetry/api@1.9.1)
+      '@orpc/interop': 1.14.6
+      '@orpc/openapi': 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/server': 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/shared': 1.14.6(@opentelemetry/api@1.9.1)
+      json-schema-typed: 8.0.2
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - crossws
+      - fastify
+      - ws
+
   '@orpc/nest@1.14.6(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(@opentelemetry/api@1.9.1)(express@5.2.1)(rxjs@7.8.2)(ws@8.21.0)':
     dependencies:
       '@nestjs/common': 11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -24148,6 +24159,22 @@ snapshots:
       '@tanstack/query-core': 5.95.2
     transitivePeerDependencies:
       - '@opentelemetry/api'
+
+  '@orpc/zod@1.14.6(@opentelemetry/api@1.9.1)(@orpc/contract@1.14.6(@opentelemetry/api@1.9.1))(@orpc/server@1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@3.25.76)':
+    dependencies:
+      '@orpc/contract': 1.14.6(@opentelemetry/api@1.9.1)
+      '@orpc/json-schema': 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/openapi': 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/server': 1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0)
+      '@orpc/shared': 1.14.6(@opentelemetry/api@1.9.1)
+      escape-string-regexp: 5.0.0
+      wildcard-match: 5.1.4
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - crossws
+      - fastify
+      - ws
 
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
@@ -26591,13 +26618,6 @@ snapshots:
   '@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76)':
     optionalDependencies:
       '@types/node': 22.19.15
-      zod: 3.25.76
-
-  '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76))(zod@3.25.76)':
-    dependencies:
-      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@3.25.76)
-      '@ts-rest/core': 3.52.1(@types/node@22.19.15)(zod@3.25.76)
-      openapi3-ts: 2.0.2
       zod: 3.25.76
 
   '@tsconfig/node10@1.0.12': {}
@@ -34644,10 +34664,6 @@ snapshots:
 
   openapi-types@12.1.3: {}
 
-  openapi3-ts@2.0.2:
-    dependencies:
-      yaml: 1.10.3
-
   opener@1.5.2: {}
 
   optionator@0.9.4:
@@ -38167,8 +38183,6 @@ snapshots:
 
   ts-dedent@2.2.0: {}
 
-  ts-deepmerge@6.2.1: {}
-
   ts-loader@9.5.4(typescript@5.9.3)(webpack@5.106.0(@swc/core@1.15.21)):
     dependencies:
       chalk: 4.1.2
@@ -39090,6 +39104,8 @@ snapshots:
   widest-line@4.0.1:
     dependencies:
       string-width: 5.1.2
+
+  wildcard-match@5.1.4: {}
 
   wildcard@2.0.1: {}
 
