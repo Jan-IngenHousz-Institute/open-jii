@@ -1,11 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type {
   ExperimentMemberList,
   TransferExperimentAdminResponse,
 } from "@repo/api/domains/experiment/experiment.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success } from "../../common/utils/fp-utils";
@@ -53,7 +53,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Get the list path
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -84,7 +84,7 @@ describe("ExperimentMembersOrpcController", () => {
     });
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: nonExistentId,
       });
 
@@ -99,7 +99,7 @@ describe("ExperimentMembersOrpcController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: invalidId,
       });
 
@@ -112,7 +112,7 @@ describe("ExperimentMembersOrpcController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -138,7 +138,7 @@ describe("ExperimentMembersOrpcController", () => {
       vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -163,7 +163,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
 
       // Verify with a list request
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -194,7 +194,7 @@ describe("ExperimentMembersOrpcController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: nonExistentId,
       });
 
@@ -215,7 +215,7 @@ describe("ExperimentMembersOrpcController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -250,7 +250,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Try to add the same member again
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -269,7 +269,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
 
       // Try to add self again
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -290,7 +290,7 @@ describe("ExperimentMembersOrpcController", () => {
         email: "new-member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -315,7 +315,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Verify there are 2 members
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       let listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
@@ -325,7 +325,7 @@ describe("ExperimentMembersOrpcController", () => {
       expect(listResponse.body).toHaveLength(2);
 
       // Remove the member
-      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const removePath = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -344,7 +344,7 @@ describe("ExperimentMembersOrpcController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: nonExistentId,
         memberId: memberId,
       });
@@ -368,7 +368,7 @@ describe("ExperimentMembersOrpcController", () => {
       // Use a non-existent member ID
       const nonExistentMemberId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: nonExistentMemberId,
       });
@@ -384,7 +384,7 @@ describe("ExperimentMembersOrpcController", () => {
 
     it("should return 400 for invalid UUIDs", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: invalidId,
         memberId: "also-not-a-uuid",
       });
@@ -397,8 +397,8 @@ describe("ExperimentMembersOrpcController", () => {
         userId: testUserId,
       });
 
-      const pathWithInvalidMember = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
+      const pathWithInvalidMember = testApp.resolveOrpcPath(
+        orpcContract.experiments.removeExperimentMember,
         {
           id: experiment.id,
           memberId: "not-a-valid-uuid",
@@ -419,7 +419,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
 
       // Attempt to remove self (the only admin)
-      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: testUserId,
       });
@@ -444,7 +444,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const removePath = testApp.resolveOrpcPath(orpcContract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -468,7 +468,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Update the member's role to admin
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -489,7 +489,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
 
       // Verify with a list request
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -516,7 +516,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, adminId, "admin");
 
       // Demote the admin to member
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: adminId,
       });
@@ -543,7 +543,7 @@ describe("ExperimentMembersOrpcController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: nonExistentId,
         memberId: memberId,
       });
@@ -571,7 +571,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -586,7 +586,7 @@ describe("ExperimentMembersOrpcController", () => {
 
     it("should return 400 for invalid UUIDs", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: invalidId,
         memberId: "also-not-a-uuid",
       });
@@ -603,8 +603,8 @@ describe("ExperimentMembersOrpcController", () => {
         userId: testUserId,
       });
 
-      const pathWithInvalidMember = testApp.resolvePath(
-        contract.experiments.updateExperimentMemberRole.path,
+      const pathWithInvalidMember = testApp.resolveOrpcPath(
+        orpcContract.experiments.updateExperimentMemberRole,
         {
           id: experiment.id,
           memberId: "not-a-valid-uuid",
@@ -626,7 +626,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
 
       // Attempt to demote self (the only admin)
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: testUserId,
       });
@@ -661,7 +661,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Try to update role as non-admin
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -691,7 +691,7 @@ describe("ExperimentMembersOrpcController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Try to update role
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -717,7 +717,7 @@ describe("ExperimentMembersOrpcController", () => {
       });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentMemberRole, {
         id: experiment.id,
         memberId: memberId,
       });
@@ -732,7 +732,7 @@ describe("ExperimentMembersOrpcController", () => {
 
   describe("transferExperimentAdmin", () => {
     const transferPath = () =>
-      testApp.resolvePath(contract.experiments.transferExperimentAdmin.path, {});
+      testApp.resolveOrpcPath(orpcContract.experiments.transferExperimentAdmin, {});
 
     it("should promote an existing member to admin", async () => {
       // Create an experiment - creator is the only admin
@@ -757,7 +757,7 @@ describe("ExperimentMembersOrpcController", () => {
       expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
 
       // Verify the member is now an admin
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
@@ -789,7 +789,7 @@ describe("ExperimentMembersOrpcController", () => {
       expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
 
       // Verify the target was added as an admin
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
@@ -822,7 +822,7 @@ describe("ExperimentMembersOrpcController", () => {
 
       expect(response.body.results).toEqual([{ experimentId: experiment.id, success: true }]);
 
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp

@@ -2,12 +2,14 @@ import { faker } from "@faker-js/faker";
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-return */
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type {
   ExperimentLocationList,
   AddExperimentLocationsBody,
   UpdateExperimentLocationsBody,
+  ExperimentPlaceSearchResponse,
+  ExperimentGeocodeResponse,
 } from "@repo/api/domains/experiment/experiment.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
@@ -76,7 +78,7 @@ describe("ExperimentLocationsOrpcController", () => {
       await locationRepository.createMany(locationsToAdd);
 
       // Get the list path
-      const path = testApp.resolvePath(contract.experiments.getExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.getExperimentLocations, {
         id: experiment.id,
       });
 
@@ -138,7 +140,7 @@ describe("ExperimentLocationsOrpcController", () => {
       });
 
       // Get the list path
-      const path = testApp.resolvePath(contract.experiments.getExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.getExperimentLocations, {
         id: experiment.id,
       });
 
@@ -154,7 +156,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.getExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.getExperimentLocations, {
         id: nonExistentId,
       });
 
@@ -169,7 +171,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(contract.experiments.getExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.getExperimentLocations, {
         id: invalidId,
       });
 
@@ -182,7 +184,7 @@ describe("ExperimentLocationsOrpcController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.getExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.getExperimentLocations, {
         id: experiment.id,
       });
 
@@ -213,7 +215,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentLocations, {
         id: experiment.id,
       });
 
@@ -269,7 +271,7 @@ describe("ExperimentLocationsOrpcController", () => {
         locations: [],
       };
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentLocations, {
         id: experiment.id,
       });
 
@@ -298,7 +300,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentLocations, {
         id: experiment.id,
       });
 
@@ -321,7 +323,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentLocations, {
         id: nonExistentId,
       });
 
@@ -348,7 +350,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.addExperimentLocations, {
         id: experiment.id,
       });
 
@@ -393,7 +395,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentLocations, {
         id: experiment.id,
       });
 
@@ -460,7 +462,7 @@ describe("ExperimentLocationsOrpcController", () => {
         locations: [],
       };
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentLocations, {
         id: experiment.id,
       });
 
@@ -490,7 +492,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentLocations, {
         id: experiment.id,
       });
 
@@ -513,7 +515,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentLocations, {
         id: nonExistentId,
       });
 
@@ -536,7 +538,7 @@ describe("ExperimentLocationsOrpcController", () => {
         ],
       };
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentLocations.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentLocations, {
         id: experiment.id,
       });
 
@@ -573,7 +575,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
       const path = "/api/v1/locations/search";
 
-      const response: SuperTestResponse<typeof contract.experiments.searchPlaces> = await testApp
+      const response: SuperTestResponse<ExperimentPlaceSearchResponse> = await testApp
         .get(path)
         .withAuth(testUserId)
         .query({ query: "New York", maxResults: 10 })
@@ -595,7 +597,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
       const path = "/api/v1/locations/search";
 
-      const response: SuperTestResponse<typeof contract.experiments.searchPlaces> = await testApp
+      const response: SuperTestResponse<ExperimentPlaceSearchResponse> = await testApp
         .get(path)
         .withAuth(testUserId)
         .query({ query: "NonexistentPlace" })
@@ -652,7 +654,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
       const path = "/api/v1/locations/geocode";
 
-      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+      const response: SuperTestResponse<ExperimentGeocodeResponse> = await testApp
         .get(path)
         .withAuth(testUserId)
         .query({ latitude: 40.7128, longitude: -74.006 })
@@ -672,7 +674,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
       const path = "/api/v1/locations/geocode";
 
-      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+      const response: SuperTestResponse<ExperimentGeocodeResponse> = await testApp
         .get(path)
         .withAuth(testUserId)
         .query({ latitude: 0, longitude: 0 })
@@ -713,7 +715,7 @@ describe("ExperimentLocationsOrpcController", () => {
 
       const path = "/api/v1/locations/geocode";
 
-      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+      const response: SuperTestResponse<ExperimentGeocodeResponse> = await testApp
         .get(path)
         .withAuth(testUserId)
         .query({ latitude: -90, longitude: 0 })

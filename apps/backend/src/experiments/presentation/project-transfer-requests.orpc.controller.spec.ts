@@ -1,10 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type {
   ExperimentCreateTransferRequestBody,
   ExperimentTransferRequest,
 } from "@repo/api/domains/experiment/experiment.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -57,7 +57,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
       );
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData: ExperimentCreateTransferRequestBody = {
@@ -80,7 +80,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
 
     it("should return 400 if projectIdOld is missing", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -97,7 +97,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
 
     it("should return 400 if projectUrlOld is missing", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -114,7 +114,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
 
     it("should return 400 if projectUrlOld is not a valid URL", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -132,7 +132,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData: ExperimentCreateTransferRequestBody = {
@@ -180,7 +180,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
       );
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listTransferRequests, {});
 
       // Send the request
       const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
@@ -199,7 +199,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
       vi.spyOn(listTransferRequestsUseCase, "execute").mockResolvedValue(success([]));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listTransferRequests, {});
 
       // Send the request
       const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
@@ -212,7 +212,7 @@ describe("ProjectTransferRequestsOrpcController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(orpcContract.experiments.listTransferRequests, {});
 
       // Send the request
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);

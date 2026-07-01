@@ -1,8 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { macros } from "@repo/database";
 
 import { AppError, failure } from "../../common/utils/fp-utils";
@@ -49,7 +49,7 @@ describe("ProtocolController – createProtocol", () => {
 
     // Act
     const response = await testApp
-      .post(contract.protocols.createProtocol.path)
+      .post(testApp.resolveOrpcPath(orpcContract.protocols.createProtocol))
       .withAuth(testUserId)
       .send(protocolData)
       .expect(StatusCodes.CONFLICT);
@@ -111,7 +111,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro2 = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro1.id, macro2.id]);
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -132,7 +132,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -146,7 +146,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -155,7 +155,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
     it("should return 404 for unknown protocol", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.listCompatibleMacros, {
         id: nonExistentId,
       });
 
@@ -172,7 +172,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -194,7 +194,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -214,7 +214,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const otherUserId = await testApp.createTestUser({ email: "other-ctrl@example.com" });
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -229,7 +229,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.addCompatibleMacros, {
         id: nonExistentId,
       });
 
@@ -251,7 +251,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -259,7 +259,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Verify it was actually removed
-      const listPath = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
       const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
@@ -275,7 +275,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -293,7 +293,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -305,7 +305,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const fakeMacroId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.protocols.removeCompatibleMacro, {
         id: nonExistentId,
         macroId: fakeMacroId,
       });

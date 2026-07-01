@@ -2,8 +2,8 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { contract } from "@repo/api/contract";
 import type { MacroProtocolList } from "@repo/api/domains/macro/macro.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 import { protocols } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -87,7 +87,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .withAuth(testUserId)
         .send(macroData)
         .expect(StatusCodes.CREATED);
@@ -112,7 +112,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .withAuth(testUserId)
         .send(invalidData)
         .expect(StatusCodes.BAD_REQUEST);
@@ -133,7 +133,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .withAuth(testUserId)
         .send(macroData)
         .expect(StatusCodes.CONFLICT);
@@ -159,7 +159,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .withAuth(testUserId)
         .send(macroData)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -175,7 +175,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .send(macroData)
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -202,7 +202,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .get(contract.macros.getMacro.path.replace(":id", mockMacro.id))
+        .get(testApp.resolveOrpcPath(orpcContract.macros.getMacro, { id: mockMacro.id }))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -228,7 +228,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .get(contract.macros.getMacro.path.replace(":id", macroId))
+        .get(testApp.resolveOrpcPath(orpcContract.macros.getMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND);
     });
@@ -236,7 +236,7 @@ describe("MacroOrpcController", () => {
     it("should require authentication", async () => {
       // Act & Assert
       await testApp
-        .get(contract.macros.getMacro.path.replace(":id", faker.string.uuid()))
+        .get(testApp.resolveOrpcPath(orpcContract.macros.getMacro, { id: faker.string.uuid() }))
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
@@ -277,7 +277,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .get(contract.macros.listMacros.path)
+        .get(testApp.resolveOrpcPath(orpcContract.macros.listMacros))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -299,7 +299,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       await testApp
-        .get(contract.macros.listMacros.path)
+        .get(testApp.resolveOrpcPath(orpcContract.macros.listMacros))
         .query({ search: "test", language: "python" })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -322,14 +322,16 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .get(contract.macros.listMacros.path)
+        .get(testApp.resolveOrpcPath(orpcContract.macros.listMacros))
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
     it("should require authentication", async () => {
       // Act & Assert
-      await testApp.get(contract.macros.listMacros.path).expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .get(testApp.resolveOrpcPath(orpcContract.macros.listMacros))
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -360,7 +362,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: macroId }))
         .withAuth(testUserId)
         .send(updateData)
         .expect(StatusCodes.OK);
@@ -391,7 +393,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: macroId }))
         .withAuth(testUserId)
         .send(updateData)
         .expect(StatusCodes.NOT_FOUND);
@@ -422,7 +424,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: macroId }))
         .withAuth(testUserId)
         .send(updateData)
         .expect(StatusCodes.OK);
@@ -443,7 +445,7 @@ describe("MacroOrpcController", () => {
     it("should require authentication", async () => {
       // Act & Assert
       await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", faker.string.uuid()))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: faker.string.uuid() }))
         .send({ name: "Updated Name" })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -461,7 +463,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: macroId }))
         .withAuth(testUserId)
         .send(updateData)
         .expect(StatusCodes.FORBIDDEN);
@@ -482,7 +484,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: macroId }))
         .withAuth(testUserId)
         .send({ data: { trace_1: [1, 2, 3] } })
         .expect(StatusCodes.OK);
@@ -512,7 +514,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       const response = await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: macroId }))
         .withAuth(testUserId)
         .send({ data: { x: 1 } })
         .expect(StatusCodes.OK);
@@ -534,7 +536,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: macroId }))
         .withAuth(testUserId)
         .send({ data: { x: 1 } })
         .expect(StatusCodes.NOT_FOUND);
@@ -549,7 +551,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: macroId }))
         .withAuth(testUserId)
         .send({ data: {} })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -558,7 +560,9 @@ describe("MacroOrpcController", () => {
     it("should require authentication", async () => {
       // Act & Assert
       await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", faker.string.uuid()))
+        .post(
+          testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: faker.string.uuid() }),
+        )
         .send({ data: {} })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -576,7 +580,7 @@ describe("MacroOrpcController", () => {
 
       // Act
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
 
@@ -592,7 +596,7 @@ describe("MacroOrpcController", () => {
       const macroId = faker.string.uuid();
 
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.FORBIDDEN);
     });
@@ -606,7 +610,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND);
     });
@@ -620,7 +624,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -628,7 +632,9 @@ describe("MacroOrpcController", () => {
     it("should require authentication", async () => {
       // Act & Assert
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", faker.string.uuid()))
+        .delete(
+          testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: faker.string.uuid() }),
+        )
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -641,7 +647,7 @@ describe("MacroOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .withAuth(testUserId)
         .expect(StatusCodes.FORBIDDEN);
     });
@@ -653,27 +659,29 @@ describe("MacroOrpcController", () => {
 
       // Test all endpoints without auth
       await testApp
-        .post(contract.macros.createMacro.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.createMacro))
         .send({})
         .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
-        .get(contract.macros.getMacro.path.replace(":id", macroId))
+        .get(testApp.resolveOrpcPath(orpcContract.macros.getMacro, { id: macroId }))
         .expect(StatusCodes.UNAUTHORIZED);
 
-      await testApp.get(contract.macros.listMacros.path).expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .get(testApp.resolveOrpcPath(orpcContract.macros.listMacros))
+        .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
-        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .put(testApp.resolveOrpcPath(orpcContract.macros.updateMacro, { id: macroId }))
         .send({})
         .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
-        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .delete(testApp.resolveOrpcPath(orpcContract.macros.deleteMacro, { id: macroId }))
         .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
-        .post(contract.macros.executeMacro.path.replace(":id", macroId))
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacro, { id: macroId }))
         .send({ data: {} })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -729,7 +737,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const protocol2 = await createTestProtocol(testUserId);
       await macroProtocolRepository.addProtocols(macro.id, [protocol1.id, protocol2.id]);
 
-      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.listCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -750,7 +758,7 @@ describe("MacroController – macro-protocol endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.listCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -764,7 +772,7 @@ describe("MacroController – macro-protocol endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.listCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -773,7 +781,7 @@ describe("MacroController – macro-protocol endpoints", () => {
 
     it("should return 404 for unknown macro", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.listCompatibleProtocols, {
         id: nonExistentId,
       });
 
@@ -790,7 +798,7 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const protocol = await createTestProtocol(testUserId);
 
-      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.addCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -812,7 +820,7 @@ describe("MacroController – macro-protocol endpoints", () => {
 
       const protocol = await createTestProtocol(testUserId);
 
-      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.addCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -832,7 +840,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const otherUserId = await testApp.createTestUser({ email: "other-ctrl@example.com" });
       const protocol = await createTestProtocol(testUserId);
 
-      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.addCompatibleProtocols, {
         id: macro.id,
       });
 
@@ -847,7 +855,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const protocol = await createTestProtocol(testUserId);
 
-      const path = testApp.resolvePath(contract.macros.addCompatibleProtocols.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.addCompatibleProtocols, {
         id: nonExistentId,
       });
 
@@ -869,7 +877,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const protocol = await createTestProtocol(testUserId);
       await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
 
-      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.removeCompatibleProtocol, {
         id: macro.id,
         protocolId: protocol.id,
       });
@@ -877,7 +885,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Verify it was actually removed
-      const listPath = testApp.resolvePath(contract.macros.listCompatibleProtocols.path, {
+      const listPath = testApp.resolveOrpcPath(orpcContract.macros.listCompatibleProtocols, {
         id: macro.id,
       });
       const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
@@ -893,7 +901,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const protocol = await createTestProtocol(testUserId);
       await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
 
-      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.removeCompatibleProtocol, {
         id: macro.id,
         protocolId: protocol.id,
       });
@@ -911,7 +919,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const protocol = await createTestProtocol(testUserId);
       await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
 
-      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.removeCompatibleProtocol, {
         id: macro.id,
         protocolId: protocol.id,
       });
@@ -923,7 +931,7 @@ describe("MacroController – macro-protocol endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const fakeProtocolId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.macros.removeCompatibleProtocol.path, {
+      const path = testApp.resolveOrpcPath(orpcContract.macros.removeCompatibleProtocol, {
         id: nonExistentId,
         protocolId: fakeProtocolId,
       });

@@ -2,12 +2,12 @@ import { faker } from "@faker-js/faker";
 import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type {
   ExperimentProjectTransferWebhookPayload,
   ExperimentProjectTransferWebhookResponse,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
@@ -67,7 +67,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -93,7 +93,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       };
 
       await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
@@ -113,7 +113,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       const timestamp = Math.floor(Date.now() / 1000).toString();
 
       await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", "invalid_signature")
         .set("x-databricks-timestamp", timestamp)
@@ -134,7 +134,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       const { signature, timestamp } = signPayload(payload);
 
       await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -168,7 +168,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -207,7 +207,7 @@ describe("ProjectTransferWebhookOrpcController", () => {
       const { signature, timestamp } = signPayload(webhookPayload);
 
       const response = await testApp
-        .post(contract.experiments.projectTransfer.path)
+        .post(testApp.resolveOrpcPath(orpcContract.experiments.projectTransfer))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)

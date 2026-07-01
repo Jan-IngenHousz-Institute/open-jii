@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -125,7 +125,11 @@ describe("ExperimentVisualizationsOrpcController", () => {
 
       // Act
       const response = await testApp
-        .get(contract.experiments.listExperimentVisualizations.path.replace(":id", experimentId))
+        .get(
+          testApp.resolveOrpcPath(orpcContract.experiments.listExperimentVisualizations, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -151,7 +155,11 @@ describe("ExperimentVisualizationsOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .get(contract.experiments.listExperimentVisualizations.path.replace(":id", experimentId))
+        .get(
+          testApp.resolveOrpcPath(orpcContract.experiments.listExperimentVisualizations, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect((response) => {
@@ -178,7 +186,11 @@ describe("ExperimentVisualizationsOrpcController", () => {
 
       // Act
       const response = await testApp
-        .post(contract.experiments.createExperimentVisualization.path.replace(":id", experimentId))
+        .post(
+          testApp.resolveOrpcPath(orpcContract.experiments.createExperimentVisualization, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .send(visualizationData)
         .expect(StatusCodes.CREATED);
@@ -216,7 +228,11 @@ describe("ExperimentVisualizationsOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.experiments.createExperimentVisualization.path.replace(":id", experimentId))
+        .post(
+          testApp.resolveOrpcPath(orpcContract.experiments.createExperimentVisualization, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .send(invalidData)
         .expect(StatusCodes.BAD_REQUEST);
@@ -236,7 +252,11 @@ describe("ExperimentVisualizationsOrpcController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.experiments.createExperimentVisualization.path.replace(":id", experimentId))
+        .post(
+          testApp.resolveOrpcPath(orpcContract.experiments.createExperimentVisualization, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .send(visualizationData)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -264,9 +284,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act
       const response = await testApp
         .get(
-          contract.experiments.getExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.getExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -292,9 +313,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act & Assert
       await testApp
         .get(
-          contract.experiments.getExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.getExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
@@ -328,9 +350,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act
       const response = await testApp
         .patch(
-          contract.experiments.updateExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .send(updateData)
@@ -362,9 +385,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act & Assert
       await testApp
         .patch(
-          contract.experiments.updateExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.updateExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .send(updateData)
@@ -388,9 +412,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act & Assert
       await testApp
         .delete(
-          contract.experiments.deleteExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.deleteExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
@@ -409,9 +434,10 @@ describe("ExperimentVisualizationsOrpcController", () => {
       // Act & Assert
       await testApp
         .delete(
-          contract.experiments.deleteExperimentVisualization.path
-            .replace(":id", experimentId)
-            .replace(":visualizationId", visualizationId),
+          testApp.resolveOrpcPath(orpcContract.experiments.deleteExperimentVisualization, {
+            id: experimentId,
+            visualizationId: visualizationId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)

@@ -2,12 +2,12 @@ import { faker } from "@faker-js/faker";
 import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
 import type {
   MacroBatchExecutionResponse,
   MacroBatchExecutionWireBody,
   MacroBatchWebhookErrorResponse,
 } from "@repo/api/domains/macro/macro.schema";
+import { orpcContract } from "@repo/api/orpc-contract";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
@@ -77,7 +77,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(requestBody);
 
       const response = await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -110,7 +110,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(requestBody);
 
       const response = await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -136,7 +136,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(requestBody);
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -153,7 +153,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(invalidBody);
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -170,7 +170,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(invalidBody);
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -199,7 +199,7 @@ describe("MacroWebhookOrpcController", () => {
       const { signature, timestamp } = signRequest(requestBody);
 
       const response: SuperTestResponse<MacroBatchExecutionResponse> = await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -218,7 +218,7 @@ describe("MacroWebhookOrpcController", () => {
       };
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .send(requestBody)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: MacroBatchWebhookErrorResponse }) => {
@@ -235,7 +235,7 @@ describe("MacroWebhookOrpcController", () => {
       const timestamp = Math.floor(Date.now() / 1000).toString();
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", "invalid_signature")
         .set("x-databricks-timestamp", timestamp)
@@ -253,7 +253,7 @@ describe("MacroWebhookOrpcController", () => {
       };
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", "some-sig")
         .send(requestBody)
@@ -272,7 +272,7 @@ describe("MacroWebhookOrpcController", () => {
       const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
 
       await testApp
-        .post(contract.macros.executeMacroBatch.path)
+        .post(testApp.resolveOrpcPath(orpcContract.macros.executeMacroBatch))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", staleTimestamp)
