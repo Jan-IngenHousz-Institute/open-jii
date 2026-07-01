@@ -8,7 +8,7 @@ import type {
   TableMetadata,
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,

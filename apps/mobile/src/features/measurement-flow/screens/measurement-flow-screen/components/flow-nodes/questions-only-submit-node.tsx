@@ -18,7 +18,7 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { FlagTypeModal } from "~/shared/ui/measurement/flag-type-modal";
 
-import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { ReadyState } from "./measurement-node/components/ready-state";
 

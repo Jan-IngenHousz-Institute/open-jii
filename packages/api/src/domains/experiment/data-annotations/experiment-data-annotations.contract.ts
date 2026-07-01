@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zExperimentAddAnnotationBody,
   zExperimentAddAnnotationsBulkBody,
@@ -7,9 +8,8 @@ import {
   zExperimentAnnotationDeleteBulkPathParam,
   zExperimentAnnotationPathParam,
   zExperimentAnnotationRowsAffected,
-  zExperimentIdPathParam,
   zExperimentUpdateAnnotationBody,
-} from "../experiment.schema";
+} from "./experiment-data-annotations.schema";
 
 export const experimentDataAnnotationsContract = {
   addAnnotation: oc

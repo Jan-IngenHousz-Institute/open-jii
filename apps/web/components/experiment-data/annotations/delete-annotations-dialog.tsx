@@ -1,7 +1,7 @@
 import React from "react";
 import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

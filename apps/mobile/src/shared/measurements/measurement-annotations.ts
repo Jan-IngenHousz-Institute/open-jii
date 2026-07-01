@@ -2,7 +2,7 @@
  * Helpers for measurement annotations (comments) compatible with the pipeline
  * (centrum_pipeline expects annotations array with type "comment", content: { text, flagType }).
  */
-import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 export const FLAG_TYPE_LABELS: Record<ExperimentAnnotationFlagType, string> = {
   outlier: "Outlier",

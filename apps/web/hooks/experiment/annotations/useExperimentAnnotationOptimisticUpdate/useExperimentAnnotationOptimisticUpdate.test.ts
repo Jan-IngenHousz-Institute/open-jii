@@ -3,10 +3,10 @@ import { renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type {
-  ExperimentDataResponse,
   ExperimentAnnotationType,
   ExperimentAnnotationContent,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataResponse } from "@repo/api/domains/experiment/experiment.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 

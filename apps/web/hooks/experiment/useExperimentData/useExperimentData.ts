@@ -5,9 +5,9 @@ import type React from "react";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
 
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import type {
   ExperimentData,
-  ExperimentAnnotationType,
   ExperimentDataColumn,
   ExperimentDataFilter,
 } from "@repo/api/domains/experiment/experiment.schema";

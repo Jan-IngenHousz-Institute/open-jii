@@ -4,6 +4,8 @@ import type {
   ExperimentAnnotation,
   ExperimentAnnotationType,
   ExperimentAnnotationContent,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type {
   ExperimentDataResponse,
   ExperimentDataColumn,
 } from "@repo/api/domains/experiment/experiment.schema";

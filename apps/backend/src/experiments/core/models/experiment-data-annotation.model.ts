@@ -4,7 +4,7 @@
 import type {
   ExperimentAnnotationCommentContent,
   ExperimentAnnotationFlagContent,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 // Type guards
 export function isCommentContent(content: unknown): content is ExperimentAnnotationCommentContent {

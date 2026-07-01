@@ -7,8 +7,8 @@ import { useExperimentAnnotationAddBulk } from "~/hooks/experiment/annotations/u
 import type {
   ExperimentAnnotationContent,
   ExperimentAnnotationType,
-} from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentAnnotationContent } from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import { zExperimentAnnotationContent } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

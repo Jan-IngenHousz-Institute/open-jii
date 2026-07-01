@@ -9,7 +9,7 @@ import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations"
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 const FLAG_VALUES = Object.keys(FLAG_TYPE_LABELS) as ExperimentAnnotationFlagType[];
 

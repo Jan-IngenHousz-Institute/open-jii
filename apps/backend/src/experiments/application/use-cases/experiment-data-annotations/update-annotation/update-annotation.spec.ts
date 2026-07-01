@@ -1,4 +1,4 @@
-import type { ExperimentUpdateAnnotationBody } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUpdateAnnotationBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import {
   assertFailure,

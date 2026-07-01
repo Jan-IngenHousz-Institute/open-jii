@@ -3,7 +3,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 import {
   ExperimentAddAnnotationsBulkBody,
   ExperimentAnnotationRowsAffected,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success } from "../../../../../common/utils/fp-utils";

@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { DeleteAnnotationsRequest } from "../../../../core/models/experiment-data-annotation.model";

@@ -11,7 +11,7 @@ import {
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
-import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 const log = createLogger("questions-upload");
 

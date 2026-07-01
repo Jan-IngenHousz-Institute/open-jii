@@ -25,7 +25,7 @@ import {
 } from "~/components/experiment-data/experiment-data-utils";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Form } from "@repo/ui/components/form";

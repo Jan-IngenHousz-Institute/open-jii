@@ -9,7 +9,7 @@ import type {
   ExperimentAnnotationFlagContent,
   ExperimentAnnotationType,
   ExperimentAnnotationFlagType,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";

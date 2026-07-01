@@ -7,7 +7,7 @@ import type {
   ExperimentAnnotationRowsAffected,
   ExperimentDeleteAnnotationsBulkBody,
   ExperimentUpdateAnnotationBody,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";

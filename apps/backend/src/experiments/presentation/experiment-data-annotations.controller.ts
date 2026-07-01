@@ -4,7 +4,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentDataAnnotationsContract } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.contract";
-import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
