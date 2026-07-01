@@ -52,7 +52,7 @@ export class ExecuteMacroUseCase {
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: [{ id: itemId, data: request.data }],
+      items: [{ id: itemId, data: request.data, context: request.context }],
       timeout: request.timeout ?? 30,
     };
 

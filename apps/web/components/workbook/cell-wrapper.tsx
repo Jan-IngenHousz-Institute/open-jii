@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Loader2,
   Play,
+  RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
@@ -26,7 +27,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
-type ExecutionStatus = "idle" | "running" | "completed" | "error";
+type ExecutionStatus = "idle" | "running" | "completed" | "error" | "stale";
 
 function formatElapsed(ms: number): string {
   if (ms < 1000) return `${Math.round(ms / 100) * 100}ms`;
@@ -201,6 +202,20 @@ export function CellWrapper({
             {executionStatus === "completed" && (
               <div className="flex w-5 items-center justify-center">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              </div>
+            )}
+            {executionStatus === "stale" && (
+              <div className="flex w-5 items-center justify-center">
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <RefreshCw className="h-3.5 w-3.5 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 text-xs">
+                      An upstream cell changed; re-run to refresh this output.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
             {executionStatus === "error" && (

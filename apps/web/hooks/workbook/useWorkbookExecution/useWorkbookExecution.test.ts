@@ -335,6 +335,86 @@ describe("useWorkbookExecution", () => {
       const macroOutput = findOutput(updated, macro.id);
       expect(macroOutput?.messages).toContain("Division by zero");
     });
+
+    it("dispatches a macro-constructed command and stores the device result", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({ producedBy: proto.id, data: { value: 1 } });
+      const macro = createMacroCell();
+
+      server.mount(contract.macros.executeMacro, {
+        body: {
+          macro_id: macro.payload.macroId,
+          success: true,
+          output: { __ojArtifact: "command", version: 1, content: "battery" },
+        },
+      });
+      mockIsConnected = true;
+      mockExecuteCommand.mockResolvedValue({ reading: 88 });
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      expect(mockExecuteCommand).toHaveBeenCalledWith("battery");
+      const macroOutput = findOutput(
+        onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[],
+        macro.id,
+      );
+      expect(macroOutput?.data).toEqual({ reading: 88 });
+      expect(macroOutput?.messages?.[0]).toMatch(/Dispatched constructed command/);
+    });
+
+    it("rejects a dangerous constructed command without dispatching", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({ producedBy: proto.id, data: { value: 1 } });
+      const macro = createMacroCell();
+
+      server.mount(contract.macros.executeMacro, {
+        body: {
+          macro_id: macro.payload.macroId,
+          success: true,
+          output: { __ojArtifact: "command", version: 1, content: "set_dac+1+128" },
+        },
+      });
+      mockIsConnected = true;
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+      const macroOutput = findOutput(
+        onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[],
+        macro.id,
+      );
+      expect(macroOutput?.messages?.[0]).toMatch(/rejected/i);
+    });
+
+    it("errors when a constructed command has no device connected", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({ producedBy: proto.id, data: { value: 1 } });
+      const macro = createMacroCell();
+
+      server.mount(contract.macros.executeMacro, {
+        body: {
+          macro_id: macro.payload.macroId,
+          success: true,
+          output: { __ojArtifact: "command", version: 1, content: "battery" },
+        },
+      });
+      mockIsConnected = false;
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+      const macroOutput = findOutput(
+        onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[],
+        macro.id,
+      );
+      expect(macroOutput?.messages?.[0]).toMatch(/No device connected/);
+    });
   });
 
   describe("runCell - question", () => {
@@ -468,6 +548,38 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const outputCell = findOutput(updated);
       expect(outputCell?.messages?.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("stale marking", () => {
+    it("flags a downstream cell stale after an upstream cell re-runs, then clears on re-run", async () => {
+      const qUp = createQuestionCell({ id: "q-up" });
+      const qDown = createQuestionCell({ id: "q-down" });
+      const onPrompt = vi.fn().mockResolvedValue("v");
+
+      const { result } = renderExecution([qUp, qDown], { onPromptQuestion: onPrompt });
+
+      await act(() => result.current.runCell("q-down"));
+      expect(result.current.executionStates["q-down"].status).toBe("completed");
+
+      await act(() => result.current.runCell("q-up"));
+      expect(result.current.executionStates["q-down"].status).toBe("stale");
+
+      await act(() => result.current.runCell("q-down"));
+      expect(result.current.executionStates["q-down"].status).toBe("completed");
+    });
+
+    it("runAll leaves no cell stale", async () => {
+      const qUp = createQuestionCell({ id: "q-up" });
+      const qDown = createQuestionCell({ id: "q-down" });
+      const onPrompt = vi.fn().mockResolvedValue("v");
+
+      const { result } = renderExecution([qUp, qDown], { onPromptQuestion: onPrompt });
+
+      await act(() => result.current.runAll());
+
+      expect(result.current.executionStates["q-up"].status).toBe("completed");
+      expect(result.current.executionStates["q-down"].status).toBe("completed");
     });
   });
 

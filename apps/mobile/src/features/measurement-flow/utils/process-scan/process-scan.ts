@@ -27,20 +27,28 @@ async function loadMathLib() {
 
 const mathLibSourcePromise = loadMathLib();
 
-async function executeMacro(code: string, json: object): Promise<MacroOutput> {
-  // console.log("[macro] (JS) input:", JSON.stringify(json));
+// Deep-freeze so macro code reads `ctx` as read-only, matching the Lambda sandbox.
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      deepFreeze((value as Record<string, unknown>)[key]);
+    }
+    Object.freeze(value);
+  }
+  return value;
+}
+
+async function executeMacro(code: string, json: object, ctx: object): Promise<MacroOutput> {
   const mathLibSource = await mathLibSourcePromise;
-  // Wrap the macro code in an IIFE to isolate its scope from mathLibSource variables
-  // This prevents variable name conflicts while still allowing access to mathLib functions
-  // The IIFE returns the output, which we capture and return
+  // Wrap the macro in an IIFE that receives `json` (nearest input) and `ctx`
+  // (upstream outputs by name), isolating its scope from mathLib internals.
   const macroSource =
-    mathLibSource + "\n\n\n" + "return (function(json) {\n" + code + "\n})(json);";
+    mathLibSource + "\n\n\n" + "return (function(json, ctx) {\n" + code + "\n})(json, ctx);";
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const fn = new Function("json", macroSource);
-    const output = fn(structuredClone(json));
-    // console.log("[macro] (JS) output:", JSON.stringify(output));
+    const fn = new Function("json", "ctx", macroSource);
+    const output = fn(structuredClone(json), deepFreeze(structuredClone(ctx)));
     return output;
   } catch (err) {
     log.error("(JS) error", { err: (err as Error)?.message });
@@ -56,6 +64,7 @@ export interface MacroInput {
 export async function applyMacro(
   result: object,
   macro: MacroInput | string,
+  ctx: Record<string, unknown> = {},
 ): Promise<MacroOutput[]> {
   if (!("sample" in result)) {
     throw new Error("Result does not contain sample data");
@@ -85,7 +94,7 @@ export async function applyMacro(
     for (let i = 0; i < samples.length; i++) {
       const sample = samples[i];
       try {
-        const out = await runPython(code, structuredClone(sample));
+        const out = await runPython(code, structuredClone(sample), ctx);
         log.debug("(Python) sample ok", { i });
         outputs.push(out);
       } catch (err) {
@@ -99,7 +108,7 @@ export async function applyMacro(
   const outputs: MacroOutput[] = [];
   for (let i = 0; i < samples.length; i++) {
     try {
-      const out = await executeMacro(code, samples[i]);
+      const out = await executeMacro(code, samples[i], ctx);
       outputs.push(out);
     } catch (err) {
       log.error("(JS) sample failed", { i, err: (err as Error)?.message });

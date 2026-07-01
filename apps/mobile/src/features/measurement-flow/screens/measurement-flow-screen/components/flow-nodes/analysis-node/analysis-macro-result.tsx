@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
 import { MeasurementResult } from "~/features/measurement-flow/components/measurement-result/measurement-result";
+import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -12,6 +13,8 @@ interface AnalysisMacroResultProps {
   isLoading: boolean;
   macroId: string;
   scanResult: object;
+  ctx?: Record<string, unknown>;
+  onProcessed?: (outputs: MacroOutput[]) => void;
   onCommentPress: () => void;
 }
 
@@ -20,6 +23,8 @@ export function AnalysisMacroResult({
   isLoading,
   macroId,
   scanResult,
+  ctx,
+  onProcessed,
   onCommentPress,
 }: AnalysisMacroResultProps) {
   const { classes } = useTheme();
@@ -62,6 +67,12 @@ export function AnalysisMacroResult({
   }
 
   return (
-    <MeasurementResult rawMeasurement={scanResult} macro={macro} onCommentPress={onCommentPress} />
+    <MeasurementResult
+      rawMeasurement={scanResult}
+      macro={macro}
+      ctx={ctx}
+      onProcessed={onProcessed}
+      onCommentPress={onCommentPress}
+    />
   );
 }

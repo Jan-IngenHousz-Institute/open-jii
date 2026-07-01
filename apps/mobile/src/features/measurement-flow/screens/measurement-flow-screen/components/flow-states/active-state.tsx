@@ -29,7 +29,7 @@ function renderNode(currentNode: FlowNode) {
     case "question":
       return <QuestionNode node={currentNode} />;
     case "analysis":
-      return <AnalysisNode content={currentNode.content} />;
+      return <AnalysisNode node={currentNode} />;
     case "branch":
       return <BranchNode node={currentNode} />;
     case "instruction":

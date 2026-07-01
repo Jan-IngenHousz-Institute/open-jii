@@ -30,6 +30,11 @@ const zCommandPayload = z
     format: zCommandFormat,
     content: z.string().min(1, "Command content is required"),
     name: z.string().optional(),
+    // "materialized" commands are produced by a macro constructor at runtime and
+    // dispatched immediately; they are not persisted into the workbook.
+    origin: z.enum(["authored", "materialized"]).optional(),
+    // For a materialized command, the macro cell that produced it.
+    producedBy: z.string().optional(),
   })
   .strict();
 
@@ -112,17 +117,44 @@ export const zWorkbookCell = z.union([
   zMarkdownCell,
 ]);
 
+type WorkbookCellShape = z.infer<typeof zWorkbookCell>;
+
+// The author-facing name that addresses a producer cell in branch conditions
+// and in the macro namespace (`ctx.<name>`). Questions carry it at the top level;
+// protocol/macro/command cells carry it on their payload. Unnamed or non-producer
+// cells return undefined and never join the namespace.
+export function namespaceNameOf(cell: WorkbookCellShape): string | undefined {
+  switch (cell.type) {
+    case "question":
+      return cell.name;
+    case "protocol":
+    case "macro":
+    case "command":
+      return cell.payload.name;
+    default:
+      return undefined;
+  }
+}
+
+// Location of the name field, so a uniqueness issue points at the right input.
+function namePathOf(cell: WorkbookCellShape): (string | number)[] {
+  return cell.type === "question" ? ["name"] : ["payload", "name"];
+}
+
 export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx) => {
-  // Canonicalised duplicate names collide as column keys in `questions_data` and lose answers. Mirrors zFlowGraph.
+  // Canonicalised duplicate names collide as `questions_data` column keys (losing
+  // answers) and as macro-namespace keys (`ctx.<name>`), so every named producer
+  // (question, protocol, macro, command) must be unique within the workbook.
   const seen = new Map<string, number>();
   cells.forEach((cell, index) => {
-    if (cell.type !== "question") return;
-    const canonical = sanitizeQuestionLabel(cell.name);
+    const name = namespaceNameOf(cell);
+    if (name == null || name === "") return;
+    const canonical = sanitizeQuestionLabel(name);
     if (seen.has(canonical)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Question cell name "${cell.name}" must be unique`,
-        path: [index, "name"],
+        message: `Cell name "${name}" must be unique`,
+        path: [index, ...namePathOf(cell)],
       });
       return;
     }

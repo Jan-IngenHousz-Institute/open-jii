@@ -32,6 +32,9 @@ interface MeasurementFlowStore {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: any;
+  // Macro/analysis outputs keyed by cell id so downstream branches and macros
+  // can read them on-device (the web runtime stores these as in-band output cells).
+  cellOutputs: Record<string, unknown>;
   isFromOverview: boolean;
 
   // Workbook-derived data, used to evaluate branch cells on-device. Empty for
@@ -64,17 +67,16 @@ interface MeasurementFlowStore {
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   setScanResult: (result: any) => void;
+  setCellOutput: (cellId: string, data: unknown) => void;
+  clearCellOutputs: () => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
 }
 
-// The store is persisted so a mid-flow blur (background, kill, tab switch)
-// is itself the "pause": the next launch rehydrates the same active flow
-// and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed. The workbook cells/edges and
-// branch state are persisted too so a resumed branching flow keeps evaluating
-// offline.
+// Persisted so a mid-flow blur (background, kill, tab switch) is itself the
+// "pause": the next launch rehydrates the active flow. Cells/edges and branch
+// state persist too so a resumed branching flow keeps evaluating offline.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
@@ -88,6 +90,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      cellOutputs: {},
       isFromOverview: false,
       cells: [],
       edges: [],
@@ -171,6 +174,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                 isFlowFinished: false,
                 isQuestionsSubmitPending: false,
                 scanResult: undefined,
+                cellOutputs: {},
                 protocolId: undefined,
                 cells: [],
                 edges: [],
@@ -248,6 +252,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           isFlowFinished: false,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          cellOutputs: {},
           protocolId: undefined,
           isFromOverview: false,
           cells: [],
@@ -263,6 +268,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           iterationCount: state.iterationCount + 1,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          cellOutputs: {},
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -274,6 +280,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           currentFlowStep: 0,
           isQuestionsSubmitPending: false,
           scanResult: undefined,
+          cellOutputs: {},
           isFromOverview: false,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -290,12 +297,17 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setScanResult: (result) => set({ scanResult: result }),
 
+      setCellOutput: (cellId, data) =>
+        set((state) => ({ cellOutputs: { ...state.cellOutputs, [cellId]: data } })),
+      clearCellOutputs: () => set({ cellOutputs: {} }),
+
       dismissQuestionsSubmit: () =>
         set((state) => ({
           isQuestionsSubmitPending: false,
           currentFlowStep: 0,
           iterationCount: state.iterationCount + 1,
           scanResult: undefined,
+          cellOutputs: {},
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
@@ -339,6 +351,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
+        cellOutputs: state.cellOutputs,
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,

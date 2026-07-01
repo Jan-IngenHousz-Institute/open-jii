@@ -6,14 +6,15 @@ export interface HydrationContext {
   scanResult?: unknown;
   /** Entity id of the protocol whose output `scanResult` holds (store.protocolId). */
   protocolId?: string;
+  /** Macro/analysis outputs keyed by cell id (store.cellOutputs). */
+  cellOutputs?: Record<string, unknown>;
 }
 
-// Snapshots cells with live values so the shared `evaluateBranch` can read them:
-// question `.answer` from the store, and the latest measurement as a synthetic
-// output cell. Mobile keeps one scanResult, so only the latest protocol's output
-// resolves; others are undefined (false → default path).
+// Snapshots cells with live values so the shared `evaluateBranch` and macro `ctx`
+// can read them: question `.answer` from the store, the latest measurement, and
+// macro outputs, each as a synthetic output cell keyed to its producer.
 export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): WorkbookCell[] {
-  const { iterationCount, getAnswer, scanResult, protocolId } = ctx;
+  const { iterationCount, getAnswer, scanResult, protocolId, cellOutputs } = ctx;
 
   const hydrated: WorkbookCell[] = cells.map((cell) =>
     cell.type === "question"
@@ -21,29 +22,47 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
       : { ...cell },
   );
 
-  if (scanResult == null || !protocolId) return hydrated;
+  const synthetic: OutputCell[] = [];
+  const producedIds = new Set<string>();
+
+  // Macro/analysis outputs are stored raw (object), matching the web runtime.
+  for (const [cellId, data] of Object.entries(cellOutputs ?? {})) {
+    synthetic.push({
+      id: `synthetic-output-${cellId}`,
+      type: "output",
+      isCollapsed: false,
+      producedBy: cellId,
+      data,
+    });
+    producedIds.add(cellId);
+  }
 
   // The scan belongs to the protocol the measurement node ran (store.protocolId);
-  // find its cell so the synthetic output is keyed to the right producer.
-  const producer = hydrated.find(
-    (c) => c.type === "protocol" && c.payload.protocolId === protocolId,
-  );
-  if (!producer) return hydrated;
+  // key the synthetic output to that producer. Sample is array-wrapped to match
+  // how protocol output is unwrapped downstream.
+  if (scanResult != null && protocolId) {
+    const producer = hydrated.find(
+      (c) => c.type === "protocol" && c.payload.protocolId === protocolId,
+    );
+    if (producer) {
+      const sample = (scanResult as { sample?: unknown }).sample;
+      const data = sample != null ? (Array.isArray(sample) ? sample : [sample]) : scanResult;
+      synthetic.push({
+        id: `synthetic-output-${producer.id}`,
+        type: "output",
+        isCollapsed: false,
+        producedBy: producer.id,
+        data,
+      });
+      producedIds.add(producer.id);
+    }
+  }
 
-  const sample = (scanResult as { sample?: unknown }).sample;
-  const data = sample != null ? (Array.isArray(sample) ? sample : [sample]) : scanResult;
+  if (synthetic.length === 0) return hydrated;
 
-  const outputCell: OutputCell = {
-    id: `synthetic-output-${producer.id}`,
-    type: "output",
-    isCollapsed: false,
-    producedBy: producer.id,
-    data,
-  };
-
-  // Drop any stale output for this producer, then append the live one.
+  // Drop any stale output for these producers, then append the live ones.
   return [
-    ...hydrated.filter((c) => !(c.type === "output" && c.producedBy === producer.id)),
-    outputCell,
+    ...hydrated.filter((c) => !(c.type === "output" && producedIds.has(c.producedBy))),
+    ...synthetic,
   ];
 }

@@ -33,7 +33,7 @@ interface BranchCellProps {
   onRun?: () => void;
   /** All cells in the workbook - used to populate source/target dropdowns */
   allCells?: WorkbookCell[];
-  executionStatus?: "idle" | "running" | "completed" | "error";
+  executionStatus?: "idle" | "running" | "completed" | "error" | "stale";
   executionError?: string;
   readOnly?: boolean;
 }

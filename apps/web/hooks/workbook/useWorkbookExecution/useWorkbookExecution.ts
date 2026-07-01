@@ -16,10 +16,13 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
+import { parseMacroArtifact } from "@repo/api/schemas/macro-artifact.schema";
+import { buildCellNamespace } from "@repo/api/utils/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/utils/command-payload";
 import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
+import { validateCommandArtifact } from "@repo/iot";
 
-type CellExecutionStatus = "idle" | "running" | "completed" | "error";
+type CellExecutionStatus = "idle" | "running" | "completed" | "error" | "stale";
 
 interface CellExecutionState {
   status: CellExecutionStatus;
@@ -166,6 +169,30 @@ export function useWorkbookExecution({
 
   const execCounterRef = useRef(0);
 
+  // After a single cell re-runs, any downstream cell that last ran in an earlier
+  // pass may now read stale upstream output. Document order is the dependency
+  // proxy (no DAG): flag completed downstream producers whose last run predates
+  // this one. Outputs are kept; the UI shows a "re-run" affordance.
+  const markDownstreamStale = useCallback((fromCellId: string, baseOrder: number) => {
+    const cells = cellsRef.current;
+    const fromIndex = cells.findIndex((c) => c.id === fromCellId);
+    if (fromIndex < 0) return;
+    setExecutionStates((prev) => {
+      const next = { ...prev };
+      for (let i = fromIndex + 1; i < cells.length; i++) {
+        const c = cells[i];
+        if (c.type === "output" || c.type === "markdown" || c.type === "branch") continue;
+        const st = next[c.id] as CellExecutionState | undefined;
+        if (st?.status !== "completed") continue;
+        const lastOrder = st.executionOrder?.length ? Math.max(...st.executionOrder) : 0;
+        if (lastOrder <= baseOrder) {
+          next[c.id] = { ...st, status: "stale" };
+        }
+      }
+      return next;
+    });
+  }, []);
+
   const runProtocolCell = useCallback(
     async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
       const protocolCode = await getProtocolCode(cell);
@@ -243,7 +270,10 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "No device connected - connect a device to run this command"),
+          makeErrorOutputCell(
+            cell.id,
+            "No device connected - connect a device to run this command",
+          ),
         );
       }
 
@@ -276,7 +306,12 @@ export function useWorkbookExecution({
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const inputData = findPrecedingOutputData(currentCells, cellIndex);
-      if (!inputData) {
+      // Upstream outputs the macro can read as `ctx.<name>`. A macro that only
+      // combines named upstream outputs has no single nearest input, so we allow
+      // it to run as long as the namespace is non-empty.
+      const { ctx } = buildCellNamespace(currentCells, cellIndex);
+      const hasContext = Object.keys(ctx).length > 0;
+      if (!inputData && !hasContext) {
         setCellState(cell.id, { status: "error", error: "No input data available" });
         return insertOutputAfterCell(
           currentCells,
@@ -291,7 +326,7 @@ export function useWorkbookExecution({
       try {
         const result = await executeMacroMutationRef.current.mutateAsync({
           params: { id: cell.payload.macroId },
-          body: { data: inputData },
+          body: { data: inputData ?? {}, context: ctx },
         });
 
         const executionTime = performance.now() - startTime;
@@ -306,11 +341,55 @@ export function useWorkbookExecution({
           );
         }
 
+        // A macro may return a constructed command/protocol instead of data.
+        const artifact = parseMacroArtifact(result.body.output);
+        if (!artifact) {
+          setCellState(cell.id, { status: "completed" });
+          return insertOutputAfterCell(
+            currentCells,
+            cell.id,
+            makeOutputCell(cell.id, result.body.output, executionTime, []),
+          );
+        }
+
+        // The artifact is untrusted: validate on the host before any dispatch.
+        const validated = validateCommandArtifact(artifact, { family: sensorFamily });
+        if (!validated.ok) {
+          setCellState(cell.id, { status: "error", error: validated.reason });
+          return insertOutputAfterCell(
+            currentCells,
+            cell.id,
+            makeErrorOutputCell(cell.id, `Constructed command rejected: ${validated.reason}`),
+          );
+        }
+
+        if (!isConnectedRef.current) {
+          setCellState(cell.id, { status: "error", error: "No device connected" });
+          return insertOutputAfterCell(
+            currentCells,
+            cell.id,
+            makeErrorOutputCell(
+              cell.id,
+              "No device connected - connect a device to run the constructed command",
+            ),
+          );
+        }
+
+        const deviceData = await executeCommandRef.current(validated.command);
+        const totalTime = performance.now() - startTime;
+        const summary =
+          artifact.__ojArtifact === "command"
+            ? `command "${String(validated.command)}"`
+            : `protocol (${artifact.code.length} blocks)`;
         setCellState(cell.id, { status: "completed" });
+        // The macro's output cell carries the device result, so a downstream
+        // branch or macro reads it by the macro's name like any other output.
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeOutputCell(cell.id, result.body.output, executionTime, []),
+          makeOutputCell(cell.id, toOutputData(deviceData), totalTime, [
+            `Dispatched constructed ${summary}`,
+          ]),
         );
       } catch (err) {
         const executionTime = performance.now() - startTime;
@@ -323,7 +402,7 @@ export function useWorkbookExecution({
         );
       }
     },
-    [setCellState],
+    [setCellState, sensorFamily],
   );
 
   const runQuestionCell = useCallback(
@@ -451,8 +530,14 @@ export function useWorkbookExecution({
       const cell = currentCells.find((c) => c.id === cellId);
       if (!cell) return;
 
+      const baseOrder = execCounterRef.current;
       currentCells = await dispatchCell(cell, currentCells);
       onCellsChangeRef.current(currentCells);
+
+      // Re-running one cell can invalidate cells below it that read its output.
+      if (cell.type !== "branch") {
+        markDownstreamStale(cell.id, baseOrder);
+      }
 
       if (cell.type === "branch") {
         const jumpIndex = resolveBranchJump(cell.id, currentCells);
@@ -479,7 +564,7 @@ export function useWorkbookExecution({
         }
       }
     },
-    [dispatchCell],
+    [dispatchCell, markDownstreamStale],
   );
 
   // Extracted so TS does not narrow abortRef.current to its initial value across awaits.

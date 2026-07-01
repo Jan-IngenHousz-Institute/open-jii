@@ -260,12 +260,43 @@ class SafeInstance:
     def __repr__(self):
         return repr(object.__getattribute__(self, '_obj'))
 
+def _freeze(value):
+    """Make ctx read-only to macro code: dicts become MappingProxyType and lists
+    become tuples, recursively, so a macro cannot mutate shared upstream state."""
+    if isinstance(value, dict):
+        return types.MappingProxyType({k: _freeze(v) for k, v in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(v) for v in value)
+    return value
+
+
+class _ArtifactBuilder:
+    """Constructor a macro returns to request a device command/protocol. Pure
+    value factory; the tagged dict is re-validated on the host before dispatch."""
+
+    def __init__(self, kind):
+        self._kind = kind
+
+    def build(self, payload, name=None, family=None):
+        artifact = {"__ojArtifact": self._kind, "version": 1}
+        artifact["content" if self._kind == "command" else "code"] = payload
+        if name is not None:
+            artifact["name"] = name
+        if family is not None:
+            artifact["family"] = family
+        return artifact
+
+
+Command = _ArtifactBuilder("command")
+Protocol = _ArtifactBuilder("protocol")
+
 results = []
 
 # 4. EXECUTION LOOP
 for item in batch_items:
     row_data = item.get("data")
     row_id = item.get("id")
+    row_context = item.get("context") or {}
 
     # Macros expect `json` to be the single measurement object. Unwrap a
     # non-empty list down to its first element, matching the legacy
@@ -290,7 +321,10 @@ for item in batch_items:
             "NameError": NameError,
         },
         "json": row_data,
+        "ctx": _freeze(row_context),
         "output": {},
+        "Command": Command,
+        "Protocol": Protocol,
         "ArrayNth": SafeCallable(ArrayNth),
         "ArrayRange": SafeCallable(ArrayRange),
         "ArrayUnZip": SafeCallable(ArrayUnZip),

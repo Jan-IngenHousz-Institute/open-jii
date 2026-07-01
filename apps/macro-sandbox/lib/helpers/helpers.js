@@ -787,11 +787,9 @@ function danger(msg, output) {
  */
 
 function NonLinearRegression(data, options) {
-  // Equal: all points are equally precise;
-  // Relative: Std Err of each Y value is proportional to Y variable itself;
-  // Counts: Std Err = square root of Y; this is appropriate if Y represents the # of occurrences of something (such as radioactive decay events);
-  // Data: Std Err is specified in the data window as a separate column of numbers, immediately to the right of the Y values;
-  // Replicates: Specify this if you have entered several Y values.
+  // Weighting options: Equal (all points equally precise); Relative (Std Err
+  // proportional to Y); Counts (Std Err = sqrt(Y), for occurrence counts); Data
+  // (Std Err from a separate column right of Y); Replicates (several Y values).
 
   // initial settings
   var presets = {
@@ -2363,3 +2361,27 @@ function dot(x, y) {
  * @example Math.random();
  * // returns a random number
  */
+
+// Constructors a macro returns to request a device command/protocol. These are
+// pure value factories with no device access; the tagged object they produce is
+// re-validated on the trusted host before any dispatch.
+function __ojArtifact(base, opts) {
+  opts = opts || {};
+  if (opts.name !== undefined) base.name = opts.name;
+  if (opts.family !== undefined) base.family = opts.family;
+  return base;
+}
+
+// `var` (not `const`) so the binding attaches to the sandbox global and is
+// visible to the separately-compiled macro script.
+var Command = Object.freeze({
+  build: function (content, opts) {
+    return __ojArtifact({ __ojArtifact: "command", version: 1, content: content }, opts);
+  },
+});
+
+var Protocol = Object.freeze({
+  build: function (code, opts) {
+    return __ojArtifact({ __ojArtifact: "protocol", version: 1, code: code }, opts);
+  },
+});

@@ -96,4 +96,34 @@ describe("hydrateCells", () => {
     hydrateCells(cells, ctx({ getAnswer: () => "x" }));
     expect(cells[0].answer).toBeUndefined();
   });
+
+  it("synthesizes output cells from cellOutputs (macro results)", () => {
+    const macroCell: WorkbookCell = {
+      id: "m1",
+      type: "macro",
+      isCollapsed: false,
+      payload: { macroId: "00000000-0000-0000-0000-000000000001", language: "javascript" },
+    };
+    const hydrated = hydrateCells([macroCell], ctx({ cellOutputs: { m1: { fvfm: 0.72 } } }));
+    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
+  });
+
+  it("synthesizes both a macro output and the latest scan", () => {
+    const macroCell: WorkbookCell = {
+      id: "m1",
+      type: "macro",
+      isCollapsed: false,
+      payload: { macroId: "00000000-0000-0000-0000-000000000001", language: "javascript" },
+    };
+    const hydrated = hydrateCells(
+      [pCell("p1", "proto-1"), macroCell],
+      ctx({
+        scanResult: { sample: [{ phi2: 0.8 }] },
+        protocolId: "proto-1",
+        cellOutputs: { m1: { fvfm: 0.72 } },
+      }),
+    );
+    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
+    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
+  });
 });

@@ -29,7 +29,7 @@ interface MacroCellProps {
   onUpdate: (cell: MacroCellType) => void;
   onDelete: () => void;
   onRun?: () => void;
-  executionStatus?: "idle" | "running" | "completed" | "error";
+  executionStatus?: "idle" | "running" | "completed" | "error" | "stale";
   executionError?: string;
   readOnly?: boolean;
   // Immutable code pinned at publish time. When present the cell renders

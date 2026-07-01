@@ -34,7 +34,7 @@ const noop = () => {
   // no-op
 };
 
-type CellExecutionStatus = "idle" | "running" | "completed" | "error";
+type CellExecutionStatus = "idle" | "running" | "completed" | "error" | "stale";
 
 interface CellExecutionState {
   status: CellExecutionStatus;

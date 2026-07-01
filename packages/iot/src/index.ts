@@ -23,6 +23,12 @@ export type { IDeviceDriver, CommandResult, ExecuteOptions } from "./driver/driv
 export { DeviceDriver, DEFAULT_MAX_BUFFER_SIZE } from "./driver/driver-base";
 export type { ICommandExecutor } from "./core/command-executor";
 export { CommandExecutor } from "./core/command-executor";
+export type {
+  CommandFamily,
+  ValidateCommandOptions,
+  ValidatedCommand,
+} from "./core/command-validator";
+export { validateCommandArtifact } from "./core/command-validator";
 
 // ── Driver: MultispeQ ───────────────────────────────
 export type {

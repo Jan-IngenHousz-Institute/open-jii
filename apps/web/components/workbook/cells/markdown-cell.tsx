@@ -15,7 +15,7 @@ interface MarkdownCellProps {
   cell: MarkdownCellType;
   onUpdate: (cell: MarkdownCellType) => void;
   onDelete: () => void;
-  executionStatus?: "idle" | "running" | "completed" | "error";
+  executionStatus?: "idle" | "running" | "completed" | "error" | "stale";
   executionError?: string;
   readOnly?: boolean;
 }

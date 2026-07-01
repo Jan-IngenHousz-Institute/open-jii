@@ -77,11 +77,28 @@ function cloneData(data) {
   return data;
 }
 
+// Deep-clone and recursively freeze, so `ctx` is read-only to macro code and a
+// mutation can never leak into the next item through the shared compiled context.
+function deepFreezeClone(value) {
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map(deepFreezeClone));
+  }
+  if (value !== null && typeof value === "object") {
+    const obj = Object.create(null);
+    for (const key of Object.keys(value)) {
+      obj[key] = deepFreezeClone(value[key]);
+    }
+    return Object.freeze(obj);
+  }
+  return value;
+}
+
 // 4. CREATE CONTEXT ONCE
 // Minimal sandbox: no Date, performance, setTimeout, process, require, eval
 const sandbox = {
   json: null,
   input_data: null,
+  ctx: Object.create(null),
   output: Object.create(null),
   console: { log: () => {} },
   Date: undefined,
@@ -153,6 +170,7 @@ for (const item of batchItems) {
   const measurement = unwrapMeasurement(item.data);
   sandbox.json = cloneData(measurement);
   sandbox.input_data = cloneData(measurement);
+  sandbox.ctx = item.context ? deepFreezeClone(item.context) : Object.create(null);
   sandbox.output = Object.create(null);
 
   try {

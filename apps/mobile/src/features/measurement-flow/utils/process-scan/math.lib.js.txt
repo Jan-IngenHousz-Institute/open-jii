@@ -2271,3 +2271,22 @@ function dot(x, y) {
  * @example Math.random();
  * // returns a random number
  */
+
+// Constructors a macro returns to request a device command/protocol. Pure value
+// factories; the tagged object is re-validated on the host before any dispatch.
+function __ojArtifact(base, opts) {
+  opts = opts || {};
+  if (opts.name !== undefined) base.name = opts.name;
+  if (opts.family !== undefined) base.family = opts.family;
+  return base;
+}
+var Command = Object.freeze({
+  build: function (content, opts) {
+    return __ojArtifact({ __ojArtifact: "command", version: 1, content: content }, opts);
+  },
+});
+var Protocol = Object.freeze({
+  build: function (code, opts) {
+    return __ojArtifact({ __ojArtifact: "protocol", version: 1, code: code }, opts);
+  },
+});

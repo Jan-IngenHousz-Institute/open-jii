@@ -31,7 +31,7 @@ interface CommandCellProps {
   onUpdate: (cell: CommandCellType) => void;
   onDelete: () => void;
   onRun?: () => void;
-  executionStatus?: "idle" | "running" | "completed" | "error";
+  executionStatus?: "idle" | "running" | "completed" | "error" | "stale";
   executionError?: string;
   readOnly?: boolean;
 }

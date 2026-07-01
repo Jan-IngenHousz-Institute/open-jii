@@ -106,6 +106,9 @@ export const zMacroProtocolPathParams = z.object({
 
 export const zMacroExecutionRequestBody = z.object({
   data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
+  // Upstream cell outputs keyed by canonical name, injected into the sandbox as
+  // read-only `ctx`. Additive: `data` still carries the nearest output (`json`).
+  context: jsonStringOrValue(z.record(z.unknown())).optional(),
   timeout: z.number().int().min(1).max(60).optional(),
 });
 
@@ -171,7 +174,7 @@ export type MacroBatchWebhookErrorResponse = z.infer<typeof zMacroBatchWebhookEr
 export type MacroExecutionRequestBody = z.infer<typeof zMacroExecutionRequestBody>;
 export type MacroExecutionResponse = z.infer<typeof zMacroExecutionResponse>;
 
-// Wire-format types — what Databricks actually sends before Zod preprocessing.
+// Wire-format types: what Databricks actually sends before Zod preprocessing.
 // Fields wrapped with jsonStringOrValue may arrive as JSON strings.
 export interface MacroBatchExecutionWireBody {
   items: MacroBatchExecutionRequestBody["items"] | string;
@@ -179,5 +182,6 @@ export interface MacroBatchExecutionWireBody {
 }
 export interface MacroExecutionWireBody {
   data: MacroExecutionRequestBody["data"] | string;
+  context?: MacroExecutionRequestBody["context"] | string;
   timeout?: number;
 }

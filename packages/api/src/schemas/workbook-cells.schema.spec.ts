@@ -217,6 +217,70 @@ describe("Workbook Cells Schema", () => {
     });
   });
 
+  describe("named-producer uniqueness (namespace keys)", () => {
+    it("rejects two protocols sharing a canonicalised name", () => {
+      const cells = [
+        {
+          id: "p1",
+          type: "protocol",
+          payload: { protocolId: uuidA, version: 1, name: "Baseline" },
+        },
+        {
+          id: "p2",
+          type: "protocol",
+          payload: { protocolId: _uuidB, version: 1, name: "baseline" },
+        },
+      ];
+      expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
+    });
+
+    it("rejects a protocol and a macro colliding across cell types", () => {
+      const cells = [
+        { id: "p1", type: "protocol", payload: { protocolId: uuidA, version: 1, name: "Scan" } },
+        { id: "m1", type: "macro", payload: { macroId: uuidA, language: "python", name: "scan!" } },
+      ];
+      expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
+    });
+
+    it("rejects a question colliding with a named command", () => {
+      const cells = [
+        {
+          id: "q1",
+          type: "question",
+          name: "Battery",
+          question: { kind: "open_ended", text: "?" },
+        },
+        {
+          id: "c1",
+          type: "command",
+          payload: { format: "string", content: "battery", name: "battery" },
+        },
+      ];
+      expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
+    });
+
+    it("allows multiple unnamed producers", () => {
+      const cells = [
+        { id: "p1", type: "protocol", payload: { protocolId: uuidA, version: 1 } },
+        { id: "p2", type: "protocol", payload: { protocolId: _uuidB, version: 1 } },
+        { id: "c1", type: "command", payload: { format: "string", content: "hello" } },
+      ];
+      expect(zWorkbookCellArray.parse(cells)).toHaveLength(3);
+    });
+
+    it("allows distinct producer names", () => {
+      const cells = [
+        {
+          id: "p1",
+          type: "protocol",
+          payload: { protocolId: uuidA, version: 1, name: "Baseline" },
+        },
+        { id: "p2", type: "protocol", payload: { protocolId: _uuidB, version: 1, name: "Stress" } },
+      ];
+      expect(zWorkbookCellArray.parse(cells)).toHaveLength(2);
+    });
+  });
+
   describe("zOutputCell", () => {
     it("accepts minimal output cell", () => {
       const cell = { id: "o1", type: "output", producedBy: "p1" };

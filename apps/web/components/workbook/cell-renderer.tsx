@@ -17,7 +17,7 @@ interface CellRendererProps {
   onDelete: () => void;
   onRun?: () => void;
   allCells?: WorkbookCell[];
-  executionStatus?: "idle" | "running" | "completed" | "error";
+  executionStatus?: "idle" | "running" | "completed" | "error" | "stale";
   executionError?: string;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;

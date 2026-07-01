@@ -4,6 +4,7 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "../schemas/workbook-cells.schema";
+import { resolveOutputData } from "./build-cell-namespace";
 
 export function validateBranchCell(cell: BranchCell): string[] {
   const errors: string[] = [];
@@ -52,21 +53,9 @@ export function resolveConditionValue(
     return sourceCell.answer ?? undefined;
   }
 
-  const outputCell = cells.find((c) => c.type === "output" && c.producedBy === sourceCellId);
-  if (outputCell?.type !== "output" || outputCell.data == null) {
-    return undefined;
-  }
-
-  const data = outputCell.data as Record<string, unknown>;
-
-  if (Array.isArray(data)) {
-    const first = data[0] as Record<string, unknown> | undefined;
-    if (!first) return undefined;
-    const val = first[field];
-    if (typeof val === "number") return val;
-    if (typeof val === "string") return val;
-    return val != null ? JSON.stringify(val) : undefined;
-  }
+  // Shared with the macro namespace builder so branch eval and `ctx` can't drift.
+  const data = resolveOutputData(cells, sourceCellId);
+  if (!data) return undefined;
 
   const val = data[field];
   if (typeof val === "number") return val;
