@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
 
 import { AddFilterPopover } from "../add-filter/add-filter-popover";

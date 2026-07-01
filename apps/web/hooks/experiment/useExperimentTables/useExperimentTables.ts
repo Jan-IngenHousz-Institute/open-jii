@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "~/lib/orpc";
 
-import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 // Re-export types for convenience
 export type { ExperimentTableMetadata };

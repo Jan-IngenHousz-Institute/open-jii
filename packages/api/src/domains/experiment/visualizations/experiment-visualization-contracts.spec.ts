@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  ExperimentChartDataConfig,
-  ExperimentChartType,
-  ExperimentDataColumn,
-} from "../experiment.schema";
-import { WellKnownColumnTypes } from "../experiment.schema";
+import type { ExperimentDataColumn } from "../data/experiment-data.schema";
+import { WellKnownColumnTypes } from "../data/experiment-data.schema";
+import type { ExperimentChartDataConfig, ExperimentChartType } from "../experiment.schema";
 import {
   CHART_TYPE_ROLE_CONTRACTS,
   filterColumnsForRole,

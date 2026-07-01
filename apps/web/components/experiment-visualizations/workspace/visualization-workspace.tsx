@@ -4,8 +4,8 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentChartType } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {

@@ -1,9 +1,9 @@
 import type { ColumnKind } from "../../../transforms/column-type-utils";
 import { getColumnKind } from "../../../transforms/column-type-utils";
+import type { ExperimentDataColumn } from "../data/experiment-data.schema";
 import type {
   ExperimentChartDataConfig,
   ExperimentChartType,
-  ExperimentDataColumn,
   ExperimentDataSourceConfig,
   ExperimentRole,
 } from "../experiment.schema";

@@ -11,7 +11,7 @@ import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experim
 import type {
   ExperimentData,
   ExperimentDataColumn,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   isTimestampType,
   isStringType,

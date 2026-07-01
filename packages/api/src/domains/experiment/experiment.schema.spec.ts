@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { zErrorResponse } from "../../shared/errors";
+import { zExperimentData, zExperimentDataColumn } from "./data/experiment-data.schema";
 import { zExperimentDataFilter } from "./data/experiment-data.schema";
 import {
   // Enums / small schemas
@@ -12,12 +13,6 @@ import {
   zExperimentList,
   zExperimentAccess,
   // Data
-  zExperimentDataColumn,
-  zExperimentData,
-  zExperimentDataQuery,
-  zExperimentDataTable,
-  zExperimentDataTableList,
-  zExperimentDataResponse,
   // ExperimentFlow
   zExperimentFlowNodeType,
   zExperimentQuestionKind,
@@ -48,7 +43,6 @@ import {
   zExperimentCustomMetadataPayload,
   makeCustomMetadataFormSchema,
   // Data filter primitives & distinct values
-  DISTINCT_VALUES_MAX_LIMIT,
   // Upload schemas
   zExperimentUploadSourceKind,
   zExperimentUploadTableName,
@@ -467,65 +461,6 @@ describe("Experiment Schema", () => {
         status: "active",
         search: "my experiment",
       });
-    });
-  });
-
-  describe("Data queries & tables", () => {
-    it("zExperimentDataQuery defaults & coercion", () => {
-      const d1 = zExperimentDataQuery.parse({ tableName: "test_table" });
-      expect(d1.page).toBeUndefined();
-      expect(d1.pageSize).toBeUndefined();
-      expect(d1.orderBy).toBeUndefined();
-      expect(d1.orderDirection).toBeUndefined();
-
-      const d2 = zExperimentDataQuery.parse({ tableName: "test_table", page: "3", pageSize: "10" });
-      expect(d2.page).toBe(3);
-      expect(d2.pageSize).toBe(10);
-      expect(d2.orderBy).toBeUndefined();
-      expect(d2.orderDirection).toBeUndefined();
-
-      const d3 = zExperimentDataQuery.parse({
-        tableName: "test_table",
-        orderBy: "timestamp",
-        orderDirection: "DESC",
-      });
-      expect(d3.orderBy).toBe("timestamp");
-      expect(d3.orderDirection).toBe("DESC");
-    });
-
-    it("zExperimentDataTable valid", () => {
-      const info = {
-        name: "t1",
-        catalog_name: "cat",
-        schema_name: "sch",
-        data: {
-          columns: [{ name: "x", type_name: "text", type_text: "VARCHAR" }],
-          rows: [{ x: "1" }],
-          totalRows: 1,
-          truncated: false,
-        },
-        page: 1,
-        pageSize: 5,
-        totalPages: 1,
-        totalRows: 1,
-      };
-      expect(zExperimentDataTable.parse(info)).toEqual(info);
-    });
-
-    it("zExperimentDataTableList / Response valid", () => {
-      const list = [
-        {
-          name: "t1",
-          catalog_name: "cat",
-          schema_name: "sch",
-          page: 1,
-          pageSize: 5,
-          totalPages: 1,
-          totalRows: 0,
-        },
-      ];
-      expect(zExperimentDataTableList.parse(list)).toEqual(list);
-      expect(zExperimentDataResponse.parse(list)).toEqual(list);
     });
   });
 

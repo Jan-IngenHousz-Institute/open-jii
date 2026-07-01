@@ -6,7 +6,7 @@ import type {
   ExperimentAnnotationType,
   ExperimentAnnotationContent,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
-import type { ExperimentDataResponse } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 

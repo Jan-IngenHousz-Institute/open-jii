@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { filterColumnPathFor, parentColumnName } from "./filter-column-path";
 

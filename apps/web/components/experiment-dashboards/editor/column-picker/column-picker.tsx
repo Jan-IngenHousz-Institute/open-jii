@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useMemo } from "react";
 
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { AddColumnPopover } from "./add-column-popover";

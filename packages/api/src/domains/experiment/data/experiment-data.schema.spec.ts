@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DISTINCT_VALUES_MAX_LIMIT,
-  zExperimentDistinctValuesQuery,
-  zExperimentDistinctValuesResponse,
-} from "../experiment.schema";
-import {
   isBivariateAggregate,
   zExperimentAggregationFunction,
   zExperimentAggregationItem,
@@ -13,6 +9,12 @@ import {
   zExperimentDataFilter,
   zExperimentDataFilterOperator,
   zExperimentDataFilterValue,
+  zExperimentDataQuery,
+  zExperimentDataResponse,
+  zExperimentDataTable,
+  zExperimentDataTableList,
+  zExperimentDistinctValuesQuery,
+  zExperimentDistinctValuesResponse,
   zExperimentGroupByItem,
   zExperimentTimeBucketUnit,
 } from "./experiment-data.schema";
@@ -245,5 +247,66 @@ describe("aggregation primitives", () => {
       zExperimentDataAggregation.safeParse({ functions: [{ column: "v", function: "sum" }] })
         .success,
     ).toBe(true);
+  });
+});
+
+describe("data queries & tables", () => {
+  const uuidA = "11111111-1111-1111-1111-111111111111";
+  const uuidB = "22222222-2222-2222-2222-222222222222";
+  it("zExperimentDataQuery defaults & coercion", () => {
+    const d1 = zExperimentDataQuery.parse({ tableName: "test_table" });
+    expect(d1.page).toBeUndefined();
+    expect(d1.pageSize).toBeUndefined();
+    expect(d1.orderBy).toBeUndefined();
+    expect(d1.orderDirection).toBeUndefined();
+
+    const d2 = zExperimentDataQuery.parse({ tableName: "test_table", page: "3", pageSize: "10" });
+    expect(d2.page).toBe(3);
+    expect(d2.pageSize).toBe(10);
+    expect(d2.orderBy).toBeUndefined();
+    expect(d2.orderDirection).toBeUndefined();
+
+    const d3 = zExperimentDataQuery.parse({
+      tableName: "test_table",
+      orderBy: "timestamp",
+      orderDirection: "DESC",
+    });
+    expect(d3.orderBy).toBe("timestamp");
+    expect(d3.orderDirection).toBe("DESC");
+  });
+
+  it("zExperimentDataTable valid", () => {
+    const info = {
+      name: "t1",
+      catalog_name: "cat",
+      schema_name: "sch",
+      data: {
+        columns: [{ name: "x", type_name: "text", type_text: "VARCHAR" }],
+        rows: [{ x: "1" }],
+        totalRows: 1,
+        truncated: false,
+      },
+      page: 1,
+      pageSize: 5,
+      totalPages: 1,
+      totalRows: 1,
+    };
+    expect(zExperimentDataTable.parse(info)).toEqual(info);
+  });
+
+  it("zExperimentDataTableList / Response valid", () => {
+    const list = [
+      {
+        name: "t1",
+        catalog_name: "cat",
+        schema_name: "sch",
+        page: 1,
+        pageSize: 5,
+        totalPages: 1,
+        totalRows: 0,
+      },
+    ];
+    expect(zExperimentDataTableList.parse(list)).toEqual(list);
+    expect(zExperimentDataResponse.parse(list)).toEqual(list);
   });
 });

@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentChartFamily,
   ExperimentChartType,
-  ExperimentDataColumn,
   ExperimentVisualization,
 } from "@repo/api/domains/experiment/experiment.schema";
 

@@ -10,13 +10,15 @@
  * ```
  */
 import type {
+  ExperimentDataResponse,
+  ExperimentTableMetadata,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
   Experiment,
   ExperimentAccess,
   ExperimentDashboard,
-  ExperimentDataResponse,
-  ExperimentTableMetadata,
   ExperimentVisualization,
   ExperimentExportRecord,
   ExperimentFilterWidget,

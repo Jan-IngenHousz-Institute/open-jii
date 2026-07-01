@@ -3,8 +3,8 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { CategoricalSingleInput } from "./categorical-single-input";
 

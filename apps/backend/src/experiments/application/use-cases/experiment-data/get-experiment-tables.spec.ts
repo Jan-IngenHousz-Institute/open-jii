@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { ExperimentTableName } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   success,

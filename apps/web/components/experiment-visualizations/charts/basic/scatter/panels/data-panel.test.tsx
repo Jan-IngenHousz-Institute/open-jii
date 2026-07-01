@@ -1,7 +1,7 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { scatterChartType } from "../";
 import { DataSourcesFieldArrayProvider } from "../../../../workspace/context/data-sources-field-array-context";

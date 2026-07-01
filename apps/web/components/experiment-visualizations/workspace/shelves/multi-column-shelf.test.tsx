@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";

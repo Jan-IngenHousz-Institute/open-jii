@@ -1,7 +1,7 @@
 import {
   ExperimentColumnPrimitiveType,
   WellKnownColumnTypes,
-} from "../domains/experiment/experiment.schema";
+} from "../domains/experiment/data/experiment-data.schema";
 
 /**
  * Utility functions for checking column data types.

@@ -12,7 +12,7 @@ import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   isNumericType,
   isMapType,

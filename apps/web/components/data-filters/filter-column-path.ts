@@ -1,5 +1,5 @@
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 /** Wire-ready dotted path; struct columns route through their identity sub-field. */
 export function filterColumnPathFor(column: ExperimentDataColumn): string {

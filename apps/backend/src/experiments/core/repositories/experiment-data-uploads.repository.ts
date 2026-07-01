@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
-  ExperimentTableName,
   zExperimentUploadHistoryStatus,
   zExperimentUploadSourceKind,
 } from "@repo/api/domains/experiment/experiment.schema";

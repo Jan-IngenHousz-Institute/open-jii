@@ -2,10 +2,8 @@
 
 import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 
-import type {
-  ExperimentDataColumn,
-  ExperimentFilterWidget,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
 
 import { parentColumnName } from "../../../data-filters/filter-column-path";
 import { operatorsForColumn } from "../../../data-filters/filter-operators";

@@ -2,7 +2,7 @@ import { act, renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { histogram2DChartType } from "../";
 import type { ChartFormValues } from "../../../chart-config";

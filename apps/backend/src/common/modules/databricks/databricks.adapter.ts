@@ -1,10 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
-import {
-  ExperimentTableName,
-  zExperimentUploadSourceKind,
-} from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 import type {
   ExportFormat,

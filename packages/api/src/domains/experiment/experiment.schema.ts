@@ -5,6 +5,7 @@ import { zMacroLanguage } from "../macro/macro.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
 import {
   zExperimentAggregationFunction,
+  zExperimentData,
   zExperimentDataAggregation,
   zExperimentDataFilter,
   zExperimentDataFilterOperator,
@@ -23,56 +24,12 @@ import {
   zExperimentLocationList,
 } from "./locations/experiment-locations.schema";
 
-/**
- * Core table names that are always present in the centrum schema
- */
-export const ExperimentTableName = {
-  RAW_DATA: "raw_data",
-  DEVICE: "device",
-} as const;
-
-export type ExperimentTableNameType =
-  (typeof ExperimentTableName)[keyof typeof ExperimentTableName];
-
-/**
- * Zod enum for core table names
- */
-export const zExperimentTableName = z.enum(["raw_data", "device"]);
-
-/**
- * Union type: core table names OR string (for dynamic macro tables)
- */
-export const zExperimentTableNameInput = z.union([
-  zExperimentTableName,
-  z.string().min(1).max(256),
-]);
-
-// Fixed table name every ambyte upload lands in, shared by the FE picker and
-// the pipeline's UPLOAD_TABLE_NAME widget. Not a core table (only present once
-// ambyte data is uploaded), so kept out of ExperimentTableName.
-export const AMBYTE_UPLOAD_TABLE_NAME = "raw_ambyte_data";
-
 // Define Zod schemas for experiment models
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
 export const zExperimentMemberRole = z.enum(["admin", "member"]);
-
-// Data column schema
-export const zExperimentDataColumn = z.object({
-  name: z.string(),
-  type_name: z.string(),
-  type_text: z.string(),
-});
-
-// Experiment data schema
-export const zExperimentData = z.object({
-  columns: z.array(zExperimentDataColumn),
-  rows: z.array(z.record(z.string(), z.unknown().nullable())),
-  totalRows: z.number().int(),
-  truncated: z.boolean(),
-});
 
 export const zExperiment = z.object({
   id: z.string().uuid(),
@@ -619,8 +576,6 @@ export const zUpdateExperimentDashboardResponse = zExperimentDashboard;
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type ExperimentMemberRole = z.infer<typeof zExperimentMemberRole>;
-export type ExperimentDataColumn = z.infer<typeof zExperimentDataColumn>;
-export type ExperimentData = z.infer<typeof zExperimentData>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
@@ -762,107 +717,6 @@ export const zExperimentFilterQuery = z.object({
   search: z.string().optional().describe("Search term for experiment name"),
 });
 
-// Hard ceiling on rows returned when filtering/aggregating. The page-based
-// pagination path uses pageSize instead; this only kicks in for the
-// "non-paginated" branches (specific columns, filtered, or aggregated).
-export const DATA_QUERY_MAX_LIMIT = 100_000;
-
-// Helper: parse a JSON-encoded query string and validate against the inner
-// schema. Used to ferry `filters` / `aggregation` through GET query params
-// without giving up the structured shape on the server.
-function jsonQuerySchema<S extends z.ZodTypeAny>(inner: S) {
-  return z
-    .string()
-    .transform((raw, ctx) => {
-      try {
-        return JSON.parse(raw) as unknown;
-      } catch {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid JSON" });
-        return z.NEVER;
-      }
-    })
-    .pipe(inner);
-}
-
-export const zExperimentDataQuery = z.object({
-  page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
-  tableName: zExperimentTableNameInput.describe(
-    "Table name: 'raw_data', 'device', macro UUID, or upload_table_id",
-  ),
-  columns: z
-    .string()
-    .optional()
-    .describe(
-      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
-    ),
-  orderBy: z.string().optional().describe("Column name to order results by"),
-  orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
-  // Filters and aggregation are JSON-encoded so the endpoint stays a real
-  // HTTP GET (cache-friendly under TanStack Query) while still supporting
-  // the structured `zExperimentDataFilter` / `zExperimentDataAggregation` shapes. Same primitives
-  // drive the persisted visualization `dataConfig`, so a saved viz can pass
-  // its config straight through.
-  filters: jsonQuerySchema(z.array(zExperimentDataFilter))
-    .optional()
-    .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
-  aggregation: jsonQuerySchema(zExperimentDataAggregation)
-    .optional()
-    .describe("JSON-encoded GROUP BY + aggregate functions"),
-  // `limit` only takes effect when filters or aggregation switch the
-  // response off the page-based path. Page/pageSize keep their existing
-  // semantics in the legacy paginated read.
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(DATA_QUERY_MAX_LIMIT)
-    .optional()
-    .describe(
-      "Hard cap on returned rows for filtered/aggregated reads. Ignored when page/pageSize are used.",
-    ),
-});
-
-// Powers the searchable categorical filter UI: GET this endpoint with a
-// table + column and you get back the distinct (non-null) values, capped
-// at `limit`. Used by the data-filters Combobox so users pick from the
-// real values in their data instead of typing free-form strings.
-
-export const DISTINCT_VALUES_DEFAULT_LIMIT = 200;
-export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
-
-export const zExperimentDistinctValuesQuery = z.object({
-  tableName: zExperimentTableNameInput.describe("Table to scan"),
-  column: z.string().min(1).describe("Column whose distinct values to return"),
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(DISTINCT_VALUES_MAX_LIMIT)
-    .optional()
-    .describe(
-      `Hard cap on returned values (default ${DISTINCT_VALUES_DEFAULT_LIMIT}, max ${DISTINCT_VALUES_MAX_LIMIT}).`,
-    ),
-});
-
-export const zExperimentDistinctValuesResponse = z.object({
-  values: z
-    .array(z.union([z.string(), z.number()]))
-    .describe("Distinct non-null values, sorted ascending"),
-  truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
-});
-
-export const zExperimentDataTable = z.object({
-  name: z.string().describe("Technical name of the table used for queries and operations"),
-  catalog_name: z.string().describe("Catalog name"),
-  schema_name: z.string().describe("Schema name"),
-  data: zExperimentData.optional(),
-  page: z.number().int(),
-  pageSize: z.number().int(),
-  totalPages: z.number().int(),
-  totalRows: z.number().int(),
-});
-
 export const zExperimentIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
 });
@@ -870,92 +724,6 @@ export const zExperimentExportPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
   exportId: z.string().uuid().describe("ID of the export"),
 });
-
-export const zExperimentDataTableList = z.array(zExperimentDataTable);
-
-export const zExperimentDataResponse = zExperimentDataTableList;
-
-// Single source of truth for all data column types used across frontend and backend
-
-// Primitive Types Zod Schema
-export const zExperimentColumnPrimitiveType = z.enum([
-  // String types
-  "STRING",
-  "VARCHAR",
-  "CHAR",
-  // Numeric types - Integer
-  "TINYINT",
-  "SMALLINT",
-  "INT",
-  "BIGINT",
-  "LONG", // Alias for BIGINT
-  // Numeric types - Floating point
-  "FLOAT",
-  "DOUBLE",
-  "REAL",
-  "DECIMAL",
-  "NUMERIC",
-  // Boolean
-  "BOOLEAN",
-  // Date/Time
-  "DATE",
-  "TIMESTAMP",
-  "TIMESTAMP_NTZ",
-  // Binary
-  "BINARY",
-  // Semi-structured
-  "VARIANT",
-]);
-
-export type ExperimentColumnPrimitiveType = z.infer<typeof zExperimentColumnPrimitiveType>;
-
-// Export constants object for convenient access (backwards compatible)
-export const ExperimentColumnPrimitiveType = zExperimentColumnPrimitiveType.enum;
-
-// Well-known Type Strings
-export const zExperimentAnnotationsColumnType = z.literal(
-  "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
-);
-
-export const zExperimentContributorColumnType = z.literal(
-  "STRUCT<id: STRING, name: STRING, avatar: STRING>",
-);
-
-export type ExperimentAnnotationsColumnType = z.infer<typeof zExperimentAnnotationsColumnType>;
-export type ExperimentContributorColumnType = z.infer<typeof zExperimentContributorColumnType>;
-
-export const WellKnownColumnTypes = {
-  ANNOTATIONS: zExperimentAnnotationsColumnType.value,
-  CONTRIBUTOR: zExperimentContributorColumnType.value,
-} as const;
-
-export const zExperimentColumnInfo = z.object({
-  name: z.string().describe("Column name"),
-  type_text: z.string().describe("Full type definition string (e.g., 'ARRAY<STRUCT<...>>')"),
-  type_name: z.string().describe("Base type category (e.g., primitive, array, map, struct types)"),
-  position: z.number().int().describe("Column position in the table"),
-  nullable: z.boolean().optional().describe("Whether the column can contain null values"),
-  comment: z.string().optional().describe("Column description or comment"),
-  type_json: z.string().optional().describe("JSON representation of complex types"),
-  type_precision: z.number().int().optional().describe("Precision for numeric types"),
-  type_scale: z.number().int().optional().describe("Scale for numeric types"),
-  partition_index: z.number().int().optional().describe("Partition index if partitioned"),
-});
-
-export const zExperimentTableMetadata = z.object({
-  identifier: z
-    .string()
-    .describe("Stable identifier: static table name, macro UUID, or upload table name"),
-  tableType: z
-    .enum(["static", "macro", "upload"])
-    .describe("Whether this is a static table, a macro table, or a user-uploaded table"),
-  displayName: z.string().describe("Human-readable display name of the table for UI"),
-  totalRows: z.number().int().describe("Total number of rows in the table"),
-  defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
-  errorColumn: z.string().optional().describe("Column name that contains error information if any"),
-});
-
-export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 
@@ -966,13 +734,6 @@ export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
-export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
-export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
-export type ExperimentDistinctValuesResponse = z.infer<typeof zExperimentDistinctValuesResponse>;
-export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
-export type ExperimentColumnInfo = z.infer<typeof zExperimentColumnInfo>;
-export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
-export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
 export type ExperimentIdPathParam = z.infer<typeof zExperimentIdPathParam>;
 
 // Visualization types

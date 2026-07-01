@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { FilterRow } from "./filter-row";
 

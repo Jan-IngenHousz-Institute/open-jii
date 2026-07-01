@@ -3,7 +3,7 @@ import type { HeaderGroup, Row } from "@tanstack/react-table";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   formatValue,

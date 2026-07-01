@@ -6,7 +6,7 @@ import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import { ExperimentTableName } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import ExperimentDataPage from "./page";
 

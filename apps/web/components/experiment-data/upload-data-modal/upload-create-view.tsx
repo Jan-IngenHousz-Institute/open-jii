@@ -9,8 +9,8 @@ import { useForm } from "react-hook-form";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { parseApiError } from "~/util/apiError";
 
+import { AMBYTE_UPLOAD_TABLE_NAME } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
-  AMBYTE_UPLOAD_TABLE_NAME,
   UPLOAD_KIND_CONSTANTS,
   zExperimentUploadFormFields,
 } from "@repo/api/domains/experiment/experiment.schema";

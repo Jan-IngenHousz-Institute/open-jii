@@ -1,4 +1,4 @@
-import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentData } from "../useExperimentData/useExperimentData";
 

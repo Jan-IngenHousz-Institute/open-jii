@@ -1,13 +1,13 @@
 import { oc } from "@orpc/contract";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zExperimentDataQuery,
   zExperimentDataResponse,
   zExperimentDistinctValuesQuery,
   zExperimentDistinctValuesResponse,
-  zExperimentIdPathParam,
   zExperimentTablesMetadataList,
-} from "../experiment.schema";
+} from "./experiment-data.schema";
 
 export const experimentDataContract = {
   getExperimentTables: oc

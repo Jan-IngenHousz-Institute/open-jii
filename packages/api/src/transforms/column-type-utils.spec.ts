@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   ExperimentColumnPrimitiveType,
   WellKnownColumnTypes,
-} from "../domains/experiment/experiment.schema";
+} from "../domains/experiment/data/experiment-data.schema";
 import {
   isNumericType,
   isArrayType,

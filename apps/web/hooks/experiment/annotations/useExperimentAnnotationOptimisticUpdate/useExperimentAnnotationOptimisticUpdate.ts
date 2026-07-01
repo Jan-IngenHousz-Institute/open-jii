@@ -5,10 +5,8 @@ import type {
   ExperimentAnnotationType,
   ExperimentAnnotationContent,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
-import type {
-  ExperimentDataResponse,
-  ExperimentDataColumn,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 // The type string for the annotations column
 const ANNOTATIONS_COLUMN_TYPE =
