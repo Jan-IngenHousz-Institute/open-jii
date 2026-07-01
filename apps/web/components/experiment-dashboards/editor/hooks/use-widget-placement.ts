@@ -6,7 +6,7 @@ import { verticalCompactor } from "react-grid-layout";
 import type { LayoutItem } from "react-grid-layout";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import {

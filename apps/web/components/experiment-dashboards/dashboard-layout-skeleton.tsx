@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export interface DashboardLayoutSkeletonProps {

@@ -1,17 +1,17 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zCreateExperimentDashboardBody,
   zCreateExperimentDashboardResponse,
   zExperimentDashboard,
   zExperimentDashboardList,
   zExperimentDashboardPathParam,
-  zExperimentIdPathParam,
   zListExperimentDashboardsQuery,
   zUpdateExperimentDashboardBody,
   zUpdateExperimentDashboardResponse,
-} from "../experiment.schema";
+} from "./experiment-dashboards.schema";
 
 export const experimentDashboardsContract = {
   listExperimentDashboards: oc

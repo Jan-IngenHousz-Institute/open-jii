@@ -1,7 +1,7 @@
 import { verticalCompactor } from "react-grid-layout";
 import type { LayoutItem, ResizeHandleAxis } from "react-grid-layout";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import { getWidgetMinDimensions } from "../../widgets/widget-dimensions";
 import type { DashboardTool } from "../context/dashboard-editor-context";

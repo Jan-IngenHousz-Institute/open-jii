@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   zExperimentDashboardLayout,
   zExperimentDashboardWidget,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { experimentDashboards } from "@repo/database";
 
 // Override the JSONB columns with the typed Zod schemas so DTOs flow through

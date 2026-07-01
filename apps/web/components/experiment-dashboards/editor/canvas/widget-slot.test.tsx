@@ -6,7 +6,7 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentDashboardWidget,
   ExperimentRichTextWidget,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";

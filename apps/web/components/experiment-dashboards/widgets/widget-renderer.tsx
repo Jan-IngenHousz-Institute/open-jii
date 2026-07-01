@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import { FilterWidgetView } from "./filter/filter-widget-view";
 import { RichTextWidgetView } from "./rich-text/rich-text-widget";

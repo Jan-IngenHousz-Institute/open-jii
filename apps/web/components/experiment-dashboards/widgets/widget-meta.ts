@@ -1,7 +1,7 @@
 import { BarChart3, Filter, Table2, Type } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import type { DashboardTool } from "../editor/context/dashboard-editor-context";
 

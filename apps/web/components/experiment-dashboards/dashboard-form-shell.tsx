@@ -9,7 +9,7 @@ import type {
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
   ExperimentDashboard,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { Form } from "@repo/ui/components/form";
 
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";

@@ -3,8 +3,8 @@
 import { Filter } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { FilterValueInput } from "../../../data-filters/value-input";

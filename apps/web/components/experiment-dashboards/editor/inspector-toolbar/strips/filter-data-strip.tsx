@@ -5,7 +5,7 @@ import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useE
 import { Columns3, Database, Filter as FilterIcon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,

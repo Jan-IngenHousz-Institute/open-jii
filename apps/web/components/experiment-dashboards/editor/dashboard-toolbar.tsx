@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

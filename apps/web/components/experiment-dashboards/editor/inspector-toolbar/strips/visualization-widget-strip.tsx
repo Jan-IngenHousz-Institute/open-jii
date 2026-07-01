@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import type { ExperimentChartType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";

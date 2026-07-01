@@ -1,7 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 interface ExperimentDashboardUpdateProps {
   experimentId: string;

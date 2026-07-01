@@ -3,7 +3,7 @@
 import { Pencil } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { ExperimentRichTextWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentRichTextWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import {
   compactWidgets,

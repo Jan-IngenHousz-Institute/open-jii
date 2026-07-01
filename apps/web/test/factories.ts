@@ -10,24 +10,26 @@
  * ```
  */
 import type {
+  ExperimentDashboardLayout,
+  ExperimentDashboardWidget,
+  ExperimentDashboard,
+  ExperimentFilterWidget,
+  ExperimentRichTextWidget,
+  ExperimentTableWidget,
+  ExperimentVisualizationWidget,
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type {
   ExperimentDataResponse,
   ExperimentTableMetadata,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
-  ExperimentDashboardLayout,
-  ExperimentDashboardWidget,
   Experiment,
   ExperimentAccess,
-  ExperimentDashboard,
   ExperimentExportRecord,
-  ExperimentFilterWidget,
   ExperimentFlowGraph,
   ExperimentLocation,
   ExperimentPlaceSearchResult,
-  ExperimentRichTextWidget,
-  ExperimentTableWidget,
   ExperimentUploadMetadata,
-  ExperimentVisualizationWidget,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";

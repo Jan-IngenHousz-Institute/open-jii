@@ -4,7 +4,7 @@ import { formatDate } from "@/util/date";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 
-import type { ExperimentDashboard } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components/card";
 

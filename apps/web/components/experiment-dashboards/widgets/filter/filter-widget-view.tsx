@@ -2,7 +2,7 @@
 
 import { Filter, RotateCcw } from "lucide-react";
 
-import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
