@@ -4,7 +4,7 @@ import { zWebhookAuthHeader, zWebhookErrorResponse } from "../user/user.schema";
 import {
   zExperimentProjectTransferWebhookPayload,
   zExperimentProjectTransferWebhookResponse,
-} from "./experiment.schema";
+} from "./project-transfer-webhook/experiment-project-transfer-webhook.schema";
 
 describe("Experiment Contract Schemas", () => {
   describe("projectTransfer request", () => {

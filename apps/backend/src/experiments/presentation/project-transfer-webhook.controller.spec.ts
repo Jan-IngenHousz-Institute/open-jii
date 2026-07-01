@@ -6,7 +6,7 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentProjectTransferWebhookPayload,
   ExperimentProjectTransferWebhookResponse,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import type { WebhookErrorResponse } from "@repo/api/domains/user/user.schema";
 
 import { stableStringify } from "../../common/utils/stable-json";

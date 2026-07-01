@@ -3,7 +3,7 @@ import { oc } from "@orpc/contract";
 import {
   zExperimentProjectTransferWebhookPayload,
   zExperimentProjectTransferWebhookResponse,
-} from "../experiment.schema";
+} from "./experiment-project-transfer-webhook.schema";
 
 export const experimentProjectTransferWebhookContract = {
   projectTransfer: oc

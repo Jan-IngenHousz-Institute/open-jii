@@ -1,10 +1,10 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import type { ExperimentFlowGraph } from "@repo/api/domains/experiment/experiment.schema";
 import type {
-  ExperimentFlowGraph,
   ExperimentProjectTransferWebhookPayload,
   ExperimentProjectTransferWebhookResponse,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import { flowNodesToWorkbookCells } from "@repo/api/transforms/flow-to-workbook-cells";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";

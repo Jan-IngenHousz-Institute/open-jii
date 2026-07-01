@@ -1,4 +1,4 @@
-import type { ExperimentProjectTransferWebhookPayload } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentProjectTransferWebhookPayload } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 
 import {
   AppError,
