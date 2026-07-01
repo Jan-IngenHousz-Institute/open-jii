@@ -18,6 +18,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "aws" {
+  alias  = "dr"
+  region = "eu-west-1"
+}
+
 provider "databricks" {
   alias         = "mws"
   host          = "https://accounts.cloud.databricks.com"
