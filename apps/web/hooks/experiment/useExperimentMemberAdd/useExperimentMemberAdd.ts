@@ -1,7 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ExperimentMember } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 
 /**
  * Hook to add members to an experiment (batch)

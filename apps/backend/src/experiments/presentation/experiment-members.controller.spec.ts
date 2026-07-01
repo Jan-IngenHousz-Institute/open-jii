@@ -5,7 +5,7 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentMemberList,
   TransferExperimentAdminResponse,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success } from "../../common/utils/fp-utils";

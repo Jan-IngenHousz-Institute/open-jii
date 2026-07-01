@@ -6,8 +6,8 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentJoinRequest,
   ExperimentJoinRequestList,
-  ExperimentMemberList,
 } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success } from "../../common/utils/fp-utils";

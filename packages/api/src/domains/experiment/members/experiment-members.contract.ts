@@ -1,16 +1,16 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zAddExperimentMembersBody,
-  zExperimentIdPathParam,
   zExperimentMember,
   zExperimentMemberList,
   zExperimentMemberPathParam,
   zTransferExperimentAdminBody,
   zTransferExperimentAdminResponse,
   zUpdateExperimentMemberRoleBody,
-} from "../experiment.schema";
+} from "./experiment-members.schema";
 
 export const experimentMembersContract = {
   listExperimentMembers: oc

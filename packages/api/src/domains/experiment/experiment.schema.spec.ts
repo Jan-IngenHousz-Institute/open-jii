@@ -9,8 +9,6 @@ import {
   // Experiment core
   zExperiment,
   zExperimentList,
-  zExperimentMember,
-  zExperimentMemberList,
   zExperimentAccess,
   // Data
   zExperimentDataColumn,
@@ -50,11 +48,9 @@ import {
   // Creation / update & filters
   zCreateExperimentBody,
   zUpdateExperimentBody,
-  zAddExperimentMembersBody,
   zExperimentFilterQuery,
   // Path params / responses
   zExperimentIdPathParam,
-  zExperimentMemberPathParam,
   zExperimentExportPathParam,
   zCreateExperimentResponse,
   // Export schemas
@@ -205,34 +201,7 @@ describe("Experiment Schema", () => {
     });
   });
 
-  describe("Members & Access", () => {
-    const member = {
-      user: {
-        id: uuidA,
-        firstName: "John",
-        lastName: "Doe",
-        email: "john@example.com",
-        avatarUrl: null,
-      },
-      role: "member",
-      joinedAt: isoTime,
-    };
-    it("zExperimentMember valid", () => {
-      expect(zExperimentMember.parse(member)).toEqual(member);
-    });
-
-    it("zExperimentMember rejects bad email", () => {
-      const bad = {
-        ...member,
-        user: { ...member.user, email: "nope" },
-      };
-      expect(() => zExperimentMember.parse(bad)).toThrow();
-    });
-
-    it("zExperimentMemberList valid array", () => {
-      expect(zExperimentMemberList.parse([member])).toEqual([member]);
-    });
-
+  describe("Access", () => {
     it("zExperimentAccess valid", () => {
       const exp = {
         id: uuidA,
@@ -511,13 +480,6 @@ describe("Experiment Schema", () => {
     it("zUpdateExperimentBody valid partials", () => {
       const body = { description: "new" };
       expect(zUpdateExperimentBody.parse(body)).toEqual(body);
-    });
-
-    it("zAddExperimentMembersBody sets default role=member", () => {
-      const body = { members: [{ userId: uuidA }, { userId: uuidB, role: "admin" }] };
-      const parsed = zAddExperimentMembersBody.parse(body);
-      expect(parsed.members[0].role).toBe("member");
-      expect(parsed.members[1].role).toBe("admin");
     });
 
     it("zExperimentFilterQuery valid and optional", () => {
@@ -838,11 +800,6 @@ describe("Experiment Schema", () => {
       const ok = { id: uuidA };
       expect(zExperimentIdPathParam.parse(ok)).toEqual(ok);
       expect(() => zExperimentIdPathParam.parse({ id: "nope" })).toThrow();
-    });
-
-    it("zExperimentMemberPathParam valid", () => {
-      const ok = { id: uuidA, memberId: uuidB };
-      expect(zExperimentMemberPathParam.parse(ok)).toEqual(ok);
     });
 
     it("zExperimentExportPathParam valid and rejects bad uuid", () => {

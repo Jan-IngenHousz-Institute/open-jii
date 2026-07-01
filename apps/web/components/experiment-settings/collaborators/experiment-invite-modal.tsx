@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type {
-  ExperimentMember,
-  ExperimentMemberRole,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
