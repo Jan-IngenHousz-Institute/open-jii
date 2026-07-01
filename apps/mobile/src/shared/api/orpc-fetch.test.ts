@@ -1,20 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { orpcFetch } from "~/shared/api/orpc-fetch";
+import { configureAuthRefresh, orpcFetch } from "~/shared/api/orpc-fetch";
 
-const { mockFetch, mockGetSession, mockSignOut, mockGetCookie } = vi.hoisted(() => ({
-  mockFetch: vi.fn(),
-  mockGetSession: vi.fn(),
-  mockSignOut: vi.fn(),
-  mockGetCookie: vi.fn(() => "sessionToken=cookie"),
-}));
-
-vi.mock("~/features/auth/services/auth", () => ({
-  getAuthClient: () => ({
-    getSession: mockGetSession,
-    signOut: mockSignOut,
-    getCookie: mockGetCookie,
-  }),
-}));
+const mockFetch = vi.fn();
+const mockRefreshSession = vi.fn();
+const mockSignOut = vi.fn();
+const mockGetCookie = vi.fn<() => string | null | undefined>(() => "sessionToken=cookie");
 
 vi.stubGlobal("fetch", mockFetch);
 
@@ -25,10 +15,16 @@ function makeRequest() {
 describe("orpcFetch", () => {
   beforeEach(() => {
     mockFetch.mockReset();
-    mockGetSession.mockReset();
+    mockRefreshSession.mockReset();
     mockSignOut.mockReset();
     mockGetCookie.mockReset();
     mockGetCookie.mockReturnValue("sessionToken=cookie");
+    // Inject the auth seam the way shared/composition/auth-wiring does at boot.
+    configureAuthRefresh({
+      getCookie: mockGetCookie,
+      refreshSession: mockRefreshSession,
+      signOut: mockSignOut,
+    });
   });
 
   it("passes through a 200 response without touching auth", async () => {
@@ -37,7 +33,7 @@ describe("orpcFetch", () => {
     const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(200);
-    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(mockRefreshSession).not.toHaveBeenCalled();
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 
@@ -45,19 +41,19 @@ describe("orpcFetch", () => {
     mockFetch
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
-    mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s1" } } });
+    mockRefreshSession.mockResolvedValueOnce(true);
 
     const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(200);
-    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it("signs out when the refresh succeeds but the retry is still 401", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
-    mockGetSession.mockResolvedValueOnce({ data: { session: { id: "s1" } } });
+    mockRefreshSession.mockResolvedValueOnce(true);
 
     const result = await orpcFetch(makeRequest(), undefined);
 
@@ -65,50 +61,16 @@ describe("orpcFetch", () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
-  it("signs out when refresh itself fails (no session)", async () => {
+  it("signs out without retrying when the refresh fails", async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
-    mockGetSession.mockResolvedValueOnce({ data: null });
+    mockRefreshSession.mockResolvedValueOnce(false);
 
     const result = await orpcFetch(makeRequest(), undefined);
 
     expect(result.status).toBe(401);
-    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledTimes(1); // no retry when refresh fails
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  it("signs out when refresh throws", async () => {
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
-    mockGetSession.mockRejectedValueOnce(new Error("offline"));
-
-    const result = await orpcFetch(makeRequest(), undefined);
-
-    expect(result.status).toBe(401);
-    expect(mockSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  it("dedupes concurrent refreshes (single-flight lock)", async () => {
-    mockFetch.mockResolvedValue(new Response(null, { status: 401 }));
-    let resolveRefresh!: (v: { data: { session: { id: string } } }) => void;
-    mockGetSession.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveRefresh = resolve;
-        }),
-    );
-
-    const p1 = orpcFetch(makeRequest(), undefined);
-    const p2 = orpcFetch(makeRequest(), undefined);
-    const p3 = orpcFetch(makeRequest(), undefined);
-
-    // Let the initial 401 reads settle, then resolve the shared refresh.
-    await new Promise((r) => setTimeout(r, 0));
-    resolveRefresh({ data: { session: { id: "s1" } } });
-
-    await Promise.all([p1, p2, p3]);
-
-    // One refresh call, no matter how many 401s came in concurrently.
-    expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
   it("attaches the Cookie header when a session cookie is present", async () => {

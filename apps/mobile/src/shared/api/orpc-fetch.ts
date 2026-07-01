@@ -1,5 +1,16 @@
-import { refreshSession } from "~/features/auth/api/refresh.api";
-import { getAuthClient } from "~/features/auth/services/auth";
+// Auth seam, injected by shared/composition/auth-wiring.ts at module load so
+// shared/api carries no dependency on the auth feature.
+export interface AuthRefreshHandler {
+  getCookie(): string | null | undefined;
+  refreshSession(): Promise<boolean>;
+  signOut(): Promise<void>;
+}
+
+let authHandler: AuthRefreshHandler | null = null;
+
+export function configureAuthRefresh(handler: AuthRefreshHandler): void {
+  authHandler = handler;
+}
 
 // Without this, fetch hangs at the platform default whenever the backend is
 // unreachable (Wi-Fi-without-internet, captive portal, sleeping device). 10s is
@@ -14,8 +25,6 @@ export async function orpcFetch(
   request: Request,
   init: RequestInit | undefined,
 ): Promise<Response> {
-  const authClient = getAuthClient();
-
   const send = () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -27,7 +36,7 @@ export async function orpcFetch(
     }
 
     const headers = new Headers(request.headers);
-    const cookie = authClient.getCookie();
+    const cookie = authHandler?.getCookie();
     if (cookie) {
       headers.set("Cookie", cookie);
     }
@@ -40,13 +49,13 @@ export async function orpcFetch(
   let result = await send();
 
   // On 401, try a single-flight session re-validation before giving up.
-  if (result.status === 401) {
-    const refreshed = await refreshSession();
+  if (result.status === 401 && authHandler) {
+    const refreshed = await authHandler.refreshSession();
     if (refreshed) {
       result = await send();
     }
     if (result.status === 401) {
-      await authClient.signOut();
+      await authHandler.signOut();
     }
   }
 

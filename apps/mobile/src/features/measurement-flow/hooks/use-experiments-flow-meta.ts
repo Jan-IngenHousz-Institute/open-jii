@@ -1,12 +1,9 @@
 import { useQueries } from "@tanstack/react-query";
-import { isQuestionsOnlyFlow } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-import type {
-  FlowEdge,
-  FlowNode,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 import { orpc } from "~/shared/api/orpc";
+import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
+import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
   requiresSensor: boolean;
