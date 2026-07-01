@@ -17,6 +17,7 @@ import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
+import { IotDevicesModule } from "./iot-devices/iot-devices.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
 import { ProtocolModule } from "./protocols/protocol.module";
@@ -42,6 +43,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     DatabaseModule,
     ExperimentModule,
     IotModule,
+    IotDevicesModule,
     MacroModule,
     ProtocolModule,
     UserModule,

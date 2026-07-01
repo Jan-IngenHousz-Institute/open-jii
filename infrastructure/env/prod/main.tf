@@ -155,6 +155,39 @@ module "iot_core" {
   enable_large_iot_sqs  = true
   large_iot_bucket_name = module.large_iot_s3.bucket_id
   large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
+
+  provisioning_lambda_arn = module.device_provisioning_lambda.function_arn
+
+  device_types = {
+    ambyte = {
+      description           = "openJII AMBYTE plant sensor"
+      searchable_attributes = ["serial_number", "firmware_version"]
+    }
+  }
+
+  device_groups = {
+    all-devices = {
+      description  = "All openJII IoT devices"
+      parent_group = null
+    }
+  }
+}
+
+module "device_provisioning_lambda" {
+  source = "../../modules/lambda"
+
+  environment   = var.environment
+  function_name = "device-provisioning"
+  timeout       = 5
+  memory_size   = 128
+
+  layers      = ["arn:aws:lambda:${var.aws_region}:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:69"]
+  secret_arns = [module.auth_secrets.secret_arn]
+
+  environment_variables = {
+    BACKEND_URL     = "https://${module.route53.api_domain}"
+    AUTH_SECRET_ARN = module.auth_secrets.secret_arn
+  }
 }
 
 module "cognito" {
@@ -1222,6 +1255,7 @@ module "auth_secrets" {
     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
     AUTH_ORCID_ID      = var.orcid_oauth_client_id
     AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
+    INTERNAL_API_KEY   = var.internal_api_key
   })
 
   tags = {
@@ -1717,6 +1751,10 @@ module "backend_ecs" {
       name      = "CONTENTFUL_ACCESS_TOKEN"
       valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_ACCESS_TOKEN::"
     },
+    {
+      name      = "INTERNAL_API_KEY"
+      valueFrom = "${module.auth_secrets.secret_arn}:INTERNAL_API_KEY::"
+    },
   ]
 
   # Environment variables for the backend service
@@ -1836,7 +1874,7 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
-    }
+    },
   ]
 
   # Additional IAM policies for the task role
