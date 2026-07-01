@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useGetUserProfile } from "./useGetUserProfile";
 
 describe("useGetUserProfile", () => {
   it("returns user profile data", async () => {
     const profile = createUserProfile({ userId: "user-123" });
-    server.mount(orpcContract.users.getUserProfile, { body: profile });
+    server.mount(contract.users.getUserProfile, { body: profile });
 
     const { result } = renderHook(() => useGetUserProfile("user-123"));
 
@@ -44,7 +44,7 @@ describe("useGetUserProfile", () => {
   });
 
   it("handles 404 for non-existent user (no retry)", async () => {
-    server.mount(orpcContract.users.getUserProfile, { status: 404 });
+    server.mount(contract.users.getUserProfile, { status: 404 });
 
     const { result } = renderHook(() => useGetUserProfile("non-existent"));
 
@@ -57,7 +57,7 @@ describe("useGetUserProfile", () => {
   });
 
   it("uses different query keys for different user IDs", async () => {
-    server.mount(orpcContract.users.getUserProfile, { body: createUserProfile() });
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
 
     const { result: r1 } = renderHook(() => useGetUserProfile("user-1"));
     const { result: r2 } = renderHook(() => useGetUserProfile("user-2"));

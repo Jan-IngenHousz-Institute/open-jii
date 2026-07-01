@@ -6,16 +6,16 @@ import { http, HttpResponse } from "msw";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { UploadDataModal } from "./upload-data-modal";
 
 function mountEmptyHistory() {
-  server.mount(orpcContract.experiments.listUploads, { body: { uploads: [] } });
+  server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
 }
 
 function setExperimentTables(tables: ReturnType<typeof createExperimentTable>[] = []) {
-  server.mount(orpcContract.experiments.getExperimentTables, { body: tables });
+  server.mount(contract.experiments.getExperimentTables, { body: tables });
 }
 
 // `uploadData` is a native multipart endpoint with no oRPC contract entry, so

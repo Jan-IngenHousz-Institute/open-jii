@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DataExportModal } from "../data-export-modal";
@@ -35,7 +35,7 @@ function mountExportHandlers(initiateOverrides?: {
   body?: unknown;
   delay?: number | "infinite";
 }) {
-  const spy = server.mount(orpcContract.experiments.initiateExport, {
+  const spy = server.mount(contract.experiments.initiateExport, {
     body: { status: "queued" as const },
     ...(initiateOverrides as {
       status?: 201 | 400 | 403 | 404 | 500;
@@ -43,7 +43,7 @@ function mountExportHandlers(initiateOverrides?: {
       delay?: number | "infinite";
     }),
   });
-  server.mount(orpcContract.experiments.listExports, { body: { exports: [] } });
+  server.mount(contract.experiments.listExports, { body: { exports: [] } });
   return spy;
 }
 
@@ -151,7 +151,7 @@ describe("DataExportModal", () => {
 
   it("forwards the anonymize override and surfaces the divergence badge when the user flips the checkbox", async () => {
     const initiateSpy = mountExportHandlers();
-    server.mount(orpcContract.experiments.getExperiment, {
+    server.mount(contract.experiments.getExperiment, {
       body: createExperiment({ anonymizeContributors: false }),
     });
 

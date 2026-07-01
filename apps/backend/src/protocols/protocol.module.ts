@@ -19,11 +19,11 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { ProtocolMacroRepository } from "./core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "./core/repositories/protocol.repository";
 // Controllers
-import { ProtocolOrpcController } from "./presentation/protocol.orpc.controller";
+import { ProtocolController } from "./presentation/protocol.controller";
 
 @Module({
   imports: [AnalyticsModule, MacroModule],
-  controllers: [ProtocolOrpcController],
+  controllers: [ProtocolController],
   providers: [
     // Port implementations
     {

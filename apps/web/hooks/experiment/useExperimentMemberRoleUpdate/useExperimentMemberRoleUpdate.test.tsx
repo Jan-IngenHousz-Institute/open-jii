@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentMemberRoleUpdate } from "./useExperimentMemberRoleUpdate";
 
@@ -20,7 +20,7 @@ const memberResponse = {
 
 describe("useExperimentMemberRoleUpdate", () => {
   it("sends PATCH request", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperimentMemberRole, {
+    const spy = server.mount(contract.experiments.updateExperimentMemberRole, {
       body: memberResponse,
     });
 
@@ -40,7 +40,7 @@ describe("useExperimentMemberRoleUpdate", () => {
   });
 
   it("sends the correct params and body", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperimentMemberRole, {
+    const spy = server.mount(contract.experiments.updateExperimentMemberRole, {
       body: memberResponse,
     });
 
@@ -62,7 +62,7 @@ describe("useExperimentMemberRoleUpdate", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(orpcContract.experiments.updateExperimentMemberRole, { status: 500 });
+    server.mount(contract.experiments.updateExperimentMemberRole, { status: 500 });
 
     const { result } = renderHook(() => useExperimentMemberRoleUpdate());
 

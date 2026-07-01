@@ -5,7 +5,7 @@ import { use } from "react";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -152,12 +152,12 @@ describe("ProtocolOverviewPage", () => {
     } as ReturnType<typeof useSession>);
 
     // Mount both endpoints by default so auto-save doesn't fail
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
-    server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
   });
 
   it("should render loading state", () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -165,7 +165,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render error state", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { status: 500 });
+    server.mount(contract.protocols.getProtocol, { status: 500 });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -176,7 +176,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render the sidebar and main content area on success", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -188,7 +188,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render the inline editable description with correct props", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -202,7 +202,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should pass hasAccess=false to description when user is not the creator", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
     });
 
@@ -214,7 +214,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should pass hasAccess=true to description when user is the creator", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
     });
 
@@ -226,7 +226,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render the code viewer with title", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -236,7 +236,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render JsonCodeViewer with protocol code when not editing", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -247,7 +247,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should show the edit button for the creator when not editing", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
     });
 
@@ -260,7 +260,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should not show the edit button for non-creators", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
     });
 
@@ -274,7 +274,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should handle null description gracefully", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, description: null }),
     });
 
@@ -286,10 +286,10 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should call toast with success message when description save succeeds", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
     });
-    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -309,10 +309,10 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should call toast with destructive variant when description save fails", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
     });
-    server.mount(orpcContract.protocols.updateProtocol, { status: 400 });
+    server.mount(contract.protocols.updateProtocol, { status: 400 });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
@@ -329,7 +329,7 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should switch to ProtocolCodeEditor when creator clicks edit button", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
     });
 

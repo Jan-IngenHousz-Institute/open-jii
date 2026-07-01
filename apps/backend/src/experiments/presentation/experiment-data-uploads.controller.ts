@@ -13,7 +13,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import type { Request } from "express";
 
-import { experimentUploadsOrpcContract } from "@repo/api/domains/experiment/experiment-uploads.orpc";
+import { experimentUploadsContract } from "@repo/api/domains/experiment/experiment-uploads.contract";
 
 import type { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -60,9 +60,9 @@ export class ExperimentDataUploadsController {
     };
   }
 
-  @Implement(experimentUploadsOrpcContract.listUploads)
+  @Implement(experimentUploadsContract.listUploads)
   listUploads(@Session() session: UserSession) {
-    return implement(experimentUploadsOrpcContract.listUploads).handler(async ({ input }) => {
+    return implement(experimentUploadsContract.listUploads).handler(async ({ input }) => {
       const result = await this.listUploadsUseCase.execute(input.id, session.user.id, {
         uploadTableId: input.uploadTableId,
         uploadTableName: input.uploadTableName,

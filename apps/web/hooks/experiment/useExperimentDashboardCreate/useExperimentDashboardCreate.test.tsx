@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentDashboardCreate } from "./useExperimentDashboardCreate";
 
@@ -12,7 +12,7 @@ const experimentId = "11111111-1111-1111-1111-111111111111";
 describe("useExperimentDashboardCreate", () => {
   it("posts the body and resolves success", async () => {
     const created = createExperimentDashboard({ name: "Fresh dash", experimentId });
-    const spy = server.mount(orpcContract.experiments.createExperimentDashboard, {
+    const spy = server.mount(contract.experiments.createExperimentDashboard, {
       status: 201,
       body: created,
     });
@@ -30,7 +30,7 @@ describe("useExperimentDashboardCreate", () => {
 
   it("invokes onSuccess with the dashboard body", async () => {
     const created = createExperimentDashboard({ name: "Fresh dash", experimentId });
-    server.mount(orpcContract.experiments.createExperimentDashboard, {
+    server.mount(contract.experiments.createExperimentDashboard, {
       status: 201,
       body: created,
     });
@@ -47,7 +47,7 @@ describe("useExperimentDashboardCreate", () => {
   });
 
   it("sets isError when the API rejects", async () => {
-    server.mount(orpcContract.experiments.createExperimentDashboard, { status: 500 });
+    server.mount(contract.experiments.createExperimentDashboard, { status: 500 });
 
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId }));
 
@@ -59,7 +59,7 @@ describe("useExperimentDashboardCreate", () => {
   });
 
   it("does not call onSuccess on failure", async () => {
-    server.mount(orpcContract.experiments.createExperimentDashboard, { status: 500 });
+    server.mount(contract.experiments.createExperimentDashboard, { status: 500 });
     const onSuccess = vi.fn();
 
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId, onSuccess }));

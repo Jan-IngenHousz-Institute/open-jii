@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ProtocolDetailsCard } from "./protocol-details-card";
@@ -100,7 +100,7 @@ describe("ProtocolDetailsCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(orpcContract.protocols.updateProtocol, {
+    server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "test-protocol-id", name: "Updated Name" }),
     });
     useIotBrowserSupportMock.mockReturnValue({
@@ -147,7 +147,7 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should call updateProtocol mutation on submit", async () => {
-    const spy = server.mount(orpcContract.protocols.updateProtocol, {
+    const spy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "test-protocol-id" }),
     });
 
@@ -207,7 +207,7 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should show loading state during update", async () => {
-    server.mount(orpcContract.protocols.updateProtocol, {
+    server.mount(contract.protocols.updateProtocol, {
       body: createProtocol(),
       delay: 999_999,
     });

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
@@ -21,7 +21,7 @@ const contributorColumn: ExperimentDataColumn = {
 };
 
 function mountDistinct(values: (string | number)[], truncated = false) {
-  return server.mount(orpcContract.experiments.getDistinctColumnValues, {
+  return server.mount(contract.experiments.getDistinctColumnValues, {
     body: { values, truncated },
   });
 }

@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ListProtocols } from "./list-protocols";
 
@@ -17,14 +17,14 @@ vi.mock("~/components/protocol-overview-cards", () => ({
 
 describe("ListProtocols", () => {
   it("renders search input and filter", () => {
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    server.mount(contract.protocols.listProtocols, { body: [] });
     render(<ListProtocols />);
 
     expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
   });
 
   it("passes data to ProtocolOverviewCards", async () => {
-    server.mount(orpcContract.protocols.listProtocols, {
+    server.mount(contract.protocols.listProtocols, {
       body: [createProtocol({ id: "1", name: "P1" })],
     });
     render(<ListProtocols />);
@@ -35,7 +35,7 @@ describe("ListProtocols", () => {
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
     const user = userEvent.setup();
     render(<ListProtocols />);
 

@@ -13,11 +13,11 @@ import { PublishVersionUseCase } from "./application/use-cases/publish-version/p
 import { UpdateWorkbookUseCase } from "./application/use-cases/update-workbook/update-workbook";
 import { WorkbookVersionRepository } from "./core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "./core/repositories/workbook.repository";
-import { WorkbookOrpcController } from "./presentation/workbook.orpc.controller";
+import { WorkbookController } from "./presentation/workbook.controller";
 
 @Module({
   imports: [MacroModule],
-  controllers: [WorkbookOrpcController],
+  controllers: [WorkbookController],
   providers: [
     WorkbookRepository,
     WorkbookVersionRepository,

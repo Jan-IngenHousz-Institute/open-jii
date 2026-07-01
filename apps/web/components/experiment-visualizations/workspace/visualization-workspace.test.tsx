@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useForm, FormProvider } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import { lineChartType } from "../charts/basic/line";
@@ -39,14 +39,14 @@ function Harness({ formDefaults = defaults() }: { formDefaults?: ChartFormValues
 }
 
 function mountTablesAndData(tableNames: string[] = ["readings"]) {
-  server.mount(orpcContract.experiments.getExperimentTables, {
+  server.mount(contract.experiments.getExperimentTables, {
     // Pin displayName so tests don't depend on the factory's module-scoped
     // sequence counter (other tests in the same worker bump it).
     body: tableNames.map((identifier) =>
       createExperimentTable({ identifier, displayName: identifier }),
     ),
   });
-  server.mount(orpcContract.experiments.getExperimentData, {
+  server.mount(contract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
         data: {

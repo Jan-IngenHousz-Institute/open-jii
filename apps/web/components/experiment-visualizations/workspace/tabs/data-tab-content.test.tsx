@@ -5,7 +5,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { lineChartType } from "../../charts/basic/line";
@@ -70,7 +70,7 @@ function Harness({
 }
 
 function mountDistinct() {
-  server.mount(orpcContract.experiments.getDistinctColumnValues, {
+  server.mount(contract.experiments.getDistinctColumnValues, {
     body: { values: [], truncated: false },
   });
 }

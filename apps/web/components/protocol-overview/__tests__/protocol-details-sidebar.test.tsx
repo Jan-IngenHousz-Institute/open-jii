@@ -6,7 +6,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
@@ -199,9 +199,9 @@ describe("ProtocolDetailsSidebar", () => {
     // Default: user is the creator, feature flag enabled
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-123" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
-    server.mount(orpcContract.protocols.deleteProtocol, {});
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.deleteProtocol, {});
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "550e8400-e29b-41d4-a716-446655440000",
@@ -299,7 +299,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("calls updateProtocol when family is changed", async () => {
-    const spy = server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
+    const spy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
     renderComponent();
 
     const selectNative = screen.getByTestId("select-native");
@@ -314,7 +314,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("shows toast on successful family update", async () => {
-    server.mount(orpcContract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
     const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
@@ -331,7 +331,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("shows destructive toast on family update error", async () => {
-    server.mount(orpcContract.protocols.updateProtocol, { status: 400 });
+    server.mount(contract.protocols.updateProtocol, { status: 400 });
     const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
@@ -371,7 +371,7 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders singular 'macro' for single compatible macro", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "550e8400-e29b-41d4-a716-446655440000",
@@ -395,7 +395,7 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders 'no compatible macros' text when count is zero and user is not creator", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
     renderComponent();
     await waitFor(() => {
@@ -405,7 +405,7 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders 'no compatible macros' when data is undefined and user is not creator", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
     renderComponent();
     await waitFor(() => {
@@ -484,7 +484,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("calls deleteProtocol and navigates on confirm delete", async () => {
-    const spy = server.mount(orpcContract.protocols.deleteProtocol, {});
+    const spy = server.mount(contract.protocols.deleteProtocol, {});
     renderComponent();
 
     // Open dialog
@@ -510,7 +510,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("shows deleting text when delete is in progress", async () => {
-    server.mount(orpcContract.protocols.deleteProtocol, { delay: 999_999 });
+    server.mount(contract.protocols.deleteProtocol, { delay: 999_999 });
 
     renderComponent();
 
@@ -530,7 +530,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("disables confirm delete button when delete is in progress", async () => {
-    server.mount(orpcContract.protocols.deleteProtocol, { delay: 999_999 });
+    server.mount(contract.protocols.deleteProtocol, { delay: 999_999 });
 
     renderComponent();
 

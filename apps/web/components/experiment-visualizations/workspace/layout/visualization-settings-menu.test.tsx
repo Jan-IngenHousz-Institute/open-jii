@@ -5,7 +5,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -124,7 +124,7 @@ describe("VisualizationSettingsMenu", () => {
       data: createSession({ user: { id: "user-1" } }),
       isPending: false,
     } as never);
-    const spy = server.mount(orpcContract.experiments.deleteExperimentVisualization, {
+    const spy = server.mount(contract.experiments.deleteExperimentVisualization, {
       status: 204,
       body: null,
     });
@@ -173,7 +173,7 @@ describe("VisualizationSettingsMenu", () => {
       data: createSession({ user: { id: "user-1" } }),
       isPending: false,
     } as never);
-    server.mount(orpcContract.experiments.deleteExperimentVisualization, {
+    server.mount(contract.experiments.deleteExperimentVisualization, {
       status: 500,
       body: { message: "boom" },
     });

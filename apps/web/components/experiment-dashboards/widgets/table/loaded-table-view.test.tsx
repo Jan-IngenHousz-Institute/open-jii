@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { LoadedTableView } from "./loaded-table-view";
 
@@ -13,7 +13,7 @@ function mountDataAndTables(opts: {
   rows?: Record<string, unknown>[];
 }) {
   const rows = opts.rows ?? [{ id: "r1", value: 1 }];
-  const spy = server.mount(orpcContract.experiments.getExperimentData, {
+  const spy = server.mount(contract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
         name: opts.tableName,
@@ -30,7 +30,7 @@ function mountDataAndTables(opts: {
       }),
     ],
   });
-  server.mount(orpcContract.experiments.getExperimentTables, {
+  server.mount(contract.experiments.getExperimentTables, {
     body: [createExperimentTable({ identifier: opts.tableName })],
   });
   return spy;
@@ -103,8 +103,8 @@ describe("LoadedTableView", () => {
   });
 
   it("shows the load-failed empty state when the data fetch errors", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, { status: 500 });
-    server.mount(orpcContract.experiments.getExperimentTables, {
+    server.mount(contract.experiments.getExperimentData, { status: 500 });
+    server.mount(contract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "raw_data" })],
     });
     render(<LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />);

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentMetadata } from "./useExperimentMetadata";
 
@@ -16,7 +16,7 @@ const metadataPayload = {
 
 describe("useExperimentMetadata", () => {
   it("returns metadata for an experiment", async () => {
-    server.mount(orpcContract.experiments.listExperimentMetadata, {
+    server.mount(contract.experiments.listExperimentMetadata, {
       body: [
         {
           metadataId: "00000000-0000-0000-0000-000000000001",
@@ -39,7 +39,7 @@ describe("useExperimentMetadata", () => {
   });
 
   it("returns empty array when no metadata exists", async () => {
-    server.mount(orpcContract.experiments.listExperimentMetadata, { body: [] });
+    server.mount(contract.experiments.listExperimentMetadata, { body: [] });
 
     const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
@@ -49,7 +49,7 @@ describe("useExperimentMetadata", () => {
   });
 
   it("handles loading state", () => {
-    server.mount(orpcContract.experiments.listExperimentMetadata, {
+    server.mount(contract.experiments.listExperimentMetadata, {
       body: [],
       delay: 999_999,
     });
@@ -61,7 +61,7 @@ describe("useExperimentMetadata", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(orpcContract.experiments.listExperimentMetadata, { status: 500 });
+    server.mount(contract.experiments.listExperimentMetadata, { status: 500 });
 
     const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 

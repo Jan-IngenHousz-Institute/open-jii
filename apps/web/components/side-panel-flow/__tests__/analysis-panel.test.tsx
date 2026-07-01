@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { AnalysisPanel } from "../analysis-panel";
 
@@ -47,8 +47,8 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     vi.clearAllMocks();
     lastDropdownProps = null;
 
-    server.mount(orpcContract.macros.listMacros, { body: mockMacros });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.macros.listMacros, { body: mockMacros });
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "proto-1", name: "Upstream Protocol" }),
     });
     // Don't mount listCompatibleMacros by default — most tests override it
@@ -67,7 +67,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
 
   it("should show incompatibility warning when selected macro is not compatible", async () => {
     // Protocol has compatible macros macro-1 and macro-2, but macro-3 is selected
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "proto-1",
@@ -108,7 +108,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when selected macro IS compatible", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "proto-1",
@@ -155,7 +155,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when compatible macros list is empty", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
     render(
       <AnalysisPanel
@@ -170,7 +170,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when no macro is selected", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "proto-1",
@@ -195,7 +195,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should pass recommendedMacroIds to MacroSearchWithDropdown when compatibility data exists", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "proto-1",
@@ -244,7 +244,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should not pass recommendedMacroIds when compatible macros list is empty", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
     render(
       <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
@@ -255,7 +255,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should call useProtocolCompatibleMacros with upstreamProtocolId and enabled=true", async () => {
-    const compatSpy = server.mount(orpcContract.protocols.listCompatibleMacros, {
+    const compatSpy = server.mount(contract.protocols.listCompatibleMacros, {
       body: [],
     });
 
@@ -268,7 +268,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should sort compatible macros first in the dropdown list", async () => {
-    server.mount(orpcContract.protocols.listCompatibleMacros, {
+    server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
           protocolId: "proto-1",
@@ -297,7 +297,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should call useProtocolCompatibleMacros with empty string and enabled=false when no upstreamProtocolId", async () => {
-    const compatSpy = server.mount(orpcContract.protocols.listCompatibleMacros, {
+    const compatSpy = server.mount(contract.protocols.listCompatibleMacros, {
       body: [],
     });
 

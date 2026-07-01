@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useMyJoinRequest } from "./useMyJoinRequest";
 
@@ -26,7 +26,7 @@ const joinRequest = {
 
 describe("useMyJoinRequest", () => {
   it("returns the pending request when one exists", async () => {
-    server.mount(orpcContract.experiments.getMyJoinRequest, { body: joinRequest });
+    server.mount(contract.experiments.getMyJoinRequest, { body: joinRequest });
 
     const { result } = renderHook(() => useMyJoinRequest("exp-1"));
 
@@ -35,7 +35,7 @@ describe("useMyJoinRequest", () => {
   });
 
   it("does not surface a request when the API returns 404 (no pending request)", async () => {
-    const spy = server.mount(orpcContract.experiments.getMyJoinRequest, { status: 404 });
+    const spy = server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
 
     const { result } = renderHook(() => useMyJoinRequest("exp-1"));
 
@@ -48,7 +48,7 @@ describe("useMyJoinRequest", () => {
   });
 
   it("does not fetch without an experiment id", () => {
-    const spy = server.mount(orpcContract.experiments.getMyJoinRequest, { body: joinRequest });
+    const spy = server.mount(contract.experiments.getMyJoinRequest, { body: joinRequest });
 
     renderHook(() => useMyJoinRequest(""));
 

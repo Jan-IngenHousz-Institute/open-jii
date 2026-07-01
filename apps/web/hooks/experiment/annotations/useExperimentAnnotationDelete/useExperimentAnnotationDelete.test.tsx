@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentAnnotationDelete } from "./useExperimentAnnotationDelete";
 
 describe("useExperimentAnnotationDelete", () => {
   it("sends DELETE request", async () => {
-    const spy = server.mount(orpcContract.experiments.deleteAnnotation, {
+    const spy = server.mount(contract.experiments.deleteAnnotation, {
       body: { rowsAffected: 1 },
     });
 
@@ -25,7 +25,7 @@ describe("useExperimentAnnotationDelete", () => {
   });
 
   it("sends correct params", async () => {
-    const spy = server.mount(orpcContract.experiments.deleteAnnotation, {
+    const spy = server.mount(contract.experiments.deleteAnnotation, {
       body: { rowsAffected: 1 },
     });
 
@@ -45,7 +45,7 @@ describe("useExperimentAnnotationDelete", () => {
   });
 
   it("handles error", async () => {
-    server.mount(orpcContract.experiments.deleteAnnotation, { status: 404 });
+    server.mount(contract.experiments.deleteAnnotation, { status: 404 });
 
     const { result } = renderHook(() => useExperimentAnnotationDelete());
 

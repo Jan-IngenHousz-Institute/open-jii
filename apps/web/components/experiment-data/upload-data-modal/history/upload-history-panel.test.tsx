@@ -3,13 +3,13 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { UploadHistoryPanel } from "./upload-history-panel";
 
 describe("UploadHistoryPanel", () => {
   it("renders the empty state when the API returns no uploads", async () => {
-    server.mount(orpcContract.experiments.listUploads, { body: { uploads: [] } });
+    server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
 
     render(<UploadHistoryPanel experimentId="exp-1" enabled />);
 
@@ -19,7 +19,7 @@ describe("UploadHistoryPanel", () => {
   });
 
   it("renders one card per upload returned by the API", async () => {
-    server.mount(orpcContract.experiments.listUploads, {
+    server.mount(contract.experiments.listUploads, {
       body: {
         uploads: [
           {
@@ -66,7 +66,7 @@ describe("UploadHistoryPanel", () => {
   });
 
   it("filters uploads by uploadTableName when provided", async () => {
-    const spy = server.mount(orpcContract.experiments.listUploads, {
+    const spy = server.mount(contract.experiments.listUploads, {
       body: { uploads: [] },
     });
 

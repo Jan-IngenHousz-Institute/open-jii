@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import ExperimentOverviewPage from "./page";
 
@@ -40,16 +40,16 @@ const archivedAccess = createExperimentAccess({
 
 function mountDefaults(
   accessOverride?: Parameters<
-    typeof server.mount<typeof orpcContract.experiments.getExperimentAccess>
+    typeof server.mount<typeof contract.experiments.getExperimentAccess>
   >[1],
 ) {
   server.mount(
-    orpcContract.experiments.getExperimentAccess,
+    contract.experiments.getExperimentAccess,
     accessOverride ?? { body: archivedAccess },
   );
-  server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
-  server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
-  server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
+  server.mount(contract.experiments.getExperimentLocations, { body: [] });
+  server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 }
 
 const props = { params: Promise.resolve({ id: "test-experiment-id" }) };
@@ -68,10 +68,10 @@ describe("<ExperimentOverviewPage />", () => {
   });
 
   it("renders ErrorDisplay when there is an error loading", async () => {
-    server.mount(orpcContract.experiments.getExperimentAccess, { status: 500 });
-    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
 
@@ -83,12 +83,12 @@ describe("<ExperimentOverviewPage />", () => {
   it("shows notFound text when experiment data is missing", async () => {
     // Simulate a successful response whose `experiment` is null — defended
     // against by the page even though it's outside the typed schema shape.
-    server.mount(orpcContract.experiments.getExperimentAccess, {
+    server.mount(contract.experiments.getExperimentAccess, {
       body: { experiment: null, hasAccess: false, isAdmin: false } as never,
     });
-    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
 
@@ -99,12 +99,12 @@ describe("<ExperimentOverviewPage />", () => {
 
   it("shows notFound text when experiment is missing from body", async () => {
     // The actual response omits `experiment` entirely — same defensive path.
-    server.mount(orpcContract.experiments.getExperimentAccess, {
+    server.mount(contract.experiments.getExperimentAccess, {
       body: { hasAccess: false, isAdmin: false } as never,
     });
-    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
 
@@ -114,15 +114,15 @@ describe("<ExperimentOverviewPage />", () => {
   });
 
   it("calls notFound when experiment is not archived", async () => {
-    server.mount(orpcContract.experiments.getExperimentAccess, {
+    server.mount(contract.experiments.getExperimentAccess, {
       body: createExperimentAccess({
         experiment: { status: "active", name: "Test", id: "123" },
         hasAccess: true,
       }),
     });
-    server.mount(orpcContract.experiments.getExperimentLocations, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentMembers, { body: [] });
-    server.mount(orpcContract.experiments.listExperimentVisualizations, { body: [] });
+    server.mount(contract.experiments.getExperimentLocations, { body: [] });
+    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
 

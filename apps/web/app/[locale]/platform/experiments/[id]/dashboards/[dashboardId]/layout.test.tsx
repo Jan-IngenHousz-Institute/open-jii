@@ -5,7 +5,7 @@ import { notFound, useParams, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import DashboardLayout from "./layout";
 
@@ -50,7 +50,7 @@ describe("DashboardLayout", () => {
   });
 
   it("shows the loading state while the dashboard is in flight", () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, {
+    server.mount(contract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard({ id: dashboardId }),
       delay: 999_999,
     });
@@ -60,7 +60,7 @@ describe("DashboardLayout", () => {
   });
 
   it("calls notFound when the dashboard fetch returns 404", async () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, { status: 404 });
+    server.mount(contract.experiments.getExperimentDashboard, { status: 404 });
     renderLayout();
     await waitFor(() => {
       expect(vi.mocked(notFound)).toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe("DashboardLayout", () => {
   });
 
   it("renders the form shell with the loaded dashboard and view mode by default", async () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, {
+    server.mount(contract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard({ id: dashboardId, name: "Crop yield board" }),
     });
     renderLayout();
@@ -82,7 +82,7 @@ describe("DashboardLayout", () => {
   });
 
   it("starts in edit mode when ?edit=1 is in the URL", async () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, {
+    server.mount(contract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard({ id: dashboardId }),
     });
     vi.mocked(useSearchParams).mockReturnValue(
@@ -95,7 +95,7 @@ describe("DashboardLayout", () => {
   });
 
   it("falls back to view mode when ?edit is any other value", async () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, {
+    server.mount(contract.experiments.getExperimentDashboard, {
       body: createExperimentDashboard({ id: dashboardId }),
     });
     vi.mocked(useSearchParams).mockReturnValue(
@@ -108,7 +108,7 @@ describe("DashboardLayout", () => {
   });
 
   it("renders an error display for non-404 errors", async () => {
-    server.mount(orpcContract.experiments.getExperimentDashboard, { status: 500 });
+    server.mount(contract.experiments.getExperimentDashboard, { status: 500 });
     renderLayout();
     await waitFor(() => {
       expect(screen.getByText("errors.error")).toBeInTheDocument();

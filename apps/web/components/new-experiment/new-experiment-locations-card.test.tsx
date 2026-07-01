@@ -4,7 +4,7 @@ import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import type { LocationPoint } from "@repo/ui/components/map";
 
@@ -95,7 +95,7 @@ describe("NewExperimentLocationsCard", () => {
 
   it("passes search results to Map", async () => {
     const results = [createPlace({ label: "Amsterdam", latitude: 52.37, longitude: 4.9 })];
-    server.mount(orpcContract.experiments.searchPlaces, { body: results });
+    server.mount(contract.experiments.searchPlaces, { body: results });
 
     render(<NewExperimentLocationsCard form={mockForm} />);
 
@@ -119,7 +119,7 @@ describe("NewExperimentLocationsCard", () => {
   });
 
   it("handles geocoded location on add-location", async () => {
-    server.mount(orpcContract.experiments.geocodeLocation, {
+    server.mount(contract.experiments.geocodeLocation, {
       body: [
         createPlace({
           label: "Berlin, Germany",

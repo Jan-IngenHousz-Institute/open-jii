@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useRemoveCompatibleMacro } from "./useRemoveCompatibleMacro";
 
 describe("useRemoveCompatibleMacro", () => {
   it("sends delete request with correct params", async () => {
-    const spy = server.mount(orpcContract.protocols.removeCompatibleMacro);
+    const spy = server.mount(contract.protocols.removeCompatibleMacro);
 
     const { result } = renderHook(() => useRemoveCompatibleMacro("protocol-1"));
 
@@ -26,7 +26,7 @@ describe("useRemoveCompatibleMacro", () => {
   });
 
   it("completes mutation successfully", async () => {
-    server.mount(orpcContract.protocols.removeCompatibleMacro);
+    server.mount(contract.protocols.removeCompatibleMacro);
 
     const { result } = renderHook(() => useRemoveCompatibleMacro("protocol-1"));
 

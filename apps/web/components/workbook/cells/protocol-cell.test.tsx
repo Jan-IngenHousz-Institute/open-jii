@@ -4,7 +4,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
@@ -73,7 +73,7 @@ describe("ProtocolCellComponent", () => {
     mockedUseSession.mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession
     >);
-    server.mount(orpcContract.protocols.getProtocol, { body: protocol });
+    server.mount(contract.protocols.getProtocol, { body: protocol });
   });
 
   it("shows the protocol name and its code once loaded", async () => {
@@ -138,7 +138,7 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("renders an empty array as an editable editor for newly-created protocols", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [] }),
     });
 
@@ -162,7 +162,7 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("renders the editor read-only when the viewer is not the protocol owner", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
     });
     mockedUseSession.mockReturnValue({
@@ -181,7 +181,7 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("renders the editor as editable when the viewer owns the protocol", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
@@ -201,14 +201,14 @@ describe("ProtocolCellComponent", () => {
 
   it("debounces and persists protocol code edits when the owner types valid JSON", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, {
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
 
@@ -228,14 +228,14 @@ describe("ProtocolCellComponent", () => {
 
   it("does not persist when the owner types unparseable JSON", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, {
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
 
@@ -254,14 +254,14 @@ describe("ProtocolCellComponent", () => {
 
   it("does not persist when the parsed JSON is not an array", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, {
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
 
@@ -280,14 +280,14 @@ describe("ProtocolCellComponent", () => {
 
   it("skips persistence when the new code matches the saved snapshot", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
       data: { user: { id: OWNER_ID } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    const updateSpy = server.mount(orpcContract.protocols.updateProtocol, {
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
 
@@ -308,7 +308,7 @@ describe("ProtocolCellComponent", () => {
     // The run flow reads the live editor code rather than re-fetching from the
     // server, so an edit is runnable straight away — no waiting out the 1000ms
     // autosave debounce, and never a stale saved version.
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
@@ -345,7 +345,7 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("forces the editor read-only regardless of ownership when readOnly prop is set", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
     mockedUseSession.mockReturnValue({
@@ -373,7 +373,7 @@ describe("ProtocolCellComponent", () => {
   // i18n resolves to the raw key in tests (e.g. "autosave.saved").
   describe("save status indicator", () => {
     function mountOwnedProtocol() {
-      server.mount(orpcContract.protocols.getProtocol, {
+      server.mount(contract.protocols.getProtocol, {
         body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
       });
       mockedUseSession.mockReturnValue({
@@ -410,7 +410,7 @@ describe("ProtocolCellComponent", () => {
     it("returns to the saved state once the debounced save persists", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       mountOwnedProtocol();
-      const updateSpy = server.mount(orpcContract.protocols.updateProtocol, {
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
         body: createProtocol({ id: "p1" }),
       });
 
@@ -433,7 +433,7 @@ describe("ProtocolCellComponent", () => {
     it("shows the failed state when persistence errors", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       mountOwnedProtocol();
-      server.mount(orpcContract.protocols.updateProtocol, { status: 500, body: undefined });
+      server.mount(contract.protocols.updateProtocol, { status: 500, body: undefined });
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(
@@ -451,7 +451,7 @@ describe("ProtocolCellComponent", () => {
     });
 
     it("does not show a save status for non-owners", async () => {
-      server.mount(orpcContract.protocols.getProtocol, {
+      server.mount(contract.protocols.getProtocol, {
         body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
       });
       mockedUseSession.mockReturnValue({

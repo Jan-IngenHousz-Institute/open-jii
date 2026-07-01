@@ -10,7 +10,7 @@ import { server } from "@/test/msw/server";
 import { assertExists, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { WorkbookEditor, createDefaultCell, reorderCellsWithGluedOutput } from "./workbook-editor";
@@ -47,8 +47,8 @@ function findDeleteButtonForCellWith(text: string) {
 
 beforeEach(() => {
   // Pickers query these on mount.
-  server.mount(orpcContract.protocols.listProtocols, { body: [] });
-  server.mount(orpcContract.macros.listMacros, { body: [] });
+  server.mount(contract.protocols.listProtocols, { body: [] });
+  server.mount(contract.macros.listMacros, { body: [] });
 });
 
 describe("createDefaultCell", () => {

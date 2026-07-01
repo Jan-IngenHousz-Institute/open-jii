@@ -3,14 +3,14 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import fs from "fs";
 import path from "path";
 
-import { orpcContract } from "./orpc-contract";
+import { contract } from "./contract";
 
 const generator = new OpenAPIGenerator({
   schemaConverters: [new ZodToJsonSchemaConverter()],
 });
 
 async function generate() {
-  const openApiDocument = await generator.generate(orpcContract, {
+  const openApiDocument = await generator.generate(contract, {
     info: {
       title: "openJII API",
       version: "1.0.0",

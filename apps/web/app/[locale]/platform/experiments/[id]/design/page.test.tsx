@@ -11,7 +11,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
 import ExperimentDesignPage from "./page";
@@ -113,20 +113,20 @@ const newerVersionSummary = createWorkbookVersionSummary({
 });
 
 function mountDefaults() {
-  server.mount(orpcContract.experiments.getExperiment, { body: activeExperiment });
-  server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
-  server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+  server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+  server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+  server.mount(contract.workbooks.listWorkbooks, { body: [] });
 }
 
 function mountWithWorkbook(overrides?: {
   versions?: (typeof versionSummary)[];
   isAdmin?: boolean;
 }) {
-  server.mount(orpcContract.experiments.getExperiment, { body: experimentWithWorkbook });
-  server.mount(orpcContract.experiments.getExperimentAccess, {
+  server.mount(contract.experiments.getExperiment, { body: experimentWithWorkbook });
+  server.mount(contract.experiments.getExperimentAccess, {
     body: overrides?.isAdmin === false ? readOnlyAccessPayload : accessPayload,
   });
-  server.mount(orpcContract.workbooks.getWorkbook, {
+  server.mount(contract.workbooks.getWorkbook, {
     body: createWorkbook({
       id: WB_ID,
       name: "Test Workbook",
@@ -135,11 +135,11 @@ function mountWithWorkbook(overrides?: {
       ],
     }),
   });
-  server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
-  server.mount(orpcContract.workbooks.listWorkbookVersions, {
+  server.mount(contract.workbooks.listWorkbooks, { body: [] });
+  server.mount(contract.workbooks.listWorkbookVersions, {
     body: overrides?.versions ?? [versionSummary],
   });
-  server.mount(orpcContract.workbooks.getWorkbookVersion, {
+  server.mount(contract.workbooks.getWorkbookVersion, {
     body: {
       ...versionSummary,
       cells: [
@@ -171,9 +171,9 @@ describe("ExperimentDesignPage", () => {
   });
 
   it("displays loading skeleton when experiment is loading", () => {
-    server.mount(orpcContract.experiments.getExperiment, { delay: "infinite" });
-    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     const { container } = render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -182,9 +182,9 @@ describe("ExperimentDesignPage", () => {
   });
 
   it("displays error state when experiment fails to load", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { status: 500 });
-    server.mount(orpcContract.experiments.getExperimentAccess, { body: accessPayload });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.experiments.getExperiment, { status: 500 });
+    server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -196,13 +196,13 @@ describe("ExperimentDesignPage", () => {
 
   it("calls notFound when experiment is archived", async () => {
     const archivedExperiment = createExperiment({ id: EXP_ID, status: "archived" });
-    server.mount(orpcContract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(orpcContract.experiments.getExperimentAccess, {
+    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(contract.experiments.getExperimentAccess, {
       body: createExperimentAccess({
         experiment: { id: EXP_ID, status: "archived" },
       }),
     });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -280,9 +280,9 @@ describe("ExperimentDesignPage", () => {
   });
 
   it("displays access loading skeleton", () => {
-    server.mount(orpcContract.experiments.getExperiment, { body: activeExperiment });
-    server.mount(orpcContract.experiments.getExperimentAccess, { delay: "infinite" });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentAccess, { delay: "infinite" });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     const { container } = render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -290,9 +290,9 @@ describe("ExperimentDesignPage", () => {
   });
 
   it("displays access error state", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { body: activeExperiment });
-    server.mount(orpcContract.experiments.getExperimentAccess, { status: 500 });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -360,7 +360,7 @@ describe("ExperimentDesignPage", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useSession>);
     mountWithWorkbook();
-    const upgradeSpy = server.mount(orpcContract.experiments.upgradeWorkbookVersion, {
+    const upgradeSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: WB_ID, workbookVersionId: "ver-2", version: 2 },
     });
     const { default: userEvent } = await import("@testing-library/user-event");

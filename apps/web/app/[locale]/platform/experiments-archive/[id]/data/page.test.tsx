@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { ExperimentTableName } from "@repo/api/domains/experiment/experiment.schema";
 
 import ExperimentDataPage from "./page";
@@ -103,8 +103,8 @@ const mockTablesData = [
 ];
 
 function mountDefaults() {
-  server.mount(orpcContract.experiments.getExperiment, { body: archivedExperiment });
-  server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
+  server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+  server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
 }
 
 beforeEach(() => {
@@ -118,8 +118,8 @@ beforeEach(() => {
 
 describe("<ExperimentDataPage />", () => {
   it("shows loading skeleton when data is loading", () => {
-    server.mount(orpcContract.experiments.getExperiment, { delay: "infinite" });
-    server.mount(orpcContract.experiments.getExperimentTables, { delay: "infinite" });
+    server.mount(contract.experiments.getExperiment, { delay: "infinite" });
+    server.mount(contract.experiments.getExperimentTables, { delay: "infinite" });
 
     render(<ExperimentDataPage params={PARAMS} />);
 
@@ -128,8 +128,8 @@ describe("<ExperimentDataPage />", () => {
   });
 
   it("renders ErrorDisplay when there is an error loading experiment", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { status: 500 });
-    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(contract.experiments.getExperiment, { status: 500 });
+    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
 
     render(<ExperimentDataPage params={PARAMS} />);
 
@@ -139,8 +139,8 @@ describe("<ExperimentDataPage />", () => {
   });
 
   it("renders ErrorDisplay when there is an error loading tables", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(orpcContract.experiments.getExperimentTables, { status: 500 });
+    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(contract.experiments.getExperimentTables, { status: 500 });
 
     render(<ExperimentDataPage params={PARAMS} />);
 
@@ -150,8 +150,8 @@ describe("<ExperimentDataPage />", () => {
   });
 
   it("calls notFound when experiment is not archived", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { body: activeExperiment });
-    server.mount(orpcContract.experiments.getExperimentTables, { body: mockTablesData });
+    server.mount(contract.experiments.getExperiment, { body: activeExperiment });
+    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
 
     render(<ExperimentDataPage params={PARAMS} />);
 
@@ -215,8 +215,8 @@ describe("<ExperimentDataPage />", () => {
   });
 
   it("shows no data message when tables array is empty", async () => {
-    server.mount(orpcContract.experiments.getExperiment, { body: archivedExperiment });
-    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
+    server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
+    server.mount(contract.experiments.getExperimentTables, { body: [] });
 
     render(<ExperimentDataPage params={PARAMS} />);
 

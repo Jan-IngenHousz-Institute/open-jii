@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ProtocolSettings } from "./protocol-settings";
 
@@ -47,7 +47,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should show loading state while fetching protocol", () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -57,7 +57,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should show not found state when data is missing", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       status: 404,
       body: { message: "Not found", statusCode: 404 },
     });
@@ -72,7 +72,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should render both child cards when data is loaded", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -83,7 +83,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should pass protocol id via API call", async () => {
-    const spy = server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    const spy = server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -94,7 +94,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should pass correct props to ProtocolDetailsCard", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -106,7 +106,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should pass correct props to ProtocolInfoCard", async () => {
-    server.mount(orpcContract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
 
     render(<ProtocolSettings protocolId="protocol-123" />);
 
@@ -118,7 +118,7 @@ describe("ProtocolSettings", () => {
   });
 
   it("should use empty string for null description", async () => {
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: { ...mockProtocol, description: null },
     });
 

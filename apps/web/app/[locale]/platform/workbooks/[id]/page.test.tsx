@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -24,8 +24,8 @@ beforeEach(() => {
     isPending: false,
   } as ReturnType<typeof useSession>);
   // Pickers fetch lists at mount even when their popovers stay closed.
-  server.mount(orpcContract.protocols.listProtocols, { body: [] });
-  server.mount(orpcContract.macros.listMacros, { body: [] });
+  server.mount(contract.protocols.listProtocols, { body: [] });
+  server.mount(contract.macros.listMacros, { body: [] });
 });
 
 function renderPage() {
@@ -34,7 +34,7 @@ function renderPage() {
 
 describe("WorkbookOverviewPage", () => {
   it("shows the loading text before the workbook arrives", () => {
-    server.mount(orpcContract.workbooks.getWorkbook, {
+    server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbook({ id: "wb-1" }),
     });
     renderPage();
@@ -42,13 +42,13 @@ describe("WorkbookOverviewPage", () => {
   });
 
   it("renders an error display when the fetch fails", async () => {
-    server.mount(orpcContract.workbooks.getWorkbook, { status: 500 });
+    server.mount(contract.workbooks.getWorkbook, { status: 500 });
     renderPage();
     await waitFor(() => expect(screen.getByText("workbooks.errorLoading")).toBeInTheDocument());
   });
 
   it("renders the workbook's cells in the editor once data loads", async () => {
-    server.mount(orpcContract.workbooks.getWorkbook, {
+    server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbook({
         id: "wb-1",
         name: "Hello",
@@ -66,10 +66,10 @@ describe("WorkbookOverviewPage", () => {
   it("auto-saves cells (debounced) when the user adds a cell", async () => {
     const user = userEvent.setup();
 
-    server.mount(orpcContract.workbooks.getWorkbook, {
+    server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbook({ id: "wb-1", cells: [] }),
     });
-    const updateSpy = server.mount(orpcContract.workbooks.updateWorkbook, {
+    const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
       body: createWorkbook({ id: "wb-1" }),
     });
 
@@ -89,10 +89,10 @@ describe("WorkbookOverviewPage", () => {
   it("shows a destructive toast when auto-save fails", async () => {
     const user = userEvent.setup();
 
-    server.mount(orpcContract.workbooks.getWorkbook, {
+    server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbook({ id: "wb-1", cells: [] }),
     });
-    server.mount(orpcContract.workbooks.updateWorkbook, { status: 400 });
+    server.mount(contract.workbooks.updateWorkbook, { status: 400 });
 
     renderPage();
 
@@ -111,7 +111,7 @@ describe("WorkbookOverviewPage", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
 
-    server.mount(orpcContract.workbooks.getWorkbook, {
+    server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbook({ id: "wb-1", createdBy: "user-1", cells: [] }),
     });
 

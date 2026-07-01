@@ -5,7 +5,7 @@ import { use } from "react";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -158,13 +158,13 @@ describe("MacroOverviewPage", () => {
       data: { user: { id: "creator-id" } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    server.mount(orpcContract.macros.getMacro, { body: mockMacroData });
-    server.mount(orpcContract.macros.updateMacro, { body: mockMacroData });
+    server.mount(contract.macros.getMacro, { body: mockMacroData });
+    server.mount(contract.macros.updateMacro, { body: mockMacroData });
   });
 
   describe("Loading State", () => {
     it("should display loading message when data is loading", () => {
-      server.mount(orpcContract.macros.getMacro, { body: mockMacroData, delay: 999_999 });
+      server.mount(contract.macros.getMacro, { body: mockMacroData, delay: 999_999 });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -174,7 +174,7 @@ describe("MacroOverviewPage", () => {
 
   describe("Error State", () => {
     it("should display ErrorDisplay component when there is an error", async () => {
-      server.mount(orpcContract.macros.getMacro, { status: 500 });
+      server.mount(contract.macros.getMacro, { status: 500 });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -185,7 +185,7 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should not render the sidebar when in error state", async () => {
-      server.mount(orpcContract.macros.getMacro, { status: 500 });
+      server.mount(contract.macros.getMacro, { status: 500 });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -235,7 +235,7 @@ describe("MacroOverviewPage", () => {
 
     it("should pass hasAccess=false to InlineEditableDescription when user is not creator", async () => {
       const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "another-user" });
-      server.mount(orpcContract.macros.getMacro, { body: macroOwnedByOther });
+      server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -262,7 +262,7 @@ describe("MacroOverviewPage", () => {
 
     it("should display 'code not available' placeholder when macro has no code", async () => {
       const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
-      server.mount(orpcContract.macros.getMacro, { body: macroWithoutCode });
+      server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -292,7 +292,7 @@ describe("MacroOverviewPage", () => {
 
     it("should not show edit trigger when there is no code", async () => {
       const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
-      server.mount(orpcContract.macros.getMacro, { body: macroWithoutCode });
+      server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -304,7 +304,7 @@ describe("MacroOverviewPage", () => {
 
     it("should handle invalid base64 code gracefully", async () => {
       const macroWithInvalidCode = createMacro({ ...mockMacroData, code: "invalid-base64!!!" });
-      server.mount(orpcContract.macros.getMacro, { body: macroWithInvalidCode });
+      server.mount(contract.macros.getMacro, { body: macroWithInvalidCode });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -394,7 +394,7 @@ describe("MacroOverviewPage", () => {
 
   describe("Description updates", () => {
     it("should call updateMacro with new description when description is saved", async () => {
-      const updateSpy = server.mount(orpcContract.macros.updateMacro, { body: mockMacroData });
+      const updateSpy = server.mount(contract.macros.updateMacro, { body: mockMacroData });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -443,7 +443,7 @@ describe("MacroOverviewPage", () => {
   describe("Non-creator behavior", () => {
     it("should not show edit trigger when user is not the creator", async () => {
       const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "different-user-id" });
-      server.mount(orpcContract.macros.getMacro, { body: macroOwnedByOther });
+      server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -456,7 +456,7 @@ describe("MacroOverviewPage", () => {
 
     it("should still render the code viewer for non-creators", async () => {
       const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "different-user-id" });
-      server.mount(orpcContract.macros.getMacro, { body: macroOwnedByOther });
+      server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -472,7 +472,7 @@ describe("MacroOverviewPage", () => {
         ...mockMacroData,
         description: null as unknown as string,
       });
-      server.mount(orpcContract.macros.getMacro, { body: macroWithNullDescription });
+      server.mount(contract.macros.getMacro, { body: macroWithNullDescription });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -485,7 +485,7 @@ describe("MacroOverviewPage", () => {
   describe("handleDescriptionSave", () => {
     it("should show success toast when description save succeeds", async () => {
       const user = userEvent.setup();
-      server.mount(orpcContract.macros.updateMacro, { body: mockMacroData });
+      server.mount(contract.macros.updateMacro, { body: mockMacroData });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -502,7 +502,7 @@ describe("MacroOverviewPage", () => {
 
     it("should show destructive toast when description save fails", async () => {
       const user = userEvent.setup();
-      server.mount(orpcContract.macros.updateMacro, { status: 400 });
+      server.mount(contract.macros.updateMacro, { status: 400 });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -521,7 +521,7 @@ describe("MacroOverviewPage", () => {
   describe("CodeIcon fallback", () => {
     it("should render CodeIcon in the code not available placeholder", async () => {
       const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
-      server.mount(orpcContract.macros.getMacro, { body: macroWithoutCode });
+      server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);
 

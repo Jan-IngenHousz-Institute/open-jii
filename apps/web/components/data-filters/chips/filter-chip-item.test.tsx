@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type {
   ExperimentDataColumn,
   ExperimentDataFilter,
@@ -42,7 +42,7 @@ describe("FilterChipItem", () => {
   });
 
   it("renders the expanded filter row when expanded", () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
     render(

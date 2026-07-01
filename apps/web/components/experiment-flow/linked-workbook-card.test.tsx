@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { LinkedWorkbookCard } from "./linked-workbook-card";
@@ -22,9 +22,9 @@ const defaultProps = {
 };
 
 function mountDefaults() {
-  server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
-  server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [v2, v1] });
-  server.mount(orpcContract.workbooks.listWorkbooks, { body: [workbook, otherWorkbook] });
+  server.mount(contract.workbooks.getWorkbook, { body: workbook });
+  server.mount(contract.workbooks.listWorkbookVersions, { body: [v2, v1] });
+  server.mount(contract.workbooks.listWorkbooks, { body: [workbook, otherWorkbook] });
 }
 
 describe("LinkedWorkbookCard", () => {
@@ -58,9 +58,9 @@ describe("LinkedWorkbookCard", () => {
   });
 
   it("hides upgrade banner when pinned version is latest", async () => {
-    server.mount(orpcContract.workbooks.getWorkbook, { body: workbook });
-    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [v1] });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [workbook] });
+    server.mount(contract.workbooks.getWorkbook, { body: workbook });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
@@ -69,9 +69,9 @@ describe("LinkedWorkbookCard", () => {
 
   // isUpgradable drift shows the banner even with no newer published version.
   it("shows the drift banner when isUpgradable is true without a newer published version", async () => {
-    server.mount(orpcContract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: true } });
-    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [v1] });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [workbook] });
+    server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: true } });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() =>
@@ -81,9 +81,9 @@ describe("LinkedWorkbookCard", () => {
 
   // Once accepted (isUpgradable false, pinned == latest) the prompt stays gone.
   it("hides the banner when isUpgradable is false and pinned is latest (offered once)", async () => {
-    server.mount(orpcContract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: false } });
-    server.mount(orpcContract.workbooks.listWorkbookVersions, { body: [v1] });
-    server.mount(orpcContract.workbooks.listWorkbooks, { body: [workbook] });
+    server.mount(contract.workbooks.getWorkbook, { body: { ...workbook, isUpgradable: false } });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
@@ -112,7 +112,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("detaches workbook via confirm dialog and shows toast", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.experiments.detachWorkbook, {
+    const spy = server.mount(contract.experiments.detachWorkbook, {
       body: createExperiment({ id: "exp-1" }),
     });
     const user = userEvent.setup();
@@ -135,7 +135,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows error toast when detach fails", async () => {
     mountDefaults();
-    server.mount(orpcContract.experiments.detachWorkbook, { status: 500 });
+    server.mount(contract.experiments.detachWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
@@ -156,7 +156,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("upgrades to latest version (no toast)", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.experiments.upgradeWorkbookVersion, {
+    const spy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: "wb-1", workbookVersionId: "ver-2", version: 2 },
     });
     const user = userEvent.setup();
@@ -178,7 +178,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows error toast when upgrade fails", async () => {
     mountDefaults();
-    server.mount(orpcContract.experiments.upgradeWorkbookVersion, { status: 500 });
+    server.mount(contract.experiments.upgradeWorkbookVersion, { status: 500 });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
@@ -207,7 +207,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("renames the workbook in place when the user owns it", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.workbooks.updateWorkbook, {
+    const spy = server.mount(contract.workbooks.updateWorkbook, {
       body: { ...workbook, name: "Renamed Workbook" },
     });
     const user = userEvent.setup();
@@ -229,7 +229,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("saves the rename when the user presses Enter", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.workbooks.updateWorkbook, {
+    const spy = server.mount(contract.workbooks.updateWorkbook, {
       body: { ...workbook, name: "Via Enter" },
     });
     const user = userEvent.setup();
@@ -272,7 +272,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("does not call update when the rename leaves the name unchanged", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.workbooks.updateWorkbook, { body: workbook });
+    const spy = server.mount(contract.workbooks.updateWorkbook, { body: workbook });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
@@ -286,7 +286,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows an error toast when the rename fails", async () => {
     mountDefaults();
-    server.mount(orpcContract.workbooks.updateWorkbook, { status: 500 });
+    server.mount(contract.workbooks.updateWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
@@ -320,7 +320,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows an error toast when attaching a changed workbook fails", async () => {
     mountDefaults();
-    server.mount(orpcContract.experiments.attachWorkbook, { status: 500 });
+    server.mount(contract.experiments.attachWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
@@ -345,7 +345,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("changes workbook via attach confirm dialog", async () => {
     mountDefaults();
-    const spy = server.mount(orpcContract.experiments.attachWorkbook, {
+    const spy = server.mount(contract.experiments.attachWorkbook, {
       body: { workbookId: "wb-2", workbookVersionId: "ver-3", version: 1 },
     });
     const user = userEvent.setup();

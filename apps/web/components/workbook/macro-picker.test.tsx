@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { MacroPicker } from "./macro-picker";
@@ -23,7 +23,7 @@ describe("MacroPicker", () => {
   it("opens the popover and shows macro list", async () => {
     const user = userEvent.setup();
     const macros = [createMacro({ id: "m1", name: "Data Processor", language: "python" })];
-    server.mount(orpcContract.macros.listMacros, { body: macros });
+    server.mount(contract.macros.listMacros, { body: macros });
 
     renderPicker();
 
@@ -38,7 +38,7 @@ describe("MacroPicker", () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const macros = [createMacro({ id: "m1", name: "NDVI Calculator", language: "python" })];
-    server.mount(orpcContract.macros.listMacros, { body: macros });
+    server.mount(contract.macros.listMacros, { body: macros });
 
     renderPicker(onSelect);
 
@@ -65,7 +65,7 @@ describe("MacroPicker", () => {
 
   it("shows create form when user clicks 'Create new macro'", async () => {
     const user = userEvent.setup();
-    server.mount(orpcContract.macros.listMacros, { body: [] });
+    server.mount(contract.macros.listMacros, { body: [] });
 
     renderPicker();
 
@@ -87,8 +87,8 @@ describe("MacroPicker", () => {
     const onSelect = vi.fn();
     const newMacro = createMacro({ id: "new-m1", name: "New Macro", language: "python" });
 
-    server.mount(orpcContract.macros.listMacros, { body: [] });
-    server.mount(orpcContract.macros.createMacro, { body: newMacro, status: 201 });
+    server.mount(contract.macros.listMacros, { body: [] });
+    server.mount(contract.macros.createMacro, { body: newMacro, status: 201 });
 
     renderPicker(onSelect);
 
@@ -121,7 +121,7 @@ describe("MacroPicker", () => {
 
   it("navigates back from create form to search", async () => {
     const user = userEvent.setup();
-    server.mount(orpcContract.macros.listMacros, { body: [] });
+    server.mount(contract.macros.listMacros, { body: [] });
 
     renderPicker();
 

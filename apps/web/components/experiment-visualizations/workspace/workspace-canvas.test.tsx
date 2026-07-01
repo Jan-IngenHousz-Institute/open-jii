@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { lineChartType } from "../charts/basic/line";
 import type { ChartFormValues } from "../charts/chart-config";
@@ -60,7 +60,7 @@ describe("WorkspaceCanvas", () => {
   });
 
   it("shows the loading state while data is in flight (table + columns set)", () => {
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -87,7 +87,7 @@ describe("WorkspaceCanvas", () => {
   });
 
   it("renders the chart-area container once data resolves", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: {

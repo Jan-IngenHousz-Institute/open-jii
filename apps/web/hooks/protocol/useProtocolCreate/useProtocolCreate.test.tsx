@@ -4,14 +4,14 @@ import { renderHook, waitFor, act } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useProtocolCreate } from "./useProtocolCreate";
 
 describe("useProtocolCreate", () => {
   it("sends POST request and invokes onSuccess", async () => {
-    server.mount(orpcContract.protocols.createProtocol, {
+    server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "proto-1" }),
     });
 
@@ -33,7 +33,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("captures request body via spy", async () => {
-    const spy = server.mount(orpcContract.protocols.createProtocol, {
+    const spy = server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "proto-2" }),
     });
 
@@ -53,7 +53,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("shows success toast after create", async () => {
-    server.mount(orpcContract.protocols.createProtocol, {
+    server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "proto-1" }),
     });
 
@@ -77,7 +77,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("shows destructive toast on 409 conflict", async () => {
-    server.mount(orpcContract.protocols.createProtocol, { status: 409 });
+    server.mount(contract.protocols.createProtocol, { status: 409 });
 
     const { result } = renderHook(() => useProtocolCreate());
 
@@ -100,7 +100,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("shows generic error toast for non-contract errors", async () => {
-    server.mount(orpcContract.protocols.createProtocol, { status: 400 });
+    server.mount(contract.protocols.createProtocol, { status: 400 });
 
     const { result } = renderHook(() => useProtocolCreate());
 
@@ -122,7 +122,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("calls onError option on failure", async () => {
-    server.mount(orpcContract.protocols.createProtocol, { status: 409 });
+    server.mount(contract.protocols.createProtocol, { status: 409 });
 
     const onError = vi.fn();
     const { result } = renderHook(() => useProtocolCreate({ onError }));
@@ -141,7 +141,7 @@ describe("useProtocolCreate", () => {
   });
 
   it("calls onSettled option after success", async () => {
-    server.mount(orpcContract.protocols.createProtocol, {
+    server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "proto-1" }),
     });
 
@@ -173,7 +173,7 @@ describe("useProtocolCreate", () => {
       body: [createProtocol({ id: "old" })],
     });
 
-    server.mount(orpcContract.protocols.createProtocol, { status: 400 });
+    server.mount(contract.protocols.createProtocol, { status: 400 });
 
     const { result } = renderHook(() => useProtocolCreate(), { queryClient });
 

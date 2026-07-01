@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type {
   ExperimentData,
   ExperimentDataResponse,
@@ -102,7 +102,7 @@ describe("useExperimentData", () => {
   };
 
   function mountData(body?: ExperimentDataResponse) {
-    return server.mount(orpcContract.experiments.getExperimentData, {
+    return server.mount(contract.experiments.getExperimentData, {
       body: body ?? [
         createExperimentDataTable({
           name: "test_table",
@@ -194,7 +194,7 @@ describe("useExperimentData", () => {
   });
 
   it("should handle error state", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, { status: 500 });
+    server.mount(contract.experiments.getExperimentData, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentData({

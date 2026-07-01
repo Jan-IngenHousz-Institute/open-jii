@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { MacroSettings } from "./macro-settings";
 
@@ -22,13 +22,13 @@ describe("MacroSettings", () => {
   beforeEach(() => {
     // The settings page lists both "compatible" protocols for the macro and
     // the overall protocol catalog (for the "add compatible" picker).
-    server.mount(orpcContract.macros.listCompatibleProtocols, { body: [] });
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    server.mount(contract.macros.listCompatibleProtocols, { body: [] });
+    server.mount(contract.protocols.listProtocols, { body: [] });
   });
 
   it("shows loading then resolves to cards", async () => {
     const macro = createMacro({ id: "m-1", name: "Test Macro", description: "Desc" });
-    server.mount(orpcContract.macros.getMacro, { body: macro });
+    server.mount(contract.macros.getMacro, { body: macro });
 
     render(<MacroSettings macroId="m-1" />);
 
@@ -42,7 +42,7 @@ describe("MacroSettings", () => {
   });
 
   it("shows not-found when API returns 404", async () => {
-    server.mount(orpcContract.macros.getMacro, { status: 404 });
+    server.mount(contract.macros.getMacro, { status: 404 });
 
     render(<MacroSettings macroId="bad-id" />);
 
@@ -53,7 +53,7 @@ describe("MacroSettings", () => {
 
   it("passes macroId to child cards", async () => {
     const macro = createMacro({ id: "m-1" });
-    server.mount(orpcContract.macros.getMacro, { body: macro });
+    server.mount(contract.macros.getMacro, { body: macro });
 
     render(<MacroSettings macroId="m-1" />);
 

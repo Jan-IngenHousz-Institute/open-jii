@@ -12,7 +12,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { CellRenderer } from "./cell-renderer";
@@ -38,7 +38,7 @@ describe("CellRenderer", () => {
     const cell = createProtocolCell({
       payload: { protocolId, version: 1, name: "Light Sensor" },
     });
-    server.mount(orpcContract.protocols.getProtocol, {
+    server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: protocolId, name: "Light Sensor" }),
     });
 
@@ -50,7 +50,7 @@ describe("CellRenderer", () => {
   it("renders macro cell with macro name after loading", async () => {
     const macroId = "m-1";
     const cell = createMacroCell({ payload: { macroId, language: "python" } });
-    server.mount(orpcContract.macros.getMacro, {
+    server.mount(contract.macros.getMacro, {
       body: createMacro({ id: macroId, name: "Chlorophyll Calc" }),
     });
 

@@ -4,7 +4,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useDetachWorkbook } from "./useDetachWorkbook";
 
@@ -17,7 +17,7 @@ describe("useDetachWorkbook", () => {
       workbookId: null,
       workbookVersionId: "33333333-3333-3333-3333-333333333333",
     });
-    const spy = server.mount(orpcContract.experiments.detachWorkbook, {
+    const spy = server.mount(contract.experiments.detachWorkbook, {
       body: updatedExperiment,
     });
 
@@ -36,7 +36,7 @@ describe("useDetachWorkbook", () => {
 
   it("invalidates the workbook caches using the experiment's workbookId (OJD-1626)", async () => {
     const workbookId = "22222222-2222-2222-2222-222222222222";
-    server.mount(orpcContract.experiments.detachWorkbook, {
+    server.mount(contract.experiments.detachWorkbook, {
       body: createExperiment({ id: experimentId, workbookId: null }),
     });
 
@@ -70,7 +70,7 @@ describe("useDetachWorkbook", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(orpcContract.experiments.detachWorkbook, { status: 500 });
+    server.mount(contract.experiments.detachWorkbook, { status: 500 });
 
     const { result } = renderHook(() => useDetachWorkbook());
 

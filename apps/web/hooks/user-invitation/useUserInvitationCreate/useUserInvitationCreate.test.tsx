@@ -3,14 +3,14 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useUserInvitationCreate } from "./useUserInvitationCreate";
 
 describe("useUserInvitationCreate", () => {
   it("sends POST request with correct body", async () => {
     const invitation = createInvitation();
-    const spy = server.mount(orpcContract.users.createInvitation, {
+    const spy = server.mount(contract.users.createInvitation, {
       body: invitation,
     });
 
@@ -43,7 +43,7 @@ describe("useUserInvitationCreate", () => {
   });
 
   it("reports pending state while request is in-flight", async () => {
-    server.mount(orpcContract.users.createInvitation, {
+    server.mount(contract.users.createInvitation, {
       body: createInvitation(),
       delay: 100,
     });
@@ -68,7 +68,7 @@ describe("useUserInvitationCreate", () => {
   });
 
   it("reports error on failure", async () => {
-    server.mount(orpcContract.users.createInvitation, { status: 400 });
+    server.mount(contract.users.createInvitation, { status: 400 });
 
     const { result } = renderHook(() => useUserInvitationCreate());
 
@@ -86,8 +86,8 @@ describe("useUserInvitationCreate", () => {
   });
 
   it("invalidates experiment-invitations queries on success", async () => {
-    server.mount(orpcContract.users.listInvitations, { body: [createInvitation()] });
-    server.mount(orpcContract.users.createInvitation, { body: createInvitation() });
+    server.mount(contract.users.listInvitations, { body: [createInvitation()] });
+    server.mount(contract.users.createInvitation, { body: createInvitation() });
 
     const { result } = renderHook(() => useUserInvitationCreate());
 

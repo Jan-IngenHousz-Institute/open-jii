@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ListMacros } from "./list-macros";
 
@@ -17,7 +17,7 @@ vi.mock("~/components/macro-overview-cards", () => ({
 
 describe("ListMacros", () => {
   it("renders search input and language filter", () => {
-    server.mount(orpcContract.macros.listMacros, { body: [] });
+    server.mount(contract.macros.listMacros, { body: [] });
     render(<ListMacros />);
 
     expect(screen.getByPlaceholderText("macros.searchPlaceholder")).toBeInTheDocument();
@@ -25,7 +25,7 @@ describe("ListMacros", () => {
   });
 
   it("passes data to MacroOverviewCards", async () => {
-    server.mount(orpcContract.macros.listMacros, {
+    server.mount(contract.macros.listMacros, {
       body: [createMacro({ id: "1", name: "M1" })],
     });
     render(<ListMacros />);
@@ -36,7 +36,7 @@ describe("ListMacros", () => {
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(orpcContract.macros.listMacros, { body: [] });
+    const spy = server.mount(contract.macros.listMacros, { body: [] });
     const user = userEvent.setup();
     render(<ListMacros />);
 

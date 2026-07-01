@@ -25,13 +25,13 @@ import { LAMBDA_PORT } from "./core/ports/lambda.port";
 // Repositories
 import { MacroProtocolRepository } from "./core/repositories/macro-protocol.repository";
 import { MacroRepository } from "./core/repositories/macro.repository";
-import { MacroWebhookOrpcController } from "./presentation/macro-webhook.orpc.controller";
+import { MacroWebhookController } from "./presentation/macro-webhook.controller";
 // Controllers
-import { MacroOrpcController } from "./presentation/macro.orpc.controller";
+import { MacroController } from "./presentation/macro.controller";
 
 @Module({
   imports: [AnalyticsModule, AwsModule, CacheModule],
-  controllers: [MacroOrpcController, MacroWebhookOrpcController],
+  controllers: [MacroController, MacroWebhookController],
   providers: [
     // Ports and Adapters
     {

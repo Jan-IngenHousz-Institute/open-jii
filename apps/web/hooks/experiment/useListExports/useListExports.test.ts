@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useListExports } from "./useListExports";
 
@@ -27,7 +27,7 @@ describe("useListExports", () => {
       }),
     ];
 
-    const spy = server.mount(orpcContract.experiments.listExports, {
+    const spy = server.mount(contract.experiments.listExports, {
       body: { exports: mockExports },
     });
 
@@ -41,7 +41,7 @@ describe("useListExports", () => {
   });
 
   it("returns empty exports array", async () => {
-    server.mount(orpcContract.experiments.listExports, {
+    server.mount(contract.experiments.listExports, {
       body: { exports: [] },
     });
 
@@ -53,7 +53,7 @@ describe("useListExports", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(orpcContract.experiments.listExports, { status: 500 });
+    server.mount(contract.experiments.listExports, { status: 500 });
 
     const { result } = renderHook(() => useListExports({ experimentId, tableName }));
 
@@ -78,7 +78,7 @@ describe("useListExports", () => {
       }),
     ];
 
-    server.mount(orpcContract.experiments.listExports, {
+    server.mount(contract.experiments.listExports, {
       body: { exports: mockExports },
     });
 

@@ -4,7 +4,7 @@ import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import * as base64Utils from "@/util/base64";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -40,8 +40,8 @@ describe("NewMacroForm", () => {
     // The form reads the current user and lists protocols to populate
     // the "compatible protocols" picker; mount default empty responses so
     // every test doesn't have to do it.
-    server.mount(orpcContract.users.getUserProfile, { body: createUserProfile() });
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    server.mount(contract.users.getUserProfile, { body: createUserProfile() });
+    server.mount(contract.protocols.listProtocols, { body: [] });
   });
 
   it("renders form structure", async () => {
@@ -69,7 +69,7 @@ describe("NewMacroForm", () => {
   });
 
   it("submits form — POST /api/v1/macros", async () => {
-    const spy = server.mount(orpcContract.macros.createMacro, {
+    const spy = server.mount(contract.macros.createMacro, {
       body: createMacro({ id: "macro-42", name: "New Macro", code: "" }),
     });
 

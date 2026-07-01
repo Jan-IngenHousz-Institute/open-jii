@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import DataLayout from "../layout";
 
@@ -27,7 +27,7 @@ describe("<DataLayout />", () => {
 
   describe("Loading State", () => {
     it("shows loading message when data is loading", () => {
-      server.mount(orpcContract.experiments.getExperiment, { delay: "infinite" });
+      server.mount(contract.experiments.getExperiment, { delay: "infinite" });
 
       render(
         <DataLayout params={Promise.resolve(mockParams)}>
@@ -42,7 +42,7 @@ describe("<DataLayout />", () => {
 
   describe("Error State", () => {
     it("shows error display when there is an error", async () => {
-      server.mount(orpcContract.experiments.getExperiment, { status: 500 });
+      server.mount(contract.experiments.getExperiment, { status: 500 });
 
       render(
         <DataLayout params={Promise.resolve(mockParams)}>
@@ -60,7 +60,7 @@ describe("<DataLayout />", () => {
 
   describe("Active State", () => {
     it("renders children when experiment status is active", async () => {
-      server.mount(orpcContract.experiments.getExperiment, {
+      server.mount(contract.experiments.getExperiment, {
         body: createExperiment({ id: "test-experiment-id", status: "active" }),
       });
 
@@ -77,7 +77,7 @@ describe("<DataLayout />", () => {
     });
 
     it("renders children when experiment status is published", async () => {
-      server.mount(orpcContract.experiments.getExperiment, {
+      server.mount(contract.experiments.getExperiment, {
         body: createExperiment({ id: "test-experiment-id", status: "published" }),
       });
 
@@ -95,7 +95,7 @@ describe("<DataLayout />", () => {
     it("renders children when experiment status is unknown", async () => {
       // Force-cast an out-of-enum status so the defensive branch is actually
       // exercised, not silently coerced to a known value.
-      server.mount(orpcContract.experiments.getExperiment, {
+      server.mount(contract.experiments.getExperiment, {
         body: {
           ...createExperiment({ id: "test-experiment-id" }),
           status: "unknown",
@@ -116,7 +116,7 @@ describe("<DataLayout />", () => {
 
   describe("Hook Integration", () => {
     it("calls use function with params promise", async () => {
-      server.mount(orpcContract.experiments.getExperiment, {
+      server.mount(contract.experiments.getExperiment, {
         body: createExperiment({ id: "test-experiment-id" }),
       });
 

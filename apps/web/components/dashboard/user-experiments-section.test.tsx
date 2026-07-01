@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { UserExperimentsSection } from "./user-experiments-section";
 
@@ -15,7 +15,7 @@ vi.mock("~/components/experiment-overview-cards", () => ({
 
 describe("UserExperimentsSection", () => {
   it("shows skeletons while loading then resolves", () => {
-    server.mount(orpcContract.experiments.listExperiments, { body: [], delay: 100 });
+    server.mount(contract.experiments.listExperiments, { body: [], delay: 100 });
     render(<UserExperimentsSection />);
 
     // Initially shows skeletons (no experiment-cards yet)
@@ -23,7 +23,7 @@ describe("UserExperimentsSection", () => {
   });
 
   it("shows first 3 experiments", async () => {
-    server.mount(orpcContract.experiments.listExperiments, {
+    server.mount(contract.experiments.listExperiments, {
       body: [
         createExperiment({ id: "1" }),
         createExperiment({ id: "2" }),

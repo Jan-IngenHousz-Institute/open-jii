@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
 import { MacroCellComponent } from "./macro-cell";
@@ -25,7 +25,7 @@ function renderMacroCell(
   overrides: Partial<Parameters<typeof MacroCellComponent>[0]> = {},
   macroOverrides: Partial<typeof baseMacro> = {},
 ) {
-  server.mount(orpcContract.macros.getMacro, { body: { ...baseMacro, ...macroOverrides } });
+  server.mount(contract.macros.getMacro, { body: { ...baseMacro, ...macroOverrides } });
 
   const props = {
     cell,
@@ -57,7 +57,7 @@ describe("MacroCellComponent", () => {
   });
 
   it("shows a loading spinner while macro data is fetching", () => {
-    server.mount(orpcContract.macros.getMacro, { body: baseMacro });
+    server.mount(contract.macros.getMacro, { body: baseMacro });
     render(<MacroCellComponent cell={cell} onUpdate={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByText("My Macro")).toBeInTheDocument();

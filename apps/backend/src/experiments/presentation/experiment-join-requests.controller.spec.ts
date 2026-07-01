@@ -2,12 +2,12 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { contract } from "@repo/api/contract";
 import type {
   ExperimentJoinRequest,
   ExperimentJoinRequestList,
   ExperimentMemberList,
 } from "@repo/api/domains/experiment/experiment.schema";
-import { orpcContract } from "@repo/api/orpc-contract";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success } from "../../common/utils/fp-utils";
@@ -60,7 +60,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "public",
       });
 
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
 
@@ -93,7 +93,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "public",
       });
 
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
 
@@ -119,7 +119,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "private",
       });
 
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
 
@@ -141,7 +141,7 @@ describe("ExperimentJoinRequestsController", () => {
         status: "archived",
       });
 
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
 
@@ -156,7 +156,7 @@ describe("ExperimentJoinRequestsController", () => {
       });
       await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
 
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
 
@@ -164,7 +164,7 @@ describe("ExperimentJoinRequestsController", () => {
     });
 
     it("returns 404 for missing experiments", async () => {
-      const path = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: faker.string.uuid(),
       });
 
@@ -180,7 +180,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "public",
       });
 
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -189,7 +189,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      const approvePath = testApp.resolveOrpcPath(orpcContract.experiments.approveJoinRequest, {
+      const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -204,12 +204,9 @@ describe("ExperimentJoinRequestsController", () => {
       expect(approveResponse.body.decidedBy).toBe(adminUserId);
 
       // Requester is now a member
-      const listMembersPath = testApp.resolveOrpcPath(
-        orpcContract.experiments.listExperimentMembers,
-        {
-          id: experiment.id,
-        },
-      );
+      const listMembersPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
+        id: experiment.id,
+      });
       const listMembersResponse: SuperTestResponse<ExperimentMemberList> = await testApp
         .get(listMembersPath)
         .withAuth(adminUserId)
@@ -233,7 +230,7 @@ describe("ExperimentJoinRequestsController", () => {
         userId: adminUserId,
         visibility: "public",
       });
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -242,7 +239,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      const approvePath = testApp.resolveOrpcPath(orpcContract.experiments.approveJoinRequest, {
+      const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -259,7 +256,7 @@ describe("ExperimentJoinRequestsController", () => {
         userId: adminUserId,
         visibility: "public",
       });
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -271,7 +268,7 @@ describe("ExperimentJoinRequestsController", () => {
       await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
       vi.mocked(emailPort).sendAddedUserNotification.mockClear();
 
-      const approvePath = testApp.resolveOrpcPath(orpcContract.experiments.approveJoinRequest, {
+      const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -284,7 +281,7 @@ describe("ExperimentJoinRequestsController", () => {
           expect(body.message).toContain("already a member");
         });
 
-      const mePath = testApp.resolveOrpcPath(orpcContract.experiments.getMyJoinRequest, {
+      const mePath = testApp.resolveOrpcPath(contract.experiments.getMyJoinRequest, {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
@@ -300,7 +297,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "public",
       });
 
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -309,7 +306,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      const rejectPath = testApp.resolveOrpcPath(orpcContract.experiments.rejectJoinRequest, {
+      const rejectPath = testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -336,7 +333,7 @@ describe("ExperimentJoinRequestsController", () => {
         visibility: "public",
       });
 
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -348,7 +345,7 @@ describe("ExperimentJoinRequestsController", () => {
       await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
       vi.mocked(emailPort).sendJoinRequestRejectedNotification.mockClear();
 
-      const rejectPath = testApp.resolveOrpcPath(orpcContract.experiments.rejectJoinRequest, {
+      const rejectPath = testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -361,7 +358,7 @@ describe("ExperimentJoinRequestsController", () => {
           expect(body.message).toContain("already a member");
         });
 
-      const mePath = testApp.resolveOrpcPath(orpcContract.experiments.getMyJoinRequest, {
+      const mePath = testApp.resolveOrpcPath(contract.experiments.getMyJoinRequest, {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
@@ -376,7 +373,7 @@ describe("ExperimentJoinRequestsController", () => {
         userId: adminUserId,
         visibility: "public",
       });
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -385,14 +382,14 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      const cancelPath = testApp.resolveOrpcPath(orpcContract.experiments.cancelJoinRequest, {
+      const cancelPath = testApp.resolveOrpcPath(contract.experiments.cancelJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
       await testApp.delete(cancelPath).withAuth(requesterUserId).expect(StatusCodes.NO_CONTENT);
 
       // No pending request anymore
-      const mePath = testApp.resolveOrpcPath(orpcContract.experiments.getMyJoinRequest, {
+      const mePath = testApp.resolveOrpcPath(contract.experiments.getMyJoinRequest, {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
@@ -404,7 +401,7 @@ describe("ExperimentJoinRequestsController", () => {
         userId: adminUserId,
         visibility: "public",
       });
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
@@ -415,7 +412,7 @@ describe("ExperimentJoinRequestsController", () => {
 
       const otherUserId = await testApp.createTestUser({ email: "other@example.com" });
 
-      const cancelPath = testApp.resolveOrpcPath(orpcContract.experiments.cancelJoinRequest, {
+      const cancelPath = testApp.resolveOrpcPath(contract.experiments.cancelJoinRequest, {
         id: experiment.id,
         requestId: createResponse.body.id,
       });
@@ -430,12 +427,12 @@ describe("ExperimentJoinRequestsController", () => {
         userId: adminUserId,
         visibility: "public",
       });
-      const createPath = testApp.resolveOrpcPath(orpcContract.experiments.createJoinRequest, {
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
       });
       await testApp.post(createPath).withAuth(requesterUserId).send({}).expect(StatusCodes.CREATED);
 
-      const listPath = testApp.resolveOrpcPath(orpcContract.experiments.listJoinRequests, {
+      const listPath = testApp.resolveOrpcPath(contract.experiments.listJoinRequests, {
         id: experiment.id,
       });
 

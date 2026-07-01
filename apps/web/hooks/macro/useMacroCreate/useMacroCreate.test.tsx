@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useMacroCreate } from "./useMacroCreate";
 
 describe("useMacroCreate", () => {
   it("calls POST /macros and invokes onSuccess with id", async () => {
-    server.mount(orpcContract.macros.createMacro, {
+    server.mount(contract.macros.createMacro, {
       body: createMacro({ id: "macro-1" }),
     });
 
@@ -27,7 +27,7 @@ describe("useMacroCreate", () => {
   });
 
   it("captures the request body sent to the API", async () => {
-    const spy = server.mount(orpcContract.macros.createMacro, {
+    const spy = server.mount(contract.macros.createMacro, {
       body: createMacro({ id: "macro-2", name: "Test", code: "" }),
     });
 
@@ -47,7 +47,7 @@ describe("useMacroCreate", () => {
   });
 
   it("calls onError when the API returns an error", async () => {
-    server.mount(orpcContract.macros.createMacro, { status: 400 });
+    server.mount(contract.macros.createMacro, { status: 400 });
 
     const onError = vi.fn();
     const { result } = renderHook(() => useMacroCreate({ onError }));

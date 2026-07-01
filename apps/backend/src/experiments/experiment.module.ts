@@ -96,22 +96,22 @@ import { ExperimentVisualizationRepository } from "./core/repositories/experimen
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
-import { ExperimentDashboardsOrpcController } from "./presentation/experiment-dashboards.orpc.controller";
+import { ExperimentDashboardsController } from "./presentation/experiment-dashboards.controller";
 // Controllers
-import { ExperimentDataAnnotationsOrpcController } from "./presentation/experiment-data-annotations.orpc.controller";
-import { ExperimentDataExportsOrpcController } from "./presentation/experiment-data-exports.orpc.controller";
+import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
+import { ExperimentDataExportsController } from "./presentation/experiment-data-exports.controller";
 import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
-import { ExperimentDataOrpcController } from "./presentation/experiment-data.orpc.controller";
-import { ExperimentFlowsOrpcController } from "./presentation/experiment-flows.orpc.controller";
+import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
-import { ExperimentLocationsOrpcController } from "./presentation/experiment-locations.orpc.controller";
-import { ExperimentMembersOrpcController } from "./presentation/experiment-members.orpc.controller";
-import { ExperimentMetadataOrpcController } from "./presentation/experiment-metadata.orpc.controller";
-import { ExperimentVisualizationsOrpcController } from "./presentation/experiment-visualizations.orpc.controller";
-import { ExperimentWorkbooksOrpcController } from "./presentation/experiment-workbooks.orpc.controller";
-import { ExperimentOrpcController } from "./presentation/experiment.orpc.controller";
-import { ProjectTransferRequestsOrpcController } from "./presentation/project-transfer-requests.orpc.controller";
-import { ProjectTransferWebhookOrpcController } from "./presentation/project-transfer-webhook.orpc.controller";
+import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
+import { ExperimentMembersController } from "./presentation/experiment-members.controller";
+import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
+import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
+import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
+import { ExperimentController } from "./presentation/experiment.controller";
+import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
+import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
 
 @Module({
   imports: [
@@ -124,21 +124,21 @@ import { ProjectTransferWebhookOrpcController } from "./presentation/project-tra
     WorkbookModule,
   ],
   controllers: [
-    ExperimentOrpcController,
-    ExperimentDataOrpcController,
-    ExperimentDataExportsOrpcController,
-    ExperimentFlowsOrpcController,
-    ExperimentWorkbooksOrpcController,
-    ExperimentMembersOrpcController,
+    ExperimentController,
+    ExperimentDataController,
+    ExperimentDataExportsController,
+    ExperimentFlowsController,
+    ExperimentWorkbooksController,
+    ExperimentMembersController,
     ExperimentJoinRequestsController,
-    ExperimentMetadataOrpcController,
-    ExperimentVisualizationsOrpcController,
-    ExperimentDashboardsOrpcController,
-    ExperimentLocationsOrpcController,
-    ExperimentDataAnnotationsOrpcController,
+    ExperimentMetadataController,
+    ExperimentVisualizationsController,
+    ExperimentDashboardsController,
+    ExperimentLocationsController,
+    ExperimentDataAnnotationsController,
     ExperimentDataUploadsController,
-    ProjectTransferRequestsOrpcController,
-    ProjectTransferWebhookOrpcController,
+    ProjectTransferRequestsController,
+    ProjectTransferWebhookController,
   ],
   providers: [
     // Port implementations

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ContributorChipValue } from "./contributor-chip-value";
 
@@ -23,7 +23,7 @@ function renderChip(filterValue: string | string[], opts: { experimentId?: strin
 
 describe("ContributorChipValue", () => {
   it("renders the no-value placeholder when no id is selected", () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
     renderChip("");
@@ -31,7 +31,7 @@ describe("ContributorChipValue", () => {
   });
 
   it("renders the contributor's name when its id matches a fetched struct", async () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [STRUCT_A], truncated: false },
     });
     renderChip("u-1");
@@ -39,7 +39,7 @@ describe("ContributorChipValue", () => {
   });
 
   it("falls back to the raw id when the fetched values don't include it", async () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [STRUCT_A], truncated: false },
     });
     renderChip("u-99");
@@ -48,7 +48,7 @@ describe("ContributorChipValue", () => {
   });
 
   it("shows a selected-count label when multiple ids are selected", () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [STRUCT_A, STRUCT_B], truncated: false },
     });
     renderChip(["u-1", "u-2"]);

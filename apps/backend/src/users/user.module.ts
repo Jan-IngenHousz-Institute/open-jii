@@ -22,14 +22,14 @@ import { EMAIL_PORT } from "./core/ports/email.port";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
 import { UserRepository } from "./core/repositories/user.repository";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
-import { InvitationOrpcController } from "./presentation/user-invitation.orpc.controller";
-import { UserWebhookOrpcController } from "./presentation/user-webhook.orpc.controller";
+import { InvitationController } from "./presentation/user-invitation.controller";
+import { UserWebhookController } from "./presentation/user-webhook.controller";
 // Controllers
-import { UserOrpcController } from "./presentation/user.orpc.controller";
+import { UserController } from "./presentation/user.controller";
 
 @Module({
   imports: [DatabricksModule, EmailModule, forwardRef(() => ExperimentModule)],
-  controllers: [UserOrpcController, UserWebhookOrpcController, InvitationOrpcController],
+  controllers: [UserController, UserWebhookController, InvitationController],
   providers: [
     // Repositories
     UserRepository,

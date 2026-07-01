@@ -7,7 +7,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { TableWidgetEditor } from "./table-widget-editor";
 
@@ -22,7 +22,7 @@ describe("TableWidgetEditor", () => {
   });
 
   it("delegates to the view component once a table is selected", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "raw_data",
@@ -39,7 +39,7 @@ describe("TableWidgetEditor", () => {
         }),
       ],
     });
-    server.mount(orpcContract.experiments.getExperimentTables, {
+    server.mount(contract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "raw_data" })],
     });
 

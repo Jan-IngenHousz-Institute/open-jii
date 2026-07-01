@@ -4,7 +4,7 @@ import { renderHook, act, waitFor } from "@/test/test-utils";
 import { useSearchParams, usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperiments } from "./useExperiments";
 
@@ -24,7 +24,7 @@ describe("useExperiments", () => {
     vi.mocked(usePathname).mockReturnValue("/platform/experiments");
     mockSearchParams.get.mockReturnValue(null);
     mockSearchParams.toString.mockReturnValue("");
-    server.mount(orpcContract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
   });
 
   it("initializes with defaults and fetches experiments", async () => {
@@ -52,7 +52,7 @@ describe("useExperiments", () => {
   });
 
   it("returns experiment data from API", async () => {
-    server.mount(orpcContract.experiments.listExperiments, {
+    server.mount(contract.experiments.listExperiments, {
       body: [createExperiment({ id: "exp-1" }), createExperiment({ id: "exp-2" })],
     });
 
@@ -109,7 +109,7 @@ describe("useExperiments", () => {
   });
 
   it("handles API error gracefully", async () => {
-    server.mount(orpcContract.experiments.listExperiments, { status: 500 });
+    server.mount(contract.experiments.listExperiments, { status: 500 });
 
     // The hook should not throw even when the API returns 500.
     // ts-rest puts non-2xx responses in the query error state,

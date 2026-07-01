@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { CUMSUM_NEEDS_X_COLUMN, useChartData } from "./use-chart-data";
 
@@ -36,7 +36,7 @@ describe("useChartData", () => {
       { time: 1, temp: 21 },
       { time: 2, temp: 22 },
     ];
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({ data: { columns: [], rows, totalRows: 2, truncated: false } }),
       ],
@@ -50,7 +50,7 @@ describe("useChartData", () => {
   });
 
   it("falls back to an empty array when the API returns no data", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, { body: [] });
+    server.mount(contract.experiments.getExperimentData, { body: [] });
 
     const { result } = renderHook(() => useChartData(buildViz(), "exp-1", undefined));
 
@@ -59,7 +59,7 @@ describe("useChartData", () => {
   });
 
   it("starts in a loading state until the request resolves", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -75,7 +75,7 @@ describe("useChartData", () => {
   });
 
   it("surfaces an error when the API responds with a failure", async () => {
-    server.mount(orpcContract.experiments.getExperimentData, { status: 500 });
+    server.mount(contract.experiments.getExperimentData, { status: 500 });
 
     const { result } = renderHook(() => useChartData(buildViz(), "exp-1", undefined));
 
@@ -84,7 +84,7 @@ describe("useChartData", () => {
   });
 
   it("masks loading and error when providedData is supplied (caller already has rows)", () => {
-    server.mount(orpcContract.experiments.getExperimentData, { status: 500, delay: 100 });
+    server.mount(contract.experiments.getExperimentData, { status: 500, delay: 100 });
 
     const { result } = renderHook(() => useChartData(buildViz(), "exp-1", [{ x: 1 }]));
 
@@ -104,7 +104,7 @@ describe("useChartData", () => {
         ],
       },
     });
-    const spy = server.mount(orpcContract.experiments.getExperimentData, {
+    const spy = server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -121,7 +121,7 @@ describe("useChartData", () => {
   });
 
   it("forwards orderBy and asks the API to sort ascending when provided", async () => {
-    const spy = server.mount(orpcContract.experiments.getExperimentData, {
+    const spy = server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -137,7 +137,7 @@ describe("useChartData", () => {
   });
 
   it("omits orderDirection when orderBy is not set", async () => {
-    const spy = server.mount(orpcContract.experiments.getExperimentData, {
+    const spy = server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -172,7 +172,7 @@ describe("useChartData", () => {
     }
 
     it("short-circuits a cumsum config with no X column and no groupBy", async () => {
-      const spy = server.mount(orpcContract.experiments.getExperimentData, {
+      const spy = server.mount(contract.experiments.getExperimentData, {
         body: [createExperimentDataTable()],
       });
 
@@ -189,7 +189,7 @@ describe("useChartData", () => {
     });
 
     it("lets the cumsum request through when an explicit orderBy is provided", async () => {
-      const spy = server.mount(orpcContract.experiments.getExperimentData, {
+      const spy = server.mount(contract.experiments.getExperimentData, {
         body: [
           createExperimentDataTable({
             data: { columns: [], rows: [], totalRows: 0, truncated: false },
@@ -216,7 +216,7 @@ describe("useChartData", () => {
           },
         },
       });
-      const spy = server.mount(orpcContract.experiments.getExperimentData, {
+      const spy = server.mount(contract.experiments.getExperimentData, {
         body: [
           createExperimentDataTable({
             data: { columns: [], rows: [], totalRows: 0, truncated: false },

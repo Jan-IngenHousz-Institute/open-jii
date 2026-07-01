@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type {
   ExperimentDashboardWidget,
   ExperimentRichTextWidget,
@@ -107,7 +107,7 @@ describe("WidgetSlot", () => {
 
   it("renders a table widget through the editor when given one (no API errors)", () => {
     // The table editor pulls table data; mount empty defaults so the request resolves.
-    server.mount(orpcContract.experiments.getExperimentData, {
+    server.mount(contract.experiments.getExperimentData, {
       body: [
         {
           name: "raw_data",

@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useMacroUpdate } from "./useMacroUpdate";
 
@@ -15,7 +15,7 @@ describe("useMacroUpdate", () => {
       description: "Updated Description",
     });
 
-    const spy = server.mount(orpcContract.macros.updateMacro, {
+    const spy = server.mount(contract.macros.updateMacro, {
       body: updatedMacro,
     });
 
@@ -43,7 +43,7 @@ describe("useMacroUpdate", () => {
       name: "Updated Macro",
     });
 
-    server.mount(orpcContract.macros.updateMacro, { body: updatedMacro });
+    server.mount(contract.macros.updateMacro, { body: updatedMacro });
 
     let successData: unknown = null;
     const { result } = renderHook(() =>
@@ -69,7 +69,7 @@ describe("useMacroUpdate", () => {
   });
 
   it("should return idle mutation state initially", () => {
-    server.mount(orpcContract.macros.updateMacro, {
+    server.mount(contract.macros.updateMacro, {
       body: createMacro({ id: "test-macro-id" }),
     });
 
@@ -80,7 +80,7 @@ describe("useMacroUpdate", () => {
   });
 
   it("should handle server error", async () => {
-    server.mount(orpcContract.macros.updateMacro, { status: 500 });
+    server.mount(contract.macros.updateMacro, { status: 500 });
 
     const { result } = renderHook(() => useMacroUpdate("test-macro-id"));
 

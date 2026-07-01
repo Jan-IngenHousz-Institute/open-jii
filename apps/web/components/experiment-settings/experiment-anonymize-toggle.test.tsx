@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ComponentProps } from "react";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ExperimentAnonymizeToggle } from "./experiment-anonymize-toggle";
 
@@ -29,7 +29,7 @@ describe("<ExperimentAnonymizeToggle />", () => {
 
   it("calls updateExperiment with the toggled value when flipped", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(orpcContract.experiments.updateExperiment, { status: 200 });
+    const spy = server.mount(contract.experiments.updateExperiment, { status: 200 });
 
     renderToggle({ initialAnonymize: false });
     await user.click(screen.getByRole("switch"));
@@ -40,7 +40,7 @@ describe("<ExperimentAnonymizeToggle />", () => {
 
   it("reverts the switch when the update mutation fails", async () => {
     const user = userEvent.setup();
-    server.mount(orpcContract.experiments.updateExperiment, { status: 500 });
+    server.mount(contract.experiments.updateExperiment, { status: 500 });
 
     renderToggle({ initialAnonymize: false });
     const switchEl = screen.getByRole("switch");

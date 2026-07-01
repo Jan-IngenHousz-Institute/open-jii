@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ExperimentTitle } from "./experiment-title";
 
@@ -94,7 +94,7 @@ describe("ExperimentTitle", () => {
   });
 
   it("saves title successfully", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperiment, {
+    const spy = server.mount(contract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-456" }),
     });
     const user = userEvent.setup();
@@ -116,7 +116,7 @@ describe("ExperimentTitle", () => {
   });
 
   it("does not save if title is unchanged", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperiment, {
+    const spy = server.mount(contract.experiments.updateExperiment, {
       body: createExperiment(),
     });
     const user = userEvent.setup();
@@ -132,7 +132,7 @@ describe("ExperimentTitle", () => {
   });
 
   it("does not save if title is empty", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperiment, {
+    const spy = server.mount(contract.experiments.updateExperiment, {
       body: createExperiment(),
     });
     const user = userEvent.setup();

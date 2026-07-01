@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useTransferRequestCreate } from "./useTransferRequestCreate";
 
 describe("useTransferRequestCreate", () => {
   it("sends POST request", async () => {
-    const spy = server.mount(orpcContract.experiments.createTransferRequest, {
+    const spy = server.mount(contract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-1" }),
     });
 
@@ -28,7 +28,7 @@ describe("useTransferRequestCreate", () => {
   });
 
   it("sends correct body", async () => {
-    const spy = server.mount(orpcContract.experiments.createTransferRequest, {
+    const spy = server.mount(contract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-2" }),
     });
 
@@ -50,7 +50,7 @@ describe("useTransferRequestCreate", () => {
   });
 
   it("calls onSuccess callback with requestId", async () => {
-    server.mount(orpcContract.experiments.createTransferRequest, {
+    server.mount(contract.experiments.createTransferRequest, {
       body: createTransferRequest({ requestId: "req-99" }),
     });
 
@@ -70,7 +70,7 @@ describe("useTransferRequestCreate", () => {
   });
 
   it("calls onError callback on failure", async () => {
-    server.mount(orpcContract.experiments.createTransferRequest, { status: 500 });
+    server.mount(contract.experiments.createTransferRequest, { status: 500 });
 
     const onError = vi.fn();
     const { result } = renderHook(() => useTransferRequestCreate({ onError }));
@@ -88,7 +88,7 @@ describe("useTransferRequestCreate", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(orpcContract.experiments.createTransferRequest, { status: 500 });
+    server.mount(contract.experiments.createTransferRequest, { status: 500 });
 
     const { result } = renderHook(() => useTransferRequestCreate());
 

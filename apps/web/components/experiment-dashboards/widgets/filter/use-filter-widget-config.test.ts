@@ -3,12 +3,12 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
 function mountColumns(tableName: string) {
-  server.mount(orpcContract.experiments.getExperimentData, {
+  server.mount(contract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
         name: tableName,

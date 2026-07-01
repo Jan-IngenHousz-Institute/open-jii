@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { assertExists, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/experiment.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
 
@@ -118,7 +118,7 @@ describe("VisualizationTableRow", () => {
 
   it("invokes the delete endpoint with the visualization id when confirmed", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(orpcContract.experiments.deleteExperimentVisualization);
+    const spy = server.mount(contract.experiments.deleteExperimentVisualization);
     renderRow();
     await user.click(screen.getByRole("button", { name: "ui.actions.moreActions" }));
     await user.click(await screen.findByText("ui.actions.delete"));

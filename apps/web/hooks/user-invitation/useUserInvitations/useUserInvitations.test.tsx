@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useUserInvitations } from "./useUserInvitations";
 
@@ -14,7 +14,7 @@ describe("useUserInvitations", () => {
       createInvitation({ email: "user2@example.com", role: "admin" }),
     ];
 
-    server.mount(orpcContract.users.listInvitations, { body: invitations });
+    server.mount(contract.users.listInvitations, { body: invitations });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-123"));
 
@@ -28,7 +28,7 @@ describe("useUserInvitations", () => {
   });
 
   it("passes correct query params", async () => {
-    const spy = server.mount(orpcContract.users.listInvitations, { body: [] });
+    const spy = server.mount(contract.users.listInvitations, { body: [] });
 
     renderHook(() => useUserInvitations("experiment", "exp-123"));
 
@@ -43,7 +43,7 @@ describe("useUserInvitations", () => {
   });
 
   it("starts in loading state", () => {
-    server.mount(orpcContract.users.listInvitations, { body: [], delay: 200 });
+    server.mount(contract.users.listInvitations, { body: [], delay: 200 });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-456"));
 
@@ -51,7 +51,7 @@ describe("useUserInvitations", () => {
   });
 
   it("handles error response", async () => {
-    server.mount(orpcContract.users.listInvitations, { status: 403 });
+    server.mount(contract.users.listInvitations, { status: 403 });
 
     const { result } = renderHook(() => useUserInvitations("experiment", "exp-789"));
 

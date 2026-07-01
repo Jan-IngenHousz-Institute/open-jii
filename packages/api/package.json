@@ -2,9 +2,9 @@
   "name": "@repo/api",
   "version": "0.0.1",
   "exports": {
-    "./orpc-contract": {
-      "types": "./dist/orpc-contract.d.ts",
-      "default": "./dist/orpc-contract.js"
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "default": "./dist/contract.js"
     },
     "./domains/*": {
       "types": "./dist/domains/*.d.ts",

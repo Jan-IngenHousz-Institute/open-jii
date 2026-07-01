@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useSession } from "@repo/auth/client";
 
@@ -233,9 +233,9 @@ const nonCreatorMacro = createMacro({
 describe("<MacroDetailsSidebar />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(orpcContract.macros.updateMacro, { body: baseMacro });
-    server.mount(orpcContract.macros.deleteMacro, {});
-    server.mount(orpcContract.macros.listCompatibleProtocols, {
+    server.mount(contract.macros.updateMacro, { body: baseMacro });
+    server.mount(contract.macros.deleteMacro, {});
+    server.mount(contract.macros.listCompatibleProtocols, {
       body: [
         {
           macroId: "abc12345-6789-0abc-def0-123456789abc",
@@ -362,7 +362,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows singular 'protocol' when count is 1", async () => {
-      server.mount(orpcContract.macros.listCompatibleProtocols, {
+      server.mount(contract.macros.listCompatibleProtocols, {
         body: [
           {
             macroId: "abc12345-6789-0abc-def0-123456789abc",
@@ -385,7 +385,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows 'no compatible protocols' text when count is 0 for non-creator", async () => {
-      server.mount(orpcContract.macros.listCompatibleProtocols, { body: [] });
+      server.mount(contract.macros.listCompatibleProtocols, { body: [] });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
@@ -397,7 +397,7 @@ describe("<MacroDetailsSidebar />", () => {
 
   describe("language change", () => {
     it("calls updateMacro when language is changed", async () => {
-      const spy = server.mount(orpcContract.macros.updateMacro, { body: baseMacro });
+      const spy = server.mount(contract.macros.updateMacro, { body: baseMacro });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -412,7 +412,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("calls toast on successful language update", async () => {
-      server.mount(orpcContract.macros.updateMacro, { body: baseMacro });
+      server.mount(contract.macros.updateMacro, { body: baseMacro });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -428,7 +428,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("calls toast with destructive variant on language update error", async () => {
-      server.mount(orpcContract.macros.updateMacro, { status: 400 });
+      server.mount(contract.macros.updateMacro, { status: 400 });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -507,7 +507,7 @@ describe("<MacroDetailsSidebar />", () => {
     it("calls deleteMacro and navigates on confirm delete", async () => {
       const { useFeatureFlagEnabled } = await import("posthog-js/react");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-      const spy = server.mount(orpcContract.macros.deleteMacro, {});
+      const spy = server.mount(contract.macros.deleteMacro, {});
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
@@ -531,7 +531,7 @@ describe("<MacroDetailsSidebar />", () => {
     it("shows deleting state when deletion is pending", async () => {
       const { useFeatureFlagEnabled } = await import("posthog-js/react");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-      server.mount(orpcContract.macros.deleteMacro, { delay: 999_999 });
+      server.mount(contract.macros.deleteMacro, { delay: 999_999 });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 

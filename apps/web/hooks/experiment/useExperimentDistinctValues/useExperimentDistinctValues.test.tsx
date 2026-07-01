@@ -2,13 +2,13 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentDistinctValues } from "./useExperimentDistinctValues";
 
 describe("useExperimentDistinctValues", () => {
   it("returns the values array from the response body", async () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: ["alpha", "beta", "gamma"], truncated: false },
     });
 
@@ -26,7 +26,7 @@ describe("useExperimentDistinctValues", () => {
   });
 
   it("exposes the truncated flag from the server", async () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [1, 2, 3], truncated: true },
     });
 
@@ -43,7 +43,7 @@ describe("useExperimentDistinctValues", () => {
   });
 
   it("falls back to an empty array and not truncated when data is undefined", () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
 
@@ -61,7 +61,7 @@ describe("useExperimentDistinctValues", () => {
   });
 
   it("does not fetch when the column is empty (disabled by guard)", async () => {
-    const spy = server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
 
@@ -79,7 +79,7 @@ describe("useExperimentDistinctValues", () => {
   });
 
   it("surfaces errors on result.current.error", async () => {
-    server.mount(orpcContract.experiments.getDistinctColumnValues, { status: 500 });
+    server.mount(contract.experiments.getDistinctColumnValues, { status: 500 });
 
     const { result } = renderHook(() =>
       useExperimentDistinctValues({
@@ -95,7 +95,7 @@ describe("useExperimentDistinctValues", () => {
   });
 
   it("passes column/tableName/limit through to the request", async () => {
-    const spy = server.mount(orpcContract.experiments.getDistinctColumnValues, {
+    const spy = server.mount(contract.experiments.getDistinctColumnValues, {
       body: { values: [], truncated: false },
     });
 

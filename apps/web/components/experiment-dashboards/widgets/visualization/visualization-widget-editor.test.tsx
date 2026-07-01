@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import VisualizationWidgetEditor from "./visualization-widget-editor";
 
@@ -25,7 +25,7 @@ describe("VisualizationWidgetEditor", () => {
 
   it("delegates to the view component once a visualization is picked", async () => {
     const viz = createVisualization({ name: "Picked" });
-    server.mount(orpcContract.experiments.getExperimentVisualization, { body: viz });
+    server.mount(contract.experiments.getExperimentVisualization, { body: viz });
     const widget = createVisualizationWidget({
       config: { visualizationId: viz.id, showTitle: true, showDescription: false },
     });

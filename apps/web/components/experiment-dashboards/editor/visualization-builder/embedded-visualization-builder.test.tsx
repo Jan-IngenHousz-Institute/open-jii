@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { LiveVizProvider } from "../context/live-viz-context";
 import { EmbeddedVisualizationBuilder } from "./embedded-visualization-builder";
@@ -29,12 +29,12 @@ function setupRender({ renderWidgetTab = () => <div>widget-tab-slot</div> }: Set
 
 describe("EmbeddedVisualizationBuilder", () => {
   it("renders the loading state until the visualization resolves", async () => {
-    server.mount(orpcContract.experiments.getExperimentVisualization, {
+    server.mount(contract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-1" }),
       delay: 30,
     });
-    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
-    server.mount(orpcContract.experiments.getExperimentData, { body: [] });
+    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(contract.experiments.getExperimentData, { body: [] });
     setupRender();
     expect(screen.getByText("workspace.inspector.loadingTables")).toBeInTheDocument();
     await waitFor(() =>
@@ -43,17 +43,17 @@ describe("EmbeddedVisualizationBuilder", () => {
   });
 
   it("renders the error message when the visualization fails to load", async () => {
-    server.mount(orpcContract.experiments.getExperimentVisualization, { status: 500 });
+    server.mount(contract.experiments.getExperimentVisualization, { status: 500 });
     setupRender();
     await waitFor(() => expect(screen.getByText("errors.failedToLoadData")).toBeInTheDocument());
   });
 
   it("mounts the BuilderBody with the supplied renderWidgetTab once the viz resolves", async () => {
-    server.mount(orpcContract.experiments.getExperimentVisualization, {
+    server.mount(contract.experiments.getExperimentVisualization, {
       body: createVisualization({ id: "viz-1" }),
     });
-    server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
-    server.mount(orpcContract.experiments.getExperimentData, { body: [] });
+    server.mount(contract.experiments.getExperimentTables, { body: [] });
+    server.mount(contract.experiments.getExperimentData, { body: [] });
 
     setupRender({ renderWidgetTab: () => <div>my-custom-widget-tab</div> });
     await waitFor(() => expect(screen.getByText("my-custom-widget-tab")).toBeInTheDocument());

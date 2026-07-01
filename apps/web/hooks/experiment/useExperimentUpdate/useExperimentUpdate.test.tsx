@@ -5,13 +5,13 @@ import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-uti
 import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentUpdate } from "./useExperimentUpdate";
 
 describe("useExperimentUpdate", () => {
   it("sends PATCH request", async () => {
-    const spy = server.mount(orpcContract.experiments.updateExperiment, {
+    const spy = server.mount(contract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-1", name: "Updated" }),
     });
 
@@ -44,7 +44,7 @@ describe("useExperimentUpdate", () => {
     );
 
     // Delay the response so we can observe optimistic state
-    server.mount(orpcContract.experiments.updateExperiment, {
+    server.mount(contract.experiments.updateExperiment, {
       body: createExperiment({ id: "exp-1", name: "New Name", description: "Old desc" }),
       delay: 100,
     });
@@ -73,9 +73,9 @@ describe("useExperimentUpdate", () => {
       createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
     );
 
-    server.mount(orpcContract.experiments.updateExperiment, { status: 500 });
+    server.mount(contract.experiments.updateExperiment, { status: 500 });
 
-    server.mount(orpcContract.experiments.getExperiment, {
+    server.mount(contract.experiments.getExperiment, {
       body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
     });
 

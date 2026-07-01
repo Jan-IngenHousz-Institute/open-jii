@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useExperimentDashboards } from "./useExperimentDashboards";
 
@@ -13,7 +13,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("fetches dashboards and exposes them on result.current.data", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, {
+    server.mount(contract.experiments.listExperimentDashboards, {
       body: [
         createExperimentDashboard({ experimentId: "exp-123" }),
         createExperimentDashboard({ experimentId: "exp-123" }),
@@ -29,7 +29,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("surfaces errors on the result without throwing", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { status: 500 });
+    server.mount(contract.experiments.listExperimentDashboards, { status: 500 });
 
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-123" }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -37,7 +37,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("defaults to limit=50, offset=0 with no prev/next when results empty", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -48,7 +48,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("detects next page only when more items exist beyond the visible page", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, {
+    server.mount(contract.experiments.listExperimentDashboards, {
       body: Array.from({ length: 51 }, () => createExperimentDashboard()),
     });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
@@ -59,7 +59,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("does not report a phantom next page when results exactly fill the limit", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, {
+    server.mount(contract.experiments.listExperimentDashboards, {
       body: Array.from({ length: 50 }, () => createExperimentDashboard()),
     });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
@@ -69,7 +69,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("advances offset by limit when nextPage is called", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, {
+    server.mount(contract.experiments.listExperimentDashboards, {
       body: Array.from({ length: 51 }, () => createExperimentDashboard()),
     });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
@@ -81,7 +81,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("rewinds via previousPage but never below 0", () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() =>
       useExperimentDashboards({ experimentId: "exp-1", initialOffset: 50 }),
     );
@@ -94,7 +94,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("clamps initialLimit to the user-facing max so the probe always fits the backend cap", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() =>
       useExperimentDashboards({ experimentId: "exp-1", initialLimit: 100 }),
     );
@@ -103,7 +103,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("clamps setLimit values above the user-facing max", async () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() => useExperimentDashboards({ experimentId: "exp-1" }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     act(() => result.current.setLimit(500));
@@ -111,7 +111,7 @@ describe("useExperimentDashboards", () => {
   });
 
   it("resetPagination jumps offset back to 0", () => {
-    server.mount(orpcContract.experiments.listExperimentDashboards, { body: [] });
+    server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     const { result } = renderHook(() =>
       useExperimentDashboards({ experimentId: "exp-1", initialOffset: 100 }),
     );

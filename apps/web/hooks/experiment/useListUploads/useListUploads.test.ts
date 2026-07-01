@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useListUploads } from "./useListUploads";
 
@@ -13,7 +13,7 @@ describe("useListUploads", () => {
       createUpload({ uploadId: "u1", status: "running" }),
       createUpload({ uploadId: "u2", status: "completed" }),
     ];
-    server.mount(orpcContract.experiments.listUploads, { body: { uploads } });
+    server.mount(contract.experiments.listUploads, { body: { uploads } });
 
     const { result } = renderHook(() => useListUploads("exp-1", { enabled: true }));
 
@@ -24,7 +24,7 @@ describe("useListUploads", () => {
   });
 
   it("does not fetch when disabled", () => {
-    const spy = server.mount(orpcContract.experiments.listUploads, { body: { uploads: [] } });
+    const spy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
 
     const { result } = renderHook(() => useListUploads("exp-1", { enabled: false }));
 
@@ -34,7 +34,7 @@ describe("useListUploads", () => {
   });
 
   it("forwards the uploadTableName filter to the request", async () => {
-    const spy = server.mount(orpcContract.experiments.listUploads, { body: { uploads: [] } });
+    const spy = server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
 
     renderHook(() => useListUploads("exp-1", { uploadTableName: "leaf_traits", enabled: true }));
 

@@ -6,11 +6,11 @@ import { ExperimentModule } from "../experiments/experiment.module";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { AWS_PORT } from "./core/ports/aws.port";
-import { IotOrpcController } from "./presentation/iot.orpc.controller";
+import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [AwsModule, ExperimentModule],
-  controllers: [IotOrpcController],
+  controllers: [IotController],
   providers: [
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,

@@ -3,12 +3,12 @@ import type { ContractRouterClient } from "@orpc/contract";
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
-import { healthOrpcContract } from "@repo/api/domains/health/health.orpc";
+import { healthContract } from "@repo/api/domains/health/health.contract";
 
-const link = new OpenAPILink(healthOrpcContract, {
+const link = new OpenAPILink(healthContract, {
   url: "http://localhost:3020",
 });
 
-const healthClient: ContractRouterClient<typeof healthOrpcContract> = createORPCClient(link);
+const healthClient: ContractRouterClient<typeof healthContract> = createORPCClient(link);
 
 export const orpcHealth = createTanstackQueryUtils(healthClient);

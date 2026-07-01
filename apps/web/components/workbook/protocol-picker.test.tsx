@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { ProtocolPicker } from "./protocol-picker";
@@ -25,7 +25,7 @@ describe("ProtocolPicker", () => {
     const protocols = [
       createProtocol({ id: "p1", name: "Photosynthesis v2", family: "multispeq" }),
     ];
-    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
+    server.mount(contract.protocols.listProtocols, { body: protocols });
 
     renderPicker();
 
@@ -43,7 +43,7 @@ describe("ProtocolPicker", () => {
       createProtocol({ id: "p1", name: "Leaf Absorbance" }),
       createProtocol({ id: "p2", name: "SPAD Measurement" }),
     ];
-    server.mount(orpcContract.protocols.listProtocols, { body: protocols });
+    server.mount(contract.protocols.listProtocols, { body: protocols });
 
     renderPicker(onSelect);
 
@@ -69,7 +69,7 @@ describe("ProtocolPicker", () => {
 
   it("shows 'Create new protocol' button that opens create form", async () => {
     const user = userEvent.setup();
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    server.mount(contract.protocols.listProtocols, { body: [] });
 
     renderPicker();
 
@@ -91,8 +91,8 @@ describe("ProtocolPicker", () => {
     const onSelect = vi.fn();
     const newProtocol = createProtocol({ id: "new-p1", name: "New Protocol" });
 
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
-    server.mount(orpcContract.protocols.createProtocol, { body: newProtocol, status: 201 });
+    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(contract.protocols.createProtocol, { body: newProtocol, status: 201 });
 
     renderPicker(onSelect);
 
@@ -125,7 +125,7 @@ describe("ProtocolPicker", () => {
 
   it("shows Back button to return to search from create form", async () => {
     const user = userEvent.setup();
-    server.mount(orpcContract.protocols.listProtocols, { body: [] });
+    server.mount(contract.protocols.listProtocols, { body: [] });
 
     renderPicker();
 

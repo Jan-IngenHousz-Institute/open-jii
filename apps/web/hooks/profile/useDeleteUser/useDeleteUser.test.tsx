@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { act, renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useDeleteUser } from "./useDeleteUser";
@@ -12,7 +12,7 @@ const USER_ID = "00000000-0000-4000-8000-000000000000";
 describe("useDeleteUser", () => {
   it("runs the caller's onSuccess when the account is deleted", async () => {
     const onSuccess = vi.fn();
-    server.mount(orpcContract.users.deleteUser, { status: 204 });
+    server.mount(contract.users.deleteUser, { status: 204 });
 
     const { result } = renderHook(() => useDeleteUser({ onSuccess }));
 
@@ -25,7 +25,7 @@ describe("useDeleteUser", () => {
 
   it("surfaces the API error as a destructive toast and forwards the contract error to onError", async () => {
     const onError = vi.fn();
-    server.mount(orpcContract.users.deleteUser, {
+    server.mount(contract.users.deleteUser, {
       status: 403,
       body: { message: "Not allowed to delete" },
     });

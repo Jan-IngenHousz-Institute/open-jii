@@ -4,9 +4,9 @@ import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { env } from "~/env";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
-const link = new OpenAPILink(orpcContract, {
+const link = new OpenAPILink(contract, {
   url: env.NEXT_PUBLIC_API_URL,
   headers: () => ({ "x-app-source": "orpc" }),
   // Send the session cookie with every request (browser-managed); oRPC throws
@@ -15,7 +15,7 @@ const link = new OpenAPILink(orpcContract, {
 });
 
 /** Plain oRPC client for use outside of React components. */
-export const orpcClient: ContractRouterClient<typeof orpcContract> = createORPCClient(link);
+export const orpcClient: ContractRouterClient<typeof contract> = createORPCClient(link);
 
 /** TanStack Query utilities (`orpc.<domain>.<endpoint>.queryOptions/mutationOptions(...)`). */
 export const orpc = createTanstackQueryUtils(orpcClient);

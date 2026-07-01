@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { MacroCompatibleProtocolsCard } from "../macro-compatible-protocols-card";
 
@@ -67,20 +67,20 @@ describe("<MacroCompatibleProtocolsCard />", () => {
     vi.clearAllMocks();
     lastDropdownProps = null;
 
-    server.mount(orpcContract.macros.listCompatibleProtocols, {
+    server.mount(contract.macros.listCompatibleProtocols, {
       body: mockCompatibleProtocols,
     });
-    server.mount(orpcContract.macros.addCompatibleProtocols, {
+    server.mount(contract.macros.addCompatibleProtocols, {
       body: [],
     });
-    server.mount(orpcContract.macros.removeCompatibleProtocol, {});
-    server.mount(orpcContract.protocols.listProtocols, {
+    server.mount(contract.macros.removeCompatibleProtocol, {});
+    server.mount(contract.protocols.listProtocols, {
       body: mockAllProtocols,
     });
   });
 
   it("should show loading state", () => {
-    server.mount(orpcContract.macros.listCompatibleProtocols, { body: [], delay: 999_999 });
+    server.mount(contract.macros.listCompatibleProtocols, { body: [], delay: 999_999 });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -88,7 +88,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should show 'no compatible protocols' when list is empty", async () => {
-    server.mount(orpcContract.macros.listCompatibleProtocols, { body: [] });
+    server.mount(contract.macros.listCompatibleProtocols, { body: [] });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -122,7 +122,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should call remove mutation when X button is clicked", async () => {
-    const spy = server.mount(orpcContract.macros.removeCompatibleProtocol, {});
+    const spy = server.mount(contract.macros.removeCompatibleProtocol, {});
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -140,7 +140,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should call remove mutation for specific protocol when its X button is clicked", async () => {
-    const spy = server.mount(orpcContract.macros.removeCompatibleProtocol, {});
+    const spy = server.mount(contract.macros.removeCompatibleProtocol, {});
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -180,7 +180,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should call add mutation when a protocol is added via the dropdown", async () => {
-    const spy = server.mount(orpcContract.macros.addCompatibleProtocols, { body: [] });
+    const spy = server.mount(contract.macros.addCompatibleProtocols, { body: [] });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -199,7 +199,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should pass isAdding state to ProtocolSearchWithDropdown", async () => {
-    server.mount(orpcContract.macros.addCompatibleProtocols, { body: [], delay: 999_999 });
+    server.mount(contract.macros.addCompatibleProtocols, { body: [], delay: 999_999 });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -217,7 +217,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should disable remove buttons while removal is pending", async () => {
-    server.mount(orpcContract.macros.removeCompatibleProtocol, { delay: 999_999 });
+    server.mount(contract.macros.removeCompatibleProtocol, { delay: 999_999 });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 

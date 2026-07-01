@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -76,7 +76,7 @@ const defaultProps = {
 };
 
 function mountRemoveMember() {
-  return server.mount(orpcContract.experiments.removeExperimentMember);
+  return server.mount(contract.experiments.removeExperimentMember);
 }
 
 describe("ExperimentMembersPanel", () => {

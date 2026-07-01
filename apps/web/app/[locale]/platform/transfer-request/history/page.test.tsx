@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/experiment.schema";
 
 import TransferRequestHistoryPage from "./page";
@@ -31,7 +31,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Loading State", () => {
     it("renders loading skeletons when data is loading", () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [],
         delay: 999_999,
       });
@@ -46,7 +46,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Error State", () => {
     it("renders error alert when there is an error", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, { status: 500 });
+      server.mount(contract.experiments.listTransferRequests, { status: 500 });
 
       render(<TransferRequestHistoryPage />);
 
@@ -57,7 +57,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("shows error for 401 status", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, { status: 401 });
+      server.mount(contract.experiments.listTransferRequests, { status: 401 });
 
       render(<TransferRequestHistoryPage />);
 
@@ -69,7 +69,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Empty State", () => {
     it("renders empty state when no requests exist", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, { body: [] });
+      server.mount(contract.experiments.listTransferRequests, { body: [] });
 
       render(<TransferRequestHistoryPage />);
 
@@ -80,7 +80,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("does not render title in empty state", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, { body: [] });
+      server.mount(contract.experiments.listTransferRequests, { body: [] });
 
       render(<TransferRequestHistoryPage />);
 
@@ -93,7 +93,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Requests Rendering", () => {
     it("renders list of transfer requests", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [
           createRequest("req-1", "pending", "project-123"),
           createRequest("req-2", "completed", "project-456"),
@@ -109,7 +109,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders project URLs for each request", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "pending", "project-789")],
       });
 
@@ -121,7 +121,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders requested date for each request", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "pending", "project-123")],
       });
 
@@ -136,7 +136,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Status Display", () => {
     it("renders pending status", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "pending", "project-123")],
       });
 
@@ -148,7 +148,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders completed status", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "completed", "project-123")],
       });
 
@@ -160,7 +160,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders rejected status", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "rejected", "project-123")],
       });
 
@@ -174,7 +174,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Layout Structure", () => {
     it("renders title when requests exist", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "pending", "project-123")],
       });
 
@@ -186,7 +186,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders scrollable container for multiple requests", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: Array.from({ length: 5 }, (_, i) =>
           createRequest(`req-${i}`, "pending", `project-${i}`),
         ),
@@ -203,7 +203,7 @@ describe("<TransferRequestHistoryPage />", () => {
 
   describe("Different Request Scenarios", () => {
     it("renders single request correctly", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: [createRequest("req-1", "completed", "single-project")],
       });
 
@@ -219,7 +219,7 @@ describe("<TransferRequestHistoryPage />", () => {
     });
 
     it("renders many requests", async () => {
-      server.mount(orpcContract.experiments.listTransferRequests, {
+      server.mount(contract.experiments.listTransferRequests, {
         body: Array.from({ length: 10 }, (_, i) =>
           createRequest(`req-${i}`, "pending", `project-${i}`),
         ),

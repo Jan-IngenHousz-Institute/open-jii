@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { useAttachWorkbook } from "./useAttachWorkbook";
 
@@ -12,7 +12,7 @@ const versionId = "33333333-3333-3333-3333-333333333333";
 
 describe("useAttachWorkbook", () => {
   it("calls attach endpoint and returns version info", async () => {
-    const spy = server.mount(orpcContract.experiments.attachWorkbook, {
+    const spy = server.mount(contract.experiments.attachWorkbook, {
       body: { workbookId, workbookVersionId: versionId, version: 1 },
     });
 
@@ -34,7 +34,7 @@ describe("useAttachWorkbook", () => {
   });
 
   it("handles error state", async () => {
-    server.mount(orpcContract.experiments.attachWorkbook, { status: 500 });
+    server.mount(contract.experiments.attachWorkbook, { status: 500 });
 
     const { result } = renderHook(() => useAttachWorkbook());
 

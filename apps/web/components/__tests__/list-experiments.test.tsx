@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { ListExperiments } from "../list-experiments";
 
@@ -15,7 +15,7 @@ vi.mock("~/components/experiment-overview-cards", () => ({
 
 describe("ListExperiments", () => {
   it("renders experiments via ExperimentOverviewCards", async () => {
-    server.mount(orpcContract.experiments.listExperiments, {
+    server.mount(contract.experiments.listExperiments, {
       body: [createExperiment({ id: "1", name: "Exp 1" })],
     });
 
@@ -27,7 +27,7 @@ describe("ListExperiments", () => {
   });
 
   it("renders empty state when no experiments", async () => {
-    server.mount(orpcContract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
 
     render(<ListExperiments />);
 
@@ -37,7 +37,7 @@ describe("ListExperiments", () => {
   });
 
   it("updates search on input change", async () => {
-    server.mount(orpcContract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
 
     const user = userEvent.setup();
     render(<ListExperiments />);
@@ -49,7 +49,7 @@ describe("ListExperiments", () => {
   });
 
   it("shows clear button when search is active and clears on click", async () => {
-    server.mount(orpcContract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
 
     const user = userEvent.setup();
     render(<ListExperiments />);

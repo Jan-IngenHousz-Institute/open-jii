@@ -2,14 +2,14 @@ import { server } from "@/test/msw/server";
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { DashboardEditorProvider } from "./context/dashboard-editor-context";
 import { DashboardEditorBody } from "./dashboard-editor-body";
 
 function setup() {
-  server.mount(orpcContract.experiments.getExperimentTables, { body: [] });
+  server.mount(contract.experiments.getExperimentTables, { body: [] });
   return renderWithForm<DashboardFormValues>(
     () => (
       <DashboardEditorProvider>

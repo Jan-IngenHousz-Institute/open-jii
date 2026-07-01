@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -82,7 +82,7 @@ describe("WorkbookList row actions", () => {
   });
 
   it("duplicates a workbook from the row menu", async () => {
-    const spy = server.mount(orpcContract.workbooks.createWorkbook, {
+    const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: makeWorkbook({ id: "99999999-9999-9999-9999-999999999999", name: "Copy of Source WB" }),
     });
@@ -99,7 +99,7 @@ describe("WorkbookList row actions", () => {
   });
 
   it("shows an error toast when duplicate fails", async () => {
-    server.mount(orpcContract.workbooks.createWorkbook, { status: 500 });
+    server.mount(contract.workbooks.createWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[unused]} />);
 
@@ -114,7 +114,7 @@ describe("WorkbookList row actions", () => {
   });
 
   it("confirms then deletes a workbook", async () => {
-    const spy = server.mount(orpcContract.workbooks.deleteWorkbook, { status: 204 });
+    const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[unused]} />);
 

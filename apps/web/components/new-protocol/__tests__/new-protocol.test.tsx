@@ -3,7 +3,7 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { NewProtocolForm } from "../new-protocol";
 
@@ -93,16 +93,16 @@ describe("NewProtocolForm", () => {
     vi.clearAllMocks();
     lastDropdownProps = null;
 
-    server.mount(orpcContract.macros.listMacros, {
+    server.mount(contract.macros.listMacros, {
       body: [
         createMacro({ id: "macro-1", name: "SPAD Macro", language: "python" }),
         createMacro({ id: "macro-2", name: "Fluorescence Macro", language: "python" }),
       ],
     });
-    server.mount(orpcContract.protocols.createProtocol, {
+    server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "new-protocol-id", name: "Test Protocol" }),
     });
-    server.mount(orpcContract.protocols.addCompatibleMacros, { body: [] });
+    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
   });
 
   describe("Step 1 - Details", () => {
@@ -326,7 +326,7 @@ describe("NewProtocolForm", () => {
     });
 
     it("should link compatible macros after create then navigate", async () => {
-      const addMacrosSpy = server.mount(orpcContract.protocols.addCompatibleMacros, { body: [] });
+      const addMacrosSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
       const user = userEvent.setup();
       const { router } = render(<NewProtocolForm />);
 

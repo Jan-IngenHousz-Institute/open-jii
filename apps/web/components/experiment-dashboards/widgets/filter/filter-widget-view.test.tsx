@@ -3,13 +3,13 @@ import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { orpcContract } from "@repo/api/orpc-contract";
+import { contract } from "@repo/api/contract";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import { FilterWidgetView } from "./filter-widget-view";
 
 function mountColumns(tableName: string) {
-  server.mount(orpcContract.experiments.getExperimentData, {
+  server.mount(contract.experiments.getExperimentData, {
     body: [
       createExperimentDataTable({
         name: tableName,
@@ -25,7 +25,7 @@ function mountColumns(tableName: string) {
       }),
     ],
   });
-  server.mount(orpcContract.experiments.getDistinctColumnValues, {
+  server.mount(contract.experiments.getDistinctColumnValues, {
     body: { values: ["d1", "d2"], truncated: false },
   });
 }
