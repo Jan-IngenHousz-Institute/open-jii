@@ -710,7 +710,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
                 label: "PIRK",
                 // pre-illumination( [ LED#, intensity, duration ms)
                 pre_illumination: [2, "@s3", "@s4"],
-                // Pulse group identifiers: 5 blocks referencing v_array0 at indices 0–4
+                // Pulse group identifiers: 5 blocks referencing v_array0 at indices 0-4
                 pulses: ["@n0:0", "@n0:1", "@n0:2", "@n0:3", "@n0:4"],
                 // LED channel(s) for pulsed measuring light (here LED 1 = green)
                 pulsed_lights: [[1], [1], [1], [1], [1]],

@@ -11,7 +11,7 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { ProtocolMacroRepository } from "../core/repositories/protocol-macro.repository";
 
-describe("ProtocolController – createProtocol", () => {
+describe("ProtocolController - createProtocol", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let createProtocolUseCase: CreateProtocolUseCase;
@@ -61,7 +61,7 @@ describe("ProtocolController – createProtocol", () => {
   });
 });
 
-describe("ProtocolController – read endpoints", () => {
+describe("ProtocolController - read endpoints", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
 
@@ -122,7 +122,7 @@ describe("ProtocolController – read endpoints", () => {
   });
 });
 
-describe("ProtocolController – protocol-macro endpoints", () => {
+describe("ProtocolController - protocol-macro endpoints", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let protocolMacroRepository: ProtocolMacroRepository;
