@@ -3,7 +3,7 @@
 import { Layers } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 
 import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";
 import { XAxisShelf } from "../../../../workspace/shelves/x-axis-shelf";

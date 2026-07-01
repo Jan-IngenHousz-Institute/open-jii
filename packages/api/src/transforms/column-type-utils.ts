@@ -225,13 +225,13 @@ export function isCategoricalColumnType(type?: string): boolean {
 
 /**
  * @deprecated Use `isPlottableColumn` plus `filterColumnsForRole` from
- * `@repo/api/domains/experiment/experiment-visualization-contracts` for per-role constraints.
+ * `@repo/api/domains/experiment/experiment-visualization-role-rules` for per-role constraints.
  * Kept as an alias so existing callers continue to work during migration.
  */
 export const isValidAxisSource = isPlottableColumn;
 
 /**
  * @deprecated Use `isPlottableColumn` plus `filterColumnsForRole` from
- * `@repo/api/domains/experiment/experiment-visualization-contracts` for per-role constraints.
+ * `@repo/api/domains/experiment/experiment-visualization-role-rules` for per-role constraints.
  */
 export const isValidColorSource = isPlottableColumn;

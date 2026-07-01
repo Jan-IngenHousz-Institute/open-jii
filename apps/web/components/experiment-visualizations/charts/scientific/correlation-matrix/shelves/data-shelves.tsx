@@ -5,7 +5,7 @@ import { useEffect, useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
 import type { ExperimentAggregationItem } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 import { useTranslation } from "@repo/i18n";
 
 import { MultiColumnShelf } from "../../../../workspace/shelves/multi-column-shelf";

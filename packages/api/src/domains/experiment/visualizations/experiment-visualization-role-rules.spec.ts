@@ -9,7 +9,7 @@ import {
   isDataConfigRenderable,
   listRequiredRoles,
   validateDataConfig,
-} from "./experiment-visualization-contracts";
+} from "./experiment-visualization-role-rules";
 import type {
   ExperimentChartDataConfig,
   ExperimentChartType,

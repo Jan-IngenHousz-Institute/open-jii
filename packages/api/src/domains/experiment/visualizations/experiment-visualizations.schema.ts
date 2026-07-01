@@ -42,7 +42,7 @@ export const zExperimentChartType = z.enum([
 ]);
 
 // Roles a data source can play in a chart. The role contract per chart type
-// lives in `@repo/api/domains/experiment/visualizations/experiment-visualization-contracts`
+// lives in `@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules`
 // and decides which of these are required, optional, single, or many.
 export const zExperimentRole = z.enum([
   // Cartesian axes

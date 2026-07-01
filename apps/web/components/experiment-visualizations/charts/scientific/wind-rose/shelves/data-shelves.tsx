@@ -3,7 +3,7 @@
 import { Compass, Sigma } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 import { useTranslation } from "@repo/i18n";
 
 import { SingleColumnShelf } from "../../../../workspace/shelves/single-column-shelf";
