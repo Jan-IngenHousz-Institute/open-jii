@@ -72,9 +72,7 @@ async function _prefetchOfflineData(
   // The response shape can vary (paginated envelope or a bare array); only an
   // actual array is iterable, so guard before `.map` to avoid
   // "experiments.map is not a function" crashes seen in production.
-  const experiments = (
-    Array.isArray(experimentsResponse) ? experimentsResponse : []
-  ) as {
+  const experiments = (Array.isArray(experimentsResponse) ? experimentsResponse : []) as {
     id: string;
     workbookId: string | null;
     workbookVersionId: string | null;
