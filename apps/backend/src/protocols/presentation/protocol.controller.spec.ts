@@ -61,6 +61,67 @@ describe("ProtocolController – createProtocol", () => {
   });
 });
 
+describe("ProtocolController – read endpoints", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("getProtocol returns 200 with the protocol and parsed code", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Readable Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: protocol.id });
+    const response: SuperTestResponse<{ id: string; name: string; code: unknown[] }> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body).toMatchObject({ id: protocol.id, name: "Readable Protocol" });
+    expect(Array.isArray(response.body.code)).toBe(true);
+  });
+
+  it("getProtocol returns 404 for an unknown id", async () => {
+    const path = testApp.resolveOrpcPath(contract.protocols.getProtocol, {
+      id: faker.string.uuid(),
+    });
+
+    await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+  });
+
+  it("listProtocols returns 200 including the created protocol", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Listed Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+    const response: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
+  });
+});
+
 describe("ProtocolController – protocol-macro endpoints", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
