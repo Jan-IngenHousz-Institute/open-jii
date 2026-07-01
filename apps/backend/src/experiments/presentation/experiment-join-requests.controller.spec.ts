@@ -6,7 +6,7 @@ import { contract } from "@repo/api/contract";
 import type {
   ExperimentJoinRequest,
   ExperimentJoinRequestList,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
 import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 

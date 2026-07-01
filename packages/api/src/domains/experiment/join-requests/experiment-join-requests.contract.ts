@@ -1,13 +1,13 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zExperimentCreateJoinRequestBody,
-  zExperimentIdPathParam,
   zExperimentJoinRequest,
   zExperimentJoinRequestList,
   zExperimentJoinRequestPathParam,
-} from "../experiment.schema";
+} from "./experiment-join-requests.schema";
 
 export const experimentJoinRequestsContract = {
   // A new request returns 201; a duplicate submit returns the existing pending
