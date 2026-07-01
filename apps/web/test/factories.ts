@@ -27,11 +27,13 @@ import type {
   ExperimentAccess,
   ExperimentExportRecord,
   ExperimentFlowGraph,
-  ExperimentLocation,
-  ExperimentPlaceSearchResult,
   ExperimentUploadMetadata,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import type {
+  ExperimentLocation,
+  ExperimentPlaceSearchResult,
+} from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";

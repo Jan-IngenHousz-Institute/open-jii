@@ -85,3 +85,11 @@ export const zUpdateExperimentLocationsBody = z.object({
 
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
+export type ExperimentLocation = z.infer<typeof zExperimentLocation>;
+export type ExperimentLocationInput = z.infer<typeof zExperimentLocationInput>;
+export type ExperimentLocationList = z.infer<typeof zExperimentLocationList>;
+export type ExperimentPlaceSearchResult = z.infer<typeof zExperimentPlaceSearchResult>;
+export type ExperimentPlaceSearchQuery = z.infer<typeof zExperimentPlaceSearchQuery>;
+export type ExperimentPlaceSearchResponse = z.infer<typeof zExperimentPlaceSearchResponse>;
+export type ExperimentGeocodeQuery = z.infer<typeof zExperimentGeocodeQuery>;
+export type ExperimentGeocodeResponse = z.infer<typeof zExperimentGeocodeResponse>;

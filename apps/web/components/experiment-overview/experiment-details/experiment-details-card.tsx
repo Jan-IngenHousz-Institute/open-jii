@@ -5,10 +5,8 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type {
-  Experiment,
-  ExperimentLocation,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentLocation } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";

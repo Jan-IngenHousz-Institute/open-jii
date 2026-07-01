@@ -4,12 +4,14 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  ExperimentLocationList,
   AddExperimentLocationsBody,
   UpdateExperimentLocationsBody,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentLocationList,
   ExperimentPlaceSearchResponse,
   ExperimentGeocodeResponse,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";

@@ -43,3 +43,9 @@ export type ExperimentInitiateExportResponse = z.infer<typeof zExperimentInitiat
 export type ExperimentListExportsQuery = z.infer<typeof zExperimentListExportsQuery>;
 export type ExperimentExportRecord = z.infer<typeof zExperimentExportRecord>;
 export type ExperimentListExportsResponse = z.infer<typeof zExperimentListExportsResponse>;
+
+export const zExperimentExportPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  exportId: z.string().uuid().describe("ID of the export"),
+});
+export type ExperimentExportPathParam = z.infer<typeof zExperimentExportPathParam>;

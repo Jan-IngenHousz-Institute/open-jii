@@ -1,17 +1,7 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
-import { zMacroLanguage } from "../macro/macro.schema";
-import { zSensorFamily } from "../protocol/protocol.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
-import type {
-  zExperimentGeocodeQuery,
-  zExperimentGeocodeResponse,
-  zExperimentLocation,
-  zExperimentPlaceSearchQuery,
-  zExperimentPlaceSearchResponse,
-  zExperimentPlaceSearchResult,
-} from "./locations/experiment-locations.schema";
 import {
   zExperimentLocationInput,
   zExperimentLocationList,
@@ -264,14 +254,6 @@ export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
-export type ExperimentLocation = z.infer<typeof zExperimentLocation>;
-export type ExperimentLocationInput = z.infer<typeof zExperimentLocationInput>;
-export type ExperimentLocationList = z.infer<typeof zExperimentLocationList>;
-export type ExperimentPlaceSearchResult = z.infer<typeof zExperimentPlaceSearchResult>;
-export type ExperimentPlaceSearchQuery = z.infer<typeof zExperimentPlaceSearchQuery>;
-export type ExperimentPlaceSearchResponse = z.infer<typeof zExperimentPlaceSearchResponse>;
-export type ExperimentGeocodeQuery = z.infer<typeof zExperimentGeocodeQuery>;
-export type ExperimentGeocodeResponse = z.infer<typeof zExperimentGeocodeResponse>;
 
 // Define request and response types
 // Shared embargo date validation function
@@ -403,10 +385,6 @@ export const zExperimentFilterQuery = z.object({
 
 export const zExperimentIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
-});
-export const zExperimentExportPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  exportId: z.string().uuid().describe("ID of the export"),
 });
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });

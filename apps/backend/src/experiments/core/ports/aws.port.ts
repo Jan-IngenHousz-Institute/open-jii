@@ -1,4 +1,4 @@
-import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
 import type { Result } from "../../../common/utils/fp-utils";
 

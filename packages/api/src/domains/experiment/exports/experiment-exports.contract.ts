@@ -1,7 +1,8 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
-import { zExperimentExportPathParam, zExperimentIdPathParam } from "../experiment.schema";
+import { zExperimentIdPathParam } from "../experiment.schema";
+import { zExperimentExportPathParam } from "./experiment-exports.schema";
 import {
   zExperimentInitiateExportBody,
   zExperimentInitiateExportResponse,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { ExperimentLocation } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentLocation } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
