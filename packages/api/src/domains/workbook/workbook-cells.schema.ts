@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { sanitizeQuestionLabel, zExperimentQuestionContent } from "../experiment/experiment.schema";
+import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
+import { zExperimentQuestionContent } from "../experiment/experiment.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
 
 const zBaseCell = z.object({

@@ -6,10 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import {
-  makeCustomMetadataFormSchema,
-  sanitizeQuestionLabel,
-} from "@repo/api/domains/experiment/experiment.schema";
+import { makeCustomMetadataFormSchema } from "@repo/api/domains/experiment/experiment.schema";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
 
 import { asStoredMetadata, EMPTY_FORM_VALUES } from "../form-helpers";
 import type { MetadataFormValues } from "../form-helpers";
