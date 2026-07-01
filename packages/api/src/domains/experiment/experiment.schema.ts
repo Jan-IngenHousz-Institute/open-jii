@@ -9,8 +9,11 @@ import type {
   zExperimentPlaceSearchQuery,
   zExperimentPlaceSearchResponse,
   zExperimentPlaceSearchResult,
-} from "./experiment-locations.schema";
-import { zExperimentLocationInput, zExperimentLocationList } from "./experiment-locations.schema";
+} from "./locations/experiment-locations.schema";
+import {
+  zExperimentLocationInput,
+  zExperimentLocationList,
+} from "./locations/experiment-locations.schema";
 
 /**
  * Core table names that are always present in the centrum schema
@@ -1669,6 +1672,6 @@ export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetad
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
 export type ExperimentCustomMetadataPayload = z.infer<typeof zExperimentCustomMetadataPayload>;
 
-export * from "./experiment-locations.schema";
-export * from "./experiment-exports.schema";
-export * from "./experiment-uploads.schema";
+export * from "./locations/experiment-locations.schema";
+export * from "./exports/experiment-exports.schema";
+export * from "./uploads/experiment-uploads.schema";

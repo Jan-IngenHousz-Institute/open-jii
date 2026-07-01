@@ -7,7 +7,7 @@ import {
   zExperimentJoinRequest,
   zExperimentJoinRequestList,
   zExperimentJoinRequestPathParam,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentJoinRequestsContract = {
   // A new request returns 201; a duplicate submit returns the existing pending

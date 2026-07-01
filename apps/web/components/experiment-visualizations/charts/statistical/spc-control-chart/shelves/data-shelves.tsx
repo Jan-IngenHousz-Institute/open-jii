@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-contracts";
 
 import { XAxisShelf } from "../../../../workspace/shelves/x-axis-shelf";
 import { YAxisShelf } from "../../../../workspace/shelves/y-axis-shelf";

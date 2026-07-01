@@ -10,7 +10,7 @@ import {
   zTransferExperimentAdminBody,
   zTransferExperimentAdminResponse,
   zUpdateExperimentMemberRoleBody,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentMembersContract = {
   listExperimentMembers: oc

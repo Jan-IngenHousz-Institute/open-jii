@@ -3,7 +3,7 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import { experimentDataContract } from "@repo/api/domains/experiment/experiment-data.contract";
+import { experimentDataContract } from "@repo/api/domains/experiment/data/experiment-data.contract";
 
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";

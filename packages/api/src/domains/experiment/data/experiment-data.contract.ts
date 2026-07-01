@@ -7,7 +7,7 @@ import {
   zExperimentDistinctValuesResponse,
   zExperimentIdPathParam,
   zExperimentTablesMetadataList,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentDataContract = {
   getExperimentTables: oc

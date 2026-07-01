@@ -1,12 +1,12 @@
-import type { ColumnKind } from "../../transforms/column-type-utils";
-import { getColumnKind } from "../../transforms/column-type-utils";
+import type { ColumnKind } from "../../../transforms/column-type-utils";
+import { getColumnKind } from "../../../transforms/column-type-utils";
 import type {
   ExperimentChartDataConfig,
   ExperimentChartType,
   ExperimentDataColumn,
   ExperimentDataSourceConfig,
   ExperimentRole,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 /**
  * Registry-driven role contracts for chart `dataConfig`. The wire format

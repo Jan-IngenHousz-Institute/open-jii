@@ -1,10 +1,10 @@
 import { oc } from "@orpc/contract";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zExperimentListUploadsQuery,
   zExperimentListUploadsResponse,
 } from "./experiment-uploads.schema";
-import { zExperimentIdPathParam } from "./experiment.schema";
 
 export const experimentUploadsContract = {
   listUploads: oc

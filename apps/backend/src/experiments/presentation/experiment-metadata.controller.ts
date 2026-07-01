@@ -3,7 +3,7 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import { experimentMetadataContract } from "@repo/api/domains/experiment/experiment-metadata.contract";
+import { experimentMetadataContract } from "@repo/api/domains/experiment/metadata/experiment-metadata.contract";
 
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";

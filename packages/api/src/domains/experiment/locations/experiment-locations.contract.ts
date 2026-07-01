@@ -9,7 +9,7 @@ import {
   zExperimentPlaceSearchQuery,
   zExperimentPlaceSearchResponse,
   zUpdateExperimentLocationsBody,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentLocationsContract = {
   getExperimentLocations: oc

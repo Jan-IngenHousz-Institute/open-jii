@@ -4,7 +4,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import type { Readable } from "stream";
 
-import { experimentExportsContract } from "@repo/api/domains/experiment/experiment-exports.contract";
+import { experimentExportsContract } from "@repo/api/domains/experiment/exports/experiment-exports.contract";
 
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";

@@ -3,7 +3,7 @@
 import { Compass, Palette, RotateCw } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/domains/experiment/experiment-visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-contracts";
 import { useTranslation } from "@repo/i18n";
 
 import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";

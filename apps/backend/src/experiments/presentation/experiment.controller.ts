@@ -4,7 +4,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { experimentCoreContract } from "@repo/api/domains/experiment/experiment-core.contract";
+import { experimentContract } from "@repo/api/domains/experiment/experiment.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
@@ -33,9 +33,9 @@ export class ExperimentController {
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
   ) {}
 
-  @Implement(experimentCoreContract.createExperiment)
+  @Implement(experimentContract.createExperiment)
   createExperiment(@Session() session: UserSession) {
-    return implement(experimentCoreContract.createExperiment).handler(async ({ input }) => {
+    return implement(experimentContract.createExperiment).handler(async ({ input }) => {
       const transformedBody = {
         ...input,
         embargoUntil: input.embargoUntil ? new Date(input.embargoUntil) : undefined,
@@ -48,9 +48,9 @@ export class ExperimentController {
     });
   }
 
-  @Implement(experimentCoreContract.listExperiments)
+  @Implement(experimentContract.listExperiments)
   listExperiments(@Session() session: UserSession) {
-    return implement(experimentCoreContract.listExperiments).handler(async ({ input }) => {
+    return implement(experimentContract.listExperiments).handler(async ({ input }) => {
       const result = await this.listExperimentsUseCase.execute(
         session.user.id,
         input.filter,
@@ -64,9 +64,9 @@ export class ExperimentController {
     });
   }
 
-  @Implement(experimentCoreContract.getExperiment)
+  @Implement(experimentContract.getExperiment)
   getExperiment(@Session() session: UserSession) {
-    return implement(experimentCoreContract.getExperiment).handler(async ({ input }) => {
+    return implement(experimentContract.getExperiment).handler(async ({ input }) => {
       const result = await this.getExperimentUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
         return formatDates(result.value);
@@ -75,9 +75,9 @@ export class ExperimentController {
     });
   }
 
-  @Implement(experimentCoreContract.getExperimentAccess)
+  @Implement(experimentContract.getExperimentAccess)
   getExperimentAccess(@Session() session: UserSession) {
-    return implement(experimentCoreContract.getExperimentAccess).handler(async ({ input }) => {
+    return implement(experimentContract.getExperimentAccess).handler(async ({ input }) => {
       const result = await this.getExperimentAccessUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
         return {
@@ -89,9 +89,9 @@ export class ExperimentController {
     });
   }
 
-  @Implement(experimentCoreContract.updateExperiment)
+  @Implement(experimentContract.updateExperiment)
   updateExperiment(@Session() session: UserSession) {
-    return implement(experimentCoreContract.updateExperiment).handler(async ({ input }) => {
+    return implement(experimentContract.updateExperiment).handler(async ({ input }) => {
       const { id, ...body } = input;
       const transformedBody = {
         ...body,
@@ -109,9 +109,9 @@ export class ExperimentController {
     });
   }
 
-  @Implement(experimentCoreContract.deleteExperiment)
+  @Implement(experimentContract.deleteExperiment)
   deleteExperiment(@Session() session: UserSession) {
-    return implement(experimentCoreContract.deleteExperiment).handler(async ({ input }) => {
+    return implement(experimentContract.deleteExperiment).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.EXPERIMENT_DELETION,
         session.user.email || session.user.id,

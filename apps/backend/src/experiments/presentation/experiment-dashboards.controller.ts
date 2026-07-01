@@ -3,7 +3,7 @@ import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import { experimentDashboardsContract } from "@repo/api/domains/experiment/experiment-dashboards.contract";
+import { experimentDashboardsContract } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";

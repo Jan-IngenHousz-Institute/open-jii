@@ -1,7 +1,10 @@
 import { oc } from "@orpc/contract";
 
-import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../workbook/workbook-version.schema";
-import { zExperiment, zExperimentIdPathParam } from "./experiment.schema";
+import {
+  zAttachWorkbookBody,
+  zAttachWorkbookResponse,
+} from "../../workbook/workbook-version.schema";
+import { zExperiment, zExperimentIdPathParam } from "../experiment.schema";
 
 export const experimentWorkbooksContract = {
   attachWorkbook: oc

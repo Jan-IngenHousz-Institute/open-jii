@@ -11,7 +11,7 @@ import {
   zListExperimentDashboardsQuery,
   zUpdateExperimentDashboardBody,
   zUpdateExperimentDashboardResponse,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentDashboardsContract = {
   listExperimentDashboards: oc

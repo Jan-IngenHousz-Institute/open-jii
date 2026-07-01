@@ -7,7 +7,7 @@ import {
   zExperimentMetadata,
   zExperimentMetadataPathParam,
   zUpdateExperimentMetadataBody,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentMetadataContract = {
   listExperimentMetadata: oc

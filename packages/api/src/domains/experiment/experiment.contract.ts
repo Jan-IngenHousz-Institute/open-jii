@@ -11,7 +11,7 @@ import {
   zUpdateExperimentBody,
 } from "./experiment.schema";
 
-export const experimentCoreContract = {
+export const experimentContract = {
   createExperiment: oc
     .route({ method: "POST", path: "/api/v1/experiments", successStatus: 201 })
     .input(zCreateExperimentBody)

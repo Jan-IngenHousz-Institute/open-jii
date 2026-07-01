@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type {
+  ExperimentChartDataConfig,
+  ExperimentChartType,
+  ExperimentDataColumn,
+} from "../experiment.schema";
+import { WellKnownColumnTypes } from "../experiment.schema";
 import {
   CHART_TYPE_ROLE_CONTRACTS,
   filterColumnsForRole,
@@ -8,12 +14,6 @@ import {
   listRequiredRoles,
   validateDataConfig,
 } from "./experiment-visualization-contracts";
-import type {
-  ExperimentChartDataConfig,
-  ExperimentChartType,
-  ExperimentDataColumn,
-} from "./experiment.schema";
-import { WellKnownColumnTypes } from "./experiment.schema";
 
 // Synthetic chart-type label that the registry doesn't know about. Used
 // to exercise the "unregistered" fallbacks (`getRoleContract` undefined,

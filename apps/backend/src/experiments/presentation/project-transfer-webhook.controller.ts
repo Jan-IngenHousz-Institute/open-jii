@@ -2,7 +2,7 @@ import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
-import { experimentProjectTransferWebhookContract } from "@repo/api/domains/experiment/experiment-project-transfer-webhook.contract";
+import { experimentProjectTransferWebhookContract } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
 
 import { HmacGuard } from "../../common/guards/hmac.guard";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";

@@ -11,7 +11,7 @@ import {
   zListExperimentVisualizationsQuery,
   zUpdateExperimentVisualizationBody,
   zUpdateExperimentVisualizationResponse,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentVisualizationsContract = {
   listExperimentVisualizations: oc

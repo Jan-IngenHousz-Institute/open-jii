@@ -4,7 +4,7 @@ import {
   zExperimentFlow,
   zExperimentIdPathParam,
   zExperimentUpsertFlowBody,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentFlowsContract = {
   getFlow: oc

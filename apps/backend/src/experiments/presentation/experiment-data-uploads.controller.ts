@@ -13,7 +13,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import type { Request } from "express";
 
-import { experimentUploadsContract } from "@repo/api/domains/experiment/experiment-uploads.contract";
+import { experimentUploadsContract } from "@repo/api/domains/experiment/uploads/experiment-uploads.contract";
 
 import type { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";

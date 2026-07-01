@@ -9,7 +9,7 @@ import {
   zExperimentAnnotationRowsAffected,
   zExperimentIdPathParam,
   zExperimentUpdateAnnotationBody,
-} from "./experiment.schema";
+} from "../experiment.schema";
 
 export const experimentDataAnnotationsContract = {
   addAnnotation: oc
