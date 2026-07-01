@@ -1,13 +1,13 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zCreateExperimentMetadataBody,
-  zExperimentIdPathParam,
   zExperimentMetadata,
   zExperimentMetadataPathParam,
   zUpdateExperimentMetadataBody,
-} from "../experiment.schema";
+} from "./experiment-metadata.schema";
 
 export const experimentMetadataContract = {
   listExperimentMetadata: oc

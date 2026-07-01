@@ -3,7 +3,7 @@ import type { MetadataRow } from "@/components/metadata-table/types";
 import type {
   ExperimentCustomMetadataPayload,
   ExperimentMetadata,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 
 // Form values mirror the contract's `metadata` payload, with col_X column ids
 // during editing. `zCustomMetadataPayload`'s `identifierColumnId` is checked

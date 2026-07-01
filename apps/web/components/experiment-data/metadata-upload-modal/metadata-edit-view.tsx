@@ -14,7 +14,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
-import type { ExperimentMetadata } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
