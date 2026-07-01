@@ -20,7 +20,7 @@ import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardR
 import type {
   ExperimentFlow,
   ExperimentUpsertFlowBody,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";

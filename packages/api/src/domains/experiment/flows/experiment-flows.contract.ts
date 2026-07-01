@@ -1,10 +1,7 @@
 import { oc } from "@orpc/contract";
 
-import {
-  zExperimentFlow,
-  zExperimentIdPathParam,
-  zExperimentUpsertFlowBody,
-} from "../experiment.schema";
+import { zExperimentIdPathParam } from "../experiment.schema";
+import { zExperimentFlow, zExperimentUpsertFlowBody } from "./experiment-flows.schema";
 
 export const experimentFlowsContract = {
   getFlow: oc

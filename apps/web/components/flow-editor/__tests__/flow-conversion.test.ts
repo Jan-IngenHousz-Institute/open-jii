@@ -1,7 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 
-import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-mapper";
 

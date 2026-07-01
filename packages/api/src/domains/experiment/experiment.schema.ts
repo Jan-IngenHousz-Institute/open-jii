@@ -299,16 +299,6 @@ export const zExperimentFlowGraph = z
     });
   });
 
-export const zExperimentFlow = z.object({
-  id: z.string().uuid(),
-  experimentId: z.string().uuid(),
-  graph: zExperimentFlowGraph,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const zExperimentUpsertFlowBody = zExperimentFlowGraph;
-
 // Chart family enum
 export const zExperimentChartFamily = z.enum(["basic", "scientific", "3d", "statistical"]);
 
@@ -815,8 +805,6 @@ export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
-export type ExperimentFlow = z.infer<typeof zExperimentFlow>;
-export type ExperimentUpsertFlowBody = z.infer<typeof zExperimentUpsertFlowBody>;
 export type ExperimentLocation = z.infer<typeof zExperimentLocation>;
 export type ExperimentLocationInput = z.infer<typeof zExperimentLocationInput>;
 export type ExperimentLocationList = z.infer<typeof zExperimentLocationList>;

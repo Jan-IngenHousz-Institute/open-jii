@@ -20,7 +20,6 @@ import type {
   ExperimentVisualization,
   ExperimentExportRecord,
   ExperimentFilterWidget,
-  ExperimentFlow,
   ExperimentFlowGraph,
   ExperimentLocation,
   ExperimentPlaceSearchResult,
@@ -29,6 +28,7 @@ import type {
   ExperimentUploadMetadata,
   ExperimentVisualizationWidget,
 } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";

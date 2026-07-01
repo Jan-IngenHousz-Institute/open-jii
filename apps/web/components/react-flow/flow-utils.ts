@@ -1,7 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { MarkerType, getIncomers, getOutgoers, getConnectedEdges } from "@xyflow/react";
 
-import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-editor/flow-mapper";
 import { createNewNode } from "./node-utils";

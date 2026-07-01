@@ -1,8 +1,8 @@
 import { createFlow } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentFlow } from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-mapper";
 import type { FlowNodeDataWithSpec } from "../flow-mapper";

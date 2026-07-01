@@ -27,8 +27,6 @@ import {
   zExperimentFlowNode,
   zExperimentFlowEdge,
   zExperimentFlowGraph,
-  zExperimentFlow,
-  zExperimentUpsertFlowBody,
   // Creation / update & filters
   zCreateExperimentBody,
   zUpdateExperimentBody,
@@ -409,30 +407,6 @@ describe("Experiment Schema", () => {
         expect(issue?.message).toContain("device_id");
         expect(issue?.message.toLowerCase()).toContain("reserved");
       }
-    });
-
-    it("zExperimentFlow and zExperimentUpsertFlowBody valid", () => {
-      const graph = {
-        nodes: [
-          {
-            id: "start",
-            type: "question",
-            name: "Start",
-            content: { kind: "open_ended", text: "Go?", required: false },
-            isStart: true,
-          },
-        ],
-        edges: [],
-      };
-      const flow = {
-        id: uuidA,
-        experimentId: uuidB,
-        graph,
-        createdAt: isoTime,
-        updatedAt: isoTime2,
-      };
-      expect(zExperimentFlow.parse(flow)).toEqual(flow);
-      expect(zExperimentUpsertFlowBody.parse(graph)).toEqual(graph);
     });
   });
 
