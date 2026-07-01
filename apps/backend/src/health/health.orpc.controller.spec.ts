@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing";
 import { ORPCModule } from "@orpc/nest";
 import request from "supertest";
 
-import { zHealthTimeResponse } from "@repo/api/domains/health/health.contract";
+import { zHealthTimeResponse } from "@repo/api/domains/health/health.orpc";
 
 import { HealthOrpcController } from "./health.orpc.controller";
 

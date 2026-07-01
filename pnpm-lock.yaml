@@ -1093,9 +1093,6 @@ importers:
       '@orpc/zod':
         specifier: catalog:orpc
         version: 1.14.6(@opentelemetry/api@1.9.1)(@orpc/contract@1.14.6(@opentelemetry/api@1.9.1))(@orpc/server@1.14.6(@opentelemetry/api@1.9.1)(ws@8.21.0))(ws@8.21.0)(zod@3.25.76)
-      '@ts-rest/core':
-        specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.19.15)(zod@3.25.76)
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -8019,17 +8016,6 @@ packages:
       prettier-plugin-svelte:
         optional: true
       svelte:
-        optional: true
-
-  '@ts-rest/core@3.52.1':
-    resolution: {integrity: sha512-tAjz7Kxq/grJodcTA1Anop4AVRDlD40fkksEV5Mmal88VoZeRKAG8oMHsDwdwPZz+B/zgnz0q2sF+cm5M7Bc7g==}
-    peerDependencies:
-      '@types/node': ^18.18.7 || >=20.8.4
-      zod: ^3.22.3
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      zod:
         optional: true
 
   '@tsconfig/node10@1.0.12':
@@ -26614,11 +26600,6 @@ snapshots:
       prettier: 3.5.3
     transitivePeerDependencies:
       - supports-color
-
-  '@ts-rest/core@3.52.1(@types/node@22.19.15)(zod@3.25.76)':
-    optionalDependencies:
-      '@types/node': 22.19.15
-      zod: 3.25.76
 
   '@tsconfig/node10@1.0.12': {}
 
