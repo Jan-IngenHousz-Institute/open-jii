@@ -17,12 +17,6 @@ import {
   zExperimentXlsxFilename,
 } from "./experiment-uploads.schema";
 
-const uuidA = "11111111-1111-1111-1111-111111111111";
-const uuidB = "22222222-2222-2222-2222-222222222222";
-const uuidC = "33333333-3333-3333-3333-333333333333";
-const isoTime = "2024-01-15T10:00:00Z";
-const isoTime2 = "2024-01-15T11:00:00Z";
-
 describe("Upload schemas", () => {
   describe("zExperimentUploadSourceKind", () => {
     it("accepts all supported kinds", () => {

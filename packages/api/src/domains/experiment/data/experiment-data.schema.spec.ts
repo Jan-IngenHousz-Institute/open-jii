@@ -251,8 +251,6 @@ describe("aggregation primitives", () => {
 });
 
 describe("data queries & tables", () => {
-  const uuidA = "11111111-1111-1111-1111-111111111111";
-  const uuidB = "22222222-2222-2222-2222-222222222222";
   it("zExperimentDataQuery defaults & coercion", () => {
     const d1 = zExperimentDataQuery.parse({ tableName: "test_table" });
     expect(d1.page).toBeUndefined();

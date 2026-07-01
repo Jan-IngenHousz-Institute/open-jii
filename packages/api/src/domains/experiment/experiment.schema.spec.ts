@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 
 import { zErrorResponse } from "../../shared/errors";
 import { zExperimentData, zExperimentDataColumn } from "./data/experiment-data.schema";
-import { zExperimentDataFilter } from "./data/experiment-data.schema";
 import {
   // Enums / small schemas
   zExperimentStatus,
@@ -30,22 +29,6 @@ import {
   // Path params / responses
   zExperimentIdPathParam,
   zCreateExperimentResponse,
-  // Export schemas
-  // Project transfer schemas
-  // Custom metadata
-  // Data filter primitives & distinct values
-  // Upload schemas
-  zExperimentCsvFilename,
-  zExperimentTsvFilename,
-  zExperimentParquetFilename,
-  zExperimentXlsxFilename,
-  zExperimentJsonFilename,
-  zExperimentNdjsonFilename,
-  zExperimentAmbyteFilename,
-  UPLOAD_KIND_CONSTANTS,
-  UPLOAD_FILENAME_SCHEMAS,
-  inferUploadSourceKind,
-  // Dashboards
 } from "./experiment.schema";
 
 const uuidA = "11111111-1111-1111-1111-111111111111";
