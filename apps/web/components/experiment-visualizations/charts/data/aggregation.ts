@@ -6,7 +6,7 @@ import type {
   ExperimentDataAggregation,
   ExperimentGroupByItem,
   ExperimentTimeBucketUnit,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { ChartFormDataConfig, ChartFormValues } from "../chart-config";
 

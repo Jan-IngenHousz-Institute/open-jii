@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { useExperimentDistinctValues } from "../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";

@@ -12,12 +12,14 @@ import {
 import type { ReactNode } from "react";
 
 import type {
-  ExperimentDashboardWidget,
   ExperimentDataFilter,
   ExperimentDataFilterValue,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentDashboardWidget,
   ExperimentFilterWidget,
 } from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 
 interface DashboardFiltersContextValue {
   getFiltersForTable: (tableName: string) => ExperimentDataFilter[];

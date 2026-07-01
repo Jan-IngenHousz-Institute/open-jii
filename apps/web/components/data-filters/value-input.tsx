@@ -1,10 +1,10 @@
 "use client";
 
 import type {
-  ExperimentDataColumn,
   ExperimentDataFilterOperator,
   ExperimentDataFilterValue,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 

@@ -6,12 +6,12 @@ import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentData,
   ExperimentDataColumn,
-  ExperimentDataFilter,
 } from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
 import {
   isTimestampType,
   isStringType,

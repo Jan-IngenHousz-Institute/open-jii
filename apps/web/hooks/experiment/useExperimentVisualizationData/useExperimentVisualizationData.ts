@@ -6,7 +6,7 @@ import { orpc } from "~/lib/orpc";
 import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
-} from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/experiment.schema";
 
 const STALE_TIME = 2 * 60 * 1000;

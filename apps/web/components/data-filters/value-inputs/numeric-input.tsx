@@ -2,7 +2,7 @@
 
 import type { ChangeEvent } from "react";
 
-import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { Input } from "@repo/ui/components/input";
 
 export interface NumericInputProps {

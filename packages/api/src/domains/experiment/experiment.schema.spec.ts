@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { zErrorResponse } from "../../shared/errors";
+import { zExperimentDataFilter } from "./data/experiment-data.schema";
 import {
   // Enums / small schemas
   zExperimentStatus,
@@ -47,11 +48,6 @@ import {
   zExperimentCustomMetadataPayload,
   makeCustomMetadataFormSchema,
   // Data filter primitives & distinct values
-  zExperimentDataFilterOperator,
-  zExperimentDataFilterValue,
-  zExperimentDataFilter,
-  zExperimentDistinctValuesQuery,
-  zExperimentDistinctValuesResponse,
   DISTINCT_VALUES_MAX_LIMIT,
   // Upload schemas
   zExperimentUploadSourceKind,
@@ -886,179 +882,6 @@ describe("Experiment Schema", () => {
     it("with empty reserved set behaves identically to the base schema", () => {
       const schema = makeCustomMetadataFormSchema(new Set());
       expect(schema.safeParse(baseBlob).success).toBe(true);
-    });
-  });
-
-  describe("Data filter primitives & distinct values", () => {
-    describe("zExperimentDataFilterOperator", () => {
-      it("accepts every supported operator", () => {
-        for (const op of [
-          "equals",
-          "not_equals",
-          "greater_than",
-          "less_than",
-          "greater_than_or_equal",
-          "less_than_or_equal",
-          "between",
-          "contains",
-          "in",
-        ]) {
-          expect(zExperimentDataFilterOperator.parse(op)).toBe(op);
-        }
-      });
-
-      it("rejects an unknown operator", () => {
-        expect(zExperimentDataFilterOperator.safeParse("starts_with").success).toBe(false);
-      });
-    });
-
-    describe("zExperimentDataFilterValue", () => {
-      it("accepts non-empty scalars", () => {
-        expect(zExperimentDataFilterValue.parse("x")).toBe("x");
-        expect(zExperimentDataFilterValue.parse(3)).toBe(3);
-        expect(zExperimentDataFilterValue.parse(false)).toBe(false);
-      });
-
-      it("accepts a non-empty array of strings/numbers", () => {
-        expect(zExperimentDataFilterValue.parse(["a", 2])).toEqual(["a", 2]);
-      });
-
-      it("rejects an empty string, empty array, and array with an empty string", () => {
-        expect(zExperimentDataFilterValue.safeParse("").success).toBe(false);
-        expect(zExperimentDataFilterValue.safeParse([]).success).toBe(false);
-        expect(zExperimentDataFilterValue.safeParse([""]).success).toBe(false);
-      });
-    });
-
-    describe("zExperimentDataFilter.superRefine", () => {
-      const base = { column: "temp" };
-
-      it("requires a non-empty column", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ column: "", operator: "equals", value: "x" }).success,
-        ).toBe(false);
-      });
-
-      it("'in' requires an array; accepts an array", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "in", value: "x" }).success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "in", value: ["a", "b"] }).success,
-        ).toBe(true);
-      });
-
-      it("'between' requires a same-typed 2-tuple", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: 5 }).success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1] }).success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, "2"] })
-            .success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "between", value: [1, 9] }).success,
-        ).toBe(true);
-      });
-
-      it("rejects array values for non-array operators", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "equals", value: ["a", "b"] })
-            .success,
-        ).toBe(false);
-      });
-
-      it("comparison operators require a number or ISO date string", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: true })
-            .success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "greater_than", value: 10 }).success,
-        ).toBe(true);
-        expect(
-          zExperimentDataFilter.safeParse({
-            ...base,
-            operator: "less_than_or_equal",
-            value: "2024-01-01",
-          }).success,
-        ).toBe(true);
-        expect(
-          zExperimentDataFilter.safeParse({
-            ...base,
-            operator: "greater_than",
-            value: "not-a-date",
-          }).success,
-        ).toBe(false);
-      });
-
-      it("'contains' requires a string value", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: 5 }).success,
-        ).toBe(false);
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "contains", value: "lf" }).success,
-        ).toBe(true);
-      });
-
-      it("accepts a plain equals filter", () => {
-        expect(
-          zExperimentDataFilter.safeParse({ ...base, operator: "equals", value: "active" }).success,
-        ).toBe(true);
-      });
-    });
-
-    describe("zExperimentDistinctValuesQuery", () => {
-      it("accepts a minimal query and leaves limit optional", () => {
-        const parsed = zExperimentDistinctValuesQuery.parse({
-          tableName: "raw_data",
-          column: "site",
-        });
-        expect(parsed.limit).toBeUndefined();
-      });
-
-      it("coerces a numeric-string limit", () => {
-        expect(
-          zExperimentDistinctValuesQuery.parse({
-            tableName: "raw_data",
-            column: "site",
-            limit: "50",
-          }).limit,
-        ).toBe(50);
-      });
-
-      it("rejects a missing column and an over-cap limit", () => {
-        expect(
-          zExperimentDistinctValuesQuery.safeParse({ tableName: "raw_data", column: "" }).success,
-        ).toBe(false);
-        expect(
-          zExperimentDistinctValuesQuery.safeParse({
-            tableName: "raw_data",
-            column: "site",
-            limit: DISTINCT_VALUES_MAX_LIMIT + 1,
-          }).success,
-        ).toBe(false);
-      });
-    });
-
-    describe("zExperimentDistinctValuesResponse", () => {
-      it("accepts string and number values with a truncated flag", () => {
-        const parsed = zExperimentDistinctValuesResponse.parse({
-          values: ["a", 1, "b"],
-          truncated: true,
-        });
-        expect(parsed.values).toEqual(["a", 1, "b"]);
-        expect(parsed.truncated).toBe(true);
-      });
-
-      it("rejects boolean values", () => {
-        expect(
-          zExperimentDistinctValuesResponse.safeParse({ values: [true], truncated: false }).success,
-        ).toBe(false);
-      });
     });
   });
 

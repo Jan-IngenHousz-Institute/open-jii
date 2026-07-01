@@ -1,9 +1,7 @@
 "use client";
 
-import type {
-  ExperimentDataColumn,
-  ExperimentDataFilter,
-} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 
 import { FilterChipFace } from "./chip-face";
 import { FilterRow } from "./filter-row";

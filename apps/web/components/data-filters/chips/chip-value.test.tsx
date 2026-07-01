@@ -3,7 +3,7 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { ChipValue } from "./chip-value";
 

@@ -3,7 +3,7 @@
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";

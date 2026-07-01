@@ -1,7 +1,7 @@
 import { renderHook } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useStableFilterKeys } from "./use-stable-filter-keys";
 

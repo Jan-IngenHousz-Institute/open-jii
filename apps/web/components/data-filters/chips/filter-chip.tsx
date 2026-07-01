@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 
 import type {
-  ExperimentDataColumn,
   ExperimentDataFilter,
   ExperimentDataFilterOperator,
-} from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";

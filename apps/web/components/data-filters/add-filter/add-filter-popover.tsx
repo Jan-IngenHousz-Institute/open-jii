@@ -6,11 +6,11 @@ import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import type {
-  ExperimentDataColumn,
   ExperimentDataFilter,
   ExperimentDataFilterOperator,
-} from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/experiment.schema";
 import type { ColumnKind } from "@repo/api/transforms/column-type-utils";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";

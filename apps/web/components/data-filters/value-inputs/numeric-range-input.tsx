@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 

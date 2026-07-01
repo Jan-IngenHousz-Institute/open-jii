@@ -2,7 +2,7 @@ import { act, renderHook } from "@/test/test-utils";
 import * as nav from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useUrlDataFilters } from "./useUrlDataFilters";
 

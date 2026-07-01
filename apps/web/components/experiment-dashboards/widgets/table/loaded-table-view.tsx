@@ -12,7 +12,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { TableBody } from "@repo/ui/components/table";
 

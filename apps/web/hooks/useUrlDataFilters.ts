@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { z } from "zod";
 
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useUrlState } from "./useUrlState";
 
