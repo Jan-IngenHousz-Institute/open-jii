@@ -19,6 +19,7 @@ export const createMacroSchema = createInsertSchema(macros).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
 export const updateMacroSchema = createInsertSchema(macros).partial().omit({
@@ -27,9 +28,10 @@ export const updateMacroSchema = createInsertSchema(macros).partial().omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
-export const selectMacroSchema = createSelectSchema(macros).extend({
+export const selectMacroSchema = createSelectSchema(macros).omit({ searchVector: true }).extend({
   createdByName: z.string().optional(),
 });
 

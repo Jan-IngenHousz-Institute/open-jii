@@ -44,5 +44,37 @@
     "new": "Nieuw",
     "edit": "Bewerken",
     "view": "Bekijken"
+  },
+  "commandPalette": {
+    "title": "Commandopalet",
+    "placeholder": "Pagina's en acties zoeken...",
+    "groups": {
+      "pages": "Pagina's",
+      "actions": "Acties"
+    },
+    "entries": {
+      "home": "Home",
+      "experiments": "Experimenten",
+      "workbooks": "Werkboeken",
+      "protocols": "Protocollen",
+      "macros": "Macro's",
+      "transferRequests": "Transferverzoeken",
+      "settings": "Instellingen",
+      "createExperiment": "Experiment aanmaken",
+      "showKeyboardShortcuts": "Sneltoetsen tonen",
+      "openDocumentation": "Documentatie openen"
+    },
+    "results": {
+      "experiments": "Experimenten",
+      "protocols": "Protocollen",
+      "macros": "Macro's"
+    },
+    "status": {
+      "searching": "Zoeken...",
+      "errorTitle": "Er is iets misgegaan",
+      "errorDescription": "We konden je zoekopdracht niet voltooien. Probeer het opnieuw.",
+      "noResultsTitle": "Geen resultaten gevonden",
+      "noResultsDescription": "Niets kwam overeen met \"{{query}}\". Probeer een andere of kortere zoekterm."
+    }
   }
 }

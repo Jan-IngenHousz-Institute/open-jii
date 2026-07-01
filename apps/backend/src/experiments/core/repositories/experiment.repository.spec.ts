@@ -646,6 +646,144 @@ describe("ExperimentRepository", () => {
     });
   });
 
+  describe("findAll full-text search ranking", () => {
+    it("ranks a name match above a match on the creator's name", async () => {
+      // Creator whose profile name contains the search term.
+      const creatorId = await testApp.createTestUser({ name: "Photosynthesis Researcher" });
+
+      // E1 matches by NAME; E2 matches only because its CREATOR is named "Photosynthesis".
+      await testApp.createExperiment({
+        name: "Photosynthesis study",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: creatorId,
+        visibility: "public",
+      });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "Photosynthesis");
+
+      assertSuccess(result);
+      const names = result.value.map((e) => e.name);
+      expect(names).toContain("Photosynthesis study");
+      expect(names).toContain("Maize field trial");
+      // The experiment whose NAME matches must come first.
+      expect(names.indexOf("Photosynthesis study")).toBeLessThan(
+        names.indexOf("Maize field trial"),
+      );
+    });
+
+    it("matches the description and tolerates a typo in the name", async () => {
+      await testApp.createExperiment({
+        name: "Bioluminescence",
+        description: "measures chlorophyll fluorescence",
+        userId: testUserId,
+        visibility: "public",
+      });
+
+      const byDescription = await repository.findAll(
+        testUserId,
+        undefined,
+        undefined,
+        "chlorophyll",
+      );
+      assertSuccess(byDescription);
+      expect(byDescription.value.some((e) => e.name === "Bioluminescence")).toBe(true);
+
+      const byTypo = await repository.findAll(testUserId, undefined, undefined, "bioluminecence");
+      assertSuccess(byTypo);
+      expect(byTypo.value.some((e) => e.name === "Bioluminescence")).toBe(true);
+    });
+
+    it("matches an experiment by a member's name (not just the creator)", async () => {
+      // Member whose profile name carries a distinctive token absent from the experiment + creator.
+      const memberId = await testApp.createTestUser({ name: "Zelkova Memberton" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "Zelkova");
+      assertSuccess(result);
+      expect(result.value.some((e) => e.name === "Maize field trial")).toBe(true);
+    });
+
+    it("matches an experiment by a location field", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.addExperimentLocation({
+        experimentId: experiment.id,
+        name: "Greenhouse",
+        country: "Wakanda",
+      });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "Wakanda");
+      assertSuccess(result);
+      expect(result.value.some((e) => e.name === "Maize field trial")).toBe(true);
+    });
+
+    it("excludes deactivated contributors from name matching entirely", async () => {
+      const ghostId = await testApp.createTestUser({ name: "Casper Ghostly", activated: false });
+      await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: ghostId,
+        visibility: "public",
+      });
+
+      // Neither the real name nor the "Unknown User" placeholder surfaces the experiment — a
+      // deactivated account simply doesn't participate in name search.
+      for (const term of ["Casper", "Unknown User"]) {
+        const result = await repository.findAll(testUserId, undefined, undefined, term);
+        assertSuccess(result);
+        expect(result.value.some((e) => e.name === "Maize field trial")).toBe(false);
+      }
+    });
+
+    it("excludes deleted contributors from creator and member matching", async () => {
+      // Active (activated=true) but soft-deleted accounts must not be matchable by name.
+      const deletedCreatorId = await testApp.createTestUser({
+        name: "Deleted Creator",
+        deletedAt: new Date(),
+      });
+      await testApp.createExperiment({
+        name: "Maize field trial",
+        userId: deletedCreatorId,
+        visibility: "public",
+      });
+
+      const deletedMemberId = await testApp.createTestUser({
+        name: "Deleted Member",
+        deletedAt: new Date(),
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Sorghum field trial",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.addExperimentMember(experiment.id, deletedMemberId, "member");
+
+      const byCreator = await repository.findAll(
+        testUserId,
+        undefined,
+        undefined,
+        "Deleted Creator",
+      );
+      assertSuccess(byCreator);
+      expect(byCreator.value.some((e) => e.name === "Maize field trial")).toBe(false);
+
+      const byMember = await repository.findAll(testUserId, undefined, undefined, "Deleted Member");
+      assertSuccess(byMember);
+      expect(byMember.value.some((e) => e.name === "Sorghum field trial")).toBe(false);
+    });
+  });
+
   describe("findOne", () => {
     it("should find an experiment by id", async () => {
       // Arrange

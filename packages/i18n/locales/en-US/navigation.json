@@ -48,5 +48,37 @@
     "new": "New",
     "edit": "Edit",
     "view": "View"
+  },
+  "commandPalette": {
+    "title": "Command palette",
+    "placeholder": "Search pages and actions...",
+    "groups": {
+      "pages": "Pages",
+      "actions": "Actions"
+    },
+    "entries": {
+      "home": "Home",
+      "experiments": "Experiments",
+      "workbooks": "Workbooks",
+      "protocols": "Protocols",
+      "macros": "Macros",
+      "transferRequests": "Transfer requests",
+      "settings": "Settings",
+      "createExperiment": "Create experiment",
+      "showKeyboardShortcuts": "Show keyboard shortcuts",
+      "openDocumentation": "Open documentation"
+    },
+    "results": {
+      "experiments": "Experiments",
+      "protocols": "Protocols",
+      "macros": "Macros"
+    },
+    "status": {
+      "searching": "Searching...",
+      "errorTitle": "Something went wrong",
+      "errorDescription": "We couldn't complete your search. Please try again.",
+      "noResultsTitle": "No results found",
+      "noResultsDescription": "Nothing matched \"{{query}}\". Try a different or shorter search term."
+    }
   }
 }

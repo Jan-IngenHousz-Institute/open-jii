@@ -3,10 +3,11 @@ import { z } from "zod";
 
 import {
   eq,
-  ilike,
+  asc,
   or,
   and,
   count,
+  ilike,
   inArray,
   organizations,
   profiles,
@@ -22,6 +23,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { escapeLike, trigramMatch } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -117,19 +119,27 @@ export class UserRepository {
         .innerJoin(users, eq(profiles.userId, users.id))
         .$dynamic();
 
-      // If search query is provided, search in firstName, lastName, email fields profiles that are activated
+      // Match activated/non-deleted profiles by name or email: substring (ILIKE) handles prefixes,
+      // trigram (%) adds typo tolerance; ranked by name/email similarity so the closest match leads.
       if (params.query) {
-        query = query.where(
-          and(
-            eq(profiles.activated, true),
-            isNull(profiles.deletedAt),
-            or(
-              ilike(profiles.firstName, `%${params.query}%`),
-              ilike(profiles.lastName, `%${params.query}%`),
-              ilike(users.email, `%${params.query}%`),
+        const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+        query = query
+          .where(
+            and(
+              eq(profiles.activated, true),
+              isNull(profiles.deletedAt),
+              or(
+                trigramMatch(profiles.firstName, params.query),
+                trigramMatch(profiles.lastName, params.query),
+                ilike(fullName, `%${escapeLike(params.query)}%`),
+                ilike(users.email, `%${escapeLike(params.query)}%`),
+              ),
             ),
-          ),
-        );
+          )
+          .orderBy(
+            sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
+            asc(profiles.firstName),
+          );
       }
 
       // Apply pagination
