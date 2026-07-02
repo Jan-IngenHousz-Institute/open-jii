@@ -16,6 +16,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
 import { isVideoAsset } from "../contentful/ctf-video";
 import { getCategoryMeta } from "./category";
+import { SurfaceBadges } from "./surface-badges";
 
 interface ReleaseHeroProps {
   entry: ReleaseNoteFields;
@@ -116,6 +117,10 @@ export const ReleaseHero: React.FC<ReleaseHeroProps> = ({
           <Badge className={category.badgeClassName} {...inspectorProps({ fieldId: "category" })}>
             {t(category.labelKey)}
           </Badge>
+          <SurfaceBadges
+            surfaces={live.surfaces}
+            inspectorProps={inspectorProps({ fieldId: "surfaces" })}
+          />
           {dateLabel && (
             <span
               className="text-muted-foreground font-mono text-xs tabular-nums"

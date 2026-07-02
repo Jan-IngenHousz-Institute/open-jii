@@ -18,6 +18,7 @@ import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "..
 import { CtfRichText } from "../contentful/ctf-rich-text";
 import { isVideoAsset } from "../contentful/ctf-video";
 import { getCategoryMeta } from "./category";
+import { SurfaceBadges } from "./surface-badges";
 
 interface ReleaseNoteEntryProps {
   entry: ReleaseNoteFields;
@@ -125,6 +126,10 @@ export const ReleaseNoteEntry: React.FC<ReleaseNoteEntryProps> = ({
               >
                 {t(category.labelKey)}
               </Badge>
+              <SurfaceBadges
+                surfaces={live.surfaces}
+                inspectorProps={inspectorProps({ fieldId: "surfaces" })}
+              />
               {dateLabel && (
                 <span
                   className="text-muted-foreground font-mono text-xs tabular-nums"

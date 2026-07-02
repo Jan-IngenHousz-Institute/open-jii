@@ -51,7 +51,7 @@
   },
   "whatsNew": {
     "navLabel": "Neuigkeiten",
-    "title": "Neuigkeiten",
+    "title": "Neuigkeiten im Web",
     "description": "Neueste Releases und Funktionsankündigungen",
     "fullChangelog": "Vollständiges Änderungsprotokoll",
     "showMore": "Mehr lesen",
@@ -64,6 +64,10 @@
       "improvement": "Verbesserung",
       "bug_fix": "Fehlerbehebung",
       "announcement": "Ankündigung"
+    },
+    "surface": {
+      "web": "Web",
+      "mobile": "Mobil"
     }
   },
   "releases": {
