@@ -1,3 +1,4 @@
+import { contributorDisplayName } from "@/components/experiment-visualizations/charts/data/contributor-cells";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
@@ -85,9 +86,6 @@ function isWindowOnlyAggregation(aggregation: DataAggregation): boolean {
 }
 
 // Flatten CONTRIBUTOR structs to their `name` so the chart layer sees plain strings.
-// Null/unparseable becomes "Unknown" to keep the bucket visible (Plotly skips null-x points).
-const UNKNOWN_CONTRIBUTOR = "Unknown";
-
 function flattenContributorCells<
   T extends {
     columns: { name: string; type_text: string }[];
@@ -103,14 +101,7 @@ function flattenContributorCells<
   const rows = table.rows.map((row) => {
     const out: Record<string, unknown> = { ...row };
     for (const col of contributorColumns) {
-      const v = row[col.name];
-      if (typeof v !== "string") {
-        out[col.name] = UNKNOWN_CONTRIBUTOR;
-        continue;
-      }
-      const parsed = JSON.parse(v) as { name?: string };
-      const name = parsed.name?.trim();
-      out[col.name] = name && name.length > 0 ? name : UNKNOWN_CONTRIBUTOR;
+      out[col.name] = contributorDisplayName(row[col.name]);
     }
     return out;
   });

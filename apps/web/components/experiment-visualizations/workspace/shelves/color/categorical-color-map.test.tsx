@@ -4,10 +4,16 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { DataColumn } from "@repo/api/schemas/experiment.schema";
 
 import { lineChartType } from "../../../charts/basic/line";
 import type { ChartFormValues } from "../../../charts/chart-config";
 import { CategoricalColorMap } from "./categorical-color-map";
+
+const columns: DataColumn[] = [
+  { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+  { name: "sensor", type_name: "STRING", type_text: "STRING" },
+];
 
 function defaults(colorMap: Record<string, string> = {}): ChartFormValues {
   return {
@@ -37,7 +43,7 @@ describe("CategoricalColorMap", () => {
 
   it("clears a category override when its reset button is clicked", async () => {
     const { form } = renderWithForm<ChartFormValues>(
-      (form) => <CategoricalColorMap form={form} />,
+      (form) => <CategoricalColorMap form={form} columns={columns} />,
       {
         useFormProps: { defaultValues: defaults({ alpha: "#ff0000" }) },
       },
@@ -53,7 +59,7 @@ describe("CategoricalColorMap", () => {
 
   it("writes a category override (debounced) when a color is committed", async () => {
     const { form, container } = renderWithForm<ChartFormValues>(
-      (form) => <CategoricalColorMap form={form} />,
+      (form) => <CategoricalColorMap form={form} columns={columns} />,
       { useFormProps: { defaultValues: defaults({ alpha: "#ff0000" }) } },
     );
 
