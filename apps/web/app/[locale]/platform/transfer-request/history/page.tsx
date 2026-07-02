@@ -20,6 +20,7 @@ const statusBadgeVariants = cva("", {
       completed: "bg-badge-active",
       rejected: "bg-destructive text-destructive-foreground",
       failed: "bg-destructive text-destructive-foreground",
+      no_data: "bg-badge-stale",
     },
   },
   defaultVariants: {
