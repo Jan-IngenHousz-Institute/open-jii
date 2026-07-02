@@ -1,6 +1,7 @@
 "use client";
 
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
 import { useHotkey, useHotkeySequence } from "@tanstack/react-hotkeys";
 import type { Hotkey } from "@tanstack/react-hotkeys";
@@ -96,6 +97,11 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
         key: "N",
         label: "Notifications",
         action: () => window.dispatchEvent(new Event(NOTIFICATION_BELL_OPEN_EVENT)),
+      },
+      {
+        key: "R",
+        label: "What's new",
+        action: () => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT)),
       },
       { key: "A", label: "Account", path: `/${locale}/platform/account` },
     ],

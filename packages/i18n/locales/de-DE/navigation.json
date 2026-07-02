@@ -48,5 +48,36 @@
     "new": "Neu",
     "edit": "Bearbeiten",
     "view": "Ansehen"
+  },
+  "whatsNew": {
+    "navLabel": "Neuigkeiten",
+    "title": "Neuigkeiten",
+    "description": "Neueste Releases und Funktionsankündigungen",
+    "fullChangelog": "Vollständiges Änderungsprotokoll",
+    "showMore": "Mehr lesen",
+    "showLess": "Weniger anzeigen",
+    "readMore": "Mehr lesen",
+    "empty": "Noch keine Neuigkeiten.",
+    "unreadBadge": "{{count}} ungelesen",
+    "category": {
+      "new_feature": "Neue Funktion",
+      "improvement": "Verbesserung",
+      "bug_fix": "Fehlerbehebung",
+      "announcement": "Ankündigung"
+    }
+  },
+  "releases": {
+    "metaTitle": "Releases",
+    "metaDescription": "Die neuesten Funktionen, Verbesserungen und Fehlerbehebungen auf der openJII-Plattform.",
+    "heading": "Releases",
+    "subheading": "Die neuesten Funktionen, Verbesserungen und Fehlerbehebungen auf der openJII-Plattform.",
+    "backToReleases": "Alle Releases",
+    "eyebrow": "Changelog",
+    "filterAll": "Alle",
+    "readUpdate": "Update lesen",
+    "previous": "Vorherige",
+    "next": "Nächste",
+    "notFoundTitle": "Release-Notiz nicht gefunden",
+    "notFoundDescription": "Diese Release-Notiz existiert nicht oder ist nicht mehr verfügbar."
   }
 }

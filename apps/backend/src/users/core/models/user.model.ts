@@ -21,6 +21,7 @@ export const createUserProfileSchema = createInsertSchema(profiles)
     userId: true,
     organizationId: true,
     createdAt: true,
+    whatsNewLastSeenAt: true,
   })
   .extend({
     organization: z.string().optional(),
@@ -30,6 +31,7 @@ export const selectUserProfileSchema = createSelectSchema(profiles)
   .omit({
     id: true,
     organizationId: true,
+    whatsNewLastSeenAt: true,
   })
   .extend({
     organization: z.string().optional(),

@@ -1,0 +1,20 @@
+{
+  "navLabel": "Wat is er nieuw",
+  "title": "Wat is er nieuw",
+  "fullChangelog": "Volledig wijzigingslogboek",
+  "showMore": "Meer lezen",
+  "showLess": "Minder tonen",
+  "empty": "Nog geen release-notities.",
+  "card": {
+    "title": "Wat is er nieuw",
+    "subtitleUnread_one": "{{count}} nieuwe update",
+    "subtitleUnread_other": "{{count}} nieuwe updates",
+    "subtitleCaughtUp": "Je bent helemaal bij"
+  },
+  "category": {
+    "new_feature": "Nieuwe functie",
+    "improvement": "Verbetering",
+    "bug_fix": "Bugfix",
+    "announcement": "Aankondiging"
+  }
+}

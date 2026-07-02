@@ -1,0 +1,20 @@
+{
+  "navLabel": "What's new",
+  "title": "What's new",
+  "fullChangelog": "Full changelog",
+  "showMore": "Read more",
+  "showLess": "Show less",
+  "empty": "No release notes yet.",
+  "card": {
+    "title": "What's new",
+    "subtitleUnread_one": "{{count}} new update",
+    "subtitleUnread_other": "{{count}} new updates",
+    "subtitleCaughtUp": "You're all caught up"
+  },
+  "category": {
+    "new_feature": "New feature",
+    "improvement": "Improvement",
+    "bug_fix": "Bug fix",
+    "announcement": "Announcement"
+  }
+}

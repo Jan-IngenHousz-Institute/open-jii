@@ -7,6 +7,7 @@ import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect
 import { useDeviceChip } from "~/features/connection/hooks/use-device-chip";
 import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
+import { WhatsNewSheet } from "~/features/release-notes/components/whats-new-sheet";
 import { useTranslation } from "~/shared/i18n";
 import { AnimatedTabBar } from "~/shared/ui/animated-tab-bar";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -120,6 +121,7 @@ export default function TabLayout() {
       </Tabs>
 
       <DeviceSheet />
+      <WhatsNewSheet />
     </View>
   );
 }

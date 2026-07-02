@@ -26,3 +26,16 @@ export { HomeFooter } from "./features/footer";
 export { AlertsContainer } from "./features/alert/alerts-container";
 export type { ComponentAlertFieldsFragment } from "./lib/__generated/sdk";
 export type { PageForceUpdateFieldsFragment } from "./lib/__generated/sdk";
+
+// What's new / release notes + public /releases page (OJD-1394)
+export { ReleaseNotesFeed } from "./features/release-notes/release-notes-feed";
+export { ReleaseNoteEntry } from "./features/release-notes/release-note-entry";
+export { ReleaseNoteArticle } from "./features/release-notes/release-note-article";
+export { ReleaseFeature } from "./features/release-notes/release-feature";
+export type { ComponentReleaseNoteFieldsFragment } from "./lib/__generated/sdk";
+export {
+  getCategoryMeta,
+  RELEASE_CATEGORIES,
+  type ReleaseCategory,
+  type CategoryMeta,
+} from "./features/release-notes/category";

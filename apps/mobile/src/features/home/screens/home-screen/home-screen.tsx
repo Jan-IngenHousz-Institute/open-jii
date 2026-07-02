@@ -5,6 +5,7 @@ import { HomeDeviceCard } from "~/features/home/components/home-device-card";
 import { HomeGreeting } from "~/features/home/components/home-greeting";
 import { HomePrimaryCta } from "~/features/home/components/home-primary-cta";
 import { HomeRecentMeasurements } from "~/features/home/components/home-recent-measurements";
+import { HomeWhatsNewCard } from "~/features/home/components/home-whats-new-card";
 
 export function HomeScreen() {
   return (
@@ -17,6 +18,7 @@ export function HomeScreen() {
       <HomeContinueCard />
       <HomePrimaryCta />
       <HomeDeviceCard />
+      <HomeWhatsNewCard />
       <HomeRecentMeasurements />
       <View style={{ height: 24 }} />
     </ScrollView>

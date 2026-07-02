@@ -48,5 +48,36 @@
     "new": "New",
     "edit": "Edit",
     "view": "View"
+  },
+  "whatsNew": {
+    "navLabel": "What's new",
+    "title": "What's new",
+    "description": "Latest releases and feature announcements",
+    "fullChangelog": "Full changelog",
+    "showMore": "Read more",
+    "showLess": "Show less",
+    "readMore": "Read more",
+    "empty": "No release notes yet.",
+    "unreadBadge": "{{count}} unread",
+    "category": {
+      "new_feature": "New feature",
+      "improvement": "Improvement",
+      "bug_fix": "Bug fix",
+      "announcement": "Announcement"
+    }
+  },
+  "releases": {
+    "metaTitle": "Releases",
+    "metaDescription": "The latest features, improvements, and fixes on the openJII platform.",
+    "heading": "Releases",
+    "subheading": "The latest features, improvements, and fixes on the openJII platform.",
+    "backToReleases": "All releases",
+    "eyebrow": "Changelog",
+    "filterAll": "All",
+    "readUpdate": "Read the update",
+    "previous": "Previous",
+    "next": "Next",
+    "notFoundTitle": "Release note not found",
+    "notFoundDescription": "This release note doesn't exist or is no longer available."
   }
 }
