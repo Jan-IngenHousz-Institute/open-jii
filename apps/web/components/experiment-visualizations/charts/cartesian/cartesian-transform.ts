@@ -142,6 +142,16 @@ export function transformCartesianData(
     return { xaxisId: `x${suffix}`, yaxisId: `y${suffix}` };
   };
 
+  // Secondary-axis Y series in facet mode need their own overlay y-axis per
+  // cell. The grid uses primary indices 1..N (y, y2, ..., yN); secondary
+  // overlays live above that range (y[N+cell+1]) so they never collide.
+  const totalCells = facetGroups.length;
+  const hasSecondaryAxis = effectiveYEntries.some(
+    ({ source }, seriesOrdinal) => seriesOrdinal !== 0 && source.axis === "secondary",
+  );
+  const secondaryYaxisIdFor = (cellIndex: number): string | undefined =>
+    facetColumn && hasSecondaryAxis ? `y${totalCells + cellIndex + 1}` : undefined;
+
   // Pick the per-series fallback color from the chart-level `color` prop:
   // either a single value or one-per-series array.
   const pickFallbackColor = (seriesOrdinal: number): string | undefined =>
@@ -304,14 +314,28 @@ export function transformCartesianData(
     cellIndex: number,
   ): CartesianSeries[] => {
     const { xaxisId, yaxisId } = buildAxisIds(cellIndex);
-    if (isContinuousColor && colorColumn) {
-      const showlegend = cellIndex === 0 ? undefined : false;
-      return buildContinuousColorCellSeries(cellRows, cellIndex, xaxisId, yaxisId, showlegend);
+    const cellSeries =
+      isContinuousColor && colorColumn
+        ? buildContinuousColorCellSeries(
+            cellRows,
+            cellIndex,
+            xaxisId,
+            yaxisId,
+            cellIndex === 0 ? undefined : false,
+          )
+        : !colorColumn
+          ? buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined)
+          : buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
+
+    // Route this cell's secondary-axis traces onto the cell's overlay axis;
+    // the builders above pinned every trace to the primary yaxis.
+    const secondaryYaxisId = secondaryYaxisIdFor(cellIndex);
+    if (!secondaryYaxisId) {
+      return cellSeries;
     }
-    if (!colorColumn) {
-      return buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined);
-    }
-    return buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
+    return cellSeries.map((s) =>
+      s.axis === "secondary" ? { ...s, yaxisId: secondaryYaxisId } : s,
+    );
   };
 
   const allSeries: CartesianSeries[] = [];
@@ -342,7 +366,6 @@ export function transformCartesianData(
 
   // Build the grid spec. `facetColumns` overrides the auto default;
   // `rows` is computed from total cells / columns, ceiling.
-  const totalCells = facetGroups.length;
   const requestedColumns = chartConfig.facetColumns;
   const cols =
     typeof requestedColumns === "number" && requestedColumns > 0
@@ -355,6 +378,7 @@ export function transformCartesianData(
       title: group.label,
       xaxisId: `x${suffix}`,
       yaxisId: `y${suffix}`,
+      secondaryYaxisId: hasSecondaryAxis ? `y${totalCells + i + 1}` : undefined,
     };
   });
 

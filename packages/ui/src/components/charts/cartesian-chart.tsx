@@ -1,11 +1,18 @@
 "use client";
 
-import type { PlotData } from "plotly.js";
+import type { Layout, PlotData } from "plotly.js";
 import React from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
-import type { BaseChartProps, BaseSeries, ErrorBarConfig, LineConfig, MarkerConfig } from "./types";
+import type {
+  BaseChartProps,
+  BaseSeries,
+  ErrorBarConfig,
+  LineConfig,
+  MarkerConfig,
+  PlotlyChartConfig,
+} from "./types";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyReferenceLines,
@@ -95,6 +102,12 @@ export interface FacetCell {
   xaxisId: string;
   /** Plotly axis ID for this cell's Y axis (e.g. `"y2"`). */
   yaxisId: string;
+  /**
+   * Plotly axis ID for this cell's overlay (secondary) Y axis, when the
+   * chart has a secondary-axis Y series. The renderer emits a matching
+   * `yaxisN` that overlays `yaxisId` on the right side of the cell.
+   */
+  secondaryYaxisId?: string;
 }
 
 export interface FacetGridConfig {
@@ -201,9 +214,8 @@ export function CartesianChart({
   }
 
   // Faceted layout: convert the single-canvas xaxis/yaxis into a grid of
-  // numbered axes + per-cell title annotations. Done before secondary-Y
-  // composition because secondary axes don't compose with facets in v1
-  // (the `extendLayoutForFacets` helper skips yaxis2 entirely).
+  // numbered axes + per-cell title annotations. Runs before the secondary-Y
+  // step so the overlay axes can borrow each cell's primary styling.
   if (subplots) {
     const { cellTitleFontSize } = facetTierStyles(sizing);
     // At very/ultra-compact cell tiers force shared axis titles
@@ -225,7 +237,11 @@ export function CartesianChart({
   }
 
   const hasSecondary = data.some((s) => s.axis === "secondary");
-  if (hasSecondary && !subplots) {
+  if (hasSecondary && subplots) {
+    // Faceted dual-Y: one overlay axis per cell, built after the grid so it
+    // can borrow each cell's primary styling and overlay its y-domain.
+    applyFacetSecondaryAxes(layout, data, subplots, config);
+  } else if (hasSecondary) {
     const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
     // Mirror tick/line styling from primary so the two axes look like a
     // matched pair rather than two unrelated widgets. The primary slice
@@ -272,6 +288,56 @@ export function CartesianChart({
       />
     </div>
   );
+}
+
+/**
+ * Faceted dual-Y: for every cell with a secondary series, emit an overlay
+ * `yaxisN` that shares the cell's y-domain (`overlaying`) and hangs its ticks
+ * on the right. Mirrors the single-canvas secondary styling per cell. When the
+ * Y scale is shared, only the rightmost column shows the secondary ticks/title
+ * and the other cells' secondaries match it so the scale stays comparable.
+ */
+function applyFacetSecondaryAxes(
+  layout: Partial<Layout>,
+  data: CartesianSeries[],
+  subplots: FacetGridConfig,
+  config: PlotlyChartConfig,
+): void {
+  const layoutRecord = layout as unknown as Record<string, unknown>;
+  const firstSecondaryId = subplots.cells.find((c) => c.secondaryYaxisId)?.secondaryYaxisId;
+  const sharedY = subplots.sharedY !== false;
+
+  subplots.cells.forEach((cell, i) => {
+    const secondaryId = cell.secondaryYaxisId;
+    if (!secondaryId) {
+      return;
+    }
+    const isLastColumn = i % subplots.columns === subplots.columns - 1;
+    const primaryKey = cell.yaxisId === "y" ? "yaxis" : `yaxis${cell.yaxisId.slice(1)}`;
+    const primary = (layoutRecord[primaryKey] ?? {}) as Record<string, unknown>;
+    const secondaryValues = data.filter((s) => s.yaxisId === secondaryId).flatMap((s) => s.y ?? []);
+
+    const base: Record<string, unknown> = {
+      overlaying: cell.yaxisId,
+      anchor: cell.xaxisId,
+      side: "right",
+      type: config.y2AxisType ?? "linear",
+      showgrid: false,
+      automargin: true,
+      tickfont: primary.tickfont,
+      color: primary.color,
+      linecolor: primary.linecolor,
+      tickcolor: primary.tickcolor,
+      showline: true,
+      // With a shared scale only the rightmost column carries ticks + title;
+      // the rest match it so every cell reads on the same secondary range.
+      showticklabels: sharedY ? isLastColumn : true,
+      title: isLastColumn && config.y2AxisTitle ? { text: config.y2AxisTitle } : undefined,
+      matches: sharedY && secondaryId !== firstSecondaryId ? firstSecondaryId : undefined,
+    };
+    const key = `yaxis${secondaryId.slice(1)}`;
+    layoutRecord[key] = config.y2AxisType ? base : refineAxisType(base, secondaryValues);
+  });
 }
 
 /**

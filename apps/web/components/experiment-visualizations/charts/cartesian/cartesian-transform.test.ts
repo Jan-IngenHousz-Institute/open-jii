@@ -230,4 +230,41 @@ describe("transformCartesianData", () => {
     expect(a?.y).toEqual([25]);
     expect(b?.y).toEqual([100]);
   });
+
+  it("routes secondary-axis series onto per-cell overlay axes in facet mode", () => {
+    const rows = [
+      { x: 1, a: 10, b: 100, site: "X" },
+      { x: 2, a: 20, b: 200, site: "Y" },
+    ];
+    const sources = [
+      ds("x", "x"),
+      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
+      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+      ds("facet", "site"),
+    ];
+    const result = transformCartesianData(rows, sources, baseConfig, baseOptions);
+
+    // Two cells (X, Y) → primary axes y / y2; overlays live above the grid.
+    expect(result.subplots?.cells.map((c) => c.secondaryYaxisId)).toEqual(["y3", "y4"]);
+
+    const cellX = result.chartSeries.filter((s) => s.xaxisId === "x");
+    const cellY = result.chartSeries.filter((s) => s.xaxisId === "x2");
+    const primaryX = cellX.find((s) => s.axis !== "secondary");
+    const secondaryX = cellX.find((s) => s.axis === "secondary");
+    const secondaryY = cellY.find((s) => s.axis === "secondary");
+
+    expect(primaryX?.yaxisId).toBe("y");
+    expect(secondaryX?.yaxisId).toBe("y3");
+    expect(secondaryY?.yaxisId).toBe("y4");
+  });
+
+  it("does not add overlay axes when no Y series targets the secondary axis", () => {
+    const rows = [
+      { x: 1, a: 10, site: "X" },
+      { x: 2, a: 20, site: "Y" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "a"), ds("facet", "site")];
+    const result = transformCartesianData(rows, sources, baseConfig, baseOptions);
+    expect(result.subplots?.cells.every((c) => c.secondaryYaxisId === undefined)).toBe(true);
+  });
 });
