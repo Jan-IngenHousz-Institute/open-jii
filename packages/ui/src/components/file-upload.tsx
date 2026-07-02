@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Upload } from "lucide-react";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 import { cn } from "../lib/utils";
 
@@ -133,12 +133,40 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
     ref,
   ) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const handleFileSelect = useCallback(
       (selectedFiles: FileList | null) => {
         onFilesChange(selectedFiles);
       },
       [onFilesChange],
+    );
+
+    const handleDragOver = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        // preventDefault is required for the drop event to fire at all.
+        e.preventDefault();
+        if (!isUploading) {
+          setIsDragging(true);
+        }
+      },
+      [isUploading],
+    );
+
+    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragging(false);
+    }, []);
+
+    const handleDrop = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (!isUploading && e.dataTransfer.files.length > 0) {
+          handleFileSelect(e.dataTransfer.files);
+        }
+      },
+      [isUploading, handleFileSelect],
     );
 
     const filesArray = files ? Array.from(files) : [];
@@ -150,8 +178,12 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
           className={cn(
             "hover:border-primary/50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors",
             isUploading ? "cursor-wait" : "cursor-pointer",
+            isDragging && "border-primary bg-muted/50",
           )}
           onClick={() => !isUploading && fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
           <input
             ref={fileInputRef}
