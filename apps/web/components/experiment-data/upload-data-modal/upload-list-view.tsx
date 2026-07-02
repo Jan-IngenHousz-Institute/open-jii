@@ -23,15 +23,7 @@ export interface UploadListViewProps {
 }
 
 // Ambyte is folder-based, so it sits last after the file-based tabular kinds.
-const SOURCE_KIND_ORDER: UploadSourceKind[] = [
-  "csv",
-  "tsv",
-  "parquet",
-  "xlsx",
-  "json",
-  "ndjson",
-  "ambyte",
-];
+const SOURCE_KIND_ORDER: UploadSourceKind[] = ["csv", "tsv", "parquet", "json", "ndjson", "ambyte"];
 
 export function UploadListView({
   experimentId,

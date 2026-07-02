@@ -476,7 +476,7 @@ export const experimentContract = c.router({
     },
     summary: "Upload generic tabular or structured data",
     description:
-      "Uploads tabular or structured data (CSV, TSV, parquet, Excel, JSON, NDJSON) into a user-defined table in the experiment. Either creates a new upload table or appends to an existing one.",
+      "Uploads tabular or structured data (CSV, TSV, parquet, JSON, NDJSON) into a user-defined table in the experiment. Either creates a new upload table or appends to an existing one.",
   },
 
   listUploads: {

@@ -1464,7 +1464,7 @@ export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
 // --- Generic Upload (user-defined tabular tables) ---
 export const zUploadSourceKind = z
-  .enum(["ambyte", "csv", "tsv", "parquet", "xlsx", "json", "ndjson"])
+  .enum(["ambyte", "csv", "tsv", "parquet", "json", "ndjson"])
   .describe("Source format for the upload");
 
 // Per-kind constants consumed by the backend (volume path, busboy limits, etc.)
@@ -1497,12 +1497,6 @@ export const UPLOAD_KIND_CONSTANTS = {
     maxFileSize: 200 * 1024 * 1024,
     maxFileCount: 100,
     extensions: [".parquet"],
-  },
-  xlsx: {
-    volumeSourceType: "uploads",
-    maxFileSize: 50 * 1024 * 1024,
-    maxFileCount: 100,
-    extensions: [".xlsx", ".xls"],
   },
   json: {
     volumeSourceType: "uploads",
@@ -1630,7 +1624,6 @@ export const zParquetFilename = bareBasenameSchema(
   "parquet",
   UPLOAD_KIND_CONSTANTS.parquet.extensions,
 );
-export const zXlsxFilename = bareBasenameSchema("Excel", UPLOAD_KIND_CONSTANTS.xlsx.extensions);
 export const zJsonFilename = bareBasenameSchema("JSON", UPLOAD_KIND_CONSTANTS.json.extensions);
 export const zNdjsonFilename = bareBasenameSchema(
   "NDJSON",
@@ -1719,7 +1712,6 @@ export const UPLOAD_FILENAME_SCHEMAS = {
   csv: zCsvFilename,
   tsv: zTsvFilename,
   parquet: zParquetFilename,
-  xlsx: zXlsxFilename,
   json: zJsonFilename,
   ndjson: zNdjsonFilename,
 } as const satisfies Record<z.infer<typeof zUploadSourceKind>, z.ZodTypeAny>;

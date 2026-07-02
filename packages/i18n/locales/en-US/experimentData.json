@@ -94,7 +94,7 @@
         "noTarget": "Pick or name a target table",
         "invalidName": "Name must start with a letter; use letters, digits, or underscores (max 63)",
         "noFiles": "Select at least one data file",
-        "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, Excel, JSON, NDJSON)",
+        "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, JSON, NDJSON)",
         "mixedFormats": "All files in a single upload must be the same format",
         "oversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
         "oversizedFiles_other": "{{count}} files exceed the maximum allowed size",
@@ -146,7 +146,6 @@
           "csv": "CSV",
           "tsv": "TSV",
           "parquet": "Parquet",
-          "xlsx": "Excel",
           "json": "JSON",
           "ndjson": "NDJSON"
         },

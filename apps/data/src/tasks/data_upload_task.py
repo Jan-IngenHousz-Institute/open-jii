@@ -1,7 +1,7 @@
 # Databricks notebook source
 # DBTITLE 1,Data Upload Task
 # Dispatches an upload run to the right processor based on SOURCE_KIND.
-# - csv/tsv/parquet/xlsx/json/ndjson: pandas parse, encode each row as JSON
+# - csv/tsv/parquet/json/ndjson: pandas parse, encode each row as JSON
 #   in uploaded_data, write parquet to processed-uploads (centrum pipeline ingests
 #   into raw_uploaded_data with a parsed VARIANT column; nested per-row values
 #   are preserved).
@@ -64,7 +64,7 @@ logger.info(
 
 # COMMAND ----------
 
-# DBTITLE 1,Tabular Processor (csv/tsv/parquet/xlsx)
+# DBTITLE 1,Tabular Processor (csv/tsv/parquet)
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
     """Shared pipeline for tabular uploads: pandas parse → JSON-encode rows → write parquet.
 
@@ -176,24 +176,6 @@ def process_parquet_upload() -> dict:
     return _process_tabular_upload("parquet", (".parquet",), pd.read_parquet)
 
 
-def process_xlsx_upload() -> dict:
-    # Excel files can have multiple sheets; concat them so users don't lose data.
-    def _read_excel_all_sheets(path: str):
-        sheets = pd.read_excel(path, sheet_name=None)
-        if not sheets:
-            return pd.DataFrame()
-        if len(sheets) == 1:
-            return next(iter(sheets.values()))
-        frames = []
-        for sheet_name, sheet_df in sheets.items():
-            sheet_df = sheet_df.copy()
-            sheet_df["sheet"] = sheet_name
-            frames.append(sheet_df)
-        return pd.concat(frames, ignore_index=True)
-
-    return _process_tabular_upload("xlsx", (".xlsx", ".xls"), _read_excel_all_sheets)
-
-
 def process_json_upload() -> dict:
     # Top-level array of objects; nested values per row are preserved (downstream
     # VARIANT handles arbitrary nesting, same shape macros work with).
@@ -225,7 +207,7 @@ def process_ambyte_upload() -> dict:
     """Parse ambyte trace folders into rows, encode each row as JSON in uploaded_data,
     and write a single parquet under processed-uploads — same sink as the tabular
     processors. The downstream raw_uploaded_data / experiment_uploaded_data DLT
-    tables ingest these alongside csv/tsv/parquet/xlsx/json/ndjson uploads."""
+    tables ingest these alongside csv/tsv/parquet/json/ndjson uploads."""
     if not YEAR_PREFIX:
         raise Exception("YEAR_PREFIX is required for source_kind=ambyte")
     if not UPLOAD_TABLE_NAME:
@@ -405,7 +387,6 @@ PROCESSORS = {
     "csv": process_csv_upload,
     "tsv": process_tsv_upload,
     "parquet": process_parquet_upload,
-    "xlsx": process_xlsx_upload,
     "json": process_json_upload,
     "ndjson": process_ndjson_upload,
     "ambyte": process_ambyte_upload,
