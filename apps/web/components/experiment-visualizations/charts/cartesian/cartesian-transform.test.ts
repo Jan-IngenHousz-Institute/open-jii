@@ -84,6 +84,10 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, config, baseOptions);
     expect(result.chartSeries).toHaveLength(4);
     expect(result.chartSeries.map((s) => s.name)).toEqual(["a — A", "a — B", "b — A", "b — B"]);
+    // Every (series × category) combo shows in the legend; keying the
+    // legendgroup on the series alone used to hide all but the first category.
+    const visible = result.chartSeries.filter((s) => s.showlegend !== false).map((s) => s.name);
+    expect(visible).toEqual(["a — A", "a — B", "b — A", "b — B"]);
   });
 
   it("uses continuous-color path when supportsContinuousColor and color column is numeric", () => {
@@ -171,6 +175,26 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, config, baseOptions);
     const visibleInLegend = result.chartSeries.filter((s) => s.showlegend !== false);
     expect(visibleInLegend.map((s) => s.name).sort()).toEqual(["Arabidopsis", "Tomato"]);
+  });
+
+  it("shows every (series × category) once across facet cells with multiple Y series", () => {
+    const rows = [
+      { a: 1, b: 10, g: "Students", region: "North" },
+      { a: 2, b: 20, g: "Teachers", region: "North" },
+      { a: 3, b: 30, g: "Students", region: "South" },
+      { a: 4, b: 40, g: "Teachers", region: "South" },
+    ];
+    const sources = [ds("y", "a"), ds("y", "b"), ds("color", "g"), ds("facet", "region")];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    const visible = result.chartSeries.filter((s) => s.showlegend !== false).map((s) => s.name);
+    // Both groups for both series, each exactly once (not collapsed to just Students).
+    expect(visible.sort()).toEqual([
+      "a — Students",
+      "a — Teachers",
+      "b — Students",
+      "b — Teachers",
+    ]);
   });
 
   it("stacks area traces with `stack-${axis}` so primary and secondary axes stack independently", () => {

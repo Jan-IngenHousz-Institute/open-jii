@@ -280,6 +280,8 @@ export function transformCartesianData(
         const key = globalCategoryKeys[catIndex];
         const groupRows = cellByCategory.get(key)?.rows ?? [];
         const categoryLabel = categoryValue == null ? "(none)" : String(categoryValue);
+        const traceName =
+          effectiveYEntries.length === 1 ? categoryLabel : `${baseName} — ${categoryLabel}`;
         const x = sharedX ?? xByCategory.get(key) ?? [];
         const y = sharedX
           ? alignYToSharedX(groupRows, xColumn, yKey, sharedX)
@@ -298,8 +300,11 @@ export function transformCartesianData(
             baseName,
           ),
           sizeContext: sizeContextForGroup,
-          legendgroup: effectiveYEntries.length > 1 ? baseName : undefined,
-          name: effectiveYEntries.length === 1 ? categoryLabel : `${baseName} — ${categoryLabel}`,
+          // Group per (series × category) so each combo gets its own legend
+          // entry and toggles together across facet cells. Keying on the
+          // series alone collapsed every category into one legend row.
+          legendgroup: effectiveYEntries.length > 1 ? traceName : undefined,
+          name: traceName,
           x,
           y,
           errorValues,
