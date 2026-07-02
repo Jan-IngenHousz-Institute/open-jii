@@ -10,15 +10,33 @@ describe("pivotToMatrix", () => {
     expect(result.z).toEqual([]);
   });
 
-  it("preserves first-seen order for both axes", () => {
+  it("preserves first-seen order for string-category axes", () => {
     const rows = [
-      { x: "b", y: 2, z: 10 },
-      { x: "a", y: 1, z: 20 },
-      { x: "b", y: 1, z: 30 },
+      { x: "b", y: "hi", z: 10 },
+      { x: "a", y: "lo", z: 20 },
+      { x: "b", y: "lo", z: 30 },
     ];
     const result = pivotToMatrix(rows, "x", "y", "z");
     expect(result.xCategories).toEqual(["b", "a"]);
-    expect(result.yCategories).toEqual([2, 1]);
+    expect(result.yCategories).toEqual(["hi", "lo"]);
+  });
+
+  it("sorts a numeric axis ascending regardless of row order", () => {
+    // Rows arrive shuffled; a contour grid needs monotonic numeric axes or
+    // Plotly draws scrambled iso-lines.
+    const rows = [
+      { x: 2, y: 1.6, z: 10 },
+      { x: 0.2, y: 0.4, z: 20 },
+      { x: 1, y: 1.6, z: 30 },
+      { x: 0.2, y: 1.6, z: 40 },
+    ];
+    const result = pivotToMatrix(rows, "x", "y", "z");
+    expect(result.xCategories).toEqual([0.2, 1, 2]);
+    expect(result.yCategories).toEqual([0.4, 1.6]);
+    // z stays aligned to the sorted axes: (x=0.2, y=1.6) => 40.
+    const xi = result.xCategories.indexOf(0.2);
+    const yi = result.yCategories.indexOf(1.6);
+    expect(result.z[yi][xi]).toBe(40);
   });
 
   it("emits z indexed as `z[yIndex][xIndex]`", () => {
