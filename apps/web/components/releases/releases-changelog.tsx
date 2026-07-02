@@ -6,7 +6,7 @@ import type {
   ComponentReleaseNoteFieldsFragment as ReleaseNoteFields,
   ReleaseCategory,
 } from "@repo/cms";
-import { RELEASE_CATEGORIES, ReleaseFeature, ReleaseNotesFeed } from "@repo/cms";
+import { RELEASE_CATEGORIES, ReleaseHero, ReleaseNotesFeed } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -73,7 +73,7 @@ export function ReleasesChangelog({ entries, linkBaseHref }: ReleasesChangelogPr
 
   return (
     <div className="flex flex-col gap-10">
-      <ReleaseFeature entry={featured} linkBaseHref={linkBaseHref} />
+      <ReleaseHero entry={featured} linkBaseHref={linkBaseHref} linkTarget="_self" />
 
       {presentCategories.length > 0 && (
         <div className="flex flex-wrap gap-2" role="group" aria-label={t("releases.heading")}>

@@ -17,15 +17,19 @@ import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "..
 import { isVideoAsset } from "../contentful/ctf-video";
 import { getCategoryMeta } from "./category";
 
-interface ReleaseFeatureProps {
+interface ReleaseHeroProps {
   entry: ReleaseNoteFields;
-  /** Base path for the detail link; the hero links to `${linkBaseHref}/${slug}`. */
+  /** Title heading level: the /releases index hero uses "h2"; the /releases/[slug] permalink uses "h1". */
+  headingLevel?: "h1" | "h2";
+  /** Base path for the detail link; when set (and the note has a slug) the title links to `${linkBaseHref}/${slug}`. Omit on the detail page itself so the title stays a plain heading. */
   linkBaseHref?: string;
-  /** Target for the detail link (default same-tab). */
+  /** Target for the title / "Read more" link (default same-tab). */
   linkTarget?: "_blank" | "_self";
+  /** Render the "Read more" link to the detail page. Turn off on the detail page — you're already there. */
+  showReadMore?: boolean;
 }
 
-/** Absolute publish date ("July 1, 2026") — matches the /releases/[slug] article header. */
+/** Absolute publish date ("July 1, 2026") — shared by the /releases hero and the /releases/[slug] header. */
 function formatDate(iso: string, locale: string): string | null {
   const ms = new Date(iso).getTime();
   if (Number.isNaN(ms)) return null;
@@ -37,15 +41,19 @@ function formatDate(iso: string, locale: string): string | null {
 }
 
 /**
- * Spotlights the newest release note at the top of the public /releases page (OJD-1394) — the
- * changelog's answer to the blog's featured ArticleHero: a large split card, media on one side and
- * title/summary/CTA on the other. Falls back to a full-width, text-forward layout when the note has
- * no media, so a media-less release still reads as intentional rather than broken.
+ * The split-card release-note hero shared by the public /releases index (spotlighting the newest
+ * note, `ReleaseNotesFeed`'s companion) and the top of the /releases/[slug] permalink
+ * (`ReleaseNoteArticle`, which renders the full body below it). Media on one side, badge/date/
+ * title/summary/CTA on the other, collapsing to a text-forward layout when the note has no media.
+ * The two surfaces differ only in `headingLevel` (h1 on the permalink for SEO) and `showReadMore`
+ * (off on the permalink). Wired for Contentful draft preview + live updates + inspector.
  */
-export const ReleaseFeature: React.FC<ReleaseFeatureProps> = ({
+export const ReleaseHero: React.FC<ReleaseHeroProps> = ({
   entry,
+  headingLevel = "h2",
   linkBaseHref,
   linkTarget = "_self",
+  showReadMore = true,
 }) => {
   const { t } = useTranslation("navigation");
   const locale = useCurrentLocale(i18nConfig) ?? "en-US";
@@ -61,6 +69,10 @@ export const ReleaseFeature: React.FC<ReleaseFeatureProps> = ({
 
   const href = linkBaseHref && live.slug ? `${linkBaseHref}/${live.slug}` : undefined;
   const linkRel = linkTarget === "_blank" ? "noopener noreferrer" : undefined;
+  const Heading = headingLevel;
+
+  const hasReadMore = Boolean(href && showReadMore);
+  const hasCta = Boolean(live.cta?.url && live.cta.label);
 
   return (
     <article
@@ -114,7 +126,7 @@ export const ReleaseFeature: React.FC<ReleaseFeatureProps> = ({
           )}
         </div>
 
-        <h2
+        <Heading
           className="text-foreground text-2xl font-semibold leading-tight tracking-tight md:text-3xl"
           {...inspectorProps({ fieldId: "title" })}
         >
@@ -130,7 +142,7 @@ export const ReleaseFeature: React.FC<ReleaseFeatureProps> = ({
           ) : (
             live.title
           )}
-        </h2>
+        </Heading>
 
         {live.summary && (
           <p
@@ -141,33 +153,35 @@ export const ReleaseFeature: React.FC<ReleaseFeatureProps> = ({
           </p>
         )}
 
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          {href && (
-            <a
-              href={href}
-              target={linkTarget}
-              rel={linkRel}
-              className="bg-primary text-primary-foreground hover:bg-primary-light inline-flex w-fit items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-            >
-              {t("whatsNew.readMore")}
-              <ArrowRight className="size-3.5" />
-            </a>
-          )}
-          {live.cta?.url && live.cta.label && (
-            <Button
-              asChild
-              size="sm"
-              variant="secondary"
-              className="w-fit"
-              {...inspectorProps({ fieldId: "cta" })}
-            >
-              <a href={live.cta.url} target="_blank" rel="noopener noreferrer">
-                {live.cta.label}
+        {(hasReadMore || hasCta) && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {hasReadMore && (
+              <a
+                href={href}
+                target={linkTarget}
+                rel={linkRel}
+                className="bg-primary text-primary-foreground hover:bg-primary-light inline-flex w-fit items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+              >
+                {t("whatsNew.readMore")}
                 <ArrowRight className="size-3.5" />
               </a>
-            </Button>
-          )}
-        </div>
+            )}
+            {live.cta?.url && live.cta.label && (
+              <Button
+                asChild
+                size="sm"
+                variant="secondary"
+                className="w-fit"
+                {...inspectorProps({ fieldId: "cta" })}
+              >
+                <a href={live.cta.url} target="_blank" rel="noopener noreferrer">
+                  {live.cta.label}
+                  <ArrowRight className="size-3.5" />
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

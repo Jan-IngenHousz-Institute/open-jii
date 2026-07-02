@@ -31,7 +31,7 @@ export type { PageForceUpdateFieldsFragment } from "./lib/__generated/sdk";
 export { ReleaseNotesFeed } from "./features/release-notes/release-notes-feed";
 export { ReleaseNoteEntry } from "./features/release-notes/release-note-entry";
 export { ReleaseNoteArticle } from "./features/release-notes/release-note-article";
-export { ReleaseFeature } from "./features/release-notes/release-feature";
+export { ReleaseHero } from "./features/release-notes/release-hero";
 export type { ComponentReleaseNoteFieldsFragment } from "./lib/__generated/sdk";
 export {
   getCategoryMeta,

@@ -82,7 +82,7 @@ export default async function ReleaseDetailPage({ params }: ReleaseDetailPagePro
   return (
     <TranslationsProvider locale={locale} namespaces={["navigation"]} resources={resources}>
       <div className="py-16 md:py-20">
-        <Container className="max-w-3xl">
+        <Container className="max-w-4xl">
           <Link
             href={`/${locale}/releases`}
             className="text-muted-foreground hover:text-foreground mb-8 inline-flex items-center gap-1.5 text-sm"
