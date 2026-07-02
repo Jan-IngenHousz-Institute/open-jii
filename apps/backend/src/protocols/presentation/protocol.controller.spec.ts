@@ -61,7 +61,7 @@ describe("ProtocolController - createProtocol", () => {
   });
 });
 
-describe("ProtocolController - read endpoints", () => {
+describe("ProtocolController - read and update endpoints", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
 
@@ -119,6 +119,21 @@ describe("ProtocolController - read endpoints", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
+  });
+
+  it("updateProtocol returns 403 when a non-creator tries to update", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Owned Protocol",
+      createdBy: testUserId,
+    });
+    const otherUserId = await testApp.createTestUser({});
+
+    const path = testApp.resolveOrpcPath(contract.protocols.updateProtocol, { id: protocol.id });
+    await testApp
+      .patch(path)
+      .withAuth(otherUserId)
+      .send({ name: "Hijacked" })
+      .expect(StatusCodes.FORBIDDEN);
   });
 });
 
