@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -66,7 +66,7 @@ export function VisualizationSettingsMenu({
 
   const handleConfirmDelete = () => {
     deleteVisualization(
-      { params: { id: experimentId, visualizationId: visualization.id } },
+      { id: experimentId, visualizationId: visualization.id },
       {
         onError: (err) => {
           const message = parseApiError(err)?.message ?? tCommon("ui.actions.error");

@@ -72,7 +72,7 @@ describe("WorkbookController", () => {
       vi.spyOn(createWorkbookUseCase, "execute").mockResolvedValue(success(mock));
 
       const response = await testApp
-        .post(contract.workbooks.createWorkbook.path)
+        .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
         .withAuth(testUserId)
         .send({ name: "Test Workbook", description: "A test workbook" })
         .expect(StatusCodes.CREATED);
@@ -87,7 +87,7 @@ describe("WorkbookController", () => {
 
     it("should reject invalid body (missing name)", async () => {
       await testApp
-        .post(contract.workbooks.createWorkbook.path)
+        .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
         .withAuth(testUserId)
         .send({ description: "No name" })
         .expect(StatusCodes.BAD_REQUEST);
@@ -99,7 +99,7 @@ describe("WorkbookController", () => {
       );
 
       await testApp
-        .post(contract.workbooks.createWorkbook.path)
+        .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
         .withAuth(testUserId)
         .send({ name: "Test" })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -107,7 +107,7 @@ describe("WorkbookController", () => {
 
     it("should return 401 without auth", async () => {
       await testApp
-        .post(contract.workbooks.createWorkbook.path)
+        .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
         .withoutAuth()
         .send({ name: "Test" })
         .expect(StatusCodes.UNAUTHORIZED);
@@ -119,7 +119,7 @@ describe("WorkbookController", () => {
       const mock = mockWorkbook();
       vi.spyOn(getWorkbookUseCase, "execute").mockResolvedValue(success(mock));
 
-      const path = testApp.resolvePath(contract.workbooks.getWorkbook.path, { id: mock.id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbook, { id: mock.id });
       const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -134,7 +134,7 @@ describe("WorkbookController", () => {
       );
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.getWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbook, { id });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -145,7 +145,7 @@ describe("WorkbookController", () => {
       vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success(mocks));
 
       const response = await testApp
-        .get(contract.workbooks.listWorkbooks.path)
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -156,7 +156,7 @@ describe("WorkbookController", () => {
       const executeSpy = vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success([]));
 
       await testApp
-        .get(contract.workbooks.listWorkbooks.path)
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .query({ search: "test", filter: "my" })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -174,7 +174,7 @@ describe("WorkbookController", () => {
       );
 
       await testApp
-        .get(contract.workbooks.listWorkbooks.path)
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -185,7 +185,7 @@ describe("WorkbookController", () => {
       const mock = mockWorkbook({ name: "Updated Name" });
       vi.spyOn(updateWorkbookUseCase, "execute").mockResolvedValue(success(mock));
 
-      const path = testApp.resolvePath(contract.workbooks.updateWorkbook.path, { id: mock.id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id: mock.id });
       const response = await testApp
         .patch(path)
         .withAuth(testUserId)
@@ -201,7 +201,7 @@ describe("WorkbookController", () => {
       );
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.updateWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id });
       await testApp
         .patch(path)
         .withAuth(testUserId)
@@ -215,7 +215,7 @@ describe("WorkbookController", () => {
       );
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.updateWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id });
       await testApp
         .patch(path)
         .withAuth(testUserId)
@@ -229,7 +229,7 @@ describe("WorkbookController", () => {
       vi.spyOn(deleteWorkbookUseCase, "execute").mockResolvedValue(success(undefined));
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.deleteWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id });
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
     });
 
@@ -239,7 +239,7 @@ describe("WorkbookController", () => {
       );
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.deleteWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id });
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.FORBIDDEN);
     });
 
@@ -249,7 +249,7 @@ describe("WorkbookController", () => {
       );
 
       const id = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.deleteWorkbook.path, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id });
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -271,7 +271,7 @@ describe("WorkbookController", () => {
       vi.spyOn(listWorkbookVersionsUseCase, "execute").mockResolvedValue(success(versions));
 
       const workbookId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.listWorkbookVersions.path, {
+      const path = testApp.resolveOrpcPath(contract.workbooks.listWorkbookVersions, {
         id: workbookId,
       });
       const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
@@ -286,7 +286,7 @@ describe("WorkbookController", () => {
       vi.spyOn(listWorkbookVersionsUseCase, "execute").mockResolvedValue(success([]));
 
       const workbookId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.listWorkbookVersions.path, {
+      const path = testApp.resolveOrpcPath(contract.workbooks.listWorkbookVersions, {
         id: workbookId,
       });
       const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
@@ -300,7 +300,7 @@ describe("WorkbookController", () => {
       );
 
       const workbookId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.workbooks.listWorkbookVersions.path, {
+      const path = testApp.resolveOrpcPath(contract.workbooks.listWorkbookVersions, {
         id: workbookId,
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -323,7 +323,7 @@ describe("WorkbookController", () => {
       const version = mockVersion();
       vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(success(version));
 
-      const path = testApp.resolvePath(contract.workbooks.getWorkbookVersion.path, {
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
         id: version.workbookId,
         versionId: version.id,
       });
@@ -340,7 +340,7 @@ describe("WorkbookController", () => {
         failure(AppError.notFound("Version not found")),
       );
 
-      const path = testApp.resolvePath(contract.workbooks.getWorkbookVersion.path, {
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
         id: faker.string.uuid(),
         versionId: faker.string.uuid(),
       });

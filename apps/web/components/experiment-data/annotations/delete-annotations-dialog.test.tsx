@@ -3,7 +3,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DeleteAnnotationsDialog } from "./delete-annotations-dialog";
@@ -12,7 +12,7 @@ const mockProps = {
   experimentId: "exp-123",
   tableName: "test-table",
   rowIds: ["1", "2", "3"],
-  type: "comment" as AnnotationType,
+  type: "comment" as ExperimentAnnotationType,
   open: true,
   setOpen: vi.fn(),
   clearSelection: vi.fn(),

@@ -171,12 +171,10 @@ export function RegistrationForm({
       }
 
       await createUserProfile({
-        body: {
-          firstName: data.firstName ?? "",
-          lastName: data.lastName ?? "",
-          organization: data.organization,
-          avatarUrl: session?.user.image ?? null,
-        },
+        firstName: data.firstName ?? "",
+        lastName: data.lastName ?? "",
+        organization: data.organization,
+        avatarUrl: session?.user.image ?? null,
       });
     } catch {
       toast({ description: t("registration.errorMessage") || "Registration failed" });

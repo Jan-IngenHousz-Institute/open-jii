@@ -5,7 +5,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ProtocolCellComponent } from "./protocol-cell";

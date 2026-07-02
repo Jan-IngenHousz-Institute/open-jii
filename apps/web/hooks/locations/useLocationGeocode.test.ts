@@ -18,7 +18,7 @@ describe("useLocationGeocode", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject([{ label: "Berlin Office" }]);
+    expect(result.current.data).toMatchObject([{ label: "Berlin Office" }]);
   });
 
   it("does not fire when latitude is NaN", async () => {

@@ -21,7 +21,7 @@ import {
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 interface MeasurementFlowStore extends FlowState {
   // AutoProceededSummary anchor: first manual question at the start of the

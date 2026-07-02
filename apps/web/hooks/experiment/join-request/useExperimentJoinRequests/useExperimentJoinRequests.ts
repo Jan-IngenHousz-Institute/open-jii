@@ -1,9 +1,11 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 export const useExperimentJoinRequests = (experimentId: string) => {
-  return tsr.experiments.listJoinRequests.useQuery({
-    queryData: { params: { id: experimentId } },
-    queryKey: ["experiment-join-requests", experimentId],
-    enabled: !!experimentId,
-  });
+  return useQuery(
+    orpc.experiments.listJoinRequests.queryOptions({
+      input: { id: experimentId },
+      enabled: !!experimentId,
+    }),
+  );
 };

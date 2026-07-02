@@ -3,7 +3,7 @@
 import { ListOrdered } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { TableWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTableWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -22,7 +22,7 @@ import { WidgetDisplayPopover } from "./widget-display-popover";
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 interface TableWidgetStripProps {
-  widget: TableWidget;
+  widget: ExperimentTableWidget;
   widgetIndex: number;
 }
 
@@ -33,7 +33,7 @@ export function TableWidgetStrip({ widget, widgetIndex }: TableWidgetStripProps)
   const { t } = useTranslation("experimentDashboards");
   const form = useFormContext<DashboardFormValues>();
 
-  const setConfig = (next: Partial<TableWidget["config"]>) => {
+  const setConfig = (next: Partial<ExperimentTableWidget["config"]>) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, ...next },

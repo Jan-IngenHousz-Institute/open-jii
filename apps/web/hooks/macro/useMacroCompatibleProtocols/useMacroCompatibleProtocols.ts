@@ -1,4 +1,5 @@
-import { tsr } from "../../../lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to fetch compatible protocols for a macro
@@ -6,9 +7,10 @@ import { tsr } from "../../../lib/tsr";
  * @param enabled Whether to enable the query (default: true)
  */
 export const useMacroCompatibleProtocols = (macroId: string, enabled = true) => {
-  return tsr.macros.listCompatibleProtocols.useQuery({
-    queryData: { params: { id: macroId } },
-    queryKey: ["macro-compatible-protocols", macroId],
-    enabled: enabled && !!macroId,
-  });
+  return useQuery(
+    orpc.macros.listCompatibleProtocols.queryOptions({
+      input: { id: macroId },
+      enabled: enabled && !!macroId,
+    }),
+  );
 };

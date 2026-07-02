@@ -48,7 +48,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.attachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       const response = await testApp
         .post(path)
         .withAuth(testUserId)
@@ -64,13 +64,13 @@ describe("ExperimentWorkbooksController", () => {
 
     it("should return 400 for invalid body (missing workbookId)", async () => {
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.attachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 without auth", async () => {
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.attachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
         .withoutAuth()
@@ -84,7 +84,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.attachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
         .withAuth(testUserId)
@@ -98,7 +98,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.attachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
         .withAuth(testUserId)
@@ -126,7 +126,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.detachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({ workbookId: null });
@@ -134,7 +134,7 @@ describe("ExperimentWorkbooksController", () => {
 
     it("should return 401 without auth", async () => {
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.detachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       await testApp.post(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -144,7 +144,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.detachWorkbook.path, { id: expId });
+      const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
   });
@@ -158,7 +158,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.upgradeWorkbookVersion.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
       const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
@@ -172,7 +172,7 @@ describe("ExperimentWorkbooksController", () => {
 
     it("should return 401 without auth", async () => {
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.upgradeWorkbookVersion.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
       await testApp.post(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
@@ -184,7 +184,7 @@ describe("ExperimentWorkbooksController", () => {
       );
 
       const expId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.upgradeWorkbookVersion.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
       await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);

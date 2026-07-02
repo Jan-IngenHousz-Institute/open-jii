@@ -6,7 +6,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../../charts/basic/line";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -27,7 +27,7 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
 
 interface HarnessOptions {
   selectedTableName?: string;
-  columns?: DataColumn[];
+  columns?: ExperimentDataColumn[];
   isTablesLoading?: boolean;
   isColumnsLoading?: boolean;
   tablesError?: unknown;
@@ -117,7 +117,7 @@ describe("DataTabContent", () => {
 
   it("renders the data panel and filters shelf once columns are available", async () => {
     mountDistinct();
-    const columns: DataColumn[] = [
+    const columns: ExperimentDataColumn[] = [
       { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
       { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
     ];

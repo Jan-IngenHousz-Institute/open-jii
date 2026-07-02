@@ -32,8 +32,8 @@ export function ExperimentAnonymizeToggle({
     setEnabled(next);
     updateExperiment(
       {
-        params: { id: experimentId },
-        body: { anonymizeContributors: next },
+        id: experimentId,
+        anonymizeContributors: next,
       },
       {
         onSuccess: () => toast({ description: t("experiments.experimentUpdated") }),

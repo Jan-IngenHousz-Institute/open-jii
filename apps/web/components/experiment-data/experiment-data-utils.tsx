@@ -8,8 +8,11 @@ import type {
   TableMetadata,
 } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes, ColumnPrimitiveType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import {
+  WellKnownColumnTypes,
+  ExperimentColumnPrimitiveType,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   isNumericType,
   isMapType,
@@ -20,7 +23,7 @@ import {
   isSortableType,
   isWellKnownSortableType,
   getWellKnownSortField,
-} from "@repo/api/utils/column-type-utils";
+} from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/table";
@@ -76,8 +79,8 @@ export function formatValue(
   rowId: string,
   columnName?: string,
   onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], annotationType: AnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], annotationType: AnnotationType) => void,
+  onAddAnnotation?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
+  onDeleteAnnotations?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
   onToggleCellExpansion?: (rowId: string, columnName: string) => void,
   isCellExpanded?: (rowId: string, columnName: string) => boolean,
   errorColumn?: string,
@@ -89,20 +92,23 @@ export function formatValue(
 
   // Exact type matches
   const exactTypeFormatters: Record<string, () => string | React.JSX.Element> = {
-    [ColumnPrimitiveType.DOUBLE]: () => (
+    [ExperimentColumnPrimitiveType.DOUBLE]: () => (
       <div className="text-right tabular-nums">{value as number}</div>
     ),
-    [ColumnPrimitiveType.INT]: () => (
+    [ExperimentColumnPrimitiveType.INT]: () => (
       <div className="text-right tabular-nums">{value as number}</div>
     ),
-    [ColumnPrimitiveType.LONG]: () => (
+    [ExperimentColumnPrimitiveType.LONG]: () => (
       <div className="text-right tabular-nums">{value as number}</div>
     ),
-    [ColumnPrimitiveType.BIGINT]: () => (
+    [ExperimentColumnPrimitiveType.BIGINT]: () => (
       <div className="text-right tabular-nums">{value as number}</div>
     ),
-    [ColumnPrimitiveType.TIMESTAMP]: () => (value as string).substring(0, 19).replace("T", " "),
-    [ColumnPrimitiveType.STRING]: () => <ExperimentDataTableTextCell text={value as string} />,
+    [ExperimentColumnPrimitiveType.TIMESTAMP]: () =>
+      (value as string).substring(0, 19).replace("T", " "),
+    [ExperimentColumnPrimitiveType.STRING]: () => (
+      <ExperimentDataTableTextCell text={value as string} />
+    ),
     [WellKnownColumnTypes.CONTRIBUTOR]: () => (
       <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
     ),

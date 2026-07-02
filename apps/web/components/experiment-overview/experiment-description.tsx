@@ -27,8 +27,8 @@ export function ExperimentDescription({
   const handleSave = async (newDescription: string) => {
     await updateExperiment(
       {
-        params: { id: experimentId },
-        body: { description: newDescription },
+        id: experimentId,
+        description: newDescription,
       },
       {
         onSuccess: () => {

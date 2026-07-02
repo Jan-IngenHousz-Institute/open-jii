@@ -5,8 +5,8 @@ import { useId, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { isCategoricalColumnType } from "@repo/api/utils/column-type-utils";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -33,7 +33,7 @@ import { ContinuousColorSettings } from "./continuous-color-settings";
 
 interface ColorDimensionShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   categoricalOnly?: boolean;
   /** Render inline with no Collapsible chrome (for popover-hosted shelves). */
   flat?: boolean;

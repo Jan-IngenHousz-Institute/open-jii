@@ -1,4 +1,4 @@
-import type { OutputCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { OutputCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 export interface HydrationContext {
   iterationCount: number;

@@ -19,7 +19,7 @@ import { useState } from "react";
 import type {
   OutputCell as OutputCellType,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
@@ -198,8 +198,8 @@ export function OutputCellComponent({
     sourceProtocolId ?? "",
     !!sourceProtocolId,
   );
-  const protocolFamily = protocolResponse?.body.family;
-  const protocolCode = protocolResponse?.body.code;
+  const protocolFamily = protocolResponse?.family;
+  const protocolCode = protocolResponse?.code;
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (

@@ -26,9 +26,11 @@ vi.mock("@tanstack/react-query", async (importActual) => {
   return {
     ...actual,
     useIsFetching: (filters?: { queryKey?: unknown[] }) => {
-      const scope = filters?.queryKey?.[0];
-      if (scope === "workbook") return syncState.workbook;
-      if (scope === "workbookVersions") return syncState.versions;
+      // oRPC query keys look like [["workbooks", "<endpoint>"], { input }].
+      const path = filters?.queryKey?.[0];
+      const endpoint: unknown = Array.isArray(path) ? path[1] : undefined;
+      if (endpoint === "getWorkbook") return syncState.workbook;
+      if (endpoint === "listWorkbookVersions") return syncState.versions;
       return 0;
     },
     useIsMutating: (filters?: { mutationKey?: unknown[] }) => {
@@ -93,7 +95,7 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
     syncState.versions = 0;
     syncState.mutating = 0;
     syncState.upgrading = 0;
-    mockUseWorkbookVersions.mockReturnValue({ data: { body: [pinnedVersion] } });
+    mockUseWorkbookVersions.mockReturnValue({ data: [pinnedVersion] });
   });
 
   it("shows the banner when the workbook is upgradable and all state is settled", () => {

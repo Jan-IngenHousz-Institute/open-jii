@@ -1,6 +1,6 @@
 "use client";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { useExperimentDistinctValues } from "../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
@@ -10,7 +10,7 @@ import { useContributorIdMap } from "../use-distinct-options";
 const NO_VALUE = "-";
 
 export interface ContributorChipValueProps {
-  filterValue: DataFilter["value"];
+  filterValue: ExperimentDataFilter["value"];
   parentColumn: string;
   experimentId: string | undefined;
   tableName: string | undefined;
@@ -52,7 +52,7 @@ export function ContributorChipValue({
   return <ContributorIdentity data={struct} size="compact" className={className} />;
 }
 
-function collectSelectedIds(filterValue: DataFilter["value"]): string[] {
+function collectSelectedIds(filterValue: ExperimentDataFilter["value"]): string[] {
   if (Array.isArray(filterValue)) {
     return filterValue.map((v) => String(v));
   }

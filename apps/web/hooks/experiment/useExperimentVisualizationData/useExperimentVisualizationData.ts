@@ -1,23 +1,27 @@
 import { shouldRetryQuery } from "@/util/query-retry";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
+import { orpc } from "~/lib/orpc";
 
-import type { DataAggregation, DataFilter } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentDataAggregation,
+  ExperimentDataFilter,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 const STALE_TIME = 2 * 60 * 1000;
 
 export interface VisualizationDataConfig {
   tableName: string;
   columns?: string[];
-  filters?: DataFilter[];
-  aggregation?: DataAggregation;
+  filters?: ExperimentDataFilter[];
+  aggregation?: ExperimentDataAggregation;
   extraGroupByColumns?: string[];
   orderBy?: string;
   orderDirection?: "ASC" | "DESC";
 }
 
-function hasAggregationContent(agg: DataAggregation | undefined): boolean {
+function hasAggregationContent(agg: ExperimentDataAggregation | undefined): boolean {
   if (!agg) {
     return false;
   }
@@ -25,7 +29,9 @@ function hasAggregationContent(agg: DataAggregation | undefined): boolean {
 }
 
 // Drop draft rows the inspector keeps around mid-edit; the API rejects them.
-function compactFilters(filters: DataFilter[] | undefined): DataFilter[] | undefined {
+function compactFilters(
+  filters: ExperimentDataFilter[] | undefined,
+): ExperimentDataFilter[] | undefined {
   if (!filters || filters.length === 0) {
     return undefined;
   }
@@ -44,7 +50,9 @@ function compactFilters(filters: DataFilter[] | undefined): DataFilter[] | undef
   return compact.length > 0 ? compact : undefined;
 }
 
-function compactAggregation(agg: DataAggregation | undefined): DataAggregation | undefined {
+function compactAggregation(
+  agg: ExperimentDataAggregation | undefined,
+): ExperimentDataAggregation | undefined {
   if (!agg) {
     return undefined;
   }
@@ -61,7 +69,7 @@ function compactAggregation(agg: DataAggregation | undefined): DataAggregation |
 
 // Maps groupBy aliases (`timestamp_hour`) back to source column.
 // Function aliases stay verbatim, they're per-series keys the renderer reads directly.
-function buildAliasMap(aggregation: DataAggregation): Record<string, string> {
+function buildAliasMap(aggregation: ExperimentDataAggregation): Record<string, string> {
   const map: Record<string, string> = {};
   for (const item of aggregation.groupBy ?? []) {
     const alias = item.timeBucket ? `${item.column}_${item.timeBucket}` : item.column;
@@ -73,7 +81,7 @@ function buildAliasMap(aggregation: DataAggregation): Record<string, string> {
 // Window functions skip GROUP BY; keep this in sync with the SQL builder.
 const WINDOW_FUNCTIONS: ReadonlySet<string> = new Set(["cumsum"]);
 
-function isWindowOnlyAggregation(aggregation: DataAggregation): boolean {
+function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolean {
   if ((aggregation.groupBy?.length ?? 0) > 0) {
     return false;
   }
@@ -121,7 +129,7 @@ function flattenContributorCells<
 // Returns undefined to drop the order when the column isn't projected.
 function resolveOrderByForAggregation(
   orderBy: string | undefined,
-  aggregation: DataAggregation,
+  aggregation: ExperimentDataAggregation,
 ): string | undefined {
   if (!orderBy) {
     return undefined;
@@ -192,10 +200,10 @@ export const useExperimentVisualizationData = (
       : dataConfig.orderBy;
   const effectiveOrderDirection = effectiveOrderBy ? dataConfig.orderDirection : undefined;
 
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperimentData.queryOptions({
+      input: {
+        id: experimentId,
         tableName: dataConfig.tableName,
         columns: columnsCsv,
         filters: filtersJson,
@@ -203,25 +211,15 @@ export const useExperimentVisualizationData = (
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
-    },
-    queryKey: [
-      "experiment-visualization-data",
-      experimentId,
-      dataConfig.tableName,
-      columnsCsv,
-      filtersJson,
-      aggregationJson,
-      effectiveOrderBy,
-      effectiveOrderDirection,
-    ],
-    staleTime: STALE_TIME,
-    enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: shouldRetryQuery,
-  });
+      staleTime: STALE_TIME,
+      enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: shouldRetryQuery,
+    }),
+  );
 
-  const tableData = data?.body[0];
+  const tableData = data?.[0];
 
   const remappedData = useMemo(() => {
     if (!tableData?.data) {

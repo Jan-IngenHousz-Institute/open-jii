@@ -22,7 +22,7 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
     return <div>{t("experimentSettings.notFound")}</div>;
   }
 
-  const experiment = data.body;
+  const experiment = data;
 
   return (
     <div className="space-y-6">

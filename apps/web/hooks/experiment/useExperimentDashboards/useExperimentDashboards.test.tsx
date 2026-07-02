@@ -24,7 +24,7 @@ describe("useExperimentDashboards", () => {
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data?.body).toHaveLength(2);
+    expect(result.current.data).toHaveLength(2);
     expect(result.current.error).toBeNull();
   });
 
@@ -55,7 +55,7 @@ describe("useExperimentDashboards", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.hasNextPage).toBe(true);
-    expect(result.current.data?.body).toHaveLength(50);
+    expect(result.current.data).toHaveLength(50);
   });
 
   it("does not report a phantom next page when results exactly fill the limit", async () => {

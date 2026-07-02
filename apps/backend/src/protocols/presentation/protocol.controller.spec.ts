@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolMacroList } from "@repo/api/schemas/protocol.schema";
+import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
 import { macros } from "@repo/database";
 
 import { AppError, failure } from "../../common/utils/fp-utils";
@@ -11,7 +11,7 @@ import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { ProtocolMacroRepository } from "../core/repositories/protocol-macro.repository";
 
-describe("ProtocolController – createProtocol", () => {
+describe("ProtocolController - createProtocol", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let createProtocolUseCase: CreateProtocolUseCase;
@@ -49,7 +49,7 @@ describe("ProtocolController – createProtocol", () => {
 
     // Act
     const response = await testApp
-      .post(contract.protocols.createProtocol.path)
+      .post(testApp.resolveOrpcPath(contract.protocols.createProtocol))
       .withAuth(testUserId)
       .send(protocolData)
       .expect(StatusCodes.CONFLICT);
@@ -61,7 +61,83 @@ describe("ProtocolController – createProtocol", () => {
   });
 });
 
-describe("ProtocolController – protocol-macro endpoints", () => {
+describe("ProtocolController - read and update endpoints", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("getProtocol returns 200 with the protocol and parsed code", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Readable Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: protocol.id });
+    const response: SuperTestResponse<{ id: string; name: string; code: unknown[] }> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body).toMatchObject({ id: protocol.id, name: "Readable Protocol" });
+    expect(Array.isArray(response.body.code)).toBe(true);
+  });
+
+  it("getProtocol returns 404 for an unknown id", async () => {
+    const path = testApp.resolveOrpcPath(contract.protocols.getProtocol, {
+      id: faker.string.uuid(),
+    });
+
+    await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+  });
+
+  it("listProtocols returns 200 including the created protocol", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Listed Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+    const response: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
+  });
+
+  it("updateProtocol returns 403 when a non-creator tries to update", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Owned Protocol",
+      createdBy: testUserId,
+    });
+    const otherUserId = await testApp.createTestUser({});
+
+    const path = testApp.resolveOrpcPath(contract.protocols.updateProtocol, { id: protocol.id });
+    await testApp
+      .patch(path)
+      .withAuth(otherUserId)
+      .send({ name: "Hijacked" })
+      .expect(StatusCodes.FORBIDDEN);
+  });
+});
+
+describe("ProtocolController - protocol-macro endpoints", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let protocolMacroRepository: ProtocolMacroRepository;
@@ -111,7 +187,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro2 = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro1.id, macro2.id]);
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -132,7 +208,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -146,7 +222,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
         createdBy: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -155,7 +231,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
     it("should return 404 for unknown protocol", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, {
         id: nonExistentId,
       });
 
@@ -172,7 +248,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -194,7 +270,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
 
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -214,7 +290,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const otherUserId = await testApp.createTestUser({ email: "other-ctrl@example.com" });
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.addCompatibleMacros, {
         id: protocol.id,
       });
 
@@ -229,7 +305,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const macro = await createTestMacro(testUserId);
 
-      const path = testApp.resolvePath(contract.protocols.addCompatibleMacros.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.addCompatibleMacros, {
         id: nonExistentId,
       });
 
@@ -251,7 +327,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -259,7 +335,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Verify it was actually removed
-      const listPath = testApp.resolvePath(contract.protocols.listCompatibleMacros.path, {
+      const listPath = testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, {
         id: protocol.id,
       });
       const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
@@ -275,7 +351,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -293,7 +369,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const macro = await createTestMacro(testUserId);
       await protocolMacroRepository.addMacros(protocol.id, [macro.id]);
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.removeCompatibleMacro, {
         id: protocol.id,
         macroId: macro.id,
       });
@@ -305,7 +381,7 @@ describe("ProtocolController – protocol-macro endpoints", () => {
       const nonExistentId = faker.string.uuid();
       const fakeMacroId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.protocols.removeCompatibleMacro.path, {
+      const path = testApp.resolveOrpcPath(contract.protocols.removeCompatibleMacro, {
         id: nonExistentId,
         macroId: fakeMacroId,
       });

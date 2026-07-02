@@ -2,11 +2,11 @@ import { render, screen } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it } from "vitest";
 
-import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 import { UploadHistoryContent } from "./upload-history-content";
 
-function makeUpload(id: string, name: string): UploadMetadata {
+function makeUpload(id: string, name: string): ExperimentUploadMetadata {
   return {
     uploadId: id,
     experimentId: "exp-1",

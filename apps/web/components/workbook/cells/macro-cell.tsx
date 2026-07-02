@@ -8,8 +8,8 @@ import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
-import type { MacroCell as MacroCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import type { MacroCell as MacroCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -95,7 +95,7 @@ export function MacroCellComponent({
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveMacro(
-          { params: { id: macroId }, body: { code: encodeBase64(code) } },
+          { id: macroId, code: encodeBase64(code) },
           {
             onSuccess: () => {
               savedKeyRef.current = code;
@@ -114,7 +114,7 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      saveMacro({ params: { id: macroId }, body: { language: lang } });
+      saveMacro({ id: macroId, language: lang });
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
     [macroId, saveMacro, cell, onUpdate],

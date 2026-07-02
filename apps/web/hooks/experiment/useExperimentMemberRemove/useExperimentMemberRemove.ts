@@ -1,52 +1,55 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 
 /**
  * Hook to remove a member from an experiment
  * @returns Mutation object for removing members from an experiment
  */
 export const useExperimentMemberRemove = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.experiments.removeExperimentMember.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["experiment-members", variables.params.id],
-      });
-
-      // Get current members
-      const previousMembers = queryClient.getQueryData<{
-        body: ExperimentMember[];
-      }>(["experiment-members", variables.params.id]);
-
-      // Optimistically remove the member from the cache
-      if (previousMembers?.body) {
-        queryClient.setQueryData(["experiment-members", variables.params.id], {
-          ...previousMembers,
-          body: previousMembers.body.filter(
-            (member) => member.user.id !== variables.params.memberId,
-          ),
+  return useMutation(
+    orpc.experiments.removeExperimentMember.mutationOptions({
+      onMutate: async (variables) => {
+        const membersKey = orpc.experiments.listExperimentMembers.queryKey({
+          input: { id: variables.id },
         });
-      }
 
-      return { previousMembers };
-    },
-    onError: (error, variables, context) => {
-      // Revert to previous state on error
-      if (context?.previousMembers) {
-        queryClient.setQueryData(
-          ["experiment-members", variables.params.id],
-          context.previousMembers,
-        );
-      }
-    },
-    onSettled: async (data, error, variables) => {
-      // Always refetch to ensure cache is in sync with server
-      await queryClient.invalidateQueries({
-        queryKey: ["experiment-members", variables.params.id],
-      });
-    },
-  });
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: membersKey });
+
+        // Get current members
+        const previousMembers = queryClient.getQueryData<ExperimentMember[]>(membersKey);
+
+        // Optimistically remove the member from the cache
+        if (previousMembers) {
+          queryClient.setQueryData(
+            membersKey,
+            previousMembers.filter((member) => member.user.id !== variables.memberId),
+          );
+        }
+
+        return { previousMembers };
+      },
+      onError: (_error, variables, context) => {
+        // Revert to previous state on error
+        if (context?.previousMembers) {
+          queryClient.setQueryData(
+            orpc.experiments.listExperimentMembers.queryKey({ input: { id: variables.id } }),
+            context.previousMembers,
+          );
+        }
+      },
+      onSettled: async (_data, _error, variables) => {
+        // Always refetch to ensure cache is in sync with server
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentMembers.queryKey({
+            input: { id: variables.id },
+          }),
+        });
+      },
+    }),
+  );
 };

@@ -1,8 +1,8 @@
 import z from "zod";
 
-import { zUpdateExperimentBody } from "@repo/api/schemas/experiment.schema";
-import { zUpdateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import { zUpdateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import { zUpdateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
+import { zUpdateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
+import { zUpdateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 
 export const editExperimentFormSchema = zUpdateExperimentBody
   .required({

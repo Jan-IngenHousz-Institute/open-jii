@@ -3,6 +3,7 @@ import type { INestApplication, Type } from "@nestjs/common";
 import type { ModuleMetadata } from "@nestjs/common/interfaces";
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
+import type { AnyContractProcedure } from "@orpc/contract";
 import { config } from "dotenv";
 import nock from "nock";
 import { resolve } from "path";
@@ -457,10 +458,30 @@ export class TestHarness {
   }
 
   /**
-   * Helper to resolve path parameters
+   * Helper to resolve path parameters. Handles both `:key` (ts-rest) and
+   * `{key}` (oRPC) placeholder styles.
    */
   public resolvePath(path: string, params: Record<string, string>): string {
-    return Object.entries(params).reduce((p, [key, value]) => p.replace(`:${key}`, value), path);
+    return Object.entries(params).reduce(
+      (p, [key, value]) => p.replaceAll(`:${key}`, value).replaceAll(`{${key}}`, value),
+      path,
+    );
+  }
+
+  /**
+   * Resolve an oRPC contract procedure's route into a request path.
+   */
+  public resolveOrpcPath(
+    procedure: AnyContractProcedure,
+    params: Record<string, string> = {},
+  ): string {
+    const { path } = procedure["~orpc"].route;
+
+    if (path === undefined) {
+      throw new Error("oRPC procedure has no route path.");
+    }
+
+    return this.resolvePath(path, params);
   }
 
   /**

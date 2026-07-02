@@ -6,7 +6,7 @@ import { verticalCompactor } from "react-grid-layout";
 import type { LayoutItem } from "react-grid-layout";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import {
@@ -128,7 +128,7 @@ export function useWidgetPlacement({
       const compacted = verticalCompactor.compact([draftItem, ...baseItems], columns);
 
       const compactedById = new Map(compacted.map((c) => [c.i, c]));
-      const updatedWidgets: DashboardWidget[] = current.map((w) => {
+      const updatedWidgets: ExperimentDashboardWidget[] = current.map((w) => {
         const c = compactedById.get(w.id);
         if (!c) {
           return w;
@@ -147,7 +147,7 @@ export function useWidgetPlacement({
         };
       });
       const finalDraft = compactedById.get(draft.id);
-      const placed: DashboardWidget = finalDraft
+      const placed: ExperimentDashboardWidget = finalDraft
         ? {
             ...draft,
             layout: {

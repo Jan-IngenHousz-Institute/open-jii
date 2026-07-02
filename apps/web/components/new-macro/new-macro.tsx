@@ -12,9 +12,9 @@ import React, { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
-import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import { zCreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { CreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
+import { zCreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -54,13 +54,13 @@ export function NewMacroForm() {
 
   const { mutate: createMacro, isPending } = useMacroCreate({
     onSuccess: (data) => {
-      const id = data.body.id;
+      const id = data.id;
       // Link selected protocols after macro creation, then redirect
       if (selectedProtocols.length > 0 && addProtocolsMutationRef.current) {
         addProtocolsMutationRef.current
           .mutateAsync({
-            params: { id },
-            body: { protocolIds: selectedProtocols.map((p) => p.id) },
+            id,
+            protocolIds: selectedProtocols.map((p) => p.id),
           })
           .catch(() => {
             // Macro was created successfully, protocol linking failed - still redirect
@@ -97,12 +97,10 @@ export function NewMacroForm() {
     const code = encodeBase64(data.code);
 
     createMacro({
-      body: {
-        name: data.name,
-        description: data.description,
-        language: data.language,
-        code: code,
-      },
+      name: data.name,
+      description: data.description,
+      language: data.language,
+      code: code,
     });
   }
 
@@ -219,7 +217,7 @@ export function NewMacroForm() {
                 value={field.value}
                 onChange={field.onChange}
                 language={form.watch("language")}
-                username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
+                username={`${userProfile?.firstName} ${userProfile?.lastName}`}
                 label=""
                 error={form.formState.errors.code?.message?.toString()}
                 height="500px"

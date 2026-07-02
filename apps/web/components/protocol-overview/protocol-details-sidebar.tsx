@@ -10,7 +10,7 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol, SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { Protocol, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -55,15 +55,15 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
   const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
   const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
-  const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
+  const compatibleMacrosCount = compatibleMacrosData?.length ?? 0;
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleFamilyChange = async (newFamily: string) => {
     await updateProtocol(
       {
-        params: { id: protocolId },
-        body: { family: newFamily as SensorFamily },
+        id: protocolId,
+        family: newFamily as SensorFamily,
       },
       {
         onSuccess: () => {
@@ -77,7 +77,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   };
 
   const handleDelete = async () => {
-    await deleteProtocol({ params: { id: protocolId } });
+    await deleteProtocol({ id: protocolId });
     setIsDeleteDialogOpen(false);
     router.push(`/${locale}/platform/protocols`);
   };

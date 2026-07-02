@@ -28,19 +28,16 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const { t } = useTranslation();
 
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
-  const experiment = accessData?.body.experiment;
+  const experiment = accessData?.experiment;
 
   const { data: membersData, isError: isMembersError } = useExperimentMembers(id);
-  const members = useMemo(() => membersData?.body ?? [], [membersData]);
+  const members = useMemo(() => membersData ?? [], [membersData]);
 
   const { data: invitationsData } = useUserInvitations("experiment", id);
-  const invitations = useMemo(() => invitationsData?.body ?? [], [invitationsData]);
+  const invitations = useMemo(() => invitationsData ?? [], [invitationsData]);
 
   const { data: joinRequestsData } = useExperimentJoinRequests(id);
-  const joinRequests = useMemo(
-    () => (joinRequestsData?.status === 200 ? joinRequestsData.body : []),
-    [joinRequestsData],
-  );
+  const joinRequests = useMemo(() => joinRequestsData ?? [], [joinRequestsData]);
 
   const { data: session } = useSession();
   const currentUserId = session?.user.id;

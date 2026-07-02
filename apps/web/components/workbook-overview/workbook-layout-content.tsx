@@ -9,7 +9,7 @@ import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWor
 import { formatDate } from "@/util/date";
 import { parseApiError } from "~/util/apiError";
 
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -35,13 +35,13 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
 
   // Versions are returned newest-first; the live page is the draft, so the
   // latest published version is the meaningful number to surface here.
-  const latestVersion = versionsData?.body[0]?.version;
+  const latestVersion = versionsData?.[0]?.version;
   const isCreator = session?.user.id === workbook.createdBy;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
     await updateWorkbook(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("workbooks.workbookUpdated") });

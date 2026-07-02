@@ -4,7 +4,7 @@ import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
 import type { ExperimentTableMetadata } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 
-import type { UploadFormFields } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadFormFields } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
@@ -19,7 +19,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 export interface UploadTargetPickerProps {
-  control: Control<UploadFormFields>;
+  control: Control<ExperimentUploadFormFields>;
   targetKind: "new" | "existing";
   uploadTables: ExperimentTableMetadata[];
   disabled: boolean;

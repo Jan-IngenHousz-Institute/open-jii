@@ -14,11 +14,11 @@ export function UserExperimentsSection() {
   });
 
   // Show only first 3 experiments for dashboard
-  const limitedExperiments = data?.body ? data.body.slice(0, 3) : undefined;
+  const limitedExperiments = data ? data.slice(0, 3) : undefined;
 
   return (
     <div className="space-y-4">
-      {data?.body ? (
+      {data ? (
         <ExperimentOverviewCards experiments={limitedExperiments} />
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

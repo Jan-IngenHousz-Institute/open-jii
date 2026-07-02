@@ -2,7 +2,7 @@
 
 import { BriefcaseBusiness } from "lucide-react";
 
-import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,

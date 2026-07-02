@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { Invitation } from "@repo/api/schemas/user.schema";
+import type { Invitation } from "@repo/api/domains/user/user.schema";
 
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -48,7 +48,7 @@ describe("InvitationController", () => {
 
       vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const path = testApp.resolveOrpcPath(contract.users.createInvitation, {});
 
       const response: SuperTestResponse<Invitation> = await testApp
         .post(path)
@@ -71,7 +71,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const path = testApp.resolveOrpcPath(contract.users.createInvitation, {});
 
       await testApp
         .post(path)
@@ -86,7 +86,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 400 for invalid body", async () => {
-      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const path = testApp.resolveOrpcPath(contract.users.createInvitation, {});
 
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
@@ -96,7 +96,7 @@ describe("InvitationController", () => {
         failure(AppError.internal("Unexpected error")),
       );
 
-      const path = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const path = testApp.resolveOrpcPath(contract.users.createInvitation, {});
 
       await testApp
         .post(path)
@@ -121,7 +121,7 @@ describe("InvitationController", () => {
       vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
       // Create an invitation first
-      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createPath = testApp.resolveOrpcPath(contract.users.createInvitation, {});
       await testApp
         .post(createPath)
         .withAuth(testUserId)
@@ -134,7 +134,7 @@ describe("InvitationController", () => {
         .expect(StatusCodes.CREATED);
 
       // Now list
-      const listPath = testApp.resolvePath(contract.users.listInvitations.path, {});
+      const listPath = testApp.resolveOrpcPath(contract.users.listInvitations, {});
 
       const response: SuperTestResponse<Invitation[]> = await testApp
         .get(listPath)
@@ -151,7 +151,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const listPath = testApp.resolvePath(contract.users.listInvitations.path, {});
+      const listPath = testApp.resolveOrpcPath(contract.users.listInvitations, {});
 
       await testApp
         .get(listPath)
@@ -165,7 +165,7 @@ describe("InvitationController", () => {
         failure(AppError.internal("Unexpected error")),
       );
 
-      const listPath = testApp.resolvePath(contract.users.listInvitations.path, {});
+      const listPath = testApp.resolveOrpcPath(contract.users.listInvitations, {});
 
       await testApp
         .get(listPath)
@@ -184,7 +184,7 @@ describe("InvitationController", () => {
 
       vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createPath = testApp.resolveOrpcPath(contract.users.createInvitation, {});
       const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
@@ -197,7 +197,7 @@ describe("InvitationController", () => {
         .expect(StatusCodes.CREATED);
 
       const invitationId = createResponse.body.id;
-      const updatePath = testApp.resolvePath(contract.users.updateInvitationRole.path, {
+      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
         invitationId,
       });
 
@@ -211,7 +211,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 404 for non-existent invitation", async () => {
-      const updatePath = testApp.resolvePath(contract.users.updateInvitationRole.path, {
+      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
         invitationId: faker.string.uuid(),
       });
 
@@ -223,7 +223,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const updatePath = testApp.resolvePath(contract.users.updateInvitationRole.path, {
+      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
         invitationId: faker.string.uuid(),
       });
 
@@ -244,7 +244,7 @@ describe("InvitationController", () => {
 
       vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createPath = testApp.resolveOrpcPath(contract.users.createInvitation, {});
       const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
@@ -257,7 +257,7 @@ describe("InvitationController", () => {
         .expect(StatusCodes.CREATED);
 
       const invitationId = createResponse.body.id;
-      const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
+      const revokePath = testApp.resolveOrpcPath(contract.users.revokeInvitation, {
         invitationId,
       });
 
@@ -265,7 +265,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 404 for non-existent invitation", async () => {
-      const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
+      const revokePath = testApp.resolveOrpcPath(contract.users.revokeInvitation, {
         invitationId: faker.string.uuid(),
       });
 
@@ -280,7 +280,7 @@ describe("InvitationController", () => {
 
       vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
-      const createPath = testApp.resolvePath(contract.users.createInvitation.path, {});
+      const createPath = testApp.resolveOrpcPath(contract.users.createInvitation, {});
       const createResponse: SuperTestResponse<Invitation> = await testApp
         .post(createPath)
         .withAuth(testUserId)
@@ -293,7 +293,7 @@ describe("InvitationController", () => {
         .expect(StatusCodes.CREATED);
 
       const invitationId = createResponse.body.id;
-      const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
+      const revokePath = testApp.resolveOrpcPath(contract.users.revokeInvitation, {
         invitationId,
       });
 
@@ -304,7 +304,7 @@ describe("InvitationController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const revokePath = testApp.resolvePath(contract.users.revokeInvitation.path, {
+      const revokePath = testApp.resolveOrpcPath(contract.users.revokeInvitation, {
         invitationId: faker.string.uuid(),
       });
 

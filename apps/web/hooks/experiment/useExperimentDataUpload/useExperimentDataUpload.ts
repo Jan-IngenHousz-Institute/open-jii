@@ -1,7 +1,12 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { env } from "~/env";
 
-import { UPLOAD_KIND_CONSTANTS, inferUploadSourceKind } from "@repo/api/schemas/experiment.schema";
-import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import {
+  UPLOAD_KIND_CONSTANTS,
+  inferUploadSourceKind,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 export type UploadValidationError =
   | { code: "noFiles" }
@@ -12,7 +17,27 @@ export type UploadValidationError =
   | { code: "ambyteInvalidStructure" }
   | { code: "ambyteOversizedFiles"; count: number };
 
-export type UploadValidationResult = UploadValidationError | { sourceKind: UploadSourceKind };
+export type UploadValidationResult =
+  | UploadValidationError
+  | { sourceKind: ExperimentUploadSourceKind };
+
+interface UploadInput {
+  params: { id: string };
+  body: FormData;
+}
+
+// uploadData is a native streaming multipart endpoint, intentionally off the
+// oRPC contract (oRPC would buffer the body). `.body` carries the parsed error
+// payload so `parseApiError` reads it the same way it did for the ts-rest error.
+class UploadError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: unknown,
+  ) {
+    super(`Upload failed with status ${status}`);
+    this.name = "UploadError";
+  }
+}
 
 const EXCLUDED_FILES = [".DS_Store"];
 
@@ -64,7 +89,7 @@ function validateAmbyte(files: FileList): UploadValidationResult {
 
 function validateTabular(
   files: FileList,
-  expectedKind: Exclude<UploadSourceKind, "ambyte">,
+  expectedKind: Exclude<ExperimentUploadSourceKind, "ambyte">,
 ): UploadValidationResult {
   const usable = Array.from(files).filter((f) => !isExcluded(f));
   if (usable.length === 0) {
@@ -92,17 +117,38 @@ function validateTabular(
 }
 
 export const useExperimentDataUpload = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  const mutation = tsr.experiments.uploadData.useMutation({
+  const mutation = useMutation({
+    mutationFn: async ({ params, body }: UploadInput) => {
+      const response = await fetch(
+        `${env.NEXT_PUBLIC_API_URL}/api/v1/experiments/${params.id}/data/uploads`,
+        {
+          method: "POST",
+          body,
+          credentials: "include",
+          headers: { "x-app-source": "orpc" },
+        },
+      );
+
+      if (!response.ok) {
+        const errorBody: unknown = await response.json().catch(() => undefined);
+        throw new UploadError(response.status, errorBody);
+      }
+
+      return response.json() as Promise<unknown>;
+    },
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
-        queryKey: ["experiments", variables.params.id],
+        queryKey: orpc.experiments.getExperiment.queryKey({ input: { id: variables.params.id } }),
       });
     },
   });
 
-  const validate = (files: FileList, sourceKind: UploadSourceKind): UploadValidationResult =>
+  const validate = (
+    files: FileList,
+    sourceKind: ExperimentUploadSourceKind,
+  ): UploadValidationResult =>
     sourceKind === "ambyte" ? validateAmbyte(files) : validateTabular(files, sourceKind);
 
   const stripExcluded = (files: FileList): File[] =>

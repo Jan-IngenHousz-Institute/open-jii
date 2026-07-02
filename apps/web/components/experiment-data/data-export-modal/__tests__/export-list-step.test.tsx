@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 
 import { ExportListStep } from "../steps/export-list-step";
 
@@ -43,7 +43,7 @@ const runningExport = createExportRecord({
   completedAt: null,
 });
 
-const mountExports = (exports: ExportRecord[]) =>
+const mountExports = (exports: ExperimentExportRecord[]) =>
   server.mount(contract.experiments.listExports, {
     body: { exports },
   });

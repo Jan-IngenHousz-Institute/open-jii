@@ -1,7 +1,7 @@
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 // Raw MultispeQ output: device-defined JSON the flow stores verbatim and
 // hands to macro evaluation / upload. Persisted, so keep it structural.

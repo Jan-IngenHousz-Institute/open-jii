@@ -1,7 +1,7 @@
+import { orpc } from "@/lib/orpc";
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
-import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -15,7 +15,7 @@ describe("useMacroDelete", () => {
     const { result } = renderHook(() => useMacroDelete());
 
     act(() => {
-      result.current.mutate({ params: { id: "macro-123" } });
+      result.current.mutate({ id: "macro-123" });
     });
 
     await waitFor(() => {
@@ -23,60 +23,25 @@ describe("useMacroDelete", () => {
     });
   });
 
-  it("optimistically removes macro from the list cache", async () => {
-    // Use Infinity gcTime so cache entries survive without active observers
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
-    });
-
-    // Pre-populate the macros list cache
-    queryClient.setQueryData(["macros"], {
-      body: [
-        createMacro({ id: "macro-1", name: "Macro 1" }),
-        createMacro({ id: "macro-2", name: "Macro 2" }),
-      ],
-    });
-
-    // Use a delayed response so we can observe the optimistic state
-    server.mount(contract.macros.deleteMacro, { delay: 100 });
-
-    const { result } = renderHook(() => useMacroDelete(), { queryClient });
-
-    act(() => {
-      result.current.mutate({ params: { id: "macro-1" } });
-    });
-
-    // After onMutate, the cache should optimistically remove macro-1
-    await waitFor(() => {
-      const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["macros"]);
-      expect(cached?.body).toHaveLength(1);
-      expect(cached?.body[0].id).toBe("macro-2");
-    });
-  });
-
-  it("restores cache on error", async () => {
+  it("removes the deleted macro's detail cache", async () => {
     const queryClient = createTestQueryClient();
+    const detailKey = orpc.macros.getMacro.queryKey({ input: { id: "macro-1" } });
 
-    queryClient.setQueryData(["macros"], {
-      body: [
-        createMacro({ id: "macro-1", name: "Macro 1" }),
-        createMacro({ id: "macro-2", name: "Macro 2" }),
-      ],
-    });
+    queryClient.setQueryData(detailKey, createMacro({ id: "macro-1" }));
 
-    server.mount(contract.macros.deleteMacro, { status: 500 });
+    server.mount(contract.macros.deleteMacro);
 
     const { result } = renderHook(() => useMacroDelete(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: "macro-1" } });
+      result.current.mutate({ id: "macro-1" });
     });
 
-    // After error + onSettled, the cache should revert
     await waitFor(() => {
-      const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["macros"]);
-      expect(cached?.body).toHaveLength(2);
+      expect(result.current.isSuccess).toBe(true);
     });
+
+    expect(queryClient.getQueryData(detailKey)).toBeUndefined();
   });
 
   it("does not fail when cache is empty", async () => {
@@ -87,7 +52,7 @@ describe("useMacroDelete", () => {
 
     // Should not throw even with no cached data
     act(() => {
-      result.current.mutate({ params: { id: "macro-1" } });
+      result.current.mutate({ id: "macro-1" });
     });
 
     await waitFor(() => {

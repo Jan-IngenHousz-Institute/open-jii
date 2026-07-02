@@ -3,20 +3,29 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { FilterRow } from "./filter-row";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: DataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
-const contributorColumn: DataColumn = {
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
+const numericColumn: ExperimentDataColumn = {
+  name: "value",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
+const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,
 };
 
-const columns: DataColumn[] = [stringColumn, numericColumn, contributorColumn];
+const columns: ExperimentDataColumn[] = [stringColumn, numericColumn, contributorColumn];
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {
@@ -27,7 +36,7 @@ function mountDistinct() {
 describe("FilterRow", () => {
   it("renders the remove button labelled by the i18n key", () => {
     mountDistinct();
-    const filter: DataFilter = { column: "label", operator: "equals", value: "x" };
+    const filter: ExperimentDataFilter = { column: "label", operator: "equals", value: "x" };
     render(
       <FilterRow
         filter={filter}

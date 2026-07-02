@@ -3,14 +3,23 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { FilterChipBar } from "./filter-chip-bar";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const numericColumn: DataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
+const numericColumn: ExperimentDataColumn = {
+  name: "value",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
 
-const columns: DataColumn[] = [stringColumn, numericColumn];
+const columns: ExperimentDataColumn[] = [stringColumn, numericColumn];
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {
@@ -21,7 +30,7 @@ function mountDistinct() {
 describe("FilterChipBar", () => {
   it("renders one chip per filter and the add-filter trigger", () => {
     mountDistinct();
-    const filters: DataFilter[] = [
+    const filters: ExperimentDataFilter[] = [
       { column: "label", operator: "equals", value: "hello" },
       { column: "value", operator: "greater_than", value: 5 },
     ];
@@ -42,7 +51,7 @@ describe("FilterChipBar", () => {
 
   it("emits the list with the targeted filter removed", async () => {
     mountDistinct();
-    const filters: DataFilter[] = [
+    const filters: ExperimentDataFilter[] = [
       { column: "label", operator: "equals", value: "hello" },
       { column: "value", operator: "greater_than", value: 5 },
     ];
@@ -68,7 +77,9 @@ describe("FilterChipBar", () => {
 
   it("resolves the column metadata for struct sub-paths via the parent column name", () => {
     mountDistinct();
-    const filters: DataFilter[] = [{ column: "label.value", operator: "equals", value: "hi" }];
+    const filters: ExperimentDataFilter[] = [
+      { column: "label.value", operator: "equals", value: "hi" },
+    ];
     render(
       <FilterChipBar
         value={filters}
@@ -86,7 +97,7 @@ describe("FilterChipBar", () => {
 
   it("emits a new list with the chip's operator change applied in place", async () => {
     mountDistinct();
-    const filters: DataFilter[] = [
+    const filters: ExperimentDataFilter[] = [
       { column: "label", operator: "equals", value: "hello" },
       { column: "value", operator: "greater_than", value: 5 },
     ];
@@ -117,7 +128,9 @@ describe("FilterChipBar", () => {
 
   it("appends a filter to the existing list when one is added via the popover", async () => {
     mountDistinct();
-    const filters: DataFilter[] = [{ column: "label", operator: "equals", value: "hello" }];
+    const filters: ExperimentDataFilter[] = [
+      { column: "label", operator: "equals", value: "hello" },
+    ];
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(

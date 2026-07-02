@@ -42,7 +42,7 @@ describe("IotController", () => {
       vi.spyOn(awsAdapter, "getIotCredentials").mockResolvedValue(success(mockCredentials));
 
       const response = await testApp
-        .get(contract.iot.getCredentials.path)
+        .get(testApp.resolveOrpcPath(contract.iot.getCredentials))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -56,7 +56,7 @@ describe("IotController", () => {
 
     it("should return 401 when user is not authenticated", async () => {
       await testApp
-        .get(contract.iot.getCredentials.path)
+        .get(testApp.resolveOrpcPath(contract.iot.getCredentials))
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -67,7 +67,7 @@ describe("IotController", () => {
       );
 
       await testApp
-        .get(contract.iot.getCredentials.path)
+        .get(testApp.resolveOrpcPath(contract.iot.getCredentials))
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -85,7 +85,7 @@ describe("IotController", () => {
         .mockResolvedValue(success(mockCredentials));
 
       await testApp
-        .get(contract.iot.getCredentials.path)
+        .get(testApp.resolveOrpcPath(contract.iot.getCredentials))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -109,7 +109,7 @@ describe("IotController", () => {
       vi.spyOn(awsAdapter, "getIotUploadUrl").mockResolvedValue(success(mockUploadUrl));
 
       const response = await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withAuth(testUserId)
         .send({ experimentId: experiment.id })
         .expect(StatusCodes.OK);
@@ -123,7 +123,7 @@ describe("IotController", () => {
 
     it("should return 401 when user is not authenticated", async () => {
       await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withoutAuth()
         .send({ experimentId: "123e4567-e89b-12d3-a456-426614174000" })
         .expect(StatusCodes.UNAUTHORIZED);
@@ -131,7 +131,7 @@ describe("IotController", () => {
 
     it("should return 400 when experimentId is not a valid UUID", async () => {
       await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withAuth(testUserId)
         .send({ experimentId: "not-a-uuid" })
         .expect(StatusCodes.BAD_REQUEST);
@@ -139,7 +139,7 @@ describe("IotController", () => {
 
     it("should return 404 when experiment does not exist", async () => {
       await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withAuth(testUserId)
         .send({ experimentId: "123e4567-e89b-12d3-a456-426614174000" })
         .expect(StatusCodes.NOT_FOUND);
@@ -153,7 +153,7 @@ describe("IotController", () => {
       });
 
       await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withAuth(testUserId)
         .send({ experimentId: experiment.id })
         .expect(StatusCodes.FORBIDDEN);
@@ -170,7 +170,7 @@ describe("IotController", () => {
       );
 
       await testApp
-        .post(contract.iot.getUploadUrl.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
         .withAuth(testUserId)
         .send({ experimentId: experiment.id })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);

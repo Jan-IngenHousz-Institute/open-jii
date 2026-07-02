@@ -19,7 +19,7 @@ describe("useExperimentAccess", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject({
+    expect(result.current.data).toMatchObject({
       hasAccess: true,
       isAdmin: true,
     });
@@ -36,6 +36,6 @@ describe("useExperimentAccess", () => {
     });
 
     // On 404, the retry function from shouldRetryQuery returns false
-    expect(result.current.data?.body).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 });

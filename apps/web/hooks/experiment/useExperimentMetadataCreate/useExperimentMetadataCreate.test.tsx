@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -23,6 +24,8 @@ const metadataResponse = {
   updatedAt: "2025-01-01T00:00:00.000Z",
 };
 
+const metadataKey = orpc.experiments.listExperimentMetadata.queryKey({ input: { id: "exp-123" } });
+
 describe("useExperimentMetadataCreate", () => {
   it("sends POST request with correct params and body", async () => {
     const spy = server.mount(contract.experiments.createExperimentMetadata, {
@@ -33,8 +36,8 @@ describe("useExperimentMetadataCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadata: metadataPayload,
       });
     });
 
@@ -46,7 +49,7 @@ describe("useExperimentMetadataCreate", () => {
 
   it("invalidates cache after successful create", async () => {
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["experiment", "exp-123", "metadata"], { body: [] });
+    queryClient.setQueryData(metadataKey, []);
 
     server.mount(contract.experiments.createExperimentMetadata, {
       body: metadataResponse,
@@ -58,8 +61,8 @@ describe("useExperimentMetadataCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadata: metadataPayload,
       });
     });
 
@@ -70,8 +73,7 @@ describe("useExperimentMetadataCreate", () => {
 
   it("reverts cache on error", async () => {
     const queryClient = createTestQueryClient();
-    const previousData = { body: [{ metadataId: "meta-1", metadata: { key: "value" } }] };
-    queryClient.setQueryData(["experiment", "exp-123", "metadata"], previousData);
+    queryClient.setQueryData(metadataKey, [metadataResponse]);
 
     server.mount(contract.experiments.createExperimentMetadata, { status: 500 });
 
@@ -81,8 +83,8 @@ describe("useExperimentMetadataCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadata: metadataPayload,
       });
     });
 
@@ -104,8 +106,8 @@ describe("useExperimentMetadataCreate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadata: metadataPayload,
       });
     });
 

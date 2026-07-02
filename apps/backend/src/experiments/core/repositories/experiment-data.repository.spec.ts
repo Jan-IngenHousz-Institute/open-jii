@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { expect } from "vitest";
 
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   AppError,

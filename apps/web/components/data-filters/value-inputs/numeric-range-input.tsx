@@ -1,12 +1,12 @@
 "use client";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 
 export interface NumericRangeInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 export function NumericRangeInput({ value, onChange }: NumericRangeInputProps) {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 import {
   Tooltip,
   TooltipContent,
@@ -11,7 +11,7 @@ import {
 import { UploadHistoryCardBody } from "./upload-history-card-body";
 
 export interface UploadHistoryCardProps {
-  upload: UploadMetadata;
+  upload: ExperimentUploadMetadata;
   index: number;
 }
 

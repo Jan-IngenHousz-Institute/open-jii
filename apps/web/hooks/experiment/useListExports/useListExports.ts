@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 export const useListExports = ({
   experimentId,
@@ -7,12 +8,10 @@ export const useListExports = ({
   experimentId: string;
   tableName: string;
 }) => {
-  return tsr.experiments.listExports.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: { tableName },
-    },
-    queryKey: ["exports", experimentId, tableName],
-    refetchInterval: 15_000,
-  });
+  return useQuery(
+    orpc.experiments.listExports.queryOptions({
+      input: { id: experimentId, tableName },
+      refetchInterval: 15_000,
+    }),
+  );
 };

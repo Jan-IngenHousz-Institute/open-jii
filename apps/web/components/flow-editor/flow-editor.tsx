@@ -17,7 +17,10 @@ import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
-import type { Flow, UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentFlow,
+  ExperimentUpsertFlowBody,
+} from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
@@ -53,11 +56,11 @@ function lookupAccent(type: string | undefined): string {
 }
 
 export interface FlowEditorHandle {
-  getFlowData: () => UpsertFlowBody | null; // null when not ready
+  getFlowData: () => ExperimentUpsertFlowBody | null; // null when not ready
 }
 
 interface FlowEditorProps {
-  initialFlow?: Flow;
+  initialFlow?: ExperimentFlow;
   onNodeSelect?: (node: Node | null) => void;
   onDirtyChange?: (dirty: boolean) => void; // notify parent that there are unsaved changes
   isDisabled?: boolean; // whether the flow is read-only
@@ -347,7 +350,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                   : "flex flex-col gap-4 md:flex-row"
               }
             >
-              {/* Flow Area */}
+              {/* ExperimentFlow Area */}
               <Card className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}>
                 <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
                   <div
@@ -420,7 +423,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                           position="bottom-left"
                           pannable
                           zoomable
-                          ariaLabel="Flow minimap"
+                          ariaLabel="ExperimentFlow minimap"
                           maskColor="rgba(241, 245, 249, 0.7)"
                           nodeStrokeWidth={3}
                           nodeBorderRadius={4}

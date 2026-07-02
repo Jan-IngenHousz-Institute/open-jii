@@ -1,6 +1,7 @@
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { tsr } from "../../../lib/tsr";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 
 interface ProtocolUpdateProps {
   onSuccess?: (protocol: Protocol) => void;
@@ -13,42 +14,30 @@ interface ProtocolUpdateProps {
  * @returns Mutation result for updating a protocol
  */
 export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps = {}) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
+  const protocolKey = orpc.protocols.getProtocol.queryKey({ input: { id: protocolId } });
 
-  return tsr.protocols.updateProtocol.useMutation({
-    onMutate: async () => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["protocol", protocolId] });
-      await queryClient.cancelQueries({ queryKey: ["protocols"] });
+  return useMutation(
+    orpc.protocols.updateProtocol.mutationOptions({
+      onMutate: async () => {
+        await queryClient.cancelQueries({ queryKey: protocolKey });
+        await queryClient.cancelQueries({ queryKey: orpc.protocols.listProtocols.key() });
 
-      // Get the current protocol
-      const previousProtocol = queryClient.getQueryData<{
-        body: Protocol;
-      }>(["protocol", protocolId]);
-
-      // Return the previous protocol to use in case of error
-      return { previousProtocol };
-    },
-    onError: (error, variables, context) => {
-      // If there was an error, revert to the previous state
-      if (context?.previousProtocol) {
-        queryClient.setQueryData(["protocol", protocolId], context.previousProtocol);
-      }
-    },
-    onSettled: async () => {
-      // Always refetch after error or success to make sure cache is in sync with server
-      await queryClient.invalidateQueries({
-        queryKey: ["protocol", protocolId],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["protocols"],
-      });
-    },
-    onSuccess: (data) => {
-      // Call the provided onSuccess callback if it exists
-      if (props.onSuccess) {
-        props.onSuccess(data.body);
-      }
-    },
-  });
+        const previousProtocol = queryClient.getQueryData(protocolKey);
+        return { previousProtocol };
+      },
+      onError: (_error, _variables, context) => {
+        if (context?.previousProtocol) {
+          queryClient.setQueryData(protocolKey, context.previousProtocol);
+        }
+      },
+      onSettled: async () => {
+        await queryClient.invalidateQueries({ queryKey: protocolKey });
+        await queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() });
+      },
+      onSuccess: (data) => {
+        props.onSuccess?.(data);
+      },
+    }),
+  );
 };

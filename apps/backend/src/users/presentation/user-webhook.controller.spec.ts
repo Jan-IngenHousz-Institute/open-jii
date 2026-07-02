@@ -7,7 +7,7 @@ import type {
   UserMetadataWebhookPayload,
   UserMetadataWebhookResponse,
   WebhookErrorResponse,
-} from "@repo/api/schemas/user.schema";
+} from "@repo/api/domains/user/user.schema";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
@@ -81,7 +81,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request with the required headers
       const response = await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -121,7 +121,7 @@ describe("UserWebhookController", () => {
 
       // Act & Assert - should return bad request due to validation (min 1 user)
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -156,7 +156,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       const response = await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -197,7 +197,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       const response = await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -243,7 +243,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       const response = await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -272,7 +272,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request without required headers
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
@@ -294,7 +294,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request with invalid signature
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", invalidSignature)
         .set("x-databricks-timestamp", timestamp)
@@ -318,7 +318,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -344,7 +344,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -366,7 +366,7 @@ describe("UserWebhookController", () => {
       const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
 
       await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -399,7 +399,7 @@ describe("UserWebhookController", () => {
 
       // Make the API request
       const response = await testApp
-        .post(contract.users.getUserMetadata.path)
+        .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)

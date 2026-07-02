@@ -4,12 +4,10 @@ import { Plus } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type {
-  AggregationFunction,
-  DataColumn,
-  SeriesTraceType,
-} from "@repo/api/schemas/experiment.schema";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { ExperimentAggregationFunction } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
@@ -35,7 +33,7 @@ import { useDataSourcesFieldArray } from "../context/data-sources-field-array-co
 import { AGG_NONE, YSeriesItem } from "./y-series-item";
 
 interface AggregateOption {
-  value: AggregationFunction;
+  value: ExperimentAggregationFunction;
   label: string;
   requiresXColumn?: boolean;
 }
@@ -55,15 +53,15 @@ const AGG_FUNCTIONS: AggregateOption[] = [
 
 export interface YAxisShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   showSeriesColor?: boolean;
   maxSeries?: number;
   hideAxisType?: boolean;
   showCartesianControls?: boolean;
-  defaultTraceType?: SeriesTraceType;
+  defaultTraceType?: ExperimentSeriesTraceType;
   hideAggregate?: boolean;
   showErrorColumn?: boolean;
-  errorColumns?: DataColumn[];
+  errorColumns?: ExperimentDataColumn[];
 }
 
 export function YAxisShelf({
@@ -336,6 +334,6 @@ export function YAxisShelf({
   );
 }
 
-function pickAggregate(raw: string): AggregationFunction | undefined {
+function pickAggregate(raw: string): ExperimentAggregationFunction | undefined {
   return AGG_FUNCTIONS.find((agg) => agg.value === raw)?.value;
 }

@@ -1,12 +1,12 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 
-import { contract } from "@repo/api/contract";
-import type { AddAnnotationsBulkBody } from "@repo/api/schemas/experiment.schema";
+import { experimentDataAnnotationsContract } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.contract";
+import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
 import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/update-annotation/update-annotation";
@@ -21,156 +21,88 @@ export class ExperimentDataAnnotationsController {
     private readonly deleteAnnotationsUseCase: DeleteAnnotationsUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.addAnnotation)
+  @Implement(experimentDataAnnotationsContract.addAnnotation)
   addAnnotation(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.addAnnotation, async ({ params, body }) => {
-      const { id: experimentId } = params;
-
-      this.logger.log({
-        msg: "Adding annotation to experiment",
-        operation: "addAnnotation",
-        experimentId,
-        userId: session.user.id,
-      });
-
-      const addBody: AddAnnotationsBulkBody = {
+    return implement(experimentDataAnnotationsContract.addAnnotation).handler(async ({ input }) => {
+      const { id, ...body } = input;
+      const addBody: ExperimentAddAnnotationsBulkBody = {
         tableName: body.tableName,
         annotation: body.annotation,
         rowIds: [body.rowId],
       };
-      const result = await this.addAnnotationsUseCase.execute(
-        experimentId,
-        addBody,
-        session.user.id,
-      );
-
+      const result = await this.addAnnotationsUseCase.execute(id, addBody, session.user.id);
       if (result.isSuccess()) {
-        return {
-          status: 201,
-          body: result.value,
-        };
+        return result.value;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.addAnnotationsBulk)
+  @Implement(experimentDataAnnotationsContract.addAnnotationsBulk)
   addAnnotationsBulk(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.addAnnotationsBulk, async ({ params, body }) => {
-      const { id: experimentId } = params;
-
-      this.logger.log({
-        msg: "Adding annotations to experiment",
-        operation: "addAnnotationsBulk",
-        experimentId,
-        userId: session.user.id,
-        count: body.rowIds.length,
-      });
-
-      const result = await this.addAnnotationsUseCase.execute(experimentId, body, session.user.id);
-
-      if (result.isSuccess()) {
-        return {
-          status: 201,
-          body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsContract.addAnnotationsBulk).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.addAnnotationsUseCase.execute(id, body, session.user.id);
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.updateAnnotation)
+  @Implement(experimentDataAnnotationsContract.updateAnnotation)
   updateAnnotation(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.updateAnnotation, async ({ params, body }) => {
-      const { id: experimentId, annotationId } = params;
-
-      this.logger.log({
-        msg: "Updating annotation for experiment",
-        operation: "updateAnnotation",
-        experimentId,
-        annotationId,
-        userId: session.user.id,
-      });
-
-      const result = await this.updateAnnotationUseCase.execute(
-        experimentId,
-        annotationId,
-        body,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        return {
-          status: 200,
-          body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsContract.updateAnnotation).handler(
+      async ({ input }) => {
+        const { id, annotationId, ...body } = input;
+        const result = await this.updateAnnotationUseCase.execute(
+          id,
+          annotationId,
+          body,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.deleteAnnotation)
+  @Implement(experimentDataAnnotationsContract.deleteAnnotation)
   deleteAnnotation(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.deleteAnnotation, async ({ params }) => {
-      const { id: experimentId, annotationId } = params;
-
-      this.logger.log({
-        msg: "Deleting annotation from experiment",
-        operation: "deleteAnnotation",
-        experimentId,
-        annotationId,
-        userId: session.user.id,
-      });
-
-      const result = await this.deleteAnnotationsUseCase.execute(
-        experimentId,
-        { annotationId },
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        return {
-          status: 200,
-          body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsContract.deleteAnnotation).handler(
+      async ({ input }) => {
+        const result = await this.deleteAnnotationsUseCase.execute(
+          input.id,
+          { annotationId: input.annotationId },
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.deleteAnnotationsBulk)
+  @Implement(experimentDataAnnotationsContract.deleteAnnotationsBulk)
   deleteAnnotationBulk(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.deleteAnnotationsBulk, async ({ params, body }) => {
-      const { id: experimentId } = params;
-      const { tableName, rowIds, type } = body;
-
-      this.logger.log({
-        msg: "Deleting annotations from experiment",
-        operation: "deleteAnnotationsBulk",
-        experimentId,
-        userId: session.user.id,
-        count: rowIds.length,
-        type,
-      });
-
-      const result = await this.deleteAnnotationsUseCase.execute(
-        experimentId,
-        { tableName, rowIds, type },
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        return {
-          status: 200,
-          body: result.value,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentDataAnnotationsContract.deleteAnnotationsBulk).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
+        const result = await this.deleteAnnotationsUseCase.execute(
+          id,
+          { tableName: body.tableName, rowIds: body.rowIds, type: body.type },
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

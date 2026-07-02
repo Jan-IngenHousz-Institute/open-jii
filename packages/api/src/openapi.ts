@@ -1,13 +1,16 @@
-import { generateOpenApi } from "@ts-rest/open-api";
+import { OpenAPIGenerator } from "@orpc/openapi";
+import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import fs from "fs";
 import path from "path";
 
 import { contract } from "./contract";
 
-// Generate the OpenAPI document
-const openApiDocument = generateOpenApi(
-  contract,
-  {
+const generator = new OpenAPIGenerator({
+  schemaConverters: [new ZodToJsonSchemaConverter()],
+});
+
+async function generate() {
+  const openApiDocument = await generator.generate(contract, {
     info: {
       title: "openJII API",
       version: "1.0.0",
@@ -19,22 +22,17 @@ const openApiDocument = generateOpenApi(
         description: "Local development",
       },
     ],
-  },
-  {
-    setOperationId: "concatenated-path",
-    jsonQuery: true,
-  },
-);
+  });
 
-// Directory for storing the OpenAPI document
-const outputDir = path.resolve(__dirname, "../dist");
+  const outputDir = path.resolve(__dirname, "../dist");
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
 
-// Ensure the directory exists
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, "openapi.json");
+  fs.writeFileSync(outputPath, JSON.stringify(openApiDocument, null, 2));
+
+  console.log(`OpenAPI document generated at ${outputPath}`);
 }
 
-// Write the OpenAPI document to a file
-fs.writeFileSync(path.join(outputDir, "openapi.json"), JSON.stringify(openApiDocument, null, 2));
-
-console.log(`OpenAPI document generated at ${path.join(outputDir, "openapi.json")}`);
+void generate();

@@ -48,11 +48,8 @@ vi.mock("~/shared/api/client", () => ({
       getTime: () => {
         getTimeCallCount++;
         return Promise.resolve({
-          status: 200,
-          body: {
-            utcTimestampMs: mockServerUtcMs,
-            utcTimestampSec: Math.floor(mockServerUtcMs / 1000),
-          },
+          utcTimestampMs: mockServerUtcMs,
+          utcTimestampSec: Math.floor(mockServerUtcMs / 1000),
         });
       },
     },
@@ -259,7 +256,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 
@@ -285,7 +282,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 
@@ -307,7 +304,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 
@@ -334,7 +331,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 
@@ -394,7 +391,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const spy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 
@@ -507,7 +504,7 @@ describe("time-sync", () => {
       const clientModule = await import("~/shared/api/client");
       const getApiClientSpy = vi.spyOn(clientModule, "getApiClient").mockReturnValue({
         health: {
-          getTime: () => Promise.resolve({ status: 500, body: {} }),
+          getTime: () => Promise.reject(new Error("server error")),
         },
       } as any);
 

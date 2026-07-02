@@ -9,14 +9,14 @@ import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations"
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
-const FLAG_VALUES = Object.keys(FLAG_TYPE_LABELS) as AnnotationFlagType[];
+const FLAG_VALUES = Object.keys(FLAG_TYPE_LABELS) as ExperimentAnnotationFlagType[];
 
 interface FlagTypeModalProps {
   visible: boolean;
-  selected: AnnotationFlagType | null;
-  onSelect: (flagType: AnnotationFlagType | null) => void;
+  selected: ExperimentAnnotationFlagType | null;
+  onSelect: (flagType: ExperimentAnnotationFlagType | null) => void;
   onCancel: () => void;
 }
 

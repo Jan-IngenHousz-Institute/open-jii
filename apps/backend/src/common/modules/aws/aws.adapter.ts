@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { PlaceSearchResult } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
 import { AwsLocationService } from "../../../common/modules/aws/services/location/location.service";
 import { ErrorCodes } from "../../../common/utils/error-codes";
@@ -36,7 +36,7 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   /**
    * Search for places using text query
    */
-  async searchPlaces(request: SearchPlacesRequest): Promise<Result<PlaceSearchResult[]>> {
+  async searchPlaces(request: SearchPlacesRequest): Promise<Result<ExperimentPlaceSearchResult[]>> {
     this.logger.log({
       msg: "Searching places",
       operation: "searchPlaces",

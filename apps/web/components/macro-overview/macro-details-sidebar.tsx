@@ -10,7 +10,7 @@ import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Macro, MacroLanguage } from "@repo/api/schemas/macro.schema";
+import type { Macro, MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -54,16 +54,15 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
   const { mutateAsync: deleteMacro, isPending: isDeleting } = useMacroDelete();
   const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(macroId);
-  const compatibleProtocolsCount =
-    (compatibleProtocolsData?.body as unknown[] | undefined)?.length ?? 0;
+  const compatibleProtocolsCount = compatibleProtocolsData?.length ?? 0;
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleLanguageChange = async (newLanguage: string) => {
     await updateMacro(
       {
-        params: { id: macroId },
-        body: { language: newLanguage as MacroLanguage },
+        id: macroId,
+        language: newLanguage as MacroLanguage,
       },
       {
         onSuccess: () => {
@@ -77,7 +76,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
   };
 
   const handleDelete = async () => {
-    await deleteMacro({ params: { id: macroId } });
+    await deleteMacro({ id: macroId });
     setIsDeleteDialogOpen(false);
     router.push(`/${locale}/platform/macros`);
   };

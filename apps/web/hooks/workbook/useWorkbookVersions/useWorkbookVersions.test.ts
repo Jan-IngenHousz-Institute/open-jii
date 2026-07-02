@@ -21,8 +21,8 @@ describe("useWorkbookVersions", () => {
     const { result } = renderHook(() => useWorkbookVersions(workbookId));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(2);
-      expect(result.current.data?.body[0].version).toBe(2);
+      expect(result.current.data).toHaveLength(2);
+      expect(result.current.data?.[0].version).toBe(2);
     });
   });
 
@@ -32,7 +32,7 @@ describe("useWorkbookVersions", () => {
     const { result } = renderHook(() => useWorkbookVersions(workbookId));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toEqual([]);
+      expect(result.current.data).toEqual([]);
     });
   });
 

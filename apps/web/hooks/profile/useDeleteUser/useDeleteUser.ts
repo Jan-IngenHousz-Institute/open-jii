@@ -1,13 +1,11 @@
-import { getContractError, tsr } from "@/lib/tsr";
-import type { TsRestMutationOptions, TsrRoute } from "@/lib/tsr";
+import { getOrpcError, orpc } from "@/lib/orpc";
 import { parseApiError } from "@/util/apiError";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "@repo/ui/hooks/use-toast";
 
-const route = tsr.users.deleteUser;
-
-export type UseDeleteUserOptions = TsRestMutationOptions<
-  TsrRoute<typeof route>,
+export type UseDeleteUserOptions = Pick<
+  ReturnType<typeof orpc.users.deleteUser.mutationOptions>,
   "onSuccess" | "onError" | "onSettled"
 >;
 
@@ -17,22 +15,24 @@ export type UseDeleteUserOptions = TsRestMutationOptions<
  * (success toast, sign-out, redirect) via onSuccess.
  */
 export const useDeleteUser = (options?: UseDeleteUserOptions) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return route.useMutation({
-    ...options,
-    onError: (error, ...rest) => {
-      toast({ description: parseApiError(error)?.message, variant: "destructive" });
-      const contractError = getContractError(route, error);
-      if (contractError) {
-        options?.onError?.(contractError, ...rest);
-      }
-    },
-    onSettled: async (...args) => {
-      // Ensure any component reading the user or userProfile refetches.
-      await queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      await queryClient.invalidateQueries({ queryKey: ["user"] });
-      await options?.onSettled?.(...args);
-    },
-  });
+  return useMutation(
+    orpc.users.deleteUser.mutationOptions({
+      ...options,
+      onError: (error, ...rest) => {
+        const orpcError = getOrpcError(error);
+        toast({ description: parseApiError(orpcError?.data)?.message, variant: "destructive" });
+        if (orpcError) {
+          options?.onError?.(orpcError, ...rest);
+        }
+      },
+      onSettled: async (...args) => {
+        // Ensure any component reading the user or userProfile refetches.
+        await queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
+        await queryClient.invalidateQueries({ queryKey: ["user"] });
+        await options?.onSettled?.(...args);
+      },
+    }),
+  );
 };

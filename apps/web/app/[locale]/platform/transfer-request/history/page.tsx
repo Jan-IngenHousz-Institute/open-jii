@@ -55,7 +55,7 @@ export default function TransferRequestHistoryPage() {
     );
   }
 
-  const requests = data?.body ?? [];
+  const requests = data ?? [];
 
   if (requests.length === 0) {
     return (

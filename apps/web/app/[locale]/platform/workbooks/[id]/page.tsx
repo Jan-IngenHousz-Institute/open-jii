@@ -5,7 +5,7 @@ import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { use } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface WorkbookOverviewPageProps {

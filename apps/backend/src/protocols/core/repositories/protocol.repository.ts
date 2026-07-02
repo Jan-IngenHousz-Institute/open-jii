@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ProtocolFilter } from "@repo/api/schemas/protocol.schema";
+import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
 import { and, asc, eq, ilike, inArray, protocols, users } from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";

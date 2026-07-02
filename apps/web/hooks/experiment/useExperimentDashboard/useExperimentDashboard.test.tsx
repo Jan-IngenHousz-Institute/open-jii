@@ -23,7 +23,7 @@ describe("useExperimentDashboard", () => {
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data?.body.name).toBe("Yield by site");
+    expect(result.current.data?.name).toBe("Yield by site");
   });
 
   it("surfaces 404 as an error on result.current", async () => {

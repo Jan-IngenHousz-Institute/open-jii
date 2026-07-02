@@ -42,9 +42,9 @@ export function EmptyWorkbookState({
   // is linked to this experiment and the user can start adding cells.
   const createWorkbook = useWorkbookCreate({
     onSuccess: (data) => {
-      const workbookId = data.body.id;
+      const workbookId = data.id;
       attachWorkbook.mutate(
-        { params: { id: experimentId }, body: { workbookId } },
+        { id: experimentId, workbookId },
         {
           onSuccess: () => router.push(`/${locale}/platform/workbooks/${workbookId}`),
           onError: () => toast({ description: t("flow.attachFailed"), variant: "destructive" }),
@@ -59,7 +59,7 @@ export function EmptyWorkbookState({
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
     attachWorkbook.mutate(
-      { params: { id: experimentId }, body: { workbookId: selectedWorkbookId } },
+      { id: experimentId, workbookId: selectedWorkbookId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
@@ -73,7 +73,7 @@ export function EmptyWorkbookState({
   };
 
   const handleCreate = () => {
-    createWorkbook.mutate({ body: { name: t("flow.newWorkbookName", { name: experimentName }) } });
+    createWorkbook.mutate({ name: t("flow.newWorkbookName", { name: experimentName }) });
   };
 
   return (

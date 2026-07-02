@@ -1,7 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { MarkerType, getIncomers, getOutgoers, getConnectedEdges } from "@xyflow/react";
 
-import type { UpsertFlowBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-editor/flow-mapper";
 import { createNewNode } from "./node-utils";
@@ -15,7 +15,7 @@ export function getInitialFlowData(): { nodes: Node[]; edges: Edge[] } {
  * Converts nodes and edges to API format if validation passes.
  * Throws an error if the flow has validation issues that should be shown to the user.
  */
-export function getFlowData(nodes: Node[], edges: Edge[]): UpsertFlowBody | null {
+export function getFlowData(nodes: Node[], edges: Edge[]): ExperimentUpsertFlowBody | null {
   try {
     return FlowMapper.toApiGraph(nodes, edges);
   } catch (e) {

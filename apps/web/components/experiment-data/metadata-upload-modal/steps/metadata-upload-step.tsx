@@ -6,10 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import {
-  makeCustomMetadataFormSchema,
-  sanitizeQuestionLabel,
-} from "@repo/api/schemas/experiment.schema";
+import { makeCustomMetadataFormSchema } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
 
 import { asStoredMetadata, EMPTY_FORM_VALUES } from "../form-helpers";
 import type { MetadataFormValues } from "../form-helpers";
@@ -24,14 +22,11 @@ interface MetadataUploadStepProps {
 
 export function MetadataUploadStep({ experimentId, onClose }: MetadataUploadStepProps) {
   const { data: existingMetadataResponse } = useExperimentMetadata(experimentId);
-  const existingRecords = useMemo(
-    () => existingMetadataResponse?.body ?? [],
-    [existingMetadataResponse?.body],
-  );
+  const existingRecords = useMemo(() => existingMetadataResponse ?? [], [existingMetadataResponse]);
 
   const { data: flowData } = useExperimentFlow(experimentId);
   const questionOptions = useMemo<QuestionOption[]>(() => {
-    const nodes = flowData?.body.graph.nodes;
+    const nodes = flowData?.graph.nodes;
     if (!nodes) return [];
     return nodes
       .filter((node: { type: string }) => node.type === "question")

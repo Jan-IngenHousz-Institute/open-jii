@@ -16,7 +16,7 @@ import {
 } from "~/lib/protocol-code-registry";
 
 import { contract } from "@repo/api/contract";
-import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { useWorkbookExecution } from "./useWorkbookExecution";
 

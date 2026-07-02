@@ -2,11 +2,11 @@
 
 import { ArrowRight } from "lucide-react";
 
-import type { Flow } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 interface StaticFlowViewerProps {
-  flow: Flow;
+  flow: ExperimentFlow;
   title?: string;
   description?: string;
   className?: string;
@@ -14,7 +14,7 @@ interface StaticFlowViewerProps {
 
 export function StaticFlowViewer({
   flow,
-  title = "Experiment Flow",
+  title = "Experiment ExperimentFlow",
   description = "Visual representation of your experiment flow",
   className = "",
 }: StaticFlowViewerProps) {
@@ -40,7 +40,7 @@ export function StaticFlowViewer({
       <CardContent className="space-y-4">
         {/* Simple list view of flow nodes */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Flow Steps:</h4>
+          <h4 className="text-sm font-medium">ExperimentFlow Steps:</h4>
           {flow.graph.nodes.map((node, index) => (
             <div key={node.id} className="rounded-lg border p-3">
               <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function StaticFlowViewer({
 
         {flow.graph.edges.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">Flow Connections:</h4>
+            <h4 className="text-sm font-medium">ExperimentFlow Connections:</h4>
             {flow.graph.edges.map((edge) => (
               <div key={edge.id} className="text-muted-foreground flex items-center gap-1 text-sm">
                 {edge.source}

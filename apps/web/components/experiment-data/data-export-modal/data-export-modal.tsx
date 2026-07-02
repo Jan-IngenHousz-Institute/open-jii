@@ -1,5 +1,6 @@
 "use client";
 
+import { getOrpcError } from "@/lib/orpc";
 import { Download } from "lucide-react";
 import * as React from "react";
 import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
@@ -42,7 +43,7 @@ export function DataExportModal({
 
   // Toggle inherits the experiment's stored setting; user can override per-export.
   const { data: experimentData } = useExperiment(experimentId);
-  const experimentAnonymize = experimentData?.body.anonymizeContributors;
+  const experimentAnonymize = experimentData?.anonymizeContributors;
   const [anonymizeOverride, setAnonymizeOverride] = React.useState<boolean | undefined>();
   const effectiveAnonymize = anonymizeOverride ?? experimentAnonymize;
 
@@ -72,22 +73,21 @@ export function DataExportModal({
 
     initiateExport(
       {
-        params: { id: experimentId },
-        body: {
-          tableName,
-          format: format as "csv" | "ndjson" | "json-array" | "parquet",
-          // Omit when not overridden so backend falls back to the stored setting.
-          ...(anonymizeOverride !== undefined && {
-            anonymizeContributors: anonymizeOverride,
-          }),
-        },
+        id: experimentId,
+        tableName,
+        format: format as "csv" | "ndjson" | "json-array" | "parquet",
+        // Omit when not overridden so backend falls back to the stored setting.
+        ...(anonymizeOverride !== undefined && {
+          anonymizeContributors: anonymizeOverride,
+        }),
       },
       {
         onError: (error) => {
           setCreationStatus("idle");
           toast({
             description:
-              parseApiError(error)?.message ?? t("experimentData.exportModal.creationError"),
+              parseApiError(getOrpcError(error)?.data ?? error)?.message ??
+              t("experimentData.exportModal.creationError"),
             variant: "destructive",
           });
         },

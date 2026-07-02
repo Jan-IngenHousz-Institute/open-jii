@@ -2,14 +2,14 @@
 
 import { FileText } from "lucide-react";
 
-import type { RichTextWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentRichTextWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
 import { WidgetEmptyState } from "../shell/widget-empty-state";
 
 interface RichTextWidgetViewProps {
-  widget: RichTextWidget;
+  widget: ExperimentRichTextWidget;
 }
 
 export function RichTextWidgetView({ widget }: RichTextWidgetViewProps) {

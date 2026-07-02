@@ -4,7 +4,7 @@ import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { parseApiError } from "~/util/apiError";
 
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -32,7 +32,7 @@ export function ProtocolLayoutContent({
 
   const handleTitleSave = async (newName: string) => {
     await updateProtocol(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("protocols.protocolUpdated") });

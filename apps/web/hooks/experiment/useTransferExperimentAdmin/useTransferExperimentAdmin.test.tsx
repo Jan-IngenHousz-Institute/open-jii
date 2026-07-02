@@ -11,7 +11,7 @@ const EXPERIMENT_ID = "aaaaaaaa-0000-4000-8000-000000000001";
 const TARGET_USER_ID = "11111111-1111-4111-8111-111111111111";
 
 const transferBody = {
-  body: { transfers: [{ experimentId: EXPERIMENT_ID, targetUserId: TARGET_USER_ID }] },
+  transfers: [{ experimentId: EXPERIMENT_ID, targetUserId: TARGET_USER_ID }],
 };
 
 describe("useTransferExperimentAdmin", () => {

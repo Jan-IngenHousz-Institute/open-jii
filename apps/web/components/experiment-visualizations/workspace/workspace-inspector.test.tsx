@@ -1,7 +1,8 @@
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../charts/basic/line";
 import type { ChartFormValues } from "../charts/chart-config";
@@ -25,7 +26,7 @@ const tables: ExperimentTableMetadata[] = [
   { identifier: "events", displayName: "Events", tableType: "static", totalRows: 50 },
 ];
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
   { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
 ];

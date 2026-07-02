@@ -1,13 +1,15 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -28,7 +30,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 interface NewProtocolDetailsCardProps {
@@ -49,13 +50,12 @@ export function NewProtocolDetailsCard({
   // Macro search
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
+  const { data: macroData } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: { search: debouncedMacroSearch || undefined },
+    }),
+  );
+  const macroList = macroData;
 
   const selectedMacroIds = useMemo(
     () => new Set(selectedMacros.map((m) => m.id)),

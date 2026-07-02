@@ -34,8 +34,8 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     async (code: ProtocolCode) => {
       try {
         await updateProtocol({
-          params: { id },
-          body: { code: code as Record<string, unknown>[] },
+          id,
+          code: code as Record<string, unknown>[],
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -74,12 +74,12 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     return <div>{t("protocols.notFound")}</div>;
   }
 
-  const protocol = data.body;
+  const protocol = data;
   const isCreator = session?.user.id === protocol.createdBy;
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateProtocol(
-      { params: { id }, body: { description: newDescription } },
+      { id, description: newDescription },
       {
         onSuccess: () => {
           toast({ description: t("protocols.protocolUpdated") });

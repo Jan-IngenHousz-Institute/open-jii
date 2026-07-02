@@ -47,7 +47,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
   const { data: blockersData, isLoading: isLoadingBlockers } = useDeletionBlockers(userId, {
     enabled: open,
   });
-  const blockers = blockersData?.body.experiments ?? [];
+  const blockers = blockersData?.experiments ?? [];
   const hasBlockers = blockers.length > 0;
   // Expanded only matters while blockers remain; once everything is transferred the section
   // collapses on its own so the erase/preserve summary comes back on screen.
@@ -73,7 +73,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
   });
 
   const handleDelete = () => {
-    deleteAccount({ params: { id: userId } });
+    deleteAccount({ id: userId });
   };
 
   return (

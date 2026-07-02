@@ -17,10 +17,8 @@ describe("useTransferRequestCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          projectIdOld: "old-123",
-          projectUrlOld: "https://photosynq.com/projects/old-123",
-        },
+        projectIdOld: "old-123",
+        projectUrlOld: "https://photosynq.com/projects/old-123",
       });
     });
 
@@ -38,10 +36,8 @@ describe("useTransferRequestCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          projectIdOld: "old-456",
-          projectUrlOld: "https://photosynq.com/projects/old-456",
-        },
+        projectIdOld: "old-456",
+        projectUrlOld: "https://photosynq.com/projects/old-456",
       });
     });
 
@@ -63,10 +59,8 @@ describe("useTransferRequestCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          projectIdOld: "old-123",
-          projectUrlOld: "https://photosynq.com/projects/old-123",
-        },
+        projectIdOld: "old-123",
+        projectUrlOld: "https://photosynq.com/projects/old-123",
       });
     });
 
@@ -83,10 +77,8 @@ describe("useTransferRequestCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          projectIdOld: "old-123",
-          projectUrlOld: "https://photosynq.com/projects/old-123",
-        },
+        projectIdOld: "old-123",
+        projectUrlOld: "https://photosynq.com/projects/old-123",
       });
     });
 
@@ -102,10 +94,8 @@ describe("useTransferRequestCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          projectIdOld: "old-123",
-          projectUrlOld: "https://photosynq.com/projects/old-123",
-        },
+        projectIdOld: "old-123",
+        projectUrlOld: "https://photosynq.com/projects/old-123",
       });
     });
 

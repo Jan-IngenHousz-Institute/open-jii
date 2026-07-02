@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { contentKeys } from "~/shared/api/content-query-keys";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("prefetch");
@@ -47,12 +46,13 @@ async function _prefetchOfflineData(
   // 404 is expected for accounts that haven't finished web registration.
   const profilePromise = userId
     ? queryClient
-        .prefetchQuery({
-          queryKey: contentKeys.userProfile(userId),
-          queryFn: () => tsr.users.getUserProfile.query({ params: { id: userId } }),
-          staleTime: 0,
-          meta: { suppressToast: true },
-        })
+        .prefetchQuery(
+          orpc.users.getUserProfile.queryOptions({
+            input: { id: userId },
+            staleTime: 0,
+            meta: { suppressToast: true },
+          }),
+        )
         .catch((err) => {
           log.warn("user profile prefetch failed", {
             err: err instanceof Error ? err.message : String(err),
@@ -60,20 +60,19 @@ async function _prefetchOfflineData(
         })
     : Promise.resolve();
 
-  const experimentsResponse = await queryClient.fetchQuery({
-    queryKey: contentKeys.experiments,
-    queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
-    staleTime: 0,
-    // Reachable from a background reconnect/foreground refetch; stay silent.
-    meta: { suppressToast: true },
-  });
+  const experimentsResponse = await queryClient.fetchQuery(
+    orpc.experiments.listExperiments.queryOptions({
+      input: { filter: "member" },
+      staleTime: 0,
+      // Reachable from a background reconnect/foreground refetch; stay silent.
+      meta: { suppressToast: true },
+    }),
+  );
 
-  // The contract response shape can vary (paginated envelope, error body, or a
-  // bare array); only an actual array is iterable, so guard before `.map` to
-  // avoid "experiments.map is not a function" crashes seen in production.
-  const experiments = (
-    Array.isArray(experimentsResponse?.body) ? experimentsResponse.body : []
-  ) as {
+  // The response shape can vary (paginated envelope or a bare array); only an
+  // actual array is iterable, so guard before `.map` to avoid
+  // "experiments.map is not a function" crashes seen in production.
+  const experiments = (Array.isArray(experimentsResponse) ? experimentsResponse : []) as {
     id: string;
     workbookId: string | null;
     workbookVersionId: string | null;
@@ -86,16 +85,14 @@ async function _prefetchOfflineData(
       if (!workbookId || !workbookVersionId) {
         throw new Error(`Experiment ${experiment.id} has no workbook version`);
       }
-      await queryClient.fetchQuery({
-        queryKey: ["workbook-version", workbookId, workbookVersionId],
-        queryFn: () =>
-          tsr.workbooks.getWorkbookVersion.query({
-            params: { id: workbookId, versionId: workbookVersionId },
-          }),
-        // Immutable pinned version: reuse the cache rather than refetch.
-        staleTime: Infinity,
-        meta: { suppressToast: true },
-      });
+      await queryClient.fetchQuery(
+        orpc.workbooks.getWorkbookVersion.queryOptions({
+          input: { id: workbookId, versionId: workbookVersionId },
+          // Immutable pinned version: reuse the cache rather than refetch.
+          staleTime: Infinity,
+          meta: { suppressToast: true },
+        }),
+      );
     }),
   );
 

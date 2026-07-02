@@ -18,9 +18,9 @@ describe("useListUploads", () => {
     const { result } = renderHook(() => useListUploads("exp-1", { enabled: true }));
 
     await waitFor(() => {
-      expect(result.current.data?.body.uploads).toHaveLength(2);
+      expect(result.current.data?.uploads).toHaveLength(2);
     });
-    expect(result.current.data?.body.uploads[0].uploadId).toBe("u1");
+    expect(result.current.data?.uploads[0].uploadId).toBe("u1");
   });
 
   it("does not fetch when disabled", () => {

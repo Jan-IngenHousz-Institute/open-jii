@@ -16,12 +16,10 @@ describe("useExperimentAnnotationAdd", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          tableName: "measurements",
-          rowId: "row-1",
-          annotation: { type: "comment", content: { type: "comment", text: "Test note" } },
-        },
+        id: "exp-1",
+        tableName: "measurements",
+        rowId: "row-1",
+        annotation: { type: "comment", content: { type: "comment", text: "Test note" } },
       });
     });
 
@@ -37,12 +35,10 @@ describe("useExperimentAnnotationAdd", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-42" },
-        body: {
-          tableName: "results",
-          rowId: "row-99",
-          annotation: { type: "flag", content: { type: "flag", flagType: "outlier" } },
-        },
+        id: "exp-42",
+        tableName: "results",
+        rowId: "row-99",
+        annotation: { type: "flag", content: { type: "flag", flagType: "outlier" } },
       });
     });
 
@@ -63,12 +59,10 @@ describe("useExperimentAnnotationAdd", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          tableName: "measurements",
-          rowId: "row-1",
-          annotation: { type: "comment", content: { type: "comment", text: "Test" } },
-        },
+        id: "exp-1",
+        tableName: "measurements",
+        rowId: "row-1",
+        annotation: { type: "comment", content: { type: "comment", text: "Test" } },
       });
     });
 

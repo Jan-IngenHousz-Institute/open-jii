@@ -15,7 +15,7 @@ import { notFound, useParams } from "next/navigation";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface LayoutProps {
@@ -32,7 +32,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
   const { data: accessData } = useExperimentAccess(experimentId);
   const { data, isLoading, error } = useExperimentVisualization(visualizationId, experimentId);
 
-  if (accessData?.body.experiment.status === "archived") {
+  if (accessData?.experiment.status === "archived") {
     notFound();
   }
 
@@ -41,15 +41,11 @@ export default function VisualizationLayout({ children }: LayoutProps) {
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
-        hasData={Boolean(data?.body)}
+        hasData={Boolean(data)}
         loadingMessage={t("common.loading")}
       >
-        {data?.body && (
-          <VisualizationFormShell
-            key={data.body.id}
-            experimentId={experimentId}
-            visualization={data.body}
-          >
+        {data && (
+          <VisualizationFormShell key={data.id} experimentId={experimentId} visualization={data}>
             {children}
           </VisualizationFormShell>
         )}

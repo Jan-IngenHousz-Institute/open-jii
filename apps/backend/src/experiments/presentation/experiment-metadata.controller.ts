@@ -1,13 +1,12 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentMetadataContract } from "@repo/api/domains/experiment/metadata/experiment-metadata.contract";
 
 import { formatDates } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/get-experiment-metadata";
@@ -24,156 +23,70 @@ export class ExperimentMetadataController {
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.listExperimentMetadata)
+  @Implement(experimentMetadataContract.listExperimentMetadata)
   listExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listExperimentMetadata, async ({ params }) => {
-      const { id: experimentId } = params;
-
-      this.logger.log({
-        msg: "Processing list metadata request",
-        operation: "listMetadata",
-        experimentId,
-        userId: session.user.id,
-      });
-
-      const result = await this.getExperimentMetadataUseCase.execute(experimentId, session.user.id);
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Successfully listed metadata",
-          operation: "listMetadata",
-          experimentId,
-          count: result.value.length,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK as const,
-          body: result.value.map(formatDates),
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentMetadataContract.listExperimentMetadata).handler(
+      async ({ input }) => {
+        const result = await this.getExperimentMetadataUseCase.execute(input.id, session.user.id);
+        if (result.isSuccess()) {
+          return result.value.map(formatDates);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.createExperimentMetadata)
+  @Implement(experimentMetadataContract.createExperimentMetadata)
   createExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.createExperimentMetadata,
-      async ({ params, body }) => {
-        const { id: experimentId } = params;
-
-        this.logger.log({
-          msg: "Processing create metadata request",
-          operation: "createMetadata",
-          experimentId,
-          userId: session.user.id,
-        });
-
+    return implement(experimentMetadataContract.createExperimentMetadata).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
         const result = await this.createExperimentMetadataUseCase.execute(
-          experimentId,
+          id,
           body,
           session.user.id,
         );
-
         if (result.isSuccess()) {
-          this.logger.log({
-            msg: "Successfully created metadata",
-            operation: "createMetadata",
-            experimentId,
-            metadataId: result.value.metadataId,
-            status: "success",
-          });
-
-          return {
-            status: StatusCodes.CREATED as const,
-            body: formatDates(result.value),
-          };
+          return formatDates(result.value);
         }
-
-        return handleFailure(result, this.logger);
+        return throwOrpcFailure(result, this.logger);
       },
     );
   }
 
-  @TsRestHandler(contract.experiments.updateExperimentMetadata)
+  @Implement(experimentMetadataContract.updateExperimentMetadata)
   updateExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.updateExperimentMetadata,
-      async ({ params, body }) => {
-        const { id: experimentId, metadataId } = params;
-
-        this.logger.log({
-          msg: "Processing update metadata request",
-          operation: "updateMetadata",
-          experimentId,
-          metadataId,
-          userId: session.user.id,
-        });
-
+    return implement(experimentMetadataContract.updateExperimentMetadata).handler(
+      async ({ input }) => {
+        const { id, metadataId, ...body } = input;
         const result = await this.updateExperimentMetadataUseCase.execute(
-          experimentId,
+          id,
           metadataId,
           body,
           session.user.id,
         );
-
         if (result.isSuccess()) {
-          this.logger.log({
-            msg: "Successfully updated metadata",
-            operation: "updateMetadata",
-            experimentId,
-            metadataId,
-            status: "success",
-          });
-
-          return {
-            status: StatusCodes.OK as const,
-            body: formatDates(result.value),
-          };
+          return formatDates(result.value);
         }
-
-        return handleFailure(result, this.logger);
+        return throwOrpcFailure(result, this.logger);
       },
     );
   }
 
-  @TsRestHandler(contract.experiments.deleteExperimentMetadata)
+  @Implement(experimentMetadataContract.deleteExperimentMetadata)
   deleteExperimentMetadata(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.deleteExperimentMetadata, async ({ params }) => {
-      const { id: experimentId, metadataId } = params;
-
-      this.logger.log({
-        msg: "Processing delete metadata request",
-        operation: "deleteMetadata",
-        experimentId,
-        metadataId,
-        userId: session.user.id,
-      });
-
-      const result = await this.deleteExperimentMetadataUseCase.execute(
-        experimentId,
-        metadataId,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Successfully deleted metadata",
-          operation: "deleteMetadata",
-          experimentId,
-          metadataId,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.NO_CONTENT as const,
-          body: null,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentMetadataContract.deleteExperimentMetadata).handler(
+      async ({ input }) => {
+        const result = await this.deleteExperimentMetadataUseCase.execute(
+          input.id,
+          input.metadataId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return undefined;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

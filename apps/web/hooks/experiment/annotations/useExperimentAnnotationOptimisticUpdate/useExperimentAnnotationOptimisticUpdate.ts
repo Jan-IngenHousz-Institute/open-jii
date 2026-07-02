@@ -1,12 +1,12 @@
 import { parseAnnotations } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
 
 import type {
-  Annotation,
-  AnnotationType,
-  AnnotationContent,
-  ExperimentDataResponse,
-  DataColumn,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAnnotation,
+  ExperimentAnnotationType,
+  ExperimentAnnotationContent,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 // The type string for the annotations column
 const ANNOTATIONS_COLUMN_TYPE =
@@ -20,7 +20,7 @@ function findAnnotationsColumnName(data: ExperimentDataResponse): string | null 
   if (!tableData?.columns || tableData.columns.length === 0) return null;
 
   const annotationColumn = tableData.columns.find(
-    (col: DataColumn) => col.type_text === ANNOTATIONS_COLUMN_TYPE,
+    (col: ExperimentDataColumn) => col.type_text === ANNOTATIONS_COLUMN_TYPE,
   );
 
   return annotationColumn?.name ?? null;
@@ -30,9 +30,9 @@ function findAnnotationsColumnName(data: ExperimentDataResponse): string | null 
  * Create a new annotation object from the annotation request data
  */
 function createAnnotationFromRequest(
-  annotation: { type: AnnotationType; content: AnnotationContent },
+  annotation: { type: ExperimentAnnotationType; content: ExperimentAnnotationContent },
   rowId: string,
-): Annotation & { preview: boolean } {
+): ExperimentAnnotation & { preview: boolean } {
   // Generate a temporary ID for optimistic updates
   const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -73,7 +73,7 @@ export function useExperimentAnnotationOptimisticUpdate() {
     data: ExperimentDataResponse,
     tableName: string,
     rowIds: string[],
-    annotationRequest: { type: AnnotationType; content: AnnotationContent },
+    annotationRequest: { type: ExperimentAnnotationType; content: ExperimentAnnotationContent },
   ): ExperimentDataResponse => {
     if (!data[0]?.data) return data;
 
@@ -152,7 +152,7 @@ export function useExperimentAnnotationOptimisticUpdate() {
     data: ExperimentDataResponse,
     tableName: string,
     rowIds: string[],
-    annotationType: AnnotationType,
+    annotationType: ExperimentAnnotationType,
   ): ExperimentDataResponse => {
     if (!data[0]?.data) return data;
 

@@ -19,8 +19,8 @@ export default function ExperimentVisualizationsPage() {
   const locale = useLocale();
 
   const { data: accessData } = useExperimentAccess(experimentId);
-  const experimentData = accessData?.body.experiment;
-  const hasAccess = accessData?.body.isAdmin;
+  const experimentData = accessData?.experiment;
+  const hasAccess = accessData?.isAdmin;
 
   if (experimentData?.status === "archived") {
     notFound();
@@ -50,14 +50,12 @@ export default function ExperimentVisualizationsPage() {
       },
     )}`;
     createVisualization({
-      params: { id: experimentId },
-      body: {
-        name: defaultName,
-        chartFamily: lineChartType.family,
-        chartType: lineChartType.type,
-        config: { ...lineChartType.defaultConfig() },
-        dataConfig: lineChartType.defaultDataConfig(),
-      },
+      id: experimentId,
+      name: defaultName,
+      chartFamily: lineChartType.family,
+      chartType: lineChartType.type,
+      config: { ...lineChartType.defaultConfig() },
+      dataConfig: lineChartType.defaultDataConfig(),
     });
   };
 
@@ -75,7 +73,7 @@ export default function ExperimentVisualizationsPage() {
       </div>
 
       <ExperimentVisualizationsList
-        visualizations={visualizationsData?.body ?? []}
+        visualizations={visualizationsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
       />

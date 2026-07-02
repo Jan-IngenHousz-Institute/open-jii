@@ -1,5 +1,5 @@
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 export interface SensorFamilyOption {
   value: SensorFamily;

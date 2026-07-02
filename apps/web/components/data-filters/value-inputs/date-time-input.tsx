@@ -2,7 +2,7 @@
 
 import { Calendar as CalendarIcon } from "lucide-react";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";
@@ -15,8 +15,8 @@ import { applyTimeOfDay, formatHm, formatYmd, parseIsoDate } from "../../../util
 const DAY_START_TIME = "00:00";
 
 export interface DateTimeInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 export function DateTimeInput({ value, onChange }: DateTimeInputProps) {

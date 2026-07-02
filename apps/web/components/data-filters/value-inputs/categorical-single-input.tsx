@@ -3,7 +3,8 @@
 import { ChevronsUpDown, Loader2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 
-import type { DataColumn, DataFilterValue } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -21,11 +22,11 @@ import { chipValueForOption, useDistinctOptions } from "../use-distinct-options"
 import { CategoricalOption } from "./categorical-option";
 
 export interface CategoricalSingleInputProps {
-  column: DataColumn;
+  column: ExperimentDataColumn;
   experimentId: string;
   tableName: string;
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
 }
 
 export function CategoricalSingleInput({
