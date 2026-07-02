@@ -18,6 +18,9 @@ interface CartesianRendererProps extends ChartRendererProps {
   supportsSize?: boolean;
 }
 
+// Above this total point count SVG starts to jank and WebGL earns its context.
+const WEBGL_POINT_THRESHOLD = 5000;
+
 export function CartesianRenderer({
   visualization,
   experimentId,
@@ -28,14 +31,12 @@ export function CartesianRenderer({
 }: CartesianRendererProps) {
   const dataSources = visualization.dataConfig.dataSources;
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
-  const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
 
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
     orderBy: xColumn,
   });
 
   const chartConfig = narrowChartConfig(visualization);
-  const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
 
   // KEEP IN SYNC with field reads in `transformCartesianData` and its helpers.
   // Re-derive: `grep -oE 'chartConfig\\.[a-zA-Z_]+' cartesian-transform.ts | sort -u`.
@@ -82,11 +83,16 @@ export function CartesianRenderer({
     chartConfig.textposition,
   ]);
 
-  // Override xAxisType when X is synthesized; force WebGL for many-trace categorical color.
+  // WebGL avoids SVG jank on large datasets, but each gl trace holds a scarce
+  // browser WebGL context; a dashboard full of gl charts exhausts the pool and
+  // the data layer vanishes on context loss. Auto-enable only for genuinely
+  // large charts so small (grouped) ones stay on SVG and cost no context.
+  const totalPoints = chartSeries.reduce((sum, s) => sum + s.y.length, 0);
+
   const effectiveConfig: PlotlyChartConfig = {
     ...chartConfig,
     xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
-    useWebGL: isCategoricalColor || chartConfig.useWebGL,
+    useWebGL: chartConfig.useWebGL || totalPoints > WEBGL_POINT_THRESHOLD,
   };
 
   return (
