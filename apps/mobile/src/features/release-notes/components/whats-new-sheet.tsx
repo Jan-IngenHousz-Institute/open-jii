@@ -1,4 +1,10 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetFooter,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
+import type { BottomSheetFooterProps } from "@gorhom/bottom-sheet";
 import { ExternalLink, WifiOff, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
@@ -36,7 +42,7 @@ function WhatsNewOfflineState() {
   );
 }
 
-/** Full-screen What's new drawer; mirrors the device sheet's store/ref pattern. */
+/** Content-sized What's new drawer; mirrors the device sheet's store/ref pattern. */
 export function WhatsNewSheet() {
   const isOpen = useWhatsNewSheetStore((s) => s.isOpen);
   const close = useWhatsNewSheetStore((s) => s.close);
@@ -54,8 +60,6 @@ export function WhatsNewSheet() {
     () => resolveExternalUrl(RELEASES_PATH, webBaseUrl),
     [webBaseUrl],
   );
-  const snapPoints = useMemo(() => ["100%"], []);
-
   useEffect(() => {
     if (isOpen) sheetRef.current?.present();
     else sheetRef.current?.dismiss();
@@ -74,26 +78,64 @@ export function WhatsNewSheet() {
     markSeen();
   }, [close, markSeen]);
 
+  // Header lives in the handle so dynamic sizing counts its height (only the
+  // handle and the scrollable's content are measured; sibling views are not).
+  const renderHandle = useCallback(
+    () => (
+      <View>
+        <View className="items-center pb-1 pt-2.5">
+          <View
+            style={{ width: 40, height: 4, borderRadius: 4, backgroundColor: themeColors.inactive }}
+          />
+        </View>
+        <View className="border-border flex-row items-center justify-between border-b px-4 pb-3 pt-1">
+          <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
+            {t("title")}
+          </Text>
+          <Pressable onPress={() => sheetRef.current?.dismiss()} hitSlop={8} className="p-1">
+            <X size={22} color={themeColors.onSurface} />
+          </Pressable>
+        </View>
+      </View>
+    ),
+    [t, themeColors],
+  );
+
+  // Rendered via footerComponent (with enableFooterMarginAdjustment on the
+  // scroll view) so its height is padded into the content and measured too.
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props}>
+        <View
+          className="border-border bg-card border-t px-6 py-4"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Pressable
+            onPress={() => void Linking.openURL(releaseNotesBaseUrl)}
+            hitSlop={6}
+            className="flex-row items-center gap-1.5 self-start"
+          >
+            <Text className="text-primary text-sm font-semibold">{t("fullChangelog")}</Text>
+            <ExternalLink size={14} color={themeColors.brand} />
+          </Pressable>
+        </View>
+      </BottomSheetFooter>
+    ),
+    [insets.bottom, releaseNotesBaseUrl, t, themeColors],
+  );
+
   return (
     <BottomSheetModal
       ref={sheetRef}
-      snapPoints={snapPoints}
       backdropComponent={renderBackdrop}
       onDismiss={handleDismiss}
-      handleIndicatorStyle={{ backgroundColor: themeColors.inactive }}
+      handleComponent={renderHandle}
+      footerComponent={renderFooter}
       backgroundStyle={{ backgroundColor: themeColors.background }}
       topInset={insets.top + SHEET_TOP_GAP}
     >
-      <View className="border-border flex-row items-center justify-between border-b px-4 pb-3 pt-1">
-        <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 20 }}>
-          {t("title")}
-        </Text>
-        <Pressable onPress={() => sheetRef.current?.dismiss()} hitSlop={8} className="p-1">
-          <X size={22} color={themeColors.onSurface} />
-        </Pressable>
-      </View>
-
       <BottomSheetScrollView
+        enableFooterMarginAdjustment
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 16,
@@ -107,20 +149,6 @@ export function WhatsNewSheet() {
           <WhatsNewFeed entries={entries} linkBaseHref={releaseNotesBaseUrl} />
         )}
       </BottomSheetScrollView>
-
-      <View
-        className="border-border bg-card border-t px-4 py-3"
-        style={{ paddingBottom: insets.bottom, minHeight: insets.bottom + 64 }}
-      >
-        <Pressable
-          onPress={() => void Linking.openURL(releaseNotesBaseUrl)}
-          hitSlop={6}
-          className="flex-row items-center gap-1.5 self-start"
-        >
-          <Text className="text-primary text-sm font-semibold">{t("fullChangelog")}</Text>
-          <ExternalLink size={14} color={themeColors.brand} />
-        </Pressable>
-      </View>
     </BottomSheetModal>
   );
 }
