@@ -73,6 +73,18 @@ export const useExperimentUpdate = () => {
       await queryClient.invalidateQueries({
         queryKey: ["experiments"],
       });
+
+      // Toggling contributor anonymization re-pseudonymizes distinct values
+      // and row data server-side; drop the cached reads so filters and
+      // charts reflect the new state without a hard refresh.
+      if (variables.body.anonymizeContributors !== undefined) {
+        await queryClient.invalidateQueries({
+          queryKey: ["experiment-distinct-values"],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["experiment-visualization-data"],
+        });
+      }
     },
   });
 };

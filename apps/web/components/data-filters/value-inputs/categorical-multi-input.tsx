@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { DataColumn, DataFilterValue } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -85,6 +85,22 @@ export function CategoricalMultiInput({
       return true;
     });
   }, [values, isContributor]);
+
+  // Toggling experiment anonymization re-pseudonymises contributor ids, so a
+  // selection made in the other mode can no longer resolve to an option and
+  // would show a raw id. Drop those stale ids once the full list has loaded.
+  // Guarded to contributor columns and a complete (non-truncated) list so a
+  // valid-but-beyond-limit id is never pruned.
+  useEffect(() => {
+    if (!isContributor || isLoading || truncated || selected.length === 0) {
+      return;
+    }
+    const valid = new Set(uniqueValues.map((v) => String(chipValueForOption(v, isContributor))));
+    const pruned = selected.filter((key) => valid.has(key));
+    if (pruned.length !== selected.length) {
+      onChange(pruned);
+    }
+  }, [isContributor, isLoading, truncated, uniqueValues, selected, onChange]);
 
   return (
     <div className="flex flex-col gap-1.5">
