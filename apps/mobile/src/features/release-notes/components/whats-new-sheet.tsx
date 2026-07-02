@@ -1,5 +1,5 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { ExternalLink, X } from "lucide-react-native";
+import { ExternalLink, WifiOff, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { useWhatsNew } from "~/features/release-notes/hooks/use-whats-new";
 import { useWhatsNewSheetStore } from "~/features/release-notes/stores/use-whats-new-sheet-store";
 import { useTranslation } from "~/shared/i18n";
 import { useEnvVar } from "~/shared/stores/environment-store";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { resolveExternalUrl } from "~/shared/utils/resolve-external-url";
 
@@ -14,6 +15,26 @@ import { WhatsNewFeed } from "./whats-new-feed";
 
 const RELEASES_PATH = "/releases";
 const SHEET_TOP_GAP = 4;
+
+/** Shown when release notes can't be fetched because the device is offline (and none are cached). */
+function WhatsNewOfflineState() {
+  const { t } = useTranslation("whatsNew");
+  const themeColors = useThemeColors();
+  return (
+    <View className="items-center gap-3 px-6 py-16">
+      <View className="border-border h-16 w-16 items-center justify-center rounded-full border">
+        <WifiOff size={28} color={themeColors.inactive} />
+      </View>
+      <Text
+        className="text-on-surface text-center"
+        style={{ fontFamily: "Poppins-SemiBold", fontSize: 16 }}
+      >
+        {t("offline.title")}
+      </Text>
+      <Text className="text-muted-body text-center text-sm leading-5">{t("offline.subtitle")}</Text>
+    </View>
+  );
+}
 
 /** Full-screen What's new drawer; mirrors the device sheet's store/ref pattern. */
 export function WhatsNewSheet() {
@@ -24,6 +45,10 @@ export function WhatsNewSheet() {
   const { t } = useTranslation("whatsNew");
   const sheetRef = useRef<BottomSheetModal>(null);
   const { entries, markSeen } = useWhatsNew();
+  // Offline is read from the shared connectivity hook, not useWhatsNew — the feed hook is untouched.
+  // Undefined (first probe) is treated as online so we never flash the offline state on open.
+  const { data: online } = useIsOnline();
+  const isOffline = online === false;
   const webBaseUrl = useEnvVar("NEXT_AUTH_URI");
   const releaseNotesBaseUrl = useMemo(
     () => resolveExternalUrl(RELEASES_PATH, webBaseUrl),
@@ -76,7 +101,11 @@ export function WhatsNewSheet() {
           gap: 16,
         }}
       >
-        <WhatsNewFeed entries={entries} linkBaseHref={releaseNotesBaseUrl} />
+        {isOffline && entries.length === 0 ? (
+          <WhatsNewOfflineState />
+        ) : (
+          <WhatsNewFeed entries={entries} linkBaseHref={releaseNotesBaseUrl} />
+        )}
       </BottomSheetScrollView>
 
       <View

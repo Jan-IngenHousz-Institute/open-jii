@@ -5,6 +5,10 @@
   "showMore": "Read more",
   "showLess": "Show less",
   "empty": "No release notes yet.",
+  "offline": {
+    "title": "You're offline",
+    "subtitle": "Connect to the internet to see the latest updates."
+  },
   "card": {
     "title": "What's new",
     "subtitleUnread_one": "{{count}} new update",

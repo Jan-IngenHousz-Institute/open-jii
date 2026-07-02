@@ -5,6 +5,10 @@
   "showMore": "Meer lezen",
   "showLess": "Minder tonen",
   "empty": "Nog geen release-notities.",
+  "offline": {
+    "title": "Je bent offline",
+    "subtitle": "Maak verbinding met internet om de nieuwste updates te zien."
+  },
   "card": {
     "title": "Wat is er nieuw",
     "subtitleUnread_one": "{{count}} nieuwe update",
