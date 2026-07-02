@@ -226,7 +226,7 @@ export function transformCartesianData(
 
   // Categorical color split: bucket this cell's rows by the global category
   // list so colours map consistently across cells, then emit one trace per
-  // (Y × category).
+  // (Y x category).
   const buildCategoricalColorCellSeries = (
     cellRows: Record<string, unknown>[],
     xaxisId: string | undefined,
@@ -252,7 +252,7 @@ export function transformCartesianData(
     }
 
     // X and (when sized) per-category size context are shared across every
-    // Y series; pre-compute once per category here so the (Y × category)
+    // Y series; pre-compute once per category here so the (Y x category)
     // inner loop is just per-Y work (y values + errors).
     const xByCategory = new Map<string, ReturnType<typeof buildXValues>>();
     const sizeContextByCategory = sizeCtx?.values ? new Map<string, SizeContext>() : null;
@@ -300,7 +300,7 @@ export function transformCartesianData(
             baseName,
           ),
           sizeContext: sizeContextForGroup,
-          // Group per (series × category) so each combo gets its own legend
+          // Group per (series x category) so each combo gets its own legend
           // entry and toggles together across facet cells. Keying on the
           // series alone collapsed every category into one legend row.
           legendgroup: effectiveYEntries.length > 1 ? traceName : undefined,

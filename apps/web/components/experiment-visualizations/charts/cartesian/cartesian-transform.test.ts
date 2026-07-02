@@ -58,7 +58,7 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries[1].name).toBe("b");
   });
 
-  it("emits one trace per (Y × category) on a categorical color split", () => {
+  it("emits one trace per (Y x category) on a categorical color split", () => {
     const rows = [
       { x: 1, v: 10, g: "A" },
       { x: 2, v: 20, g: "B" },
@@ -74,7 +74,7 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries[1].x).toEqual([2, 4]);
   });
 
-  it("emits 2 Y × 2 categories = 4 traces with `Y — category` names", () => {
+  it("emits 2 Y x 2 categories = 4 traces with `Y — category` names", () => {
     const rows = [
       { x: 1, a: 10, b: 100, g: "A" },
       { x: 2, a: 20, b: 200, g: "B" },
@@ -84,7 +84,7 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, config, baseOptions);
     expect(result.chartSeries).toHaveLength(4);
     expect(result.chartSeries.map((s) => s.name)).toEqual(["a — A", "a — B", "b — A", "b — B"]);
-    // Every (series × category) combo shows in the legend; keying the
+    // Every (series x category) combo shows in the legend; keying the
     // legendgroup on the series alone used to hide all but the first category.
     const visible = result.chartSeries.filter((s) => s.showlegend !== false).map((s) => s.name);
     expect(visible).toEqual(["a — A", "a — B", "b — A", "b — B"]);
@@ -177,7 +177,7 @@ describe("transformCartesianData", () => {
     expect(visibleInLegend.map((s) => s.name).sort()).toEqual(["Arabidopsis", "Tomato"]);
   });
 
-  it("shows every (series × category) once across facet cells with multiple Y series", () => {
+  it("shows every (series x category) once across facet cells with multiple Y series", () => {
     const rows = [
       { a: 1, b: 10, g: "Students", region: "North" },
       { a: 2, b: 20, g: "Teachers", region: "North" },
