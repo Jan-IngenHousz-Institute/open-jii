@@ -22,6 +22,7 @@ import {
   getPlotType,
   getRenderer,
   refineAxisType,
+  truncateCategoryTicks,
 } from "./utils";
 
 /**
@@ -213,6 +214,10 @@ export function CartesianChart({
     layout.yaxis = { ...layout.yaxis, type: "category" };
   }
 
+  // Truncate long category ticks before facets so cells inherit them.
+  layout.xaxis = truncateCategoryTicks(layout.xaxis ?? {}, xAxisValues, sizing);
+  layout.yaxis = truncateCategoryTicks(layout.yaxis ?? {}, primaryYValues, sizing);
+
   // Faceted layout: convert the single-canvas xaxis/yaxis into a grid of
   // numbered axes + per-cell title annotations. Runs before the secondary-Y
   // step so the overlay axes can borrow each cell's primary styling.
@@ -232,6 +237,7 @@ export function CartesianChart({
       sharedYTitle: effectiveSharedYTitle,
       roworder: subplots.roworder,
       titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
     });
     Object.assign(layout, faceted);
   }

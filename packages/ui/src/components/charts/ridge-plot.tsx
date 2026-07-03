@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig } from "./utils";
+import { createBaseLayout, createPlotlyConfig, truncateTickLabel } from "./utils";
 
 /**
  * One ridge, pre-computed by the caller. The wrapper just shapes Plotly
@@ -84,7 +84,8 @@ export function RidgePlot({
     ...layout.yaxis,
     tickmode: "array",
     tickvals: categoryTicks.map((t) => t.value),
-    ticktext: categoryTicks.map((t) => t.label),
+    // Ellipsize lane labels per tier so they cannot grow the left margin.
+    ticktext: categoryTicks.map((t) => truncateTickLabel(t.label, sizing)),
     showgrid: false,
     zeroline: false,
   };

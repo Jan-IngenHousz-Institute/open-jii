@@ -3,9 +3,11 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
-import { createPlotlyConfig, getRenderer } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import { createPlotlyConfig, getRenderer, responsiveChrome, tierAxisFontSizes } from "./utils";
 
 export interface CarpetSeriesData extends BaseSeries {
   a: number[];
@@ -101,6 +103,8 @@ export function CarpetPlot({
   loading,
   error,
 }: CarpetPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
 
   const plotData: PlotData[] = [
@@ -119,6 +123,7 @@ export function CarpetPlot({
           aaxis: series.aaxis
             ? {
                 title: series.aaxis.title || "A",
+                tickfont: { size: fontSizes.tick },
                 tickmode: series.aaxis.tickmode || "linear",
                 tick0: series.aaxis.tick0 || 0,
                 dtick: series.aaxis.dtick || 1,
@@ -131,6 +136,7 @@ export function CarpetPlot({
               }
             : {
                 title: "A",
+                tickfont: { size: fontSizes.tick },
                 gridcolor: "#E6E6E6",
                 linecolor: "#444",
               },
@@ -138,6 +144,7 @@ export function CarpetPlot({
           baxis: series.baxis
             ? {
                 title: series.baxis.title || "B",
+                tickfont: { size: fontSizes.tick },
                 tickmode: series.baxis.tickmode || "linear",
                 tick0: series.baxis.tick0 || 0,
                 dtick: series.baxis.dtick || 1,
@@ -150,6 +157,7 @@ export function CarpetPlot({
               }
             : {
                 title: "B",
+                tickfont: { size: fontSizes.tick },
                 gridcolor: "#E6E6E6",
                 linecolor: "#444",
               },
@@ -245,18 +253,13 @@ export function CarpetPlot({
     ),
   ];
 
-  // Create layout
-  const layout = {
-    title: config.title ? { text: config.title } : undefined,
-    paper_bgcolor: config.backgroundColor || "white",
-    showlegend: config.showLegend !== false,
-    autosize: true,
-  } as any; // Layout type allows flexible property assignment
+  // Tier-aware chrome; the carpet axes live on the traces above.
+  const layout = responsiveChrome(config, sizing) as any;
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

@@ -3,9 +3,11 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createPlotlyConfig, legendAnchorFor } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes } from "./utils";
 
 /**
  * Wind-rose series. Each series represents one **value band** (e.g.
@@ -66,6 +68,8 @@ export function WindRose({
   directionTicks = DEFAULT_DIRECTION_TICKS,
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
@@ -104,12 +108,9 @@ export function WindRose({
   const tickText =
     directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
 
+  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const layout = {
-    title: config.title ? { text: config.title } : undefined,
-    paper_bgcolor: config.backgroundColor || "white",
-    autosize: true,
-    showlegend: config.showLegend !== false,
-    legend: legendAnchorFor(config.legendPosition ?? "right"),
+    ...responsiveChrome(config, sizing),
     // Stack value-band segments within each direction slice (the
     // canonical wind-rose rendering). `barmode: "stack"` is read by
     // both cartesian bar traces and barpolar.
@@ -117,7 +118,8 @@ export function WindRose({
     polar: {
       bgcolor: "white",
       radialaxis: {
-        title: { text: radialAxisTitle },
+        title: { text: radialAxisTitle, font: { size: fontSizes.axisTitle } },
+        tickfont: { size: fontSizes.tick },
         // East-pointing radial axis: avoids the north overlap with bars.
         angle: 0,
         tickangle: 0,
@@ -135,16 +137,17 @@ export function WindRose({
         tickmode: "array",
         tickvals: directionTicks,
         ticktext: tickText,
+        tickfont: { size: fontSizes.tick },
         gridcolor: "#E6E6E6",
         showgrid: config.showGrid !== false,
       },
     },
   } as unknown as Partial<import("plotly.js").Layout>;
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

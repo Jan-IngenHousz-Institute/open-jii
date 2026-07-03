@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface DensityPlotProps extends BaseChartProps {
@@ -58,6 +60,7 @@ export function DensityPlot({
   loading,
   error,
 }: DensityPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const plotData: PlotData[] = [];
 
   if (showMarginalHistograms) {
@@ -142,15 +145,17 @@ export function DensityPlot({
     }
   }
 
+  // Tier margins replace the previous fixed 50/60 block.
+  const base = createBaseLayout(config, sizing);
+
   // Create layout based on whether marginal histograms are shown
   let layout;
   if (showMarginalHistograms) {
     // Layout with marginal subplots (like Plotly documentation)
     layout = {
-      ...createBaseLayout(config),
+      ...base,
       showlegend: false,
       autosize: true,
-      margin: { t: 50, l: 60, r: 60, b: 60 },
       hovermode: "closest",
       bargap: 0,
       // Main plot axes
@@ -183,10 +188,9 @@ export function DensityPlot({
   } else {
     // Use similar layout structure but without marginal axes
     layout = {
-      ...createBaseLayout(config),
+      ...base,
       showlegend: false,
       autosize: true,
-      margin: { t: 50, l: 60, r: 60, b: 60 },
       hovermode: "closest",
       bargap: 0,
       xaxis: {
@@ -202,10 +206,10 @@ export function DensityPlot({
     } as any; // Layout type allows flexible property assignment
   }
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}
@@ -244,6 +248,7 @@ export function RidgePlot({
   colorScale = "Viridis",
   colorMode = "solid",
 }: RidgePlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -473,19 +478,20 @@ export function RidgePlot({
     }
   });
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   // Create custom layout for ridge plots
+  const base = createBaseLayout(config, sizing);
   const layout = {
-    ...createBaseLayout(config),
+    ...base,
     xaxis: {
-      ...createBaseLayout(config).xaxis,
+      ...base.xaxis,
       autorange: true,
       type: "linear" as const,
       title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
     },
     yaxis: {
-      ...createBaseLayout(config).yaxis,
+      ...base.yaxis,
       tickvals: data.map((_, index) => index * spacing),
       ticktext: data.map((series) => series.category),
       range: [-0.5, (data.length - 1) * spacing + 1],
@@ -494,7 +500,7 @@ export function RidgePlot({
   };
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

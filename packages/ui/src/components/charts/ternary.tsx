@@ -3,9 +3,27 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType, legendAnchorFor } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  responsiveChrome,
+  tierAxisFontSizes,
+} from "./utils";
+
+// Normalise string-or-object axis titles; a caller-provided font wins over the tier font.
+function ternaryAxisTitle(
+  title: string | { text: string; font?: SafeFont } | undefined,
+  fallback: string,
+  fontSize: number,
+): { text: string; font?: SafeFont } {
+  const normalized = typeof title === "string" ? { text: title } : (title ?? { text: fallback });
+  return { font: { size: fontSize }, ...normalized };
+}
 
 export interface TernarySeriesData extends BaseSeries {
   a: number[];
@@ -113,6 +131,8 @@ export function TernaryPlot({
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterternary", renderer);
 
@@ -198,18 +218,16 @@ export function TernaryPlot({
   // Combine all traces - boundaries first (background), then scatter points (foreground) for proper layering
   const allTraces = [...boundaryTraces, ...plotData];
 
-  // Create ternary-specific layout using responsive base layout
+  // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
   const baseLayout = {
-    title: config.title ? { text: config.title } : undefined,
-    // Remove fixed width/height to allow container-based sizing
-    paper_bgcolor: config.backgroundColor || "white",
+    ...responsiveChrome(config, sizing),
     plot_bgcolor: bgcolor,
-    autosize: true, // Enable responsive sizing
 
     ternary: {
       sum: sum,
       aaxis: {
-        title: typeof aaxis.title === "string" ? { text: aaxis.title } : aaxis.title || "A",
+        title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: aaxis.min || 0,
         max: aaxis.max || sum,
         tick0: aaxis.tick0 || 0,
@@ -221,7 +239,8 @@ export function TernaryPlot({
         showticklabels: aaxis.showticklabels !== false,
       },
       baxis: {
-        title: typeof baxis.title === "string" ? { text: baxis.title } : baxis.title || "B",
+        title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: baxis.min || 0,
         max: baxis.max || sum,
         tick0: baxis.tick0 || 0,
@@ -233,7 +252,8 @@ export function TernaryPlot({
         showticklabels: baxis.showticklabels !== false,
       },
       caxis: {
-        title: typeof caxis.title === "string" ? { text: caxis.title } : caxis.title || "C",
+        title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: caxis.min || 0,
         max: caxis.max || sum,
         tick0: caxis.tick0 || 0,
@@ -246,15 +266,12 @@ export function TernaryPlot({
       },
       bgcolor: bgcolor,
     },
-
-    showlegend: config.showLegend !== false,
-    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any; // Layout type allows flexible property assignment
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={allTraces}
         layout={baseLayout}
@@ -312,6 +329,8 @@ export function TernaryContour({
   caxis = {},
   sum = 1,
 }: TernaryContourProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("contourternary", renderer);
 
@@ -360,17 +379,15 @@ export function TernaryContour({
       }) as any as PlotData,
   );
 
-  // Create ternary-specific layout (similar to TernaryPlot) with responsive sizing
+  // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
   const layout = {
-    title: config.title ? { text: config.title } : undefined,
-    // Remove fixed width/height to allow container-based sizing
-    paper_bgcolor: config.backgroundColor || "white",
-    autosize: true, // Enable responsive sizing
+    ...responsiveChrome(config, sizing),
 
     ternary: {
       sum: sum,
       aaxis: {
-        title: aaxis.title || "A",
+        title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: aaxis.min || 0,
         max: aaxis.max || sum,
         tick0: aaxis.tick0 || 0,
@@ -381,7 +398,8 @@ export function TernaryContour({
         showline: aaxis.showline !== false,
       },
       baxis: {
-        title: baxis.title || "B",
+        title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: baxis.min || 0,
         max: baxis.max || sum,
         tick0: baxis.tick0 || 0,
@@ -392,7 +410,8 @@ export function TernaryContour({
         showline: baxis.showline !== false,
       },
       caxis: {
-        title: caxis.title || "C",
+        title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
+        tickfont: { size: fontSizes.tick },
         min: caxis.min || 0,
         max: caxis.max || sum,
         tick0: caxis.tick0 || 0,
@@ -403,15 +422,12 @@ export function TernaryContour({
         showline: caxis.showline !== false,
       },
     },
-
-    showlegend: config.showLegend !== false,
-    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any; // Layout type allows flexible property assignment
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

@@ -15,6 +15,7 @@ import {
   extendLayoutForFacets,
   getRenderer,
   getPlotType,
+  truncateCategoryTicks,
 } from "./utils";
 
 export interface BoxSeriesData extends BaseSeries {
@@ -163,6 +164,7 @@ export function BoxPlot({
       sharedYTitle: effectiveSharedYTitle,
       roworder: subplots.roworder,
       titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
     });
     Object.assign(layout, faceted);
   }
@@ -179,22 +181,24 @@ export function BoxPlot({
   );
 
   if (hasStringX && orientation === "v") {
-    layout.xaxis = {
-      ...layout.xaxis,
-      type: "category",
-    };
+    layout.xaxis = truncateCategoryTicks(
+      { ...layout.xaxis, type: "category" },
+      data.flatMap((series) => series.x ?? []),
+      sizing,
+    );
   }
 
   if (hasStringY && orientation === "h") {
-    layout.yaxis = {
-      ...layout.yaxis,
-      type: "category",
-    };
+    layout.yaxis = truncateCategoryTicks(
+      { ...layout.yaxis, type: "category" },
+      data.flatMap((series) => series.y ?? []),
+      sizing,
+    );
   }
 
   applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

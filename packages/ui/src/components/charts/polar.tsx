@@ -3,9 +3,17 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType, legendAnchorFor } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  responsiveChrome,
+  tierAxisFontSizes,
+} from "./utils";
 
 export interface PolarSeriesData extends BaseSeries {
   r: number[];
@@ -98,6 +106,8 @@ export function PolarPlot({
   hole = 0,
   bgcolor = "white",
 }: PolarPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
 
   const plotData: PlotData[] = data.map((series) => {
@@ -155,17 +165,15 @@ export function PolarPlot({
     } as any as PlotData;
   });
 
-  // Create polar layout with responsive sizing
+  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const layout = {
-    title: config.title ? { text: config.title } : undefined,
-    // Remove fixed width/height to allow container-based sizing
-    paper_bgcolor: config.backgroundColor || "white",
+    ...responsiveChrome(config, sizing),
     plot_bgcolor: bgcolor,
-    autosize: true, // Enable responsive sizing
 
     polar: {
       radialaxis: {
-        title: radialAxis.title || "R",
+        title: { text: radialAxis.title || "R", font: { size: fontSizes.axisTitle } },
+        tickfont: { size: fontSizes.tick },
         range: radialAxis.range,
         tickmode: radialAxis.tickmode || "linear",
         tick0: radialAxis.tick0 || 0,
@@ -181,7 +189,8 @@ export function PolarPlot({
         showticklabels: radialAxis.showticklabels !== false,
       },
       angularaxis: {
-        title: angularAxis.title || "θ",
+        title: { text: angularAxis.title || "θ", font: { size: fontSizes.axisTitle } },
+        tickfont: { size: fontSizes.tick },
         tickmode: angularAxis.tickmode || "linear",
         tick0: angularAxis.tick0 || 0,
         dtick: angularAxis.dtick || 45,
@@ -204,15 +213,12 @@ export function PolarPlot({
       hole: hole,
       bgcolor: bgcolor,
     },
-
-    showlegend: config.showLegend !== false,
-    legend: legendAnchorFor(config.legendPosition ?? "right"),
   } as any;
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface ContourSeriesData extends BaseSeries {
@@ -70,6 +72,7 @@ export function ContourPlot({
   error,
   fillMode = "none",
 }: ContourPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("contour", renderer);
 
@@ -153,18 +156,19 @@ export function ContourPlot({
     [data, plotType],
   );
 
-  const layout = useMemo(() => createBaseLayout(config), [config]);
-  const plotConfig = useMemo(() => createPlotlyConfig(config), [config]);
+  const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing]);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   // When the configuration genuinely changes, `config` identity flips
   // and `layout` / `plotConfig` recompute; react-plotly would call
   // `Plotly.react` and crash. The only safe path is a clean unmount and
   // remount, driven by a key that hashes the full config snapshot. One
-  // frame of flicker per intentional change, no crash.
-  const remountKey = useMemo(() => JSON.stringify(config), [config]);
+  // frame of flicker per intentional change, no crash. Sizing-tier flips
+  // remount for the same reason.
+  const remountKey = useMemo(() => JSON.stringify({ config, sizing }), [config, sizing]);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         key={remountKey}
         data={plotData}
@@ -191,6 +195,7 @@ export function OverlayContour({
   loading,
   error,
 }: OverlayContourProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const contourType = getPlotType("contour", renderer);
 
@@ -230,11 +235,11 @@ export function OverlayContour({
   // Combine base data with contour overlay
   const allData = [...baseData, ...contourPlotData];
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={allData}
         layout={layout}
