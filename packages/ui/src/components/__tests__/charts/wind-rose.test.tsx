@@ -23,6 +23,14 @@ vi.mock("../../charts/utils", () => ({
     displayModeBar: false,
   })),
   legendAnchorFor: vi.fn(() => ({})),
+  responsiveChrome: vi.fn((config: any) => ({
+    title: config.title ? { text: config.title } : undefined,
+    showlegend: config.showLegend !== false,
+    legend: {},
+    autosize: true,
+    paper_bgcolor: config.backgroundColor || "white",
+  })),
+  tierAxisFontSizes: vi.fn(() => ({ tick: 12, axisTitle: 14 })),
 }));
 
 const sampleData: WindRoseSeriesData[] = [
@@ -126,12 +134,12 @@ describe("WindRose", () => {
 
   it("defaults the radial-axis title to Frequency", () => {
     render(<WindRose data={sampleData} />);
-    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Frequency" });
+    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Frequency", font: { size: 14 } });
   });
 
   it("respects a custom radial-axis title (e.g. translated)", () => {
     render(<WindRose data={sampleData} radialAxisTitle="Häufigkeit" />);
-    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Häufigkeit" });
+    expect(getLayout().polar.radialaxis.title).toEqual({ text: "Häufigkeit", font: { size: 14 } });
   });
 
   it("renders the radial axis horizontally to the east (angle: 0)", () => {

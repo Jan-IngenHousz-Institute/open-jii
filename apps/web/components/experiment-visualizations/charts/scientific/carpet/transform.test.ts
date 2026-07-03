@@ -138,4 +138,34 @@ describe("transformCarpetData", () => {
     expect(onResult.carpetData[0].aaxis?.showgrid).toBe(true);
     expect(onResult.carpetData[0].baxis?.showgrid).toBe(true);
   });
+
+  it("emits monotonically sorted a / b axes regardless of row order", () => {
+    // Non-monotonic carpet axes crash plotly's contourcarpet makeCrossings;
+    // shuffled dashboard rows used to produce that. Axes must come out sorted.
+    const shuffled = [
+      { x: 2, y: 2, z: 40 },
+      { x: 1, y: 2, z: 20 },
+      { x: 2, y: 1, z: 30 },
+      { x: 1, y: 1, z: 10 },
+    ];
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(shuffled, sources, baseConfig);
+    expect(result.contourData[0].a).toEqual([1, 2]);
+    expect(result.contourData[0].b).toEqual([1, 2]);
+    // z stays aligned to the sorted axes: (a=1, b=1) => 10, (a=2, b=2) => 40.
+    // contourcarpet z is z[bIdx][aIdx].
+    expect(result.contourData[0].z[0][0]).toBe(10);
+    expect(result.contourData[0].z[1][1]).toBe(40);
+  });
+
+  it("propagates carpetReverseScale onto the contour trace", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    expect(
+      transformCarpetData(wellShaped, sources, { carpetReverseScale: true }).contourData[0],
+    ).toHaveProperty("reversescale", true);
+    expect(transformCarpetData(wellShaped, sources, baseConfig).contourData[0]).toHaveProperty(
+      "reversescale",
+      false,
+    );
+  });
 });

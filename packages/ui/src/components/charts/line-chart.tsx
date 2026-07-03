@@ -156,6 +156,7 @@ export function LineChart({
       sharedYTitle: effectiveSharedYTitle,
       roworder: subplots.roworder,
       titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
     });
     Object.assign(layout, faceted);
   }

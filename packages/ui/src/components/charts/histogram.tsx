@@ -314,6 +314,7 @@ export function Histogram({
       sharedYTitle: effectiveSharedYTitle,
       roworder: subplots.roworder,
       titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
     });
     Object.assign(layout, faceted);
   }
@@ -326,7 +327,7 @@ export function Histogram({
 
   applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

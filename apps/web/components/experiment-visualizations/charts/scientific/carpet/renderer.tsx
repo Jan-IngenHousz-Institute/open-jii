@@ -45,6 +45,7 @@ export function CarpetRenderer({
     chartConfig.carpetNContours,
     chartConfig.carpetContourColoring,
     chartConfig.carpetShowContourLabels,
+    chartConfig.showGrid,
   ]);
 
   if (visualization.chartType !== "carpet") {
