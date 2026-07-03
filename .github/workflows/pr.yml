@@ -198,22 +198,22 @@ jobs:
   release_preview:
     name: Release Preview (dry run)
     needs: detect
-    # Skip forks / Dependabot: their token is read-only, so semantic-release's
-    # push-dry-run auth check cannot run.
+    # Skip forks/Dependabot: read-only token can't run the push --dry-run auth check.
     if: >
       needs.detect.outputs.has_affected_apps == 'true' &&
       github.event.pull_request.head.repo.fork != true &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
-      # `contents: write` lets semantic-release's `git push --dry-run` auth check
-      # pass. Nothing is pushed: the whole run is `--dry-run`. `pull-requests:
-      # write` is for the preview comment.
+      # contents:write only so semantic-release's push --dry-run auth check passes.
       contents: write
       pull-requests: write
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
+      # Make env-ci see a push to main (checkout still uses the PR merge commit).
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -237,15 +237,6 @@ jobs:
           echo "app_count=$(echo "$RELEASE_APPS" | jq 'length')" >> $GITHUB_OUTPUT
           echo "Preview release candidates: $RELEASE_APPS"
 
-      - name: Treat merge ref as main
-        if: steps.filter_apps.outputs.app_count > 0
-        shell: bash
-        run: |
-          # semantic-release only releases from `main`; on a PR we are on a
-          # detached merge commit (main + this PR). Name it `main` so the dry
-          # run reports exactly what merging would release.
-          git checkout -B main
-
       - name: Compute release preview
         id: preview
         if: steps.filter_apps.outputs.app_count > 0
@@ -260,14 +251,13 @@ jobs:
         if: always()
         env:
           RELEASES: ${{ steps.preview.outputs.releases_created }}
-          # 'failure' means the dry run itself errored (continue-on-error kept the
-          # job green); we must NOT report that as "nothing will release".
+          # failure = dry run errored; don't report it as "nothing will release".
           PREVIEW_OUTCOME: ${{ steps.preview.outcome }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
-          RELEASES="${RELEASES:-{}}"
+          if [ -z "$RELEASES" ]; then RELEASES="{}"; fi
           {
             echo "## 📦 Release preview"
             echo ""

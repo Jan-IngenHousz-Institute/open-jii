@@ -79,13 +79,10 @@ runs:
           # Run semantic-release for this app
           cd "$APP_PATH"
           
-          # `set +e` around the pipeline so `pipefail` does not abort the step
-          # before we read the exit code; `${PIPESTATUS[0]}` is semantic-release's
-          # code (not tee's) so the failure block below actually runs.
+          # set +e + PIPESTATUS so we read semantic-release's exit code, not tee's.
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE - Preview only"
-            # --no-ci so the preview still computes a version on PR builds
-            # (semantic-release otherwise refuses to run for pull requests).
+            # --no-ci so the preview still computes on PR builds.
             set +e
             ../../tooling/release/node_modules/.bin/semantic-release --dry-run --no-ci 2>&1 | tee release-output.txt
             RELEASE_EXIT_CODE=${PIPESTATUS[0]}

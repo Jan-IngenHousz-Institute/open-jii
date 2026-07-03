@@ -1,24 +1,9 @@
 /**
- * Dependency-aware replacement for `semantic-release-monorepo`'s commit filter.
- *
- * `semantic-release-monorepo` scopes each app's release to commits that touched
- * the app's OWN directory. In this monorepo the apps (`mobile`, `web`,
- * `backend`) ship shared `@repo/*` packages, so a fix landed in a shared package
- * (e.g. `fix(iot)` under `packages/iot`) never cut a release for the apps that
- * bundle it: the app's next release silently swallowed the fix with no version.
- *
- * This module keeps the per-app monorepo scoping (tag format, notes, success)
- * but widens the "relevant commit" path set to the app PLUS its transitive
- * workspace runtime `dependencies`. Only runtime `dependencies` propagate a
- * release: config/tooling packages consumed as `devDependencies` (eslint-config,
- * typescript-config, vitest-config, tailwind-config) deliberately do NOT bump an
- * app version. The turbo affected graph (used by the release workflow to pick
- * which apps to run) also follows devDependencies, so it may enter an app into
- * the release loop where this filter then correctly finds no relevant commit.
- *
- * Wired into each app via `apps/<app>/.releaserc.js` (replaces
- * `extends: "semantic-release-monorepo"`). Reuses the upstream plugin's file
- * listing and version->tag transforms so changelog/tag behaviour is unchanged.
+ * Dependency-aware replacement for semantic-release-monorepo's commit filter:
+ * an app releases on commits touching its own dir OR any workspace package in
+ * its transitive runtime `dependencies` (so fix(iot) cuts the apps bundling
+ * @repo/iot). devDependency-only config/tooling packages deliberately do not.
+ * Wired via apps/<app>/.releaserc.js in place of extends:semantic-release-monorepo.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -59,11 +44,7 @@ const indexWorkspace = (root) => {
   return byName;
 };
 
-/**
- * Directories (relative to the git root) whose commits count towards the
- * current package's release: the package itself plus its transitive workspace
- * runtime dependencies. External (published) deps are ignored.
- */
+/** Package dir + its transitive workspace runtime-dep dirs (git-root-relative). */
 export const computeRelevantPaths = () => {
   const root = gitRoot();
   const byName = indexWorkspace(root);
