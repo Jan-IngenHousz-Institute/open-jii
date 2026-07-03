@@ -173,14 +173,17 @@ export function DensityPlot({
         zeroline: false,
         title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
       },
-      // Marginal histogram axes
+      // Marginal histogram axes. Inherit the base tick font so their labels
+      // shrink with the tier like the main axes.
       xaxis2: {
+        tickfont: base.xaxis?.tickfont,
         domain: [0.85, 1],
         showgrid: false,
         zeroline: false,
         showticklabels: true,
       },
       yaxis2: {
+        tickfont: base.yaxis?.tickfont,
         domain: [0.85, 1],
         showgrid: false,
         zeroline: false,

@@ -210,7 +210,7 @@ export function OverlayContour({
             name: series.name,
             type: contourType,
 
-            ncontours: series.ncontours || 15,
+            ncontours: series.ncontours ?? 15,
             contours: {
               ...series.contours,
               coloring: "lines",
@@ -219,7 +219,7 @@ export function OverlayContour({
 
             line: {
               color: series.line?.color || "black",
-              width: series.line?.width || 1,
+              width: series.line?.width ?? 1,
             },
 
             showscale: false, // Don't show colorbar for overlay
