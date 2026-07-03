@@ -18,6 +18,10 @@ vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
   NavigationTopbar: () => <header aria-label="topbar">Topbar</header>,
 }));
 
+vi.mock("@/components/whats-new/whats-new-sheet", () => ({
+  WhatsNewSheet: () => null,
+}));
+
 describe("AppLayout", () => {
   const defaultProps = {
     children: <div>Page content</div>,
