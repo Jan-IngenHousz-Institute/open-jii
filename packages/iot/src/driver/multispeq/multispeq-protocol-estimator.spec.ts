@@ -208,7 +208,16 @@ describe("estimateProtocolDurationMs", () => {
   it("sums the multi-LED pre_illumination form", () => {
     expect(
       estimateProtocolDurationMs([
-        { _protocol_set_: [{ pre_illumination: [[2, 200, 600_000], [3, 100, 300_000]] }] },
+        {
+          _protocol_set_: [
+            {
+              pre_illumination: [
+                [2, 200, 600_000],
+                [3, 100, 300_000],
+              ],
+            },
+          ],
+        },
       ]),
     ).toBe(900_000);
   });
