@@ -92,7 +92,7 @@ export function CartesianRenderer({
   const effectiveConfig: PlotlyChartConfig = {
     ...chartConfig,
     xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
-    useWebGL: chartConfig.useWebGL || totalPoints > WEBGL_POINT_THRESHOLD,
+    useWebGL: chartConfig.useWebGL === true || totalPoints > WEBGL_POINT_THRESHOLD,
   };
 
   return (
