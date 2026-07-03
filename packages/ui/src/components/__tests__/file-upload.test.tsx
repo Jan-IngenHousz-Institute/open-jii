@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { vi, expect, describe, it, beforeEach } from "vitest";
@@ -95,6 +95,41 @@ describe("FileUpload", () => {
     await user.upload(input, files);
 
     expect(mockOnFilesChange).toHaveBeenCalledWith(expect.any(FileList));
+  });
+
+  it("calls onFilesChange when files are dropped", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
+    const dropzone = getFileInput(container).parentElement as HTMLElement;
+
+    const file = new File(["test"], "dropped.csv", { type: "text/csv" });
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } });
+
+    expect(mockOnFilesChange).toHaveBeenCalledTimes(1);
+    expect(mockOnFilesChange).toHaveBeenCalledWith([file]);
+  });
+
+  it("highlights the dropzone on drag over and clears it on drag leave", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
+    const dropzone = getFileInput(container).parentElement as HTMLElement;
+
+    fireEvent.dragOver(dropzone);
+    expect(dropzone.className).toContain("bg-muted/50");
+
+    fireEvent.dragLeave(dropzone);
+    expect(dropzone.className).not.toContain("bg-muted/50");
+  });
+
+  it("ignores dropped files while uploading", () => {
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading />,
+    );
+    const dropzone = getFileInput(container).parentElement as HTMLElement;
+
+    fireEvent.drop(dropzone, {
+      dataTransfer: { files: [new File(["x"], "x.csv", { type: "text/csv" })] },
+    });
+
+    expect(mockOnFilesChange).not.toHaveBeenCalled();
   });
 
   it("disables file selection when isUploading is true", () => {
