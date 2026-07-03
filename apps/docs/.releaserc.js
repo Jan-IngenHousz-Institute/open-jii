@@ -3,11 +3,20 @@
  * Tag format: docs-vX.Y.Z
  */
 import baseConfig from "../../.releaserc.js";
+import {
+  analyzeCommits,
+  fail,
+  generateNotes,
+  success,
+} from "../../tooling/release/monorepo-deps.js";
 
 export default {
   ...baseConfig,
-  extends: "semantic-release-monorepo",
   tagFormat: "docs-v${version}",
+  analyzeCommits,
+  generateNotes,
+  success,
+  fail,
   plugins: [
     ...baseConfig.plugins,
     [

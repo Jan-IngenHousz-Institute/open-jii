@@ -1578,6 +1578,9 @@ importers:
       semantic-release-monorepo:
         specifier: ^8.0.2
         version: 8.0.2(semantic-release@25.0.5(typescript@5.9.3))
+      semantic-release-plugin-decorators:
+        specifier: ^4.0.0
+        version: 4.0.0(semantic-release@25.0.5(typescript@5.9.3))
 
   tooling/tailwind:
     dependencies:
