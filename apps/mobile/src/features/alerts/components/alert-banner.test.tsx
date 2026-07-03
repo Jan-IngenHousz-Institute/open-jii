@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
-import { Text } from "react-native";
+import { Linking, Text } from "react-native";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -66,5 +66,33 @@ describe("AlertBanner", () => {
     const json = { nodeType: "document", content: [] };
     render(<AlertBanner alert={makeAlert({ body: { json } })} onDismiss={vi.fn()} />);
     expect(screen.getByText(JSON.stringify(json))).toBeTruthy();
+  });
+
+  it("opens an absolute link URL as-is when the CTA is pressed", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockImplementation(() => Promise.resolve());
+    render(
+      <AlertBanner
+        alert={makeAlert({ link: { url: "https://example.com/x", label: "Learn more" } })}
+        onDismiss={vi.fn()}
+        baseUrl="https://app.openjii.org"
+      />,
+    );
+    fireEvent.press(screen.getByText("Learn more"));
+    expect(openURL).toHaveBeenCalledWith("https://example.com/x");
+    openURL.mockRestore();
+  });
+
+  it("resolves a relative link URL against baseUrl before opening", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockImplementation(() => Promise.resolve());
+    render(
+      <AlertBanner
+        alert={makeAlert({ link: { url: "/releases", label: "See releases" } })}
+        onDismiss={vi.fn()}
+        baseUrl="https://app.openjii.org"
+      />,
+    );
+    fireEvent.press(screen.getByText("See releases"));
+    expect(openURL).toHaveBeenCalledWith("https://app.openjii.org/releases");
+    openURL.mockRestore();
   });
 });
