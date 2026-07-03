@@ -235,10 +235,7 @@ export function OverlayContour({
     [contourData, contourType],
   );
 
-  const allData = useMemo(
-    () => [...baseData, ...contourPlotData],
-    [baseData, contourPlotData],
-  );
+  const allData = useMemo(() => [...baseData, ...contourPlotData], [baseData, contourPlotData]);
 
   const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing]);
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
