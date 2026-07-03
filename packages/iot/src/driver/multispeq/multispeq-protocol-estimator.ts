@@ -124,18 +124,43 @@ function channelCount(detectorsEntry: Json): number {
   return Array.isArray(detectorsEntry) ? Math.max(1, detectorsEntry.length) : 1;
 }
 
+/**
+ * Total pre-illumination wait (ms) for a block. Single form is
+ * `[led, intensity, duration]`; the multi-LED form is an array of those tuples.
+ * The duration (index 2) may itself be a ramp array. Durations are summed, the
+ * safe direction for sizing a timeout. See OJD-1565.
+ */
+function preIlluminationMs(
+  block: Record<string, unknown>,
+  vArrays: VArrays,
+  vars: Record<string, number>,
+): number {
+  const pi = block.pre_illumination;
+  if (!Array.isArray(pi) || pi.length === 0) return 0;
+  const tuples = Array.isArray(pi[0]) ? (pi as Json[][]) : [pi as Json[]];
+  let total = 0;
+  for (const tuple of tuples) {
+    const duration = tuple[2];
+    const parts = Array.isArray(duration) ? duration : [duration];
+    for (const part of parts) total += resolveField(part, vArrays, vars) ?? 0;
+  }
+  return total;
+}
+
 function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, number>): number {
   if (!isRecord(block)) return 0;
 
   const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
   const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
+  const preIllumMs = preIlluminationMs(block, vArrays, vars);
 
-  // Setup blocks (autogain, etc.) carry a fixed cost rather than a pulse train,
-  // but a setup-only / delay-only block still waits its protocols_delay.
+  // A block with no pulse train still waits its pre_illumination and
+  // protocols_delay. A standalone pre_illumination block (no pulses) is a
+  // documented construct, so count it rather than treating it as 0.
   const hasPulses = Array.isArray(block.pulses) && block.pulses.length > 0;
   if (!hasPulses) {
     const setupMs = "autogain" in block ? SETUP_BLOCK_MS : 0;
-    return setupMs + delayMs * repeats;
+    return setupMs + (preIllumMs + delayMs) * repeats;
   }
 
   const pulses = block.pulses as Json[];
@@ -150,14 +175,9 @@ function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, num
   }
   const pulseTrainMs = pulseTrainUs / 1000;
 
-  const preIllumination = Array.isArray(block.pre_illumination)
-    ? (block.pre_illumination as Json[])
-    : [];
-  const preIlluminationMs = resolveField(preIllumination[2], vArrays, vars) ?? 0;
-
   const averages = Math.max(1, resolveField(block.protocol_averages, vArrays, vars) ?? 1);
 
-  return (pulseTrainMs + preIlluminationMs) * repeats * averages + delayMs * repeats;
+  return (pulseTrainMs + preIllumMs) * repeats * averages + delayMs * repeats;
 }
 
 function estimateSetMs(set: Json): number {
