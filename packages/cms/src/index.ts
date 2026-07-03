@@ -35,6 +35,7 @@ export { ReleaseHero } from "./features/release-notes/release-hero";
 export type { ComponentReleaseNoteFieldsFragment } from "./lib/__generated/sdk";
 export {
   getCategoryMeta,
+  normalizeCategory,
   RELEASE_CATEGORIES,
   type ReleaseCategory,
   type CategoryMeta,

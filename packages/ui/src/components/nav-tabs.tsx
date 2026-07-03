@@ -73,14 +73,13 @@ function getTriggerLabel(child: React.ReactElement): React.ReactNode {
 const NavTabsMobileList = ({
   className,
   children,
+  onClick,
   ...props
 }: React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>) => {
   const currentValue = React.useContext(NavTabsValueContext);
   const [open, setOpen] = React.useState(false);
 
-  const items = React.Children.toArray(children).filter(
-    React.isValidElement,
-  ) as React.ReactElement[];
+  const items = React.Children.toArray(children).filter(React.isValidElement);
   const active =
     items.find((child) => (child.props as { value?: string }).value === currentValue) ?? items[0];
   const activeCount = active ? (active.props as { count?: number }).count : undefined;
@@ -112,8 +111,10 @@ const NavTabsMobileList = ({
         <TabsPrimitive.List
           className="flex flex-col gap-0.5"
           {...props}
-          // Close once a row is chosen (covers both mouse and keyboard activation).
+          // Compose with any consumer-passed handler, then close once a row is chosen (covers both
+          // mouse and keyboard activation).
           onClick={(event) => {
+            onClick?.(event);
             if ((event.target as HTMLElement).closest('[role="tab"]')) setOpen(false);
           }}
         >

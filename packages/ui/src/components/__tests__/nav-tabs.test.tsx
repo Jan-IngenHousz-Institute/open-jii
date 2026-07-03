@@ -464,6 +464,28 @@ describe("NavTabs", () => {
       expect(screen.getByRole("button")).toBeInTheDocument();
     });
 
+    it("runs a consumer-supplied onClick and still closes the dropdown on selection", async () => {
+      const user = userEvent.setup();
+      const onClick = vi.fn();
+
+      render(
+        <NavTabs value="overview">
+          <NavTabsList onClick={onClick}>
+            <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+            <NavTabsTrigger value="data">Data</NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /overview/i }));
+      await user.click(screen.getByRole("tab", { name: /data/i }));
+
+      // The consumer's handler is composed with the internal one (not clobbered by it)...
+      expect(onClick).toHaveBeenCalled();
+      // ...and the internal close behavior still fires.
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    });
+
     it("labels the closed dropdown from an asChild trigger's inner content", () => {
       render(
         <NavTabs value="data">

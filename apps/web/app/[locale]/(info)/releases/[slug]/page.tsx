@@ -13,7 +13,7 @@ import { safeMetadata } from "~/lib/safe-metadata";
 
 import { ReleaseNoteArticle } from "@repo/cms";
 import { Container } from "@repo/cms/container";
-import { defaultLocale, locales } from "@repo/i18n/config";
+import { locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface ReleaseDetailPageProps {
@@ -29,12 +29,13 @@ export function generateMetadata({ params }: ReleaseDetailPageProps): Promise<Me
     const { isEnabled: preview } = await draftMode();
     const entry = await getReleaseNoteBySlug(locale, slug, preview);
 
-    const languages = Object.fromEntries(
-      locales.map((l) => [l, l === defaultLocale ? `/releases/${slug}` : `/${l}/releases/${slug}`]),
-    );
+    // The proxy middleware redirects unprefixed paths to `/{defaultLocale}/…`, so every hreflang
+    // (including the default locale) and the canonical must carry the locale prefix to point at the
+    // real, non-redirecting URL.
+    const languages = Object.fromEntries(locales.map((l) => [l, `/${l}/releases/${slug}`]));
     const metadata: Metadata = {
       alternates: {
-        canonical: `/releases/${slug}`,
+        canonical: `/${locale}/releases/${slug}`,
         languages,
       },
     };

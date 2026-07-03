@@ -180,6 +180,7 @@ export const userContract = c.router({
     responses: {
       200: zWhatsNewSeenResponse,
       401: zErrorResponse,
+      404: zErrorResponse,
     },
     summary: "Get the caller's What's new last-seen timestamp",
     description:
@@ -193,6 +194,7 @@ export const userContract = c.router({
     responses: {
       200: zWhatsNewSeenResponse,
       401: zErrorResponse,
+      404: zErrorResponse,
     },
     summary: "Mark What's new as seen",
     description:

@@ -44,10 +44,15 @@ const CATEGORY_META: Record<ReleaseCategory, CategoryMeta> = {
   },
 };
 
-/** Normalizes the free-text `category` field to known {@link CategoryMeta}; unknown → announcement. */
-export function getCategoryMeta(category?: string | null): CategoryMeta {
+/** Normalizes the free-text `category` field to a known {@link ReleaseCategory}; unknown → announcement. */
+export function normalizeCategory(category?: string | null): ReleaseCategory {
   if (category && category in CATEGORY_META) {
-    return CATEGORY_META[category as ReleaseCategory];
+    return category as ReleaseCategory;
   }
-  return CATEGORY_META.announcement;
+  return "announcement";
+}
+
+/** Resolves the free-text `category` field to its {@link CategoryMeta}; unknown → announcement. */
+export function getCategoryMeta(category?: string | null): CategoryMeta {
+  return CATEGORY_META[normalizeCategory(category)];
 }

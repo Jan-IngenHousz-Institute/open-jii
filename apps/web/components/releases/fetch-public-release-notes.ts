@@ -36,6 +36,17 @@ export const getReleaseNoteBySlug = cache(
     const { previewClient, client } = await getContentfulClients();
     const gqlClient = preview ? previewClient : client;
     const data = await gqlClient.releaseNoteBySlug({ slug, locale, preview });
-    return data.componentReleaseNoteCollection?.items[0] ?? null;
+    const entry = data.componentReleaseNoteCollection?.items[0] ?? null;
+
+    // Honor the scheduled `publishedAt` reveal (the list query filters `publishedAt_lte: now`), so a
+    // future-dated note isn't reachable early via its direct URL. Draft mode still previews it.
+    if (!preview && entry?.publishedAt) {
+      const publishedMs = new Date(entry.publishedAt as string).getTime();
+      if (!Number.isNaN(publishedMs) && publishedMs > Date.now()) {
+        return null;
+      }
+    }
+
+    return entry;
   },
 );

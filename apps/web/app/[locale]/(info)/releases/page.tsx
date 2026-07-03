@@ -5,7 +5,7 @@ import { getAllReleaseNotes } from "~/components/releases/fetch-public-release-n
 import { ReleasesChangelog } from "~/components/releases/releases-changelog";
 
 import { Container } from "@repo/cms/container";
-import { defaultLocale, locales } from "@repo/i18n/config";
+import { locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface ReleasesPageProps {
@@ -16,14 +16,14 @@ export async function generateMetadata({ params }: ReleasesPageProps): Promise<M
   const { locale } = await params;
   const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
 
-  const languages = Object.fromEntries(
-    locales.map((l) => [l, l === defaultLocale ? "/releases" : `/${l}/releases`]),
-  );
+  // The proxy middleware redirects unprefixed paths to `/{defaultLocale}/…`, so every hreflang
+  // (including the default locale) and the canonical must carry the locale prefix.
+  const languages = Object.fromEntries(locales.map((l) => [l, `/${l}/releases`]));
 
   return {
     title: t("releases.metaTitle"),
     description: t("releases.metaDescription"),
-    alternates: { canonical: "/releases", languages },
+    alternates: { canonical: `/${locale}/releases`, languages },
   };
 }
 

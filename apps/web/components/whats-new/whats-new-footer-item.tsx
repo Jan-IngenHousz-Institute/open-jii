@@ -16,7 +16,9 @@ import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 export function WhatsNewFooterItem({ entries }: { entries: ReleaseNoteFields[] }) {
   const { t } = useTranslation("navigation");
   const lastSeen = useWhatsNewLastSeen();
-  const unreadCount = countUnread(entries, lastSeen.data?.body.lastSeenAt ?? null);
+  // Wait for the query to resolve — treating a loading `undefined` as "never seen" flashes every
+  // note as unread. A resolved null `lastSeenAt` still correctly means all unread.
+  const unreadCount = lastSeen.data ? countUnread(entries, lastSeen.data.body.lastSeenAt) : 0;
   const hasUnread = unreadCount > 0;
   const label = t("whatsNew.navLabel");
 

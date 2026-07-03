@@ -6,7 +6,7 @@ import type {
   ComponentReleaseNoteFieldsFragment as ReleaseNoteFields,
   ReleaseCategory,
 } from "@repo/cms";
-import { RELEASE_CATEGORIES, ReleaseHero, ReleaseNotesFeed } from "@repo/cms";
+import { RELEASE_CATEGORIES, ReleaseHero, ReleaseNotesFeed, normalizeCategory } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
@@ -37,12 +37,15 @@ export function ReleasesChangelog({ entries, linkBaseHref }: ReleasesChangelogPr
 
   const [featured, ...rest] = entries;
   const isAll = filter === "all";
-  // The featured note is always the hero, so keep it out of the timeline regardless of filter.
-  const feedEntries = isAll ? rest : rest.filter((entry) => entry.category === filter);
+  // Group by the same normalized category the badges display (unknown/blank → announcement), so a
+  // note shown as "Announcement" is also filtered into the Announcement tab.
+  const feedEntries = isAll
+    ? rest
+    : rest.filter((entry) => normalizeCategory(entry.category) === filter);
   // Chips come from `rest`, not all entries — otherwise a category whose only note is the pinned
   // featured hero would get a chip that filters to an empty timeline.
   const presentCategories = RELEASE_CATEGORIES.filter((category) =>
-    rest.some((entry) => entry.category === category),
+    rest.some((entry) => normalizeCategory(entry.category) === category),
   );
 
   return (
@@ -59,7 +62,9 @@ export function ReleasesChangelog({ entries, linkBaseHref }: ReleasesChangelogPr
               <NavTabsTrigger
                 key={category}
                 value={category}
-                count={rest.filter((entry) => entry.category === category).length}
+                count={
+                  rest.filter((entry) => normalizeCategory(entry.category) === category).length
+                }
               >
                 {t(`whatsNew.category.${category}`)}
               </NavTabsTrigger>

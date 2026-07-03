@@ -9,7 +9,8 @@ import { env } from "~/env";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { ReleaseNotesFeed } from "@repo/cms";
-import { useTranslation } from "@repo/i18n";
+import { useCurrentLocale, useTranslation } from "@repo/i18n";
+import i18nConfig from "@repo/i18n/config";
 import {
   Sheet,
   SheetContent,
@@ -20,13 +21,13 @@ import {
 
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
-// The public /releases page lives in this same app, so anchor it to this deployment's own origin
-// (localhost / dev / prod) rather than a hardcoded domain — mirrors how the support link uses env.
-const RELEASES_BASE_URL = `${env.NEXT_PUBLIC_BASE_URL}/releases`;
-
 /** Right-side 480px panel listing release notes, grouped by month, with a "Full changelog" link. */
 export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
   const { t } = useTranslation("navigation");
+  const locale = useCurrentLocale(i18nConfig) ?? "en-US";
+  // Same-app origin (env, not a hardcoded domain), locale in the path so the proxy doesn't redirect
+  // an unprefixed URL to the default locale.
+  const releasesBaseUrl = `${env.NEXT_PUBLIC_BASE_URL}/${locale}/releases`;
   const lastSeen = useWhatsNewLastSeen();
   const markSeen = useMarkWhatsNewSeen();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -57,7 +58,7 @@ export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <ReleaseNotesFeed
             entries={entries}
-            linkBaseHref={RELEASES_BASE_URL}
+            linkBaseHref={releasesBaseUrl}
             linkTarget="_blank"
             variant="sheet"
           />
@@ -65,7 +66,7 @@ export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
 
         <div className="border-border border-t px-6 py-4">
           <Link
-            href={RELEASES_BASE_URL}
+            href={releasesBaseUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
