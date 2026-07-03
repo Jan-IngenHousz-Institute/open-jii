@@ -1586,7 +1586,9 @@ export const zUploadFormFields = z.discriminatedUnion("targetKind", [
   z.object({
     targetKind: z.literal("existing"),
     sourceKind: zUploadSourceKind,
-    uploadTableId: z.string().uuid(),
+    uploadTableId: z
+      .string({ required_error: "Select a table to append to" })
+      .uuid("Select a table to append to"),
   }),
 ]);
 export type UploadFormFields = z.infer<typeof zUploadFormFields>;

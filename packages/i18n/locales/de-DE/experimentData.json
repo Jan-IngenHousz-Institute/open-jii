@@ -95,7 +95,7 @@
         "invalidName": "Der Name muss mit einem Buchstaben beginnen; erlaubt sind Buchstaben, Ziffern und Unterstriche (max. 63)",
         "noFiles": "Wählen Sie mindestens eine Datendatei aus",
         "unsupportedFormat": "'{{fileName}}' ist kein unterstütztes Dateiformat (CSV, TSV, Parquet, JSON, NDJSON)",
-        "mixedFormats": "Alle Dateien eines Uploads müssen dasselbe Format haben",
+        "wrongFormat": "'{{fileName}}' ist keine {{format}}-Datei",
         "oversizedFiles_one": "{{count}} Datei überschreitet die maximal zulässige Größe",
         "oversizedFiles_other": "{{count}} Dateien überschreiten die maximal zulässige Größe",
         "tooManyFiles": "Zu viele Dateien: maximal {{max}} auswählen",

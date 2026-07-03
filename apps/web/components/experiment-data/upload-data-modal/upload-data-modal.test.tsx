@@ -111,7 +111,7 @@ describe("UploadDataModal", () => {
     expect(fd.getAll("files")).toHaveLength(1);
   });
 
-  it("rejects mixed-format batches before they hit the wire", async () => {
+  it("flags a file that doesn't match the selected format on selection (before Upload)", async () => {
     setExperimentTables();
     mountEmptyHistory();
     const spy = mountUploadCapture();
@@ -119,17 +119,11 @@ describe("UploadDataModal", () => {
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
-    await userEvent.type(
-      screen.getByLabelText("experimentData.uploadDataModal.newTable.label"),
-      "leaf_traits",
-    );
-    await selectFiles(["a.csv", "b.tsv"]);
-    await userEvent.click(
-      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
-    );
+    // A .tsv file when CSV was chosen: error must surface without clicking Upload.
+    await selectFiles(["data.tsv"]);
 
     await waitFor(() => {
-      expect(screen.getByText(/validation\.mixedFormats/)).toBeInTheDocument();
+      expect(screen.getByText(/validation\.wrongFormat/)).toBeInTheDocument();
     });
     expect(spy.called).toBe(false);
   });
@@ -154,6 +148,37 @@ describe("UploadDataModal", () => {
         screen.getByText("experimentData.uploadDataModal.existingTable.label"),
       ).toBeInTheDocument();
     });
+  });
+
+  it("shows a validation error when appending with no table selected", async () => {
+    setExperimentTables([
+      createExperimentTable({
+        identifier: "leaf_traits",
+        tableType: "upload",
+        displayName: "Leaf Traits",
+        totalRows: 7,
+      }),
+    ]);
+    mountEmptyHistory();
+    const spy = mountUploadCapture();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+    // Defaults to "append to existing" with no table picked; Upload must surface an error.
+    await waitFor(() => {
+      expect(
+        screen.getByText("experimentData.uploadDataModal.existingTable.label"),
+      ).toBeInTheDocument();
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Select a table to append to")).toBeInTheDocument();
+    });
+    expect(spy.called).toBe(false);
   });
 
   it("hides the target picker and uses the folder label for ambyte uploads", async () => {
