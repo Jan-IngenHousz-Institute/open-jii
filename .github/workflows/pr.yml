@@ -211,9 +211,6 @@ jobs:
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
-      # Make env-ci see a push to main (checkout still uses the PR merge commit).
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
