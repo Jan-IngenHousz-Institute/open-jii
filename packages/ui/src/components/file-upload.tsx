@@ -155,7 +155,13 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
 
     const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-      setIsDragging(false);
+      // Dragging over a child fires dragleave on the container; only clear the
+      // highlight when the pointer actually leaves the dropzone, not its children.
+      const stillInside =
+        e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget);
+      if (!stillInside) {
+        setIsDragging(false);
+      }
     }, []);
 
     const handleDrop = useCallback(
