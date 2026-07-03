@@ -67,6 +67,7 @@ export interface CarpetContourSeriesData extends BaseSeries {
   b: number[];
   carpet?: string; // Reference to carpet trace
   colorscale?: string | Array<[number, string]>;
+  reversescale?: boolean;
   showscale?: boolean;
   colorbar?: {
     title?: string;
@@ -215,6 +216,7 @@ export function CarpetPlot({
           carpet: series.carpet || `carpet${index + 1}`,
 
           colorscale: series.colorscale || "Viridis",
+          reversescale: series.reversescale,
           showscale: series.showscale !== false,
           colorbar: series.colorbar || {
             title: "Value",
