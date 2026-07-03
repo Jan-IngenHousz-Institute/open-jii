@@ -58,6 +58,8 @@
     "showLess": "Show less",
     "readMore": "Read more",
     "empty": "No release notes yet.",
+    "emptyTitle": "Nothing new yet",
+    "emptyDescription": "Updates, fixes, and announcements will appear here once they are published.",
     "unreadBadge": "{{count}} unread",
     "category": {
       "new_feature": "New feature",
@@ -78,6 +80,8 @@
     "backToReleases": "All releases",
     "eyebrow": "Changelog",
     "filterAll": "All",
+    "emptyTitle": "No releases published yet",
+    "emptyDescription": "This changelog is ready for the first update. Future features, improvements, and fixes will appear here.",
     "readUpdate": "Read the update",
     "previous": "Previous",
     "next": "Next",

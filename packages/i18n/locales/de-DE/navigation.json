@@ -58,6 +58,8 @@
     "showLess": "Weniger anzeigen",
     "readMore": "Mehr lesen",
     "empty": "Noch keine Neuigkeiten.",
+    "emptyTitle": "Noch nichts Neues",
+    "emptyDescription": "Updates, Korrekturen und Ankündigungen erscheinen hier, sobald sie veröffentlicht sind.",
     "unreadBadge": "{{count}} ungelesen",
     "category": {
       "new_feature": "Neue Funktion",
@@ -78,6 +80,8 @@
     "backToReleases": "Alle Releases",
     "eyebrow": "Changelog",
     "filterAll": "Alle",
+    "emptyTitle": "Noch keine Releases veröffentlicht",
+    "emptyDescription": "Dieses Änderungsprotokoll ist bereit für das erste Update. Zukünftige Funktionen, Verbesserungen und Fehlerbehebungen erscheinen hier.",
     "readUpdate": "Update lesen",
     "previous": "Vorherige",
     "next": "Nächste",

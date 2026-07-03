@@ -54,6 +54,8 @@
     "showLess": "Minder tonen",
     "readMore": "Meer lezen",
     "empty": "Nog geen release-notities.",
+    "emptyTitle": "Nog niets nieuws",
+    "emptyDescription": "Updates, fixes en aankondigingen verschijnen hier zodra ze gepubliceerd zijn.",
     "unreadBadge": "{{count}} ongelezen",
     "category": {
       "new_feature": "Nieuwe functie",
@@ -70,6 +72,8 @@
     "backToReleases": "Alle releases",
     "eyebrow": "Changelog",
     "filterAll": "Alles",
+    "emptyTitle": "Nog geen releases gepubliceerd",
+    "emptyDescription": "Dit wijzigingslogboek staat klaar voor de eerste update. Toekomstige functies, verbeteringen en bugfixes verschijnen hier.",
     "readUpdate": "Lees de update",
     "previous": "Vorige",
     "next": "Volgende",

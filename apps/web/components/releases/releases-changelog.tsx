@@ -32,7 +32,7 @@ export function ReleasesChangelog({ entries, linkBaseHref }: ReleasesChangelogPr
   const [filter, setFilter] = React.useState<Filter>("all");
 
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("whatsNew.empty")}</p>;
+    return <ReleaseNotesFeed entries={entries} linkBaseHref={linkBaseHref} linkTarget="_self" />;
   }
 
   const [featured, ...rest] = entries;

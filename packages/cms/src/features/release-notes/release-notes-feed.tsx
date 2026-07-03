@@ -1,5 +1,6 @@
 "use client";
 
+import { Newspaper } from "lucide-react";
 import React from "react";
 
 import { useCurrentLocale, useTranslation } from "@repo/i18n";
@@ -23,6 +24,47 @@ interface MonthGroup {
   key: string;
   label: string;
   entries: ReleaseNoteFields[];
+}
+
+function ReleaseNotesEmptyState({ variant }: { variant: "default" | "sheet" }) {
+  const { t } = useTranslation("navigation");
+  const isSheet = variant === "sheet";
+
+  return (
+    <section
+      className={cn(
+        "flex flex-col items-center justify-center text-center",
+        isSheet
+          ? "min-h-72 px-4 py-12"
+          : "border-border bg-muted/20 min-h-96 rounded-lg border border-dashed px-6 py-20",
+      )}
+    >
+      <div
+        className={cn(
+          "border-border bg-background text-muted-foreground flex items-center justify-center rounded-full border",
+          isSheet ? "size-14" : "size-16",
+        )}
+      >
+        <Newspaper className={isSheet ? "size-6" : "size-7"} aria-hidden="true" />
+      </div>
+      <h2
+        className={cn(
+          "text-foreground mt-5 font-semibold",
+          isSheet ? "text-base" : "text-xl sm:text-2xl",
+        )}
+      >
+        {isSheet ? t("whatsNew.emptyTitle") : t("releases.emptyTitle")}
+      </h2>
+      <p
+        className={cn(
+          "text-muted-foreground mt-2 max-w-md text-sm leading-6",
+          !isSheet && "sm:text-base",
+        )}
+      >
+        {isSheet ? t("whatsNew.emptyDescription") : t("releases.emptyDescription")}
+      </p>
+    </section>
+  );
 }
 
 /** Groups entries by month, preserving the incoming newest-first order. */
@@ -62,15 +104,14 @@ export const ReleaseNotesFeed: React.FC<ReleaseNotesFeedProps> = ({
   linkTarget,
   variant = "default",
 }) => {
-  const { t } = useTranslation("navigation");
   const locale = useCurrentLocale(i18nConfig) ?? "en-US";
+  const isSheet = variant === "sheet";
 
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("whatsNew.empty")}</p>;
+    return <ReleaseNotesEmptyState variant={variant} />;
   }
 
   const groups = groupByMonth(entries, locale);
-  const isSheet = variant === "sheet";
 
   return (
     <div className={cn("flex flex-col", isSheet ? "gap-8" : "gap-10")}>
