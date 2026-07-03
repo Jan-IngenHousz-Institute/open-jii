@@ -2,12 +2,22 @@
  * Semantic release configuration for Web app
  * Tag format: web-vX.Y.Z
  */
+import {
+  analyzeCommits,
+  fail,
+  generateNotes,
+  success,
+} from "@open-jii/release-tools/monorepo-deps.js";
+
 import baseConfig from "../../.releaserc.js";
 
 export default {
   ...baseConfig,
-  extends: "semantic-release-monorepo",
   tagFormat: "web-v${version}",
+  analyzeCommits,
+  generateNotes,
+  success,
+  fail,
   plugins: [
     ...baseConfig.plugins,
     [

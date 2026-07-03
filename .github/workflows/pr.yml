@@ -195,6 +195,92 @@ jobs:
     with:
       affected-apps: ${{ needs.detect.outputs.affected_apps || '[]' }}
 
+  release_preview:
+    name: Release Preview (dry run)
+    needs: detect
+    # Skip forks/Dependabot: read-only token can't run the push --dry-run auth check.
+    if: >
+      needs.detect.outputs.has_affected_apps == 'true' &&
+      github.event.pull_request.head.repo.fork != true &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      # contents:write only so semantic-release's push --dry-run auth check passes.
+      contents: write
+      pull-requests: write
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Filter Apps for Release
+        id: filter_apps
+        shell: bash
+        env:
+          AFFECTED_APPS: ${{ needs.detect.outputs.affected_apps }}
+        run: |
+          # Only actual apps release; drop @repo/* library packages.
+          RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]')
+          echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
+          echo "app_count=$(echo "$RELEASE_APPS" | jq 'length')" >> $GITHUB_OUTPUT
+          echo "Preview release candidates: $RELEASE_APPS"
+
+      - name: Compute release preview
+        id: preview
+        if: steps.filter_apps.outputs.app_count > 0
+        continue-on-error: true
+        uses: ./.github/actions/semantic-release
+        with:
+          affected_apps: ${{ steps.filter_apps.outputs.release_apps }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: "true"
+
+      - name: Post release preview
+        if: always()
+        env:
+          RELEASES: ${{ steps.preview.outputs.releases_created }}
+          # failure = dry run errored; don't report it as "nothing will release".
+          PREVIEW_OUTCOME: ${{ steps.preview.outcome }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          if [ -z "$RELEASES" ]; then RELEASES="{}"; fi
+          {
+            echo "## 📦 Release preview"
+            echo ""
+            if [ "$PREVIEW_OUTCOME" = "failure" ]; then
+              echo "⚠️ Release preview could not be computed (semantic-release failed)."
+              echo "Check the workflow logs. This does **not** mean no releases will be cut."
+            elif [ "$RELEASES" = "{}" ] || [ -z "$RELEASES" ]; then
+              echo "Merging this PR will **not** create any new releases."
+            else
+              echo "Merging this PR into \`main\` will publish:"
+              echo ""
+              echo "| App | Next version | Tag |"
+              echo "|---|---|---|"
+              echo "$RELEASES" | jq -r 'to_entries[] | "| \(.key) | v\(.value) | `\(.key)-v\(.value)` |"'
+            fi
+            echo ""
+            echo "_Preview only. Actual releases are cut when this merges to \`main\`._"
+          } > preview.md
+          cat preview.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --body-file preview.md --edit-last \
+              || gh pr comment "$PR_NUMBER" --body-file preview.md \
+              || echo "::warning::Could not post release-preview comment"
+          fi
+
   tofu:
     name: OpenTofu (Plan)
     needs: detect
