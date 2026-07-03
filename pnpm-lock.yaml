@@ -283,6 +283,9 @@ importers:
       '@nestjs/testing':
         specifier: ^11.1.18
         version: 11.1.18(@nestjs/common@11.1.18(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.18)(@nestjs/platform-express@11.1.18)
+      '@open-jii/release-tools':
+        specifier: workspace:*
+        version: link:../../tooling/release
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -400,6 +403,9 @@ importers:
       '@docusaurus/types':
         specifier: ^3.10.0
         version: 3.10.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@open-jii/release-tools':
+        specifier: workspace:*
+        version: link:../../tooling/release
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -698,6 +704,9 @@ importers:
       '@babel/plugin-transform-class-static-block':
         specifier: ^7.28.6
         version: 7.28.6(@babel/core@7.29.0)
+      '@open-jii/release-tools':
+        specifier: workspace:*
+        version: link:../../tooling/release
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -932,6 +941,9 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
     devDependencies:
+      '@open-jii/release-tools':
+        specifier: workspace:*
+        version: link:../../tooling/release
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint

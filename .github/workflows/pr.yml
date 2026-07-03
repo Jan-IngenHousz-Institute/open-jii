@@ -226,9 +226,10 @@ jobs:
       - name: Filter Apps for Release
         id: filter_apps
         shell: bash
+        env:
+          AFFECTED_APPS: ${{ needs.detect.outputs.affected_apps }}
         run: |
           # Only actual apps release; drop @repo/* library packages.
-          AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
           RELEASE_APPS=$(echo "$AFFECTED_APPS" | jq -c '[.[] | select(startswith("@repo/") | not)]')
           echo "release_apps=$RELEASE_APPS" >> $GITHUB_OUTPUT
           echo "app_count=$(echo "$RELEASE_APPS" | jq 'length')" >> $GITHUB_OUTPUT
