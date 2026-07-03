@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, createEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { vi, expect, describe, it, beforeEach } from "vitest";
@@ -26,6 +26,14 @@ describe("FileUpload", () => {
 
   const getFileInput = (container: HTMLElement) => {
     return container.querySelector('input[type="file"]') as HTMLInputElement;
+  };
+
+  const getDropzone = (container: HTMLElement) => {
+    const dropzone = getFileInput(container).parentElement;
+    if (!dropzone) {
+      throw new Error("dropzone element not found");
+    }
+    return dropzone;
   };
 
   it("renders with default props", () => {
@@ -99,7 +107,7 @@ describe("FileUpload", () => {
 
   it("calls onFilesChange when files are dropped", () => {
     const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
-    const dropzone = getFileInput(container).parentElement as HTMLElement;
+    const dropzone = getDropzone(container);
 
     const file = new File(["test"], "dropped.csv", { type: "text/csv" });
     fireEvent.drop(dropzone, { dataTransfer: { files: [file] } });
@@ -110,7 +118,7 @@ describe("FileUpload", () => {
 
   it("highlights the dropzone on drag over and clears it on drag leave", () => {
     const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
-    const dropzone = getFileInput(container).parentElement as HTMLElement;
+    const dropzone = getDropzone(container);
 
     fireEvent.dragOver(dropzone);
     expect(dropzone.className).toContain("bg-muted/50");
@@ -119,11 +127,31 @@ describe("FileUpload", () => {
     expect(dropzone.className).not.toContain("bg-muted/50");
   });
 
+  it("keeps the highlight when dragging over a child of the dropzone", () => {
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange}>
+        <div data-testid="dropzone-child">child</div>
+      </FileUpload>,
+    );
+    const dropzone = getDropzone(container);
+    const child = screen.getByTestId("dropzone-child");
+
+    fireEvent.dragOver(dropzone);
+    expect(dropzone.className).toContain("bg-muted/50");
+
+    // Leaving into a descendant must not clear the highlight (avoids flicker).
+    // relatedTarget isn't carried by a plain fireEvent.dragLeave in jsdom, so set it.
+    const leaveEvent = createEvent.dragLeave(dropzone);
+    Object.defineProperty(leaveEvent, "relatedTarget", { value: child });
+    fireEvent(dropzone, leaveEvent);
+    expect(dropzone.className).toContain("bg-muted/50");
+  });
+
   it("ignores dropped files while uploading", () => {
     const { container } = render(
       <FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading />,
     );
-    const dropzone = getFileInput(container).parentElement as HTMLElement;
+    const dropzone = getDropzone(container);
 
     fireEvent.drop(dropzone, {
       dataTransfer: { files: [new File(["x"], "x.csv", { type: "text/csv" })] },
