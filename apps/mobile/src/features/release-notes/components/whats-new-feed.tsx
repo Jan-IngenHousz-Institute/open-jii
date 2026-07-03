@@ -48,10 +48,10 @@ export function WhatsNewFeed({
   entries: ReleaseNoteFields[];
   linkBaseHref?: string;
 }) {
-  const { t, i18n } = useTranslation("whatsNew");
+  const { i18n } = useTranslation("whatsNew");
 
   if (entries.length === 0) {
-    return <Text className="text-muted-body text-sm">{t("empty")}</Text>;
+    return null;
   }
 
   const groups = groupByMonth(entries, i18n.language);

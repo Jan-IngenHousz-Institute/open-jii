@@ -5,7 +5,7 @@ import {
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import type { BottomSheetFooterProps } from "@gorhom/bottom-sheet";
-import { ExternalLink, WifiOff, X } from "lucide-react-native";
+import { ExternalLink, FileText, WifiOff, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,6 +42,26 @@ function WhatsNewOfflineState() {
   );
 }
 
+/** Shown when there are no release notes available yet. */
+function WhatsNewEmptyState() {
+  const { t } = useTranslation("whatsNew");
+  const themeColors = useThemeColors();
+  return (
+    <View className="items-center gap-3 px-6 py-16">
+      <View className="border-border h-16 w-16 items-center justify-center rounded-full border">
+        <FileText size={28} color={themeColors.inactive} />
+      </View>
+      <Text
+        className="text-on-surface text-center"
+        style={{ fontFamily: "Poppins-SemiBold", fontSize: 16 }}
+      >
+        {t("empty")}
+      </Text>
+      <Text className="text-muted-body text-center text-sm leading-5">{t("emptySubtitle")}</Text>
+    </View>
+  );
+}
+
 /** Content-sized What's new drawer; mirrors the device sheet's store/ref pattern. */
 export function WhatsNewSheet() {
   const isOpen = useWhatsNewSheetStore((s) => s.isOpen);
@@ -51,6 +71,7 @@ export function WhatsNewSheet() {
   const { t } = useTranslation("whatsNew");
   const sheetRef = useRef<BottomSheetModal>(null);
   const { entries, markSeen } = useWhatsNew();
+  const hasEntries = entries.length > 0;
   // Offline is read from the shared connectivity hook, not useWhatsNew — the feed hook is untouched.
   // Undefined (first probe) is treated as online so we never flash the offline state on open.
   const { data: online } = useIsOnline();
@@ -143,8 +164,10 @@ export function WhatsNewSheet() {
           gap: 16,
         }}
       >
-        {isOffline && entries.length === 0 ? (
+        {isOffline && !hasEntries ? (
           <WhatsNewOfflineState />
+        ) : !hasEntries ? (
+          <WhatsNewEmptyState />
         ) : (
           <WhatsNewFeed entries={entries} linkBaseHref={releaseNotesBaseUrl} />
         )}

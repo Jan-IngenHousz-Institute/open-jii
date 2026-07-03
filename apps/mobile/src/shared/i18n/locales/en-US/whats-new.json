@@ -5,6 +5,7 @@
   "showMore": "Read more",
   "showLess": "Show less",
   "empty": "No release notes yet.",
+  "emptySubtitle": "When there is something new to share, it will show up here.",
   "offline": {
     "title": "You're offline",
     "subtitle": "Connect to the internet to see the latest updates."
