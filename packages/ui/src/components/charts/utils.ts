@@ -181,15 +181,17 @@ export function truncateCategoryTicks(
   const categories: string[] = [];
   for (const v of values) {
     if (v == null || v === "") continue;
-    const s = v instanceof Date ? v.toISOString() : String(v as string | number);
+    const s = v instanceof Date ? v.toISOString() : String(v);
     if (seen.has(s)) continue;
     seen.add(s);
     categories.push(s);
   }
 
   const maxChars = tierMaxTickChars(options);
+  const cap = tierTickCap(options);
   const needsTruncation = categories.some((c) => c.length > maxChars);
-  if (!needsTruncation) return axis;
+  const overCap = cap !== undefined && categories.length > cap;
+  if (!needsTruncation && !overCap) return axis;
 
   // Sample in display order so array-mode ticks stay evenly spaced; tick
   // positions anchor by value, so order only affects sampling evenness.
@@ -199,7 +201,6 @@ export function truncateCategoryTicks(
     : categories;
   if (order === "category descending") displayOrdered.reverse();
 
-  const cap = tierTickCap(options);
   const step =
     cap !== undefined && displayOrdered.length > cap ? Math.ceil(displayOrdered.length / cap) : 1;
   const sampled = displayOrdered.filter((_, i) => i % step === 0);
@@ -772,11 +773,17 @@ export function createPlotlyConfig(
  * bottom row keeps them when X is shared) and which should hide their
  * Y-axis title (only the leftmost column keeps it).
  */
-function cellPosition(
+export function cellPosition(
   cellIndex: number,
   rows: number,
   columns: number,
-): { row: number; column: number; isLastRow: boolean; isFirstColumn: boolean } {
+): {
+  row: number;
+  column: number;
+  isLastRow: boolean;
+  isFirstColumn: boolean;
+  isLastColumn: boolean;
+} {
   const row = Math.floor(cellIndex / columns);
   const column = cellIndex % columns;
   return {
@@ -784,6 +791,7 @@ function cellPosition(
     column,
     isLastRow: row === rows - 1,
     isFirstColumn: column === 0,
+    isLastColumn: column === columns - 1,
   };
 }
 

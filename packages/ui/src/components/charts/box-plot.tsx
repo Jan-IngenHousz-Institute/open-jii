@@ -148,31 +148,10 @@ export function BoxPlot({
   );
 
   const layout = createBaseLayout(config, sizing);
-
-  // Faceted layout: same shape used by cartesian / histogram.
-  if (subplots) {
-    const { cellTitleFontSize } = facetTierStyles(sizing);
-    const forceSharedTitles = sizing.cellVeryCompact;
-    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
-    const faceted = extendLayoutForFacets(layout, subplots.cells, {
-      rows: subplots.rows,
-      columns: subplots.columns,
-      sharedX: subplots.sharedX,
-      sharedY: subplots.sharedY,
-      sharedXTitle: effectiveSharedXTitle,
-      sharedYTitle: effectiveSharedYTitle,
-      roworder: subplots.roworder,
-      titleFontSize: cellTitleFontSize,
-      ultraCompactCells: sizing.cellUltraCompact,
-    });
-    Object.assign(layout, faceted);
-  }
-
-  // Add box plot specific layout properties
   layout.boxmode = boxmode;
 
-  // Handle categorical axes - if we have string values on x or y axis
+  // Truncate category ticks before faceting so extendLayoutForFacets copies
+  // the truncated template into every cell (xaxisN/yaxisN).
   const hasStringX = data.some(
     (series) => series.x && series.x.some((val) => typeof val === "string"),
   );
@@ -194,6 +173,26 @@ export function BoxPlot({
       data.flatMap((series) => series.y ?? []),
       sizing,
     );
+  }
+
+  // Faceted layout: same shape used by cartesian / histogram.
+  if (subplots) {
+    const { cellTitleFontSize } = facetTierStyles(sizing);
+    const forceSharedTitles = sizing.cellVeryCompact;
+    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+    const faceted = extendLayoutForFacets(layout, subplots.cells, {
+      rows: subplots.rows,
+      columns: subplots.columns,
+      sharedX: subplots.sharedX,
+      sharedY: subplots.sharedY,
+      sharedXTitle: effectiveSharedXTitle,
+      sharedYTitle: effectiveSharedYTitle,
+      roworder: subplots.roworder,
+      titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
+    });
+    Object.assign(layout, faceted);
   }
 
   applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });

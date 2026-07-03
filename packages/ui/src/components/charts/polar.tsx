@@ -168,7 +168,6 @@ export function PolarPlot({
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const layout = {
     ...responsiveChrome(config, sizing),
-    plot_bgcolor: bgcolor,
 
     polar: {
       radialaxis: {

@@ -113,8 +113,8 @@ describe("useExperimentUpdate", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
-    expect(invalidatedKeys).toContainEqual(["experiment-distinct-values"]);
-    expect(invalidatedKeys).toContainEqual(["experiment-visualization-data"]);
+    expect(invalidatedKeys).toContainEqual(["experiment-distinct-values", "exp-1"]);
+    expect(invalidatedKeys).toContainEqual(["experiment-visualization-data", "exp-1"]);
   });
 
   it("does not invalidate distinct values / data on a non-anonymization update", async () => {
@@ -134,7 +134,7 @@ describe("useExperimentUpdate", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
-    expect(invalidatedKeys).not.toContainEqual(["experiment-distinct-values"]);
-    expect(invalidatedKeys).not.toContainEqual(["experiment-visualization-data"]);
+    expect(invalidatedKeys).not.toContainEqual(["experiment-distinct-values", "exp-1"]);
+    expect(invalidatedKeys).not.toContainEqual(["experiment-visualization-data", "exp-1"]);
   });
 });

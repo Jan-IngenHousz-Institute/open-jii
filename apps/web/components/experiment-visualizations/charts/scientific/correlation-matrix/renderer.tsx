@@ -22,21 +22,20 @@ export function CorrelationMatrixRenderer({
 
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
-  const distinctYCount = new Set(
-    dataSources
-      .filter((ds) => ds.role === "y" && ds.columnName.length > 0)
-      .map((ds) => ds.columnName),
-  ).size;
+  const yColumns = useMemo(
+    () =>
+      dataSources
+        .filter((ds) => ds.role === "y" && ds.columnName.length > 0)
+        .map((ds) => ds.columnName),
+    [dataSources],
+  );
+  const distinctYCount = new Set(yColumns).size;
 
   // Derive the corr aggregation here rather than trusting the saved config:
   // the data-shelf only seeds it while editing, so a dashboard's stale value
   // would fetch raw rows and render an all-NaN matrix.
   const visualizationForFetch = useMemo(() => {
-    const functions = correlationPairFunctions(
-      dataSources
-        .filter((ds) => ds.role === "y" && ds.columnName.length > 0)
-        .map((ds) => ds.columnName),
-    );
+    const functions = correlationPairFunctions(yColumns);
     return {
       ...visualization,
       dataConfig: {
@@ -44,7 +43,7 @@ export function CorrelationMatrixRenderer({
         aggregation: functions.length > 0 ? { groupBy: undefined, functions } : undefined,
       },
     };
-  }, [visualization, dataSources]);
+  }, [visualization, yColumns]);
 
   // Skip the SQL request entirely when correlation can't be computed.
   // Fewer than 2 distinct picks means no pairs and the renderer shows

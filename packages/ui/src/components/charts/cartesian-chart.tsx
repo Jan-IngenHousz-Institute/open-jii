@@ -23,6 +23,7 @@ import {
   getRenderer,
   refineAxisType,
   truncateCategoryTicks,
+  cellPosition,
 } from "./utils";
 
 /**
@@ -318,10 +319,10 @@ function applyFacetSecondaryAxes(
     if (!secondaryId) {
       return;
     }
-    const isLastColumn = i % subplots.columns === subplots.columns - 1;
+    const { isLastColumn } = cellPosition(i, subplots.rows, subplots.columns);
     const primaryKey = cell.yaxisId === "y" ? "yaxis" : `yaxis${cell.yaxisId.slice(1)}`;
     const primary = (layoutRecord[primaryKey] ?? {}) as Record<string, unknown>;
-    const secondaryValues = data.filter((s) => s.yaxisId === secondaryId).flatMap((s) => s.y ?? []);
+    const secondaryValues = data.filter((s) => s.yaxisId === secondaryId).flatMap((s) => s.y);
 
     const base: Record<string, unknown> = {
       overlaying: cell.yaxisId,

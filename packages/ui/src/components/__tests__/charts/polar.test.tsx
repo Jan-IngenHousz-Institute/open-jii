@@ -455,7 +455,6 @@ describe("PolarPlot", () => {
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.hole).toBe(0.3);
     expect(chartLayout.polar.bgcolor).toBe("#f0f0f0");
-    expect(chartLayout.plot_bgcolor).toBe("#f0f0f0");
   });
 
   it("applies default hole and background", () => {
@@ -464,7 +463,6 @@ describe("PolarPlot", () => {
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.hole).toBe(0);
     expect(chartLayout.polar.bgcolor).toBe("white");
-    expect(chartLayout.plot_bgcolor).toBe("white");
   });
 
   it("handles multiple series", () => {

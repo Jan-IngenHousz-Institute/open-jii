@@ -199,48 +199,58 @@ export function OverlayContour({
   const renderer = getRenderer(config.useWebGL);
   const contourType = getPlotType("contour", renderer);
 
-  // Convert contour data to plot data
-  const contourPlotData: PlotData[] = contourData.map(
-    (series) =>
-      ({
-        x: series.x,
-        y: series.y,
-        z: series.z,
-        name: series.name,
-        type: contourType,
+  const contourPlotData: PlotData[] = useMemo(
+    () =>
+      contourData.map(
+        (series) =>
+          ({
+            x: series.x,
+            y: series.y,
+            z: series.z,
+            name: series.name,
+            type: contourType,
 
-        ncontours: series.ncontours || 15,
-        contours: {
-          ...series.contours,
-          coloring: "lines",
-          showlines: true,
-        },
+            ncontours: series.ncontours || 15,
+            contours: {
+              ...series.contours,
+              coloring: "lines",
+              showlines: true,
+            },
 
-        line: {
-          color: series.line?.color || "black",
-          width: series.line?.width || 1,
-        },
+            line: {
+              color: series.line?.color || "black",
+              width: series.line?.width || 1,
+            },
 
-        showscale: false, // Don't show colorbar for overlay
+            showscale: false, // Don't show colorbar for overlay
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [contourData, contourType],
   );
 
-  // Combine base data with contour overlay
-  const allData = [...baseData, ...contourPlotData];
+  const allData = useMemo(
+    () => [...baseData, ...contourPlotData],
+    [baseData, contourPlotData],
+  );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing]);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
+
+  // Same remount guard as ContourPlot: config/sizing changes must remount
+  // rather than let react-plotly call Plotly.react on contour traces.
+  const remountKey = useMemo(() => JSON.stringify({ config, sizing }), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
+        key={remountKey}
         data={allData}
         layout={layout}
         config={plotConfig}

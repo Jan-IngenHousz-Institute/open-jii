@@ -120,6 +120,16 @@ describe("truncateCategoryTicks", () => {
     expect(axis.tickvals).toHaveLength(5);
   });
 
+  it("samples short labels purely on count when the tick cap is exceeded", () => {
+    // Every label fits the 8-char veryCompact budget, so no truncation fires;
+    // sampling must still run because 12 > the 5-tick cap.
+    const many = Array.from({ length: 12 }, (_, i) => `c${String(i).padStart(2, "0")}`);
+    const axis = truncateCategoryTicks({ type: "category" }, many, { veryCompact: true });
+    expect(axis.tickmode).toBe("array");
+    expect(axis.tickvals).toHaveLength(4); // step ceil(12/5)=3 → indices 0,3,6,9
+    expect(axis.ticktext).toEqual(axis.tickvals); // short labels stay verbatim
+  });
+
   it("samples in sorted order when categoryorder is category ascending", () => {
     const axis = truncateCategoryTicks(
       { type: "category", categoryorder: "category ascending" },

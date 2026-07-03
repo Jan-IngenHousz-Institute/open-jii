@@ -5,7 +5,7 @@ import React from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
-import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
+import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
@@ -160,12 +160,14 @@ export function DensityPlot({
       bargap: 0,
       // Main plot axes
       xaxis: {
+        ...base.xaxis,
         domain: [0, 0.85],
         showgrid: false,
         zeroline: false,
         title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
       },
       yaxis: {
+        ...base.yaxis,
         domain: [0, 0.85],
         showgrid: false,
         zeroline: false,
@@ -194,11 +196,13 @@ export function DensityPlot({
       hovermode: "closest",
       bargap: 0,
       xaxis: {
+        ...base.xaxis,
         showgrid: false,
         zeroline: false,
         title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
       },
       yaxis: {
+        ...base.yaxis,
         showgrid: false,
         zeroline: false,
         title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,

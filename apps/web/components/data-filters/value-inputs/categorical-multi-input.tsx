@@ -37,11 +37,8 @@ export function CategoricalMultiInput({
 }: CategoricalMultiInputProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const { values, isLoading, truncated, isContributor, contributorMap } = useDistinctOptions(
-    column,
-    experimentId,
-    tableName,
-  );
+  const { values, isLoading, isSuccess, truncated, isContributor, contributorMap } =
+    useDistinctOptions(column, experimentId, tableName);
 
   const selected = useMemo<string[]>(
     () => (Array.isArray(value) ? value.map((v) => String(v)) : []),
@@ -86,13 +83,12 @@ export function CategoricalMultiInput({
     });
   }, [values, isContributor]);
 
-  // Toggling experiment anonymization re-pseudonymises contributor ids, so a
-  // selection made in the other mode can no longer resolve to an option and
-  // would show a raw id. Drop those stale ids once the full list has loaded.
-  // Guarded to contributor columns and a complete (non-truncated) list so a
-  // valid-but-beyond-limit id is never pruned.
+  // Toggling anonymization re-pseudonymises contributor ids, so a selection
+  // from the other mode no longer resolves and would show a raw id. Prune only
+  // on a confirmed load (isSuccess, not `!isLoading` which is also false on
+  // error) of a complete list, so a valid-but-beyond-limit id is never dropped.
   useEffect(() => {
-    if (!isContributor || isLoading || truncated || selected.length === 0) {
+    if (!isContributor || !isSuccess || truncated || selected.length === 0) {
       return;
     }
     const valid = new Set(uniqueValues.map((v) => String(chipValueForOption(v, isContributor))));
@@ -100,7 +96,7 @@ export function CategoricalMultiInput({
     if (pruned.length !== selected.length) {
       onChange(pruned);
     }
-  }, [isContributor, isLoading, truncated, uniqueValues, selected, onChange]);
+  }, [isContributor, isSuccess, truncated, uniqueValues, selected, onChange]);
 
   return (
     <div className="flex flex-col gap-1.5">

@@ -5,7 +5,7 @@ import React from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
-import type { BaseChartProps, BaseSeries, SafeLayout } from "./types";
+import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
 import { createPlotlyConfig, getRenderer, responsiveChrome, tierAxisFontSizes } from "./utils";
 

@@ -22,7 +22,7 @@ function ternaryAxisTitle(
   fontSize: number,
 ): { text: string; font?: SafeFont } {
   const normalized = typeof title === "string" ? { text: title } : (title ?? { text: fallback });
-  return { font: { size: fontSize }, ...normalized };
+  return { ...normalized, font: { size: fontSize, ...normalized.font } };
 }
 
 export interface TernarySeriesData extends BaseSeries {

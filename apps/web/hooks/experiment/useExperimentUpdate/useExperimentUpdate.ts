@@ -78,11 +78,12 @@ export const useExperimentUpdate = () => {
       // and row data server-side; drop the cached reads so filters and
       // charts reflect the new state without a hard refresh.
       if (variables.body?.anonymizeContributors !== undefined) {
+        // Both caches key on the experiment id, so scope the prefix to it.
         await queryClient.invalidateQueries({
-          queryKey: ["experiment-distinct-values"],
+          queryKey: ["experiment-distinct-values", variables.params.id],
         });
         await queryClient.invalidateQueries({
-          queryKey: ["experiment-visualization-data"],
+          queryKey: ["experiment-visualization-data", variables.params.id],
         });
       }
     },
