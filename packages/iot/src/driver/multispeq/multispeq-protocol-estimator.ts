@@ -22,7 +22,7 @@ export interface ScanTimeoutOptions {
   graceMs?: number;
   /** Lower bound, in ms (default 60_000). */
   minMs?: number;
-  /** Upper bound so a dead device cannot hang forever, in ms (default 600_000). */
+  /** Upper bound so a dead device cannot hang forever, in ms (default 1_200_000). */
   maxMs?: number;
 }
 
@@ -30,7 +30,7 @@ export const SCAN_TIMEOUT_DEFAULTS: Required<ScanTimeoutOptions> = {
   safetyFactor: 2,
   graceMs: 10_000,
   minMs: 60_000,
-  maxMs: 600_000,
+  maxMs: 1_200_000,
 };
 
 /**
@@ -39,7 +39,7 @@ export const SCAN_TIMEOUT_DEFAULTS: Required<ScanTimeoutOptions> = {
  * gate (`par_led_start_on_*`) where the device sits silent for as long as the
  * user takes to open/close the clamp. 2 min covers a typical hand-measured
  * DIRK/PAM workflow while still letting a truly dead device fail well before
- * the 10 min maxMs. See OJD-1643.
+ * the 20 min maxMs. See OJD-1643.
  */
 export const MEASUREMENT_TIMEOUT_FLOOR_MS = 120_000;
 
