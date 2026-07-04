@@ -1,6 +1,6 @@
 import { createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -126,6 +126,30 @@ describe("UploadDataModal", () => {
       expect(screen.getByText(/validation\.wrongFormat/)).toBeInTheDocument();
     });
     expect(spy.called).toBe(false);
+  });
+
+  it("clears the file error when the selection is emptied", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+    await selectFiles(["data.tsv"]);
+    await waitFor(() => {
+      expect(screen.getByText(/validation\.wrongFormat/)).toBeInTheDocument();
+    });
+
+    // Emptying the picker clears the error.
+    const input = document.querySelector('input[type="file"]');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("file input not found");
+    }
+    fireEvent.change(input, { target: { files: [] } });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/validation\.wrongFormat/)).not.toBeInTheDocument();
+    });
   });
 
   it("defaults targetKind to 'existing' when an upload table already exists", async () => {
