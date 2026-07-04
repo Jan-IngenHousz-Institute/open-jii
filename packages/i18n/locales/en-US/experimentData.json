@@ -95,7 +95,7 @@
         "invalidName": "Name must start with a letter; use letters, digits, or underscores (max 63)",
         "noFiles": "Select at least one data file",
         "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, JSON, NDJSON)",
-        "mixedFormats": "All files in a single upload must be the same format",
+        "wrongFormat": "'{{fileName}}' is not a {{format}} file",
         "oversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
         "oversizedFiles_other": "{{count}} files exceed the maximum allowed size",
         "tooManyFiles": "Too many files: select at most {{max}}",

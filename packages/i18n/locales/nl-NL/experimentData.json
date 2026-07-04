@@ -95,7 +95,7 @@
         "invalidName": "Naam moet beginnen met een letter; gebruik letters, cijfers of underscores (max. 63)",
         "noFiles": "Selecteer ten minste één gegevensbestand",
         "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, JSON, NDJSON)",
-        "mixedFormats": "Alle bestanden in één upload moeten hetzelfde formaat hebben",
+        "wrongFormat": "'{{fileName}}' is geen {{format}}-bestand",
         "oversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
         "oversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte",
         "tooManyFiles": "Te veel bestanden: selecteer er maximaal {{max}}",
