@@ -18,7 +18,7 @@ export const useExperimentDistinctValues = ({
   limit,
   enabled = true,
 }: UseExperimentDistinctValuesArgs) => {
-  const { data, isLoading, error } = tsr.experiments.getDistinctColumnValues.useQuery({
+  const { data, isLoading, isSuccess, error } = tsr.experiments.getDistinctColumnValues.useQuery({
     queryData: {
       params: { id: experimentId },
       query: { tableName, column, limit },
@@ -35,6 +35,7 @@ export const useExperimentDistinctValues = ({
     values: data?.body.values ?? [],
     truncated: data?.body.truncated ?? false,
     isLoading,
+    isSuccess,
     error,
   };
 };

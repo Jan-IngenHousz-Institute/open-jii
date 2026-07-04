@@ -7,7 +7,13 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  truncateCategoryTicks,
+} from "./utils";
 
 export interface DotSeriesData extends BaseSeries {
   x?: (string | number | Date)[];
@@ -145,10 +151,11 @@ export function DotPlot({
   // Fix for horizontal dot plots - ensure categorical axis
   const hasHorizontalDots = data.some((series) => (series.orientation || orientation) === "h");
   if (hasHorizontalDots) {
-    dotLayout.yaxis = {
-      ...dotLayout.yaxis,
-      type: "category",
-    };
+    dotLayout.yaxis = truncateCategoryTicks(
+      { ...dotLayout.yaxis, type: "category" },
+      data.flatMap((series) => series.y ?? []),
+      sizing,
+    );
   }
 
   // Check if we have categorical x data (non-numeric strings)
@@ -156,10 +163,11 @@ export function DotPlot({
     (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
   );
   if (hasCategoricalX && !hasHorizontalDots) {
-    dotLayout.xaxis = {
-      ...dotLayout.xaxis,
-      type: "category",
-    };
+    dotLayout.xaxis = truncateCategoryTicks(
+      { ...dotLayout.xaxis, type: "category" },
+      data.flatMap((series) => series.x ?? []),
+      sizing,
+    );
   }
 
   const plotConfig = createPlotlyConfig(config, sizing);
