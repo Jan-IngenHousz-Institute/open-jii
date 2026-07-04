@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aliasForCorrelationPair } from "./correlation-alias";
+import { aliasForCorrelationPair, correlationPairFunctions } from "./correlation-alias";
 
 describe("aliasForCorrelationPair", () => {
   it("emits a corr__a__b alias for a sorted pair", () => {
@@ -32,5 +32,26 @@ describe("aliasForCorrelationPair", () => {
 
   it("sorts lexicographically (uppercase before lowercase)", () => {
     expect(aliasForCorrelationPair("Beta", "alpha")).toBe("corr__Beta__alpha");
+  });
+});
+
+describe("correlationPairFunctions", () => {
+  it("emits one corr function per unique unordered pair", () => {
+    const result = correlationPairFunctions(["a", "b", "c"]);
+    expect(result).toHaveLength(3);
+    expect(result.map((f) => f.alias)).toEqual(["corr__a__b", "corr__a__c", "corr__b__c"]);
+    expect(result.every((f) => f.function === "corr")).toBe(true);
+    expect(result[0]).toMatchObject({ column: "a", secondColumn: "b" });
+  });
+
+  it("dedupes repeated columns so no phantom self-pair is emitted", () => {
+    const result = correlationPairFunctions(["a", "a", "b"]);
+    expect(result).toHaveLength(1);
+    expect(result[0].alias).toBe("corr__a__b");
+  });
+
+  it("returns an empty array for fewer than two distinct columns", () => {
+    expect(correlationPairFunctions(["a"])).toEqual([]);
+    expect(correlationPairFunctions([])).toEqual([]);
   });
 });

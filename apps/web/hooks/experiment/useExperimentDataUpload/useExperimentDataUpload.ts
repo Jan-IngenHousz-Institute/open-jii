@@ -11,7 +11,7 @@ import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/ex
 export type UploadValidationError =
   | { code: "noFiles" }
   | { code: "unsupportedFormat"; fileName: string }
-  | { code: "mixedFormats" }
+  | { code: "wrongFormat"; fileName: string; expected: ExperimentUploadSourceKind }
   | { code: "oversizedFiles"; count: number }
   | { code: "tooManyFiles"; max: number }
   | { code: "ambyteInvalidStructure" }
@@ -97,11 +97,15 @@ function validateTabular(
   }
   for (const file of usable) {
     const kind = inferUploadSourceKind(file.name);
-    if (!kind || kind === "ambyte" || kind !== expectedKind) {
-      return kind && kind !== expectedKind
-        ? { code: "mixedFormats" }
-        : { code: "unsupportedFormat", fileName: file.name };
+    if (kind === expectedKind) {
+      continue;
     }
+    // A recognized-but-different kind (e.g. .csv when tsv is selected) gets a
+    // format-specific message; an unrecognized extension stays "unsupported".
+    if (!kind || kind === "ambyte") {
+      return { code: "unsupportedFormat", fileName: file.name };
+    }
+    return { code: "wrongFormat", fileName: file.name, expected: expectedKind };
   }
 
   const { maxFileSize, maxFileCount } = UPLOAD_KIND_CONSTANTS[expectedKind];

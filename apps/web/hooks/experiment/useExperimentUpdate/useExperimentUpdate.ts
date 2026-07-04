@@ -57,6 +57,21 @@ export const useExperimentUpdate = () => {
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.listExperiments.key(),
         });
+
+        // Toggling contributor anonymization re-pseudonymizes distinct values
+        // and row data server-side; drop the cached reads so filters and
+        // charts reflect the new state without a hard refresh.
+        if (variables.anonymizeContributors !== undefined) {
+          // Both caches key on the experiment id, so scope the prefix to it.
+          await queryClient.invalidateQueries({
+            queryKey: orpc.experiments.getDistinctColumnValues.key({
+              input: { id: variables.id },
+            }),
+          });
+          await queryClient.invalidateQueries({
+            queryKey: orpc.experiments.getExperimentData.key({ input: { id: variables.id } }),
+          });
+        }
       },
     }),
   );

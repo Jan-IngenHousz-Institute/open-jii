@@ -40,6 +40,7 @@ vi.mock("../../charts/utils", () => ({
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
   ),
+  tierAxisFontSizes: vi.fn(() => ({ tick: 12, axisTitle: 14 })),
 }));
 
 describe("ParallelCoordinates", () => {

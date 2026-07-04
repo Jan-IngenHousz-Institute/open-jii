@@ -112,10 +112,14 @@ describe("useExperimentDataUpload (validate tabular)", () => {
     expect(result.current.validate(files, "csv")).toEqual({ sourceKind: "csv" });
   });
 
-  it("returns mixedFormats when one file is a different kind", () => {
+  it("returns wrongFormat when a file is a different tabular kind than selected", () => {
     const { result } = renderHook(() => useExperimentDataUpload());
     const files = makeFileList([makeFile("a.csv"), makeFile("b.tsv")]);
-    expect(result.current.validate(files, "csv")).toEqual({ code: "mixedFormats" });
+    expect(result.current.validate(files, "csv")).toEqual({
+      code: "wrongFormat",
+      fileName: "b.tsv",
+      expected: "csv",
+    });
   });
 
   it("returns unsupportedFormat for unknown extensions", () => {
@@ -127,12 +131,15 @@ describe("useExperimentDataUpload (validate tabular)", () => {
     });
   });
 
-  it("treats an ambyte-shaped file as a mixed format when expecting tabular", () => {
-    // .txt is an ambyte extension; in the tabular flow we surface it as a
-    // mixed-formats error since it inferred a kind the picker didn't ask for.
+  it("treats an ambyte-shaped file as unsupported when expecting tabular", () => {
+    // .txt infers ambyte; in the tabular flow it's not an acceptable file at all,
+    // so it surfaces as unsupportedFormat rather than a wrong tabular kind.
     const { result } = renderHook(() => useExperimentDataUpload());
     const files = makeFileList([makeFile("trace.txt")]);
-    expect(result.current.validate(files, "csv")).toEqual({ code: "mixedFormats" });
+    expect(result.current.validate(files, "csv")).toEqual({
+      code: "unsupportedFormat",
+      fileName: "trace.txt",
+    });
   });
 
   it("returns noFiles when all files are excluded", () => {

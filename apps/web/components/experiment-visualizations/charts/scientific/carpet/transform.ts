@@ -21,16 +21,9 @@ function toNumericAxis(values: readonly (string | number)[]): number[] | null {
   return out;
 }
 
-// Plotly's `contourcarpet` reads `reversescale` at the trace root, but
-// `CarpetContourSeriesData` from the UI wrapper doesn't expose it. Widen
-// the element type here rather than casting at each emit site.
-type CarpetContourSeriesDataWithReverse = CarpetContourSeriesData & {
-  reversescale?: boolean;
-};
-
 export interface CarpetTransformResult {
   carpetData: CarpetSeriesData[];
-  contourData: CarpetContourSeriesDataWithReverse[];
+  contourData: CarpetContourSeriesData[];
   degenerateReason: CarpetDegenerateReason | null;
 }
 

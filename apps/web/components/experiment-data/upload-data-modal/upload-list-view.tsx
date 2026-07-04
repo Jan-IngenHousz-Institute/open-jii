@@ -27,7 +27,6 @@ const SOURCE_KIND_ORDER: ExperimentUploadSourceKind[] = [
   "csv",
   "tsv",
   "parquet",
-  "xlsx",
   "json",
   "ndjson",
   "ambyte",

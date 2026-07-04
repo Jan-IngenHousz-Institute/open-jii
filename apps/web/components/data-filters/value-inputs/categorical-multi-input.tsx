@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -38,11 +38,8 @@ export function CategoricalMultiInput({
 }: CategoricalMultiInputProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const { values, isLoading, truncated, isContributor, contributorMap } = useDistinctOptions(
-    column,
-    experimentId,
-    tableName,
-  );
+  const { values, isLoading, isSuccess, truncated, isContributor, contributorMap } =
+    useDistinctOptions(column, experimentId, tableName);
 
   const selected = useMemo<string[]>(
     () => (Array.isArray(value) ? value.map((v) => String(v)) : []),
@@ -86,6 +83,21 @@ export function CategoricalMultiInput({
       return true;
     });
   }, [values, isContributor]);
+
+  // Toggling anonymization re-pseudonymises contributor ids, so a selection
+  // from the other mode no longer resolves and would show a raw id. Prune only
+  // on a confirmed load (isSuccess, not `!isLoading` which is also false on
+  // error) of a complete list, so a valid-but-beyond-limit id is never dropped.
+  useEffect(() => {
+    if (!isContributor || !isSuccess || truncated || selected.length === 0) {
+      return;
+    }
+    const valid = new Set(uniqueValues.map((v) => String(chipValueForOption(v, isContributor))));
+    const pruned = selected.filter((key) => valid.has(key));
+    if (pruned.length !== selected.length) {
+      onChange(pruned);
+    }
+  }, [isContributor, isSuccess, truncated, uniqueValues, selected, onChange]);
 
   return (
     <div className="flex flex-col gap-1.5">

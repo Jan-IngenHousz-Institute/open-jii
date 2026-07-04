@@ -14,7 +14,6 @@ import {
   zExperimentUploadSourceKind,
   zExperimentUploadTableName,
   zExperimentUploadTargetTable,
-  zExperimentXlsxFilename,
 } from "./experiment-uploads.schema";
 
 describe("Upload schemas", () => {
@@ -24,7 +23,6 @@ describe("Upload schemas", () => {
       expect(zExperimentUploadSourceKind.safeParse("csv").success).toBe(true);
       expect(zExperimentUploadSourceKind.safeParse("tsv").success).toBe(true);
       expect(zExperimentUploadSourceKind.safeParse("parquet").success).toBe(true);
-      expect(zExperimentUploadSourceKind.safeParse("xlsx").success).toBe(true);
       expect(zExperimentUploadSourceKind.safeParse("json").success).toBe(true);
       expect(zExperimentUploadSourceKind.safeParse("ndjson").success).toBe(true);
     });
@@ -141,17 +139,6 @@ describe("Upload schemas", () => {
     });
   });
 
-  describe("zExperimentXlsxFilename", () => {
-    it("accepts .xlsx and .xls", () => {
-      expect(zExperimentXlsxFilename.safeParse("data.xlsx").success).toBe(true);
-      expect(zExperimentXlsxFilename.safeParse("data.xls").success).toBe(true);
-    });
-
-    it("rejects non-Excel extensions", () => {
-      expect(zExperimentXlsxFilename.safeParse("data.csv").success).toBe(false);
-    });
-  });
-
   describe("zExperimentJsonFilename", () => {
     it("accepts a bare JSON filename", () => {
       expect(zExperimentJsonFilename.safeParse("data.json").success).toBe(true);
@@ -181,8 +168,6 @@ describe("Upload schemas", () => {
       ["a.CSV", "csv"],
       ["a.tsv", "tsv"],
       ["a.parquet", "parquet"],
-      ["a.xlsx", "xlsx"],
-      ["a.xls", "xlsx"],
       ["a.json", "json"],
       ["a.ndjson", "ndjson"],
       ["a.jsonl", "ndjson"],
@@ -240,7 +225,7 @@ describe("Upload schemas", () => {
   });
 
   describe("UPLOAD_KIND_CONSTANTS + UPLOAD_FILENAME_SCHEMAS", () => {
-    const expectedKinds = ["ambyte", "csv", "json", "ndjson", "parquet", "tsv", "xlsx"];
+    const expectedKinds = ["ambyte", "csv", "json", "ndjson", "parquet", "tsv"];
 
     it("has matching keys for every supported kind", () => {
       expect(Object.keys(UPLOAD_KIND_CONSTANTS).sort()).toEqual(expectedKinds);
@@ -253,7 +238,7 @@ describe("Upload schemas", () => {
       }
     });
 
-    it("respects the 5 GiB ceiling — every kind maxFileSize is well below", () => {
+    it("respects the 5 GiB ceiling: every kind maxFileSize is well below", () => {
       const fiveGib = 5 * 1024 * 1024 * 1024;
       for (const kind of expectedKinds as (keyof typeof UPLOAD_KIND_CONSTANTS)[]) {
         expect(UPLOAD_KIND_CONSTANTS[kind].maxFileSize).toBeLessThan(fiveGib);

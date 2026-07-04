@@ -6,6 +6,8 @@ import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { FormColorInput } from "@repo/ui/components/form-color-input";
@@ -18,6 +20,7 @@ import {
   getCategoryColor,
 } from "../../../charts/colors/palettes";
 import { toBucketKey } from "../../../charts/data/cell-coercion";
+import { contributorDisplayName } from "../../../charts/data/contributor-cells";
 import { dataSourcesByRole, firstDataSourceByRole } from "../../../charts/data/data-sources";
 
 /** Cap the override list so a high-cardinality column doesn't make the
@@ -27,6 +30,7 @@ const MAX_CATEGORIES = 50;
 
 interface CategoricalColorMapProps {
   form: UseFormReturn<ChartFormValues>;
+  columns: ExperimentDataColumn[];
 }
 
 interface Category {
@@ -47,7 +51,7 @@ interface Category {
  *   category key, then to the palette -- so old single-key colorMaps keep
  *   working as "default for all series".
  */
-export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
+export function CategoricalColorMap({ form, columns }: CategoricalColorMapProps) {
   const { t } = useTranslation("experimentVisualizations");
   const params = useParams<{ id?: string }>();
   const experimentId = params.id;
@@ -58,6 +62,12 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
 
   const colorEntry = firstDataSourceByRole(sources, "color");
   const colorColumn = colorEntry?.source.columnName ?? "";
+
+  // CONTRIBUTOR distinct values arrive as STRUCT JSON; the renderer flattens
+  // them to the contributor name, so the picker must key/label by name too or
+  // the overrides never match what the chart looks up.
+  const isContributor =
+    columns.find((c) => c.name === colorColumn)?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
 
   // Mirror the renderer's seriesKey for `getCategoryColor` lookups.
   const seriesKeys = useMemo(() => {
@@ -83,14 +93,14 @@ export function CategoricalColorMap({ form }: CategoricalColorMapProps) {
     const seen = new Set<string>();
     const out: Category[] = [];
     for (const value of rawValues) {
-      const key = toBucketKey(value);
+      const key = isContributor ? contributorDisplayName(value) : toBucketKey(value);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push({ key, label: key === "" ? t("workspace.shelves.colorMap.nullLabel") : key });
     }
     out.sort((a, b) => a.label.localeCompare(b.label));
     return out;
-  }, [rawValues, t]);
+  }, [rawValues, isContributor, t]);
 
   // Read the live colorMap at commit time, not the render-time snapshot:
   // debounced swatch commits from different rows can land close together and

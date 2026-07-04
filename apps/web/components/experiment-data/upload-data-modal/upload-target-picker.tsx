@@ -93,7 +93,7 @@ export function UploadTargetPicker({
         <Controller
           control={control}
           name="uploadTableId"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <div className="space-y-1.5">
               <Label htmlFor="existing-table-name">
                 {t("experimentData.uploadDataModal.existingTable.label")}
@@ -110,6 +110,9 @@ export function UploadTargetPicker({
                   ))}
                 </SelectContent>
               </Select>
+              {fieldState.error?.message && (
+                <p className="text-destructive text-xs">{fieldState.error.message}</p>
+              )}
             </div>
           )}
         />

@@ -113,8 +113,14 @@ export function UploadCreateView({
 
   const handleFilesChange = (selected: FileList | null) => {
     setFiles(selected);
-    setFileError(null);
     setSubmitError(null);
+    // Validate on selection so format/size errors surface before the user hits Upload.
+    if (!selected || selected.length === 0) {
+      setFileError(null);
+      return;
+    }
+    const fileCheck = validate(selected, sourceKind);
+    setFileError("code" in fileCheck ? fileCheck : null);
   };
 
   const onSubmit = (values: ExperimentUploadFormFields) => {
@@ -241,8 +247,11 @@ function useFileErrorMessage(error: UploadValidationError | null): string | null
       return t("experimentData.uploadDataModal.validation.unsupportedFormat", {
         fileName: error.fileName,
       });
-    case "mixedFormats":
-      return t("experimentData.uploadDataModal.validation.mixedFormats");
+    case "wrongFormat":
+      return t("experimentData.uploadDataModal.validation.wrongFormat", {
+        fileName: error.fileName,
+        format: t(`experimentData.uploadDataModal.history.sourceKind.${error.expected}`),
+      });
     case "oversizedFiles":
       return t("experimentData.uploadDataModal.validation.oversizedFiles", {
         count: error.count,

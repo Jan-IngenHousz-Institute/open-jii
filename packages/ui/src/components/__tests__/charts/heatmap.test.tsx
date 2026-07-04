@@ -32,6 +32,7 @@ vi.mock("../../charts/utils", () => ({
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
   ),
+  truncateCategoryTicks: vi.fn((axis) => axis),
 }));
 
 describe("Heatmap", () => {

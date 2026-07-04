@@ -180,7 +180,7 @@ export function ColorDimensionShelf({
           )}
 
           {colorMode === "categorical" ? (
-            <CategoricalColorMap form={form} />
+            <CategoricalColorMap form={form} columns={columns} />
           ) : (
             <ContinuousColorSettings
               control={form.control}

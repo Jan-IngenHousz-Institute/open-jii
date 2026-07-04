@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const zExperimentUploadSourceKind = z
-  .enum(["ambyte", "csv", "tsv", "parquet", "xlsx", "json", "ndjson"])
+  .enum(["ambyte", "csv", "tsv", "parquet", "json", "ndjson"])
   .describe("Source format for the upload");
 
 // Per-kind constants consumed by the backend (volume path, busboy limits, etc.)
@@ -34,12 +34,6 @@ export const UPLOAD_KIND_CONSTANTS = {
     maxFileSize: 200 * 1024 * 1024,
     maxFileCount: 100,
     extensions: [".parquet"],
-  },
-  xlsx: {
-    volumeSourceType: "uploads",
-    maxFileSize: 50 * 1024 * 1024,
-    maxFileCount: 100,
-    extensions: [".xlsx", ".xls"],
   },
   json: {
     volumeSourceType: "uploads",
@@ -131,7 +125,9 @@ export const zExperimentUploadFormFields = z.discriminatedUnion("targetKind", [
   z.object({
     targetKind: z.literal("existing"),
     sourceKind: zExperimentUploadSourceKind,
-    uploadTableId: z.string().uuid(),
+    uploadTableId: z
+      .string({ required_error: "Select a table to append to" })
+      .uuid("Select a table to append to"),
   }),
 ]);
 export type ExperimentUploadFormFields = z.infer<typeof zExperimentUploadFormFields>;
@@ -172,10 +168,6 @@ export const zExperimentTsvFilename = bareBasenameSchema(
 export const zExperimentParquetFilename = bareBasenameSchema(
   "parquet",
   UPLOAD_KIND_CONSTANTS.parquet.extensions,
-);
-export const zExperimentXlsxFilename = bareBasenameSchema(
-  "Excel",
-  UPLOAD_KIND_CONSTANTS.xlsx.extensions,
 );
 export const zExperimentJsonFilename = bareBasenameSchema(
   "JSON",
@@ -268,7 +260,6 @@ export const UPLOAD_FILENAME_SCHEMAS = {
   csv: zExperimentCsvFilename,
   tsv: zExperimentTsvFilename,
   parquet: zExperimentParquetFilename,
-  xlsx: zExperimentXlsxFilename,
   json: zExperimentJsonFilename,
   ndjson: zExperimentNdjsonFilename,
 } as const satisfies Record<z.infer<typeof zExperimentUploadSourceKind>, z.ZodTypeAny>;

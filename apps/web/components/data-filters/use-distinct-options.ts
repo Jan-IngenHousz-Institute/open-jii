@@ -10,14 +10,14 @@ export function useDistinctOptions(
   experimentId: string,
   tableName: string,
 ) {
-  const { values, truncated, isLoading, error } = useExperimentDistinctValues({
+  const { values, truncated, isLoading, isSuccess, error } = useExperimentDistinctValues({
     experimentId,
     tableName,
     column: column.name,
   });
   const isContributor = column.type_text === WellKnownColumnTypes.CONTRIBUTOR;
   const contributorMap = useContributorIdMap(values, isContributor);
-  return { values, truncated, isLoading, error, isContributor, contributorMap };
+  return { values, truncated, isLoading, isSuccess, error, isContributor, contributorMap };
 }
 
 export function useContributorIdMap(

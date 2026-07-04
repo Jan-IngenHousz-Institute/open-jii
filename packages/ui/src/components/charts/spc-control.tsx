@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
 
 export interface SPCSeriesData extends BaseSeries {
@@ -56,6 +58,7 @@ export function SPCControlCharts({
   showSpecLimits = true,
   showCenterLine = true,
 }: SPCControlChartsProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -219,11 +222,11 @@ export function SPCControlCharts({
       : []),
   ];
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

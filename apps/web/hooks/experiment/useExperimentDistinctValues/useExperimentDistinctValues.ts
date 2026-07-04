@@ -19,7 +19,7 @@ export const useExperimentDistinctValues = ({
   limit,
   enabled = true,
 }: UseExperimentDistinctValuesArgs) => {
-  const { data, isLoading, error } = useQuery(
+  const { data, isLoading, isSuccess, error } = useQuery(
     orpc.experiments.getDistinctColumnValues.queryOptions({
       input: { id: experimentId, tableName, column, limit },
       staleTime: STALE_TIME,
@@ -34,6 +34,7 @@ export const useExperimentDistinctValues = ({
     values: data?.values ?? [],
     truncated: data?.truncated ?? false,
     isLoading,
+    isSuccess,
     error,
   };
 };

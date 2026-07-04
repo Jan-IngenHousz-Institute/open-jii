@@ -3,8 +3,10 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
 export interface Histogram2DSeriesData extends BaseSeries {
@@ -66,6 +68,7 @@ export function Histogram2D({
   renderMode = "heatmap",
   contourFill = false,
 }: Histogram2DProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   // `histogram2dcontour` has no WebGL variant; `getPlotType` falls back
   // to the SVG path automatically.
@@ -117,11 +120,11 @@ export function Histogram2D({
       }) as any as PlotData,
   );
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

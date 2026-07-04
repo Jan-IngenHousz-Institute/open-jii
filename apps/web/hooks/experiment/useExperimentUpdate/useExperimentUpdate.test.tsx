@@ -3,7 +3,7 @@ import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -99,5 +99,55 @@ describe("useExperimentUpdate", () => {
 
     expect(result.current.mutate).toBeDefined();
     expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("invalidates cached distinct values and data when anonymization is toggled", async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    server.mount(contract.experiments.updateExperiment, {
+      body: createExperiment({ id: "exp-1", anonymizeContributors: true }),
+    });
+
+    const { result } = renderHook(() => useExperimentUpdate(), { queryClient });
+
+    act(() => {
+      result.current.mutate({ id: "exp-1", anonymizeContributors: true });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
+    expect(invalidatedKeys).toContainEqual(
+      orpc.experiments.getDistinctColumnValues.key({ input: { id: "exp-1" } }),
+    );
+    expect(invalidatedKeys).toContainEqual(
+      orpc.experiments.getExperimentData.key({ input: { id: "exp-1" } }),
+    );
+  });
+
+  it("does not invalidate distinct values / data on a non-anonymization update", async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    server.mount(contract.experiments.updateExperiment, {
+      body: createExperiment({ id: "exp-1", name: "Renamed" }),
+    });
+
+    const { result } = renderHook(() => useExperimentUpdate(), { queryClient });
+
+    act(() => {
+      result.current.mutate({ id: "exp-1", name: "Renamed" });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
+    expect(invalidatedKeys).not.toContainEqual(
+      orpc.experiments.getDistinctColumnValues.key({ input: { id: "exp-1" } }),
+    );
+    expect(invalidatedKeys).not.toContainEqual(
+      orpc.experiments.getExperimentData.key({ input: { id: "exp-1" } }),
+    );
   });
 });

@@ -144,4 +144,67 @@ describe("CategoricalMultiInput", () => {
 
     expect(onChange).toHaveBeenLastCalledWith(["u-1"]);
   });
+
+  it("drops a stale contributor id once the loaded list no longer contains it", async () => {
+    // Simulates an anonymization toggle: the selected real id is gone from the
+    // now-pseudonymised option list, so it should be pruned.
+    const pseudo = JSON.stringify({
+      id: "Contributor-ABC123",
+      name: "Contributor-ABC123",
+      avatar: null,
+    });
+    mountDistinct([pseudo]);
+    const onChange = vi.fn();
+    render(
+      <CategoricalMultiInput
+        column={contributorColumn}
+        experimentId="exp-1"
+        tableName="raw_data"
+        value={["real-uuid"]}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([]));
+  });
+
+  it("keeps a contributor selection that still resolves in the loaded list", async () => {
+    const struct = JSON.stringify({ id: "u-1", name: "Alice", avatar: null });
+    mountDistinct([struct]);
+    const onChange = vi.fn();
+    render(
+      <CategoricalMultiInput
+        column={contributorColumn}
+        experimentId="exp-1"
+        tableName="raw_data"
+        value={["u-1"]}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Alice")).toBeInTheDocument());
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not prune when the option list is truncated (can't confirm staleness)", async () => {
+    const pseudo = JSON.stringify({
+      id: "Contributor-ABC123",
+      name: "Contributor-ABC123",
+      avatar: null,
+    });
+    mountDistinct([pseudo], true);
+    const onChange = vi.fn();
+    render(
+      <CategoricalMultiInput
+        column={contributorColumn}
+        experimentId="exp-1"
+        tableName="raw_data"
+        value={["real-uuid"]}
+        onChange={onChange}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent(/selectedCount/));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
