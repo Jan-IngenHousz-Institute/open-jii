@@ -5,7 +5,6 @@
  * Commands are sent as strings (or JSON) terminated with \r\n.
  * Responses are newline-terminated with an 8-char checksum before the newline.
  */
-import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
 import {
   stringifyIfObject,
@@ -27,20 +26,29 @@ import type {
 } from "./interface";
 import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
 
+/** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
+function summarizeCommand(commandStr: string, maxLength = 120): string {
+  if (commandStr.length <= maxLength) return commandStr;
+  return `${commandStr.slice(0, maxLength)}… (${commandStr.length} chars)`;
+}
+
 /**
  * MultispeQ device driver
  * Implements the MultispeQ device communication with checksums and JSON framing
  */
 export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
-  override readonly family: SensorFamily = "multispeq";
-  protected override readonly responseEvent = "receivedReplyFromDevice" as const;
-
   private dataBuffer: string[] = [];
   private bufferLength = 0;
 
+  /** Base response timeout (ms) used for short console commands. */
+  private readonly defaultTimeout: number;
+
+  /** Aborts the in-flight waitForResponse(), if any. Set while a command waits. */
+  private pendingAbort?: () => void;
+
   constructor(logger?: Logger, config?: Pick<MultispeqTransportConfig, "timeout">) {
     super(logger);
-    this.defaultTimeoutMs = config?.timeout ?? MULTISPEQ_FRAMING.DEFAULT_TIMEOUT;
+    this.defaultTimeout = config?.timeout ?? MULTISPEQ_FRAMING.DEFAULT_TIMEOUT;
   }
 
   initialize(transport: ITransportAdapter): void {
@@ -58,7 +66,6 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
       chars: data.length,
       buffered: this.bufferLength + data.length,
     });
-    this.notifyRxChunk(data.length);
 
     // Guard against unbounded buffer growth from malformed/chatty devices
     this.bufferLength += data.length;
@@ -102,48 +109,57 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     });
   }
 
-  /** Full wire payload: command string (JSON for objects) plus CRLF. */
-  protected override encodeCommand(command: string | object): string {
-    return addLineEnding(stringifyIfObject(command), MULTISPEQ_FRAMING.LINE_ENDING);
-  }
+  async execute<T = unknown>(
+    command: string | object,
+    options?: ExecuteOptions,
+  ): Promise<CommandResult<T>> {
+    this.ensureInitialized();
 
-  protected override decodeResponse<T>(payload: unknown): CommandResult<T> {
-    const response = payload as MultispeqCommandResult;
-    return {
-      success: true,
-      data: response.data as T,
-      checksum: response.checksum,
-    } as CommandResult<T>;
-  }
+    const timeoutMs = options?.timeoutMs ?? resolveCommandTimeoutMs(command, this.defaultTimeout);
 
-  /** Size the timeout to the command (measurement protocols get a bigger budget). */
-  protected override resolveTimeoutMs(command: string | object, options?: ExecuteOptions): number {
-    return options?.timeoutMs ?? resolveCommandTimeoutMs(command, this.defaultTimeoutMs);
-  }
+    // Serialize commands so responses are never mismatched
+    return this.commandQueue.enqueue(async () => {
+      const startedAt = Date.now();
+      try {
+        // Send command
+        const commandStr = stringifyIfObject(command);
+        const commandWithEnding = addLineEnding(commandStr, MULTISPEQ_FRAMING.LINE_ENDING);
 
-  // Resync barrier: drop bytes buffered from a previous (timed-out/cancelled)
-  // command; commands are serialized, so anything buffered predates this send
-  // and a stale fragment would fuse onto this command's reply. See OJD-1565.
-  protected override beforeSend(command: string | object): void {
-    void command;
-    this.dataBuffer = [];
-    this.bufferLength = 0;
-  }
+        if (!this.transport) {
+          throw new Error("Transport not initialized");
+        }
 
-  // On timeout the device may still be running a long protocol. Without
-  // an explicit cancel it keeps the actinic light on and eventually
-  // drops the connection (OJD-1565). Best-effort abort so it returns to
-  // idle; the command itself is still rejected as timed out.
-  protected override onResponseTimeout(timeoutMs: number): void {
-    this.log.warn("response timeout, sending cancel", { timeoutMs });
-    this.sendCancelToDevice();
-  }
+        this.log.debug("tx", { command: summarizeCommand(commandStr), timeoutMs });
+        // Resync barrier: drop any bytes still buffered from a previous command
+        // (e.g. a partial frame left by one that timed out or was cancelled)
+        // before sending this one. Commands are serialized, so whatever is
+        // buffered now necessarily predates this send — letting it linger would
+        // fuse a stale fragment onto this command's reply and return wrong data
+        // to the next queued execute(). See OJD-1565.
+        this.dataBuffer = [];
+        this.bufferLength = 0;
+        await this.transport.send(commandWithEnding);
 
-  /** Best-effort `-1+` cancel switch to the device. */
-  protected override sendCancelToDevice(): void {
-    this.transport
-      ?.send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
-      .catch(() => undefined);
+        // Wait for response
+        const response = await this.waitForResponse(timeoutMs);
+
+        this.log.debug("command completed", { elapsedMs: Date.now() - startedAt, timeoutMs });
+        return {
+          success: true,
+          data: response.data as T,
+          checksum: response.checksum,
+        } as CommandResult<T>;
+      } catch (error) {
+        this.log.warn("command failed", {
+          elapsedMs: Date.now() - startedAt,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as CommandResult<T>;
+      }
+    });
   }
 
   async getDeviceInfo(): Promise<MultispeqDeviceInfo> {
@@ -175,18 +191,75 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     return info;
   }
 
-  /** Identify the device via getDeviceInfo() (name + battery). */
-  async getDeviceIdentity(): Promise<DeviceIdentity> {
-    const info = await this.getDeviceInfo();
-    return {
-      family: "multispeq",
-      name: typeof info.device_name === "string" ? info.device_name : undefined,
-      batteryPercent: typeof info.device_battery === "number" ? info.device_battery : undefined,
-      raw: info,
-    };
+  private waitForResponse(timeoutMs: number): Promise<MultispeqCommandResult> {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.emitter.off("receivedReplyFromDevice", handler);
+        this.pendingAbort = undefined;
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        this.log.warn("response timeout, sending cancel", { timeoutMs });
+        // On timeout the device may still be running a long protocol. Without
+        // an explicit cancel it keeps the actinic light on and eventually
+        // drops the connection (OJD-1565). Best-effort abort so it returns to
+        // idle; we still reject this command as timed out.
+        this.sendCancel();
+        reject(new Error("Command timeout"));
+      }, timeoutMs);
+
+      const handler = (payload: MultispeqCommandResult) => {
+        cleanup();
+        resolve(payload);
+      };
+
+      // Let cancel() abort this wait. The device-side abort (`-1+`) is sent by
+      // cancel() itself so it reaches the device immediately, bypassing the
+      // command queue.
+      this.pendingAbort = () => {
+        cleanup();
+        reject(new Error("Command cancelled"));
+      };
+
+      this.emitter.once("receivedReplyFromDevice", handler);
+    });
   }
 
-  override async destroy(): Promise<void> {
+  /** Best-effort `-1+` cancel switch to the device. */
+  private sendCancel(): void {
+    this.transport
+      ?.send(addLineEnding(MULTISPEQ_CONSOLE.CANCEL, MULTISPEQ_FRAMING.LINE_ENDING))
+      .catch(() => undefined);
+  }
+
+  /**
+   * Abort the in-flight command: send `-1+` to the device immediately
+   * (bypassing the command queue so it reaches a long-running protocol) and
+   * reject the pending execute() with "Command cancelled". No-op when idle —
+   * importantly, this avoids emitting a stray `-1+` whose ack could be
+   * mismatched to a later command.
+   */
+  async cancel(): Promise<void> {
+    const abort = this.pendingAbort;
+    if (!abort) return;
+    this.log.debug("cancel: aborting in-flight command");
+    this.pendingAbort = undefined;
+    this.sendCancel();
+    abort();
+    await Promise.resolve();
+  }
+
+  async destroy(): Promise<void> {
+    // Abort any in-flight command so it rejects immediately instead of hanging
+    // until its (possibly multi-minute) timeout after the transport is gone —
+    // e.g. the device disconnects mid-measurement. Without this the pending
+    // execute() waits the full budget, so the UI looks "still measuring" long
+    // after the device left (OJD-1565).
+    const abort = this.pendingAbort;
+    this.pendingAbort = undefined;
+    abort?.();
     this.dataBuffer = [];
     this.bufferLength = 0;
     await super.destroy();
