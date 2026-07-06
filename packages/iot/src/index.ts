@@ -26,12 +26,23 @@ export type {
   ValidatedCommand,
 } from "./core/command-validator";
 export { validateCommandArtifact } from "./core/command-validator";
-export type { CommandProgress, CommandProgressListener } from "./core/progress";
 export type { ITransportAdapter, TransportAdapterFactory } from "./transport/interface";
-export type { IDeviceDriver, CommandResult, ExecuteOptions } from "./driver/driver-base";
+export type {
+  IDeviceDriver,
+  CommandResult,
+  ExecuteOptions,
+  CommandProgress,
+  CommandProgressListener,
+  DeviceDriverOptions,
+} from "./driver/driver-base";
 export { DeviceDriver, DEFAULT_MAX_BUFFER_SIZE } from "./driver/driver-base";
+// Connector aliases: family-agnostic names for the same driver contract
+export { DeviceDriver as CommandConnector } from "./driver/driver-base";
+export type { IDeviceDriver as ICommandConnector } from "./driver/driver-base";
 export type { ICommandExecutor } from "./core/command-executor";
 export { CommandExecutor } from "./core/command-executor";
+export type { IdentifyDeviceOptions, IdentifiedDevice } from "./core/identify-device";
+export { identifyDevice, createConnectorForFamily } from "./core/identify-device";
 
 // ── Driver: MultispeQ ───────────────────────────────
 export type {
@@ -87,12 +98,20 @@ export {
   GENERIC_OPTIONAL_COMMANDS,
 } from "./driver/generic/commands";
 export { GenericDeviceDriver } from "./driver/generic/driver";
+export type {
+  GenericCommandConnectorEvents,
+  GenericCommandConnectorConfig,
+} from "./driver/generic/command-connector";
+export { GenericCommandConnector } from "./driver/generic/command-connector";
 export type { GenericDeviceTransportConfig, GenericDriverConfig } from "./driver/generic/config";
 export {
   GENERIC_BLE_UUIDS,
   GENERIC_SERIAL_DEFAULTS,
   GENERIC_FRAMING,
 } from "./driver/generic/config";
+
+// ── Driver: Ambit ───────────────────────────────────
+export { AmbitConnector } from "./driver/ambit/connector";
 
 // ── Logger (public DI contract) ─────────────────────
 export type { Logger } from "./utils/logger/logger";

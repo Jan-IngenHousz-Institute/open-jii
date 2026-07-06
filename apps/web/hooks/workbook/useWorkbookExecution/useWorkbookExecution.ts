@@ -114,8 +114,7 @@ export function useWorkbookExecution({
             throw new Error("No device connected - connect a device to run this protocol");
           }
           const onAbort = () => {
-            // Cancel is a MultispeQ driver capability, not yet on IDeviceDriver (OJD-1668).
-            void (driverRef.current as { cancel?: () => Promise<void> } | null)?.cancel?.();
+            void driverRef.current?.cancel?.();
           };
           signal.addEventListener("abort", onAbort);
           try {

@@ -8,7 +8,7 @@
  *
  * ## Custom commands
  *
- * Use `execute()` directly to send any command string or object — there is no
+ * Use `execute()` directly to send any command string or object; there is no
  * need for a separate `executeCustom()` method:
  *
  * ```ts
@@ -22,12 +22,12 @@
  * });
  * ```
  */
+import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult } from "../driver-base";
 import { GENERIC_COMMANDS } from "./commands";
-import type { GenericCommandWithParams, CustomCommandWithParams } from "./commands";
 import { GENERIC_FRAMING } from "./config";
 import type { GenericDriverConfig } from "./config";
 import type {
@@ -39,12 +39,17 @@ import type {
 } from "./interface";
 
 export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
+  override readonly family: SensorFamily = "generic";
+  protected override readonly responseEvent = "receivedResponse" as const;
+  /** Historical error message kept for backward compat. */
+  protected override timeoutErrorMessage = "Response timeout";
+
   private responseBuffer = "";
 
   /** Resolved driver config (defaults merged with caller overrides) */
   private readonly config: Readonly<GenericDriverConfig>;
 
-  /** Cached INFO response — populated during initialize() */
+  /** Cached INFO response, populated during initialize() */
   private deviceInfo: GenericDeviceInfo | null = null;
 
   /**
@@ -58,6 +63,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
       timeout: config?.timeout ?? GENERIC_FRAMING.DEFAULT_TIMEOUT,
       lineEnding: config?.lineEnding ?? GENERIC_FRAMING.LINE_ENDING,
     });
+    this.defaultTimeoutMs = this.config.timeout;
   }
 
   /**
@@ -66,7 +72,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
    * After wiring up data/status handlers the driver automatically sends an
    * INFO command to probe the device's identity and capabilities.  If INFO
    * fails (timeout, unsupported, etc.) the driver logs a warning and
-   * continues — capability guards are disabled in that case.
+   * continues; capability guards are disabled in that case.
    */
   override async initialize(transport: ITransportAdapter): Promise<void> {
     await super.initialize(transport);
@@ -90,7 +96,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     try {
       this.deviceInfo = await this.getDeviceInfo();
     } catch {
-      this.log.warn("INFO probe failed during initialize — capability guards disabled");
+      this.log.warn("INFO probe failed during initialize \u2014 capability guards disabled");
       this.deviceInfo = null;
     }
   }
@@ -134,7 +140,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
             const response = JSON.parse(line) as GenericCommandResponse;
             void this.emitter.emit("receivedResponse", response);
           } catch (parseError) {
-            // Not valid JSON — emit diagnostic event so consumers can debug
+            // Not valid JSON; emit diagnostic event so consumers can debug
             void this.emitter.emit("parseError", { line, error: parseError });
           }
         }
@@ -142,64 +148,36 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     }
   }
 
-  async execute<T = unknown>(
-    command: string | GenericCommandWithParams | CustomCommandWithParams,
-  ): Promise<CommandResult<T>> {
-    this.ensureInitialized();
-
-    // Serialize commands so responses are never mismatched
-    return this.commandQueue.enqueue(async () => {
-      const cmdObject = typeof command === "string" ? { command } : command;
-
-      try {
-        // Send command as JSON
-        const cmdString = JSON.stringify(cmdObject);
-        void this.emitter.emit("sendCommand", cmdObject);
-
-        if (!this.transport) {
-          throw new Error("Transport not initialized");
-        }
-
-        await this.transport.send(cmdString + this.config.lineEnding);
-
-        // Wait for response
-        const response = await this.waitForResponse<T>();
-
-        return {
-          success: response.status === "success",
-          data: response.data,
-          error: response.error ? new Error(response.error) : undefined,
-        } as CommandResult<T>;
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-        } as CommandResult<T>;
-      }
-    });
+  /** Wrap string commands in the JSON envelope and append the line ending. */
+  protected override encodeCommand(command: string | object): string {
+    const cmdObject = typeof command === "string" ? { command } : command;
+    return JSON.stringify(cmdObject) + this.config.lineEnding;
   }
 
-  private async waitForResponse<T>(
-    timeout = this.config.timeout,
-  ): Promise<GenericCommandResponse<T>> {
-    return new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        cleanup();
-        reject(new Error("Response timeout"));
-      }, timeout);
+  protected override decodeResponse<T>(payload: unknown): CommandResult<T> {
+    const response = payload as GenericCommandResponse<T>;
+    return {
+      success: response.status === "success",
+      data: response.data,
+      error: response.error ? new Error(response.error) : undefined,
+    } as CommandResult<T>;
+  }
 
-      const handleResponse = (response: unknown) => {
-        cleanup();
-        resolve(response as GenericCommandResponse<T>);
-      };
+  protected override beforeSend(command: string | object): void {
+    const cmdObject = typeof command === "string" ? { command } : command;
+    void this.emitter.emit("sendCommand", cmdObject);
+  }
 
-      const cleanup = () => {
-        clearTimeout(timeoutId);
-        this.emitter.off("receivedResponse", handleResponse);
-      };
-
-      this.emitter.once("receivedResponse", handleResponse);
-    });
+  /** Identify from cached/probed INFO; device_type "ambit" maps to that family. */
+  async getDeviceIdentity(): Promise<DeviceIdentity> {
+    const info = this.deviceInfo ?? (await this.getDeviceInfo());
+    return {
+      family: info.device_type === "ambit" ? "ambit" : this.family,
+      name: info.device_name,
+      deviceId: info.device_id,
+      firmwareVersion: info.firmware_version,
+      raw: info,
+    };
   }
 
   // ─── Capability guard ────────────────────────────────────────────
@@ -207,7 +185,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   /**
    * Throws if the device reported capabilities and the given command is not
    * among them.  When capabilities are unknown (INFO failed or device didn't
-   * report them) the guard is a no-op — fail-open for backward compat.
+   * report them) the guard is a no-op, fail-open for backward compat.
    */
   private requireCapability(command: string): void {
     const caps = this.deviceInfo?.capabilities;
@@ -221,7 +199,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
 
   // ─── Required commands ───────────────────────────────────────────
 
-  /** Get device information (always available — required command) */
+  /** Get device information (always available, required command) */
   async getDeviceInfo(): Promise<GenericDeviceInfo> {
     const result = await this.execute<GenericDeviceInfo>({
       command: GENERIC_COMMANDS.INFO,
@@ -234,7 +212,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     return result.data;
   }
 
-  /** Run measurement based on loaded config (always available — required command) */
+  /** Run measurement based on loaded config (always available, required command) */
   async runMeasurement(params?: Record<string, unknown>): Promise<void> {
     const result = await this.execute({
       command: GENERIC_COMMANDS.RUN,
