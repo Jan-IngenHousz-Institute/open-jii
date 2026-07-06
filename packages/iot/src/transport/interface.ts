@@ -10,7 +10,7 @@ export interface ITransportAdapter {
   /** Send raw data to device */
   send(data: string): Promise<void>;
 
-  /** Register callback for received data */
+  /** Register callback for received data. Replace semantics are contractual: registering a new callback replaces the previous one. */
   onDataReceived(callback: (data: string) => void): void;
 
   /** Register callback for status changes */
