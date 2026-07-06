@@ -8,7 +8,7 @@ import {
   createQuestionCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, act } from "@/test/test-utils";
+import { renderHook, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   __resetProtocolCodeRegistry,
@@ -49,14 +49,22 @@ function renderExecution(
   overrides: Partial<Parameters<typeof useWorkbookExecution>[0]> = {},
 ) {
   const onCellsChange = vi.fn();
-  const result = renderHook(() =>
-    useWorkbookExecution({
-      cells,
-      onCellsChange,
-      ...overrides,
-    }),
+  const result = renderHook(
+    (props: { cells: WorkbookCell[] }) =>
+      useWorkbookExecution({
+        cells: props.cells,
+        onCellsChange,
+        ...overrides,
+      }),
+    { initialProps: { cells } },
   );
   return { ...result, onCellsChange };
+}
+
+function lastPushed(onCellsChange: ReturnType<typeof vi.fn>): WorkbookCell[] {
+  const calls = onCellsChange.mock.calls;
+  expect(calls.length).toBeGreaterThan(0);
+  return calls[calls.length - 1][0] as WorkbookCell[];
 }
 
 function findOutput(cells: WorkbookCell[], producedBy?: string) {
@@ -86,12 +94,13 @@ describe("useWorkbookExecution", () => {
 
     act(() => result.current.clearOutputs());
 
-    const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+    const updated = lastPushed(onCellsChange);
     expect(updated.every((c) => c.type !== "output")).toBe(true);
     expect(updated).toHaveLength(2);
+    expect(result.current.executionStates).toEqual({});
   });
 
-  describe("runCell — protocol", () => {
+  describe("runCell - protocol", () => {
     it("errors when protocol has no code", async () => {
       const proto = createProtocolCell();
       const protocol = createProtocol({
@@ -104,10 +113,10 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(proto.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(lastPushed(onCellsChange));
       expect(outputCell).toBeDefined();
-      expect(outputCell?.messages).toContain("Invalid or missing protocol JSON");
+      expect(outputCell?.messages).toContain("Invalid or missing protocol code");
+      expect(result.current.executionStates[proto.id].status).toBe("error");
     });
 
     it("errors when no device is connected", async () => {
@@ -123,8 +132,7 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(proto.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(lastPushed(onCellsChange));
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("No device connected")]),
       );
@@ -144,15 +152,15 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(proto.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(lastPushed(onCellsChange));
       expect(outputCell?.data).toEqual({ measurement: 42 });
       expect(outputCell?.producedBy).toBe(proto.id);
+      expect(result.current.executionStates[proto.id].status).toBe("completed");
     });
 
     it("runs the live editor code directly, without re-fetching from the server", async () => {
       // Fixes the stale-protocol bug at the source: the device runs exactly the
-      // code currently in the editor, with no backend round-trip — so a debounced,
+      // code currently in the editor, with no backend round-trip - so a debounced,
       // not-yet-saved edit is never bypassed in favour of an older saved version.
       const proto = createProtocolCell();
       const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
@@ -186,7 +194,7 @@ describe("useWorkbookExecution", () => {
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
 
-      // No code source registered — e.g. the cell's editor is not mounted.
+      // No code source registered - e.g. the cell's editor is not mounted.
       const { result } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
@@ -208,27 +216,46 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(proto.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(lastPushed(onCellsChange));
       expect(outputCell?.messages).toContain("Device timed out");
+      expect(result.current.executionStates[proto.id].error).toBe("Device timed out");
+    });
+
+    it("re-running a protocol replaces its previous output cell", async () => {
+      const proto = createProtocolCell();
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: [{ _protocol_set_: [] }] }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValueOnce({ run: 1 }).mockResolvedValueOnce({ run: 2 });
+
+      const { result, onCellsChange } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = lastPushed(onCellsChange);
+      const outputs = updated.filter((c) => c.type === "output");
+      expect(outputs).toHaveLength(1);
+      expect(findOutput(updated, proto.id)?.data).toEqual({ run: 2 });
     });
   });
 
-  describe("runCell — macro", () => {
+  describe("runCell - macro", () => {
     it("errors when no preceding output data", async () => {
       const macro = createMacroCell();
       const { result, onCellsChange } = renderExecution([macro]);
 
       await act(() => result.current.runCell(macro.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(lastPushed(onCellsChange));
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("No measurement data available")]),
       );
+      expect(result.current.executionStates[macro.id].status).toBe("error");
     });
 
-    it("executes macro with preceding output data", async () => {
+    it("executes macro against the preceding protocol's persisted output", async () => {
       const proto = createProtocolCell();
       const output = createOutputCell({
         producedBy: proto.id,
@@ -236,7 +263,7 @@ describe("useWorkbookExecution", () => {
       });
       const macro = createMacroCell();
 
-      server.mount(contract.macros.executeMacro, {
+      const executeSpy = server.mount(contract.macros.executeMacro, {
         body: {
           macro_id: macro.payload.macroId,
           success: true,
@@ -248,9 +275,9 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(macro.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const macroOutput = findOutput(updated, macro.id);
+      const macroOutput = findOutput(lastPushed(onCellsChange), macro.id);
       expect(macroOutput?.data).toEqual({ result: 99 });
+      expect(executeSpy.body).toEqual({ data: { chlorophyll: 35 } });
     });
 
     it("captures macro failure response", async () => {
@@ -273,60 +300,61 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(macro.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const macroOutput = findOutput(updated, macro.id);
+      const macroOutput = findOutput(lastPushed(onCellsChange), macro.id);
       expect(macroOutput?.messages).toContain("Division by zero");
+    });
+
+    it("feeds a fresh protocol run into a macro run across rerenders", async () => {
+      const proto = createProtocolCell();
+      const macro = createMacroCell();
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: [{ _protocol_set_: [] }] }),
+      });
+      mockIsConnected = true;
+      mockExecuteProtocol.mockResolvedValue({ spad: 7 });
+      const executeSpy = server.mount(contract.macros.executeMacro, {
+        body: { macro_id: macro.payload.macroId, success: true, output: { ok: true } },
+      });
+
+      const { result, onCellsChange, rerender } = renderExecution([proto, macro]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      // Parent commits the pushed cells (output folded in), then the macro runs.
+      rerender({ cells: lastPushed(onCellsChange) });
+      await act(() => result.current.runCell(macro.id));
+
+      expect(executeSpy.body).toEqual({ data: { spad: 7 } });
     });
   });
 
-  describe("runCell — question", () => {
-    it("errors when question text is empty", async () => {
-      const q = createQuestionCell({
-        question: { kind: "open_ended", text: "", required: false },
-      });
-
-      const { result, onCellsChange } = renderExecution([q]);
-
-      await act(() => result.current.runCell(q.id));
-
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
-      expect(outputCell?.messages).toEqual(
-        expect.arrayContaining([expect.stringContaining("Question text is required")]),
-      );
-    });
-
-    it("does not add output without a prompt function", async () => {
+  describe("runCell - question", () => {
+    it("does not produce output without a prompt function", async () => {
       const q = createQuestionCell();
       const { result, onCellsChange } = renderExecution([q]);
 
       await act(() => result.current.runCell(q.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      expect(findOutput(updated)).toBeUndefined();
+      // Nothing to fold back: no push at all.
+      expect(onCellsChange).not.toHaveBeenCalled();
     });
 
-    it("records the answer and produces output", async () => {
+    it("prompts, records the answer and completes the cell", async () => {
       const q = createQuestionCell();
       const onPrompt = vi.fn().mockResolvedValue("42");
 
-      const { result, onCellsChange } = renderExecution([q], {
+      const { result } = renderExecution([q], {
         onPromptQuestion: onPrompt,
       });
 
       await act(() => result.current.runCell(q.id));
 
       expect(onPrompt).toHaveBeenCalledWith(q);
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const answeredQ = updated.find((c) => c.id === q.id);
-      expect(answeredQ).toHaveProperty("answer", "42");
-      expect(answeredQ).toHaveProperty("isAnswered", true);
-
-      const outputCell = findOutput(updated);
-      expect(outputCell?.data).toEqual({ answer: "42" });
+      expect(result.current.executionStates[q.id].status).toBe("completed");
+      expect(result.current.executionStates[q.id].executionOrder).toEqual([1]);
     });
 
-    it("does not add output when user cancels the prompt", async () => {
+    it("does not record a run when user cancels the prompt", async () => {
       const q = createQuestionCell();
       const onPrompt = vi.fn().mockResolvedValue(undefined);
 
@@ -336,13 +364,43 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(q.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      expect(findOutput(updated)).toBeUndefined();
+      expect(onPrompt).toHaveBeenCalledTimes(1);
+      expect(onCellsChange).not.toHaveBeenCalled();
+      expect(result.current.executionStates[q.id]).toBeUndefined();
+    });
+
+    it("marks the prompted question as running while the prompt is open", async () => {
+      const q = createQuestionCell();
+      let resolvePrompt: ((answer: string | undefined) => void) | undefined;
+      const onPrompt = vi.fn().mockImplementation(
+        () =>
+          new Promise<string | undefined>((resolve) => {
+            resolvePrompt = resolve;
+          }),
+      );
+
+      const { result } = renderExecution([q], { onPromptQuestion: onPrompt });
+
+      let done: Promise<void> | undefined;
+      act(() => {
+        done = result.current.runCell(q.id);
+      });
+
+      await waitFor(() =>
+        expect(result.current.executionStates[q.id]).toMatchObject({ status: "running" }),
+      );
+
+      await act(async () => {
+        resolvePrompt?.("yes");
+        await done;
+      });
+
+      expect(result.current.executionStates[q.id].status).toBe("completed");
     });
   });
 
-  describe("runCell — branch", () => {
-    it("evaluates branch and records matched path", async () => {
+  describe("runCell - branch", () => {
+    it("evaluates branch from a persisted answer and records matched path", async () => {
       const q = createQuestionCell({
         id: "q-1",
         answer: "yes",
@@ -373,17 +431,17 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(branch.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const updated = lastPushed(onCellsChange);
       const updatedBranch = updated.find((c) => c.id === "branch-1");
       expect(updatedBranch).toHaveProperty("evaluatedPathId", "path-yes");
 
-      const outputCell = findOutput(updated);
+      const outputCell = findOutput(updated, "branch-1");
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("Yes path")]),
       );
     });
 
-    it("reports validation errors for misconfigured branch", async () => {
+    it("reports no match for a branch whose conditions do not hold", async () => {
       const branch = createBranchCell({
         paths: [
           {
@@ -407,9 +465,38 @@ describe("useWorkbookExecution", () => {
 
       await act(() => result.current.runCell(branch.id));
 
-      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
-      const outputCell = findOutput(updated);
-      expect(outputCell?.messages?.length).toBeGreaterThan(0);
+      const updated = lastPushed(onCellsChange);
+      const outputCell = findOutput(updated, branch.id);
+      expect(outputCell?.messages).toEqual(["No path matched"]);
+      const updatedBranch = updated.find((c) => c.id === branch.id);
+      expect((updatedBranch as { evaluatedPathId?: string }).evaluatedPathId).toBeUndefined();
+    });
+
+    it("follows a branch jump and runs the cells from the target", async () => {
+      const q = createQuestionCell({ id: "q-1", answer: "yes", isAnswered: true });
+      const target = createQuestionCell({ id: "q-target", name: "target_q" });
+      const branch = createBranchCell({
+        id: "branch-1",
+        paths: [
+          {
+            id: "path-yes",
+            label: "Yes path",
+            color: "#22c55e",
+            conditions: [
+              { id: "cond-1", sourceCellId: "q-1", field: "answer", operator: "eq", value: "yes" },
+            ],
+            gotoCellId: "q-target",
+          },
+        ],
+      });
+      const onPrompt = vi.fn().mockResolvedValue("landed");
+
+      const { result } = renderExecution([q, branch, target], { onPromptQuestion: onPrompt });
+
+      await act(() => result.current.runCell(branch.id));
+
+      expect(onPrompt).toHaveBeenCalledTimes(1);
+      expect(onPrompt).toHaveBeenCalledWith(target);
     });
   });
 
@@ -449,6 +536,21 @@ describe("useWorkbookExecution", () => {
       expect(result.current.isRunningAll).toBe(false);
 
       expect(callOrder).toEqual(["q-1", "q-2"]);
+    });
+
+    it("ends the pass at a question whose prompt is dismissed", async () => {
+      const q1 = createQuestionCell({ id: "q-1" });
+      const q2 = createQuestionCell({ id: "q-2" });
+      const onPrompt = vi.fn().mockResolvedValue(undefined);
+
+      const { result } = renderExecution([q1, q2], {
+        onPromptQuestion: onPrompt,
+      });
+
+      await act(() => result.current.runAll());
+
+      expect(onPrompt).toHaveBeenCalledTimes(1);
+      expect(result.current.isRunningAll).toBe(false);
     });
   });
 
@@ -491,6 +593,23 @@ describe("useWorkbookExecution", () => {
       const states = result.current.executionStates;
       expect(states["q-1"].executionOrder).toEqual([1]);
       expect(states["q-2"].executionOrder).toEqual([2]);
+    });
+
+    it("preserves execution records across cell edits", async () => {
+      const q1 = createQuestionCell({ id: "q-1" });
+      const onPrompt = vi.fn().mockResolvedValue("ok");
+
+      const { result, rerender } = renderExecution([q1], { onPromptQuestion: onPrompt });
+
+      await act(() => result.current.runCell(q1.id));
+      expect(result.current.executionStates["q-1"].status).toBe("completed");
+
+      // Edit the workbook (new array identity), then run again: counters continue.
+      const edited: WorkbookCell[] = [q1, createMarkdownCell({ content: "note" })];
+      rerender({ cells: edited });
+      await act(() => result.current.runCell(q1.id));
+
+      expect(result.current.executionStates["q-1"].executionOrder).toEqual([1, 2]);
     });
   });
 

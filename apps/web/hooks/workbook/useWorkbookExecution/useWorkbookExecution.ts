@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
@@ -8,14 +8,12 @@ import { tsr } from "~/lib/tsr";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {
-  BranchCell,
-  MacroCell,
   OutputCell,
-  ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
-import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
+import type { CellRunStatus, RunnerState, WorkbookRunnerPorts } from "@repo/workbook";
+import { WorkbookRunner, createInitialState, isProducer, ownerCellId } from "@repo/workbook";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -32,95 +30,222 @@ interface UseWorkbookExecutionOptions {
   onPromptQuestion?: (cell: QuestionCell) => Promise<string | undefined>;
 }
 
-function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
-  return "multispeq";
-}
+type ConnectionType = "bluetooth" | "serial";
 
-async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
-  // Prefer the live editor code so the device runs exactly what is on screen,
-  // with no redundant backend round-trip. Fall back to the last saved version
-  // only when no editor is mounted for this protocol (or it holds invalid code).
-  const live = getLiveProtocolCode(cell.payload.protocolId);
-  if (live && live.length > 0) return live;
-
-  try {
-    const result = await tsr.protocols.getProtocol.query({
-      params: { id: cell.payload.protocolId },
-    });
-    if (result.status !== 200) return null;
-    const code = result.body.code;
-    if (code.length > 0) {
-      return code;
-    }
-    return null;
-  } catch {
-    return null;
+function toExecutionStatus(status: CellRunStatus): CellExecutionStatus {
+  switch (status) {
+    case "running":
+      return "running";
+    case "completed":
+      return "completed";
+    case "error":
+      return "error";
+    default:
+      // stale / cancelled / interrupted re-arm the cell.
+      return "idle";
   }
 }
 
-function findPrecedingOutputData(
+function toExecutionStates(
+  state: Readonly<RunnerState> | null,
+  promptingCellId: string | null,
+): Record<string, CellExecutionState> {
+  const states: Record<string, CellExecutionState> = {};
+  if (state) {
+    for (const [key, run] of Object.entries(state.cellRuns)) {
+      if (!run || ownerCellId(key) !== key) continue;
+      states[key] = {
+        status: toExecutionStatus(run.status),
+        error: run.error,
+        executionOrder: run.executionOrder,
+      };
+    }
+    // A running dispatch step (macro-constructed command) shows on its macro.
+    for (const [key, run] of Object.entries(state.cellRuns)) {
+      const owner = ownerCellId(key);
+      if (!run || owner === key || run.status !== "running") continue;
+      states[owner] = { ...states[owner], status: "running" };
+    }
+  }
+  if (promptingCellId) {
+    states[promptingCellId] = { ...states[promptingCellId], status: "running" };
+  }
+  return states;
+}
+
+/** Seed runner outputs from persisted output cells so macros/branches see them. */
+function outputsFromCells(cells: WorkbookCell[]): RunnerState["outputs"] {
+  const byId = new Map(cells.map((c) => [c.id, c]));
+  const outputs: RunnerState["outputs"] = {};
+  for (const cell of cells) {
+    if (cell.type !== "output" || cell.data == null) continue;
+    const owner = byId.get(ownerCellId(cell.producedBy));
+    if (owner && isProducer(owner)) outputs[cell.producedBy] = { v: cell.data };
+  }
+  return outputs;
+}
+
+/**
+ * Initial runner state for the current cell array. Outputs seed from persisted
+ * output cells; when a previous runner existed, its outputs, run records and
+ * counters carry over (keyed by stable cell ids) so edits do not reset them.
+ */
+function buildRestoredState(
   cells: WorkbookCell[],
-  beforeIndex: number,
-): Record<string, unknown> | null {
-  for (let i = beforeIndex - 1; i >= 0; i--) {
-    const c = cells[i];
-    if (c.type === "output" && c.data) {
-      return c.data as Record<string, unknown>;
-    }
+  prev: Readonly<RunnerState> | null,
+  deviceFamily: SensorFamily,
+): RunnerState {
+  const base = createInitialState({ cells, mode: "notebook", deviceFamily });
+  const outputs = outputsFromCells(cells);
+  if (!prev) return { ...base, outputs };
+
+  const ids = new Set(cells.map((c) => c.id));
+  for (const [key, entry] of Object.entries(prev.outputs)) {
+    if (entry && ids.has(ownerCellId(key))) outputs[key] = entry;
   }
-  return null;
-}
-
-// Replaces any previous output produced by the same source cell.
-function insertOutputAfterCell(
-  currentCells: WorkbookCell[],
-  sourceCellId: string,
-  outputCell: OutputCell,
-): WorkbookCell[] {
-  const filtered = currentCells.filter(
-    (c) => !(c.type === "output" && c.producedBy === sourceCellId),
-  );
-  const idx = filtered.findIndex((c) => c.id === sourceCellId);
-  const updated = [...filtered];
-  updated.splice(idx + 1, 0, outputCell);
-  return updated;
-}
-
-function makeOutputCell(
-  producedBy: string,
-  data: Record<string, unknown> | undefined,
-  executionTime: number,
-  messages: string[],
-): OutputCell {
+  const cellRuns: RunnerState["cellRuns"] = {};
+  for (const [key, run] of Object.entries(prev.cellRuns)) {
+    if (run && run.status !== "running" && ids.has(ownerCellId(key))) cellRuns[key] = run;
+  }
   return {
-    id: crypto.randomUUID(),
-    type: "output",
-    isCollapsed: false,
-    producedBy,
-    data,
-    executionTime,
-    messages,
+    ...base,
+    outputs,
+    cellRuns,
+    execCounter: prev.execCounter,
+    effectSeq: prev.effectSeq,
   };
 }
 
-function makeErrorOutputCell(producedBy: string, error: string, executionTime = 0): OutputCell {
-  return makeOutputCell(producedBy, undefined, executionTime, [error]);
+function sameStringArray(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
-type ConnectionType = "bluetooth" | "serial";
+function sameOutputCell(existing: OutputCell, desired: OutputCell): boolean {
+  return (
+    Object.is(existing.data, desired.data) &&
+    existing.executionTime === desired.executionTime &&
+    sameStringArray(existing.messages, desired.messages)
+  );
+}
 
+function lastOrder(run: { executionOrder: number[] } | undefined): number {
+  return run?.executionOrder[run.executionOrder.length - 1] ?? 0;
+}
+
+/**
+ * Fold runner results into the latest cell array: one output cell per produced
+ * value (or per-cell error) inserted after its producer, replacing any previous
+ * output for the same producer; branch cells get `evaluatedPathId` plus a
+ * message output. Unmanaged output cells (question answers, orphans) pass
+ * through untouched, and unchanged outputs keep their existing cell objects so
+ * repeated merges are stable.
+ */
+function mergeRunnerView(latest: WorkbookCell[], state: Readonly<RunnerState>): WorkbookCell[] {
+  const byId = new Map(latest.map((c) => [c.id, c]));
+  const managed = new Map<string, OutputCell>();
+  const byOwner = new Map<string, string[]>();
+
+  const keys = new Set(Object.keys(state.outputs));
+  for (const [key, run] of Object.entries(state.cellRuns)) {
+    if (run?.status === "error" && run.error !== undefined) keys.add(key);
+  }
+
+  for (const key of keys) {
+    const ownerId = ownerCellId(key);
+    const owner = byId.get(ownerId);
+    if (!owner || !isProducer(owner)) continue;
+    const run = state.cellRuns[key];
+    const entry = state.outputs[key];
+    const failed = run?.status === "error" && run.error !== undefined;
+    if (entry === undefined && !failed) continue;
+    managed.set(key, {
+      id: `out:${key}:${state.cycle}:${lastOrder(run)}`,
+      type: "output",
+      isCollapsed: false,
+      producedBy: key,
+      data: entry?.v,
+      executionTime: run?.executionTimeMs,
+      messages: failed ? [run.error ?? "Execution failed"] : undefined,
+    });
+    byOwner.set(ownerId, [...(byOwner.get(ownerId) ?? []), key]);
+  }
+
+  for (const cell of latest) {
+    if (cell.type !== "branch") continue;
+    const run = state.cellRuns[cell.id];
+    if (run?.status !== "completed") continue;
+    const matched = run.lastMatchedPathId
+      ? cell.paths.find((p) => p.id === run.lastMatchedPathId)
+      : undefined;
+    managed.set(cell.id, {
+      id: `out:${cell.id}:${state.cycle}:${lastOrder(run)}`,
+      type: "output",
+      isCollapsed: false,
+      producedBy: cell.id,
+      data: undefined,
+      executionTime: 0,
+      messages: [matched ? `Matched: ${matched.label || "Unnamed path"}` : "No path matched"],
+    });
+    byOwner.set(cell.id, [cell.id]);
+  }
+
+  const existingByKey = new Map<string, OutputCell>();
+  for (const cell of latest) {
+    if (cell.type === "output" && managed.has(cell.producedBy)) {
+      existingByKey.set(cell.producedBy, cell);
+    }
+  }
+
+  const result: WorkbookCell[] = [];
+  for (const cell of latest) {
+    if (cell.type === "output" && managed.has(cell.producedBy)) continue;
+    let rendered = cell;
+    if (cell.type === "branch") {
+      const run = state.cellRuns[cell.id];
+      if (run?.status === "completed" && cell.evaluatedPathId !== run.lastMatchedPathId) {
+        rendered = { ...cell, evaluatedPathId: run.lastMatchedPathId };
+      }
+    }
+    result.push(rendered);
+    const ownedKeys = byOwner.get(cell.id);
+    if (!ownedKeys) continue;
+    // Owner first, dispatch step second, mirroring execution order.
+    ownedKeys.sort((a, b) => a.length - b.length);
+    for (const key of ownedKeys) {
+      const desired = managed.get(key);
+      if (!desired) continue;
+      const existing = existingByKey.get(key);
+      result.push(existing && sameOutputCell(existing, desired) ? existing : desired);
+    }
+  }
+  return result;
+}
+
+function sameCellArray(a: WorkbookCell[], b: WorkbookCell[]): boolean {
+  return a.length === b.length && a.every((cell, i) => cell === b[i]);
+}
+
+/**
+ * Thin adapter binding the env-agnostic WorkbookRunner (notebook mode) to the
+ * web editor: device driver and backend mutations plug in as runner ports, and
+ * runner results fold back into the cell array so persistence keeps working.
+ *
+ * The runner treats cells as an immutable program, so a fresh runner is built
+ * lazily at each run entry point when the cell array identity (or the sensor
+ * family) changed; outputs, run records and counters carry over by cell id.
+ * Cell edits made while a pass is running take effect on the next run.
+ */
 export function useWorkbookExecution({
   cells,
   onCellsChange,
   onPromptQuestion,
 }: UseWorkbookExecutionOptions) {
-  const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
-  const [isRunningAll, setIsRunningAll] = useState(false);
-  const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
-    resolveSensorFamily(cells),
-  );
+  const [runnerState, setRunnerState] = useState<Readonly<RunnerState> | null>(null);
+  const [promptingCellId, setPromptingCellId] = useState<string | null>(null);
+  const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>("multispeq");
   const [connectionType, setConnectionType] = useState<ConnectionType>("serial");
-  const abortRef = useRef(false);
 
   const cellsRef = useRef(cells);
   cellsRef.current = cells;
@@ -141,330 +266,205 @@ export function useWorkbookExecution({
 
   const isConnectedRef = useRef(isConnected);
   isConnectedRef.current = isConnected;
+  const driverRef = useRef(driver);
+  driverRef.current = driver;
   const executeProtocolRef = useRef(executeProtocol);
   executeProtocolRef.current = executeProtocol;
   const executeMacroMutationRef = useRef(executeMacroMutation);
   executeMacroMutationRef.current = executeMacroMutation;
+  const sensorFamilyRef = useRef(sensorFamily);
+  sensorFamilyRef.current = sensorFamily;
 
-  const setCellState = useCallback(
-    (cellId: string, state: Omit<CellExecutionState, "executionOrder">) => {
-      setExecutionStates((prev) => {
-        const existing = prev[cellId];
-        return { ...prev, [cellId]: { ...state, executionOrder: existing.executionOrder } };
-      });
-    },
+  const ports = useMemo<WorkbookRunnerPorts>(
+    () => ({
+      macroRunner: {
+        run: async (input) => {
+          if (input.json == null) {
+            throw new Error("No measurement data available - run a protocol cell first");
+          }
+          // TODO(OJD-1655): pass input.ctx once executeMacro accepts a context field.
+          const result = await executeMacroMutationRef.current.mutateAsync({
+            params: { id: input.macroId },
+            body: { data: input.json as Record<string, unknown> | unknown[] },
+          });
+          if (!result.body.success) {
+            throw new Error(result.body.error ?? "Macro execution failed");
+          }
+          return result.body.output ?? {};
+        },
+      },
+      commandExecutor: {
+        execute: async (input, { signal }) => {
+          if (!isConnectedRef.current) {
+            throw new Error("No device connected - connect a device to run this protocol");
+          }
+          const onAbort = () => {
+            void driverRef.current?.cancel?.();
+          };
+          signal.addEventListener("abort", onAbort);
+          try {
+            if (Array.isArray(input.command)) {
+              return await executeProtocolRef.current(input.command as Record<string, unknown>[]);
+            }
+            // Inline/artifact commands go straight to the driver.
+            const activeDriver = driverRef.current;
+            if (!activeDriver) throw new Error("Not connected to device");
+            const result = await activeDriver.execute(input.command);
+            if (!result.success) {
+              throw new Error(result.error?.message ?? "Command execution failed");
+            }
+            return result.data;
+          } finally {
+            signal.removeEventListener("abort", onAbort);
+          }
+        },
+      },
+      protocolCodeResolver: {
+        // Prefer the live editor code so the device runs exactly what is on
+        // screen; fall back to the last saved version when no editor is mounted.
+        resolveProtocolCode: async (protocolId) => {
+          const live = getLiveProtocolCode(protocolId);
+          if (live && live.length > 0) return live;
+          try {
+            const result = await tsr.protocols.getProtocol.query({ params: { id: protocolId } });
+            if (result.status !== 200) return null;
+            return result.body.code.length > 0 ? result.body.code : null;
+          } catch {
+            return null;
+          }
+        },
+      },
+    }),
     [],
   );
 
-  const execCounterRef = useRef(0);
+  const runnerRef = useRef<WorkbookRunner | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  const runProtocolCell = useCallback(
-    async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
-      const protocolCode = await getProtocolCode(cell);
-      if (!protocolCode) {
-        setCellState(cell.id, { status: "error", error: "Invalid or missing protocol code" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "Invalid or missing protocol JSON"),
-        );
-      }
+  const disposeRunner = useCallback(() => {
+    unsubscribeRef.current?.();
+    unsubscribeRef.current = null;
+    runnerRef.current?.dispose();
+    runnerRef.current = null;
+  }, []);
 
-      if (!isConnectedRef.current) {
-        // The page-level Run handler short-circuits to connect() before this
-        // path on direct Run clicks; this branch covers Run all + scripted
-        // entry points where we still need a recorded error.
-        setCellState(cell.id, { status: "error", error: "No device connected" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(
-            cell.id,
-            "No device connected - connect a device to run this protocol",
-          ),
-        );
-      }
+  useEffect(() => disposeRunner, [disposeRunner]);
 
-      setCellState(cell.id, { status: "running" });
-      const startTime = performance.now();
+  const handleRunnerState = useCallback((state: Readonly<RunnerState>) => {
+    setRunnerState(state);
+    const latest = cellsRef.current;
+    const merged = mergeRunnerView(latest, state);
+    if (!sameCellArray(merged, latest)) onCellsChangeRef.current(merged);
+  }, []);
 
-      try {
-        const data = await executeProtocolRef.current(protocolCode);
-        const executionTime = performance.now() - startTime;
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, data as Record<string, unknown>, executionTime, []),
-        );
-      } catch (err) {
-        const executionTime = performance.now() - startTime;
-        const message = err instanceof Error ? err.message : "Execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
-      }
-    },
-    [setCellState],
-  );
+  const ensureRunner = useCallback((): WorkbookRunner | null => {
+    const existing = runnerRef.current;
+    const current = cellsRef.current;
+    if (existing) {
+      const st = existing.getState();
+      const busy =
+        st.status === "running" ||
+        st.status === "cancelling" ||
+        (st.status === "awaitingInput" && st.runAllActive);
+      const fresh = st.cells === current && st.options.deviceFamily === sensorFamilyRef.current;
+      if (busy || fresh) return existing;
+    }
+    const prev = existing?.getState() ?? null;
+    disposeRunner();
+    let runner: WorkbookRunner;
+    try {
+      runner = new WorkbookRunner(
+        { cells: current, ports, mode: "notebook", deviceFamily: sensorFamilyRef.current },
+        buildRestoredState(current, prev, sensorFamilyRef.current),
+      );
+    } catch (err) {
+      console.error("Workbook runner init failed:", err);
+      setRunnerState(null);
+      return null;
+    }
+    runnerRef.current = runner;
+    unsubscribeRef.current = runner.subscribe(handleRunnerState);
+    setRunnerState(runner.getState());
+    return runner;
+  }, [ports, disposeRunner, handleRunnerState]);
 
-  const runMacroCell = useCallback(
-    async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
-      const inputData = findPrecedingOutputData(currentCells, cellIndex);
-      if (!inputData) {
-        setCellState(cell.id, { status: "error", error: "No input data available" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "No measurement data available - run a protocol cell first"),
-        );
-      }
-
-      setCellState(cell.id, { status: "running" });
-      const startTime = performance.now();
-
-      try {
-        const result = await executeMacroMutationRef.current.mutateAsync({
-          params: { id: cell.payload.macroId },
-          body: { data: inputData },
+  /**
+   * Drive the runner until it settles: wait while running, and when a pass
+   * suspends at a question, prompt the user and feed the answer back. A
+   * dismissed prompt cancels (ends the pass at that question).
+   */
+  const settle = useCallback(async (runner: WorkbookRunner) => {
+    for (;;) {
+      if (runnerRef.current !== runner) return;
+      const st = runner.getState();
+      if (st.status === "running" || st.status === "cancelling") {
+        await new Promise<void>((resolve) => {
+          const unsubscribe = runner.subscribe(() => {
+            unsubscribe();
+            resolve();
+          });
         });
-
-        const executionTime = performance.now() - startTime;
-
-        if (!result.body.success) {
-          const error = result.body.error ?? "Macro execution failed";
-          setCellState(cell.id, { status: "error", error });
-          return insertOutputAfterCell(
-            currentCells,
-            cell.id,
-            makeErrorOutputCell(cell.id, error, executionTime),
-          );
-        }
-
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, result.body.output, executionTime, []),
-        );
-      } catch (err) {
-        const executionTime = performance.now() - startTime;
-        const message = err instanceof Error ? err.message : "Macro execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
+        continue;
       }
-    },
-    [setCellState],
-  );
-
-  const runQuestionCell = useCallback(
-    async (cell: QuestionCell, currentCells: WorkbookCell[]): Promise<WorkbookCell[]> => {
-      if (!cell.question.text.trim()) {
-        setCellState(cell.id, { status: "error", error: "Question text is required" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "Question text is required — add a question before running"),
-        );
-      }
-
+      if (st.status !== "awaitingInput" || st.position.cellId === null) return;
+      const cellId = st.position.cellId;
+      const cell =
+        cellsRef.current.find((c) => c.id === cellId) ?? st.cells.find((c) => c.id === cellId);
+      if (cell?.type !== "question") return;
       const promptFn = onPromptQuestionRef.current;
-      if (!promptFn) return currentCells;
-
-      setCellState(cell.id, { status: "running" });
-
+      if (!promptFn) {
+        runner.send({ type: "CANCEL" });
+        return;
+      }
+      setPromptingCellId(cellId);
+      let answer: string | undefined;
       try {
-        const answer = await promptFn(cell);
-        if (answer === undefined) {
-          setCellState(cell.id, { status: "idle" });
-          return currentCells;
-        }
-
-        setCellState(cell.id, { status: "completed" });
-        const updated = currentCells.map((c) =>
-          c.id === cell.id ? { ...cell, answer, isAnswered: true } : c,
-        );
-        return insertOutputAfterCell(updated, cell.id, makeOutputCell(cell.id, { answer }, 0, []));
+        answer = await promptFn(cell);
       } catch {
-        setCellState(cell.id, { status: "error", error: "Question prompt failed" });
-        return currentCells;
+        answer = undefined;
       }
-    },
-    [setCellState],
-  );
-
-  const runBranchCell = useCallback(
-    (cell: BranchCell, currentCells: WorkbookCell[], pass?: number): WorkbookCell[] => {
-      setCellState(cell.id, { status: "running" });
-
-      const configErrors = validateBranchCell(cell);
-      if (configErrors.length > 0) {
-        setCellState(cell.id, { status: "error", error: configErrors.join("; ") });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, undefined, 0, configErrors),
-        );
+      setPromptingCellId(null);
+      if (runnerRef.current !== runner) return;
+      if (answer === undefined) {
+        runner.send({ type: "CANCEL" });
+        return;
       }
-
-      const matchedPath = evaluateBranch(cell, currentCells);
-      setCellState(cell.id, { status: "completed" });
-
-      const passLabel = pass != null ? ` (pass ${pass})` : "";
-      const messages = matchedPath
-        ? [`Matched: ${matchedPath.label || "Unnamed path"}${passLabel}`]
-        : [`No path matched${passLabel}`];
-
-      const updated = insertOutputAfterCell(
-        currentCells,
-        cell.id,
-        makeOutputCell(cell.id, undefined, 0, messages),
-      );
-      return updated.map((c) =>
-        c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
-      );
-    },
-    [setCellState],
-  );
-
-  const dispatchCell = useCallback(
-    async (
-      cell: WorkbookCell,
-      currentCells: WorkbookCell[],
-      pass?: number,
-    ): Promise<WorkbookCell[]> => {
-      const cellIndex = currentCells.findIndex((c) => c.id === cell.id);
-
-      const order = ++execCounterRef.current;
-      setExecutionStates((prev) => {
-        const existing = prev[cell.id] as CellExecutionState | undefined;
-        const prevOrder = existing?.executionOrder ?? [];
-        return {
-          ...prev,
-          [cell.id]: {
-            ...existing,
-            status: "running" as const,
-            executionOrder: [...prevOrder, order],
-          },
-        };
-      });
-
-      switch (cell.type) {
-        case "protocol":
-          return runProtocolCell(cell, currentCells);
-        case "macro":
-          return runMacroCell(cell, cellIndex, currentCells);
-        case "question":
-          return runQuestionCell(cell, currentCells);
-        case "branch":
-          return runBranchCell(cell, currentCells, pass);
-        default:
-          return currentCells;
-      }
-    },
-    [runProtocolCell, runMacroCell, runQuestionCell, runBranchCell],
-  );
-
-  // Returns the jump index into `currentCells`, or -1 if no jump.
-  const resolveBranchJump = (branchCellId: string, currentCells: WorkbookCell[]): number => {
-    const branch = currentCells.find((c) => c.id === branchCellId);
-    if (branch?.type !== "branch" || !branch.evaluatedPathId) return -1;
-    const matchedPath = branch.paths.find((p) => p.id === branch.evaluatedPathId);
-    if (!matchedPath?.gotoCellId) return -1;
-    return currentCells.findIndex((c) => c.id === matchedPath.gotoCellId);
-  };
+      runner.send({ type: "ANSWER", cellId, value: answer });
+    }
+  }, []);
 
   const runCell = useCallback(
     async (cellId: string) => {
-      let currentCells = cellsRef.current;
-      const cell = currentCells.find((c) => c.id === cellId);
-      if (!cell) return;
-
-      currentCells = await dispatchCell(cell, currentCells);
-      onCellsChangeRef.current(currentCells);
-
-      if (cell.type === "branch") {
-        const jumpIndex = resolveBranchJump(cell.id, currentCells);
-        if (jumpIndex !== -1) {
-          const visitCounts = new Map<string, number>();
-          const MAX_VISITS = 100;
-
-          for (let i = jumpIndex; i < currentCells.length; i++) {
-            const c = currentCells[i];
-            if (c.type === "output" || c.type === "markdown") continue;
-
-            const count = visitCounts.get(c.id) ?? 0;
-            if (count >= MAX_VISITS) continue;
-            visitCounts.set(c.id, count + 1);
-
-            currentCells = await dispatchCell(c, currentCells, count + 1);
-            onCellsChangeRef.current(currentCells);
-
-            if (c.type === "branch") {
-              const nestedJump = resolveBranchJump(c.id, currentCells);
-              if (nestedJump !== -1) i = nestedJump - 1;
-            }
-          }
-        }
-      }
+      const runner = ensureRunner();
+      if (!runner) return;
+      runner.send({ type: "RUN_CELL", cellId });
+      await settle(runner);
     },
-    [dispatchCell],
+    [ensureRunner, settle],
   );
 
-  // Extracted so TS does not narrow abortRef.current to its initial value across awaits.
-  const shouldAbort = () => abortRef.current;
-
   const runAll = useCallback(async () => {
-    setIsRunningAll(true);
-    abortRef.current = false;
-    execCounterRef.current = 0;
-    setExecutionStates({});
-
-    let currentCells = [...cellsRef.current];
-    const visitCounts = new Map<string, number>();
-    const MAX_VISITS_PER_CELL = 100;
-
-    for (let i = 0; i < currentCells.length; i++) {
-      if (shouldAbort()) break;
-
-      const cell = currentCells[i];
-
-      if (cell.type === "output" || cell.type === "markdown") continue;
-
-      // Cap revisits to avoid infinite loops from branch jumps.
-      const count = visitCounts.get(cell.id) ?? 0;
-      if (count >= MAX_VISITS_PER_CELL) continue;
-      visitCounts.set(cell.id, count + 1);
-
-      currentCells = await dispatchCell(cell, currentCells, count + 1);
-      onCellsChangeRef.current(currentCells);
-
-      if (cell.type === "branch") {
-        const jumpIndex = resolveBranchJump(cell.id, currentCells);
-        if (jumpIndex !== -1) i = jumpIndex - 1;
-      }
-    }
-
-    setIsRunningAll(false);
-  }, [dispatchCell]);
+    const runner = ensureRunner();
+    if (!runner) return;
+    runner.send({ type: "RUN_ALL" });
+    await settle(runner);
+  }, [ensureRunner, settle]);
 
   const stopExecution = useCallback(() => {
-    abortRef.current = true;
+    runnerRef.current?.send({ type: "STOP" });
   }, []);
 
   const clearOutputs = useCallback(() => {
-    const filtered = cellsRef.current.filter((c) => c.type !== "output");
-    onCellsChangeRef.current(filtered);
-    execCounterRef.current = 0;
-    setExecutionStates({});
-  }, []);
+    disposeRunner();
+    setRunnerState(null);
+    setPromptingCellId(null);
+    onCellsChangeRef.current(cellsRef.current.filter((c) => c.type !== "output"));
+  }, [disposeRunner]);
+
+  const executionStates = useMemo(
+    () => toExecutionStates(runnerState, promptingCellId),
+    [runnerState, promptingCellId],
+  );
 
   return {
     isConnected,
@@ -478,7 +478,7 @@ export function useWorkbookExecution({
     disconnect,
 
     executionStates,
-    isRunningAll,
+    isRunningAll: runnerState?.runAllActive ?? false,
     runCell,
     runAll,
     stopExecution,
