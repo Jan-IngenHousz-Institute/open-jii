@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { assertMonotonicVisibility } from "../../../../authorization/visibility-transition";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto, UpdateProtocolDto } from "../../../core/models/protocol.model";
@@ -34,6 +35,14 @@ export class UpdateProtocolUseCase {
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
+    }
+
+    const visibilityError = assertMonotonicVisibility(
+      protocol.visibility,
+      updateProtocolDto.visibility,
+    );
+    if (visibilityError) {
+      return failure(visibilityError);
     }
 
     // Protocol exists and is not assigned, now update it

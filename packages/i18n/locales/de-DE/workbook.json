@@ -1,4 +1,11 @@
 {
+  "workbookVisibility": {
+    "visibility": "Sichtbarkeit",
+    "public": "Öffentlich",
+    "private": "Privat",
+    "changeToPublicTitle": "Öffentlich machen?",
+    "changeToPublicDescription": "Wenn Sie diese Arbeitsmappe öffentlich machen, kann sie von jedem eingesehen werden. Diese Aktion kann nicht rückgängig gemacht werden."
+  },
   "workbooks": {
     "title": "Arbeitsmappen",
     "workbook": "Arbeitsmappe",
@@ -14,6 +21,8 @@
     "errorLoading": "Fehler beim Laden der Arbeitsmappen",
     "filterMy": "Meine Arbeitsmappen",
     "filterAll": "Alle Arbeitsmappen",
+    "filterAccessible": "Zugänglich",
+    "filterPublic": "Öffentlich",
     "filterWorkbooks": "Arbeitsmappen filtern",
     "clearSearch": "Suche loschen",
     "lastUpdate": "Letzte Aktualisierung",

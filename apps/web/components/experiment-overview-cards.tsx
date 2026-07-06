@@ -1,9 +1,11 @@
-import { ChevronRight } from "lucide-react";
+import { useOwningOrgName } from "@/hooks/organization/useOwningOrgName";
+import { Building2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
 import type { Experiment } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -15,6 +17,7 @@ export function ExperimentOverviewCards({
   archived?: boolean;
 }) {
   const { t } = useTranslation("experiments");
+  const owningOrgName = useOwningOrgName();
 
   if (!experiments) {
     return (
@@ -40,10 +43,17 @@ export function ExperimentOverviewCards({
         const experimentPath = archived
           ? `/platform/experiments-archive/${experiment.id}`
           : `/platform/experiments/${experiment.id}`;
+        const orgName = owningOrgName(experiment.organizationId);
 
         return (
           <Link key={experiment.id} href={experimentPath}>
             <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+              {orgName && (
+                <Badge variant="outline" className="w-fit gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {orgName}
+                </Badge>
+              )}
               <div className="mb-auto">
                 <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
                   {experiment.name}

@@ -8,15 +8,16 @@ import { LoggerModule } from "nestjs-pino";
 import { pinoConfig } from "@repo/analytics";
 import { auth } from "@repo/auth/server";
 
+import { AuthorizationModule } from "./authorization/authorization.module";
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
-import { AuthorizationModule } from "./authorization/authorization.module";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { ExperimentModule } from "./experiments/experiment.module";
+import { FeedModule } from "./feed/feed.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
@@ -45,6 +46,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     DatabaseModule,
     AuthorizationModule,
     ExperimentModule,
+    FeedModule,
     IotModule,
     MacroModule,
     OrganizationsModule,

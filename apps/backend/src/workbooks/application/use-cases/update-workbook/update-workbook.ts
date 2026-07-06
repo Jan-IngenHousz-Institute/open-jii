@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { assertMonotonicVisibility } from "../../../../authorization/visibility-transition";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateWorkbookDto, WorkbookDto } from "../../../core/models/workbook.model";
@@ -46,6 +47,11 @@ export class UpdateWorkbookUseCase {
         userId,
       });
       return failure(AppError.forbidden("Only the workbook creator can update this workbook"));
+    }
+
+    const visibilityError = assertMonotonicVisibility(existingWorkbook.visibility, data.visibility);
+    if (visibilityError) {
+      return failure(visibilityError);
     }
 
     const updateResult = await this.workbookRepository.update(id, data);

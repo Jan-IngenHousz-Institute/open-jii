@@ -3,6 +3,8 @@ import { z } from "zod";
 export const zSensorFamily = z.enum(["multispeq", "ambit", "generic"]);
 
 // Define Zod schemas for protocol models
+export const zVisibility = z.enum(["private", "public"]);
+
 export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -10,6 +12,8 @@ export const zProtocol = z.object({
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
   sortOrder: z.number().nullable(),
+  visibility: zVisibility,
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -21,6 +25,10 @@ export const zProtocolList = z.array(zProtocol);
 export const zProtocolFilterQuery = z.object({
   search: z.string().optional(),
   filter: z.enum(["my"]).optional(),
+  scope: z
+    .enum(["accessible", "public"])
+    .optional()
+    .describe("accessible = mine + active org + shared with me (default); public = public library"),
 });
 
 // Path parameters
@@ -38,6 +46,7 @@ export const zCreateProtocolRequestBody = z.object({
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateProtocolRequestBody = z.object({
@@ -50,6 +59,7 @@ export const zUpdateProtocolRequestBody = z.object({
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
   family: zSensorFamily.optional(),
+  visibility: zVisibility.optional(),
 });
 
 // Error response

@@ -45,12 +45,5 @@
     "protocol1": "Protocol 1",
     "otherDevices": "Other devices",
     "otherDevice1": "Other device 1"
-  },
-  "breadcrumbs": {
-    "home": "Home",
-    "experiments": "Experiments",
-    "new": "New",
-    "edit": "Edit",
-    "view": "View"
   }
 }

@@ -6,6 +6,7 @@ import {
   experiments,
   macros,
   organizationMembers,
+  organizations,
   protocols,
   resourceGrants,
   sensors,
@@ -15,7 +16,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
-import { roleCan } from "./abilities";
+import { basePermissionCan, roleCan } from "./abilities";
 import type { ResourceAction } from "./abilities";
 
 export interface AccessRequest {
@@ -29,6 +30,7 @@ export interface AccessDecision {
   /** Machine-readable reason: why access was granted or denied. */
   reason:
     | "org-role"
+    | "org-base-permission"
     | "resource-grant:user"
     | "resource-grant:org"
     | "resource-grant:team"
@@ -58,11 +60,17 @@ export class AuthorizationService {
       return { allow: false, reason: "not-found" };
     }
 
-    // 2. Owning-org membership role.
+    // 2. Owning-org membership. Owners/admins always have full access; plain
+    //    members get the org's configurable base permission (none/read/admin).
+    //    A denial here falls through to explicit grants below (which override).
     if (ownership.organizationId) {
       const memberRows = await this.db
-        .select({ role: organizationMembers.role })
+        .select({
+          role: organizationMembers.role,
+          basePermission: organizations.basePermission,
+        })
         .from(organizationMembers)
+        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
         .where(
           and(
             eq(organizationMembers.organizationId, ownership.organizationId),
@@ -70,8 +78,15 @@ export class AuthorizationService {
           ),
         )
         .limit(1);
-      if (memberRows.length > 0 && roleCan(memberRows[0].role, req.action)) {
-        return { allow: true, reason: "org-role", role: memberRows[0].role };
+      if (memberRows.length > 0) {
+        const { role, basePermission } = memberRows[0];
+        // owner/admin → full control (roleCan grants "manage" only to them).
+        if (roleCan(role, "manage")) {
+          return { allow: true, reason: "org-role", role };
+        }
+        if (basePermissionCan(basePermission, req.action)) {
+          return { allow: true, reason: "org-base-permission", role };
+        }
       }
     }
 

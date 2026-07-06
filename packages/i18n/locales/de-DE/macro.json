@@ -42,6 +42,8 @@
     "onlyCreatorCanEdit": "Nur der Makro-Ersteller kann auf die Einstellungen zugreifen",
     "filterMy": "Meine Makros",
     "filterAll": "Alle Makros",
+    "filterAccessible": "Zugänglich",
+    "filterPublic": "Öffentlich",
     "filterMacros": "Makros filtern",
     "clearSearch": "Suche löschen",
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
@@ -68,7 +70,18 @@
     "codeTitle": "Makro-Code",
     "finalizeSetup": "Makro erstellen",
     "compatibleProtocols": "Kompatible Protokolle",
-    "compatibleProtocolsDescription": "Optional kompatible Protokolle für dieses Makro auswählen"
+    "compatibleProtocolsDescription": "Optional kompatible Protokolle für dieses Makro auswählen",
+    "visibilityPlaceholder": "Sichtbarkeit wählen",
+    "visibilityCannotBeChanged": "Öffentliche Makros können später nicht auf privat gesetzt werden."
+  },
+  "macroVisibility": {
+    "cardTitle": "Sichtbarkeit",
+    "cardDescription": "Legen Sie fest, wer dieses Makro sehen kann. Öffentliche Makros sind für alle sichtbar.",
+    "visibility": "Sichtbarkeit",
+    "cannotBeChanged": "Öffentliche Ressourcen können nicht auf privat zurückgesetzt werden.",
+    "changeToPublicTitle": "Öffentlich machen?",
+    "changeToPublicDescription": "Wenn Sie dieses Makro öffentlich machen, kann es von jedem eingesehen werden. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm": "Bestätigen"
   },
   "macroSettings": {
     "loading": "Makro wird geladen...",

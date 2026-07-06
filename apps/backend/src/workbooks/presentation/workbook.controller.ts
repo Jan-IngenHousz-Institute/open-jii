@@ -37,6 +37,7 @@ export class WorkbookController {
       const result = await this.createWorkbookUseCase.execute(
         body as CreateWorkbookDto,
         session.user.id,
+        session.session.activeOrganizationId ?? null,
       );
 
       if (result.isSuccess()) {
@@ -73,6 +74,7 @@ export class WorkbookController {
         search: query.search,
         filter: query.filter,
         userId: session.user.id,
+        scope: query.scope ?? "accessible",
       });
 
       if (result.isSuccess()) {

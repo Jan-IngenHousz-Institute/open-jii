@@ -1,4 +1,11 @@
 {
+  "workbookVisibility": {
+    "visibility": "Zichtbaarheid",
+    "public": "Openbaar",
+    "private": "Privé",
+    "changeToPublicTitle": "Openbaar maken?",
+    "changeToPublicDescription": "Als je dit werkboek openbaar maakt, kan iedereen het bekijken. Deze actie kan niet ongedaan worden gemaakt."
+  },
   "workbooks": {
     "title": "Werkboeken",
     "workbook": "Werkboek",
@@ -14,6 +21,8 @@
     "errorLoading": "Fout bij het laden van werkboeken",
     "filterMy": "Mijn werkboeken",
     "filterAll": "Alle werkboeken",
+    "filterAccessible": "Toegankelijk",
+    "filterPublic": "Openbaar",
     "filterWorkbooks": "Werkboeken filteren",
     "clearSearch": "Zoekopdracht wissen",
     "lastUpdate": "Laatste update",

@@ -200,6 +200,40 @@ const sidebars: SidebarsConfig = {
       value: `
         <div class="sidebar-divider">
           <hr class="sidebar-divider-line" />
+          <div class="sidebar-divider-label">Organizations & Teams</div>
+        </div>
+      `,
+      defaultStyle: false,
+    },
+    {
+      type: "doc",
+      id: "organizations-teams/about-organizations",
+      label: "About Organizations",
+    },
+    {
+      type: "category",
+      label: "Organizations & Teams",
+      link: { type: "generated-index" },
+      items: [
+        "organizations-teams/creating-an-organization",
+        "organizations-teams/organization-roles",
+        "organizations-teams/base-permissions",
+        "organizations-teams/managing-membership",
+        "organizations-teams/inviting-and-join-requests",
+        "organizations-teams/organizing-members-into-teams",
+        "organizations-teams/sharing-resources",
+        "organizations-teams/outside-collaborators",
+        "organizations-teams/resource-visibility-and-embargo",
+        "organizations-teams/access-precedence",
+        "organizations-teams/best-practices",
+      ],
+    },
+
+    {
+      type: "html",
+      value: `
+        <div class="sidebar-divider">
+          <hr class="sidebar-divider-line" />
           <div class="sidebar-divider-label">Methodology & Analysis</div>
         </div>
       `,

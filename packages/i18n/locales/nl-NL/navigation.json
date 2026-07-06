@@ -41,12 +41,5 @@
     "protocol1": "Protocol 1",
     "otherDevices": "Andere apparaten",
     "otherDevice1": "Ander apparaat 1"
-  },
-  "breadcrumbs": {
-    "home": "Home",
-    "experiments": "Experimenten",
-    "new": "Nieuw",
-    "edit": "Bewerken",
-    "view": "Bekijken"
   }
 }

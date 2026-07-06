@@ -29,7 +29,7 @@ describe("useExperiments", () => {
 
   it("initializes with defaults and fetches experiments", async () => {
     const { result } = renderHook(() => useExperiments({}));
-    expect(result.current.filter).toBe("member");
+    expect(result.current.filter).toBe("accessible");
     expect(result.current.status).toBeUndefined();
     expect(result.current.search).toBe("");
 
@@ -41,12 +41,12 @@ describe("useExperiments", () => {
   it("initializes with custom values", () => {
     const { result } = renderHook(() =>
       useExperiments({
-        initialFilter: "all",
+        initialFilter: "public",
         initialStatus: "active",
         initialSearch: "test search",
       }),
     );
-    expect(result.current.filter).toBe("all");
+    expect(result.current.filter).toBe("public");
     expect(result.current.status).toBe("active");
     expect(result.current.search).toBe("test search");
   });
@@ -67,14 +67,14 @@ describe("useExperiments", () => {
   it("updates filter and URL", () => {
     const { result, router } = renderHook(() => useExperiments({}));
 
-    act(() => result.current.setFilter("all"));
-    expect(result.current.filter).toBe("all");
-    expect(router.push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
+    act(() => result.current.setFilter("public"));
+    expect(result.current.filter).toBe("public");
+    expect(router.push).toHaveBeenCalledWith("/platform/experiments?scope=public", {
       scroll: false,
     });
 
-    act(() => result.current.setFilter("member"));
-    expect(result.current.filter).toBe("member");
+    act(() => result.current.setFilter("accessible"));
+    expect(result.current.filter).toBe("accessible");
     expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
       scroll: false,
     });
@@ -86,26 +86,10 @@ describe("useExperiments", () => {
     expect(result.current.search).toBe("new search");
   });
 
-  it("reads filter from URL params", () => {
-    mockSearchParams.get.mockReturnValue("all");
+  it("reads scope from URL params", () => {
+    mockSearchParams.get.mockReturnValue("public");
     const { result } = renderHook(() => useExperiments({}));
-    expect(result.current.filter).toBe("all");
-  });
-
-  it("cleans up invalid URL filter", () => {
-    mockSearchParams.get.mockReturnValue("invalid");
-    mockSearchParams.toString.mockReturnValue("filter=invalid");
-    const { router } = renderHook(() => useExperiments({}));
-    expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
-      scroll: false,
-    });
-  });
-
-  it("does not clean up valid 'all' filter in URL", () => {
-    mockSearchParams.get.mockReturnValue("all");
-    mockSearchParams.toString.mockReturnValue("filter=all");
-    const { router } = renderHook(() => useExperiments({}));
-    expect(router.push).not.toHaveBeenCalled();
+    expect(result.current.filter).toBe("public");
   });
 
   it("handles API error gracefully", async () => {
@@ -121,7 +105,7 @@ describe("useExperiments", () => {
     });
 
     // Hook still exposes filter / search controls (not broken)
-    expect(result.current.filter).toBe("member");
+    expect(result.current.filter).toBe("accessible");
     expect(result.current.search).toBe("");
   });
 });

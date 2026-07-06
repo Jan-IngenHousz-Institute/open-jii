@@ -41,7 +41,7 @@ export function ProtocolPicker({
   const [open, setOpen] = useState(false);
   // Drive search from the hook's own state so the input actually filters the
   // query (passing it as `initialSearch` is read only once).
-  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
+  const { protocols, search, setSearch } = useProtocols();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

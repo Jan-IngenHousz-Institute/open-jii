@@ -56,11 +56,13 @@ export class GetOrganizationUseCase {
 export class GetOrganizationResourcesUseCase {
   constructor(private readonly repo: OrganizationsRepository) {}
 
-  async execute(organizationId: string): Promise<Result<OrganizationResourcesRows>> {
+  async execute(userId: string, organizationId: string): Promise<Result<OrganizationResourcesRows>> {
     const orgResult = await this.repo.findById(organizationId);
     if (orgResult.isFailure()) return failure(orgResult.error);
     if (!orgResult.value) return failure(AppError.notFound("Organization not found"));
-    return this.repo.listPublicResources(organizationId);
+    // Members see private resources too; everyone else sees the public showcase.
+    const includePrivate = await this.repo.isMember(organizationId, userId);
+    return this.repo.listResources(organizationId, includePrivate);
   }
 }
 

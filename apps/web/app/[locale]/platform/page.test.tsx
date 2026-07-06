@@ -11,20 +11,19 @@ vi.mock("@/components/dashboard/dashboard-section", () => ({
     <section aria-label={title}>{children}</section>
   ),
 }));
-vi.mock("@/components/dashboard/user-experiments-section", () => ({
-  UserExperimentsSection: () => <div>Experiments</div>,
+vi.mock("@/components/dashboard/dashboard-feed", () => ({
+  DashboardFeed: () => <div>Feed</div>,
 }));
 vi.mock("~/components/dashboard/blog-posts-section", () => ({
   BlogPostsSection: () => <div>Blog Posts</div>,
 }));
 
 describe("PlatformDashboard", () => {
-  it("renders heading and both dashboard sections", async () => {
+  it("renders heading, feed, and blog sections", async () => {
     render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("dashboard.title");
-    expect(screen.getByRole("region", { name: /dashboard.yourExperiments/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /dashboard.recentArticles/i })).toBeInTheDocument();
-    expect(screen.getByText("Experiments")).toBeInTheDocument();
+    expect(screen.getByText("Feed")).toBeInTheDocument();
     expect(screen.getByText("Blog Posts")).toBeInTheDocument();
   });
 });

@@ -1,4 +1,11 @@
 {
+  "workbookVisibility": {
+    "visibility": "Visibility",
+    "public": "Public",
+    "private": "Private",
+    "changeToPublicTitle": "Make public?",
+    "changeToPublicDescription": "Making this workbook public will allow anyone to view it. This action cannot be undone."
+  },
   "workbooks": {
     "title": "Workbooks",
     "workbook": "Workbook",
@@ -19,6 +26,8 @@
     "errorLoading": "Error loading workbooks",
     "filterMy": "My Workbooks",
     "filterAll": "All Workbooks",
+    "filterAccessible": "Accessible",
+    "filterPublic": "Public",
     "filterWorkbooks": "Filter workbooks",
     "clearSearch": "Clear search",
     "lastUpdate": "Last update",

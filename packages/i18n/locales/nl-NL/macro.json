@@ -42,6 +42,8 @@
     "onlyCreatorCanEdit": "Alleen de maker van de macro heeft toegang tot de instellingen",
     "filterMy": "Mijn macro's",
     "filterAll": "Alle macro's",
+    "filterAccessible": "Toegankelijk",
+    "filterPublic": "Openbaar",
     "filterMacros": "Macro's filteren",
     "clearSearch": "Zoekopdracht wissen",
     "descriptionPlaceholder": "Beschrijving toevoegen...",
@@ -68,7 +70,18 @@
     "codeTitle": "Macro-code",
     "finalizeSetup": "Macro maken",
     "compatibleProtocols": "Compatibele protocollen",
-    "compatibleProtocolsDescription": "Selecteer optioneel compatibele protocollen voor deze macro"
+    "compatibleProtocolsDescription": "Selecteer optioneel compatibele protocollen voor deze macro",
+    "visibilityPlaceholder": "Selecteer zichtbaarheid",
+    "visibilityCannotBeChanged": "Openbare macro's kunnen later niet privé worden gemaakt."
+  },
+  "macroVisibility": {
+    "cardTitle": "Zichtbaarheid",
+    "cardDescription": "Bepaal wie deze macro kan zien. Openbare macro's zijn voor iedereen zichtbaar.",
+    "visibility": "Zichtbaarheid",
+    "cannotBeChanged": "Openbare bronnen kunnen niet privé worden gemaakt.",
+    "changeToPublicTitle": "Openbaar maken?",
+    "changeToPublicDescription": "Als je deze macro openbaar maakt, kan iedereen deze bekijken. Deze actie kan niet ongedaan worden gemaakt.",
+    "confirm": "Bevestigen"
   },
   "macroSettings": {
     "loading": "Macro laden...",

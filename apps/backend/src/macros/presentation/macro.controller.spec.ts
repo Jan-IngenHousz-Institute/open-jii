@@ -311,6 +311,7 @@ describe("MacroController", () => {
         language: "python",
         filter: undefined,
         userId: testUserId,
+        scope: "accessible",
       });
     });
 

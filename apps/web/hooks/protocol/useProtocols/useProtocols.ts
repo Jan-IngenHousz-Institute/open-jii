@@ -1,13 +1,13 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 
 import { tsr } from "../../../lib/tsr";
 import { useDebounce } from "../../useDebounce";
 
-export type ProtocolFilter = "my" | "all";
+export type ProtocolFilter = "accessible" | "public";
 
 export const useProtocols = ({
-  initialFilter = "my",
+  initialFilter = "accessible",
   initialSearch = "",
 }: {
   initialFilter?: ProtocolFilter;
@@ -17,10 +17,10 @@ export const useProtocols = ({
   const pathname = usePathname();
   const router = useRouter();
 
-  const rawFilter = searchParams.get("filter");
+  const rawScope = searchParams.get("scope");
 
   const [filter, setFilterState] = useState<ProtocolFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
+    rawScope === "public" ? "public" : initialFilter,
   );
   const [search, setSearch] = useState<string>(initialSearch);
   const [debouncedSearch] = useDebounce(search, 300);
@@ -41,7 +41,7 @@ export const useProtocols = ({
   const setFilter = useCallback(
     (value: ProtocolFilter) => {
       setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
+      const queryString = createQueryString("scope", value === "public" ? "public" : null);
       const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newUrl, { scroll: false });
     },
@@ -51,26 +51,12 @@ export const useProtocols = ({
   const { data } = tsr.protocols.listProtocols.useQuery({
     queryData: {
       query: {
-        filter: filter === "all" ? undefined : "my",
+        scope: filter === "public" ? "public" : undefined,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
     },
     queryKey: ["protocols", filter, debouncedSearch],
   });
-
-  // Auto-switch to "all" if user has no protocols of their own on initial load
-  const hasAutoSwitched = useRef(false);
-  useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      data?.body.length === 0 &&
-      !debouncedSearch
-    ) {
-      hasAutoSwitched.current = true;
-      setFilter("all");
-    }
-  }, [filter, data?.body, setFilter, debouncedSearch]);
 
   return {
     protocols: data?.body,

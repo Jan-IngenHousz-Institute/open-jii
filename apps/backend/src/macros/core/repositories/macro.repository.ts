@@ -13,6 +13,8 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import { listScopeCondition } from "../../../authorization/resource-scope";
+import type { ListScope } from "../../../authorization/resource-scope";
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
@@ -32,6 +34,7 @@ export interface MacroFilter {
   language?: "python" | "r" | "javascript";
   filter?: "my";
   userId?: string;
+  scope?: ListScope;
 }
 
 @Injectable()
@@ -42,11 +45,16 @@ export class MacroRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
   ) {}
 
-  async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
+  async create(
+    data: CreateMacroDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // Generate UUID for the macro to create a consistent hashed filename
       const macroId = crypto.randomUUID();
-      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
+      const organizationId =
+        activeOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
 
       const results = await this.database
         .insert(macros)
@@ -94,8 +102,28 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
-      if (filter?.filter === "my" && filter.userId) {
+      // Accessible (default): mine + any org I belong to + shared with me. Public:
+      // the global library. `filter:"my"` narrows accessible to rows I made.
+      const scope: ListScope = filter?.scope ?? "accessible";
+      if (scope === "public") {
+        conditions.push(eq(macros.visibility, "public"));
+      } else if (filter?.filter === "my" && filter.userId) {
         conditions.push(eq(macros.createdBy, filter.userId));
+      } else if (filter?.userId) {
+        conditions.push(
+          listScopeCondition(
+            this.database,
+            "macro",
+            {
+              id: macros.id,
+              createdBy: macros.createdBy,
+              organizationId: macros.organizationId,
+              visibility: macros.visibility,
+            },
+            filter.userId,
+            "accessible",
+          ),
+        );
       }
 
       // Apply all conditions with AND logic if there are any

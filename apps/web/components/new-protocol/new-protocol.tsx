@@ -164,6 +164,7 @@ export function NewProtocolForm() {
         description: data.description,
         code: data.code,
         family: data.family,
+        visibility: data.visibility,
       },
     });
   }
@@ -229,6 +230,7 @@ export function NewProtocolForm() {
             description: "",
             code: [{}],
             family: "generic",
+            visibility: "public",
           }}
           onSubmit={onSubmit}
           isSubmitting={isSubmitting || isPending}

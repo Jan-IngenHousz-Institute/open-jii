@@ -8,6 +8,7 @@ import { useMacro } from "../../hooks/macro/useMacro/useMacro";
 import { MacroCompatibleProtocolsCard } from "./macro-compatible-protocols-card";
 import { MacroDetailsCard } from "./macro-details-card";
 import { MacroInfoCard } from "./macro-info-card";
+import { MacroVisibilityCard } from "./macro-visibility-card";
 
 interface MacroSettingsProps {
   macroId: string;
@@ -40,6 +41,9 @@ export function MacroSettings({ macroId }: MacroSettingsProps) {
 
       {/* Compatible Protocols Card */}
       <MacroCompatibleProtocolsCard macroId={macroId} />
+
+      {/* Visibility Card */}
+      <MacroVisibilityCard macroId={macroId} initialVisibility={macro.visibility} />
 
       {/* Macro Info Card - Last */}
       <MacroInfoCard macroId={macroId} macro={macro} />

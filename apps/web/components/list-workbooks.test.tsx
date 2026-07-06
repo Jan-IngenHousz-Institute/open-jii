@@ -30,7 +30,7 @@ describe("ListWorkbooks", () => {
     render(<ListWorkbooks />);
 
     expect(screen.getByPlaceholderText("workbooks.searchPlaceholder")).toBeInTheDocument();
-    expect(screen.getByText("workbooks.filterMy")).toBeInTheDocument();
+    expect(screen.getByText("workbooks.filterAccessible")).toBeInTheDocument();
   });
 
   it("passes workbooks data to cards", async () => {

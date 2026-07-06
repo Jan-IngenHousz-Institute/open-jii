@@ -1,6 +1,7 @@
 import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
+import { useOwningOrgName } from "@/hooks/organization/useOwningOrgName";
 import { useLocale } from "@/hooks/useLocale";
-import { ChevronRight } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
@@ -83,10 +84,12 @@ function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enable
 function MacroCard({
   macro,
   locale,
+  orgName,
   t,
 }: {
   macro: Macro;
   locale: string;
+  orgName: string | null;
   t: (key: string) => string;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -99,12 +102,18 @@ function MacroCard({
       onMouseLeave={() => setHovered(false)}
     >
       <div className={cardVariants({ featured: isPreferred })}>
-        <div className="inline-flex gap-1">
+        <div className="inline-flex flex-wrap gap-1">
           <Badge className={getLanguageColor(macro.language)}>
             {getLanguageDisplay(macro.language)}
           </Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+          {orgName && (
+            <Badge variant="outline" className="gap-1">
+              <Building2 className="h-3 w-3" />
+              {orgName}
+            </Badge>
           )}
         </div>
         <div className="mb-auto">
@@ -128,6 +137,7 @@ function MacroCard({
 export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProps) {
   const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
+  const owningOrgName = useOwningOrgName();
 
   if (isLoading) {
     return (
@@ -150,7 +160,13 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {macros.map((macro) => (
-        <MacroCard key={macro.id} macro={macro} locale={locale} t={t} />
+        <MacroCard
+          key={macro.id}
+          macro={macro}
+          locale={locale}
+          orgName={owningOrgName(macro.organizationId)}
+          t={t}
+        />
       ))}
     </div>
   );

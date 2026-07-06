@@ -11,14 +11,18 @@ export class CreateWorkbookUseCase {
 
   constructor(private readonly workbookRepository: WorkbookRepository) {}
 
-  async execute(data: CreateWorkbookDto, userId: string): Promise<Result<WorkbookDto>> {
+  async execute(
+    data: CreateWorkbookDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<WorkbookDto>> {
     this.logger.log({
       msg: "Creating workbook",
       operation: "createWorkbook",
       userId,
     });
 
-    const result = await this.workbookRepository.create(data, userId);
+    const result = await this.workbookRepository.create(data, userId, activeOrganizationId);
 
     if (result.isFailure()) {
       return result;

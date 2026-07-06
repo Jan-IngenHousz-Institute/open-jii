@@ -42,7 +42,11 @@ export class MacroController {
   @TsRestHandler(macroContract.createMacro)
   createMacro(@Session() session: UserSession) {
     return tsRestHandler(macroContract.createMacro, async ({ body }) => {
-      const result = await this.createMacroUseCase.execute(body, session.user.id);
+      const result = await this.createMacroUseCase.execute(
+        body,
+        session.user.id,
+        session.session.activeOrganizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         return {
@@ -79,6 +83,7 @@ export class MacroController {
         language: query.language,
         filter: query.filter,
         userId: session.user.id,
+        scope: query.scope ?? "accessible",
       });
 
       if (result.isSuccess()) {

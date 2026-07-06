@@ -20,7 +20,11 @@ export class CreateExperimentUseCase {
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
-  async execute(data: CreateExperimentDto, userId: string): Promise<Result<ExperimentDto>> {
+  async execute(
+    data: CreateExperimentDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<ExperimentDto>> {
     this.logger.log({
       msg: "Creating experiment",
       operation: "createExperiment",
@@ -70,7 +74,11 @@ export class CreateExperimentUseCase {
         userId,
       });
       // Create the experiment
-      const experimentResult = await this.experimentRepository.create(data, userId);
+      const experimentResult = await this.experimentRepository.create(
+        data,
+        userId,
+        activeOrganizationId,
+      );
 
       return experimentResult.chain(async (experiments: ExperimentDto[]) => {
         if (experiments.length === 0) {

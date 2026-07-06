@@ -3,6 +3,10 @@
 The openJII platform has no platform-wide roles, so when navigating the web platform and the app, in principle everyone is the same, but there is a difference when it comes to individual experiments:  
 Within an experiment a user that is part of that experiment can have a role: "experiment admin" or "experiment member". These roles are set **per experiment**. To be concise we refer to them as 'admin' and 'member' roles.
 
+:::tip
+The roles below are the per-experiment access layer. For organization-wide roles, teams, base permissions, and the unified model for sharing any resource (experiments, protocols, macros, workbooks), see [Organizations & Teams](../../004-organizations-teams/001-about-organizations.md).
+:::
+
 ### Experiment admin
 
 An experiment is set up and owned by an 'admin'. This person has editing (admin) rights to the entire experiment. An experiment can also be shared among multiple admins and once there are multiple admins, you can even be demoted to user or leave the experiment.

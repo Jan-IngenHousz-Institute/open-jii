@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 import { useWorkbooks } from "./useWorkbooks";
 
 describe("useWorkbooks", () => {
-  it("returns workbooks from the API with default 'my' filter", async () => {
+  it("returns workbooks from the API with default 'accessible' filter", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Mine" })];
     server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
 
@@ -18,7 +18,7 @@ describe("useWorkbooks", () => {
       expect(result.current.data).toHaveLength(1);
       expect(result.current.data?.[0].name).toBe("Mine");
     });
-    expect(result.current.filter).toBe("my");
+    expect(result.current.filter).toBe("accessible");
   });
 
   it("shows loading state initially", () => {
@@ -29,14 +29,16 @@ describe("useWorkbooks", () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  it("auto-switches to 'all' when user has no workbooks", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+  it("passes scope=public when filter is public", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    const { result } = renderHook(() => useWorkbooks());
+    const { result } = renderHook(() => useWorkbooks({ initialFilter: "public" }));
 
     await waitFor(() => {
-      expect(result.current.filter).toBe("all");
+      expect(result.current.data).toBeDefined();
     });
+
+    expect(spy.calls[spy.calls.length - 1]?.query?.scope).toBe("public");
   });
 
   it("provides setFilter to change filter", async () => {

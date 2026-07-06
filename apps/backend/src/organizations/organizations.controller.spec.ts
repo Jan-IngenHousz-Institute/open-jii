@@ -122,6 +122,23 @@ describe("OrganizationsController", () => {
       expect(body.macros).toHaveLength(1);
       expect(body.macros[0].name).toContain("Public Macro");
     });
+
+    it("includes private entities for a member of the org", async () => {
+      const { owner, org } = await publicOrg();
+      await testApp.createMacro({
+        name: `Member Private ${crypto.randomUUID().slice(0, 8)}`,
+        createdBy: owner,
+        organizationId: org.id,
+        visibility: "private",
+      });
+
+      const res = await testApp
+        .get(`/api/v1/organizations/${org.id}/resources`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const body = res.body as { macros: { name: string }[] };
+      expect(body.macros.some((m) => m.name.includes("Member Private"))).toBe(true);
+    });
   });
 
   describe("getOrganizationAccess", () => {

@@ -1,11 +1,12 @@
 "use client";
 
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
+import { useOwningOrgName } from "@/hooks/organization/useOwningOrgName";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
 import { formatDate } from "@/util/date";
-import { Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Building2, Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -142,6 +143,8 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const router = useRouter();
+  const owningOrgName = useOwningOrgName();
+  const orgName = owningOrgName(workbook.organizationId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
@@ -197,16 +200,24 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
         onClick={() => router.push(viewHref)}
       >
         <TableCell className="px-6 py-3">
-          <Link
-            href={viewHref}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 text-[13px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2",
-              TEXT_STRONG,
+          <span className="flex flex-wrap items-center gap-2">
+            <Link
+              href={viewHref}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 text-[13px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2",
+                TEXT_STRONG,
+              )}
+            >
+              {workbook.name}
+            </Link>
+            {orgName && (
+              <span className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] text-[#68737B]">
+                <Building2 className="size-3" />
+                {orgName}
+              </span>
             )}
-          >
-            {workbook.name}
-          </Link>
+          </span>
           <WorkbookCellSummary cells={workbook.cells} className="mt-1.5" />
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", TEXT_MUTED)}>

@@ -1,4 +1,5 @@
 CREATE TYPE "public"."grantee_type" AS ENUM('user', 'organization', 'team');--> statement-breakpoint
+CREATE TYPE "public"."org_base_permission" AS ENUM('none', 'read', 'admin');--> statement-breakpoint
 CREATE TYPE "public"."resource_type" AS ENUM('experiment', 'macro', 'protocol', 'workbook', 'device');--> statement-breakpoint
 CREATE TYPE "public"."visibility" AS ENUM('private', 'public');--> statement-breakpoint
 ALTER TYPE "public"."invitation_resource_type" ADD VALUE 'macro';--> statement-breakpoint
@@ -71,6 +72,7 @@ ALTER TABLE "organizations" ADD COLUMN "slug" varchar(255);--> statement-breakpo
 ALTER TABLE "organizations" ADD COLUMN "logo" text;--> statement-breakpoint
 ALTER TABLE "organizations" ADD COLUMN "metadata" text;--> statement-breakpoint
 ALTER TABLE "organizations" ADD COLUMN "visibility" "visibility" DEFAULT 'private' NOT NULL;--> statement-breakpoint
+ALTER TABLE "organizations" ADD COLUMN "base_permission" "org_base_permission" DEFAULT 'read' NOT NULL;--> statement-breakpoint
 ALTER TABLE "protocols" ADD COLUMN "organization_id" uuid;--> statement-breakpoint
 ALTER TABLE "protocols" ADD COLUMN "visibility" "visibility" DEFAULT 'public' NOT NULL;--> statement-breakpoint
 ALTER TABLE "sensors" ADD COLUMN "organization_id" uuid;--> statement-breakpoint
@@ -78,7 +80,7 @@ ALTER TABLE "sensors" ADD COLUMN "visibility" "visibility" DEFAULT 'public' NOT 
 ALTER TABLE "sessions" ADD COLUMN "active_organization_id" uuid;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "active_team_id" uuid;--> statement-breakpoint
 ALTER TABLE "workbooks" ADD COLUMN "organization_id" uuid;--> statement-breakpoint
-ALTER TABLE "workbooks" ADD COLUMN "visibility" "visibility" DEFAULT 'private' NOT NULL;--> statement-breakpoint
+ALTER TABLE "workbooks" ADD COLUMN "visibility" "visibility" DEFAULT 'public' NOT NULL;--> statement-breakpoint
 ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_inviter_id_users_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

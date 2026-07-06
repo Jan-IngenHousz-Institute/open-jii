@@ -24,8 +24,12 @@ describe("AuthorizationService", () => {
     await testApp.teardown();
   });
 
-  async function experimentInOrg(opts: { ownerId: string; visibility?: "private" | "public" }) {
-    const org = await testApp.createOrganization();
+  async function experimentInOrg(opts: {
+    ownerId: string;
+    visibility?: "private" | "public";
+    basePermission?: "none" | "read" | "admin";
+  }) {
+    const org = await testApp.createOrganization({ basePermission: opts.basePermission });
     const { experiment } = await testApp.createExperiment({
       name: `Exp ${crypto.randomUUID().slice(0, 8)}`,
       userId: opts.ownerId,
@@ -59,7 +63,7 @@ describe("AuthorizationService", () => {
     expect(decision).toMatchObject({ allow: true, reason: "org-role", role: "admin" });
   });
 
-  it("lets an org member read but not update", async () => {
+  it("lets an org member read but not update under the default (read) base permission", async () => {
     const ownerId = await testApp.createTestUser();
     const { org, experiment } = await experimentInOrg({ ownerId });
     const member = await testApp.createTestUser();
@@ -67,11 +71,68 @@ describe("AuthorizationService", () => {
 
     expect(await service.can(member, base(experiment.id, "read"))).toMatchObject({
       allow: true,
-      reason: "org-role",
+      reason: "org-base-permission",
     });
     expect(await service.can(member, base(experiment.id, "update"))).toMatchObject({
       allow: false,
       reason: "forbidden",
+    });
+  });
+
+  it("base permission 'none' denies a member implicit access, even read", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { org, experiment } = await experimentInOrg({ ownerId, basePermission: "none" });
+    const member = await testApp.createTestUser();
+    await testApp.addOrgMember(org.id, member, "member");
+
+    expect(await service.can(member, base(experiment.id, "read"))).toMatchObject({
+      allow: false,
+      reason: "forbidden",
+    });
+  });
+
+  it("base permission 'admin' lets a plain member manage org resources", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { org, experiment } = await experimentInOrg({ ownerId, basePermission: "admin" });
+    const member = await testApp.createTestUser();
+    await testApp.addOrgMember(org.id, member, "member");
+
+    expect(await service.can(member, base(experiment.id, "update"))).toMatchObject({
+      allow: true,
+      reason: "org-base-permission",
+    });
+  });
+
+  it("owners/admins keep full access regardless of a restrictive base permission", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { org, experiment } = await experimentInOrg({ ownerId, basePermission: "none" });
+    const admin = await testApp.createTestUser();
+    await testApp.addOrgMember(org.id, admin, "admin");
+
+    expect(await service.can(admin, base(experiment.id, "delete"))).toMatchObject({
+      allow: true,
+      reason: "org-role",
+      role: "admin",
+    });
+  });
+
+  it("an explicit grant overrides a 'none' base permission", async () => {
+    const ownerId = await testApp.createTestUser();
+    const { org, experiment } = await experimentInOrg({ ownerId, basePermission: "none" });
+    const member = await testApp.createTestUser();
+    await testApp.addOrgMember(org.id, member, "member");
+
+    await testApp.grant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: member,
+      role: "member",
+    });
+
+    expect(await service.can(member, base(experiment.id, "read"))).toMatchObject({
+      allow: true,
+      reason: "resource-grant:user",
     });
   });
 
@@ -260,7 +321,7 @@ describe("AuthorizationService", () => {
 
     expect(
       await service.can(ownerId, { resourceType: "device", resourceId: sensor.id, action: "read" }),
-    ).toMatchObject({ allow: true, reason: "org-role" });
+    ).toMatchObject({ allow: true, reason: "org-base-permission" });
 
     const stranger = await testApp.createTestUser();
     expect(

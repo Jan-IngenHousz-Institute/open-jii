@@ -82,6 +82,8 @@
     "filterMember": "Member Experiments",
     "filterRelated": "All Related Experiments",
     "filterAll": "All Experiments",
+    "filterAccessible": "Accessible",
+    "filterPublic": "Public",
     "filterStatusAll": "All Statuses",
     "clearSearch": "Clear search",
     "title": "Experiments",
@@ -364,6 +366,14 @@
     "title": "Anonymize contributors",
     "description": "Replaces participant names and avatars with stable pseudonyms in tables and charts."
   },
+  "resourceVisibility": {
+    "cardTitle": "Visibility",
+    "cardDescription": "Control who can see this resource. Public resources are visible to everyone.",
+    "visibility": "Visibility",
+    "cannotBeChanged": "Public resources cannot be made private.",
+    "changeToPublicTitle": "Make public?",
+    "changeToPublicDescription": "Making this resource public will allow anyone to view it. This action cannot be undone."
+  },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to openJII",
@@ -379,7 +389,12 @@
     "statistics": "Statistics",
     "quickActions": "Quick Actions",
     "noBlogPosts": "No blog posts available",
-    "errorLoadingBlogPosts": "Error loading blog posts"
+    "errorLoadingBlogPosts": "Error loading blog posts",
+    "feedTitle": "Recent activity",
+    "feedEmpty": "Your feed fills as you and your organizations work.",
+    "feedJoinedOrg": "You joined {{name}}",
+    "feedPrivate": "Private",
+    "feedPublic": "Public"
   },
   "auth": {
     "login": "Sign in",
@@ -539,18 +554,6 @@
     "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
     "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
     "goToPlatform": "Go to the openJII platform"
-  },
-  "breadcrumbs": {
-    "home": "Home",
-    "platform": "Platform",
-    "experiments": "Experiments",
-    "protocols": "Protocols",
-    "macros": "Macros",
-    "new": "New",
-    "edit": "Edit",
-    "view": "View",
-    "account": "Account",
-    "settings": "Settings"
   },
   "experimentData": {
     "title": "Experiment Data",
@@ -719,6 +722,8 @@
     "onlyCreatorCanEdit": "Only the protocol creator can access settings",
     "filterMy": "My Protocols",
     "filterAll": "All Protocols",
+    "filterAccessible": "Accessible",
+    "filterPublic": "Public",
     "filterProtocols": "Filter protocols",
     "clearSearch": "Clear search",
     "searchProtocols": "Search protocols...",
@@ -739,6 +744,9 @@
     "detailsDescription": "Set the name and description for your protocol",
     "family": "Sensor Family",
     "selectFamily": "Select a sensor family",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select visibility",
+    "visibilityCannotBeChanged": "Public protocols cannot be made private later.",
     "codeTitle": "Protocol Code",
     "codeDescription": "Define the code structure for your protocol",
     "codePlaceholder": "Enter protocol code as JSON",

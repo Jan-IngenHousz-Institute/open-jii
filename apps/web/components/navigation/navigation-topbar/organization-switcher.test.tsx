@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, userEvent, waitFor } from "~/test/test-utils";
 
 import { authClient } from "@repo/auth/client";
 
 import { OrganizationSwitcher } from "./organization-switcher";
-import { render, screen, userEvent, waitFor } from "~/test/test-utils";
 
 const useListOrganizations = vi.mocked(authClient.useListOrganizations);
 const useActiveOrganization = vi.mocked(authClient.useActiveOrganization);

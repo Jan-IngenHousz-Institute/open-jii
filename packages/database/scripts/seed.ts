@@ -253,6 +253,7 @@ async function seedOrganizations(seedUserId: string) {
       name: "Photosynthesis Lab",
       slug: "seed-photosynthesis-lab",
       visibility: "public",
+      basePermission: "read",
       type: "research_institute",
       description:
         "A plant-physiology lab studying photosynthetic efficiency with the MultispeQ.",
@@ -264,6 +265,7 @@ async function seedOrganizations(seedUserId: string) {
       name: "Field Trials Group",
       slug: "seed-field-trials-group",
       visibility: "private",
+      basePermission: "admin",
       type: "non_profit",
       description: "Coordinates multi-site outdoor crop trials and shared protocols.",
       location: "Ames, IA",
@@ -273,6 +275,7 @@ async function seedOrganizations(seedUserId: string) {
       name: "Community",
       slug: "seed-community",
       visibility: "public",
+      basePermission: "none",
       type: "non_profit",
       description:
         "An open community sharing public protocols, macros, and workbooks for everyone.",

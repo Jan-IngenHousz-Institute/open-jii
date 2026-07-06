@@ -22,6 +22,7 @@ interface OrgInvitation {
 
 const MANAGER_ROLES = new Set(["owner", "admin"]);
 const ASSIGNABLE_ROLES = ["member", "admin", "owner"] as const;
+const BASE_PERMISSIONS = ["none", "read", "admin"] as const;
 
 interface OrganizationSettingsProps {
   /** Manage this org; defaults to the session's active organization. */
@@ -42,6 +43,7 @@ export function OrganizationSettings({
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<(typeof ASSIGNABLE_ROLES)[number]>("member");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const fullOrg = useQuery({
     queryKey: ["org-full", organizationId],
@@ -105,8 +107,31 @@ export function OrganizationSettings({
     onSuccess: invalidate,
   });
 
+  const updateBasePermission = useMutation({
+    mutationFn: async (basePermission: (typeof BASE_PERMISSIONS)[number]) => {
+      const res = await authClient.organization.update({
+        data: { basePermission },
+        organizationId,
+      } as Parameters<typeof authClient.organization.update>[0]);
+      if (res.error) {
+        throw new Error(res.error.message ?? "Failed to update default access");
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const members = (fullOrg.data?.members ?? []) as OrgMember[];
   const invitations = (fullOrg.data?.invitations ?? []) as OrgInvitation[];
+  const memberQuery = memberSearch.trim().toLowerCase();
+  const filteredMembers = memberQuery
+    ? members.filter(
+        (m) =>
+          m.user.name.toLowerCase().includes(memberQuery) ||
+          m.user.email.toLowerCase().includes(memberQuery),
+      )
+    : members;
+  const basePermission =
+    (fullOrg.data as { basePermission?: string } | undefined)?.basePermission ?? "read";
   const myRole = members.find((m) => m.userId === session?.user.id)?.role ?? "";
   const canManage = myRole
     .split(",")
@@ -126,13 +151,47 @@ export function OrganizationSettings({
         <p className="text-muted-foreground text-sm">Manage members and invitations.</p>
       </header>
 
+      {canManage && (
+        <div className="space-y-2">
+          <h3 className="font-medium">Default member access</h3>
+          <select
+            aria-label="Default member access"
+            value={basePermission}
+            disabled={fullOrg.isPending || updateBasePermission.isPending}
+            onChange={(e) =>
+              updateBasePermission.mutate(e.target.value as (typeof BASE_PERMISSIONS)[number])
+            }
+            className="h-9 rounded-md border px-2 text-sm"
+          >
+            {BASE_PERMISSIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <p className="text-muted-foreground text-xs">
+            Owners and admins always have full access. Explicit grants override this.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2">
         <h3 className="font-medium">Members</h3>
+        <input
+          type="search"
+          value={memberSearch}
+          onChange={(e) => setMemberSearch(e.target.value)}
+          placeholder="Search members by name or email"
+          aria-label="Search members"
+          className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none"
+        />
         {fullOrg.isPending ? (
           <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : filteredMembers.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No members match your search.</p>
         ) : (
           <ul className="divide-y rounded-md border">
-            {members.map((m) => (
+            {filteredMembers.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2">
                 <span className="min-w-0 truncate text-sm">
                   <span className="font-medium">{m.user.name}</span>{" "}

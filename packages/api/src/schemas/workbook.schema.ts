@@ -2,12 +2,16 @@ import { z } from "zod";
 
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
+export const zVisibility = z.enum(["private", "public"]);
+
 export const zWorkbook = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
+  visibility: zVisibility,
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -21,6 +25,10 @@ export const zWorkbookList = z.array(zWorkbook);
 export const zWorkbookFilterQuery = z.object({
   search: z.string().optional(),
   filter: z.enum(["my"]).optional(),
+  scope: z
+    .enum(["accessible", "public"])
+    .optional()
+    .describe("accessible = mine + active org + shared with me (default); public = public library"),
 });
 
 export const zWorkbookIdPathParam = z.object({
@@ -36,6 +44,7 @@ export const zCreateWorkbookRequestBody = z.object({
   description: z.string().optional(),
   cells: zWorkbookCellArray.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateWorkbookRequestBody = z.object({
@@ -48,6 +57,7 @@ export const zUpdateWorkbookRequestBody = z.object({
   description: z.string().optional(),
   cells: zWorkbookCellArray.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  visibility: zVisibility.optional(),
 });
 
 export const zWorkbookErrorResponse = z.object({

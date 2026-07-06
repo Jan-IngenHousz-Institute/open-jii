@@ -266,7 +266,7 @@ describe("ExperimentRepository", () => {
       );
     });
 
-    it("should not return private experiments where user is not a member (no filter)", async () => {
+    it("excludes others' experiments from the accessible scope, but surfaces public ones under the public scope", async () => {
       // Arrange
       const mainUserId = await testApp.createTestUser({
         email: "privacy-test@example.com",
@@ -289,17 +289,47 @@ describe("ExperimentRepository", () => {
         visibility: "public",
       });
 
-      // Act - query without filter as mainUser
-      const result = await repository.findAll(mainUserId);
+      // Accessible scope (default): mine + active org + shared-with-me. A
+      // non-member with no grant and no active org sees neither experiment —
+      // public experiments are browsed via the public scope, not this list.
+      const accessible = await repository.findAll(mainUserId);
+      expect(accessible.isSuccess()).toBe(true);
+      assertSuccess(accessible);
+      expect(accessible.value.length).toBe(0);
 
-      // Assert - should only see public experiment
-      expect(result.isSuccess()).toBe(true);
+      // Public scope: the public library — the public experiment shows, the
+      // private one does not.
+      const publicResult = await repository.findAll(
+        mainUserId,
+        undefined,
+        undefined,
+        undefined,
+        "public",
+      );
+      expect(publicResult.isSuccess()).toBe(true);
+      assertSuccess(publicResult);
+      expect(publicResult.value.some((e) => e.id === publicExp.id)).toBe(true);
+      expect(publicResult.value.every((e) => e.visibility === "public")).toBe(true);
+    });
+
+    it("includes experiments owned by any org I'm a member of (de-siloed, no active org)", async () => {
+      const ownerId = await testApp.createTestUser({ email: "org-owner@example.com" });
+      const member = await testApp.createTestUser({ email: "org-member@example.com" });
+      const org = await testApp.createOrganization();
+      await testApp.addOrgMember(org.id, member, "member");
+
+      // A private experiment owned by the org, created by someone else; the member
+      // is NOT an experiment_member of it.
+      const { experiment: orgExp } = await testApp.createExperiment({
+        name: `Org Exp ${crypto.randomUUID().slice(0, 8)}`,
+        userId: ownerId,
+        visibility: "private",
+        organizationId: org.id,
+      });
+
+      const result = await repository.findAll(member);
       assertSuccess(result);
-      const experiments = result.value;
-
-      expect(experiments.length).toBe(1);
-      expect(experiments[0].id).toBe(publicExp.id);
-      expect(experiments[0].visibility).toBe("public");
+      expect(result.value.some((e) => e.id === orgExp.id)).toBe(true);
     });
 
     it("should return private experiments where user is a member (no filter)", async () => {

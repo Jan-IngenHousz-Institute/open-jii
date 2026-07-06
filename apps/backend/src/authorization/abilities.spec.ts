@@ -1,4 +1,4 @@
-import { roleCan } from "./abilities";
+import { basePermissionCan, roleCan } from "./abilities";
 import type { ResourceAction } from "./abilities";
 
 const ALL_ACTIONS: ResourceAction[] = ["read", "update", "delete", "share", "manage"];
@@ -36,6 +36,27 @@ describe("abilities", () => {
       expect(roleCan("member,viewer", "read")).toBe(true);
       expect(roleCan("member,viewer", "update")).toBe(false);
       expect(roleCan("member,stranger", "delete")).toBe(false);
+    });
+  });
+
+  describe("basePermissionCan", () => {
+    it("'none' grants nothing", () => {
+      for (const action of ALL_ACTIONS) {
+        expect(basePermissionCan("none", action)).toBe(false);
+      }
+    });
+
+    it("'read' grants read only", () => {
+      expect(basePermissionCan("read", "read")).toBe(true);
+      for (const action of ALL_ACTIONS.filter((a) => a !== "read")) {
+        expect(basePermissionCan("read", action)).toBe(false);
+      }
+    });
+
+    it("'admin' grants every action", () => {
+      for (const action of ALL_ACTIONS) {
+        expect(basePermissionCan("admin", action)).toBe(true);
+      }
     });
   });
 });

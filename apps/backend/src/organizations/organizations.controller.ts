@@ -92,9 +92,9 @@ export class OrganizationsController {
   }
 
   @TsRestHandler(contract.organizations.getOrganizationResources)
-  resources() {
+  resources(@Session() session: UserSession) {
     return tsRestHandler(contract.organizations.getOrganizationResources, async ({ params }) => {
-      const result = await this.getResources.execute(params.id);
+      const result = await this.getResources.execute(session.user.id, params.id);
       if (result.isSuccess()) {
         return {
           status: StatusCodes.OK as const,

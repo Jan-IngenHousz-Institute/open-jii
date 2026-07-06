@@ -262,9 +262,14 @@ export class OrganizationsRepository {
     });
   }
 
-  /** An org's public entities, grouped by type (the public-resources showcase). */
-  listPublicResources(
+  /**
+   * An org's entities grouped by type, most-recent first (the profile showcase /
+   * recent activity). Non-members see public only; members (`includePrivate`) also
+   * see the org's private resources.
+   */
+  listResources(
     organizationId: string,
+    includePrivate = false,
     limit = 12,
   ): Promise<Result<OrganizationResourcesRows>> {
     return tryCatch(async () => {
@@ -279,10 +284,12 @@ export class OrganizationsRepository {
             })
             .from(experiments)
             .where(
-              and(
-                eq(experiments.organizationId, organizationId),
-                eq(experiments.visibility, "public"),
-              ),
+              includePrivate
+                ? eq(experiments.organizationId, organizationId)
+                : and(
+                    eq(experiments.organizationId, organizationId),
+                    eq(experiments.visibility, "public"),
+                  ),
             )
             .orderBy(desc(experiments.updatedAt))
             .limit(limit),
@@ -294,7 +301,11 @@ export class OrganizationsRepository {
               updatedAt: macros.updatedAt,
             })
             .from(macros)
-            .where(and(eq(macros.organizationId, organizationId), eq(macros.visibility, "public")))
+            .where(
+              includePrivate
+                ? eq(macros.organizationId, organizationId)
+                : and(eq(macros.organizationId, organizationId), eq(macros.visibility, "public")),
+            )
             .orderBy(desc(macros.updatedAt))
             .limit(limit),
           this.db
@@ -306,7 +317,12 @@ export class OrganizationsRepository {
             })
             .from(protocols)
             .where(
-              and(eq(protocols.organizationId, organizationId), eq(protocols.visibility, "public")),
+              includePrivate
+                ? eq(protocols.organizationId, organizationId)
+                : and(
+                    eq(protocols.organizationId, organizationId),
+                    eq(protocols.visibility, "public"),
+                  ),
             )
             .orderBy(desc(protocols.updatedAt))
             .limit(limit),
@@ -319,7 +335,12 @@ export class OrganizationsRepository {
             })
             .from(workbooks)
             .where(
-              and(eq(workbooks.organizationId, organizationId), eq(workbooks.visibility, "public")),
+              includePrivate
+                ? eq(workbooks.organizationId, organizationId)
+                : and(
+                    eq(workbooks.organizationId, organizationId),
+                    eq(workbooks.visibility, "public"),
+                  ),
             )
             .orderBy(desc(workbooks.updatedAt))
             .limit(limit),
@@ -332,7 +353,9 @@ export class OrganizationsRepository {
             })
             .from(sensors)
             .where(
-              and(eq(sensors.organizationId, organizationId), eq(sensors.visibility, "public")),
+              includePrivate
+                ? eq(sensors.organizationId, organizationId)
+                : and(eq(sensors.organizationId, organizationId), eq(sensors.visibility, "public")),
             )
             .orderBy(desc(sensors.updatedAt))
             .limit(limit),

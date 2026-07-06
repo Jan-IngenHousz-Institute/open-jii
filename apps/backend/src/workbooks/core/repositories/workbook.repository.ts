@@ -14,6 +14,8 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import { listScopeCondition } from "../../../authorization/resource-scope";
+import type { ListScope } from "../../../authorization/resource-scope";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
@@ -25,6 +27,7 @@ export interface WorkbookFilter {
   search?: string;
   filter?: "my";
   userId?: string;
+  scope?: ListScope;
 }
 
 // Number of experiments currently referencing a workbook. A correlated subquery
@@ -42,9 +45,14 @@ export class WorkbookRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async create(data: CreateWorkbookDto, userId: string): Promise<Result<WorkbookDto[]>> {
+  async create(
+    data: CreateWorkbookDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
-      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
+      const organizationId =
+        activeOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const results = await this.database
         .insert(workbooks)
         .values({
@@ -86,8 +94,28 @@ export class WorkbookRepository {
         conditions.push(ilike(workbooks.name, `%${filter.search}%`));
       }
 
-      if (filter?.filter === "my" && filter.userId) {
+      // Accessible (default): mine + any org I belong to + shared with me. Public:
+      // the global library. `filter:"my"` narrows accessible to rows I made.
+      const scope: ListScope = filter?.scope ?? "accessible";
+      if (scope === "public") {
+        conditions.push(eq(workbooks.visibility, "public"));
+      } else if (filter?.filter === "my" && filter.userId) {
         conditions.push(eq(workbooks.createdBy, filter.userId));
+      } else if (filter?.userId) {
+        conditions.push(
+          listScopeCondition(
+            this.database,
+            "workbook",
+            {
+              id: workbooks.id,
+              createdBy: workbooks.createdBy,
+              organizationId: workbooks.organizationId,
+              visibility: workbooks.visibility,
+            },
+            filter.userId,
+            "accessible",
+          ),
+        );
       }
 
       if (conditions.length > 0) {

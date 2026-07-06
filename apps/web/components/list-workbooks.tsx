@@ -75,8 +75,8 @@ export function ListWorkbooks() {
               <SelectValue placeholder={t("workbooks.filterWorkbooks")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="my">{t("workbooks.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
+              <SelectItem value="accessible">{t("workbooks.filterAccessible")}</SelectItem>
+              <SelectItem value="public">{t("workbooks.filterPublic")}</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={() => setCreateOpen(true)}>{t("workbooks.create")}</Button>

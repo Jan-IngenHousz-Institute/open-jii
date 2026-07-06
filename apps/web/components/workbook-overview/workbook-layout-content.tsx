@@ -14,6 +14,8 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { WorkbookVisibilityCard } from "./workbook-visibility-card";
+
 interface WorkbookLayoutContentProps {
   id: string;
   workbook: Workbook;
@@ -85,6 +87,11 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
               {workbook.createdByName ?? "-"}
             </span>
           </div>
+          <WorkbookVisibilityCard
+            id={id}
+            initialVisibility={workbook.visibility}
+            canManage={isCreator}
+          />
         </div>
       </div>
 

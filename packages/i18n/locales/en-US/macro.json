@@ -42,6 +42,8 @@
     "onlyCreatorCanEdit": "Only the macro creator can access settings",
     "filterMy": "My Macros",
     "filterAll": "All Macros",
+    "filterAccessible": "Accessible",
+    "filterPublic": "Public",
     "filterMacros": "Filter macros",
     "clearSearch": "Clear search",
     "descriptionPlaceholder": "Add a description...",
@@ -68,7 +70,18 @@
     "codeTitle": "Macro Code",
     "finalizeSetup": "Create Macro",
     "compatibleProtocols": "Compatible Protocols",
-    "compatibleProtocolsDescription": "Optionally select protocols compatible with this macro"
+    "compatibleProtocolsDescription": "Optionally select protocols compatible with this macro",
+    "visibilityPlaceholder": "Select visibility",
+    "visibilityCannotBeChanged": "Public macros cannot be made private later."
+  },
+  "macroVisibility": {
+    "cardTitle": "Visibility",
+    "cardDescription": "Control who can see this macro. Public macros are visible to everyone.",
+    "visibility": "Visibility",
+    "cannotBeChanged": "Public resources cannot be made private.",
+    "changeToPublicTitle": "Make public?",
+    "changeToPublicDescription": "Making this macro public will allow anyone to view it. This action cannot be undone.",
+    "confirm": "Confirm"
   },
   "macroSettings": {
     "loading": "Loading macro...",

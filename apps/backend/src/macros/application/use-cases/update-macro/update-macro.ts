@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { assertMonotonicVisibility } from "../../../../authorization/visibility-transition";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateMacroDto, MacroDto } from "../../../core/models/macro.model";
@@ -46,6 +47,11 @@ export class UpdateMacroUseCase {
         userId,
       });
       return failure(AppError.forbidden("Only the macro creator can update this macro"));
+    }
+
+    const visibilityError = assertMonotonicVisibility(existingMacro.visibility, data.visibility);
+    if (visibilityError) {
+      return failure(visibilityError);
     }
 
     const updateResult = await this.macroRepository.update(id, data);

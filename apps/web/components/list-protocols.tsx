@@ -47,8 +47,8 @@ export function ListProtocols() {
               <SelectValue placeholder={t("protocols.filterProtocols")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="my">{t("protocols.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("protocols.filterAll")}</SelectItem>
+              <SelectItem value="accessible">{t("protocols.filterAccessible")}</SelectItem>
+              <SelectItem value="public">{t("protocols.filterPublic")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -11,14 +11,18 @@ export class CreateProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(data: CreateProtocolDto, userId: string): Promise<Result<ProtocolDto>> {
+  async execute(
+    data: CreateProtocolDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Creating protocol",
       operation: "createProtocol",
       userId,
     });
 
-    const protocolResult = await this.protocolRepository.create(data, userId);
+    const protocolResult = await this.protocolRepository.create(data, userId, activeOrganizationId);
 
     if (protocolResult.isSuccess()) {
       if (protocolResult.value.length === 0) {

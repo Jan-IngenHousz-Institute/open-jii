@@ -59,13 +59,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const { data: session } = useSession();
   // Drive search/language from the hook's own state so the inputs actually
   // filter the query (passing them as `initial*` props is read only once).
-  const {
-    data: macros,
-    search,
-    setSearch,
-    language,
-    setLanguage,
-  } = useMacros({ initialFilter: "all" });
+  const { data: macros, search, setSearch, language, setLanguage } = useMacros();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

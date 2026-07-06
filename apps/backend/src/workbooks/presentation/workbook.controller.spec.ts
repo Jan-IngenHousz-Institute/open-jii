@@ -165,6 +165,7 @@ describe("WorkbookController", () => {
         search: "test",
         filter: "my",
         userId: testUserId,
+        scope: "accessible",
       });
     });
 

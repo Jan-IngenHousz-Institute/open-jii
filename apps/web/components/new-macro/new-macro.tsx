@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
 import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import { zCreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
+import { zCreateMacroRequestBody, zVisibility } from "@repo/api/schemas/macro.schema";
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -85,6 +85,7 @@ export function NewMacroForm() {
       description: "",
       language: "python",
       code: "",
+      visibility: "public",
     },
   });
 
@@ -102,6 +103,7 @@ export function NewMacroForm() {
         description: data.description,
         language: data.language,
         code: code,
+        visibility: data.visibility,
       },
     });
   }
@@ -158,6 +160,36 @@ export function NewMacroForm() {
                       <SelectItem value="javascript">JavaScript</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Visibility */}
+            <FormField
+              control={form.control}
+              name="visibility"
+              render={({ field }) => (
+                <FormItem>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("newMacro.visibilityPlaceholder")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(zVisibility.enum).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value.charAt(0).toUpperCase() + value.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {field.value === "public" && (
+                    <p className="text-muted-foreground pt-1 text-xs">
+                      {t("newMacro.visibilityCannotBeChanged")}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

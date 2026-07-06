@@ -19,6 +19,8 @@ function jsonStringOrValue<T extends z.ZodTypeAny>(schema: T) {
 
 export const zMacroLanguage = z.enum(["python", "r", "javascript"]);
 
+export const zVisibility = z.enum(["private", "public"]);
+
 // Define Zod schemas for macro models
 export const zMacro = z.object({
   id: z.string().uuid(),
@@ -28,6 +30,8 @@ export const zMacro = z.object({
   language: zMacroLanguage,
   code: z.string(),
   sortOrder: z.number().nullable(),
+  visibility: zVisibility,
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -40,6 +44,10 @@ export const zMacroFilterQuery = z.object({
   search: z.string().optional(),
   language: zMacroLanguage.optional(),
   filter: z.enum(["my"]).optional(),
+  scope: z
+    .enum(["accessible", "public"])
+    .optional()
+    .describe("accessible = mine + active org + shared with me (default); public = public library"),
 });
 
 // Path parameters
@@ -57,6 +65,7 @@ export const zCreateMacroRequestBody = z.object({
   description: z.string().optional(),
   language: zMacroLanguage,
   code: z.string().min(1, "Code file content is required"), // Base64 encoded file content
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateMacroRequestBody = z.object({
@@ -69,6 +78,7 @@ export const zUpdateMacroRequestBody = z.object({
   description: z.string().optional(),
   language: zMacroLanguage.optional(),
   code: z.string().optional(), // Base64 encoded file content
+  visibility: zVisibility.optional(),
 });
 
 // Error response

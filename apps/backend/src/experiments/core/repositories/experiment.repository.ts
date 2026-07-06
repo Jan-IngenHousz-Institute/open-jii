@@ -18,6 +18,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import { grantReachCondition, orgMembershipCondition } from "../../../authorization/resource-scope";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
@@ -39,12 +40,15 @@ export class ExperimentRepository {
   async create(
     createExperimentDto: CreateExperimentDto,
     userId: string,
+    activeOrganizationId?: string | null,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
-      // Org-scoped ownership: a new experiment belongs to the creator's personal
-      // org, and the creator gets an admin resource grant (the unified sharing
-      // layer that generalizes experiment_members).
-      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
+      // Org-scoped ownership: a new experiment belongs to the active org (so the
+      // whole org sees it), falling back to the creator's personal org. The
+      // creator also gets an admin resource grant (the unified sharing layer that
+      // generalizes experiment_members).
+      const organizationId =
+        activeOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const rows = await this.database
         .insert(experiments)
         .values({
@@ -72,6 +76,7 @@ export class ExperimentRepository {
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
     search?: string,
+    scope: "accessible" | "public" = "accessible",
   ): Promise<Result<ExperimentDto[]>> {
     const experimentFields = {
       id: experiments.id,
@@ -97,40 +102,34 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      // Only apply membership filter if explicitly requested
-      if (filter === "member") {
-        conditions.push(
-          exists(
-            this.database
-              .select()
-              .from(experimentMembers)
-              .where(
-                and(
-                  eq(experimentMembers.experimentId, experiments.id),
-                  eq(experimentMembers.userId, userId),
-                ),
-              ),
+      const memberExists = exists(
+        this.database
+          .select()
+          .from(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, experiments.id),
+              eq(experimentMembers.userId, userId),
+            ),
           ),
-        );
+      );
+
+      if (scope === "public") {
+        // Browse the public library.
+        conditions.push(eq(experiments.visibility, "public"));
       } else {
-        // If no filter, only show public experiments OR experiments where user is a member
+        // Accessible: experiments I'm a member of, ones owned by ANY org I belong
+        // to, or ones shared with me via a user/org/team grant. The active org does
+        // not narrow this. `filter` is retained for back-compat but no longer used.
         conditions.push(
           or(
-            eq(experiments.visibility, "public"),
-            exists(
-              this.database
-                .select()
-                .from(experimentMembers)
-                .where(
-                  and(
-                    eq(experimentMembers.experimentId, experiments.id),
-                    eq(experimentMembers.userId, userId),
-                  ),
-                ),
-            ),
+            memberExists,
+            grantReachCondition(this.database, "experiment", experiments.id, userId),
+            orgMembershipCondition(this.database, experiments.organizationId, userId),
           ),
         );
       }
+      void filter;
 
       if (status) {
         conditions.push(eq(experiments.status, status));

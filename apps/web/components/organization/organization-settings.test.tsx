@@ -60,6 +60,22 @@ describe("OrganizationSettings", () => {
     expect(screen.queryByLabelText("Remove ada@example.com")).not.toBeInTheDocument();
   });
 
+  it("filters members by the search input", async () => {
+    setUser("u-owner");
+    setOrg([
+      member("m1", "u-owner", "owner", "ada@example.com", "Ada"),
+      member("m2", "u-bob", "member", "bob@example.com", "Bob"),
+    ]);
+
+    render(<OrganizationSettings />);
+
+    expect(await screen.findByText("bob@example.com")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Search members"), "ada");
+
+    expect(screen.getByText("ada@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("bob@example.com")).not.toBeInTheDocument();
+  });
+
   it("invites a member by email", async () => {
     setUser("u-owner");
     setOrg([member("m1", "u-owner", "owner", "ada@example.com", "Ada")]);

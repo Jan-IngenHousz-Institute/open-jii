@@ -14,6 +14,7 @@ export const detailsSchema = zCreateProtocolRequestBody.pick({
   name: true,
   description: true,
   family: true,
+  visibility: true,
 });
 
 interface DetailsCardProps {

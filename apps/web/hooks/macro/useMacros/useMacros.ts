@@ -1,15 +1,15 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 
 import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
 
 import { tsr } from "../../../lib/tsr";
 import { useDebounce } from "../../useDebounce";
 
-export type MacroFilter = "my" | "all";
+export type MacroFilter = "accessible" | "public";
 
 export function useMacros({
-  initialFilter = "my",
+  initialFilter = "accessible",
   initialSearch = "",
   initialLanguage,
 }: {
@@ -21,10 +21,10 @@ export function useMacros({
   const pathname = usePathname();
   const router = useRouter();
 
-  const rawFilter = searchParams.get("filter");
+  const rawScope = searchParams.get("scope");
 
   const [filter, setFilterState] = useState<MacroFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
+    rawScope === "public" ? "public" : initialFilter,
   );
   const [search, setSearch] = useState<string>(initialSearch);
   const [debouncedSearch] = useDebounce(search, 300);
@@ -46,7 +46,7 @@ export function useMacros({
   const setFilter = useCallback(
     (value: MacroFilter) => {
       setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
+      const queryString = createQueryString("scope", value === "public" ? "public" : null);
       const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newUrl, { scroll: false });
     },
@@ -56,28 +56,13 @@ export function useMacros({
   const query = tsr.macros.listMacros.useQuery({
     queryData: {
       query: {
-        filter: filter === "all" ? undefined : "my",
+        scope: filter === "public" ? "public" : undefined,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
         language,
       },
     },
     queryKey: ["macros", filter, debouncedSearch, language],
   });
-
-  // Auto-switch to "all" if user has no macros of their own on initial load
-  const hasAutoSwitched = useRef(false);
-  useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      query.data?.body.length === 0 &&
-      !debouncedSearch &&
-      !language
-    ) {
-      hasAutoSwitched.current = true;
-      setFilter("all");
-    }
-  }, [filter, query.data?.body, setFilter, debouncedSearch, language]);
 
   return {
     data: query.data?.body,

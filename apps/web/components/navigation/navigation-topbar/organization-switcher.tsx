@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,6 +25,7 @@ import {
 export function OrganizationSwitcher() {
   const router = useRouter();
   const locale = useLocale();
+  const queryClient = useQueryClient();
   const { data: organizations, isPending } = authClient.useListOrganizations();
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const [isSwitching, setIsSwitching] = useState(false);
@@ -42,7 +44,9 @@ export function OrganizationSwitcher() {
     setIsSwitching(true);
     try {
       await authClient.organization.setActive({ organizationId });
-      router.refresh();
+      // Lists span all orgs now, so a hard refresh is unnecessary; a broad
+      // invalidate refreshes the create-default-dependent views.
+      await queryClient.invalidateQueries();
     } finally {
       setIsSwitching(false);
     }

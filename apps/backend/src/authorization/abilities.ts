@@ -38,3 +38,26 @@ function singleRoleCan(role: string, action: ResourceAction): boolean {
 export function roleCan(role: string, action: ResourceAction): boolean {
   return roleTokens(role).some((r) => singleRoleCan(r, action));
 }
+
+/** Org-wide base permissions, lowest privilege first. */
+export const ORG_BASE_PERMISSIONS = ["none", "read", "admin"] as const;
+export type OrgBasePermission = (typeof ORG_BASE_PERMISSIONS)[number];
+
+/**
+ * Whether an org's base permission grants a plain member the action on the org's
+ * resources. none → nothing; read → read only; admin → everything. Owners/admins
+ * bypass this (they always have full access); explicit grants override it.
+ */
+export function basePermissionCan(
+  basePermission: OrgBasePermission,
+  action: ResourceAction,
+): boolean {
+  switch (basePermission) {
+    case "admin":
+      return true;
+    case "read":
+      return action === "read";
+    default:
+      return false;
+  }
+}

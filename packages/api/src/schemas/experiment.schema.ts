@@ -257,6 +257,7 @@ export const zExperiment = z.object({
   anonymizeContributors: z.boolean(),
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
@@ -1233,6 +1234,10 @@ export const zExperimentFilterQuery = z.object({
   filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
   search: z.string().optional().describe("Search term for experiment name"),
+  scope: z
+    .enum(["accessible", "public"])
+    .optional()
+    .describe("accessible = mine + active org + shared with me (default); public = public library"),
 });
 
 // Hard ceiling on rows returned when filtering/aggregating. The page-based

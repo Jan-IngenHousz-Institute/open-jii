@@ -52,8 +52,8 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
               <SelectValue placeholder="Filter experiments" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="member">{t("experiments.filterMember")}</SelectItem>
-              <SelectItem value="all">{t("experiments.filterAll")}</SelectItem>
+              <SelectItem value="accessible">{t("experiments.filterAccessible")}</SelectItem>
+              <SelectItem value="public">{t("experiments.filterPublic")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

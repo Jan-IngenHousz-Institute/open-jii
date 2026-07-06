@@ -101,6 +101,12 @@ export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit", "
 // Shared visibility enum for org-scoped resources (sensors/macros/protocols/workbooks/…).
 export const visibilityEnum = pgEnum("visibility", ["private", "public"]);
 
+// Org-wide default access every plain member holds on the org's resources (GitHub-style
+// "base permission"). none = no implicit access (explicit grant required); read = read
+// any org resource; admin = manage any org resource. Owners/admins always have full
+// access regardless; explicit resource grants override this baseline.
+export const orgBasePermissionEnum = pgEnum("org_base_permission", ["none", "read", "admin"]);
+
 // Profiles Table
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -134,6 +140,8 @@ export const organizations = pgTable("organizations", {
   location: text("location"),
   // Directory visibility: public orgs are discoverable + request-to-join; private are invite-only.
   visibility: visibilityEnum("visibility").default("private").notNull(),
+  // Default access every plain member has to this org's resources (owners/admins always full).
+  basePermission: orgBasePermissionEnum("base_permission").default("read").notNull(),
   ...timestamps,
 });
 
@@ -595,7 +603,7 @@ export const workbooks = pgTable(
     organizationId: uuid("organization_id").references(() => organizations.id, {
       onDelete: "cascade",
     }),
-    visibility: visibilityEnum("visibility").default("private").notNull(),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),

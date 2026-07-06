@@ -1,6 +1,5 @@
-import { use } from "react";
-
 import { PageContainer } from "@/components/page-container";
+import { use } from "react";
 import { AcceptInvitation } from "~/components/organization/accept-invitation";
 
 interface AcceptInvitationPageProps {

@@ -166,6 +166,7 @@ export const auth = betterAuth({
             website: { type: "string", required: false, input: true },
             location: { type: "string", required: false, input: true },
             visibility: { type: "string", required: false, input: true },
+            basePermission: { type: "string", required: false, input: true },
           },
         },
       },

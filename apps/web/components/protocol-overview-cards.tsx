@@ -1,6 +1,7 @@
+import { useOwningOrgName } from "@/hooks/organization/useOwningOrgName";
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useLocale } from "@/hooks/useLocale";
-import { ChevronRight } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
@@ -63,10 +64,12 @@ function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; ena
 function ProtocolCard({
   protocol,
   locale,
+  orgName,
   t,
 }: {
   protocol: Protocol;
   locale: string;
+  orgName: string | null;
   t: (key: string) => string;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -79,12 +82,18 @@ function ProtocolCard({
       onMouseLeave={() => setHovered(false)}
     >
       <div className={cardVariants({ featured: isPreferred })}>
-        <div className="inline-flex gap-1">
+        <div className="inline-flex flex-wrap gap-1">
           <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
             {protocol.family}
           </Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
+          )}
+          {orgName && (
+            <Badge variant="outline" className="gap-1">
+              <Building2 className="h-3 w-3" />
+              {orgName}
+            </Badge>
           )}
         </div>
         <div className="mb-auto">
@@ -108,6 +117,7 @@ function ProtocolCard({
 export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
   const { t } = useTranslation("common");
   const locale = useLocale();
+  const owningOrgName = useOwningOrgName();
 
   if (!protocols) {
     return (
@@ -130,7 +140,13 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {protocols.map((protocol) => (
-        <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
+        <ProtocolCard
+          key={protocol.id}
+          protocol={protocol}
+          locale={locale}
+          orgName={owningOrgName(protocol.organizationId)}
+          t={t}
+        />
       ))}
     </div>
   );

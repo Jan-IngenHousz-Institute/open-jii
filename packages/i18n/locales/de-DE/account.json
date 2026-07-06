@@ -41,7 +41,16 @@
     "cancel": "Abbrechen",
     "save": "Änderungen speichern",
     "saving": "Speichern...",
-    "saved": "Kontoeinstellungen gespeichert"
+    "saved": "Kontoeinstellungen gespeichert",
+    "organizations": {
+      "title": "Organisationen",
+      "description": "Die Organisation, der die von Ihnen erstellten Ressourcen gehören.",
+      "default": "Standard",
+      "setAsDefault": "Als Standard festlegen",
+      "browse": "Organisationen durchsuchen",
+      "create": "Organisation erstellen",
+      "empty": "Sie sind noch in keiner Organisation Mitglied."
+    }
   },
   "dangerZone": {
     "title": "Gefahrenzone",

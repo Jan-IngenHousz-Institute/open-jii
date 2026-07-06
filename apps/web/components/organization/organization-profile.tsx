@@ -129,7 +129,7 @@ export function OrganizationProfile({ organizationId }: OrganizationProfileProps
         </NavTabsList>
 
         <NavTabsContent value="overview">
-          <OrganizationResourcesShowcase organizationId={org.id} />
+          <OrganizationResourcesShowcase organizationId={org.id} isMember={isMember} />
         </NavTabsContent>
 
         {isMember && (

@@ -78,6 +78,8 @@
     "filterMember": "Mitglied-Experimente",
     "filterRelated": "Alle verwandten Experimente",
     "filterAll": "Alle Experimente",
+    "filterAccessible": "Zugänglich",
+    "filterPublic": "Öffentlich",
     "filterStatusAll": "Alle Status",
     "clearSearch": "Suche löschen",
     "title": "Experimente",
@@ -240,7 +242,12 @@
     "statistics": "Statistiken",
     "quickActions": "Schnellaktionen",
     "noBlogPosts": "Keine Blogbeiträge vorhanden",
-    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge"
+    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge",
+    "feedTitle": "Letzte Aktivität",
+    "feedEmpty": "Ihr Feed füllt sich, während Sie und Ihre Organisationen arbeiten.",
+    "feedJoinedOrg": "Sie sind {{name}} beigetreten",
+    "feedPrivate": "Privat",
+    "feedPublic": "Öffentlich"
   },
   "auth": {
     "login": "Anmelden",
@@ -385,18 +392,6 @@
     "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
     "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "goToPlatform": "Zur openJII-Plattform gehen"
-  },
-  "breadcrumbs": {
-    "home": "Startseite",
-    "platform": "Plattform",
-    "experiments": "Experimente",
-    "protocols": "Protokolle",
-    "macros": "Makros",
-    "new": "Neu",
-    "edit": "Bearbeiten",
-    "view": "Ansehen",
-    "account": "Konto",
-    "settings": "Einstellungen"
   },
   "experimentData": {
     "title": "Experimentdaten",
@@ -564,6 +559,8 @@
     "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen",
     "filterMy": "Meine Protokolle",
     "filterAll": "Alle Protokolle",
+    "filterAccessible": "Zugänglich",
+    "filterPublic": "Öffentlich",
     "filterProtocols": "Protokolle filtern",
     "clearSearch": "Suche löschen",
     "searchProtocols": "Protokolle suchen...",
@@ -571,6 +568,14 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "lastUpdate": "Letzte Aktualisierung"
+  },
+  "resourceVisibility": {
+    "cardTitle": "Sichtbarkeit",
+    "cardDescription": "Legen Sie fest, wer diese Ressource sehen kann. Öffentliche Ressourcen sind für alle sichtbar.",
+    "visibility": "Sichtbarkeit",
+    "cannotBeChanged": "Öffentliche Ressourcen können nicht auf privat zurückgesetzt werden.",
+    "changeToPublicTitle": "Öffentlich machen?",
+    "changeToPublicDescription": "Wenn Sie diese Ressource öffentlich machen, kann sie von jedem eingesehen werden. Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "newProtocol": {
     "description": "Richten Sie ein neues Protokoll ein.",
@@ -584,6 +589,9 @@
     "detailsDescription": "Legen Sie den Namen und die Beschreibung für Ihr Protokoll fest",
     "family": "Sensor-Familie",
     "selectFamily": "Wählen Sie eine Sensor-Familie",
+    "visibility": "Sichtbarkeit",
+    "visibilityPlaceholder": "Sichtbarkeit wählen",
+    "visibilityCannotBeChanged": "Öffentliche Protokolle können später nicht auf privat gesetzt werden.",
     "codeTitle": "Protokollcode",
     "codeDescription": "Definieren Sie die Code-Struktur für Ihr Protokoll",
     "codePlaceholder": "Protokollcode als JSON eingeben",

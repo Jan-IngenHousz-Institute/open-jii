@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { assertMonotonicVisibility } from "../../../../authorization/visibility-transition";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto, UpdateExperimentDto } from "../../../core/models/experiment.model";
@@ -47,6 +48,11 @@ export class UpdateExperimentUseCase {
             userId,
           });
           return failure(AppError.forbidden("You do not have access to this experiment"));
+        }
+
+        const visibilityError = assertMonotonicVisibility(experiment.visibility, data.visibility);
+        if (visibilityError) {
+          return failure(visibilityError);
         }
 
         // Handling for archived experiments

@@ -8,6 +8,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import { zVisibility } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -118,6 +119,35 @@ export function NewProtocolDetailsCard({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="visibility"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("newProtocol.visibility")}</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("newProtocol.visibilityPlaceholder")} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.values(zVisibility.enum).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value.charAt(0).toUpperCase() + value.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {field.value === "public" && (
+                  <p className="text-muted-foreground pt-1 text-xs">
+                    {t("newProtocol.visibilityCannotBeChanged")}
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}

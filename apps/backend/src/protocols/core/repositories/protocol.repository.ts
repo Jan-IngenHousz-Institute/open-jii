@@ -15,6 +15,8 @@ import {
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import { listScopeCondition } from "../../../authorization/resource-scope";
+import type { ListScope } from "../../../authorization/resource-scope";
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import {
   getAnonymizedFirstName,
@@ -32,9 +34,11 @@ export class ProtocolRepository {
   async create(
     createProtocolDto: CreateProtocolDto,
     userId: string,
+    activeOrganizationId?: string | null,
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const organizationId = await ensurePersonalOrganization(this.database, { id: userId });
+      const organizationId =
+        activeOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const results = await this.database
         .insert(protocols)
         .values({
@@ -61,6 +65,7 @@ export class ProtocolRepository {
     search?: ProtocolFilter,
     filter?: "my",
     userId?: string,
+    scope: ListScope = "accessible",
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       let query = this.database
@@ -79,8 +84,27 @@ export class ProtocolRepository {
         conditions.push(ilike(protocols.name, `%${search}%`));
       }
 
-      if (filter === "my" && userId) {
+      // Accessible (default): mine + any org I belong to + shared with me. Public:
+      // the global library. `filter:"my"` further narrows accessible to rows I made.
+      if (scope === "public") {
+        conditions.push(eq(protocols.visibility, "public"));
+      } else if (filter === "my" && userId) {
         conditions.push(eq(protocols.createdBy, userId));
+      } else if (userId) {
+        conditions.push(
+          listScopeCondition(
+            this.database,
+            "protocol",
+            {
+              id: protocols.id,
+              createdBy: protocols.createdBy,
+              organizationId: protocols.organizationId,
+              visibility: protocols.visibility,
+            },
+            userId,
+            "accessible",
+          ),
+        );
       }
 
       if (conditions.length > 0) {

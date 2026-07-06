@@ -45,12 +45,5 @@
     "organizations": "Organisationen",
     "findOrganizations": "Organisationen finden",
     "newOrganization": "Organisation erstellen"
-  },
-  "breadcrumbs": {
-    "home": "Startseite",
-    "experiments": "Experimente",
-    "new": "Neu",
-    "edit": "Bearbeiten",
-    "view": "Ansehen"
   }
 }

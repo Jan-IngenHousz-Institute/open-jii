@@ -1,15 +1,15 @@
 import { tsr } from "@/lib/tsr";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 import type { ExperimentStatus } from "@repo/api/schemas/experiment.schema";
 
 import { useDebounce } from "../../useDebounce";
 
-export type ExperimentFilter = "member" | "all";
+export type ExperimentFilter = "accessible" | "public";
 
 export const useExperiments = ({
-  initialFilter = "member",
+  initialFilter = "accessible",
   initialStatus = undefined,
   initialSearch = "",
   archived = false,
@@ -23,11 +23,10 @@ export const useExperiments = ({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Get filter from URL params, defaulting to initialFilter
-  const rawFilter = searchParams.get("filter");
+  const rawScope = searchParams.get("scope");
 
   const [filter, setFilterState] = useState<ExperimentFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "member" ? "member" : initialFilter,
+    rawScope === "public" ? "public" : initialFilter,
   );
   const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
   const [search, setSearch] = useState<string>(initialSearch);
@@ -47,31 +46,21 @@ export const useExperiments = ({
     [searchParams],
   );
 
-  // Clean up invalid filter in URL
-  useEffect(() => {
-    if (rawFilter !== null && rawFilter !== "all") {
-      const queryString = createQueryString("filter", null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    }
-  }, [rawFilter, pathname, router, createQueryString]);
-
   // Sync filter state with URL
   const setFilter = useCallback(
     (value: ExperimentFilter) => {
       setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
+      const queryString = createQueryString("scope", value === "public" ? "public" : null);
       const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newUrl, { scroll: false });
     },
     [pathname, router, createQueryString],
   );
 
-  // When filter is "all", we don't pass any filter to the API
   const { data } = tsr.experiments.listExperiments.useQuery({
     queryData: {
       query: {
-        filter: filter === "all" ? undefined : filter,
+        scope: filter === "public" ? "public" : undefined,
         status: archived ? "archived" : status,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },

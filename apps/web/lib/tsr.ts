@@ -5,6 +5,7 @@ import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v
 import { env } from "~/env";
 
 import { experimentContract } from "@repo/api/contracts/experiment.contract";
+import { feedContract } from "@repo/api/contracts/feed.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
 import { organizationContract } from "@repo/api/contracts/organization.contract";
 import { protocolContract } from "@repo/api/contracts/protocol.contract";
@@ -20,6 +21,7 @@ const c = initContract();
 // Export the main API contract
 export const contract = c.router({
   experiments: experimentContract,
+  feed: feedContract,
   macros: macroContract,
   organizations: organizationContract,
   protocols: protocolContract,

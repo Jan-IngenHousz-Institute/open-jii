@@ -1,5 +1,5 @@
 {
-  "id": "758d0174-fdcf-44cd-8320-8d8b40bef4bb",
+  "id": "cbf45ac1-ea1a-4548-9897-145a1ce87485",
   "prevId": "226948eb-85d8-421d-b363-f4569ecaa212",
   "version": "7",
   "dialect": "postgresql",
@@ -1617,6 +1617,14 @@
           "notNull": true,
           "default": "'private'"
         },
+        "base_permission": {
+          "name": "base_permission",
+          "type": "org_base_permission",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'read'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2846,7 +2854,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'private'"
+          "default": "'public'"
         },
         "created_by": {
           "name": "created_by",
@@ -3037,6 +3045,15 @@
         "python",
         "r",
         "javascript"
+      ]
+    },
+    "public.org_base_permission": {
+      "name": "org_base_permission",
+      "schema": "public",
+      "values": [
+        "none",
+        "read",
+        "admin"
       ]
     },
     "public.organization_type": {

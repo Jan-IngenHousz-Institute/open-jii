@@ -23,71 +23,31 @@ describe("useProtocols", () => {
     expect(result.current.protocols?.[1]?.name).toBe("P2");
   });
 
-  it("passes filter and search as query parameters", async () => {
+  it("omits scope by default (accessible)", async () => {
     const spy = server.mount(contract.protocols.listProtocols, {
       body: [createProtocol({ id: "p-1" })],
     });
 
-    const { result } = renderHook(() =>
-      useProtocols({ initialSearch: "test", initialFilter: "my" }),
-    );
+    const { result } = renderHook(() => useProtocols({ initialSearch: "test" }));
 
     await waitFor(() => {
       expect(result.current.protocols).toHaveLength(1);
     });
 
     expect(spy.calls[spy.calls.length - 1]?.query?.search).toBe("test");
-    expect(spy.calls[spy.calls.length - 1]?.query?.filter).toBe("my");
+    expect(spy.calls[spy.calls.length - 1]?.query?.scope).toBeUndefined();
   });
 
-  it("omits filter when set to all", async () => {
+  it("passes scope=public when set to public", async () => {
     const spy = server.mount(contract.protocols.listProtocols, { body: [] });
 
-    const { result } = renderHook(() => useProtocols({ initialFilter: "all" }));
+    const { result } = renderHook(() => useProtocols({ initialFilter: "public" }));
 
     await waitFor(() => {
       expect(result.current.protocols).toBeDefined();
     });
 
-    expect(spy.calls[spy.calls.length - 1]?.query?.filter).toBeUndefined();
-  });
-
-  it("auto-switches to all when user has no protocols", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
-
-    const { result } = renderHook(() => useProtocols({ initialFilter: "my" }));
-
-    await waitFor(() => {
-      expect(result.current.filter).toBe("all");
-    });
-  });
-
-  it("keeps my filter when user has protocols", async () => {
-    server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1" })],
-    });
-
-    const { result } = renderHook(() => useProtocols({ initialFilter: "my" }));
-
-    await waitFor(() => {
-      expect(result.current.protocols).toHaveLength(1);
-    });
-
-    expect(result.current.filter).toBe("my");
-  });
-
-  it("does not auto-switch when there is a search term", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
-
-    const { result } = renderHook(() =>
-      useProtocols({ initialFilter: "my", initialSearch: "test" }),
-    );
-
-    await waitFor(() => {
-      expect(result.current.protocols).toBeDefined();
-    });
-
-    expect(result.current.filter).toBe("my");
+    expect(spy.calls[spy.calls.length - 1]?.query?.scope).toBe("public");
   });
 
   it("does not pass empty search to query", async () => {

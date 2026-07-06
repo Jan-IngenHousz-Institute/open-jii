@@ -64,6 +64,8 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "filterAccessible": "Toegankelijk",
+    "filterPublic": "Openbaar",
     "title": "Experimenten",
     "newExperiment": "Nieuw experiment",
     "overview": "Overzicht",
@@ -275,19 +277,12 @@
     "welcome": "Welkom bij openJII",
     "recentExperiments": "Recente experimenten",
     "statistics": "Statistieken",
-    "quickActions": "Snelle acties"
-  },
-  "breadcrumbs": {
-    "home": "Home",
-    "platform": "Platform",
-    "experiments": "Experimenten",
-    "protocols": "Protocollen",
-    "macros": "Macro's",
-    "new": "Nieuw",
-    "edit": "Bewerken",
-    "view": "Bekijken",
-    "account": "Account",
-    "settings": "Instellingen"
+    "quickActions": "Snelle acties",
+    "feedTitle": "Recente activiteit",
+    "feedEmpty": "Je feed vult zich naarmate jij en je organisaties werken.",
+    "feedJoinedOrg": "Je bent lid geworden van {{name}}",
+    "feedPrivate": "Privé",
+    "feedPublic": "Openbaar"
   },
   "experimentData": {
     "title": "Experimentgegevens",
@@ -332,6 +327,8 @@
     "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen",
     "filterMy": "Mijn protocollen",
     "filterAll": "Alle protocollen",
+    "filterAccessible": "Toegankelijk",
+    "filterPublic": "Openbaar",
     "filterProtocols": "Protocollen filteren",
     "clearSearch": "Zoekopdracht wissen",
     "searchProtocols": "Protocollen zoeken...",
@@ -339,6 +336,14 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Voer protocol code in als JSON",
     "lastUpdate": "Laatste update"
+  },
+  "resourceVisibility": {
+    "cardTitle": "Zichtbaarheid",
+    "cardDescription": "Bepaal wie deze bron kan zien. Openbare bronnen zijn voor iedereen zichtbaar.",
+    "visibility": "Zichtbaarheid",
+    "cannotBeChanged": "Openbare bronnen kunnen niet privé worden gemaakt.",
+    "changeToPublicTitle": "Openbaar maken?",
+    "changeToPublicDescription": "Als je deze bron openbaar maakt, kan iedereen deze bekijken. Deze actie kan niet ongedaan worden gemaakt."
   },
   "newProtocol": {
     "description": "Stel een nieuw protocol in.",
@@ -352,6 +357,9 @@
     "detailsDescription": "Stel de naam en beschrijving van je protocol in",
     "family": "Sensor familie",
     "selectFamily": "Selecteer een sensor familie",
+    "visibility": "Zichtbaarheid",
+    "visibilityPlaceholder": "Selecteer zichtbaarheid",
+    "visibilityCannotBeChanged": "Openbare protocollen kunnen later niet privé worden gemaakt.",
     "codeTitle": "Protocol code",
     "codeDescription": "Definieer de code structuur voor je protocol",
     "codePlaceholder": "Voer protocol code in als JSON",

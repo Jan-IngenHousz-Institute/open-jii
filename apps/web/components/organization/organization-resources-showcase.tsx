@@ -10,6 +10,8 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface OrganizationResourcesShowcaseProps {
   organizationId: string;
+  /** Members also see the org's private resources, so the framing differs. */
+  isMember?: boolean;
 }
 
 type Group = keyof OrganizationResources;
@@ -22,9 +24,13 @@ const GROUPS: { key: Group; label: string; icon: typeof Beaker; route?: string }
   { key: "devices", label: "Devices", icon: Cpu },
 ];
 
-/** The org's public resources, grouped by type ("what they're up to"). */
+/**
+ * The org's recent activity, grouped by resource type. Members see public and
+ * private resources; non-members see only public ones.
+ */
 export function OrganizationResourcesShowcase({
   organizationId,
+  isMember = false,
 }: OrganizationResourcesShowcaseProps) {
   const locale = useLocale();
   const { data, isPending } = useOrganizationResources(organizationId);
@@ -49,9 +55,11 @@ export function OrganizationResourcesShowcase({
         <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
           <Sparkles className="h-5 w-5" />
         </div>
-        <p className="text-foreground text-sm font-semibold">Nothing public yet</p>
+        <p className="text-foreground text-sm font-semibold">No recent activity</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          This organization has not shared any public resources.
+          {isMember
+            ? "This organization has no resources yet."
+            : "This organization has not shared any public resources."}
         </p>
       </div>
     );
@@ -59,6 +67,7 @@ export function OrganizationResourcesShowcase({
 
   return (
     <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Recent activity</h2>
       {GROUPS.map((group) => {
         const items = resources[group.key];
         if (items.length === 0) return null;

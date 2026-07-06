@@ -379,7 +379,12 @@ export class TestHarness {
 
   /** Create an organization (org tier). */
   public async createOrganization(
-    data: { name?: string; slug?: string; visibility?: "private" | "public" } = {},
+    data: {
+      name?: string;
+      slug?: string;
+      visibility?: "private" | "public";
+      basePermission?: "none" | "read" | "admin";
+    } = {},
   ) {
     const suffix = crypto.randomUUID().slice(0, 8);
     const [org] = await this.database
@@ -388,6 +393,7 @@ export class TestHarness {
         name: data.name ?? `Org ${suffix}`,
         slug: data.slug ?? `org-${suffix}`,
         visibility: data.visibility ?? "private",
+        ...(data.basePermission ? { basePermission: data.basePermission } : {}),
       })
       .returning();
     return org;

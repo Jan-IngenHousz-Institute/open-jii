@@ -17,6 +17,7 @@ export class ListExperimentsUseCase {
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
     search?: string,
+    scope: "accessible" | "public" = "accessible",
   ): Promise<Result<ExperimentDto[]>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -25,9 +26,10 @@ export class ListExperimentsUseCase {
       filter,
       status,
       search,
+      scope,
     });
 
-    const result = await this.experimentRepository.findAll(userId, filter, status, search);
+    const result = await this.experimentRepository.findAll(userId, filter, status, search, scope);
 
     result.fold(
       (experiments: ExperimentDto[]) => {

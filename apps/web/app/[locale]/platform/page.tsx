@@ -1,6 +1,6 @@
 import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
+import { DashboardFeed } from "@/components/dashboard/dashboard-feed";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
-import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
@@ -44,15 +44,13 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
       {/* Dashboard Header */}
       <h1 className="text-4xl font-bold text-gray-900">{t("dashboard.title")}</h1>
 
-      {/* First Row - User's Experiments */}
-      <DashboardSection
-        title={t("dashboard.yourExperiments")}
-        seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments?filter=all"
-        locale={locale}
-      >
-        <UserExperimentsSection />
-      </DashboardSection>
+      {/* First Row - Personal activity feed */}
+      <section className="flex flex-col">
+        <h2 className="mb-4 text-[1rem] font-bold leading-[1.3125rem] text-[#011111]">
+          {t("dashboard.feedTitle")}
+        </h2>
+        <DashboardFeed />
+      </section>
 
       {/* Second Row - Recent Blog Posts */}
       <DashboardSection

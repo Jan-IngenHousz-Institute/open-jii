@@ -16,6 +16,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ErrorDisplay } from "../error-display";
 import { DangerZoneCard } from "./danger-zone-card";
+import { OrganizationsSection } from "./organizations-section";
 import { ProfileCard } from "./profile-card";
 import { ProfilePictureCard } from "./profile-picture-card";
 
@@ -115,6 +116,9 @@ function AccountSettingsForm({
             <ProfileCard form={form} />
           </div>
         </div>
+
+        {/* Organizations: pick the create-default org */}
+        <OrganizationsSection />
 
         {/* Danger zone: deactivate account */}
         <div>

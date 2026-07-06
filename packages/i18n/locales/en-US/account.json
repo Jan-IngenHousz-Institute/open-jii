@@ -41,7 +41,16 @@
     "cancel": "Cancel",
     "save": "Save changes",
     "saving": "Saving...",
-    "saved": "Account settings saved"
+    "saved": "Account settings saved",
+    "organizations": {
+      "title": "Organizations",
+      "description": "The organization that owns resources you create.",
+      "default": "Default",
+      "setAsDefault": "Set as default",
+      "browse": "Browse organizations",
+      "create": "Create organization",
+      "empty": "You are not a member of any organization yet."
+    }
   },
   "dangerZone": {
     "title": "Danger Zone",

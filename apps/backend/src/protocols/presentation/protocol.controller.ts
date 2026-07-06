@@ -148,6 +148,7 @@ export class ProtocolController {
         query.search,
         query.filter,
         session.user.id,
+        query.scope ?? "accessible",
       );
 
       if (result.isSuccess()) {
@@ -207,9 +208,14 @@ export class ProtocolController {
         description: body.description,
         code: JSON.stringify(body.code),
         family: body.family,
+        visibility: body.visibility,
       };
 
-      const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
+      const result = await this.createProtocolUseCase.execute(
+        createDto,
+        session.user.id,
+        session.session.activeOrganizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         const protocol = {
@@ -276,6 +282,7 @@ export class ProtocolController {
         description: body.description,
         code: body.code ? JSON.stringify(body.code) : undefined,
         family: body.family,
+        visibility: body.visibility,
       };
 
       const result = await this.updateProtocolUseCase.execute(params.id, updateDto);

@@ -6,6 +6,7 @@ import { useProtocol } from "../../hooks/protocol/useProtocol/useProtocol";
 import { ProtocolCompatibleMacrosCard } from "./protocol-compatible-macros-card";
 import { ProtocolDetailsCard } from "./protocol-details-card";
 import { ProtocolInfoCard } from "./protocol-info-card";
+import { ProtocolVisibilityCard } from "./protocol-visibility-card";
 
 interface ProtocolSettingsProps {
   protocolId: string;
@@ -38,6 +39,9 @@ export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
 
       {/* Compatible Macros Card */}
       <ProtocolCompatibleMacrosCard protocolId={protocolId} />
+
+      {/* Visibility Card */}
+      <ProtocolVisibilityCard protocolId={protocolId} initialVisibility={protocol.visibility} />
 
       {/* Protocol Info Card */}
       <ProtocolInfoCard protocolId={protocolId} protocol={protocol} />

@@ -73,8 +73,8 @@ export function ListMacros() {
               <SelectValue placeholder={t("macros.filterMacros")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="my">{t("macros.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("macros.filterAll")}</SelectItem>
+              <SelectItem value="accessible">{t("macros.filterAccessible")}</SelectItem>
+              <SelectItem value="public">{t("macros.filterPublic")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

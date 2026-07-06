@@ -11,7 +11,11 @@ export class CreateMacroUseCase {
 
   constructor(private readonly macroRepository: MacroRepository) {}
 
-  async execute(data: CreateMacroDto, userId: string): Promise<Result<MacroDto>> {
+  async execute(
+    data: CreateMacroDto,
+    userId: string,
+    activeOrganizationId?: string | null,
+  ): Promise<Result<MacroDto>> {
     this.logger.log({
       msg: "Creating macro",
       operation: "createMacro",
@@ -25,8 +29,10 @@ export class CreateMacroUseCase {
         description: data.description,
         language: data.language,
         code: data.code,
+        visibility: data.visibility,
       },
       userId,
+      activeOrganizationId,
     );
 
     if (macroResult.isFailure()) {
