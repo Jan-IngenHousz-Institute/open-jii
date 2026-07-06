@@ -3,7 +3,7 @@ import type { SensorFamily } from "@repo/iot";
 import type { RunnerCell } from "../cells";
 import { firstExecutableCellId } from "../flow/flow-utils";
 import type { OutputEntry } from "../flow/hydrate";
-import type { CommandProgress } from "../ports/command-executor";
+import type { CommandProgress } from "../ports";
 
 export const MAX_BRANCH_VISITS = 100;
 export const TRACE_CAP = 500;

@@ -1,5 +1,5 @@
-import type { CommandRunInput } from "../ports/command-executor";
-import type { MacroRunInput } from "../ports/macro-runner";
+import type { CommandRunInput } from "../ports";
+import type { MacroRunInput } from "../ports";
 
 export type Effect =
   | { kind: "runMacro"; effectId: string; cellId: string; input: MacroRunInput }

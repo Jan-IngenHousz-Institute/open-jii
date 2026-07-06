@@ -1,53 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunnerCell } from "../cells";
+import { commandCell, markdownCell } from "../demo/fixtures";
+import { createSamplePorts, sampleWorkbook, scanAttempts } from "../demo/sample-workbook";
 import {
-  MACRO_PHI2_ID,
-  sampleMacroRegistry,
-  sampleProtocolCode,
-  sampleWorkbook,
-  scanAttempts,
-} from "../demo/sample-workbook";
-import {
-  createCodeResolver,
-  createMacroRunner,
   createManualExecutor,
   createMemoryOutputStore,
   createSimulatedExecutor,
   FakeClock,
+  waitFor,
 } from "../demo/simulators";
 import type { CellNamespace } from "../namespace/build-cell-namespace";
-import type { CommandProgress, CommandRunInput } from "../ports/command-executor";
+import type { CommandProgress, CommandRunInput } from "../ports";
 import { SnapshotError } from "./snapshot";
 import type { RunnerState } from "./state";
 import type { WorkbookRunnerOptions, WorkbookRunnerPorts } from "./workbook-runner";
 import { WorkbookRunner } from "./workbook-runner";
 
-function waitFor(
-  runner: WorkbookRunner,
-  pred: (state: Readonly<RunnerState>) => boolean,
-  label = "condition",
-): Promise<Readonly<RunnerState>> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      unsub();
-      reject(new Error(`waitFor(${label}) timed out in status ${runner.getState().status}`));
-    }, 2000);
-    const check = (state: Readonly<RunnerState>) => {
-      if (pred(state)) {
-        clearTimeout(timer);
-        unsub();
-        resolve(state);
-      }
-    };
-    const unsub = runner.subscribe(check);
-    check(runner.getState());
-  });
-}
-
 interface SampleRunner {
   runner: WorkbookRunner;
-  protocolCalls: CommandRunInput[];
   allCalls: CommandRunInput[];
   macroInputs: { json: unknown; ctx: CellNamespace }[];
   clock: FakeClock;
@@ -60,46 +31,12 @@ function makeSampleRunner(
 ): SampleRunner {
   const clock = new FakeClock();
   const macroInputs: { json: unknown; ctx: CellNamespace }[] = [];
-  let protoCall = 0;
-
-  const registry = { ...sampleMacroRegistry };
-  const phi2 = registry[MACRO_PHI2_ID];
-  if (!phi2) throw new Error("sample registry missing phi2");
-  registry[MACRO_PHI2_ID] = (json, ctx) => {
-    macroInputs.push({ json, ctx });
-    return phi2(json, ctx);
-  };
-
-  const executor = createSimulatedExecutor({
-    respond: (input) => {
-      if (input.source.kind === "protocolCell") {
-        const attempt = attempts[Math.min(protoCall, attempts.length - 1)];
-        protoCall += 1;
-        return attempt;
-      }
-      if (input.source.kind === "artifact") return { dispatched: true };
-      return "82%";
-    },
-  });
-
-  const runner = new WorkbookRunner({
-    cells: sampleWorkbook,
-    ports: {
-      macroRunner: createMacroRunner(registry),
-      commandExecutor: executor,
-      protocolCodeResolver: createCodeResolver(sampleProtocolCode),
-      clock,
-    },
-    ...options,
-  });
-
-  return {
-    runner,
-    protocolCalls: executor.calls.filter((c) => c.source.kind === "protocolCell"),
-    allCalls: executor.calls,
-    macroInputs,
+  const { ports, executor } = createSamplePorts(attempts, {
     clock,
-  };
+    onMacroInput: (json, ctx) => macroInputs.push({ json, ctx }),
+  });
+  const runner = new WorkbookRunner({ cells: sampleWorkbook, ports, ...options });
+  return { runner, allCalls: executor.calls, macroInputs, clock };
 }
 
 async function runSampleToDone(sample: SampleRunner): Promise<Readonly<RunnerState>> {
@@ -181,19 +118,10 @@ describe("WorkbookRunner: spike scenarios", () => {
 
     const snapshot: unknown = JSON.parse(JSON.stringify(sample.runner.snapshot()));
     const revived = makeSampleRunner([scanAttempts[1]]);
-    const restored = await WorkbookRunner.restore(snapshot, {
-      macroRunner: createMacroRunner(sampleMacroRegistry),
-      commandExecutor: createSimulatedExecutor({
-        respond: (input) =>
-          input.source.kind === "protocolCell"
-            ? scanAttempts[1]
-            : input.source.kind === "artifact"
-              ? { dispatched: true }
-              : "82%",
-      }),
-      protocolCodeResolver: createCodeResolver(sampleProtocolCode),
-      clock: revived.clock,
-    });
+    const restored = await WorkbookRunner.restore(
+      snapshot,
+      createSamplePorts([scanAttempts[1]], { clock: revived.clock }).ports,
+    );
     expect(restored.getState().position.cellId).toBe("q_sunlight");
     restored.send({ type: "ANSWER", cellId: "q_sunlight", value: "yes" });
     await waitFor(restored, (s) => s.position.cellId === "md_done", "md_done");
@@ -203,18 +131,12 @@ describe("WorkbookRunner: spike scenarios", () => {
   });
 });
 
-const battery: RunnerCell[] = [
-  {
-    id: "c1",
-    type: "command",
-    payload: { format: "string", content: "battery" },
-  },
-  { id: "m1", type: "markdown", isCollapsed: false, content: "end" },
-];
+const battery: RunnerCell[] = [commandCell("c1"), markdownCell("m1", "end")];
 
 function basePorts(overrides: Partial<WorkbookRunnerPorts> = {}): WorkbookRunnerPorts {
+  const { ports } = createSamplePorts();
   return {
-    macroRunner: createMacroRunner({}),
+    ...ports,
     commandExecutor: createSimulatedExecutor(),
     clock: new FakeClock(),
     ...overrides,

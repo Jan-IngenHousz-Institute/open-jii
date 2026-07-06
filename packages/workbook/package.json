@@ -15,7 +15,6 @@
     "build": "tsc --build tsconfig.build.json --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --build tsconfig.build.json --watch",
-    "demo": "tsx src/demo/run-demo.ts",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -37,7 +36,6 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
-    "tsx": "^4.21.0",
     "typescript": "catalog:",
     "vitest": "catalog:testing"
   }

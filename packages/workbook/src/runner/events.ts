@@ -1,4 +1,4 @@
-import type { CommandProgress } from "../ports/command-executor";
+import type { CommandProgress } from "../ports";
 
 export type WorkbookPublicEvent =
   | { type: "START" }
@@ -71,17 +71,7 @@ export type WorkbookInternalEvent =
 
 export type WorkbookEvent = WorkbookPublicEvent | WorkbookInternalEvent;
 
-const INTERNAL_TYPES = new Set([
-  "MACRO_DONE",
-  "MACRO_FAILED",
-  "COMMAND_DONE",
-  "COMMAND_FAILED",
-  "COMMAND_PROGRESS",
-  "CODE_RESOLVED",
-  "CODE_RESOLVE_FAILED",
-  "EFFECT_CANCELLED",
-]);
-
+/** Internal events are exactly the ones carrying an effect id. */
 export function isInternalEvent(event: WorkbookEvent): event is WorkbookInternalEvent {
-  return INTERNAL_TYPES.has(event.type);
+  return "effectId" in event;
 }

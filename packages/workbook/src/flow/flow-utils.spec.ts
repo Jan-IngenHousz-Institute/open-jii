@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunnerCell } from "../cells";
+import { commandCell, macroCell, markdownCell, protocolCell } from "../demo/fixtures";
 import {
   dispatchStepId,
   executableCells,
@@ -14,21 +15,11 @@ import {
 } from "./flow-utils";
 
 const cells: RunnerCell[] = [
-  { id: "md", type: "markdown", isCollapsed: false, content: "x" },
-  {
-    id: "p",
-    type: "protocol",
-    isCollapsed: false,
-    payload: { protocolId: "5f1f9c1a-2c1e-4f6a-9d1b-000000000001", version: 1 },
-  },
+  markdownCell("md"),
+  protocolCell("p"),
   { id: "out", type: "output", isCollapsed: false, producedBy: "p" },
-  { id: "c", type: "command", payload: { format: "string", content: "battery" } },
-  {
-    id: "a",
-    type: "macro",
-    isCollapsed: false,
-    payload: { macroId: "5f1f9c1a-2c1e-4f6a-9d1b-000000000002", language: "javascript" },
-  },
+  commandCell("c"),
+  macroCell("a"),
 ];
 
 describe("flow-utils", () => {

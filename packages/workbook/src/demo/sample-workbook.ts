@@ -1,5 +1,9 @@
 import type { RunnerCell } from "../cells";
-import type { MacroFn } from "./simulators";
+import type { CellNamespace } from "../namespace/build-cell-namespace";
+import type { ClockPort } from "../ports";
+import type { WorkbookRunnerPorts } from "../runner/workbook-runner";
+import type { MacroFn, SimulatedExecutor } from "./simulators";
+import { createCodeResolver, createMacroRunner, createSimulatedExecutor } from "./simulators";
 
 export const PROTO_PSII_ID = "5f1f9c1a-2c1e-4f6a-9d1b-000000000001";
 export const MACRO_PHI2_ID = "5f1f9c1a-2c1e-4f6a-9d1b-000000000002";
@@ -124,3 +128,51 @@ export const scanAttempts: Record<string, unknown>[] = [
   { raw_fluorescence: [0.21, 0.83, 0.79, 0.07], detectors: 3 },
   { raw_fluorescence: [0.71, 0.78, 0.75], detectors: 3 },
 ];
+
+export interface SamplePortsOptions {
+  progressTicks?: number;
+  tickMs?: number;
+  consoleResponse?: unknown;
+  artifactResponse?: unknown;
+  onMacroInput?: (json: unknown, ctx: CellNamespace) => void;
+  clock?: ClockPort;
+}
+
+/**
+ * The one place the sample workbook gets wired to simulators; the specs and
+ * the demo both build their runners from this.
+ */
+export function createSamplePorts(
+  attempts: Record<string, unknown>[] = scanAttempts,
+  opts: SamplePortsOptions = {},
+): { ports: WorkbookRunnerPorts; executor: SimulatedExecutor } {
+  let protoCall = 0;
+  const registry = { ...sampleMacroRegistry };
+  const phi2 = sampleMacroRegistry[MACRO_PHI2_ID];
+  if (opts.onMacroInput && phi2) {
+    registry[MACRO_PHI2_ID] = (json, ctx) => {
+      opts.onMacroInput?.(json, ctx);
+      return phi2(json, ctx);
+    };
+  }
+  const executor = createSimulatedExecutor({
+    progressTicks: opts.progressTicks,
+    tickMs: opts.tickMs,
+    respond: (input) => {
+      if (input.source.kind === "protocolCell") {
+        return attempts[Math.min(protoCall++, attempts.length - 1)];
+      }
+      if (input.source.kind === "artifact") return opts.artifactResponse ?? { dispatched: true };
+      return opts.consoleResponse ?? "82%";
+    },
+  });
+  return {
+    ports: {
+      macroRunner: createMacroRunner(registry),
+      commandExecutor: executor,
+      protocolCodeResolver: createCodeResolver(sampleProtocolCode),
+      clock: opts.clock,
+    },
+    executor,
+  };
+}

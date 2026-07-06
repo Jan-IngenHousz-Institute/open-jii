@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { SENSOR_FAMILIES } from "@repo/iot";
+
 import { ownerCellId } from "./cell-entry";
 import type { RunnerState } from "./state";
 
@@ -42,7 +44,7 @@ const zSnapshotState = z.object({
     loop: z.boolean(),
     maxBranchVisits: z.number(),
     allowDeviceWrites: z.boolean(),
-    deviceFamily: z.enum(["multispeq", "ambit", "generic"]).optional(),
+    deviceFamily: z.enum(SENSOR_FAMILIES).optional(),
   }),
   cells: z.array(zLooseCell),
   status: z.enum([

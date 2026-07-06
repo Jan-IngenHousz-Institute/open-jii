@@ -2,14 +2,14 @@ import type { SensorFamily } from "@repo/iot";
 
 import type { RunnerCell } from "../cells";
 import { DISPATCH_STEP_SUFFIX } from "../flow/flow-utils";
-import type { ClockPort } from "../ports/clock";
-import { systemClock } from "../ports/clock";
-import type { CommandExecutorPort } from "../ports/command-executor";
-import type { LoggerPort } from "../ports/logger";
-import { noopLogger } from "../ports/logger";
-import type { MacroRunnerPort } from "../ports/macro-runner";
-import type { OutputStorePort } from "../ports/output-store";
-import type { ProtocolCodeResolverPort } from "../ports/protocol-code-resolver";
+import type { ClockPort } from "../ports";
+import { systemClock } from "../ports";
+import type { CommandExecutorPort } from "../ports";
+import type { LoggerPort } from "../ports";
+import { noopLogger } from "../ports";
+import type { MacroRunnerPort } from "../ports";
+import type { OutputStorePort } from "../ports";
+import type { ProtocolCodeResolverPort } from "../ports";
 import type { Effect } from "./effects";
 import type { WorkbookEvent, WorkbookPublicEvent } from "./events";
 import { transition } from "./reducer";
@@ -261,50 +261,46 @@ export class WorkbookRunner {
     this.controllers.set(effectId, controller);
     const startedAt = this.clock.now();
 
+    const settle = (outcome: { output?: unknown; error?: string }) => {
+      const timings = { startedAt, endedAt: this.clock.now() };
+      if (controller.signal.aborted) {
+        this.dispatch({ type: "EFFECT_CANCELLED", effectId, cellId });
+        return;
+      }
+      if (outcome.error !== undefined) {
+        const type =
+          family === "macro"
+            ? "MACRO_FAILED"
+            : family === "code"
+              ? "CODE_RESOLVE_FAILED"
+              : "COMMAND_FAILED";
+        this.dispatch({ type, effectId, cellId, error: outcome.error, timings });
+      } else if (family === "macro") {
+        this.dispatch({
+          type: "MACRO_DONE",
+          effectId,
+          cellId,
+          output: (outcome.output ?? {}) as Record<string, unknown>,
+          timings,
+        });
+      } else if (family === "code") {
+        this.dispatch({
+          type: "CODE_RESOLVED",
+          effectId,
+          cellId,
+          code: outcome.output as Record<string, unknown>[] | null,
+          timings,
+        });
+      } else {
+        this.dispatch({ type: "COMMAND_DONE", effectId, cellId, output: outcome.output, timings });
+      }
+    };
+
     void run(controller.signal)
-      .then((output) => {
-        const timings = { startedAt, endedAt: this.clock.now() };
-        if (controller.signal.aborted) {
-          this.dispatch({ type: "EFFECT_CANCELLED", effectId, cellId });
-          return;
-        }
-        if (family === "macro") {
-          this.dispatch({
-            type: "MACRO_DONE",
-            effectId,
-            cellId,
-            output: (output ?? {}) as Record<string, unknown>,
-            timings,
-          });
-        } else if (family === "code") {
-          this.dispatch({
-            type: "CODE_RESOLVED",
-            effectId,
-            cellId,
-            code: output as Record<string, unknown>[] | null,
-            timings,
-          });
-        } else {
-          this.dispatch({ type: "COMMAND_DONE", effectId, cellId, output, timings });
-        }
-      })
-      .catch((error: unknown) => {
-        const timings = { startedAt, endedAt: this.clock.now() };
-        if (controller.signal.aborted) {
-          this.dispatch({ type: "EFFECT_CANCELLED", effectId, cellId });
-          return;
-        }
-        const message = error instanceof Error ? error.message : String(error);
-        if (family === "macro") {
-          this.dispatch({ type: "MACRO_FAILED", effectId, cellId, error: message, timings });
-        } else if (family === "code") {
-          this.dispatch({ type: "CODE_RESOLVE_FAILED", effectId, cellId, error: message, timings });
-        } else {
-          this.dispatch({ type: "COMMAND_FAILED", effectId, cellId, error: message, timings });
-        }
-      })
-      .finally(() => {
-        this.controllers.delete(effectId);
-      });
+      .then((output) => settle({ output }))
+      .catch((error: unknown) =>
+        settle({ error: error instanceof Error ? error.message : String(error) }),
+      )
+      .finally(() => this.controllers.delete(effectId));
   }
 }

@@ -1,6 +1,7 @@
 import type { BranchCell } from "@repo/api/schemas/workbook-cells.schema";
 import { evaluateBranch } from "@repo/api/utils/evaluate-branch";
 import { validateCommandArtifact } from "@repo/iot";
+import type { SensorFamily } from "@repo/iot";
 
 import type { MacroArtifact } from "../artifact/macro-artifact";
 import { isCommandCell } from "../cells";
@@ -19,12 +20,18 @@ import {
 } from "../flow/flow-utils";
 import { asWorkbookCells, hydrateCells } from "../flow/hydrate";
 import { buildCellNamespace } from "../namespace/build-cell-namespace";
-import type { TransitionResult } from "./effects";
-import type { CellRunState, EnteredVia, RunnerState } from "./state";
+import type { CommandSource, ResolvedCommandValue } from "../ports";
+import type { Effect, TransitionResult } from "./effects";
+import type { CellRunState, EffectKind, EnteredVia, RunnerState } from "./state";
 import { currentAnswers, trace } from "./state";
 
-function setCellRun(state: RunnerState, cellId: string, run: CellRunState): RunnerState {
+export function setCellRun(state: RunnerState, cellId: string, run: CellRunState): RunnerState {
   return { ...state, cellRuns: { ...state.cellRuns, [cellId]: run } };
+}
+
+/** Unaccepted events are no-ops that only leave a trace line. */
+export function ignored(state: RunnerState, what: string): TransitionResult {
+  return { state: trace(state, `ignored ${what} in ${state.status}`), effects: [] };
 }
 
 export function lastOrder(run: CellRunState | undefined): number {
@@ -100,9 +107,81 @@ export function markDownstreamStale(
   return cellRuns === state.cellRuns ? state : { ...state, cellRuns };
 }
 
-function mintEffectId(state: RunnerState): { state: RunnerState; effectId: string } {
+/** Mint the next effect id, set inFlight, and emit the effect built from it. */
+function emitEffect(
+  state: RunnerState,
+  cellId: string,
+  kind: EffectKind,
+  build: (effectId: string) => Effect,
+): TransitionResult {
   const effectSeq = state.effectSeq + 1;
-  return { state: { ...state, effectSeq }, effectId: `e${effectSeq}` };
+  const effectId = `e${effectSeq}`;
+  return {
+    state: { ...state, effectSeq, inFlight: { effectId, cellId, kind } },
+    effects: [build(effectId)],
+  };
+}
+
+function emitRunCommand(
+  state: RunnerState,
+  cellId: string,
+  command: ResolvedCommandValue,
+  family: SensorFamily,
+  source: CommandSource,
+): TransitionResult {
+  return emitEffect(state, cellId, "runCommand", (effectId) => ({
+    kind: "runCommand",
+    effectId,
+    cellId,
+    input: { cellId, command, family, source },
+  }));
+}
+
+export type AnswerRecording =
+  | { kind: "rejected"; state: RunnerState }
+  | { kind: "recorded"; state: RunnerState };
+
+/**
+ * Validate and record an answer on the current cycle (shared by both modes):
+ * required questions reject blank values, blank optional answers delete the
+ * key, the question gets a run stamp, and a CHANGED value marks downstream
+ * producers stale.
+ */
+export function recordAnswer(state: RunnerState, cellId: string, value: string): AnswerRecording {
+  const cell = cellById(state.cells, cellId);
+  if (cell?.type !== "question") {
+    return { kind: "rejected", state: ignored(state, "ANSWER").state };
+  }
+
+  const required = (cell.question as { required?: boolean }).required ?? false;
+  const blank = value.trim() === "";
+  if (required && blank) {
+    return {
+      kind: "rejected",
+      state: failRun(
+        trace(state, `ANSWER rejected: question ${cellId} is required`),
+        cellId,
+        "Answer required",
+      ),
+    };
+  }
+
+  const existing = currentAnswers(state)[cellId];
+  const changed = existing !== undefined && existing !== value;
+
+  const answers = { ...currentAnswers(state) };
+  if (blank) {
+    delete answers[cellId];
+  } else {
+    answers[cellId] = value;
+  }
+  let next: RunnerState = {
+    ...state,
+    answersByCycle: state.answersByCycle.map((m, i) => (i === state.cycle ? answers : m)),
+  };
+  next = completeRun(stampRun(next, cellId), cellId);
+  if (changed) next = markDownstreamStale(next, cellId);
+  return { kind: "recorded", state: next };
 }
 
 /** Record a per-cell failure; mode decides pause vs continue at the call site. */
@@ -140,23 +219,13 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
   next = { ...next, status: "running", progress: null };
 
   if (cell.type === "protocol") {
-    const minted = mintEffectId(next);
-    next = {
-      ...minted.state,
-      inFlight: { effectId: minted.effectId, cellId, kind: "resolveProtocolCode" },
-    };
-    return {
-      state: next,
-      effects: [
-        {
-          kind: "resolveProtocolCode",
-          effectId: minted.effectId,
-          cellId,
-          protocolId: cell.payload.protocolId,
-          version: cell.payload.version,
-        },
-      ],
-    };
+    return emitEffect(next, cellId, "resolveProtocolCode", (effectId) => ({
+      kind: "resolveProtocolCode",
+      effectId,
+      cellId,
+      protocolId: cell.payload.protocolId,
+      version: cell.payload.version,
+    }));
   }
 
   if (isCommandCell(cell)) {
@@ -164,24 +233,10 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
     if (!resolved.ok) {
       return { state: failRun(next, cellId, resolved.error), effects: [] };
     }
-    const minted = mintEffectId(next);
-    next = { ...minted.state, inFlight: { effectId: minted.effectId, cellId, kind: "runCommand" } };
-    return {
-      state: next,
-      effects: [
-        {
-          kind: "runCommand",
-          effectId: minted.effectId,
-          cellId,
-          input: {
-            cellId,
-            command: resolved.value,
-            family: producerFamily(next),
-            source: { kind: "inlineCell", format: cell.payload.format },
-          },
-        },
-      ],
-    };
+    return emitRunCommand(next, cellId, resolved.value, producerFamily(next), {
+      kind: "inlineCell",
+      format: cell.payload.format,
+    });
   }
 
   if (cell.type === "macro") {
@@ -189,25 +244,12 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
     const json = upstreamId ? (next.outputs[upstreamId]?.v ?? null) : null;
     const hydrated = hydrateCells(next.cells, currentAnswers(next), next.outputs);
     const ctx = buildCellNamespace(hydrated, cellIndex(next.cells, cellId));
-    const minted = mintEffectId(next);
-    next = { ...minted.state, inFlight: { effectId: minted.effectId, cellId, kind: "runMacro" } };
-    return {
-      state: next,
-      effects: [
-        {
-          kind: "runMacro",
-          effectId: minted.effectId,
-          cellId,
-          input: {
-            cellId,
-            macroId: cell.payload.macroId,
-            language: cell.payload.language,
-            json,
-            ctx,
-          },
-        },
-      ],
-    };
+    return emitEffect(next, cellId, "runMacro", (effectId) => ({
+      kind: "runMacro",
+      effectId,
+      cellId,
+      input: { cellId, macroId: cell.payload.macroId, language: cell.payload.language, json, ctx },
+    }));
   }
 
   return fatal(state, `startProducer: cell ${cellId} is not a producer`);
@@ -221,31 +263,11 @@ export function startResolvedProtocolCommand(
 ): TransitionResult {
   const cell = cellById(state.cells, cellId);
   if (cell?.type !== "protocol") return fatal(state, `resolved code for non-protocol ${cellId}`);
-  const minted = mintEffectId(state);
-  const next: RunnerState = {
-    ...minted.state,
-    inFlight: { effectId: minted.effectId, cellId, kind: "runCommand" },
-  };
-  return {
-    state: next,
-    effects: [
-      {
-        kind: "runCommand",
-        effectId: minted.effectId,
-        cellId,
-        input: {
-          cellId,
-          command: code,
-          family: producerFamily(next),
-          source: {
-            kind: "protocolCell",
-            protocolId: cell.payload.protocolId,
-            version: cell.payload.version,
-          },
-        },
-      },
-    ],
-  };
+  return emitRunCommand(state, cellId, code, producerFamily(state), {
+    kind: "protocolCell",
+    protocolId: cell.payload.protocolId,
+    version: cell.payload.version,
+  });
 }
 
 /**
@@ -267,32 +289,16 @@ export function startArtifactDispatch(
 
   const stepId = dispatchStepId(macroCellId);
   let next = stampRun(state, stepId);
-  next = { ...next, status: "running", progress: null };
-  const minted = mintEffectId(next);
   next = {
-    ...minted.state,
-    inFlight: { effectId: minted.effectId, cellId: stepId, kind: "runCommand" },
+    ...trace(next, `dispatch ${artifact.__ojArtifact} constructed by ${macroCellId}`),
+    status: "running",
+    progress: null,
   };
-  return {
-    state: trace(next, `dispatch ${artifact.__ojArtifact} constructed by ${macroCellId}`),
-    effects: [
-      {
-        kind: "runCommand",
-        effectId: minted.effectId,
-        cellId: stepId,
-        input: {
-          cellId: stepId,
-          command: validated.command,
-          family: validated.family,
-          source: {
-            kind: "artifact",
-            artifact: artifact.__ojArtifact,
-            producedBy: macroCellId,
-          },
-        },
-      },
-    ],
-  };
+  return emitRunCommand(next, stepId, validated.command, validated.family, {
+    kind: "artifact",
+    artifact: artifact.__ojArtifact,
+    producedBy: macroCellId,
+  });
 }
 
 function fatal(state: RunnerState, reason: string): TransitionResult {

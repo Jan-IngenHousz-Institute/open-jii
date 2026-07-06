@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { SENSOR_FAMILIES } from "@repo/iot";
+
 // A macro may return a tagged artifact instead of a plain data record: a request
 // to run a device command or protocol the macro constructed. The tag is NOT a
 // trust signal (a macro can forge it); it only routes the value to the @repo/iot
 // validator, which is the actual security boundary before any dispatch.
 
-export const zArtifactFamily = z.enum(["multispeq", "ambit", "generic"]);
+export const zArtifactFamily = z.enum(SENSOR_FAMILIES);
 export type ArtifactFamily = z.infer<typeof zArtifactFamily>;
 
 // A raw console command string (e.g. "battery", "light5"). Structured protocols

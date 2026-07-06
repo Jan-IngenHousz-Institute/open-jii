@@ -1,24 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import type { BranchCell } from "@repo/api/schemas/workbook-cells.schema";
 import { evaluateBranch } from "@repo/api/utils/evaluate-branch";
 
 import type { RunnerCell } from "../cells";
+import { branchCell, commandCell, macroCell, questionCell } from "../demo/fixtures";
 import { asWorkbookCells, hydrateCells } from "./hydrate";
 import { normalizeOutputData } from "./normalize-output";
 
 const cells: RunnerCell[] = [
-  {
-    id: "q1",
-    type: "question",
-    isCollapsed: false,
-    name: "Sunlight",
-    question: { kind: "yes_no", text: "Sunlight?", required: false },
-    isAnswered: false,
-  },
-  { id: "c1", type: "command", payload: { format: "string", content: "battery" } },
+  questionCell("q1", "Sunlight"),
+  commandCell("c1"),
   { id: "out_c1", type: "output", isCollapsed: false, producedBy: "c1" },
-  { id: "c2", type: "command", payload: { format: "string", content: "hello" } },
+  commandCell("c2", "hello"),
 ];
 
 describe("normalizeOutputData", () => {
@@ -50,15 +43,7 @@ describe("hydrateCells", () => {
   });
 
   it("never sample-unwraps macro outputs (only device responses)", () => {
-    const withMacro: RunnerCell[] = [
-      ...cells,
-      {
-        id: "a1",
-        type: "macro",
-        isCollapsed: false,
-        payload: { macroId: "5f1f9c1a-2c1e-4f6a-9d1b-000000000009", language: "javascript" },
-      },
-    ];
+    const withMacro: RunnerCell[] = [...cells, macroCell("a1")];
     const macroOutput = { sample: 5, mean: 3 };
     const hydrated = hydrateCells(withMacro, {}, { a1: { v: macroOutput } });
     const out = hydrated.find((c) => c.type === "output" && c.producedBy === "a1");
@@ -76,22 +61,13 @@ describe("hydrateCells", () => {
   });
 
   it("makes the same authored condition match web- and mobile-shaped responses", () => {
-    const branch: BranchCell = {
-      id: "b1",
-      type: "branch",
-      isCollapsed: false,
-      paths: [
-        {
-          id: "hit",
-          label: "hit",
-          color: "#000",
-          conditions: [
-            { id: "c", sourceCellId: "c2", field: "Phi2", operator: "gt", value: "0.5" },
-          ],
-          gotoCellId: "c1",
-        },
-      ],
-    };
+    const branch = branchCell("b1", [
+      {
+        id: "hit",
+        goto: "c1",
+        condition: { source: "c2", field: "Phi2", operator: "gt", value: "0.5" },
+      },
+    ]);
     const program = [...cells, branch];
     const webShaped = hydrateCells(program, {}, { c2: { v: { Phi2: 0.7 } } });
     const mobileShaped = hydrateCells(program, {}, { c2: { v: { sample: [{ Phi2: 0.7 }] } } });

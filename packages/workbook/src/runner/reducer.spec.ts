@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { CommandCellLike, RunnerCell } from "../cells";
+import type { RunnerCell } from "../cells";
+import {
+  branchCell as branch,
+  commandCell as cmd,
+  macroCell as macro,
+  markdownCell as md,
+  protocolCell as proto,
+  questionCell as question,
+} from "../demo/fixtures";
 import type { Effect } from "./effects";
 import type { WorkbookEvent } from "./events";
 import { transition } from "./reducer";
@@ -8,76 +16,6 @@ import type { CreateStateOptions, RunnerState } from "./state";
 import { createInitialState } from "./state";
 
 const TIMINGS = { startedAt: 0, endedAt: 5 };
-
-const md = (id: string): RunnerCell => ({ id, type: "markdown", isCollapsed: false, content: id });
-
-const question = (id: string, name: string, required = false): RunnerCell => ({
-  id,
-  type: "question",
-  isCollapsed: false,
-  name,
-  question: { kind: "yes_no", text: name, required },
-  isAnswered: false,
-});
-
-const cmd = (id: string, content = "battery"): CommandCellLike => ({
-  id,
-  type: "command",
-  payload: { format: "string", content, name: id },
-});
-
-const proto = (id: string): RunnerCell => ({
-  id,
-  type: "protocol",
-  isCollapsed: false,
-  payload: { protocolId: "5f1f9c1a-2c1e-4f6a-9d1b-00000000aaaa", version: 1, name: id },
-});
-
-const macro = (id: string): RunnerCell => ({
-  id,
-  type: "macro",
-  isCollapsed: false,
-  payload: {
-    macroId: `5f1f9c1a-2c1e-4f6a-9d1b-00000000bb${id.length}0`,
-    language: "javascript",
-    name: id,
-  },
-});
-
-interface BranchPathSpec {
-  id: string;
-  goto?: string;
-  condition?: {
-    source: string;
-    field: string;
-    operator: "eq" | "neq" | "gt" | "lt" | "gte" | "lte";
-    value: string;
-  };
-}
-
-const branch = (id: string, paths: BranchPathSpec[], defaultPathId?: string): RunnerCell => ({
-  id,
-  type: "branch",
-  isCollapsed: false,
-  paths: paths.map((p) => ({
-    id: p.id,
-    label: p.id,
-    color: "#000",
-    conditions: p.condition
-      ? [
-          {
-            id: `${p.id}_c`,
-            sourceCellId: p.condition.source,
-            field: p.condition.field,
-            operator: p.condition.operator,
-            value: p.condition.value,
-          },
-        ]
-      : [],
-    gotoCellId: p.goto,
-  })),
-  defaultPathId,
-});
 
 function init(cells: RunnerCell[], opts: Partial<CreateStateOptions> = {}): RunnerState {
   return createInitialState({ cells, ...opts });
@@ -129,27 +67,19 @@ function withoutTrace(state: RunnerState): Omit<RunnerState, "trace"> {
 describe("transition: event/status matrix", () => {
   it("unaccepted events are no-ops that only touch the trace", () => {
     const idle = init([md("m1"), question("q1", "Q One"), cmd("c1")]);
-    const cases: { state: RunnerState; events: WorkbookEvent[] }[] = [
-      {
-        state: idle,
-        events: [
-          { type: "NEXT" },
-          { type: "BACK" },
-          { type: "ANSWER", cellId: "q1", value: "yes" },
-          { type: "RETRY" },
-          { type: "CANCEL" },
-          { type: "STOP" },
-          { type: "RUN_ALL" },
-          { type: "START_CYCLE" },
-        ],
-      },
+    const events: WorkbookEvent[] = [
+      { type: "NEXT" },
+      { type: "BACK" },
+      { type: "RETRY" },
+      { type: "CANCEL" },
+      { type: "STOP" },
+      { type: "RUN_ALL" },
+      { type: "START_CYCLE" },
     ];
-    for (const c of cases) {
-      for (const event of c.events) {
-        const { state: next, effects } = transition(c.state, event);
-        expect(effects).toEqual([]);
-        expect(withoutTrace(next)).toEqual(withoutTrace(c.state));
-      }
+    for (const event of events) {
+      const { state: next, effects } = transition(idle, event);
+      expect(effects).toEqual([]);
+      expect(withoutTrace(next)).toEqual(withoutTrace(idle));
     }
   });
 
@@ -207,16 +137,20 @@ describe("transition: flow basics", () => {
     expect(next.state.position.cellId).toBe("q1");
   });
 
-  it("ANSWER must target the current cell", () => {
+  it("ANSWER advances only when it targets the awaited cell", () => {
     const step = apply(init([question("q1", "Q One"), question("q2", "Q Two")]), {
       type: "START",
     });
-    const wrong = apply(step.state, { type: "ANSWER", cellId: "q2", value: "yes" });
-    expect(wrong.state.position.cellId).toBe("q1");
-    expect(wrong.state.answersByCycle[0]).toEqual({});
-    const right = apply(step.state, { type: "ANSWER", cellId: "q1", value: "yes" });
-    expect(right.state.answersByCycle[0]).toEqual({ q1: "yes" });
-    expect(right.state.position.cellId).toBe("q2");
+    // Off-target answers record without moving the cursor (mode-free rule).
+    const offTarget = apply(step.state, { type: "ANSWER", cellId: "q2", value: "later" });
+    expect(offTarget.state.position.cellId).toBe("q1");
+    expect(offTarget.state.answersByCycle[0]).toEqual({ q2: "later" });
+    // Answering a non-question id is fully ignored.
+    const bogus = apply(step.state, { type: "ANSWER", cellId: "nope", value: "x" });
+    expect(bogus.state.answersByCycle[0]).toEqual({});
+    const onTarget = apply(step.state, { type: "ANSWER", cellId: "q1", value: "yes" });
+    expect(onTarget.state.answersByCycle[0]).toEqual({ q1: "yes" });
+    expect(onTarget.state.position.cellId).toBe("q2");
   });
 
   it("required questions reject blank answers and block NEXT", () => {
@@ -263,11 +197,7 @@ describe("transition: producers and effects", () => {
   });
 
   it("a malformed inline command fails without emitting an effect", () => {
-    const bad: CommandCellLike = {
-      id: "c1",
-      type: "command",
-      payload: { format: "json", content: "{nope" },
-    };
+    const bad = cmd("c1", "{nope", "json");
     const step = apply(init([bad, md("m1")]), { type: "START" });
     expect(step.effects).toEqual([]);
     expect(step.state.status).toBe("pausedError");
@@ -815,19 +745,14 @@ describe("transition: determinism", () => {
     expect(replayed.state).toEqual(live.state);
   });
 
-  it("transition is referentially transparent", () => {
-    const state = apply(init([question("q1", "Pick"), cmd("c1")]), { type: "START" }).state;
-    const event: WorkbookEvent = { type: "ANSWER", cellId: "q1", value: "yes" };
-    const a = transition(state, event);
-    const b = transition(state, event);
-    expect(a.state).toEqual(b.state);
-    expect(a.effects).toEqual(b.effects);
-  });
-
-  it("transitions never mutate the previous state object", () => {
+  it("transition is pure: same result twice, input state untouched", () => {
     const before = apply(init([question("q1", "Pick"), cmd("c1")]), { type: "START" }).state;
     const frozen = JSON.parse(JSON.stringify(before)) as unknown;
-    apply(before, { type: "ANSWER", cellId: "q1", value: "yes" });
+    const event: WorkbookEvent = { type: "ANSWER", cellId: "q1", value: "yes" };
+    const a = transition(before, event);
+    const b = transition(before, event);
+    expect(a.state).toEqual(b.state);
+    expect(a.effects).toEqual(b.effects);
     expect(JSON.parse(JSON.stringify(before))).toEqual(frozen);
   });
 });

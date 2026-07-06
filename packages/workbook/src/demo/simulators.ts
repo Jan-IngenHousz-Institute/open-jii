@@ -1,27 +1,45 @@
 import type { CellNamespace } from "../namespace/build-cell-namespace";
-import type { ClockPort } from "../ports/clock";
-import type {
-  CommandExecutorPort,
-  CommandProgress,
-  CommandRunInput,
-} from "../ports/command-executor";
-import type { MacroRunnerPort } from "../ports/macro-runner";
-import type { OutputStorePort } from "../ports/output-store";
-import type { ProtocolCodeResolverPort } from "../ports/protocol-code-resolver";
+import type { ClockPort } from "../ports";
+import type { CommandExecutorPort, CommandProgress, CommandRunInput } from "../ports";
+import type { MacroRunnerPort } from "../ports";
+import type { OutputStorePort } from "../ports";
+import type { ProtocolCodeResolverPort } from "../ports";
+import type { RunnerState } from "../runner/state";
+import type { WorkbookRunner } from "../runner/workbook-runner";
 
 /** Deterministic injected time for tests and the demo. */
 export class FakeClock implements ClockPort {
-  private t = 0;
   now(): number {
-    return this.t;
-  }
-  tick(ms: number): void {
-    this.t += ms;
+    return 0;
   }
 }
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Resolve with the first runner state matching `pred`; reject on timeout. */
+export function waitFor(
+  runner: WorkbookRunner,
+  pred: (state: Readonly<RunnerState>) => boolean,
+  label = "condition",
+  timeoutMs = 2000,
+): Promise<Readonly<RunnerState>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsub();
+      reject(new Error(`waitFor(${label}) timed out in status ${runner.getState().status}`));
+    }, timeoutMs);
+    const check = (state: Readonly<RunnerState>) => {
+      if (pred(state)) {
+        clearTimeout(timer);
+        unsub();
+        resolve(state);
+      }
+    };
+    const unsub = runner.subscribe(check);
+    check(runner.getState());
+  });
 }
 
 export type MacroFn = (
@@ -95,7 +113,6 @@ interface PendingCommand {
 export interface ManualExecutor extends CommandExecutorPort {
   pending: PendingCommand[];
   settle(value: unknown): void;
-  fail(error: Error): void;
 }
 
 /** Executor whose promises the test settles by hand (cancel-race scenarios). */
@@ -113,11 +130,6 @@ export function createManualExecutor(): ManualExecutor {
       if (!next) throw new Error("No pending command to settle");
       next.resolve(value);
     },
-    fail(error) {
-      const next = pending.shift();
-      if (!next) throw new Error("No pending command to fail");
-      next.reject(error);
-    },
   };
 }
 
@@ -131,14 +143,9 @@ export function createCodeResolver(
   };
 }
 
-export interface MemoryOutputStore extends OutputStorePort {
-  entries: Map<string, unknown>;
-}
-
-export function createMemoryOutputStore(): MemoryOutputStore {
+export function createMemoryOutputStore(): OutputStorePort {
   const entries = new Map<string, unknown>();
   return {
-    entries,
     put(key, data) {
       const ref = `mem:${key}`;
       entries.set(ref, data);
