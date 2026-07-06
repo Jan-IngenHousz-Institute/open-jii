@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { getAllReleaseNotes } from "~/components/releases/fetch-public-release-notes";
 import { ReleasesChangelog } from "~/components/releases/releases-changelog";
+import { safeMetadata } from "~/lib/safe-metadata";
 
 import { Container } from "@repo/cms/container";
 import { locales } from "@repo/i18n/config";
@@ -12,19 +13,21 @@ interface ReleasesPageProps {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: ReleasesPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
+export function generateMetadata({ params }: ReleasesPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale } = await params;
+    const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
 
-  // The proxy middleware redirects unprefixed paths to `/{defaultLocale}/…`, so every hreflang
-  // (including the default locale) and the canonical must carry the locale prefix.
-  const languages = Object.fromEntries(locales.map((l) => [l, `/${l}/releases`]));
+    // The proxy middleware redirects unprefixed paths to `/{defaultLocale}/…`, so every hreflang
+    // (including the default locale) and the canonical must carry the locale prefix.
+    const languages = Object.fromEntries(locales.map((l) => [l, `/${l}/releases`]));
 
-  return {
-    title: t("releases.metaTitle"),
-    description: t("releases.metaDescription"),
-    alternates: { canonical: `/${locale}/releases`, languages },
-  };
+    return {
+      title: t("releases.metaTitle"),
+      description: t("releases.metaDescription"),
+      alternates: { canonical: `/${locale}/releases`, languages },
+    };
+  });
 }
 
 /**

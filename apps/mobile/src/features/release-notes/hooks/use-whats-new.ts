@@ -3,10 +3,12 @@ import { useMemo } from "react";
 import { useActiveReleaseNotes } from "~/features/release-notes/hooks/use-active-release-notes";
 import { tsr } from "~/shared/api/tsr";
 import { useTranslation } from "~/shared/i18n";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms/lib/__generated/sdk";
 
 const LAST_SEEN_QUERY_KEY = ["whats-new", "last-seen"];
+const log = createLogger("whats-new");
 
 /** Entries published after the user last opened the panel (null = never → all unread). */
 function countUnread(entries: ReleaseNoteFields[], lastSeenAt: string | null): number {
@@ -56,6 +58,10 @@ export function useWhatsNew(): UseWhatsNewResult {
       {
         onSuccess: () => {
           void queryClient.invalidateQueries({ queryKey: LAST_SEEN_QUERY_KEY });
+        },
+        onError: (error) => {
+          // Log quietly rather than surfacing an error to the user.
+          log.debug("failed to mark What's new as seen", { error });
         },
       },
     );
