@@ -59,10 +59,7 @@ const getLanguageColor = (language: string) => {
 
 function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
   const { data } = useMacroCompatibleProtocols(macroId, enabled);
-  const protocols: MacroProtocolEntry[] = useMemo(
-    () => (data?.body as MacroProtocolEntry[] | undefined) ?? [],
-    [data],
-  );
+  const protocols: MacroProtocolEntry[] = useMemo(() => data?.body ?? [], [data]);
 
   if (protocols.length === 0) return null;
 

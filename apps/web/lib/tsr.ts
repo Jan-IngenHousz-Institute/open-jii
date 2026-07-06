@@ -57,7 +57,7 @@ export function getContractError<T>(
 ): ContractError<TsrRoute<T>> | undefined {
   if (error instanceof Error) return undefined;
   if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
-  if (typeof (error as { status: unknown }).status !== "number") return undefined;
+  if (typeof error.status !== "number") return undefined;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
   return error as any;
 }

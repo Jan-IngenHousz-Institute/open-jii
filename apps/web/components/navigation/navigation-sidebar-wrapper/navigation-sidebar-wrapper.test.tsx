@@ -193,7 +193,7 @@ describe("NavigationSidebarWrapper", () => {
     const Component = await NavigationSidebarWrapper({
       locale: "en",
       className: "test-class",
-    } as never);
+    });
     render(Component);
 
     expect(screen.getByTestId("app-sidebar")).toBeInTheDocument();

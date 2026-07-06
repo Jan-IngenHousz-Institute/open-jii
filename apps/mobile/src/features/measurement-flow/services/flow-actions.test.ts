@@ -80,7 +80,7 @@ describe("advanceWithAnswer", () => {
     const node = {
       ...makeQuestion("q1"),
       content: { kind: "multi_choice", options: ["a", "b", "c"] },
-    } as FlowNode;
+    };
     mockFlowAnswersState.autoincrementSettings = { q1: true };
     advanceWithAnswer(node, "a");
     expect(mockSetAnswer).toHaveBeenCalledWith(1, "q1", "b");
@@ -90,7 +90,7 @@ describe("advanceWithAnswer", () => {
     const node = {
       ...makeQuestion("q1"),
       content: { kind: "multi_choice", options: ["a", "b", "c"] },
-    } as FlowNode;
+    };
     mockFlowAnswersState.autoincrementSettings = { q1: true };
     advanceWithAnswer(node, "c");
     expect(mockSetAnswer).toHaveBeenCalledWith(1, "q1", "a");

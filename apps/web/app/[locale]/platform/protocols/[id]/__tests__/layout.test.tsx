@@ -92,9 +92,7 @@ function renderLayout({
     | { data: null; isPending: boolean };
   children?: React.ReactNode;
 } = {}) {
-  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" } as ReturnType<
-    typeof useParams
-  >);
+  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" });
   vi.mocked(usePathname).mockReturnValue(`/en/platform/protocols/${protocolId}`);
   vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 

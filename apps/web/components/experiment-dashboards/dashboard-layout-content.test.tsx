@@ -45,7 +45,7 @@ function defaults(overrides: Partial<DashboardFormValues> = {}): DashboardFormVa
 
 function renderLayout({
   isAdmin = false,
-  initialMode = "view" as "view" | "edit",
+  initialMode = "view",
   dashboard = createExperimentDashboard(),
   formDefaults = defaults(),
 }: {

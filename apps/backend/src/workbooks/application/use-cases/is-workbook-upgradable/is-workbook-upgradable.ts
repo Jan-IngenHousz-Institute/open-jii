@@ -52,8 +52,7 @@ export class IsWorkbookUpgradableUseCase {
 
     // Key-order-insensitive: jsonb snapshots come back re-normalised (OJD-1626).
     const cellsChanged =
-      stableStringify(designOf(workbook.cells)) !==
-      stableStringify(designOf(latest.cells as WorkbookCell[]));
+      stableStringify(designOf(workbook.cells)) !== stableStringify(designOf(latest.cells));
     if (cellsChanged) return success(true);
 
     const protocolIds = [

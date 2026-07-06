@@ -35,7 +35,7 @@ function item(id: string, status: "pending" | "failed" | "successful"): Measurem
     questions: [],
     hasComment: false,
     dayKey: "2026-01-01",
-  } as MeasurementItem;
+  };
 }
 
 describe("mountOutboxBridge", () => {

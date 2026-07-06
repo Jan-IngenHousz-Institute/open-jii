@@ -56,9 +56,7 @@ export function StaticFlowViewer({
                 )}
               </div>
               {typeof node.content === "object" && "text" in node.content && (
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {(node.content as { text: string }).text}
-                </p>
+                <p className="text-muted-foreground mt-1 text-sm">{node.content.text}</p>
               )}
             </div>
           ))}

@@ -54,20 +54,35 @@ vi.mock("~/features/measurement-flow/stores/use-flow-answers-store", () => ({
   useFlowAnswersStore: { getState: () => ({ getAnswer: mockGetAnswer }) },
 }));
 
-const branchFlowNode = (id: string): FlowNode =>
-  ({ id, type: "branch", name: "Branch", content: {}, isStart: false }) as FlowNode;
-const plainFlowNode = (id: string): FlowNode =>
-  ({ id, type: "question", name: id, content: {}, isStart: false }) as FlowNode;
+const branchFlowNode = (id: string): FlowNode => ({
+  id,
+  type: "branch",
+  name: "Branch",
+  content: {},
+  isStart: false,
+});
+const plainFlowNode = (id: string): FlowNode => ({
+  id,
+  type: "question",
+  name: id,
+  content: {},
+  isStart: false,
+});
 // The active protocol is derived from the flow's measurement node (flowProtocolId).
-const measurementFlowNode = (id: string, protocolId: string): FlowNode =>
-  ({ id, type: "measurement", name: id, content: { protocolId }, isStart: false }) as FlowNode;
+const measurementFlowNode = (id: string, protocolId: string): FlowNode => ({
+  id,
+  type: "measurement",
+  name: id,
+  content: { protocolId },
+  isStart: false,
+});
 
 const qCell = (id: string): QuestionCell => ({
   id,
   type: "question",
   isCollapsed: false,
   name: id,
-  question: { kind: "number", text: id, required: false } as QuestionCell["question"],
+  question: { kind: "number", text: id, required: false },
   isAnswered: false,
 });
 const pCell = (id: string, protocolId: string): ProtocolCell => ({
