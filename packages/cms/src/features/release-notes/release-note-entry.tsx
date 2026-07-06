@@ -15,7 +15,7 @@ import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
-import { CtfRichText } from "../contentful/ctf-rich-text";
+import { CtfRichText, type EmbeddedEntryType } from "../contentful/ctf-rich-text";
 import { isVideoAsset } from "../contentful/ctf-video";
 import { getCategoryMeta } from "./category";
 import { SurfaceBadges } from "./surface-badges";
@@ -81,7 +81,9 @@ export const ReleaseNoteEntry: React.FC<ReleaseNoteEntryProps> = ({
 
   // Live updates reflect unpublished edits in the Contentful preview iframe in real time; inspector
   // props add click-to-edit overlays. No-ops outside preview. Mirrors the blog's ArticleTile.
-  const live = useContentfulLiveUpdates(entry);
+  const live = useContentfulLiveUpdates(entry) as Omit<ReleaseNoteFields, "body"> & {
+    body?: { json: Document; links: { entries: { block: EmbeddedEntryType[] } } } | null;
+  };
   const inspectorProps = useContentfulInspectorMode({ entryId: entry.sys.id });
 
   const category = getCategoryMeta(live.category);
@@ -209,7 +211,7 @@ export const ReleaseNoteEntry: React.FC<ReleaseNoteEntryProps> = ({
 
                 {canExpand && expanded && (
                   <div className="text-sm [&_*]:text-sm" {...inspectorProps({ fieldId: "body" })}>
-                    <CtfRichText json={live.body?.json as Document} />
+                    <CtfRichText json={live.body?.json as Document} links={live.body?.links} />
                   </div>
                 )}
               </div>

@@ -8561,7 +8561,44 @@ export type ComponentReleaseNoteFieldsFragment = {
   publishedAt?: any | null;
   active?: boolean | null;
   sys: { __typename?: "Sys"; id: string };
-  body?: { __typename?: "ComponentReleaseNoteBody"; json: any } | null;
+  body?: {
+    __typename?: "ComponentReleaseNoteBody";
+    json: any;
+    links: {
+      __typename?: "ComponentReleaseNoteBodyLinks";
+      entries: {
+        __typename?: "ComponentReleaseNoteBodyEntries";
+        block: Array<
+          | { __typename?: "ComponentAlert" }
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
   media?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
   cta?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
   seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
@@ -9234,6 +9271,13 @@ export const ComponentReleaseNoteFieldsFragmentDoc = gql`
     summary
     body {
       json
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
     }
     media {
       ...ImageFields
@@ -9249,6 +9293,7 @@ export const ComponentReleaseNoteFieldsFragmentDoc = gql`
     }
     active
   }
+  ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
   ${ButtonFieldsFragmentDoc}
   ${SeoFieldsFragmentDoc}

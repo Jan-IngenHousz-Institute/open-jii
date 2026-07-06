@@ -8,6 +8,13 @@ fragment ComponentReleaseNoteFields on ComponentReleaseNote {
   summary
   body {
     json
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
   }
   media {
     ...ImageFields

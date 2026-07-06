@@ -8,7 +8,7 @@ import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
-import { CtfRichText } from "../contentful/ctf-rich-text";
+import { CtfRichText, type EmbeddedEntryType } from "../contentful/ctf-rich-text";
 import { ReleaseHero } from "./release-hero";
 
 interface ReleaseNoteArticleProps {
@@ -24,7 +24,9 @@ interface ReleaseNoteArticleProps {
  */
 export const ReleaseNoteArticle: React.FC<ReleaseNoteArticleProps> = ({ entry }) => {
   // Live updates reflect unpublished edits in the Contentful preview iframe in real time.
-  const live = useContentfulLiveUpdates(entry);
+  const live = useContentfulLiveUpdates(entry) as Omit<ReleaseNoteFields, "body"> & {
+    body?: { json: Document; links: { entries: { block: EmbeddedEntryType[] } } } | null;
+  };
   const inspectorProps = useContentfulInspectorMode({ entryId: entry.sys.id });
 
   return (
@@ -33,7 +35,7 @@ export const ReleaseNoteArticle: React.FC<ReleaseNoteArticleProps> = ({ entry })
 
       {live.body?.json && (
         <div className="max-w-none" {...inspectorProps({ fieldId: "body" })}>
-          <CtfRichText json={live.body.json as Document} />
+          <CtfRichText json={live.body.json as Document} links={live.body.links} />
         </div>
       )}
     </article>
