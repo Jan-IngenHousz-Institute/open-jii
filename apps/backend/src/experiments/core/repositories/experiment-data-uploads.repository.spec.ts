@@ -265,6 +265,27 @@ describe("ExperimentDataUploadsRepository", () => {
       );
     });
 
+    it("skips completed rows with an unrecognized source_kind instead of failing the whole list", async () => {
+      const goodId = faker.string.uuid();
+      vi.spyOn(databricksPort, "getUploadMetadata").mockResolvedValue(
+        success({
+          columns: METADATA_COLUMNS,
+          // "xlsx" is a legacy kind that's since been removed from the enum.
+          rows: [row({ upload_id: "legacy", source_kind: "xlsx" }), row({ upload_id: goodId })],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      vi.spyOn(databricksPort, "getActiveUploads").mockResolvedValue(success([]));
+      vi.spyOn(databricksPort, "getFailedUploads").mockResolvedValue(success([]));
+
+      const result = await repository.listUploads({ experimentId });
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.map((u) => u.uploadId)).toEqual([goodId]);
+    });
+
     it("falls back to completed-only when getActiveUploads fails", async () => {
       vi.spyOn(databricksPort, "getUploadMetadata").mockResolvedValue(
         success({
