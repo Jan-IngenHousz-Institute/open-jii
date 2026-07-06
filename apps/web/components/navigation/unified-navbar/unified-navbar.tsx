@@ -236,6 +236,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
+    pathname.startsWith(`/${locale}/releases`) ||
     pathname.startsWith(`/${locale}/policies`);
 
   const showSolid = (isHomePage && !isIntersecting) || isGreenMode;

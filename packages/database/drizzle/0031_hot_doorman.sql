@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "whats_new_last_seen_at" timestamp;

@@ -189,6 +189,8 @@ export type AssetLinkingCollections = {
   componentFeatureCursorCollection?: Maybe<ComponentFeatureCursorCollection>;
   componentPartnerCollection?: Maybe<ComponentPartnerCollection>;
   componentPartnerCursorCollection?: Maybe<ComponentPartnerCursorCollection>;
+  componentReleaseNoteCollection?: Maybe<ComponentReleaseNoteCollection>;
+  componentReleaseNoteCursorCollection?: Maybe<ComponentReleaseNoteCursorCollection>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
   componentRichImageCursorCollection?: Maybe<ComponentRichImageCursorCollection>;
   componentSeoCollection?: Maybe<ComponentSeoCollection>;
@@ -252,6 +254,23 @@ export type AssetLinkingCollectionsComponentPartnerCollectionArgs = {
 };
 
 export type AssetLinkingCollectionsComponentPartnerCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentReleaseNoteCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentReleaseNoteCursorCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   pageNext?: InputMaybe<Scalars["String"]["input"]>;
@@ -990,6 +1009,8 @@ export type ComponentButtonLinkingCollections = {
   __typename?: "ComponentButtonLinkingCollections";
   componentAlertCollection?: Maybe<ComponentAlertCollection>;
   componentAlertCursorCollection?: Maybe<ComponentAlertCursorCollection>;
+  componentReleaseNoteCollection?: Maybe<ComponentReleaseNoteCollection>;
+  componentReleaseNoteCursorCollection?: Maybe<ComponentReleaseNoteCursorCollection>;
   entryCollection?: Maybe<EntryCollection>;
   entryCursorCollection?: Maybe<EntryCursorCollection>;
   footerCollection?: Maybe<FooterCollection>;
@@ -1016,6 +1037,29 @@ export type ComponentButtonLinkingCollectionsComponentAlertCursorCollectionArgs 
   locale?: InputMaybe<Scalars["String"]["input"]>;
   order?: InputMaybe<
     Array<InputMaybe<ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsComponentReleaseNoteCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsComponentReleaseNoteCollectionOrder>>
+  >;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentButtonLinkingCollectionsComponentReleaseNoteCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentButtonLinkingCollectionsComponentReleaseNoteCursorCollectionOrder>>
   >;
   pageNext?: InputMaybe<Scalars["String"]["input"]>;
   pagePrev?: InputMaybe<Scalars["String"]["input"]>;
@@ -1163,6 +1207,60 @@ export enum ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder
   TitleDesc = "title_DESC",
   TypeAsc = "type_ASC",
   TypeDesc = "type_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsComponentReleaseNoteCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  CategoryAsc = "category_ASC",
+  CategoryDesc = "category_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedAtAsc = "publishedAt_ASC",
+  PublishedAtDesc = "publishedAt_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SummaryAsc = "summary_ASC",
+  SummaryDesc = "summary_DESC",
+  SurfacesAsc = "surfaces_ASC",
+  SurfacesDesc = "surfaces_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentButtonLinkingCollectionsComponentReleaseNoteCursorCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  CategoryAsc = "category_ASC",
+  CategoryDesc = "category_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedAtAsc = "publishedAt_ASC",
+  PublishedAtDesc = "publishedAt_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SummaryAsc = "summary_ASC",
+  SummaryDesc = "summary_DESC",
+  SurfacesAsc = "surfaces_ASC",
+  SurfacesDesc = "surfaces_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
 }
 
 export enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
@@ -2138,6 +2236,292 @@ export enum ComponentPartnerOrder {
   UrlDesc = "url_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNote = Entry &
+  _Node & {
+    __typename?: "ComponentReleaseNote";
+    _id: Scalars["ID"]["output"];
+    active?: Maybe<Scalars["Boolean"]["output"]>;
+    body?: Maybe<ComponentReleaseNoteBody>;
+    category?: Maybe<Scalars["String"]["output"]>;
+    contentfulMetadata: ContentfulMetadata;
+    cta?: Maybe<ComponentButton>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<ComponentReleaseNoteLinkingCollections>;
+    media?: Maybe<Asset>;
+    publishedAt?: Maybe<Scalars["DateTime"]["output"]>;
+    seoFields?: Maybe<ComponentSeo>;
+    slug?: Maybe<Scalars["String"]["output"]>;
+    summary?: Maybe<Scalars["String"]["output"]>;
+    surfaces?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteActiveArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteBodyArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteCategoryArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteCtaArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteMediaArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNotePublishedAtArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteSeoFieldsArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentSeoFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteSlugArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteSummaryArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteSurfacesArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote) */
+export type ComponentReleaseNoteTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentReleaseNoteBody = {
+  __typename?: "ComponentReleaseNoteBody";
+  json: Scalars["JSON"]["output"];
+  links: ComponentReleaseNoteBodyLinks;
+};
+
+export type ComponentReleaseNoteBodyAssets = {
+  __typename?: "ComponentReleaseNoteBodyAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type ComponentReleaseNoteBodyEntries = {
+  __typename?: "ComponentReleaseNoteBodyEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type ComponentReleaseNoteBodyLinks = {
+  __typename?: "ComponentReleaseNoteBodyLinks";
+  assets: ComponentReleaseNoteBodyAssets;
+  entries: ComponentReleaseNoteBodyEntries;
+  resources: ComponentReleaseNoteBodyResources;
+};
+
+export type ComponentReleaseNoteBodyResources = {
+  __typename?: "ComponentReleaseNoteBodyResources";
+  block: Array<ComponentReleaseNoteBodyResourcesBlock>;
+  hyperlink: Array<ComponentReleaseNoteBodyResourcesHyperlink>;
+  inline: Array<ComponentReleaseNoteBodyResourcesInline>;
+};
+
+export type ComponentReleaseNoteBodyResourcesBlock = ResourceLink & {
+  __typename?: "ComponentReleaseNoteBodyResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type ComponentReleaseNoteBodyResourcesHyperlink = ResourceLink & {
+  __typename?: "ComponentReleaseNoteBodyResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type ComponentReleaseNoteBodyResourcesInline = ResourceLink & {
+  __typename?: "ComponentReleaseNoteBodyResourcesInline";
+  sys: ResourceSys;
+};
+
+export type ComponentReleaseNoteCollection = {
+  __typename?: "ComponentReleaseNoteCollection";
+  items: Array<Maybe<ComponentReleaseNote>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type ComponentReleaseNoteCursorCollection = {
+  __typename?: "ComponentReleaseNoteCursorCollection";
+  items: Array<Maybe<ComponentReleaseNote>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export type ComponentReleaseNoteFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ComponentReleaseNoteFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ComponentReleaseNoteFilter>>>;
+  active?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  active_not?: InputMaybe<Scalars["Boolean"]["input"]>;
+  body_contains?: InputMaybe<Scalars["String"]["input"]>;
+  body_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  body_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  category?: InputMaybe<Scalars["String"]["input"]>;
+  category_contains?: InputMaybe<Scalars["String"]["input"]>;
+  category_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  category_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  category_not?: InputMaybe<Scalars["String"]["input"]>;
+  category_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  category_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  cta?: InputMaybe<CfComponentButtonNestedFilter>;
+  cta_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  media_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  publishedAt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  publishedAt_gt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_gte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  publishedAt_lt?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_lte?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_not?: InputMaybe<Scalars["DateTime"]["input"]>;
+  publishedAt_not_in?: InputMaybe<Array<InputMaybe<Scalars["DateTime"]["input"]>>>;
+  seoFields?: InputMaybe<CfComponentSeoNestedFilter>;
+  seoFields_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  slug?: InputMaybe<Scalars["String"]["input"]>;
+  slug_contains?: InputMaybe<Scalars["String"]["input"]>;
+  slug_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  slug_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  slug_not?: InputMaybe<Scalars["String"]["input"]>;
+  slug_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  slug_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  summary?: InputMaybe<Scalars["String"]["input"]>;
+  summary_contains?: InputMaybe<Scalars["String"]["input"]>;
+  summary_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  summary_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  summary_not?: InputMaybe<Scalars["String"]["input"]>;
+  summary_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  summary_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  surfaces?: InputMaybe<Scalars["String"]["input"]>;
+  surfaces_contains?: InputMaybe<Scalars["String"]["input"]>;
+  surfaces_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  surfaces_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  surfaces_not?: InputMaybe<Scalars["String"]["input"]>;
+  surfaces_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  surfaces_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type ComponentReleaseNoteLinkingCollections = {
+  __typename?: "ComponentReleaseNoteLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+  entryCursorCollection?: Maybe<EntryCursorCollection>;
+};
+
+export type ComponentReleaseNoteLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentReleaseNoteLinkingCollectionsEntryCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export enum ComponentReleaseNoteOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  CategoryAsc = "category_ASC",
+  CategoryDesc = "category_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedAtAsc = "publishedAt_ASC",
+  PublishedAtDesc = "publishedAt_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SummaryAsc = "summary_ASC",
+  SummaryDesc = "summary_DESC",
+  SurfacesAsc = "surfaces_ASC",
+  SurfacesDesc = "surfaces_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
 export type ComponentRichImage = Entry &
   _Node & {
@@ -2399,12 +2783,37 @@ export type ComponentSeoFilter = {
 
 export type ComponentSeoLinkingCollections = {
   __typename?: "ComponentSeoLinkingCollections";
+  componentReleaseNoteCollection?: Maybe<ComponentReleaseNoteCollection>;
+  componentReleaseNoteCursorCollection?: Maybe<ComponentReleaseNoteCursorCollection>;
   entryCollection?: Maybe<EntryCollection>;
   entryCursorCollection?: Maybe<EntryCursorCollection>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
   pageBlogPostCursorCollection?: Maybe<PageBlogPostCursorCollection>;
   pageLandingCollection?: Maybe<PageLandingCollection>;
   pageLandingCursorCollection?: Maybe<PageLandingCursorCollection>;
+};
+
+export type ComponentSeoLinkingCollectionsComponentReleaseNoteCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentSeoLinkingCollectionsComponentReleaseNoteCollectionOrder>>
+  >;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type ComponentSeoLinkingCollectionsComponentReleaseNoteCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentSeoLinkingCollectionsComponentReleaseNoteCursorCollectionOrder>>
+  >;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 export type ComponentSeoLinkingCollectionsEntryCollectionArgs = {
@@ -2465,6 +2874,60 @@ export type ComponentSeoLinkingCollectionsPageLandingCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
+
+export enum ComponentSeoLinkingCollectionsComponentReleaseNoteCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  CategoryAsc = "category_ASC",
+  CategoryDesc = "category_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedAtAsc = "publishedAt_ASC",
+  PublishedAtDesc = "publishedAt_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SummaryAsc = "summary_ASC",
+  SummaryDesc = "summary_DESC",
+  SurfacesAsc = "surfaces_ASC",
+  SurfacesDesc = "surfaces_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export enum ComponentSeoLinkingCollectionsComponentReleaseNoteCursorCollectionOrder {
+  ActiveAsc = "active_ASC",
+  ActiveDesc = "active_DESC",
+  CategoryAsc = "category_ASC",
+  CategoryDesc = "category_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  PublishedAtAsc = "publishedAt_ASC",
+  PublishedAtDesc = "publishedAt_DESC",
+  SlugAsc = "slug_ASC",
+  SlugDesc = "slug_DESC",
+  SummaryAsc = "summary_ASC",
+  SummaryDesc = "summary_DESC",
+  SurfacesAsc = "surfaces_ASC",
+  SurfacesDesc = "surfaces_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
 
 export enum ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder {
   InternalNameAsc = "internalName_ASC",
@@ -6042,6 +6505,9 @@ export type Query = {
   componentPartner?: Maybe<ComponentPartner>;
   componentPartnerCollection?: Maybe<ComponentPartnerCollection>;
   componentPartnerCursorCollection?: Maybe<ComponentPartnerCursorCollection>;
+  componentReleaseNote?: Maybe<ComponentReleaseNote>;
+  componentReleaseNoteCollection?: Maybe<ComponentReleaseNoteCollection>;
+  componentReleaseNoteCursorCollection?: Maybe<ComponentReleaseNoteCursorCollection>;
   componentRichImage?: Maybe<ComponentRichImage>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
   componentRichImageCursorCollection?: Maybe<ComponentRichImageCursorCollection>;
@@ -6333,6 +6799,34 @@ export type QueryComponentPartnerCursorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
   where?: InputMaybe<ComponentPartnerFilter>;
+};
+
+export type QueryComponentReleaseNoteArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryComponentReleaseNoteCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentReleaseNoteOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentReleaseNoteFilter>;
+};
+
+export type QueryComponentReleaseNoteCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentReleaseNoteOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentReleaseNoteFilter>;
 };
 
 export type QueryComponentRichImageArgs = {
@@ -7309,6 +7803,7 @@ export type PageAboutFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7422,6 +7917,7 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7502,6 +7998,7 @@ export type PageCookiePolicyFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7560,6 +8057,7 @@ export type ComponentEmailFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | { __typename?: "ComponentRichImage" }
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7775,6 +8273,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7812,6 +8311,7 @@ export type PageHomeMissionFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -7951,6 +8451,7 @@ export type PagePoliciesFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -8010,6 +8511,7 @@ export type PageTermsAndConditionsFieldsFragment = {
           | { __typename?: "ComponentFaqQuestion" }
           | { __typename?: "ComponentFeature" }
           | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "Footer" }
@@ -8045,6 +8547,73 @@ export type PageTermsAndConditionsQuery = {
     __typename?: "PageTermsAndConditionsCollection";
     items: Array<
       ({ __typename?: "PageTermsAndConditions" } & PageTermsAndConditionsFieldsFragment) | null
+    >;
+  } | null;
+};
+
+export type ComponentReleaseNoteFieldsFragment = {
+  __typename: "ComponentReleaseNote";
+  slug?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  category?: string | null;
+  surfaces?: string | null;
+  publishedAt?: any | null;
+  active?: boolean | null;
+  sys: { __typename?: "Sys"; id: string };
+  body?: { __typename?: "ComponentReleaseNoteBody"; json: any } | null;
+  media?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
+  cta?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
+  seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
+};
+
+export type ActiveReleaseNotesQueryVariables = Exact<{
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  now: Scalars["DateTime"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  surfaces?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]["input"]>> | InputMaybe<Scalars["String"]["input"]>
+  >;
+}>;
+
+export type ActiveReleaseNotesQuery = {
+  __typename?: "Query";
+  componentReleaseNoteCollection?: {
+    __typename?: "ComponentReleaseNoteCollection";
+    items: Array<
+      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
+    >;
+  } | null;
+};
+
+export type AllReleaseNotesQueryVariables = Exact<{
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  now: Scalars["DateTime"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type AllReleaseNotesQuery = {
+  __typename?: "Query";
+  componentReleaseNoteCollection?: {
+    __typename?: "ComponentReleaseNoteCollection";
+    items: Array<
+      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
+    >;
+  } | null;
+};
+
+export type ReleaseNoteBySlugQueryVariables = Exact<{
+  slug: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type ReleaseNoteBySlugQuery = {
+  __typename?: "Query";
+  componentReleaseNoteCollection?: {
+    __typename?: "ComponentReleaseNoteCollection";
+    items: Array<
+      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
     >;
   } | null;
 };
@@ -8654,6 +9223,36 @@ export const PageTermsAndConditionsFieldsFragmentDoc = gql`
   }
   ${RichImageFieldsFragmentDoc}
 `;
+export const ComponentReleaseNoteFieldsFragmentDoc = gql`
+  fragment ComponentReleaseNoteFields on ComponentReleaseNote {
+    __typename
+    sys {
+      id
+    }
+    slug
+    title
+    summary
+    body {
+      json
+    }
+    media {
+      ...ImageFields
+    }
+    category
+    surfaces
+    publishedAt
+    cta {
+      ...ButtonFields
+    }
+    seoFields {
+      ...SeoFields
+    }
+    active
+  }
+  ${ImageFieldsFragmentDoc}
+  ${ButtonFieldsFragmentDoc}
+  ${SeoFieldsFragmentDoc}
+`;
 export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
     pageBlogPostCollection(limit: 100, locale: $locale) {
@@ -8962,6 +9561,56 @@ export const PageTermsAndConditionsDocument = gql`
     }
   }
   ${PageTermsAndConditionsFieldsFragmentDoc}
+`;
+export const ActiveReleaseNotesDocument = gql`
+  query activeReleaseNotes(
+    $preview: Boolean
+    $now: DateTime!
+    $locale: String
+    $surfaces: [String]
+  ) {
+    componentReleaseNoteCollection(
+      preview: $preview
+      locale: $locale
+      order: [publishedAt_DESC]
+      where: { active: true, surfaces_in: $surfaces, publishedAt_lte: $now }
+    ) {
+      items {
+        ...ComponentReleaseNoteFields
+      }
+    }
+  }
+  ${ComponentReleaseNoteFieldsFragmentDoc}
+`;
+export const AllReleaseNotesDocument = gql`
+  query allReleaseNotes($preview: Boolean, $now: DateTime!, $locale: String) {
+    componentReleaseNoteCollection(
+      preview: $preview
+      locale: $locale
+      order: [publishedAt_DESC]
+      where: { active: true, publishedAt_lte: $now }
+    ) {
+      items {
+        ...ComponentReleaseNoteFields
+      }
+    }
+  }
+  ${ComponentReleaseNoteFieldsFragmentDoc}
+`;
+export const ReleaseNoteBySlugDocument = gql`
+  query releaseNoteBySlug($slug: String!, $locale: String, $preview: Boolean) {
+    componentReleaseNoteCollection(
+      limit: 1
+      preview: $preview
+      locale: $locale
+      where: { slug: $slug, active: true }
+    ) {
+      items {
+        ...ComponentReleaseNoteFields
+      }
+    }
+  }
+  ${ComponentReleaseNoteFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument = gql`
   query sitemapPages($locale: String!) {
@@ -9356,6 +10005,60 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageTermsAndConditions",
+        "query",
+        variables,
+      );
+    },
+    activeReleaseNotes(
+      variables: ActiveReleaseNotesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ActiveReleaseNotesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ActiveReleaseNotesQuery>({
+            document: ActiveReleaseNotesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "activeReleaseNotes",
+        "query",
+        variables,
+      );
+    },
+    allReleaseNotes(
+      variables: AllReleaseNotesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AllReleaseNotesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AllReleaseNotesQuery>({
+            document: AllReleaseNotesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "allReleaseNotes",
+        "query",
+        variables,
+      );
+    },
+    releaseNoteBySlug(
+      variables: ReleaseNoteBySlugQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ReleaseNoteBySlugQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ReleaseNoteBySlugQuery>({
+            document: ReleaseNoteBySlugDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "releaseNoteBySlug",
         "query",
         variables,
       );

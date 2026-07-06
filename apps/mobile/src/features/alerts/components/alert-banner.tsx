@@ -4,6 +4,7 @@ import React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { CtfRichText } from "~/shared/ui/ctf-rich-text";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { resolveExternalUrl } from "~/shared/utils/resolve-external-url";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 import { getSeverity } from "@repo/cms/alert";
@@ -55,13 +56,16 @@ export interface AlertBannerProps {
   alert: ComponentAlertFieldsFragment;
   onDismiss: () => void;
   topPadding?: number;
+  /** App origin used to resolve a relative link url; full urls are opened as-is. */
+  baseUrl?: string;
 }
 
-export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
+export function AlertBanner({ alert, onDismiss, topPadding = 0, baseUrl }: AlertBannerProps) {
   const severity = getSeverity(alert);
   const themeColors = useThemeColors();
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;
+  const linkHref = alert.link?.url ? resolveExternalUrl(alert.link.url, baseUrl) : undefined;
 
   return (
     <View className={bannerVariants({ severity })}>
@@ -89,14 +93,10 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
           )}
         </Text>
 
-        {alert.link?.url && alert.link?.label && (
+        {linkHref && alert.link?.label && (
           <Pressable
             className={actionButtonVariants({ severity })}
-            onPress={() => {
-              if (alert.link?.url) {
-                void Linking.openURL(alert.link.url);
-              }
-            }}
+            onPress={() => void Linking.openURL(linkHref)}
           >
             <Text className="text-sm font-medium text-white">{alert.link.label}</Text>
             <ArrowRight size={14} color="white" />

@@ -4,6 +4,8 @@ import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sid
 import { PageContainer } from "@/components/page-container";
 import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
+import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -53,10 +55,12 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
+  const releaseNotes = await fetchWebReleaseNotes(locale);
+
   return (
     <SidebarProvider>
       <ActivityProvider>
-        <NavigationSidebarWrapper locale={locale} />
+        <NavigationSidebarWrapper locale={locale} releaseNotes={releaseNotes} />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
@@ -72,6 +76,7 @@ export default async function AppLayout({
         <CommandPalette locale={locale} />
         <Toaster />
         <ShortcutHint />
+        <WhatsNewSheet entries={releaseNotes} />
       </ActivityProvider>
     </SidebarProvider>
   );
