@@ -1,7 +1,10 @@
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
-import type { ComponentReleaseNoteFieldsFragment } from "@repo/cms";
+import type {
+  ComponentReleaseNoteDetailFieldsFragment,
+  ComponentReleaseNoteFieldsFragment,
+} from "@repo/cms";
 
 /**
  * Public-changelog fetchers for the openjii.org/releases page + per-note detail pages.
@@ -32,7 +35,7 @@ export const getReleaseNoteBySlug = cache(
     locale: string,
     slug: string,
     preview: boolean,
-  ): Promise<ComponentReleaseNoteFieldsFragment | null> => {
+  ): Promise<ComponentReleaseNoteDetailFieldsFragment | null> => {
     const { previewClient, client } = await getContentfulClients();
     const gqlClient = preview ? previewClient : client;
     const data = await gqlClient.releaseNoteBySlug({ slug, locale, preview });

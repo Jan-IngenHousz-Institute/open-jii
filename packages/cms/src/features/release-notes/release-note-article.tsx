@@ -7,7 +7,7 @@ import {
 import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
-import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
+import type { ComponentReleaseNoteDetailFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
 import { CtfRichText, type EmbeddedEntryType } from "../contentful/ctf-rich-text";
 import { ReleaseHero } from "./release-hero";
 

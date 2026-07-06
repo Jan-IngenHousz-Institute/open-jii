@@ -8561,9 +8561,16 @@ export type ComponentReleaseNoteFieldsFragment = {
   publishedAt?: any | null;
   active?: boolean | null;
   sys: { __typename?: "Sys"; id: string };
+  body?: { __typename?: "ComponentReleaseNoteBody"; json: any } | null;
+  media?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
+  cta?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
+  seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
+};
+
+export type ComponentReleaseNoteDetailFieldsFragment = {
+  __typename?: "ComponentReleaseNote";
   body?: {
     __typename?: "ComponentReleaseNoteBody";
-    json: any;
     links: {
       __typename?: "ComponentReleaseNoteBodyLinks";
       entries: {
@@ -8599,10 +8606,7 @@ export type ComponentReleaseNoteFieldsFragment = {
       };
     };
   } | null;
-  media?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
-  cta?: ({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null;
-  seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
-};
+} & ComponentReleaseNoteFieldsFragment;
 
 export type ActiveReleaseNotesQueryVariables = Exact<{
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -8650,7 +8654,7 @@ export type ReleaseNoteBySlugQuery = {
   componentReleaseNoteCollection?: {
     __typename?: "ComponentReleaseNoteCollection";
     items: Array<
-      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
+      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteDetailFieldsFragment) | null
     >;
   } | null;
 };
@@ -9271,13 +9275,6 @@ export const ComponentReleaseNoteFieldsFragmentDoc = gql`
     summary
     body {
       json
-      links {
-        entries {
-          block {
-            ...RichImageFields
-          }
-        }
-      }
     }
     media {
       ...ImageFields
@@ -9293,10 +9290,25 @@ export const ComponentReleaseNoteFieldsFragmentDoc = gql`
     }
     active
   }
-  ${RichImageFieldsFragmentDoc}
   ${ImageFieldsFragmentDoc}
   ${ButtonFieldsFragmentDoc}
   ${SeoFieldsFragmentDoc}
+`;
+export const ComponentReleaseNoteDetailFieldsFragmentDoc = gql`
+  fragment ComponentReleaseNoteDetailFields on ComponentReleaseNote {
+    ...ComponentReleaseNoteFields
+    body {
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
+    }
+  }
+  ${ComponentReleaseNoteFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
 `;
 export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
@@ -9651,11 +9663,11 @@ export const ReleaseNoteBySlugDocument = gql`
       where: { slug: $slug, active: true }
     ) {
       items {
-        ...ComponentReleaseNoteFields
+        ...ComponentReleaseNoteDetailFields
       }
     }
   }
-  ${ComponentReleaseNoteFieldsFragmentDoc}
+  ${ComponentReleaseNoteDetailFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument = gql`
   query sitemapPages($locale: String!) {

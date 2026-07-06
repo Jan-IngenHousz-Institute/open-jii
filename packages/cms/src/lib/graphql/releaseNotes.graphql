@@ -8,13 +8,6 @@ fragment ComponentReleaseNoteFields on ComponentReleaseNote {
   summary
   body {
     json
-    links {
-      entries {
-        block {
-          ...RichImageFields
-        }
-      }
-    }
   }
   media {
     ...ImageFields
@@ -29,6 +22,22 @@ fragment ComponentReleaseNoteFields on ComponentReleaseNote {
     ...SeoFields
   }
   active
+}
+
+# Full note including embedded rich-text media (inline images/videos). Used only for the
+# single-note detail page: expanding body links per item exceeds Contentful's query-complexity
+# limit across a whole collection, so the list/feed queries deliberately omit it.
+fragment ComponentReleaseNoteDetailFields on ComponentReleaseNote {
+  ...ComponentReleaseNoteFields
+  body {
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
+  }
 }
 
 # Active release notes for the caller's surface, newest first. `surfaces` is a single-select
@@ -77,7 +86,7 @@ query releaseNoteBySlug($slug: String!, $locale: String, $preview: Boolean) {
     where: { slug: $slug, active: true }
   ) {
     items {
-      ...ComponentReleaseNoteFields
+      ...ComponentReleaseNoteDetailFields
     }
   }
 }
