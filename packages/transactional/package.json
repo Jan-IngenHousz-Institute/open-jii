@@ -64,7 +64,7 @@
     "@types/react": "catalog:react19",
     "eslint": "catalog:",
     "react": "catalog:react19",
-    "react-email": "5.2.10",
+    "react-email": "6.6.6",
     "tsx": "^4.21.0",
     "typescript": "catalog:"
   }
