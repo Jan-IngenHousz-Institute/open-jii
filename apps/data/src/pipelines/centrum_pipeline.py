@@ -1248,19 +1248,15 @@ def raw_uploaded_data():
 def experiment_uploaded_data():
     """Gold: rows from raw_uploaded_data with a per-row id, ready for the enriched view.
 
-    id is upload_id plus the upload task's row_index, kept distinct so annotations
-    join uniquely. row_index is used instead of monotonically_increasing_id, which is
-    unsupported on streaming DataFrames.
+    id is an opaque hash of (upload_id, row_index), mirroring experiment_macro_data's
+    derived id; annotations join on it. xxhash64 rather than 32-bit hash() because a
+    single upload can exceed the ~77k rows where 32-bit collisions become likely.
     """
     return (
         dlt.read_stream(RAW_UPLOADED_DATA_TABLE)
         .withColumn(
             "id",
-            F.concat_ws(
-                ":",
-                F.col("upload_id"),
-                F.col("row_index").cast("string"),
-            ),
+            F.abs(F.xxhash64(F.col("upload_id"), F.col("row_index"))),
         )
         .select(
             F.col("id"),
