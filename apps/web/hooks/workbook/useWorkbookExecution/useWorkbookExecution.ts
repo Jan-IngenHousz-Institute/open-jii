@@ -7,13 +7,9 @@ import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { tsr } from "~/lib/tsr";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type {
-  OutputCell,
-  QuestionCell,
-  WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import type { CellRunStatus, RunnerState, WorkbookRunnerPorts } from "@repo/workbook";
-import { WorkbookRunner, createInitialState, isProducer, ownerCellId } from "@repo/workbook";
+import { carryOverState, effectiveCellRuns, mergeCellsView, WorkbookRunner } from "@repo/workbook";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -44,187 +40,6 @@ function toExecutionStatus(status: CellRunStatus): CellExecutionStatus {
       // stale / cancelled / interrupted re-arm the cell.
       return "idle";
   }
-}
-
-function toExecutionStates(
-  state: Readonly<RunnerState> | null,
-  promptingCellId: string | null,
-): Record<string, CellExecutionState> {
-  const states: Record<string, CellExecutionState> = {};
-  if (state) {
-    for (const [key, run] of Object.entries(state.cellRuns)) {
-      if (!run || ownerCellId(key) !== key) continue;
-      states[key] = {
-        status: toExecutionStatus(run.status),
-        error: run.error,
-        executionOrder: run.executionOrder,
-      };
-    }
-    // A running dispatch step (macro-constructed command) shows on its macro.
-    for (const [key, run] of Object.entries(state.cellRuns)) {
-      const owner = ownerCellId(key);
-      if (!run || owner === key || run.status !== "running") continue;
-      states[owner] = { ...states[owner], status: "running" };
-    }
-  }
-  if (promptingCellId) {
-    states[promptingCellId] = { ...states[promptingCellId], status: "running" };
-  }
-  return states;
-}
-
-/** Seed runner outputs from persisted output cells so macros/branches see them. */
-function outputsFromCells(cells: WorkbookCell[]): RunnerState["outputs"] {
-  const byId = new Map(cells.map((c) => [c.id, c]));
-  const outputs: RunnerState["outputs"] = {};
-  for (const cell of cells) {
-    if (cell.type !== "output" || cell.data == null) continue;
-    const owner = byId.get(ownerCellId(cell.producedBy));
-    if (owner && isProducer(owner)) outputs[cell.producedBy] = { v: cell.data };
-  }
-  return outputs;
-}
-
-/**
- * Initial runner state for the current cell array. Outputs seed from persisted
- * output cells; when a previous runner existed, its outputs, run records and
- * counters carry over (keyed by stable cell ids) so edits do not reset them.
- */
-function buildRestoredState(
-  cells: WorkbookCell[],
-  prev: Readonly<RunnerState> | null,
-  deviceFamily: SensorFamily,
-): RunnerState {
-  const base = createInitialState({ cells, mode: "notebook", deviceFamily });
-  const outputs = outputsFromCells(cells);
-  if (!prev) return { ...base, outputs };
-
-  const ids = new Set(cells.map((c) => c.id));
-  for (const [key, entry] of Object.entries(prev.outputs)) {
-    if (entry && ids.has(ownerCellId(key))) outputs[key] = entry;
-  }
-  const cellRuns: RunnerState["cellRuns"] = {};
-  for (const [key, run] of Object.entries(prev.cellRuns)) {
-    if (run && run.status !== "running" && ids.has(ownerCellId(key))) cellRuns[key] = run;
-  }
-  return {
-    ...base,
-    outputs,
-    cellRuns,
-    execCounter: prev.execCounter,
-    effectSeq: prev.effectSeq,
-  };
-}
-
-function sameStringArray(a: string[] | undefined, b: string[] | undefined): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.length === b.length && a.every((v, i) => v === b[i]);
-}
-
-function sameOutputCell(existing: OutputCell, desired: OutputCell): boolean {
-  return (
-    Object.is(existing.data, desired.data) &&
-    existing.executionTime === desired.executionTime &&
-    sameStringArray(existing.messages, desired.messages)
-  );
-}
-
-function lastOrder(run: { executionOrder: number[] } | undefined): number {
-  return run?.executionOrder[run.executionOrder.length - 1] ?? 0;
-}
-
-/**
- * Fold runner results into the latest cell array: one output cell per produced
- * value (or per-cell error) inserted after its producer, replacing any previous
- * output for the same producer; branch cells get `evaluatedPathId` plus a
- * message output. Unmanaged output cells (question answers, orphans) pass
- * through untouched, and unchanged outputs keep their existing cell objects so
- * repeated merges are stable.
- */
-function mergeRunnerView(latest: WorkbookCell[], state: Readonly<RunnerState>): WorkbookCell[] {
-  const byId = new Map(latest.map((c) => [c.id, c]));
-  const managed = new Map<string, OutputCell>();
-  const byOwner = new Map<string, string[]>();
-
-  const keys = new Set(Object.keys(state.outputs));
-  for (const [key, run] of Object.entries(state.cellRuns)) {
-    if (run?.status === "error" && run.error !== undefined) keys.add(key);
-  }
-
-  for (const key of keys) {
-    const ownerId = ownerCellId(key);
-    const owner = byId.get(ownerId);
-    if (!owner || !isProducer(owner)) continue;
-    const run = state.cellRuns[key];
-    const entry = state.outputs[key];
-    const failed = run?.status === "error" && run.error !== undefined;
-    if (entry === undefined && !failed) continue;
-    managed.set(key, {
-      id: `out:${key}:${state.cycle}:${lastOrder(run)}`,
-      type: "output",
-      isCollapsed: false,
-      producedBy: key,
-      data: entry?.v,
-      executionTime: run?.executionTimeMs,
-      messages: failed ? [run.error ?? "Execution failed"] : undefined,
-    });
-    byOwner.set(ownerId, [...(byOwner.get(ownerId) ?? []), key]);
-  }
-
-  for (const cell of latest) {
-    if (cell.type !== "branch") continue;
-    const run = state.cellRuns[cell.id];
-    if (run?.status !== "completed") continue;
-    const matched = run.lastMatchedPathId
-      ? cell.paths.find((p) => p.id === run.lastMatchedPathId)
-      : undefined;
-    managed.set(cell.id, {
-      id: `out:${cell.id}:${state.cycle}:${lastOrder(run)}`,
-      type: "output",
-      isCollapsed: false,
-      producedBy: cell.id,
-      data: undefined,
-      executionTime: 0,
-      messages: [matched ? `Matched: ${matched.label || "Unnamed path"}` : "No path matched"],
-    });
-    byOwner.set(cell.id, [cell.id]);
-  }
-
-  const existingByKey = new Map<string, OutputCell>();
-  for (const cell of latest) {
-    if (cell.type === "output" && managed.has(cell.producedBy)) {
-      existingByKey.set(cell.producedBy, cell);
-    }
-  }
-
-  const result: WorkbookCell[] = [];
-  for (const cell of latest) {
-    if (cell.type === "output" && managed.has(cell.producedBy)) continue;
-    let rendered = cell;
-    if (cell.type === "branch") {
-      const run = state.cellRuns[cell.id];
-      if (run?.status === "completed" && cell.evaluatedPathId !== run.lastMatchedPathId) {
-        rendered = { ...cell, evaluatedPathId: run.lastMatchedPathId };
-      }
-    }
-    result.push(rendered);
-    const ownedKeys = byOwner.get(cell.id);
-    if (!ownedKeys) continue;
-    // Owner first, dispatch step second, mirroring execution order.
-    ownedKeys.sort((a, b) => a.length - b.length);
-    for (const key of ownedKeys) {
-      const desired = managed.get(key);
-      if (!desired) continue;
-      const existing = existingByKey.get(key);
-      result.push(existing && sameOutputCell(existing, desired) ? existing : desired);
-    }
-  }
-  return result;
-}
-
-function sameCellArray(a: WorkbookCell[], b: WorkbookCell[]): boolean {
-  return a.length === b.length && a.every((cell, i) => cell === b[i]);
 }
 
 /**
@@ -353,8 +168,9 @@ export function useWorkbookExecution({
   const handleRunnerState = useCallback((state: Readonly<RunnerState>) => {
     setRunnerState(state);
     const latest = cellsRef.current;
-    const merged = mergeRunnerView(latest, state);
-    if (!sameCellArray(merged, latest)) onCellsChangeRef.current(merged);
+    const merged = mergeCellsView(latest, state);
+    // mergeCellsView returns `latest` itself when nothing changed.
+    if (merged !== latest) onCellsChangeRef.current(merged as WorkbookCell[]);
   }, []);
 
   const ensureRunner = useCallback((): WorkbookRunner | null => {
@@ -371,12 +187,14 @@ export function useWorkbookExecution({
     }
     const prev = existing?.getState() ?? null;
     disposeRunner();
+    const options = {
+      cells: current,
+      mode: "notebook",
+      deviceFamily: sensorFamilyRef.current,
+    } as const;
     let runner: WorkbookRunner;
     try {
-      runner = new WorkbookRunner(
-        { cells: current, ports, mode: "notebook", deviceFamily: sensorFamilyRef.current },
-        buildRestoredState(current, prev, sensorFamilyRef.current),
-      );
+      runner = new WorkbookRunner({ ...options, ports }, carryOverState(options, prev));
     } catch (err) {
       console.error("Workbook runner init failed:", err);
       setRunnerState(null);
@@ -461,10 +279,17 @@ export function useWorkbookExecution({
     onCellsChangeRef.current(cellsRef.current.filter((c) => c.type !== "output"));
   }, [disposeRunner]);
 
-  const executionStates = useMemo(
-    () => toExecutionStates(runnerState, promptingCellId),
-    [runnerState, promptingCellId],
-  );
+  const executionStates = useMemo(() => {
+    const states: Record<string, CellExecutionState> = {};
+    for (const [id, run] of Object.entries(effectiveCellRuns(runnerState, promptingCellId))) {
+      states[id] = {
+        status: toExecutionStatus(run.status),
+        error: run.error,
+        executionOrder: run.executionOrder,
+      };
+    }
+    return states;
+  }, [runnerState, promptingCellId]);
 
   return {
     isConnected,

@@ -1,37 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
 import type { CommandProgress } from "../driver-base";
+import type { MockTransport } from "../testing/mock-transport";
+import { createMockTransport } from "../testing/mock-transport";
 import { MULTISPEQ_FRAMING } from "./config";
 import { MultispeqDriver } from "./driver";
 
-function createMockTransport(): ITransportAdapter & {
-  simulateData: (data: string) => void;
-} {
-  let dataCallback: ((data: string) => void) | undefined;
+const TIMEOUT = MULTISPEQ_FRAMING.DEFAULT_TIMEOUT;
 
-  return {
-    isConnected: vi.fn().mockReturnValue(true),
-    send: vi.fn().mockResolvedValue(undefined),
-    onDataReceived: vi.fn((cb: (data: string) => void) => {
-      dataCallback = cb;
-    }),
-    onStatusChanged: vi.fn(),
-    disconnect: vi.fn().mockResolvedValue(undefined),
-    simulateData(data: string) {
-      dataCallback?.(data);
-    },
-  };
-}
+let driver: MultispeqDriver;
+let transport: MockTransport;
+let logger: Logger;
 
-function createMockLogger(): Logger {
-  return {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
+beforeEach(() => {
+  logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  driver = new MultispeqDriver(logger);
+  transport = createMockTransport();
+  driver.initialize(transport);
+});
+
+/** Make the next send() reply with `chunks`, delivered asynchronously. */
+function replyWith(...chunks: string[]) {
+  vi.mocked(transport.send).mockImplementation(() => {
+    setTimeout(() => {
+      for (const chunk of chunks) transport.simulateData(chunk);
+    }, 0);
+    return Promise.resolve();
+  });
 }
 
 /**
@@ -40,82 +36,51 @@ function createMockLogger(): Logger {
  * compatibility contract: renaming them breaks command tracing and progress.
  */
 describe("MultispeqDriver log contract", () => {
-  let driver: MultispeqDriver;
-  let transport: ReturnType<typeof createMockTransport>;
-  let logger: Logger;
+  it.each([
+    {
+      name: '"tx" with command and timeoutMs fields',
+      cmd: "test-cmd",
+      chunks: ['{"ok":1}ABCD1234\n'],
+      calls: [["tx", { command: "test-cmd", timeoutMs: TIMEOUT }]],
+    },
+    {
+      name: '"rx chunk" with a chars field per fragment',
+      cmd: "cmd",
+      chunks: ['{"va', 'lue":7}', "ABCD1234\n"],
+      calls: [
+        ["rx chunk", { chars: 4, buffered: 4 }],
+        ["rx chunk", { chars: 7, buffered: 11 }],
+        ["rx chunk", { chars: 9, buffered: 20 }],
+      ],
+    },
+    {
+      name: '"rx complete" with chars and checksum fields',
+      cmd: "cmd",
+      chunks: ['{"value":42}ABCD1234\n'],
+      calls: [["rx complete", { chars: 20, checksum: "ABCD1234" }]],
+    },
+    {
+      name: '"rx complete" with checksum "none" for plain-text replies',
+      cmd: "battery",
+      chunks: ["battery:85\n"],
+      calls: [["rx complete", { chars: 10, checksum: "none" }]],
+    },
+    {
+      name: '"command completed" with elapsedMs and timeoutMs fields',
+      cmd: "cmd",
+      chunks: ['{"ok":1}ABCD1234\n'],
+      calls: [
+        ["command completed", { elapsedMs: expect.any(Number) as number, timeoutMs: TIMEOUT }],
+      ],
+    },
+  ])("emits debug $name", async ({ cmd, chunks, calls }) => {
+    replyWith(...chunks);
 
-  beforeEach(() => {
-    logger = createMockLogger();
-    driver = new MultispeqDriver(logger);
-    transport = createMockTransport();
-    driver.initialize(transport);
-  });
+    await driver.execute(cmd);
 
-  it('emits debug "tx" with command and timeoutMs fields', async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"ok":1}ABCD1234\n'), 0);
-      return Promise.resolve();
-    });
-
-    await driver.execute("test-cmd");
-
-    expect(logger.debug).toHaveBeenCalledWith("tx", {
-      command: "test-cmd",
-      timeoutMs: MULTISPEQ_FRAMING.DEFAULT_TIMEOUT,
-    });
-  });
-
-  it('emits debug "rx chunk" with a chars field per fragment', async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => {
-        transport.simulateData('{"va');
-        transport.simulateData('lue":7}');
-        transport.simulateData("ABCD1234\n");
-      }, 0);
-      return Promise.resolve();
-    });
-
-    await driver.execute("cmd");
-
-    expect(logger.debug).toHaveBeenCalledWith("rx chunk", { chars: 4, buffered: 4 });
-    expect(logger.debug).toHaveBeenCalledWith("rx chunk", { chars: 7, buffered: 11 });
-    expect(logger.debug).toHaveBeenCalledWith("rx chunk", { chars: 9, buffered: 20 });
-  });
-
-  it('emits debug "rx complete" with chars and checksum fields', async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"value":42}ABCD1234\n'), 0);
-      return Promise.resolve();
-    });
-
-    await driver.execute("cmd");
-
-    expect(logger.debug).toHaveBeenCalledWith("rx complete", { chars: 20, checksum: "ABCD1234" });
-  });
-
-  it('reports checksum "none" in "rx complete" for plain-text replies', async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData("battery:85\n"), 0);
-      return Promise.resolve();
-    });
-
-    await driver.execute("battery");
-
-    expect(logger.debug).toHaveBeenCalledWith("rx complete", { chars: 10, checksum: "none" });
-  });
-
-  it('emits debug "command completed" with elapsedMs and timeoutMs fields', async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"ok":1}ABCD1234\n'), 0);
-      return Promise.resolve();
-    });
-
-    await driver.execute("cmd");
-
-    expect(logger.debug).toHaveBeenCalledWith("command completed", {
-      elapsedMs: expect.any(Number) as number,
-      timeoutMs: MULTISPEQ_FRAMING.DEFAULT_TIMEOUT,
-    });
+    for (const [message, fields] of calls) {
+      expect(logger.debug).toHaveBeenCalledWith(message, fields);
+    }
   });
 
   it('emits warn "command failed" with elapsedMs and err fields on transport error', async () => {
@@ -133,11 +98,11 @@ describe("MultispeqDriver log contract", () => {
     vi.useFakeTimers();
     try {
       const resultPromise = driver.execute("cmd");
-      await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
+      await vi.advanceTimersByTimeAsync(TIMEOUT + 1);
       await resultPromise;
 
       expect(logger.warn).toHaveBeenCalledWith("response timeout, sending cancel", {
-        timeoutMs: MULTISPEQ_FRAMING.DEFAULT_TIMEOUT,
+        timeoutMs: TIMEOUT,
       });
     } finally {
       vi.useRealTimers();
@@ -156,13 +121,9 @@ describe("MultispeqDriver log contract", () => {
   });
 
   it("summarizes long commands in the tx log", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"ok":1}ABCD1234\n'), 0);
-      return Promise.resolve();
-    });
-    const longCommand = "x".repeat(500);
+    replyWith('{"ok":1}ABCD1234\n');
 
-    await driver.execute(longCommand);
+    await driver.execute("x".repeat(500));
 
     const txCall = vi.mocked(logger.debug).mock.calls.find(([msg]) => msg === "tx");
     const fields = txCall?.[1] as { command: string };
@@ -172,11 +133,7 @@ describe("MultispeqDriver log contract", () => {
 });
 
 describe("MultispeqDriver getDeviceIdentity", () => {
-  it("maps battery and hello replies onto a multispeq DeviceIdentity", async () => {
-    const driver = new MultispeqDriver();
-    const transport = createMockTransport();
-    driver.initialize(transport);
-
+  it("maps battery and hello replies onto a DeviceIdentity; omits fields when silent", async () => {
     let callCount = 0;
     vi.mocked(transport.send).mockImplementation(() => {
       callCount++;
@@ -184,51 +141,32 @@ describe("MultispeqDriver getDeviceIdentity", () => {
       setTimeout(() => transport.simulateData(reply), 0);
       return Promise.resolve();
     });
-
     const identity = await driver.getDeviceIdentity();
-
     expect(identity).toEqual({
       family: "multispeq",
       name: "MSQ-Device",
       batteryPercent: 88,
       raw: { device_battery: 88, device_name: "MSQ-Device" },
     });
-  });
 
-  it("omits name and battery when the device stays silent", async () => {
-    const driver = new MultispeqDriver();
-    const transport = createMockTransport();
-    driver.initialize(transport);
     vi.mocked(transport.send).mockRejectedValue(new Error("timeout"));
-
-    const identity = await driver.getDeviceIdentity();
-
-    expect(identity.family).toBe("multispeq");
-    expect(identity.name).toBeUndefined();
-    expect(identity.batteryPercent).toBeUndefined();
-    expect(identity.raw).toEqual({});
+    const silent = await driver.getDeviceIdentity();
+    expect(silent.family).toBe("multispeq");
+    expect(silent.name).toBeUndefined();
+    expect(silent.batteryPercent).toBeUndefined();
+    expect(silent.raw).toEqual({});
   });
 });
 
 describe("MultispeqDriver progress emissions", () => {
-  it('emits "sent" then a throttled "receiving" stream across a chunked reply', async () => {
+  it('emits "sent" then a throttled "receiving" stream; unsubscribed listeners stay silent', async () => {
     vi.useFakeTimers();
     try {
-      const driver = new MultispeqDriver();
-      const transport = createMockTransport();
-      driver.initialize(transport);
-
-      vi.mocked(transport.send).mockImplementation(() => {
-        setTimeout(() => {
-          transport.simulateData('{"va');
-          transport.simulateData('lue":7}');
-          transport.simulateData("ABCD1234\n");
-        }, 0);
-        return Promise.resolve();
-      });
-
+      replyWith('{"va', 'lue":7}', "ABCD1234\n");
       const events: CommandProgress[] = [];
       driver.onProgress((p) => events.push(p));
+      const unsubscribed: CommandProgress[] = [];
+      driver.onProgress((p) => unsubscribed.push(p))();
 
       const resultPromise = driver.execute("cmd");
       await vi.advanceTimersByTimeAsync(1);
@@ -241,27 +179,9 @@ describe("MultispeqDriver progress emissions", () => {
       expect(events[0]).toMatchObject({ chunks: 0, bytes: 0 });
       expect(events[1]).toMatchObject({ chunks: 1, bytes: 4 });
       expect(events[1]?.lastEventAt).toBeGreaterThan(0);
+      expect(unsubscribed).toHaveLength(0);
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it("stops notifying after unsubscribe", async () => {
-    const driver = new MultispeqDriver();
-    const transport = createMockTransport();
-    driver.initialize(transport);
-
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"ok":1}ABCD1234\n'), 0);
-      return Promise.resolve();
-    });
-
-    const events: CommandProgress[] = [];
-    const unsubscribe = driver.onProgress((p) => events.push(p));
-    unsubscribe();
-
-    await driver.execute("cmd");
-
-    expect(events).toHaveLength(0);
   });
 });

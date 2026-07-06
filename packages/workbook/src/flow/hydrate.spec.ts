@@ -25,18 +25,19 @@ describe("normalizeOutputData", () => {
 });
 
 describe("hydrateCells", () => {
-  it("overlays current-cycle answers and fills program output cells", () => {
-    const hydrated = hydrateCells(cells, { q1: "yes" }, { c1: { v: { level: 82 } } });
+  it("overlays answers, fills program output cells, and appends synthetic ones", () => {
+    const hydrated = hydrateCells(
+      cells,
+      { q1: "yes" },
+      { c1: { v: { level: 82 } }, c2: { v: { sample: [{ ok: 1 }] } } },
+    );
     const q = hydrated.find((c) => c.id === "q1");
     if (q?.type !== "question") throw new Error("q1 missing");
     expect(q.answer).toBe("yes");
     const out = hydrated.find((c) => c.id === "out_c1");
     if (out?.type !== "output") throw new Error("out_c1 missing");
     expect(out.data).toEqual({ level: 82 });
-  });
-
-  it("appends synthetic output cells for producers without one", () => {
-    const hydrated = hydrateCells(cells, {}, { c2: { v: { sample: [{ ok: 1 }] } } });
+    // c2 has no authored output cell: a synthetic one appends.
     const synthetic = hydrated.find((c) => c.type === "output" && c.producedBy === "c2");
     if (synthetic?.type !== "output") throw new Error("synthetic missing");
     expect(synthetic.data).toEqual([{ ok: 1 }]);

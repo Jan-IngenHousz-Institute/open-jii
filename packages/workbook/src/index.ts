@@ -44,8 +44,12 @@ export type {
 } from "./runner/events";
 export type { Effect, TransitionResult } from "./runner/effects";
 export { transition } from "./runner/reducer";
-export { ownerCellId } from "./runner/cell-entry";
+export { lastOrder, ownerCellId } from "./runner/cell-entry";
 export { isProducer } from "./flow/flow-utils";
+
+export type { CellViewRun } from "./runner/host-view";
+export { carryOverState, effectiveCellRuns } from "./runner/host-view";
+export { mergeCellsView, outputsFromCells } from "./runner/host-view";
 
 export type { SnapshotOutputEntry, WorkbookSnapshot } from "./runner/snapshot";
 export { hashCells, parseSnapshot, SnapshotError } from "./runner/snapshot";

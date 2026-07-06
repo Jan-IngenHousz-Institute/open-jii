@@ -38,19 +38,16 @@ describe("flow-utils", () => {
     expect(prevCellId(cells, "md")).toBeNull();
   });
 
-  it("goto targets must resolve to executable cells", () => {
+  it("goto targets must resolve to executable cells; dispatch ids derive from the macro", () => {
     expect(resolveGotoCellId(cells, "c")).toBe("c");
     expect(resolveGotoCellId(cells, "out")).toBeNull();
     expect(resolveGotoCellId(cells, "ghost")).toBeNull();
+    expect(dispatchStepId("a")).toBe("a__dispatch");
   });
 
   it("the nearest upstream producer is a protocol or command, not a macro", () => {
     expect(nearestUpstreamProducerId(cells, "a")).toBe("c");
     expect(nearestUpstreamProducerId(cells, "c")).toBe("p");
     expect(nearestUpstreamProducerId(cells, "md")).toBeNull();
-  });
-
-  it("dispatch step ids derive from the macro cell id", () => {
-    expect(dispatchStepId("a")).toBe("a__dispatch");
   });
 });

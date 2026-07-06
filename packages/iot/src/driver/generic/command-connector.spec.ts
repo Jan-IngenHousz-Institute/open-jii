@@ -1,31 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ITransportAdapter } from "../../transport/interface";
 import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
+import type { MockTransport } from "../testing/mock-transport";
+import { createMockTransport } from "../testing/mock-transport";
 import { GenericCommandConnector } from "./command-connector";
-
-function createMockTransport(): ITransportAdapter & {
-  simulateData: (data: string) => void;
-} {
-  let dataCallback: ((data: string) => void) | undefined;
-
-  return {
-    isConnected: vi.fn().mockReturnValue(true),
-    send: vi.fn().mockResolvedValue(undefined),
-    onDataReceived: vi.fn((cb: (data: string) => void) => {
-      dataCallback = cb;
-    }),
-    onStatusChanged: vi.fn(),
-    disconnect: vi.fn().mockResolvedValue(undefined),
-    simulateData(data: string) {
-      dataCallback?.(data);
-    },
-  };
-}
 
 describe("GenericCommandConnector", () => {
   let connector: GenericCommandConnector;
-  let transport: ReturnType<typeof createMockTransport>;
+  let transport: MockTransport;
 
   beforeEach(() => {
     connector = new GenericCommandConnector();
@@ -33,83 +15,71 @@ describe("GenericCommandConnector", () => {
     connector.initialize(transport);
   });
 
+  /** Make the next send() reply with `chunks`, delivered asynchronously. */
+  function replyWith(...chunks: string[]) {
+    vi.mocked(transport.send).mockImplementation(() => {
+      setTimeout(() => {
+        for (const chunk of chunks) transport.simulateData(chunk);
+      }, 0);
+      return Promise.resolve();
+    });
+  }
+
   it("exposes the generic family", () => {
     expect(connector.family).toBe("generic");
   });
 
-  it("sends string commands verbatim with a newline", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData("OK\n"), 0);
-      return Promise.resolve();
-    });
+  it.each([
+    {
+      name: "sends string commands verbatim with a newline",
+      cmd: "RAW_CMD" as string | object,
+      chunks: ["OK\n"],
+      sent: "RAW_CMD\n",
+      data: "OK" as unknown,
+    },
+    {
+      name: "JSON-stringifies object commands",
+      cmd: { command: "GO", speed: 3 },
+      chunks: ["ack\n"],
+      sent: '{"command":"GO","speed":3}\n',
+      data: "ack",
+    },
+    {
+      name: "assembles a reply from multiple chunks up to the newline",
+      cmd: "cmd",
+      chunks: ['{"a"', ":1}", "\n"],
+      data: { a: 1 },
+    },
+    {
+      name: "parses JSON reply lines into objects",
+      cmd: "cmd",
+      chunks: ['{"status":"done","v":2}\n'],
+      data: { status: "done", v: 2 },
+    },
+    {
+      name: "returns plain-text reply lines as strings, stripping a trailing CR",
+      cmd: "cmd",
+      chunks: ["hello world\r\n"],
+      data: "hello world",
+    },
+  ])("$name", async ({ cmd, chunks, sent, data }) => {
+    replyWith(...chunks);
 
-    const result = await connector.execute("RAW_CMD");
+    const result = await connector.execute(cmd);
 
-    expect(transport.send).toHaveBeenCalledWith("RAW_CMD\n");
+    if (sent) expect(transport.send).toHaveBeenCalledWith(sent);
     expect(result.success).toBe(true);
-    expect(result.data).toBe("OK");
-  });
-
-  it("JSON-stringifies object commands", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData("ack\n"), 0);
-      return Promise.resolve();
-    });
-
-    await connector.execute({ command: "GO", speed: 3 });
-
-    expect(transport.send).toHaveBeenCalledWith('{"command":"GO","speed":3}\n');
+    expect(result.data).toEqual(data);
   });
 
   it("honours a custom line ending", async () => {
     const crlf = new GenericCommandConnector({ lineEnding: "\r\n" });
     crlf.initialize(transport);
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData("pong\n"), 0);
-      return Promise.resolve();
-    });
+    replyWith("pong\n");
 
     await crlf.execute("ping");
 
     expect(transport.send).toHaveBeenCalledWith("ping\r\n");
-  });
-
-  it("assembles a reply from multiple chunks up to the newline", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => {
-        transport.simulateData('{"a"');
-        transport.simulateData(":1}");
-        transport.simulateData("\n");
-      }, 0);
-      return Promise.resolve();
-    });
-
-    const result = await connector.execute("cmd");
-
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ a: 1 });
-  });
-
-  it("parses JSON reply lines into objects", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData('{"status":"done","v":2}\n'), 0);
-      return Promise.resolve();
-    });
-
-    const result = await connector.execute("cmd");
-
-    expect(result.data).toEqual({ status: "done", v: 2 });
-  });
-
-  it("returns plain-text reply lines as strings, stripping a trailing CR", async () => {
-    vi.mocked(transport.send).mockImplementation(() => {
-      setTimeout(() => transport.simulateData("hello world\r\n"), 0);
-      return Promise.resolve();
-    });
-
-    const result = await connector.execute("cmd");
-
-    expect(result.data).toBe("hello world");
   });
 
   it("fails with Command timeout when the device stays silent", async () => {
@@ -156,19 +126,10 @@ describe("GenericCommandConnector", () => {
     expect(transport.send).toHaveBeenCalledWith("cmd\n");
   });
 
-  it("is a no-op to cancel when idle", async () => {
+  it("cancel is a no-op when idle, identity is bare, execute before initialize throws", async () => {
     await connector.cancel();
     expect(transport.send).not.toHaveBeenCalled();
-  });
-
-  it("reports a bare generic identity", async () => {
-    await expect(connector.getDeviceIdentity()).resolves.toEqual({
-      family: "generic",
-      raw: {},
-    });
-  });
-
-  it("throws when executing before initialize", async () => {
+    await expect(connector.getDeviceIdentity()).resolves.toEqual({ family: "generic", raw: {} });
     const fresh = new GenericCommandConnector();
     await expect(fresh.execute("cmd")).rejects.toThrow(
       "Driver not initialized. Call initialize() first.",

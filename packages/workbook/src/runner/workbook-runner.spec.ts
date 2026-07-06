@@ -50,7 +50,7 @@ async function runSampleToDone(sample: SampleRunner): Promise<Readonly<RunnerSta
 }
 
 describe("WorkbookRunner: spike scenarios", () => {
-  it("runs a good reading straight through to done", async () => {
+  it("runs a good reading to done: outputs, macro ctx, artifact dispatch, answers", async () => {
     const sample = makeSampleRunner([scanAttempts[1]]);
     const state = await runSampleToDone(sample);
     expect(state.branchVisits.branch_quality).toBe(1);
@@ -62,27 +62,21 @@ describe("WorkbookRunner: spike scenarios", () => {
       "macro_phi2",
       "proto_psii",
     ]);
-  });
-
-  it("macros read the verbatim upstream scan and the ctx namespace", async () => {
-    const sample = makeSampleRunner([scanAttempts[1]]);
-    await runSampleToDone(sample);
+    // Macros read the verbatim upstream scan and the ctx namespace.
     const input = sample.macroInputs[0];
     expect(input.json).toEqual(scanAttempts[1]);
     expect(input.ctx.ctx.measured_in_sunlight).toEqual({ answer: "yes" });
-    const output = sample.runner.getState().outputs.macro_phi2;
-    expect(output).toEqual({ v: { Phi2: 0.747, sunlit: true, samples: 3 } });
-  });
-
-  it("dispatches the macro-constructed protocol through validation", async () => {
-    const sample = makeSampleRunner([scanAttempts[1]]);
-    const state = await runSampleToDone(sample);
+    expect(state.outputs.macro_phi2).toEqual({ v: { Phi2: 0.747, sunlit: true, samples: 3 } });
+    // The macro-constructed protocol dispatches through validation.
     const dispatch = sample.allCalls.find((c) => c.source.kind === "artifact");
     if (dispatch?.source.kind !== "artifact") throw new Error("no dispatch call");
     expect(dispatch.source.producedBy).toBe("macro_construct");
     expect(dispatch.family).toBe("multispeq");
     expect(Array.isArray(dispatch.command)).toBe(true);
     expect(state.outputs.macro_construct__dispatch).toEqual({ v: { dispatched: true } });
+    // Answers and command outputs accumulate in context.
+    expect(state.answersByCycle[0]).toEqual({ q_sunlight: "yes" });
+    expect(state.outputs.cmd_battery).toEqual({ v: "82%" });
   });
 
   it("loops back and remeasures on a noisy first reading", async () => {
@@ -94,27 +88,15 @@ describe("WorkbookRunner: spike scenarios", () => {
     expect(state.outputs.macro_phi2).toEqual({ v: { Phi2: 0.747, sunlit: true, samples: 3 } });
   });
 
-  it("accumulates answers and outputs in context", async () => {
-    const sample = makeSampleRunner([scanAttempts[1]]);
-    const state = await runSampleToDone(sample);
-    expect(state.answersByCycle[0]).toEqual({ q_sunlight: "yes" });
-    expect(state.outputs.cmd_battery).toEqual({ v: "82%" });
-  });
-
-  it("ignores ANSWER events that target a different cell", () => {
-    const sample = makeSampleRunner([scanAttempts[1]]);
-    sample.runner.start();
-    sample.runner.send({ type: "NEXT" });
-    sample.runner.send({ type: "ANSWER", cellId: "md_done", value: "nope" });
-    expect(sample.runner.getState().position.cellId).toBe("q_sunlight");
-    expect(sample.runner.getState().answersByCycle[0]).toEqual({});
-  });
-
   it("survives a JSON snapshot round-trip mid-flow and resumes to done", async () => {
     const sample = makeSampleRunner([scanAttempts[1]]);
     sample.runner.start();
     sample.runner.send({ type: "NEXT" });
     expect(sample.runner.getState().position.cellId).toBe("q_sunlight");
+    // An ANSWER targeting a different cell is ignored outright.
+    sample.runner.send({ type: "ANSWER", cellId: "md_done", value: "nope" });
+    expect(sample.runner.getState().position.cellId).toBe("q_sunlight");
+    expect(sample.runner.getState().answersByCycle[0]).toEqual({});
 
     const snapshot: unknown = JSON.parse(JSON.stringify(sample.runner.snapshot()));
     const revived = makeSampleRunner([scanAttempts[1]]);
@@ -143,6 +125,16 @@ function basePorts(overrides: Partial<WorkbookRunnerPorts> = {}): WorkbookRunner
   };
 }
 
+/** Battery workbook wired to a manually-settled executor. */
+function manualRunner() {
+  const manual = createManualExecutor();
+  const runner = new WorkbookRunner({
+    cells: battery,
+    ports: basePorts({ commandExecutor: manual }),
+  });
+  return { manual, runner };
+}
+
 describe("WorkbookRunner: driver behavior", () => {
   it("streams progress into state and clears it on completion", async () => {
     const runner = new WorkbookRunner({
@@ -161,11 +153,7 @@ describe("WorkbookRunner: driver behavior", () => {
   });
 
   it("cancel aborts the signal, discards the late result, and RETRY recovers", async () => {
-    const manual = createManualExecutor();
-    const runner = new WorkbookRunner({
-      cells: battery,
-      ports: basePorts({ commandExecutor: manual }),
-    });
+    const { manual, runner } = manualRunner();
     runner.start();
     await waitFor(runner, (s) => s.status === "running", "running");
     const pending = manual.pending.shift();
@@ -186,11 +174,7 @@ describe("WorkbookRunner: driver behavior", () => {
   });
 
   it("snapshot taken mid-command re-arms the cell as interrupted", async () => {
-    const manual = createManualExecutor();
-    const runner = new WorkbookRunner({
-      cells: battery,
-      ports: basePorts({ commandExecutor: manual }),
-    });
+    const { runner } = manualRunner();
     runner.start();
     await waitFor(runner, (s) => s.status === "running", "running");
     const snapshot = runner.snapshot();
@@ -233,7 +217,14 @@ describe("WorkbookRunner: driver behavior", () => {
     expect(restored.getState().outputs.c1).toEqual({ v: big });
   });
 
-  it("restore rejects tampered cells and offloaded snapshots without a store", async () => {
+  it("restore rejects tampered cells, storeless offloads, corrupt and future snapshots", async () => {
+    await expect(WorkbookRunner.restore("garbage", basePorts())).rejects.toBeInstanceOf(
+      SnapshotError,
+    );
+    await expect(WorkbookRunner.restore({ schemaVersion: 999 }, basePorts())).rejects.toMatchObject(
+      { code: "unsupportedVersion" },
+    );
+
     const runner = new WorkbookRunner({ cells: battery, ports: basePorts() });
     runner.start();
     await waitFor(runner, (s) => s.position.cellId === "m1", "m1");
@@ -265,11 +256,7 @@ describe("WorkbookRunner: driver behavior", () => {
   });
 
   it("a subscriber cancelling synchronously on 'running' still aborts the command", async () => {
-    const manual = createManualExecutor();
-    const runner = new WorkbookRunner({
-      cells: battery,
-      ports: basePorts({ commandExecutor: manual }),
-    });
+    const { manual, runner } = manualRunner();
     runner.subscribe((s) => {
       if (s.status === "running") runner.cancel();
     });
@@ -306,14 +293,5 @@ describe("WorkbookRunner: driver behavior", () => {
     unsub();
     runner.start();
     expect(calls).toBe(0);
-  });
-
-  it("SnapshotError surfaces for corrupt and future snapshots", async () => {
-    await expect(WorkbookRunner.restore("garbage", basePorts())).rejects.toBeInstanceOf(
-      SnapshotError,
-    );
-    await expect(WorkbookRunner.restore({ schemaVersion: 999 }, basePorts())).rejects.toMatchObject(
-      { code: "unsupportedVersion" },
-    );
   });
 });

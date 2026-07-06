@@ -10,11 +10,13 @@ const cells: RunnerCell[] = [
 ];
 
 describe("toSnapshot", () => {
-  it("is valid JSON that parseSnapshot accepts back", () => {
+  it("is valid JSON that parseSnapshot accepts back, ref-shaped outputs intact", () => {
     const snapshot = toSnapshot(createInitialState({ cells }), 42);
+    snapshot.state.outputs.c1 = { ref: "mem:c1" };
     const roundTripped: unknown = JSON.parse(JSON.stringify(snapshot));
     expect(parseSnapshot(roundTripped)).toEqual(snapshot);
     expect(snapshot.savedAt).toBe(42);
+    expect(parseSnapshot(roundTripped).state.outputs.c1).toEqual({ ref: "mem:c1" });
   });
 
   it("strips volatile progress and re-arms in-flight work as interrupted", () => {
@@ -48,7 +50,7 @@ describe("toSnapshot", () => {
 });
 
 describe("parseSnapshot", () => {
-  it("rejects non-objects and versionless payloads as invalid", () => {
+  it("rejects invalid payloads and unsupported schema versions with typed errors", () => {
     for (const bad of [null, "x", 42, {}, { schemaVersion: "1" }]) {
       try {
         parseSnapshot(bad);
@@ -58,22 +60,12 @@ describe("parseSnapshot", () => {
         expect((error as SnapshotError).code).toBe("invalid");
       }
     }
-  });
-
-  it("rejects newer versions and unmigratable older versions", () => {
-    expect(() => parseSnapshot({ schemaVersion: 2 })).toThrowError(
-      expect.objectContaining({ code: "unsupportedVersion" }) as Error,
-    );
-    expect(() => parseSnapshot({ schemaVersion: 0 })).toThrowError(
-      expect.objectContaining({ code: "unsupportedVersion" }) as Error,
-    );
-  });
-
-  it("keeps ref-shaped output entries intact", () => {
-    const snapshot = toSnapshot(createInitialState({ cells }), 0);
-    snapshot.state.outputs.c1 = { ref: "mem:c1" };
-    const parsed = parseSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed.state.outputs.c1).toEqual({ ref: "mem:c1" });
+    // Newer versions and unmigratable older versions both refuse.
+    for (const version of [2, 0]) {
+      expect(() => parseSnapshot({ schemaVersion: version })).toThrowError(
+        expect.objectContaining({ code: "unsupportedVersion" }) as Error,
+      );
+    }
   });
 });
 

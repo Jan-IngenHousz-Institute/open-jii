@@ -49,47 +49,39 @@ function command(id: string, name?: string): CommandCellLike {
 }
 
 describe("buildCellNamespace", () => {
-  it("keys producer outputs by id and by canonical name", () => {
-    const cells = [protocol("p1", "Baseline"), output("p1", { value: 0.8 })];
+  it("keys protocol and command outputs by id and by canonical name", () => {
+    const cells = [
+      protocol("p1", "Baseline"),
+      output("p1", { value: 0.8 }),
+      command("c1", "Battery Check"),
+      output("c1", { level: 87 }),
+    ];
     const ns = buildCellNamespace(cells);
     expect(ns.byId.p1).toEqual({ value: 0.8 });
     expect(ns.ctx.baseline).toEqual({ value: 0.8 });
     expect(ns.names.baseline).toBe("p1");
+    expect(ns.byId.c1).toEqual({ level: 87 });
+    expect(ns.ctx.battery_check).toEqual({ level: 87 });
+    expect(ns.names.battery_check).toBe("c1");
   });
 
-  it("exposes an answered question as { answer }", () => {
-    const cells = [question("q1", "Soil moisture", "wet")];
-    const ns = buildCellNamespace(cells);
-    expect(ns.byId.q1).toEqual({ answer: "wet" });
-    expect(ns.ctx.soil_moisture).toEqual({ answer: "wet" });
-  });
-
-  it("omits unanswered questions and producers without output", () => {
-    const cells = [question("q1", "Unanswered"), protocol("p1", "NoRun")];
-    const ns = buildCellNamespace(cells);
-    expect(ns.byId).toEqual({});
-    expect(ns.ctx).toEqual({});
-  });
-
-  it("includes unnamed producers in byId but not ctx", () => {
-    const cells = [protocol("p1"), output("p1", { v: 1 })];
-    const ns = buildCellNamespace(cells);
-    expect(ns.byId.p1).toEqual({ v: 1 });
-    expect(ns.ctx).toEqual({});
+  it("answered questions surface as { answer }; unanswered/no-output/unnamed cells thin out", () => {
+    const answered = buildCellNamespace([question("q1", "Soil moisture", "wet")]);
+    expect(answered.byId.q1).toEqual({ answer: "wet" });
+    expect(answered.ctx.soil_moisture).toEqual({ answer: "wet" });
+    // Unanswered questions and producers without output are omitted entirely.
+    const empty = buildCellNamespace([question("q1", "Unanswered"), protocol("p1", "NoRun")]);
+    expect(empty.byId).toEqual({});
+    expect(empty.ctx).toEqual({});
+    // Unnamed producers appear in byId but not ctx.
+    const unnamed = buildCellNamespace([protocol("p1"), output("p1", { v: 1 })]);
+    expect(unnamed.byId.p1).toEqual({ v: 1 });
+    expect(unnamed.ctx).toEqual({});
   });
 
   it("unwraps a non-empty array output to its first element", () => {
     const cells = [protocol("p1", "Scan"), output("p1", [{ value: 1 }, { value: 2 }])];
-    const ns = buildCellNamespace(cells);
-    expect(ns.ctx.scan).toEqual({ value: 1 });
-  });
-
-  it("exposes a command cell's output by id and canonical name", () => {
-    const cells = [command("c1", "Battery Check"), output("c1", { level: 87 })];
-    const ns = buildCellNamespace(cells);
-    expect(ns.byId.c1).toEqual({ level: 87 });
-    expect(ns.ctx.battery_check).toEqual({ level: 87 });
-    expect(ns.names.battery_check).toBe("c1");
+    expect(buildCellNamespace(cells).ctx.scan).toEqual({ value: 1 });
   });
 
   it("only sees cells strictly before beforeIndex (upstream-only)", () => {
@@ -126,10 +118,8 @@ describe("buildCellNamespace", () => {
 });
 
 describe("resolveOutputData", () => {
-  it("returns undefined when no output exists", () => {
+  it("returns undefined when no output exists or the array output is empty", () => {
     expect(resolveOutputData([protocol("p1")], "p1")).toBeUndefined();
-  });
-  it("returns undefined for an empty array output", () => {
     expect(resolveOutputData([protocol("p1"), output("p1", [])], "p1")).toBeUndefined();
   });
 });

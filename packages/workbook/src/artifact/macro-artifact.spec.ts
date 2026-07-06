@@ -3,41 +3,28 @@ import { describe, it, expect } from "vitest";
 import { parseMacroArtifact } from "./macro-artifact";
 
 describe("parseMacroArtifact", () => {
-  it("returns null for a plain data record (existing macros)", () => {
-    expect(parseMacroArtifact({ fvfm: 0.8, value: 1 })).toBeNull();
-  });
-
-  it("returns null for non-objects", () => {
-    expect(parseMacroArtifact(null)).toBeNull();
-    expect(parseMacroArtifact("battery")).toBeNull();
-    expect(parseMacroArtifact(42)).toBeNull();
-  });
-
-  it("parses a valid command artifact", () => {
-    const a = parseMacroArtifact({ __ojArtifact: "command", version: 1, content: "battery" });
-    expect(a).toEqual({ __ojArtifact: "command", version: 1, content: "battery" });
-  });
-
-  it("parses a valid protocol artifact", () => {
-    const a = parseMacroArtifact({
+  it("parses valid command and protocol artifacts", () => {
+    expect(parseMacroArtifact({ __ojArtifact: "command", version: 1, content: "battery" })).toEqual(
+      { __ojArtifact: "command", version: 1, content: "battery" },
+    );
+    const protocol = parseMacroArtifact({
       __ojArtifact: "protocol",
       version: 1,
       code: [{ _protocol_set_: [] }],
     });
-    expect(a?.__ojArtifact).toBe("protocol");
+    expect(protocol?.__ojArtifact).toBe("protocol");
   });
 
-  it("returns null for an unknown version", () => {
-    expect(parseMacroArtifact({ __ojArtifact: "command", version: 2, content: "x" })).toBeNull();
-  });
-
-  it("returns null for a tagged value with extra keys (strict)", () => {
-    expect(
-      parseMacroArtifact({ __ojArtifact: "command", version: 1, content: "x", evil: true }),
-    ).toBeNull();
-  });
-
-  it("returns null for an empty protocol", () => {
-    expect(parseMacroArtifact({ __ojArtifact: "protocol", version: 1, code: [] })).toBeNull();
+  it("returns null for plain data, non-objects, unknown versions, extra keys, empty protocols", () => {
+    const rejected: unknown[] = [
+      { fvfm: 0.8, value: 1 }, // plain data record (existing macros)
+      null,
+      "battery",
+      42,
+      { __ojArtifact: "command", version: 2, content: "x" },
+      { __ojArtifact: "command", version: 1, content: "x", evil: true }, // strict: extra keys
+      { __ojArtifact: "protocol", version: 1, code: [] },
+    ];
+    for (const value of rejected) expect(parseMacroArtifact(value)).toBeNull();
   });
 });
