@@ -8,6 +8,13 @@ export type QuestionKind =
   | "yes_no"
   | "open_ended";
 
+// The flow's protocol comes from its measurement node (the flow model
+// assumes at most one). Derived from flowNodes so it survives pause/resume.
+export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
+  const node = flowNodes.find((n) => n.type === "measurement");
+  return (node?.content as { protocolId?: string } | undefined)?.protocolId;
+}
+
 export function isQuestionsOnlyFlow(flowNodes: FlowNode[]): boolean {
   // Branches produce no uploadable data and auto-advance, so they're transparent
   // here: a flow of questions/instructions/branches still ends at the submit

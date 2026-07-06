@@ -4,15 +4,15 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
 import type { AnalysisContent } from "~/shared/measurements/flow-node";
+import { flowProtocolId } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
@@ -34,8 +34,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
   const macro = content.macro;
-  const { scanResult, previousStep, nextStep, experimentId, iterationCount, flowNodes } =
-    useMeasurementFlowStore();
+  const scanResult = useWorkbookFlowStore((s) => s.scanResult);
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
+  const iterationCount = useWorkbookFlowStore((s) => s.iterationCount);
+  const flowNodes = useWorkbookFlowStore((s) => s.flowNodes);
+  const macroCellId = useWorkbookFlowStore((s) => s.currentNode?.id);
   const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
@@ -127,11 +130,13 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,
     });
-    nextStep();
+    // Release the analysis gate: the runner finishes the macro cell and moves
+    // on (mid-flow to the next node, at the end into the next iteration).
+    if (macroCellId) useWorkbookFlowStore.getState().continueFromAnalysis(macroCellId);
   };
 
   const handleRetry = () => {
-    previousStep();
+    useWorkbookFlowStore.getState().retryFromAnalysis();
   };
 
   const { scrollViewRef, hasScrolled, handleScroll, scrollToTop } = useScrollToTop();

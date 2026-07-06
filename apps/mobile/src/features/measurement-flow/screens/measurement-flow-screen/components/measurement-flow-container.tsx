@@ -1,8 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useIterationStateSync } from "~/features/measurement-flow/hooks/use-iteration-state-sync";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
@@ -11,15 +10,13 @@ import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, isQuestionsSubmitPending, experimentId } =
-    useMeasurementFlowStore();
-  const isFlowInitialized = flowNodes.length > 0;
-  const currentNode = flowNodes[currentFlowStep];
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
+  const isFlowInitialized = useWorkbookFlowStore((s) => s.flowNodes.length > 0);
+  const currentNode = useWorkbookFlowStore((s) => s.currentNode);
+  const isQuestionsSubmitPending = useWorkbookFlowStore((s) => s.isQuestionsSubmitPending);
   const insets = useSafeAreaInsets();
 
-  useIterationStateSync(flowNodes);
-
-  // Picker — flat against the screen background.
+  // Picker: flat against the screen background.
   if (!experimentId) {
     return (
       <View className="bg-background flex-1">

@@ -47,6 +47,7 @@
     "@repo/auth": "workspace:*",
     "@repo/cms": "workspace:*",
     "@repo/iot": "workspace:*",
+    "@repo/workbook": "workspace:*",
     "@shopify/flash-list": "^2.3.1",
     "@tanstack/pacer": "^0.19.0",
     "@tanstack/query-async-storage-persister": "catalog:react-query",

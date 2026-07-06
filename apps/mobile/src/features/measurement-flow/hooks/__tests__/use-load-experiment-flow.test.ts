@@ -1,17 +1,15 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
 import { useLoadExperimentFlow } from "../use-load-experiment-flow";
 
-const { listUseQuery, versionUseQuery, setFlowGraph, setFlowNodes } = vi.hoisted(() => ({
+const { listUseQuery, versionUseQuery, prepareFlow, clearPreparedFlow } = vi.hoisted(() => ({
   listUseQuery: vi.fn(),
   versionUseQuery: vi.fn(),
-  setFlowGraph: vi.fn(),
-  setFlowNodes: vi.fn(),
+  prepareFlow: vi.fn(),
+  clearPreparedFlow: vi.fn(),
 }));
 
 vi.mock("~/shared/api/tsr", () => ({
@@ -25,9 +23,9 @@ vi.mock("~/shared/api/tsr", () => ({
   },
 }));
 
-vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: (selector: (s: unknown) => unknown) =>
-    selector({ setFlowGraph, setFlowNodes }),
+vi.mock("~/features/measurement-flow/stores/use-workbook-flow-store", () => ({
+  useWorkbookFlowStore: (selector: (s: unknown) => unknown) =>
+    selector({ prepareFlow, clearPreparedFlow }),
 }));
 
 beforeEach(() => {
@@ -67,19 +65,11 @@ describe("useLoadExperimentFlow", () => {
 
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
-    await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
-    const [nodesArg, edgesArg, cellsArg] = setFlowGraph.mock.calls[0] as [
-      FlowNode[],
-      unknown,
-      unknown,
-    ];
-    // Graph derived from the version's cells, with the protocol node hydrated
-    // (assert the outcome directly, not via the helper under test).
-    const measurement = nodesArg.find((n) => n.type === "measurement");
-    expect(measurement?.content?.protocol).toBeDefined();
-    expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
+    await waitFor(() => expect(prepareFlow).toHaveBeenCalled());
+    const [cellsArg, snapshotsArg] = prepareFlow.mock.calls[0] as [unknown, unknown];
     expect(cellsArg).toBe(cells);
-    expect(setFlowNodes).not.toHaveBeenCalled();
+    expect(snapshotsArg).toBe(entitySnapshots);
+    expect(clearPreparedFlow).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });
 
@@ -94,9 +84,9 @@ describe("useLoadExperimentFlow", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.isReady).toBe(false);
     expect((result.current.error as Error)?.message).toContain("no workbook version");
-    expect(setFlowGraph).not.toHaveBeenCalled();
+    expect(prepareFlow).not.toHaveBeenCalled();
     // Stale graph from a prior experiment is cleared on a failed load.
-    expect(setFlowNodes).toHaveBeenCalledWith([]);
+    expect(clearPreparedFlow).toHaveBeenCalled();
   });
 
   it("surfaces a listExperiments error instead of hanging in loading", () => {
@@ -108,6 +98,6 @@ describe("useLoadExperimentFlow", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(err);
     expect(result.current.isReady).toBe(false);
-    expect(setFlowGraph).not.toHaveBeenCalled();
+    expect(prepareFlow).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react-nativ
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { QuestionsOnlySubmitNode } from "./questions-only-submit-node";
@@ -77,16 +77,13 @@ const makeQuestion = (id: string, text = `${id} text`): FlowNode =>
   }) as FlowNode;
 
 beforeEach(() => {
-  useMeasurementFlowStore.setState({
+  useWorkbookFlowStore.setState({
     experimentId: undefined,
-    currentStep: 0,
     flowNodes: [],
-    currentFlowStep: 0,
     iterationCount: 0,
-    isFlowFinished: false,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
-    isFromOverview: false,
+    overviewNodeId: null,
   });
   useFlowAnswersStore.setState({
     answersHistory: [],
@@ -107,7 +104,7 @@ beforeEach(() => {
 
 describe("QuestionsOnlySubmitNode", () => {
   it("renders the ReadyState overview plus Finish and Submit buttons", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1", "What's your name?")],
     });
@@ -124,7 +121,7 @@ describe("QuestionsOnlySubmitNode", () => {
   });
 
   it("shows 'Uploading...' on the continue button while uploading", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
     });
@@ -135,20 +132,20 @@ describe("QuestionsOnlySubmitNode", () => {
   });
 
   it("tapping an answer card navigates to that question via the store", () => {
-    const navigateToQuestionFromOverview = vi.fn();
-    useMeasurementFlowStore.setState({
+    const openQuestionFromOverview = vi.fn();
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1"), makeQuestion("q2")],
-      navigateToQuestionFromOverview,
+      openQuestionFromOverview,
     });
     render(<QuestionsOnlySubmitNode />);
     fireEvent.press(screen.getByText("q2 text"));
-    expect(navigateToQuestionFromOverview).toHaveBeenCalledWith(1);
+    expect(openQuestionFromOverview).toHaveBeenCalledWith(1);
   });
 
   it("'Submit & Continue' uploads and dismisses the review screen", async () => {
     const dismissQuestionsSubmit = vi.fn();
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1", "What's your name?")],
       dismissQuestionsSubmit,
@@ -184,7 +181,7 @@ describe("QuestionsOnlySubmitNode", () => {
   });
 
   it("'Finish' uploads then exits the flow to Recent Measurements", async () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
     });
@@ -199,7 +196,7 @@ describe("QuestionsOnlySubmitNode", () => {
 
   it("falls back to 'Experiment' when no matching experiment is found", async () => {
     useExperiments.mockReturnValue({ experiments: [] });
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-missing",
       flowNodes: [makeQuestion("q1")],
     });
@@ -219,7 +216,7 @@ describe("QuestionsOnlySubmitNode", () => {
   });
 
   it("logs upload rejections through the logger", async () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
       flowNodes: [makeQuestion("q1")],
     });

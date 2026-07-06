@@ -3,7 +3,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { useHomeContinueAction } from "~/features/home/hooks/use-home-continue-action";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
@@ -11,11 +11,11 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function HomeContinueCard() {
   const { experimentId, experimentLabel, currentFlowStep, totalSteps, isQuestionsSubmitPending } =
-    useMeasurementFlowStore(
+    useWorkbookFlowStore(
       useShallow((s) => ({
         experimentId: s.experimentId,
         experimentLabel: s.experimentLabel,
-        currentFlowStep: s.currentFlowStep,
+        currentFlowStep: s.currentNodeIndex,
         totalSteps: s.flowNodes.length,
         isQuestionsSubmitPending: s.isQuestionsSubmitPending,
       })),

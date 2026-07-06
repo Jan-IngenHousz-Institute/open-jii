@@ -1,54 +1,35 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
+import type { FlowNode } from "~/shared/measurements/flow-node";
+
+import type { RunnerState } from "@repo/workbook";
 
 import { MeasurementNode } from "./measurement-node";
 
 // Only the network/native boundaries and deep state children are mocked; the
-// start-scan guards run unmocked, and the protocol is passed via content.
-const {
-  executeScan,
-  resetScan,
-  cancelCommand,
-  useConnectedDevice,
-  refetchConnectedDevice,
-  nextStep,
-  setScanResult,
-  setProtocolId,
-  navigateToQuestionFromOverview,
-  openDeviceSheet,
-  toastError,
-  playSound,
-  scanState,
-} = vi.hoisted(() => ({
-  executeScan: vi.fn(),
-  resetScan: vi.fn(),
-  cancelCommand: vi.fn(),
-  useConnectedDevice: vi.fn(),
-  refetchConnectedDevice: vi.fn(),
-  nextStep: vi.fn(),
-  setScanResult: vi.fn(),
-  setProtocolId: vi.fn(),
-  navigateToQuestionFromOverview: vi.fn(),
-  openDeviceSheet: vi.fn(),
-  toastError: vi.fn(),
-  playSound: vi.fn(),
-  scanState: { isScanning: false },
-}));
-
-vi.mock("~/features/connection/hooks/use-scan-manager", () => ({
-  useScanner: () => ({
-    executeScan,
-    isScanning: scanState.isScanning,
-    reset: resetScan,
-    result: undefined,
-    error: undefined,
-    cancelCommand,
+// start-scan guards run unmocked against the real workbook flow store.
+const { useConnectedDevice, refetchConnectedDevice, openDeviceSheet, toastError } = vi.hoisted(
+  () => ({
+    useConnectedDevice: vi.fn(),
+    refetchConnectedDevice: vi.fn(),
+    openDeviceSheet: vi.fn(),
+    toastError: vi.fn(),
   }),
-}));
+);
 
 vi.mock("~/features/connection/hooks/use-device-connection", () => ({
   useConnectedDevice: () => useConnectedDevice(),
+}));
+
+vi.mock("~/features/connection/hooks/use-scanner-command-executor", () => ({
+  useScannerCommandExecutor: () => ({
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
+  }),
 }));
 
 vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
@@ -56,21 +37,8 @@ vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
     selector({ open: openDeviceSheet }),
 }));
 
-vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: () => ({
-    nextStep,
-    setScanResult,
-    setProtocolId,
-    navigateToQuestionFromOverview,
-  }),
-}));
-
 vi.mock("sonner-native", () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
-}));
-
-vi.mock("~/features/measurement-flow/utils/play-sound", () => ({
-  playSound: () => playSound(),
 }));
 
 vi.mock("~/shared/ui/hooks/use-theme", () => ({
@@ -99,135 +67,187 @@ const PROTOCOL_UNAVAILABLE_KEY = "measurementFlow:measurementNode.toast.protocol
 const DEVICE_DISCONNECTED_KEY = "measurementFlow:measurementNode.toast.deviceDisconnected";
 const SCAN_ERROR_KEY = "measurementFlow:measurementNode.toast.scanError";
 
-const content = { params: {}, protocolId: "proto-1", protocol: PROTOCOL };
+const content = {
+  params: {},
+  protocolId: "proto-1",
+  protocol: PROTOCOL as { name: string; code: Record<string, unknown>[] } | undefined,
+};
+
+const measurementNode: FlowNode = {
+  id: "p1",
+  name: "scan",
+  type: "measurement",
+  content,
+  isStart: false,
+};
+
+const runnerAt = (status: RunnerState["status"]): RunnerState =>
+  ({
+    status,
+    position: { cellId: "p1", enteredVia: "forward", atStart: false },
+    cellRuns: {},
+    cycle: 0,
+  }) as unknown as RunnerState;
+
+function renderNode(nodeContent = content) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MeasurementNode content={nodeContent} />
+    </QueryClientProvider>,
+  );
+}
+
+const startScan = vi.fn();
+const cancelScan = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  scanState.isScanning = false;
+  useWorkbookFlowStore.setState({
+    experimentId: "exp-1",
+    currentNode: measurementNode,
+    runnerState: runnerAt("awaitingInput"),
+    awaitingScanStart: false,
+    scanError: undefined,
+    scanResult: undefined,
+    startScan,
+    cancelScan,
+  });
   useConnectedDevice.mockReturnValue({ data: { id: "dev-1" }, refetch: refetchConnectedDevice });
   refetchConnectedDevice.mockResolvedValue({ data: { id: "dev-1" } });
 });
 
 describe("MeasurementNode start-scan guards", () => {
-  it("shows the protocol-unavailable toast (not scan error) when the node has no protocol", () => {
-    render(<MeasurementNode content={{ ...content, protocol: undefined }} />);
+  it("shows the protocol-unavailable toast when the node has no protocol", async () => {
+    renderNode({ ...content, protocol: undefined });
     fireEvent.press(screen.getByText(START_KEY));
 
-    expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
-    expect(executeScan).not.toHaveBeenCalled();
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY));
+    expect(startScan).not.toHaveBeenCalled();
   });
 
-  it("shows the no-protocol toast when the node has no protocolId", () => {
-    render(<MeasurementNode content={{ ...content, protocolId: "" }} />);
+  it("shows the no-protocol toast when the node has no protocolId", async () => {
+    renderNode({ ...content, protocolId: "" });
     fireEvent.press(screen.getByText(START_KEY));
 
-    expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol");
-    expect(executeScan).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol"),
+    );
+    expect(startScan).not.toHaveBeenCalled();
   });
 
   it("blocks the scan and shows device-disconnected when the liveness probe finds no device", async () => {
     refetchConnectedDevice.mockResolvedValue({ data: null });
 
-    render(<MeasurementNode content={content} />);
+    renderNode();
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(DEVICE_DISCONNECTED_KEY));
-    expect(executeScan).not.toHaveBeenCalled();
+    expect(startScan).not.toHaveBeenCalled();
   });
 
-  it("runs the scan and advances when the protocol and connection are available", async () => {
-    executeScan.mockResolvedValue({ result: 42 });
-
-    render(<MeasurementNode content={content} />);
+  it("arms the scan gate for the current producer cell when preconditions pass", async () => {
+    renderNode();
     fireEvent.press(screen.getByText(START_KEY));
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalledWith(PROTOCOL));
-    expect(setScanResult).toHaveBeenCalledWith({ result: 42 });
-    expect(nextStep).toHaveBeenCalled();
+    await waitFor(() => expect(startScan).toHaveBeenCalledWith("p1"));
     expect(toastError).not.toHaveBeenCalled();
   });
 
-  it("maps a transport failure to the device-disconnected toast", async () => {
-    executeScan.mockRejectedValue(new Error("Failed to write to device"));
-
-    render(<MeasurementNode content={content} />);
-    fireEvent.press(screen.getByText(START_KEY));
+  it("maps a transport failure recorded by the runner to the device-disconnected toast", async () => {
+    useWorkbookFlowStore.setState({
+      runnerState: runnerAt("pausedError"),
+      scanError: new Error("Failed to write to device"),
+    });
+    renderNode();
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(DEVICE_DISCONNECTED_KEY));
     expect(toastError).not.toHaveBeenCalledWith(SCAN_ERROR_KEY);
-    expect(nextStep).not.toHaveBeenCalled();
   });
 
   it("shows the generic scan-error toast when the scan itself fails", async () => {
-    executeScan.mockRejectedValue(new Error("Invalid result"));
-
-    render(<MeasurementNode content={content} />);
-    fireEvent.press(screen.getByText(START_KEY));
+    useWorkbookFlowStore.setState({
+      runnerState: runnerAt("pausedError"),
+      scanError: new Error("Invalid result"),
+    });
+    renderNode();
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(SCAN_ERROR_KEY));
-    expect(nextStep).not.toHaveBeenCalled();
   });
 
   it("stays silent when the measurement was cancelled", async () => {
-    executeScan.mockRejectedValue(new Error("Measurement cancelled"));
+    useWorkbookFlowStore.setState({
+      runnerState: runnerAt("awaitingInput"),
+      scanError: new Error("Measurement cancelled"),
+    });
+    renderNode();
 
-    render(<MeasurementNode content={content} />);
-    fireEvent.press(screen.getByText(START_KEY));
-
-    await waitFor(() => expect(executeScan).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(toastError).not.toHaveBeenCalled();
-    expect(nextStep).not.toHaveBeenCalled();
   });
 
   it("hides the Start button entirely when no device is connected", () => {
     useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
 
-    render(<MeasurementNode content={content} />);
+    renderNode();
 
     expect(screen.queryByText(START_KEY)).toBeNull();
   });
 
-  it("ignores a second Start tap while the first scan is starting", async () => {
-    let resolveScan: (value: unknown) => void = () => undefined;
-    executeScan.mockReturnValue(
+  it("ignores a second Start tap while the first one is still probing", async () => {
+    let resolveProbe: (value: unknown) => void = () => undefined;
+    refetchConnectedDevice.mockReturnValue(
       new Promise((resolve) => {
-        resolveScan = resolve;
+        resolveProbe = resolve;
       }),
     );
 
-    render(<MeasurementNode content={content} />);
+    renderNode();
     const button = screen.getByText(START_KEY);
     fireEvent.press(button);
     fireEvent.press(button);
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalledTimes(1));
-    resolveScan({ result: 1 });
+    resolveProbe({ data: { id: "dev-1" } });
+    await waitFor(() => expect(startScan).toHaveBeenCalledTimes(1));
   });
 });
 
 describe("MeasurementNode in-scan controls", () => {
-  it("awaits cancel before resetting when the measurement is cancelled", async () => {
-    scanState.isScanning = true;
-    cancelCommand.mockResolvedValue(undefined);
+  it("cancels the in-flight runner effect when the measurement is cancelled", async () => {
+    useWorkbookFlowStore.setState({ runnerState: runnerAt("running") });
 
-    render(<MeasurementNode content={content} />);
+    renderNode();
     fireEvent.press(screen.getByText(CANCEL_KEY));
 
-    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
-    expect(resetScan).toHaveBeenCalled();
+    await waitFor(() => expect(cancelScan).toHaveBeenCalled());
   });
 
-  it("aborts and resets the scan when the device drops mid-measurement", async () => {
-    scanState.isScanning = true;
-    cancelCommand.mockResolvedValue(undefined);
+  it("renders the ready screen (not scanning) while the gate awaits the tap", () => {
+    useWorkbookFlowStore.setState({
+      runnerState: runnerAt("running"),
+      awaitingScanStart: true,
+    });
 
-    const { rerender } = render(<MeasurementNode content={content} />);
-    expect(cancelCommand).not.toHaveBeenCalled();
+    renderNode();
+
+    expect(screen.getByText(START_KEY)).toBeTruthy();
+    expect(screen.queryByText(CANCEL_KEY)).toBeNull();
+  });
+
+  it("aborts the scan when the device drops mid-measurement", async () => {
+    useWorkbookFlowStore.setState({ runnerState: runnerAt("running") });
+
+    const { rerender } = renderNode();
+    // Re-render inside the same provider tree with the device gone.
+    expect(cancelScan).not.toHaveBeenCalled();
 
     useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
-    rerender(<MeasurementNode content={content} />);
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MeasurementNode content={content} />
+      </QueryClientProvider>,
+    );
 
-    await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
-    expect(resetScan).toHaveBeenCalled();
+    await waitFor(() => expect(cancelScan).toHaveBeenCalled());
   });
 });

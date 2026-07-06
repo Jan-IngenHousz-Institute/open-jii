@@ -127,7 +127,7 @@ describe("createDriverCommandExecutor", () => {
 
     // "sent" fires first; a forced "receiving" reports the framed transfer.
     expect(events[0]?.phase).toBe("sent");
-    const last = events.at(-1);
+    const last = events[events.length - 1];
     expect(last?.phase).toBe("receiving");
     expect(last?.chunks).toBeGreaterThanOrEqual(1);
     expect(last?.bytes).toBeGreaterThan(0);

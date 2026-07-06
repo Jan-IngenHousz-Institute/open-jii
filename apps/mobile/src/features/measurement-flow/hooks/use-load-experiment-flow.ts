@@ -1,21 +1,18 @@
 import { useEffect } from "react";
 import { useWorkbookVersionQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { tsr } from "~/shared/api/tsr";
 
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
-
-// Loads an experiment's workbook flow into the store: fetch the workbook version
-// and derive the graph locally via cellsToFlowGraph (cells kept for branch eval).
+// Pre-loads an experiment's workbook (cells + entity snapshots) into the flow
+// store while the picker is open; startFlow promotes it into a WorkbookRunner.
 // Every experiment is workbook-backed; one without a workbook surfaces an error.
 export function useLoadExperimentFlow(experimentId: string | undefined): {
   isLoading: boolean;
   error: unknown;
   isReady: boolean;
 } {
-  const setFlowGraph = useMeasurementFlowStore((s) => s.setFlowGraph);
-  const setFlowNodes = useMeasurementFlowStore((s) => s.setFlowNodes);
+  const prepareFlow = useWorkbookFlowStore((s) => s.prepareFlow);
+  const clearPreparedFlow = useWorkbookFlowStore((s) => s.clearPreparedFlow);
 
   // Shares the ["experiments"] cache key with useExperiments(), so this reads
   // from cache (no extra fetch) in the normal flow.
@@ -40,15 +37,12 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     error: versionError,
   } = useWorkbookVersionQuery(workbookId, workbookVersionId);
 
-  // Derive the graph in document order (preserve branches; don't collapse to a
-  // single path) and hydrate each node so scan + upload read offline off it.
   useEffect(() => {
     const body = versionData?.body;
     const cells = body?.cells;
     if (!cells) return;
-    const { nodes, edges } = cellsToFlowGraph(cells);
-    setFlowGraph(hydrateFlowNodes(nodes, cells, body?.entitySnapshots), edges, cells);
-  }, [versionData, setFlowGraph]);
+    prepareFlow(cells, body?.entitySnapshots);
+  }, [versionData, prepareFlow]);
 
   // The list resolved but the experiment has no workbook: every experiment is
   // workbook-backed, so surface an error rather than hang.
@@ -56,11 +50,11 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
 
   const isReady = !!versionData?.body?.cells;
 
-  // Clear a previously-loaded graph when this load fails, so consumers don't keep
-  // rendering the prior experiment's nodes.
+  // Clear a previously-prepared graph when this load fails, so startFlow can't
+  // launch the prior experiment's cells.
   useEffect(() => {
-    if (!isReady && (noWorkbook || versionError)) setFlowNodes([]);
-  }, [isReady, noWorkbook, versionError, setFlowNodes]);
+    if (!isReady && (noWorkbook || versionError)) clearPreparedFlow();
+  }, [isReady, noWorkbook, versionError, clearPreparedFlow]);
 
   const isLoading =
     !noWorkbook &&

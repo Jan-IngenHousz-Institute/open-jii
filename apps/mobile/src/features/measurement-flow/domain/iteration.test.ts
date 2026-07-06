@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { AnswersSnapshot } from "./iteration";
-import { findNextMandatoryStep, firstManualQuestionNodeId } from "./iteration";
+import {
+  autoAdvanceDecision,
+  carryForwardAnswers,
+  firstManualQuestionNodeId,
+  seedNextIterationAnswer,
+} from "./iteration";
 
 const makeQuestion = (id: string): FlowNode =>
   ({ id, type: "question", name: id, content: { kind: "text" } }) as FlowNode;
@@ -17,76 +22,164 @@ const answers = (overrides: Partial<AnswersSnapshot> = {}): AnswersSnapshot => (
   ...overrides,
 });
 
-describe("findNextMandatoryStep", () => {
-  const next = (
-    fromIndex: number,
-    flowNodes: FlowNode[],
+describe("autoAdvanceDecision", () => {
+  const decide = (
+    questionId: string,
+    required: boolean,
     iterationCount: number,
     a: AnswersSnapshot = answers(),
-  ) => findNextMandatoryStep({ fromIndex, flowNodes, iterationCount, answers: a });
+  ) => autoAdvanceDecision({ questionId, required, iterationCount, answers: a });
 
-  it("returns the next question index", () => {
-    const nodes = [makeQuestion("q1"), makeQuestion("q2"), makeQuestion("q3")];
-    expect(next(0, nodes, 0)).toBe(1);
+  it("parks on a plain manual question", () => {
+    expect(decide("q1", false, 0)).toEqual({ kind: "park" });
   });
 
-  it("returns flowNodes.length when no mandatory step remains", () => {
-    const nodes = [makeQuestion("q1")];
-    expect(next(0, nodes, 0)).toBe(1);
-  });
-
-  it("skips instructions on iterations > 0", () => {
-    const nodes = [makeQuestion("q1"), makeInstruction("i1"), makeQuestion("q2")];
-    expect(next(0, nodes, 1)).toBe(2);
-  });
-
-  it("does not skip instructions on iteration 0", () => {
-    const nodes = [makeQuestion("q1"), makeInstruction("i1"), makeQuestion("q2")];
-    expect(next(0, nodes, 0)).toBe(1);
-  });
-
-  it("skips questions with auto-increment enabled", () => {
-    const nodes = [makeQuestion("q1"), makeQuestion("q2"), makeQuestion("q3")];
-    expect(next(0, nodes, 0, answers({ autoincrementSettings: { q2: true } }))).toBe(2);
-  });
-
-  it("skips questions with remember-answer enabled", () => {
-    const nodes = [makeQuestion("q1"), makeQuestion("q2"), makeQuestion("q3")];
-    expect(next(0, nodes, 0, answers({ rememberAnswerSettings: { q2: true } }))).toBe(2);
-  });
-
-  it("does not skip a required question with remember enabled when value is empty", () => {
-    const nodes = [
-      makeQuestion("q1"),
-      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
-      makeQuestion("q3"),
-    ];
-    expect(next(0, nodes, 0, answers({ rememberAnswerSettings: { q2: true } }))).toBe(1);
-  });
-
-  it("skips a required question with remember enabled when it already has a value", () => {
-    const nodes = [
-      makeQuestion("q1"),
-      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
-      makeQuestion("q3"),
-    ];
+  it("commits the stored value for an auto-increment question", () => {
     const a = answers({
-      rememberAnswerSettings: { q2: true },
-      answersHistory: [{ q2: "some value" }],
+      autoincrementSettings: { q1: true },
+      answersHistory: [{ q1: "plot-2" }],
     });
-    expect(next(0, nodes, 0, a)).toBe(2);
+    expect(decide("q1", false, 0, a)).toEqual({ kind: "commit", value: "plot-2" });
   });
 
-  it("does not skip a required question with auto-increment enabled when value is empty", () => {
-    const nodes = [
-      makeQuestion("q1"),
-      {
-        ...makeQuestion("q2"),
-        content: { kind: "multi_choice", required: true, options: ["a", "b"] },
-      } as FlowNode,
-      makeQuestion("q3"),
-    ];
-    expect(next(0, nodes, 0, answers({ autoincrementSettings: { q2: true } }))).toBe(1);
+  it("commits the stored value for a remembered question", () => {
+    const a = answers({
+      rememberAnswerSettings: { q1: true },
+      answersHistory: [{}, { q1: "kept" }],
+    });
+    expect(decide("q1", true, 1, a)).toEqual({ kind: "commit", value: "kept" });
+  });
+
+  it("skips an optional auto question with no value", () => {
+    const a = answers({ rememberAnswerSettings: { q1: true } });
+    expect(decide("q1", false, 0, a)).toEqual({ kind: "skip" });
+  });
+
+  it("parks a required auto question with no value yet", () => {
+    const a = answers({ autoincrementSettings: { q1: true } });
+    expect(decide("q1", true, 0, a)).toEqual({ kind: "park" });
+  });
+
+  it("treats a blank stored value as missing", () => {
+    const a = answers({
+      rememberAnswerSettings: { q1: true },
+      answersHistory: [{ q1: "   " }],
+    });
+    expect(decide("q1", true, 0, a)).toEqual({ kind: "park" });
+  });
+});
+
+describe("seedNextIterationAnswer", () => {
+  const multiChoice = (id: string, options: string[]): FlowNode =>
+    ({ id, type: "question", name: id, content: { kind: "multi_choice", options } }) as FlowNode;
+
+  it("rotates a multi_choice to the next option when auto-increment is on", () => {
+    const a = answers({ autoincrementSettings: { q1: true } });
+    const seed = seedNextIterationAnswer({
+      node: multiChoice("q1", ["a", "b", "c"]),
+      answerValue: "b",
+      iterationCount: 0,
+      answers: a,
+    });
+    expect(seed).toEqual({ cycle: 1, name: "q1", value: "c" });
+  });
+
+  it("wraps the rotation past the last option", () => {
+    const a = answers({ autoincrementSettings: { q1: true } });
+    const seed = seedNextIterationAnswer({
+      node: multiChoice("q1", ["a", "b"]),
+      answerValue: "b",
+      iterationCount: 2,
+      answers: a,
+    });
+    expect(seed).toEqual({ cycle: 3, name: "q1", value: "a" });
+  });
+
+  it("returns null for a multi_choice without auto-increment", () => {
+    const seed = seedNextIterationAnswer({
+      node: multiChoice("q1", ["a", "b"]),
+      answerValue: "a",
+      iterationCount: 0,
+      answers: answers(),
+    });
+    expect(seed).toBeNull();
+  });
+
+  it("copies a remembered answer into the next iteration", () => {
+    const a = answers({ rememberAnswerSettings: { q1: true } });
+    const seed = seedNextIterationAnswer({
+      node: makeQuestion("q1"),
+      answerValue: "P-001",
+      iterationCount: 1,
+      answers: a,
+    });
+    expect(seed).toEqual({ cycle: 2, name: "q1", value: "P-001" });
+  });
+
+  it("returns null when nothing should carry", () => {
+    expect(
+      seedNextIterationAnswer({
+        node: makeQuestion("q1"),
+        answerValue: "P-001",
+        iterationCount: 0,
+        answers: answers(),
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("carryForwardAnswers", () => {
+  const multiChoice = (id: string, options: string[]): FlowNode =>
+    ({ id, type: "question", name: id, content: { kind: "multi_choice", options } }) as FlowNode;
+
+  it("copies remembered answers from the previous iteration", () => {
+    const a = answers({
+      rememberAnswerSettings: { q1: true },
+      answersHistory: [{ q1: "P-001" }],
+    });
+    expect(
+      carryForwardAnswers({ flowNodes: [makeQuestion("q1")], iterationCount: 1, answers: a }),
+    ).toEqual([{ cycle: 1, name: "q1", value: "P-001" }]);
+  });
+
+  it("rotates auto-increment multi_choice answers", () => {
+    const a = answers({
+      autoincrementSettings: { q1: true },
+      answersHistory: [{ q1: "a" }],
+    });
+    const nodes = [multiChoice("q1", ["a", "b"])];
+    expect(carryForwardAnswers({ flowNodes: nodes, iterationCount: 1, answers: a })).toEqual([
+      { cycle: 1, name: "q1", value: "b" },
+    ]);
+  });
+
+  it("keeps an existing non-blank answer for the new iteration", () => {
+    const a = answers({
+      rememberAnswerSettings: { q1: true },
+      answersHistory: [{ q1: "old" }, { q1: "already set" }],
+    });
+    expect(
+      carryForwardAnswers({ flowNodes: [makeQuestion("q1")], iterationCount: 1, answers: a }),
+    ).toEqual([]);
+  });
+
+  it("skips a rotation when the previous value is not a known option", () => {
+    const a = answers({
+      autoincrementSettings: { q1: true },
+      answersHistory: [{ q1: "zzz" }],
+    });
+    const nodes = [multiChoice("q1", ["a", "b"])];
+    expect(carryForwardAnswers({ flowNodes: nodes, iterationCount: 1, answers: a })).toEqual([]);
+  });
+
+  it("carries nothing without a previous answer or settings", () => {
+    expect(
+      carryForwardAnswers({
+        flowNodes: [makeQuestion("q1")],
+        iterationCount: 1,
+        answers: answers(),
+      }),
+    ).toEqual([]);
   });
 });
 

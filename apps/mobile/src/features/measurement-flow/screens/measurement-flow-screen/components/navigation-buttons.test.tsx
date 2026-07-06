@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { NavigationButtons } from "./navigation-buttons";
@@ -30,16 +30,12 @@ const makeMeasurement = (id: string): FlowNode =>
   ({ id, name: id, type: "measurement", content: {} }) as FlowNode;
 
 beforeEach(() => {
-  useMeasurementFlowStore.setState({
+  useWorkbookFlowStore.setState({
     experimentId: undefined,
-    currentStep: 0,
-    flowNodes: [],
-    currentFlowStep: 0,
+    currentNode: undefined,
     iterationCount: 0,
-    isFlowFinished: false,
     isQuestionsSubmitPending: false,
-    scanResult: undefined,
-    isFromOverview: false,
+    overviewNodeId: null,
   });
   useFlowAnswersStore.setState({
     answersHistory: [],
@@ -50,18 +46,16 @@ beforeEach(() => {
 
 describe("NavigationButtons", () => {
   it("renders nothing when there is no experiment", () => {
-    useMeasurementFlowStore.setState({
-      flowNodes: [makeQuestion("q1")],
-    });
+    useWorkbookFlowStore.setState({ currentNode: makeQuestion("q1") });
     render(<NavigationButtons />);
     expect(screen.queryByText("Back")).toBeNull();
     expect(screen.queryByText("Next")).toBeNull();
   });
 
   it("renders nothing on measurement nodes", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeMeasurement("m1")],
+      currentNode: makeMeasurement("m1"),
     });
     render(<NavigationButtons />);
     expect(screen.queryByText("Back")).toBeNull();
@@ -69,10 +63,9 @@ describe("NavigationButtons", () => {
   });
 
   it("hides itself when the questions-only submit/review screen is active", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1"), makeQuestion("q2")],
-      currentFlowStep: 1,
+      currentNode: makeQuestion("q2"),
       isQuestionsSubmitPending: true,
     });
     render(<NavigationButtons />);
@@ -81,9 +74,9 @@ describe("NavigationButtons", () => {
   });
 
   it("shows Back + Next on question nodes", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1")],
+      currentNode: makeQuestion("q1"),
     });
     render(<NavigationButtons />);
     expect(screen.getByText("Back")).toBeTruthy();
@@ -91,9 +84,9 @@ describe("NavigationButtons", () => {
   });
 
   it("hides Next on required auto-advance questions (yes_no)", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1", { kind: "yes_no", required: true })],
+      currentNode: makeQuestion("q1", { kind: "yes_no", required: true }),
     });
     render(<NavigationButtons />);
     expect(screen.queryByText("Next")).toBeNull();
@@ -101,25 +94,23 @@ describe("NavigationButtons", () => {
   });
 
   it("keeps Next visible for optional multi_choice so users can skip", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [
-        makeQuestion("q1", {
-          kind: "multi_choice",
-          required: false,
-          options: ["a", "b"],
-        }),
-      ],
+      currentNode: makeQuestion("q1", {
+        kind: "multi_choice",
+        required: false,
+        options: ["a", "b"],
+      }),
     });
     render(<NavigationButtons />);
     expect(screen.getByText("Next")).toBeTruthy();
   });
 
   it("shows only 'Back to overview' when navigated from the overview", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1")],
-      isFromOverview: true,
+      currentNode: makeQuestion("q1"),
+      overviewNodeId: "q1",
     });
     render(<NavigationButtons />);
     expect(screen.getByText("Back to overview")).toBeTruthy();
@@ -127,25 +118,24 @@ describe("NavigationButtons", () => {
     expect(screen.queryByText("Next")).toBeNull();
   });
 
-  it("pressing Back calls previousStep on the store", () => {
-    const previousStep = vi.fn();
-    useMeasurementFlowStore.setState({
+  it("pressing Back sends BACK through the store", () => {
+    const back = vi.fn();
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1"), makeQuestion("q2")],
-      currentFlowStep: 1,
-      previousStep,
+      currentNode: makeQuestion("q2"),
+      back,
     });
     render(<NavigationButtons />);
     fireEvent.press(screen.getByText("Back"));
-    expect(previousStep).toHaveBeenCalled();
+    expect(back).toHaveBeenCalled();
   });
 
   it("pressing 'Back to overview' calls returnToOverview", () => {
     const returnToOverview = vi.fn();
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeQuestion("q1")],
-      isFromOverview: true,
+      currentNode: makeQuestion("q1"),
+      overviewNodeId: "q1",
       returnToOverview,
     });
     render(<NavigationButtons />);
@@ -153,15 +143,29 @@ describe("NavigationButtons", () => {
     expect(returnToOverview).toHaveBeenCalled();
   });
 
-  it("pressing Next on an instruction calls nextStep", () => {
-    const nextStep = vi.fn();
-    useMeasurementFlowStore.setState({
+  it("pressing Next on an instruction advances the runner", () => {
+    const next = vi.fn();
+    useWorkbookFlowStore.setState({
       experimentId: "exp-1",
-      flowNodes: [makeInstruction("i1")],
-      nextStep,
+      currentNode: makeInstruction("i1"),
+      next,
     });
     render(<NavigationButtons />);
     fireEvent.press(screen.getByText("Next"));
-    expect(nextStep).toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("pressing Next on a question commits the current answer", () => {
+    const commitAnswer = vi.fn();
+    const node = makeQuestion("q1");
+    useFlowAnswersStore.setState({ answersHistory: [{ q1: "P-001" }] });
+    useWorkbookFlowStore.setState({
+      experimentId: "exp-1",
+      currentNode: node,
+      commitAnswer,
+    });
+    render(<NavigationButtons />);
+    fireEvent.press(screen.getByText("Next"));
+    expect(commitAnswer).toHaveBeenCalledWith(node, "P-001");
   });
 });

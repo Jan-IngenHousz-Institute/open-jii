@@ -18,7 +18,7 @@ import { useExperimentSelectionStore } from "~/features/experiments/stores/use-e
 import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
@@ -36,7 +36,7 @@ export function ExperimentSelectionStep() {
   const { t } = useTranslation("measurementFlow");
   const { experiments, isLoading, error, refetch, isRefetching } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
-  const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
+  const startFlow = useWorkbookFlowStore((s) => s.startFlow);
   const { isReady: experimentFlowReady } = useLoadExperimentFlow(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
@@ -75,7 +75,7 @@ export function ExperimentSelectionStep() {
   const handleStart = () => {
     if (!selectedExperimentId || !experimentFlowReady) return;
     clearHistory();
-    setExperimentId(selectedExperimentId, selectedExperiment?.label);
+    startFlow(selectedExperimentId, selectedExperiment?.label);
   };
 
   return (

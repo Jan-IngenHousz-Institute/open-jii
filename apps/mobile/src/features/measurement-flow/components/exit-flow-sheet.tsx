@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
 import { teardownFlow } from "~/features/measurement-flow/services/flow-actions";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
+import { flushWorkbookSnapshot } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -34,8 +35,9 @@ export function ExitFlowSheet() {
 
   // Pause just leaves the screen. The flow + answers stores are persisted,
   // so the next launch (or tap on the home Resume card) rehydrates exactly
-  // where the user left off.
+  // where the user left off. Flush the debounced runner snapshot first.
   const handlePause = () => {
+    flushWorkbookSnapshot();
     close();
     dismissFlow();
   };

@@ -2,9 +2,8 @@ import React from "react";
 import { Keyboard, View } from "react-native";
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-actions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
@@ -13,16 +12,11 @@ import { NextButton } from "./next-button";
 
 export function NavigationButtons() {
   const { t } = useTranslation("measurementFlow");
-  const {
-    flowNodes,
-    currentFlowStep,
-    experimentId,
-    previousStep,
-    isFromOverview,
-    isQuestionsSubmitPending,
-    returnToOverview,
-    iterationCount,
-  } = useMeasurementFlowStore();
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
+  const currentNode = useWorkbookFlowStore((s) => s.currentNode);
+  const isFromOverview = useWorkbookFlowStore((s) => s.overviewNodeId !== null);
+  const isQuestionsSubmitPending = useWorkbookFlowStore((s) => s.isQuestionsSubmitPending);
+  const iterationCount = useWorkbookFlowStore((s) => s.iterationCount);
 
   const keyboard = useAnimatedKeyboard();
   const insets = useSafeAreaInsets();
@@ -30,8 +24,6 @@ export function NavigationButtons() {
   const navStyle = useAnimatedStyle(() => ({
     paddingBottom: Math.max(insets.bottom, keyboard.height.value),
   }));
-  // Get current node to check type
-  const currentNode = flowNodes[currentFlowStep];
   const currentAnswer = useFlowAnswersStore((s) =>
     currentNode?.type === "question" ? s.getAnswer(iterationCount, currentNode.id) : undefined,
   );
@@ -39,14 +31,10 @@ export function NavigationButtons() {
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
   // Show navigation buttons only for instruction/question nodes, not on the
-  // submit/review screen. Branch nodes route automatically and must never show
-  // Back/Next (the `!== "branch"` guard is defensive — branch isn't an
-  // instruction/question anyway).
+  // submit/review screen. Branch nodes route automatically inside the runner
+  // and never become the current node.
   const shouldShowNavigationButtons =
-    !!experimentId &&
-    isInstructionOrQuestion &&
-    currentNode?.type !== "branch" &&
-    !isQuestionsSubmitPending;
+    !!experimentId && isInstructionOrQuestion && !isQuestionsSubmitPending;
 
   if (!shouldShowNavigationButtons) {
     return null;
@@ -60,22 +48,21 @@ export function NavigationButtons() {
 
   const handleBackPress = () => {
     Keyboard.dismiss();
-    previousStep();
+    useWorkbookFlowStore.getState().back();
   };
 
   const handleReturnToOverview = () => {
     Keyboard.dismiss();
-    returnToOverview();
+    useWorkbookFlowStore.getState().returnToOverview();
   };
 
   const handleNextPress = () => {
     Keyboard.dismiss();
-    // For questions, use shared utility to handle answer logic and advance
+    // Questions commit their answer (ANSWER event); other nodes just advance.
     if (currentNode?.type === "question") {
-      advanceWithAnswer(currentNode, currentAnswer ?? "");
+      useWorkbookFlowStore.getState().commitAnswer(currentNode, currentAnswer ?? "");
     } else {
-      // For non-question nodes, just advance
-      useMeasurementFlowStore.getState().nextStep();
+      useWorkbookFlowStore.getState().next();
     }
   };
 

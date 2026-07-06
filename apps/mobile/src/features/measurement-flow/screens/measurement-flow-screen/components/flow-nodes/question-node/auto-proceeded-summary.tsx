@@ -2,7 +2,7 @@ import { Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -12,15 +12,15 @@ interface AutoProceededSummaryProps {
 }
 
 // The banner is anchored to whichever question node was the first manual
-// question at the start of the iteration. useIterationStateSync computes the
+// question at the start of the iteration. The flow store computes the
 // anchor once per iteration (store field `iterationAnchor`), so toggling
 // "remember answer" or navigating to the overview and back does not move the
 // banner mid-iteration. The banner content (which auto-proceeded questions
 // exist and their current answers) remains fully dynamic, so the banner
 // disappears if there are no auto-proceeded answers.
 export function AutoProceededSummary({ currentNodeId, iterationCount }: AutoProceededSummaryProps) {
-  const { flowNodes } = useMeasurementFlowStore();
-  const anchor = useMeasurementFlowStore((s) => s.iterationAnchor);
+  const flowNodes = useWorkbookFlowStore((s) => s.flowNodes);
+  const anchor = useWorkbookFlowStore((s) => s.iterationAnchor);
   const { getAnswer, isAutoincrementEnabled } = useFlowAnswersStore();
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");

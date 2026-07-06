@@ -1,4 +1,4 @@
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 import type { FlowNode, FlowNodeType } from "~/shared/measurements/flow-node";
 
@@ -34,16 +34,12 @@ function deriveStepInfo(
   currentFlowStep: number,
   experimentId: string | undefined,
   isQuestionsSubmitPending: boolean,
-  isFlowFinished: boolean,
 ): FlowStepInfo {
   const questionsOnly = isQuestionsOnlyFlow(flowNodes);
-  // Branch nodes auto-advance invisibly, so they're excluded from the count —
-  // otherwise "Step X of Y" silently skips a number when the flow routes through one.
+  // Branch nodes route invisibly inside the runner, so they're excluded from
+  // the count; "Step X of Y" would otherwise skip a number over them.
   const visibleCount = flowNodes.reduce((n, node) => n + (node.type === "branch" ? 0 : 1), 0);
   const totalSteps = Math.max(1, visibleCount + (questionsOnly ? 1 : 0));
-
-  // Resolve the rendering state first — order matters here.
-  const finishedAfterAllNodes = isFlowFinished && currentFlowStep >= flowNodes.length;
 
   let currentStep: number;
   let stepTypeKey: StepTypeKey;
@@ -51,9 +47,6 @@ function deriveStepInfo(
   if (!experimentId || flowNodes.length === 0) {
     currentStep = 1;
     stepTypeKey = "instruction";
-  } else if (finishedAfterAllNodes) {
-    currentStep = totalSteps;
-    stepTypeKey = "completed";
   } else if (isQuestionsSubmitPending) {
     currentStep = totalSteps;
     stepTypeKey = "review";
@@ -75,19 +68,12 @@ function deriveStepInfo(
 
 /** Snapshot variant used by the FlowHero. */
 export function useFlowStepInfo(): FlowStepInfo {
-  const flowNodes = useMeasurementFlowStore((s) => s.flowNodes);
-  const currentFlowStep = useMeasurementFlowStore((s) => s.currentFlowStep);
-  const experimentId = useMeasurementFlowStore((s) => s.experimentId);
-  const isQuestionsSubmitPending = useMeasurementFlowStore((s) => s.isQuestionsSubmitPending);
-  const isFlowFinished = useMeasurementFlowStore((s) => s.isFlowFinished);
+  const flowNodes = useWorkbookFlowStore((s) => s.flowNodes);
+  const currentFlowStep = useWorkbookFlowStore((s) => s.currentNodeIndex);
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
+  const isQuestionsSubmitPending = useWorkbookFlowStore((s) => s.isQuestionsSubmitPending);
 
-  return deriveStepInfo(
-    flowNodes,
-    currentFlowStep,
-    experimentId,
-    isQuestionsSubmitPending,
-    isFlowFinished,
-  );
+  return deriveStepInfo(flowNodes, currentFlowStep, experimentId, isQuestionsSubmitPending);
 }
 
 export { deriveStepInfo as __testing_deriveStepInfo };

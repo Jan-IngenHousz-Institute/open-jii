@@ -10,7 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 
@@ -29,7 +29,7 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("measurementFlow");
   const { currentStep, totalSteps, stepTypeKey, progress } = useFlowStepInfo();
-  const lastMatchedPath = useMeasurementFlowStore((s) => s.lastMatchedPath);
+  const lastMatchedPath = useWorkbookFlowStore((s) => s.lastMatchedPath);
 
   const progressValue = useSharedValue(progress);
   useEffect(() => {

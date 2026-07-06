@@ -1,9 +1,8 @@
 import { CircleAlert, Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Keyboard } from "react-native";
-import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-actions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { FlowNode } from "~/shared/measurements/flow-node";
 import { Checkbox } from "~/shared/ui/Checkbox";
@@ -24,7 +23,7 @@ interface QuestionNodeProps {
 }
 
 export function QuestionNode({ node }: QuestionNodeProps) {
-  const { iterationCount } = useMeasurementFlowStore();
+  const iterationCount = useWorkbookFlowStore((s) => s.iterationCount);
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
   const {
@@ -55,7 +54,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   const handleAnswerChangeAndAdvance = (value: string) => {
     Keyboard.dismiss();
     setAnswer(iterationCount, node.id, value);
-    advanceWithAnswer(node, value);
+    useWorkbookFlowStore.getState().commitAnswer(node, value);
   };
 
   const handleQRScanned = (data: string) => {

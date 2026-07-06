@@ -6,7 +6,7 @@ import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-questions-upload";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
@@ -25,13 +25,11 @@ import { ReadyState } from "./measurement-node/components/ready-state";
 const log = createLogger("questions-submit");
 
 export function QuestionsOnlySubmitNode() {
-  const {
-    experimentId,
-    iterationCount,
-    flowNodes,
-    dismissQuestionsSubmit,
-    navigateToQuestionFromOverview,
-  } = useMeasurementFlowStore();
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
+  const iterationCount = useWorkbookFlowStore((s) => s.iterationCount);
+  const flowNodes = useWorkbookFlowStore((s) => s.flowNodes);
+  const dismissQuestionsSubmit = useWorkbookFlowStore((s) => s.dismissQuestionsSubmit);
+  const navigateToQuestionFromOverview = useWorkbookFlowStore((s) => s.openQuestionFromOverview);
   const finishAndExit = useFinishFlow();
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");

@@ -1,9 +1,8 @@
 import type { FlowNode, QuestionContent } from "~/shared/measurements/flow-node";
 
-// Pure iteration rules: which answers carry into a new iteration and which
-// step needs manual input next. Callers (flow-actions, use-iteration-state-
-// sync) read the stores once, pass snapshots in, and apply the returned
-// seeds via the answers store.
+// Pure iteration rules: which answers carry into a new iteration and whether
+// a question step advances on its own. The workbook flow store reads the
+// answers store once, passes snapshots in, and applies the returned seeds.
 
 export interface AnswersSnapshot {
   answersHistory: Record<string, string>[];
@@ -29,37 +28,36 @@ function isRememberEnabled(answers: AnswersSnapshot, name: string): boolean {
   return answers.rememberAnswerSettings[name] ?? false;
 }
 
+export type AutoAdvanceDecision =
+  /** The question needs manual input; the flow parks on it. */
+  | { kind: "park" }
+  /** Commit this value and move on (auto-increment/remembered with a value). */
+  | { kind: "commit"; value: string }
+  /** Skip without an answer (optional auto question with nothing to carry). */
+  | { kind: "skip" };
+
 /**
- * Returns the index of the next step after `fromIndex` that needs manual input.
- * Skips:
- * - instruction steps on iterations > 0
- * - question steps with auto-increment or remember enabled,
- *   unless the question is required and has no value yet
- * Returns `flowNodes.length` if no mandatory step remains.
+ * Whether a question the flow just landed on advances by itself. Questions
+ * with auto-increment or remember enabled pass through, unless they are
+ * required and still have no value for this iteration.
  */
-export function findNextMandatoryStep(args: {
-  fromIndex: number;
-  flowNodes: FlowNode[];
+export function autoAdvanceDecision(args: {
+  questionId: string;
+  required: boolean;
   iterationCount: number;
   answers: AnswersSnapshot;
-}): number {
-  const { fromIndex, flowNodes, iterationCount, answers } = args;
-  for (let i = fromIndex + 1; i < flowNodes.length; i++) {
-    const node = flowNodes[i];
-    if (node.type === "instruction" && iterationCount > 0) continue;
-    if (node.type === "question") {
-      const isAutoOrRemember =
-        isAutoincrementEnabled(answers, node.id) || isRememberEnabled(answers, node.id);
-      const hasValue = !!answerOf(answers, iterationCount, node.id)?.trim();
-      if (isAutoOrRemember && (!node.content.required || hasValue)) continue;
-    }
-    return i;
-  }
-  return flowNodes.length;
+}): AutoAdvanceDecision {
+  const { questionId, required, iterationCount, answers } = args;
+  const isAutoOrRemember =
+    isAutoincrementEnabled(answers, questionId) || isRememberEnabled(answers, questionId);
+  if (!isAutoOrRemember) return { kind: "park" };
+  const value = answerOf(answers, iterationCount, questionId);
+  if (value?.trim()) return { kind: "commit", value };
+  return required ? { kind: "park" } : { kind: "skip" };
 }
 
 // Seed produced by committing `answerValue` on `node`: auto-increment rotates
-// a multi_choice to its next option, remember copies the value — both into
+// a multi_choice to its next option, remember copies the value, both into
 // the NEXT iteration. Null when nothing should carry.
 export function seedNextIterationAnswer(args: {
   node: FlowNode;

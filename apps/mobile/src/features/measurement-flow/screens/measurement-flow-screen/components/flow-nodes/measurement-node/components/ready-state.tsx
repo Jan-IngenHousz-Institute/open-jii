@@ -4,7 +4,7 @@ import { Bookmark, HelpCircle, Repeat2 } from "lucide-react-native";
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -25,7 +25,8 @@ interface ReadyStateProps {
 export function ReadyState({ onCardPress }: ReadyStateProps) {
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
-  const { flowNodes, iterationCount } = useMeasurementFlowStore();
+  const flowNodes = useWorkbookFlowStore((s) => s.flowNodes);
+  const iterationCount = useWorkbookFlowStore((s) => s.iterationCount);
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
 
   const questionEntries: { node: FlowNode; index: number }[] = flowNodes

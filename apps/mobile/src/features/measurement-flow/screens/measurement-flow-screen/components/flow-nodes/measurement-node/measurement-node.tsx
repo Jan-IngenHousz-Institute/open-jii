@@ -26,7 +26,6 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     device,
     protocol,
     isScanning,
-    scanResult,
     scanError,
     startScan,
     cancelScan,
@@ -65,7 +64,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       );
     }
 
-    if (isScanning || scanResult) {
+    if (isScanning) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">

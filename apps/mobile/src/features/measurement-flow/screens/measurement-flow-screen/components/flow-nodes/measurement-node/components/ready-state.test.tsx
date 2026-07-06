@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { ReadyState } from "./ready-state";
@@ -35,16 +35,13 @@ const makeInstruction = (id: string): FlowNode =>
   ({ id, name: id, type: "instruction", content: {} }) as FlowNode;
 
 beforeEach(() => {
-  useMeasurementFlowStore.setState({
+  useWorkbookFlowStore.setState({
     experimentId: undefined,
-    currentStep: 0,
     flowNodes: [],
-    currentFlowStep: 0,
     iterationCount: 0,
-    isFlowFinished: false,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
-    isFromOverview: false,
+    overviewNodeId: null,
   });
   useFlowAnswersStore.setState({
     answersHistory: [],
@@ -55,13 +52,13 @@ beforeEach(() => {
 
 describe("ReadyState", () => {
   it("shows the empty state when the flow has no questions", () => {
-    useMeasurementFlowStore.setState({ flowNodes: [makeInstruction("i1")] });
+    useWorkbookFlowStore.setState({ flowNodes: [makeInstruction("i1")] });
     render(<ReadyState onCardPress={vi.fn()} />);
     expect(screen.getByText(/no questions/i)).toBeTruthy();
   });
 
   it("uses the question text as the card label, not the node name", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       flowNodes: [
         makeQuestion("q1", {
           name: "author-label",
@@ -75,7 +72,7 @@ describe("ReadyState", () => {
   });
 
   it("falls back to the node name when content.text is absent", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       flowNodes: [makeQuestion("q1", { name: "fallback-name", content: { kind: "text" } })],
     });
     render(<ReadyState onCardPress={vi.fn()} />);
@@ -83,7 +80,7 @@ describe("ReadyState", () => {
   });
 
   it("renders the answer for the current cycle", () => {
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       flowNodes: [makeQuestion("q1")],
       iterationCount: 0,
     });
@@ -98,7 +95,7 @@ describe("ReadyState", () => {
   });
 
   it("shows 'Not set' when the answer is blank", () => {
-    useMeasurementFlowStore.setState({ flowNodes: [makeQuestion("q1")] });
+    useWorkbookFlowStore.setState({ flowNodes: [makeQuestion("q1")] });
     useFlowAnswersStore.setState({
       answersHistory: [{ q1: "   " }],
       autoincrementSettings: {},
@@ -110,7 +107,7 @@ describe("ReadyState", () => {
 
   it("passes the flow index (not the filtered position) to onCardPress", () => {
     const onCardPress = vi.fn();
-    useMeasurementFlowStore.setState({
+    useWorkbookFlowStore.setState({
       flowNodes: [
         makeInstruction("i1"),
         makeQuestion("q1"),

@@ -14,7 +14,7 @@ import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
 import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -31,11 +31,10 @@ interface MeasurementFlowScreenProps {
 
 export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   useKeepAwake();
-  // Subscribe only to the field this screen renders against. The auto-pause
-  // and back-handler hooks read the rest of the store via getState() so the
-  // screen doesn't re-render on every flow tick (scanResult, currentFlowStep,
-  // …) and cascade through MeasurementFlowContainer and its children.
-  const experimentId = useMeasurementFlowStore((s) => s.experimentId);
+  // Subscribe only to the field this screen renders against so the screen
+  // doesn't re-render on every flow tick and cascade through
+  // MeasurementFlowContainer and its children.
+  const experimentId = useWorkbookFlowStore((s) => s.experimentId);
   const { experiment } = useExperiment(experimentId);
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();

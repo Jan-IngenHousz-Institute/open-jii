@@ -2,14 +2,14 @@ import React, { useEffect, useRef } from "react";
 import { Text, View } from "react-native";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { BackButton } from "~/features/measurement-flow/screens/measurement-flow-screen/components/back-button";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { useWorkbookFlowStore } from "~/features/measurement-flow/stores/use-workbook-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 export function NoDeviceState() {
   const { t } = useTranslation("measurementFlow");
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
-  const previousStep = useMeasurementFlowStore((s) => s.previousStep);
+  const previousStep = useWorkbookFlowStore((s) => s.back);
 
   // Auto-open the connect overlay once when this state first appears. The ref
   // guard keeps the 3s connected-device poll re-renders from re-opening it; a

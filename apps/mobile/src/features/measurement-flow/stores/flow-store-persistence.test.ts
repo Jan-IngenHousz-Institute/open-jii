@@ -1,74 +1,89 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { hashCells } from "@repo/workbook";
 
 import { useFlowAnswersStore } from "./use-flow-answers-store";
-import { useMeasurementFlowStore } from "./use-measurement-flow-store";
+import { resetWorkbookFlowForTest, useWorkbookFlowStore } from "./use-workbook-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 0). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. Update fixtures ONLY with a
-// deliberate change (additive/removal) or a version bump + migrate.
+// stores. A silent shape change wipes a field researcher's paused flow on
+// rehydrate. Update fixtures ONLY with a deliberate change or a version bump.
 
-const MEASUREMENT_KEY = "measurement-flow-storage";
+const WORKBOOK_KEY = "workbook-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
 
-// v0 envelope for a paused mid-flow session, parked on the measurement node.
-// Every value differs from the store default so a key dropped from partialize
-// fails its per-field assert instead of silently matching the default.
-const MEASUREMENT_FIXTURE = `{
-  "state": {
-    "experimentId": "exp-42",
-    "experimentLabel": "Greenhouse Trial B",
-    "protocolId": "proto-7",
-    "currentStep": 1,
-    "flowNodes": [
-      {
-        "id": "node-q1",
-        "name": "plant_id",
-        "type": "question",
-        "content": { "kind": "text", "text": "Plant ID?", "required": true, "placeholder": "P-000" },
-        "isStart": true,
-        "position": { "x": 0, "y": 0 }
-      },
-      {
-        "id": "node-i1",
-        "name": "clip_leaf",
-        "type": "instruction",
-        "content": { "text": "Clip the leaf into the sensor head." },
-        "isStart": false,
-        "position": { "x": 0, "y": 120 }
-      },
-      {
-        "id": "node-m1",
-        "name": "spad_reading",
-        "type": "measurement",
-        "content": { "params": { "averages": 3 }, "protocolId": "proto-7" },
-        "isStart": false,
-        "position": { "x": 0, "y": 240 }
-      },
-      {
-        "id": "node-a1",
-        "name": "spad_macro",
-        "type": "analysis",
-        "content": { "params": { "threshold": 40 }, "macroId": "macro-9" },
-        "isStart": false,
-        "position": { "x": 0, "y": 360 }
-      }
-    ],
-    "currentFlowStep": 2,
-    "iterationCount": 3,
-    "isFlowFinished": true,
-    "isQuestionsSubmitPending": true,
-    "scanResult": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] },
-    "isFromOverview": true,
-    "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
-    "edges": [{ "id": "edge-1", "source": "node-q1", "target": "node-m1" }],
-    "lastMatchedPath": { "label": "High N", "color": "#22c55e" },
-    "branchVisitCounts": { "node-b1": 2 },
-    "branchReturnStack": [{ "landing": 3, "step": 1 }]
+const CELLS: WorkbookCell[] = [
+  {
+    id: "q1",
+    type: "question",
+    isCollapsed: false,
+    name: "plant_id",
+    question: { kind: "text", text: "Plant ID?", required: true },
+    isAnswered: false,
   },
-  "version": 0
-}`;
+  {
+    id: "m1",
+    type: "markdown",
+    isCollapsed: false,
+    content: "Clip the leaf into the sensor head.",
+  },
+  {
+    id: "p1",
+    type: "protocol",
+    isCollapsed: false,
+    payload: { protocolId: "proto-7", version: 1, name: "SPAD" },
+  },
+] as WorkbookCell[];
+
+// The runner's own v1 snapshot wire format (schemaVersion + cellsHash + pure
+// JSON state), paused mid-flow on the question cell of iteration 1.
+const RUNNER_SNAPSHOT = {
+  schemaVersion: 1,
+  savedAt: 1750000000000,
+  cellsHash: hashCells(CELLS),
+  state: {
+    schemaVersion: 1,
+    mode: "flow",
+    options: {
+      loop: true,
+      maxBranchVisits: 100,
+      allowDeviceWrites: false,
+      deviceFamily: "multispeq",
+    },
+    cells: CELLS,
+    status: "awaitingInput",
+    position: { cellId: "q1", enteredVia: "forward", atStart: true },
+    runAllActive: false,
+    stopRequested: false,
+    cycle: 1,
+    answersByCycle: [{ q1: "P-001" }, { q1: "P-002" }],
+    outputs: { p1: { v: { device_name: "MultispeQ v2.0", sample: [{ spad: 41.2 }] } } },
+    branchVisits: {},
+    returnStack: [],
+    cellRuns: {},
+    execCounter: 3,
+    effectSeq: 2,
+    inFlight: null,
+    progress: null,
+    fatalReason: null,
+    trace: [],
+  },
+};
+
+const WORKBOOK_FIXTURE = JSON.stringify({
+  state: {
+    experimentId: "exp-42",
+    experimentLabel: "Greenhouse Trial B",
+    entitySnapshots: {
+      protocols: { "proto-7": { code: [{ averages: 3 }], family: "multispeq" } },
+      macros: {},
+    },
+    snapshot: RUNNER_SNAPSHOT,
+  },
+  version: 1,
+});
 
 // v0 envelope after two completed answer iterations with per-question
 // autoincrement/remember toggles.
@@ -84,16 +99,6 @@ const ANSWERS_FIXTURE = `{
   "version": 0
 }`;
 
-const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> })
-  .state;
-
-// Dropped from the persisted slice (protocolId is now derived from flowNodes
-// via flowProtocolId). The fixture keeps it so we prove legacy payloads
-// still rehydrate; the app neither reads nor re-writes it.
-const LEGACY_ONLY_KEYS = ["protocolId"];
-const EXPECTED_WRITTEN_STATE = Object.fromEntries(
-  Object.entries(MEASUREMENT_STATE).filter(([key]) => !LEGACY_ONLY_KEYS.includes(key)),
-);
 const ANSWERS_STATE = (JSON.parse(ANSWERS_FIXTURE) as { state: Record<string, unknown> }).state;
 
 async function readEnvelope(key: string): Promise<Record<string, unknown>> {
@@ -106,55 +111,85 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v0 wire format", () => {
+describe("workbook-flow-storage v1 wire format", () => {
   beforeAll(async () => {
-    await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
-    await useMeasurementFlowStore.persist.rehydrate();
+    await AsyncStorage.setItem(WORKBOOK_KEY, WORKBOOK_FIXTURE);
+    await useWorkbookFlowStore.persist.rehydrate();
+    // Rehydration restores the runner asynchronously; wait for the mirror.
+    await vi.waitFor(() => {
+      if (useWorkbookFlowStore.getState().runnerState === null) {
+        throw new Error("runner not restored yet");
+      }
+    });
   });
 
-  it.each(Object.keys(EXPECTED_WRITTEN_STATE))("rehydrates persisted field %s", (key) => {
-    const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
-    expect(state[key]).toEqual(MEASUREMENT_STATE[key]);
+  afterAll(() => {
+    resetWorkbookFlowForTest();
   });
 
-  it("tolerates legacy payloads carrying the removed protocolId key", () => {
-    // Rehydration of the fixture above (which includes protocolId) must not
-    // throw or disturb the managed fields; the key is simply ignored.
-    const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
+  it("rehydrates the persisted identity fields", () => {
+    const state = useWorkbookFlowStore.getState();
     expect(state.experimentId).toBe("exp-42");
+    expect(state.experimentLabel).toBe("Greenhouse Trial B");
+    expect(state.entitySnapshots?.protocols["proto-7"]?.code).toEqual([{ averages: 3 }]);
   });
 
-  it("round-trips the envelope unchanged through partialize", async () => {
-    await AsyncStorage.removeItem(MEASUREMENT_KEY);
-    useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
-    const envelope = await readEnvelope(MEASUREMENT_KEY);
-    expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(0);
-    expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
+  it("restores the runner exactly where the researcher paused", () => {
+    const state = useWorkbookFlowStore.getState();
+    expect(state.runnerState?.position.cellId).toBe("q1");
+    expect(state.iterationCount).toBe(1);
+    expect(state.currentNode?.id).toBe("q1");
+    expect(state.flowNodes.map((n) => n.type)).toEqual(["question", "instruction", "measurement"]);
+    // The paused scan output survives, keyed to the protocol cell.
+    expect(state.scanResult).toEqual({ device_name: "MultispeQ v2.0", sample: [{ spad: 41.2 }] });
   });
 
   it("persists exactly the known field set", () => {
-    const { partialize } = useMeasurementFlowStore.persist.getOptions();
+    const { partialize } = useWorkbookFlowStore.persist.getOptions();
     if (!partialize) throw new Error("store no longer configures partialize");
-    const persisted = partialize(useMeasurementFlowStore.getState()) as Record<string, unknown>;
+    const persisted = partialize(useWorkbookFlowStore.getState()) as Record<string, unknown>;
     // Adding a persisted field must update this list AND the fixture above.
     expect(Object.keys(persisted).sort()).toEqual([
-      "branchReturnStack",
-      "branchVisitCounts",
-      "cells",
-      "currentFlowStep",
-      "currentStep",
-      "edges",
+      "entitySnapshots",
       "experimentId",
       "experimentLabel",
-      "flowNodes",
-      "isFlowFinished",
-      "isFromOverview",
-      "isQuestionsSubmitPending",
-      "iterationCount",
-      "lastMatchedPath",
-      "scanResult",
+      "snapshot",
     ]);
+  });
+
+  it("writes a v1 envelope carrying the runner's own v1 snapshot format", async () => {
+    await AsyncStorage.removeItem(WORKBOOK_KEY);
+    useWorkbookFlowStore.setState({}); // identity write still runs partialize + setItem
+    const envelope = await readEnvelope(WORKBOOK_KEY);
+    expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
+    expect(envelope.version).toBe(1);
+    const state = envelope.state as Record<string, unknown>;
+    expect(state.experimentId).toBe("exp-42");
+    const snapshot = state.snapshot as {
+      schemaVersion: number;
+      cellsHash: string;
+      state: Record<string, unknown>;
+    };
+    expect(snapshot.schemaVersion).toBe(1);
+    expect(snapshot.cellsHash).toBe(hashCells(CELLS));
+    expect((snapshot.state.position as { cellId: string }).cellId).toBe("q1");
+    expect(snapshot.state.cycle).toBe(1);
+    expect(snapshot.state.answersByCycle).toEqual([{ q1: "P-001" }, { q1: "P-002" }]);
+  });
+
+  it("drops an unrestorable snapshot instead of crashing", async () => {
+    const broken = JSON.parse(WORKBOOK_FIXTURE) as {
+      state: { snapshot: { cellsHash: string } };
+    };
+    broken.state.snapshot.cellsHash = "deadbeef";
+    await AsyncStorage.setItem(WORKBOOK_KEY, JSON.stringify({ ...broken, version: 1 }));
+    await useWorkbookFlowStore.persist.rehydrate();
+    await vi.waitFor(() => {
+      if (useWorkbookFlowStore.getState().experimentId !== undefined) {
+        throw new Error("stale flow not dropped yet");
+      }
+    });
+    expect(useWorkbookFlowStore.getState().runnerState).toBeNull();
   });
 });
 
