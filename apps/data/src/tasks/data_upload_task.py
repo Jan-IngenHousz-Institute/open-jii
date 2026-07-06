@@ -245,8 +245,13 @@ def process_parquet_upload() -> dict:
     except Exception:
         pass
 
-    row_count = result.count()
-    result.write.mode("overwrite").parquet(output_path)
+    # count() and write() are separate actions; cache so the sources are read once.
+    result.persist()
+    try:
+        row_count = result.count()
+        result.write.mode("overwrite").parquet(output_path)
+    finally:
+        result.unpersist()
 
     logger.info(f"Saved {row_count} rows to {output_path}")
     return {
