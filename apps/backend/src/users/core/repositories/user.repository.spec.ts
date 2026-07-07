@@ -1,6 +1,16 @@
 import { faker } from "@faker-js/faker";
 
-import { users, profiles, accounts, sessions, experimentMembers, eq } from "@repo/database";
+import {
+  users,
+  profiles,
+  accounts,
+  sessions,
+  experimentMembers,
+  organizations,
+  organizationMembers,
+  personalOrgSlug,
+  eq,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -526,12 +536,14 @@ describe("UserRepository", () => {
 
   describe("createOrUpdateUserProfile", () => {
     it("should create a new user profile", async () => {
+      // A user with no profile yet, so this exercises the create branch.
+      const newUserId = await testApp.createTestUser({ createProfile: false });
       const dto = {
         firstName: "Alice",
         lastName: "Smith",
       };
 
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+      const result = await repository.createOrUpdateUserProfile(newUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -544,9 +556,24 @@ describe("UserRepository", () => {
       const profs = await testApp.database
         .select()
         .from(profiles)
-        .where(eq(profiles.userId, testUserId));
+        .where(eq(profiles.userId, newUserId));
       expect(profs.length).toBe(1);
       expect(profs[0].firstName).toBe(dto.firstName);
+
+      // Creating the profile names the user's personal org from first + last
+      // and makes them its owner.
+      const [org] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, personalOrgSlug(newUserId)));
+      expect(org.name).toBe("Alice Smith's workspace");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, org.id));
+      expect(members).toHaveLength(1);
+      expect(members[0].role).toBe("owner");
     });
 
     it("should update an existing user profile", async () => {
