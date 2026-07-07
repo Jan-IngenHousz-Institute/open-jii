@@ -525,7 +525,28 @@ module "centrum_pipeline" {
   catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
+    # bronze
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
+    # silver
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_data",
+    # gold
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_status",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_device_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_devices",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
+    # enriched
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
+    # event hooks
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
   ]
 
   configuration = {
