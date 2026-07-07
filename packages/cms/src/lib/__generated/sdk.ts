@@ -8567,6 +8567,47 @@ export type ComponentReleaseNoteFieldsFragment = {
   seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
 };
 
+export type ComponentReleaseNoteDetailFieldsFragment = {
+  __typename?: "ComponentReleaseNote";
+  body?: {
+    __typename?: "ComponentReleaseNoteBody";
+    links: {
+      __typename?: "ComponentReleaseNoteBodyLinks";
+      entries: {
+        __typename?: "ComponentReleaseNoteBodyEntries";
+        block: Array<
+          | { __typename?: "ComponentAlert" }
+          | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentButton" }
+          | { __typename?: "ComponentEmail" }
+          | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
+          | { __typename?: "ComponentPartner" }
+          | { __typename?: "ComponentReleaseNote" }
+          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
+          | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
+          | { __typename?: "LandingMetadata" }
+          | { __typename?: "PageAbout" }
+          | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageCookiePolicy" }
+          | { __typename?: "PageEmails" }
+          | { __typename?: "PageFaq" }
+          | { __typename?: "PageForceUpdate" }
+          | { __typename?: "PageHomeFeatures" }
+          | { __typename?: "PageHomeHero" }
+          | { __typename?: "PageHomeMission" }
+          | { __typename?: "PageHomePartners" }
+          | { __typename?: "PageLanding" }
+          | { __typename?: "PagePolicies" }
+          | { __typename?: "PageTermsAndConditions" }
+          | null
+        >;
+      };
+    };
+  } | null;
+} & ComponentReleaseNoteFieldsFragment;
+
 export type ActiveReleaseNotesQueryVariables = Exact<{
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   now: Scalars["DateTime"]["input"];
@@ -8613,7 +8654,7 @@ export type ReleaseNoteBySlugQuery = {
   componentReleaseNoteCollection?: {
     __typename?: "ComponentReleaseNoteCollection";
     items: Array<
-      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
+      ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteDetailFieldsFragment) | null
     >;
   } | null;
 };
@@ -9253,6 +9294,22 @@ export const ComponentReleaseNoteFieldsFragmentDoc = gql`
   ${ButtonFieldsFragmentDoc}
   ${SeoFieldsFragmentDoc}
 `;
+export const ComponentReleaseNoteDetailFieldsFragmentDoc = gql`
+  fragment ComponentReleaseNoteDetailFields on ComponentReleaseNote {
+    ...ComponentReleaseNoteFields
+    body {
+      links {
+        entries {
+          block {
+            ...RichImageFields
+          }
+        }
+      }
+    }
+  }
+  ${ComponentReleaseNoteFieldsFragmentDoc}
+  ${RichImageFieldsFragmentDoc}
+`;
 export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
     pageBlogPostCollection(limit: 100, locale: $locale) {
@@ -9606,11 +9663,11 @@ export const ReleaseNoteBySlugDocument = gql`
       where: { slug: $slug, active: true }
     ) {
       items {
-        ...ComponentReleaseNoteFields
+        ...ComponentReleaseNoteDetailFields
       }
     }
   }
-  ${ComponentReleaseNoteFieldsFragmentDoc}
+  ${ComponentReleaseNoteDetailFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument = gql`
   query sitemapPages($locale: String!) {
