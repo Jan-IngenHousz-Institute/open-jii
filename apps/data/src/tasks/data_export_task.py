@@ -157,8 +157,9 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
 # COMMAND ----------
 
 # DBTITLE 1,Export Data
-# Excel worksheets are hard-capped at 1,048,576 rows, including the header row.
+# Excel worksheets are hard-capped at 1,048,576 rows (incl. header) and 16,384 columns.
 EXCEL_MAX_ROWS = 1_048_576
+EXCEL_MAX_COLUMNS = 16_384
 
 
 def flatten_complex_columns(df):
@@ -205,6 +206,12 @@ def export_data(df, row_count):
                 raise ValueError(
                     f"Export has {row_count} rows, which exceeds Excel's {EXCEL_MAX_ROWS}-row "
                     "limit per sheet. Use CSV or Parquet for datasets this large."
+                )
+            column_count = len(df.columns)
+            if column_count > EXCEL_MAX_COLUMNS:
+                raise ValueError(
+                    f"Export has {column_count} columns, which exceeds Excel's {EXCEL_MAX_COLUMNS}-column "
+                    "limit per sheet. Use CSV or Parquet for tables this wide."
                 )
             df = flatten_complex_columns(df)
             df.coalesce(1).write.mode("overwrite").format("excel").option("header", True).save(OUTPUT_PATH)
