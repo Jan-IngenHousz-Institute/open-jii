@@ -205,7 +205,7 @@ describe("UploadDataModal", () => {
     expect(spy.called).toBe(false);
   });
 
-  it("hides the target picker and uses the folder label for ambyte uploads", async () => {
+  it("uses the same target form and a folder dropzone for ambyte uploads", async () => {
     setExperimentTables();
     mountEmptyHistory();
 
@@ -213,12 +213,14 @@ describe("UploadDataModal", () => {
 
     await enterCreateView("ambyte");
 
+    // Ambyte is just another format now: same create-new + name target form...
     expect(
-      await screen.findByText("experimentData.uploadDataModal.files.dropzone.ambytePlaceholder"),
+      await screen.findByLabelText("experimentData.uploadDataModal.newTable.label"),
     ).toBeInTheDocument();
+    // ...but it keeps the folder dropzone.
     expect(
-      screen.queryByLabelText("experimentData.uploadDataModal.newTable.label"),
-    ).not.toBeInTheDocument();
+      screen.getByText("experimentData.uploadDataModal.files.dropzone.ambytePlaceholder"),
+    ).toBeInTheDocument();
   });
 
   it("blocks submit and surfaces the noFiles validation when no files are picked", async () => {

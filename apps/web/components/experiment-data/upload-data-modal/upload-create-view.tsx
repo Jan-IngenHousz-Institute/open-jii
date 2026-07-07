@@ -9,11 +9,7 @@ import { useForm } from "react-hook-form";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { parseApiError } from "~/util/apiError";
 
-import {
-  AMBYTE_UPLOAD_TABLE_NAME,
-  UPLOAD_KIND_CONSTANTS,
-  zUploadFormFields,
-} from "@repo/api/schemas/experiment.schema";
+import { UPLOAD_KIND_CONSTANTS, zUploadFormFields } from "@repo/api/schemas/experiment.schema";
 import type { UploadFormFields, UploadSourceKind } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
@@ -46,13 +42,6 @@ export function UploadCreateView({
   );
   const hasExistingTables = uploadTables.length > 0;
 
-  // Ambyte uploads always land in one experiment-wide table named "raw_ambyte_data".
-  // If it already exists, append; otherwise mint it on first upload.
-  const existingAmbyteTable = React.useMemo(
-    () => uploadTables.find((table) => table.displayName === AMBYTE_UPLOAD_TABLE_NAME),
-    [uploadTables],
-  );
-
   const [files, setFiles] = React.useState<FileList | null>(null);
   const [fileError, setFileError] = React.useState<UploadValidationError | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -60,19 +49,12 @@ export function UploadCreateView({
   const form = useForm<UploadFormFields>({
     resolver: zodResolver(zUploadFormFields),
     mode: "onSubmit",
-    // Ambyte always targets its fixed table, so seed the name up front; the
-    // effect below upgrades to "append" if that table already exists.
-    defaultValues: {
-      targetKind: "new",
-      sourceKind,
-      targetName: isAmbyte ? AMBYTE_UPLOAD_TABLE_NAME : "",
-    },
+    defaultValues: { targetKind: "new", sourceKind, targetName: "" },
   });
 
   const targetKind = form.watch("targetKind");
 
-  // Tables resolve after mount; settle the default target once they load. Ambyte
-  // pins to its fixed table; tabular kinds default to appending when one exists.
+  // Tables resolve after mount; default to appending once an upload table exists.
   const hasSyncedTargetDefault = React.useRef(false);
   React.useEffect(() => {
     if (hasSyncedTargetDefault.current || tables === undefined) {
@@ -80,23 +62,10 @@ export function UploadCreateView({
     }
     hasSyncedTargetDefault.current = true;
 
-    if (isAmbyte) {
-      if (existingAmbyteTable) {
-        form.reset({
-          targetKind: "existing",
-          sourceKind,
-          uploadTableId: existingAmbyteTable.identifier,
-        });
-      } else {
-        form.reset({ targetKind: "new", sourceKind, targetName: AMBYTE_UPLOAD_TABLE_NAME });
-      }
-      return;
-    }
-
     if (hasExistingTables) {
-      form.reset({ targetKind: "existing", sourceKind, uploadTableId: undefined });
+      form.setValue("targetKind", "existing");
     }
-  }, [tables, isAmbyte, hasExistingTables, existingAmbyteTable, sourceKind, form]);
+  }, [tables, hasExistingTables, form]);
 
   const extensions = isAmbyte ? [] : UPLOAD_KIND_CONSTANTS[sourceKind].extensions;
   const formatLabel = t(`experimentData.uploadDataModal.history.sourceKind.${sourceKind}`);
@@ -166,14 +135,12 @@ export function UploadCreateView({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-      {!isAmbyte && (
-        <UploadTargetPicker
-          control={form.control}
-          targetKind={targetKind}
-          uploadTables={uploadTables}
-          disabled={isUploading}
-        />
-      )}
+      <UploadTargetPicker
+        control={form.control}
+        targetKind={targetKind}
+        uploadTables={uploadTables}
+        disabled={isUploading}
+      />
 
       <FileUpload
         files={files}
