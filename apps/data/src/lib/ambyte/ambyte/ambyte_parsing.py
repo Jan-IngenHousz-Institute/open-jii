@@ -4,16 +4,33 @@ Ambyte trace file processing functions.
 This module contains all the core processing logic for parsing Ambyte trace files.
 """
 
-import pandas as pd
-import numpy as np
 import datetime
 import os
-from typing import List, Tuple, Optional, Union
-from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
+from typing import TYPE_CHECKING
 
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+import numpy as np
+import pandas as pd
+from pyspark.sql import SparkSession
+
+# pyspark.dbutils only exists on Databricks Runtime. For type-checking we
+# pretend it is always present (since the functions that use it only run on
+# DBR); at import time we tolerate its absence so vanilla PySpark can load
+# this module for tests / CI.
+if TYPE_CHECKING:
+    from pyspark.dbutils import DBUtils  # type: ignore[import-not-found]
+
+    spark: SparkSession
+    dbutils: DBUtils
+else:
+    try:
+        from pyspark.dbutils import DBUtils
+
+        spark = SparkSession.builder.getOrCreate()
+        dbutils = DBUtils(spark)
+    except ImportError:  # pragma: no cover: DBR-only path
+        spark = None
+        dbutils = None
+
 
 def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     if arr.size == 3:
@@ -31,7 +48,7 @@ def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     section_start_idx = 0
     section_line = []
 
-    for _n, _f, _m, _a in zip(_num, _freq, _type, _act):
+    for _n, _f, _m, _a in zip(_num, _freq, _type, _act, strict=False):
         if _m == 0:
             continue
         _start, _end = section_start_idx, section_start_idx + _n
@@ -56,16 +73,16 @@ def protocol_array_calc(arr: np.ndarray, actual_size=-1):
 def parse_trace(trace: list):
     # Check trace type and parse header
     if trace[0][:2] == "A\t":
-        arr_info = trace[0].strip().split('\t')
+        arr_info = trace[0].strip().split("\t")
         if len(arr_info) != 5:
             print("Invalid A entry")
             return {"suc": False}
         t0_rel_ms = int(arr_info[1])
         t1_rel_ms = int(arr_info[2])
         protocol_name = arr_info[3]
-        protocol_arr = np.reshape(np.fromstring(arr_info[4], int, sep=','), (-1, 8))
+        protocol_arr = np.reshape(np.fromstring(arr_info[4], int, sep=","), (-1, 8))
     elif trace[0][:2] == "S\t":
-        arr_info = trace[0].strip().split('\t')
+        arr_info = trace[0].strip().split("\t")
         if len(arr_info) != 6:
             return {"suc": False}
         t0_rel_ms = int(arr_info[1])
@@ -90,7 +107,7 @@ def parse_trace(trace: list):
     trace_array[:, 1] = flur
     trace_array[:, 2] = ref
     for section in protocol_sections:
-        trace_array[section[0]:section[1], 7] = section[2]
+        trace_array[section[0] : section[1], 7] = section[2]
 
     # Optional: parse sun/leaf and 7s/7r if present
     sun = leaf = _7s = _7r = None
@@ -115,7 +132,7 @@ def parse_trace(trace: list):
     millis = 0
     time_warp_factor = 0.900 if protocol_name == "SPACER" else 0.8586
     if trace[1][:2] == "T0":
-        t0_timeline = trace[1].strip().split('\t')
+        t0_timeline = trace[1].strip().split("\t")
         if len(t0_timeline) == 2:
             t0_info = np.fromstring(t0_timeline[1], dtype=np.uint32, sep=",")
             if len(t0_info) > 1:
@@ -133,7 +150,9 @@ def parse_trace(trace: list):
                         if _type == 1:
                             end_ms_0 = millis + _data
                 if start_ms_0 > 0 and end_ms_0 > 100:
-                    _time_warp_factor = (end_ms_0 - start_ms_0) / (protocol_rel_ms[-1] - 2 * protocol_rel_ms[0] + protocol_rel_ms[1])
+                    _time_warp_factor = (end_ms_0 - start_ms_0) / (
+                        protocol_rel_ms[-1] - 2 * protocol_rel_ms[0] + protocol_rel_ms[1]
+                    )
                     if 0.75 < _time_warp_factor < 1.25:
                         time_warp_factor = _time_warp_factor
     trace_array[:, 0] = protocol_rel_ms * time_warp_factor + t0_rel_ms
@@ -146,11 +165,13 @@ def parse_trace(trace: list):
         "t2": t1_rel_ms,
         "tm": millis,
         "Full": full_length,
-        "Duration": end_ms_0 - start_ms_0 if 'end_ms_0' in locals() else None
+        # `end_ms_0`/`start_ms_0` only bind inside the timeline branch above;
+        # the locals() guard preserves the legacy "no timeline" -> None contract.
+        "Duration": end_ms_0 - start_ms_0 if "end_ms_0" in locals() else None,  # pyright: ignore
     }
 
 
-def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6) -> List[str]:
+def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6) -> list[str]:
     """Locate folders that contain subfolders named '1','2','3','4' or 'unknown_ambit' (DBFS recursive).
 
     Args:
@@ -158,8 +179,8 @@ def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6
         recursive: Enable depth-first recursion.
         max_depth: Maximum recursion depth.
     """
-    required = {'1', '2', '3', '4'}
-    results: List[str] = []
+    required = {"1", "2", "3", "4"}
+    results: list[str] = []
 
     def _dfs(path: str, depth: int):
         if depth > max_depth:
@@ -169,35 +190,35 @@ def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6
         except Exception as e:
             print(f"Cannot list {path}: {e}")
             return
-        dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
+        dir_names = {os.path.basename(e.path.rstrip("/")) for e in entries if e.isDir()}
         # Check for standard byte folders (1-4) or unknown_ambit folder
-        if required.issubset(dir_names) or 'unknown_ambit' in dir_names:
-            results.append(path.rstrip('/'))
+        if required.issubset(dir_names) or "unknown_ambit" in dir_names:
+            results.append(path.rstrip("/"))
         if recursive:
             for e in entries:
                 if e.isDir():
-                    _dfs(e.path.rstrip('/'), depth + 1)
+                    _dfs(e.path.rstrip("/"), depth + 1)
 
-    _dfs(dbfs_path.rstrip('/'), 0)
+    _dfs(dbfs_path.rstrip("/"), 0)
     return sorted(set(results))
 
 
 def load_files_per_byte(
-    byte_folder_path: str, year_prefix: Union[str, Tuple[str, ...]] = "2025"
-) -> Tuple[List[List[list]], str]:
+    byte_folder_path: str, year_prefix: str | tuple[str, ...] = "2025"
+) -> tuple[list[list[list]], str]:
     """Load trace files from each byte subfolder (1-4) or from unknown_ambit using full DBFS reads.
 
     Args:
         byte_folder_path: Base folder containing subfolders 1..4 or unknown_ambit
         year_prefix: File name prefix filter; a tuple accepts files matching any prefix.
     """
-    files_per_byte: List[List[list]] = [[] for _ in range(4)]
+    files_per_byte: list[list[list]] = [[] for _ in range(4)]
 
     # Check if this is an unknown_ambit folder structure
     try:
         entries = dbutils.fs.ls(byte_folder_path)
-        dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
-        has_unknown_ambit = 'unknown_ambit' in dir_names
+        dir_names = {os.path.basename(e.path.rstrip("/")) for e in entries if e.isDir()}
+        has_unknown_ambit = "unknown_ambit" in dir_names
     except Exception as e:
         print(f"Error accessing folder {byte_folder_path}: {e}")
         has_unknown_ambit = False
@@ -209,11 +230,11 @@ def load_files_per_byte(
             listing = dbutils.fs.ls(unknown_ambit_dir)
             for fi in listing:
                 name = os.path.basename(fi.path)
-                if not (name.endswith('_.txt') and name.startswith(year_prefix)):
+                if not (name.endswith("_.txt") and name.startswith(year_prefix)):
                     continue
                 try:
                     content = dbutils.fs.head(fi.path, max_bytes=10485760)
-                    lines = content.split('\n')
+                    lines = content.split("\n")
                     lines.append("EOF")
                     if len(lines) > 7:
                         files_per_byte[0].append(lines)  # Put all unknown_ambit files in first slot
@@ -233,11 +254,11 @@ def load_files_per_byte(
 
             for fi in listing:
                 name = os.path.basename(fi.path)
-                if not (name.endswith('_.txt') and name.startswith(year_prefix)):
+                if not (name.endswith("_.txt") and name.startswith(year_prefix)):
                     continue
                 try:
                     content = dbutils.fs.head(fi.path, max_bytes=10485760)
-                    lines = content.split('\n')
+                    lines = content.split("\n")
                     lines.append("EOF")
                     if len(lines) > 7:
                         files_per_byte[byte_index - 1].append(lines)
@@ -247,18 +268,18 @@ def load_files_per_byte(
     return files_per_byte, byte_folder_path
 
 
-def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) -> Optional[pd.DataFrame]:
+def process_trace_files(ambyte_folder: str, files_per_byte: list[list[list]]) -> pd.DataFrame | None:
     """Process trace files and return a concatenated DataFrame (Databricks only).
 
     The legacy ms_offset bug has been removed; timestamp alignment uses per-ambit sizing.
     """
-    all_dfs: List[pd.DataFrame] = []
-    
+    all_dfs: list[pd.DataFrame] = []
+
     # Detect if this is an unknown_ambit case by checking if only the first element has data
     is_unknown_ambit = (
-        len([data for data in files_per_byte if data]) == 1 and 
-        files_per_byte[0] and 
-        not any(files_per_byte[1:])
+        len([data for data in files_per_byte if data]) == 1
+        and files_per_byte[0]
+        and not any(files_per_byte[1:])
     )
 
     for ambit_index, ambit_data in enumerate(files_per_byte):
@@ -267,13 +288,18 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
         print(f"Processing ambit index {ambit_index}, ambyte folder: {ambyte_folder}")
 
         try:
-            Traces_df: List[pd.DataFrame] = []
+            Traces_df: list[pd.DataFrame] = []
             for lines in ambit_data:
                 try:
                     _timestamp = int(lines[0].split("\t")[2])
                 except Exception:
                     _timestamp = 0
-                print("Processing date: ", datetime.datetime.fromtimestamp(_timestamp, datetime.timezone.utc) if _timestamp else "N/A")
+                print(
+                    "Processing date: ",
+                    datetime.datetime.fromtimestamp(_timestamp, datetime.timezone.utc)
+                    if _timestamp
+                    else "N/A",
+                )
                 # Per-ambit ms_offset sizing (fixed behavior)
                 ms_offset_factor = np.ones(len(ambit_data) + 10)
                 _line_count_1 = -1
@@ -302,17 +328,20 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
                             _Header_t0_ms = int(_line_split[1])
                             _Header_RTC_ms = int(_line_split[2]) * 1000
 
-                    if _line.startswith("I1\t") or _line.startswith("H1\t"):
-                        if (_Header_t0_ms > 0) and (_Header_RTC_ms > 0):
-                            RTC_T0_MS = int(_Header_RTC_ms - _Header_t0_ms)
+                    if (
+                        (_line.startswith("I1\t") or _line.startswith("H1\t"))
+                        and _Header_t0_ms > 0
+                        and _Header_RTC_ms > 0
+                    ):
+                        RTC_T0_MS = int(_Header_RTC_ms - _Header_t0_ms)
 
                     if _line.startswith("INFO START"):
                         _line_count_1 = n + 1
                     if _line.startswith("INFO END") and _line_count_1 > 1:
                         Metadata = lines[_line_count_1:n]
 
-                    trace_ret = {'suc': False}
-                    if (_line_counter_traces >= 0) and _line[:2] == 'T' + str(n - _line_counter_traces - 1):
+                    trace_ret = {"suc": False}
+                    if (_line_counter_traces >= 0) and _line[:2] == "T" + str(n - _line_counter_traces - 1):
                         pass
                     elif _line_counter_traces >= 0:
                         trace_ret = parse_trace(lines[_line_counter_traces:n])
@@ -321,54 +350,70 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
                         _line_counter_traces = n
 
                     if _line[:2] == "P\t":
-                        _pars = _line.split('\t')
+                        _pars = _line.split("\t")
                         try:
                             _par_dict = {
-                                't': int(_pars[1]) + RTC_T0_MS,
-                                'PAR': float(_pars[2]),
-                                'raw': float(_pars[13]),
-                                'spec': np.array(list(map(int, _pars[3:13])), dtype=np.uint16).tolist(),
-                                'Time': 0
+                                "t": int(_pars[1]) + RTC_T0_MS,
+                                "PAR": float(_pars[2]),
+                                "raw": float(_pars[13]),
+                                "spec": np.array(list(map(int, _pars[3:13])), dtype=np.uint16).tolist(),
+                                "Time": 0,
                             }
                             _par_dict_l.append(_par_dict)
                         except Exception:
                             pass
                     if _line[:2] == "L\t":
-                        _leaf_l = _line.split('\t')
+                        _leaf_l = _line.split("\t")
                         try:
                             _leafT_dict = {
-                                't': int(_leaf_l[1]) + RTC_T0_MS,
-                                'Temp': float(_leaf_l[2]),
-                                'BoardT': float(_leaf_l[4]),
-                                'Time': 0
+                                "t": int(_leaf_l[1]) + RTC_T0_MS,
+                                "Temp": float(_leaf_l[2]),
+                                "BoardT": float(_leaf_l[4]),
+                                "Time": 0,
                             }
                             _leafT_dict_l.append(_leafT_dict)
                         except Exception:
                             pass
 
-                    if trace_ret['suc']:
+                    if trace_ret["suc"]:
                         Trace_count += 1
-                        df = pd.DataFrame(trace_ret['arr'], columns=[
-                            't', 'SigF', 'RefF', 'Sun', 'Leaf', 'Sig7', 'Ref7', 'Actinic', 'Temp', 'Res'
-                        ])
-                        df['Full'] = trace_ret['Full']
-                        df['Type'] = trace_ret['Trace_type']
-                        if not df['t'].is_monotonic_increasing:
+                        df = pd.DataFrame(
+                            trace_ret["arr"],
+                            columns=[
+                                "t",
+                                "SigF",
+                                "RefF",
+                                "Sun",
+                                "Leaf",
+                                "Sig7",
+                                "Ref7",
+                                "Actinic",
+                                "Temp",
+                                "Res",
+                            ],
+                        )
+                        df["Full"] = trace_ret["Full"]
+                        df["Type"] = trace_ret["Trace_type"]
+                        if not df["t"].is_monotonic_increasing:
                             print("Warning: Time not monotonic")
-                        df['Count'] = Trace_count
+                        df["Count"] = Trace_count
                         # Timestamp alignment using corrected per-ambit offset factor
                         idx = min(_header_counter, len(ms_offset_factor) - 1)
-                        df['Time'] = pd.to_datetime(df['t'] + RTC_T0_MS - df['t'][0] * (1 - ms_offset_factor[idx]), unit='ms')
-                        df['PTS'] = np.arange(df.shape[0]).astype('int32')  # Use int32 instead of uint16
-                        if len(df.loc[df['Time'] < "2020"]):
-                            df.drop(df.loc[df['Time'] < "2020"].index)
+                        df["Time"] = pd.to_datetime(
+                            df["t"] + RTC_T0_MS - df["t"][0] * (1 - ms_offset_factor[idx]), unit="ms"
+                        )
+                        df["PTS"] = np.arange(df.shape[0]).astype("int32")  # Use int32 instead of uint16
+                        if len(df.loc[df["Time"] < "2020"]):
+                            df.drop(df.loc[df["Time"] < "2020"].index)
 
                         if Traces_df:
                             _last_df = Traces_df[-1]
-                            if _last_df['Time'].iloc[-1] > df['Time'].iloc[0]:
-                                mask = df['Time'] < _last_df['Time'].iloc[-1]
+                            if _last_df["Time"].iloc[-1] > df["Time"].iloc[0]:
+                                mask = df["Time"] < _last_df["Time"].iloc[-1]
                                 if np.count_nonzero(mask) > 0:
-                                    print(f"Warning: Interlaced time in trace {Trace_count} ({np.count_nonzero(mask)} rows removed)")
+                                    print(
+                                        f"Warning: Interlaced time in trace {Trace_count} ({np.count_nonzero(mask)} rows removed)"
+                                    )
                                     df.drop(index=df.loc[mask].index, inplace=True)
                         Traces_df.append(df)
 
@@ -377,7 +422,7 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
 
             # Merge traces for this ambit
             df_ambit = pd.concat(Traces_df)
-            df_ambit.set_index('Time', inplace=True)
+            df_ambit.set_index("Time", inplace=True)
             if not df_ambit.index.is_monotonic_increasing:
                 print("Warning: Ambit index not monotonic after concat")
             df_ambit.sort_index(inplace=True)
@@ -385,81 +430,81 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
             # Attach PAR records
             if _par_dict_l:
                 for rec in _par_dict_l:
-                    _dt = pd.to_datetime(rec['t'], unit='ms')
-                    _idx = df_ambit.index.searchsorted(_dt, side='right')
+                    _dt = pd.to_datetime(rec["t"], unit="ms")
+                    _idx = df_ambit.index.searchsorted(_dt, side="right")
                     if _idx > 0:
-                        rec['Time'] = df_ambit.iloc[_idx - 1].name
+                        rec["Time"] = df_ambit.iloc[_idx - 1].name
                 df_par = pd.DataFrame(_par_dict_l)
-                df_par.drop(columns=['t'], inplace=True)
-                df_ambit = df_ambit.join(df_par.set_index('Time'), how='left')
-                
+                df_par.drop(columns=["t"], inplace=True)
+                df_ambit = df_ambit.join(df_par.set_index("Time"), how="left")
+
                 # Ensure spec column has consistent array type for Spark compatibility
-                if 'spec' in df_ambit.columns:
-                    df_ambit['spec'] = df_ambit['spec'].apply(lambda x: x if isinstance(x, list) else [])
+                if "spec" in df_ambit.columns:
+                    df_ambit["spec"] = df_ambit["spec"].apply(lambda x: x if isinstance(x, list) else [])
 
             # Temperature conversions & leaf temps
-            df_ambit.loc[df_ambit['Temp'] == 0, 'Temp'] = np.nan
-            df_ambit['Temp'] = df_ambit['Temp'] / 10 - 273.1
+            df_ambit.loc[df_ambit["Temp"] == 0, "Temp"] = np.nan
+            df_ambit["Temp"] = df_ambit["Temp"] / 10 - 273.1
 
             if _leafT_dict_l:
                 for rec in _leafT_dict_l:
-                    _dt = pd.to_datetime(rec['t'], unit='ms')
-                    _idx = df_ambit.index.searchsorted(_dt, side='right')
+                    _dt = pd.to_datetime(rec["t"], unit="ms")
+                    _idx = df_ambit.index.searchsorted(_dt, side="right")
                     if _idx > 0:
-                        rec['Time'] = df_ambit.iloc[_idx - 1].name
+                        rec["Time"] = df_ambit.iloc[_idx - 1].name
                 df_leaf = pd.DataFrame(_leafT_dict_l)
-                df_leaf.drop(index=df_leaf[df_leaf['Time'].isna()].index, inplace=True, errors='ignore')
-                df_leaf.drop(columns=['t'], inplace=True, errors='ignore')
+                df_leaf.drop(index=df_leaf[df_leaf["Time"].isna()].index, inplace=True, errors="ignore")
+                df_leaf.drop(columns=["t"], inplace=True, errors="ignore")
                 if not df_leaf.empty:
-                    df_leaf['Time'] = df_leaf['Time'].astype('datetime64[ns]')
-                    df_ambit = df_ambit.combine_first(df_leaf.set_index('Time'))
+                    df_leaf["Time"] = df_leaf["Time"].astype("datetime64[ns]")
+                    df_ambit = df_ambit.combine_first(df_leaf.set_index("Time"))
 
             attrs = {}
             for _l in Metadata:
-                for _tabs in _l.strip().split('\t'):
+                for _tabs in _l.strip().split("\t"):
                     if _tabs.startswith("Act:"):
                         attrs.update({"Actinic": float(_tabs[4:])})
                     if _tabs.startswith("Dark:"):
                         attrs.update({"Dark": int(_tabs[5:])})
 
             if "Actinic" in attrs:
-                df_ambit['meta_Actinic'] = attrs["Actinic"]
+                df_ambit["meta_Actinic"] = attrs["Actinic"]
             if "Dark" in attrs:
-                df_ambit['meta_Dark'] = attrs["Dark"]
+                df_ambit["meta_Dark"] = attrs["Dark"]
 
             # Type / dtype normalization - using Spark-compatible types
-            df_ambit['Sig7'] = df_ambit['Sig7'].astype('int32')
-            df_ambit['Ref7'] = df_ambit['Ref7'].astype('int32')
-            df_ambit.loc[(df_ambit['Sig7'] < 1) | (df_ambit['Ref7'] < 10), ['Sig7', 'Ref7']] = None
-            df_ambit['Sun'] = df_ambit['Sun'].astype('int32')
-            df_ambit['Sun'] -= df_ambit['Sun'].min()
-            df_ambit['Leaf'] = df_ambit['Leaf'].astype('int32')
-            df_ambit['Leaf'] -= df_ambit['Leaf'].min()
-            df_ambit['Actinic'] = df_ambit['Actinic'].astype('int32')  # Convert categorical to int32
-            df_ambit['Res'] = df_ambit['Res'].astype('int32')
-            df_ambit['Type'] = df_ambit['Type'].astype('string')  # Convert categorical to string
-            df_ambit['Count'] = df_ambit['Count'].astype('int32')
-            if 'raw' in df_ambit.columns:
-                df_ambit['raw'] = df_ambit['raw'].astype('float32')
-            if 'PAR' in df_ambit.columns:
-                df_ambit['PAR'] = df_ambit['PAR'].astype('float32')
-            df_ambit['Temp'] = df_ambit['Temp'].astype('float32')
-            if 'BoardT' in df_ambit.columns:
-                df_ambit['BoardT'] = df_ambit['BoardT'].astype('float32')
-            if 'meta_Actinic' in df_ambit.columns:
-                df_ambit['meta_Actinic'] = df_ambit['meta_Actinic'].astype('float32')
-            if 'meta_Dark' in df_ambit.columns:
-                df_ambit['meta_Dark'] = df_ambit['meta_Dark'].astype('int32')
-            df_ambit.drop(columns=['t'], inplace=True, errors='ignore')
+            df_ambit["Sig7"] = df_ambit["Sig7"].astype("int32")
+            df_ambit["Ref7"] = df_ambit["Ref7"].astype("int32")
+            df_ambit.loc[(df_ambit["Sig7"] < 1) | (df_ambit["Ref7"] < 10), ["Sig7", "Ref7"]] = None
+            df_ambit["Sun"] = df_ambit["Sun"].astype("int32")
+            df_ambit["Sun"] -= df_ambit["Sun"].min()
+            df_ambit["Leaf"] = df_ambit["Leaf"].astype("int32")
+            df_ambit["Leaf"] -= df_ambit["Leaf"].min()
+            df_ambit["Actinic"] = df_ambit["Actinic"].astype("int32")  # Convert categorical to int32
+            df_ambit["Res"] = df_ambit["Res"].astype("int32")
+            df_ambit["Type"] = df_ambit["Type"].astype("string")  # Convert categorical to string
+            df_ambit["Count"] = df_ambit["Count"].astype("int32")
+            if "raw" in df_ambit.columns:
+                df_ambit["raw"] = df_ambit["raw"].astype("float32")
+            if "PAR" in df_ambit.columns:
+                df_ambit["PAR"] = df_ambit["PAR"].astype("float32")
+            df_ambit["Temp"] = df_ambit["Temp"].astype("float32")
+            if "BoardT" in df_ambit.columns:
+                df_ambit["BoardT"] = df_ambit["BoardT"].astype("float32")
+            if "meta_Actinic" in df_ambit.columns:
+                df_ambit["meta_Actinic"] = df_ambit["meta_Actinic"].astype("float32")
+            if "meta_Dark" in df_ambit.columns:
+                df_ambit["meta_Dark"] = df_ambit["meta_Dark"].astype("int32")
+            df_ambit.drop(columns=["t"], inplace=True, errors="ignore")
 
             # Identification columns
-            df_ambit['ambyte_folder'] = ambyte_folder
+            df_ambit["ambyte_folder"] = ambyte_folder
             # Set ambit_index to null for unknown_ambit case, otherwise use normal index
             if is_unknown_ambit:
-                df_ambit['ambit_index'] = None  # Use None instead of pd.NA for Spark compatibility
+                df_ambit["ambit_index"] = None  # Use None instead of pd.NA for Spark compatibility
             else:
-                df_ambit['ambit_index'] = ambit_index + 1
-            df_ambit['ambit_index'] = df_ambit['ambit_index'].astype('int32')  # Ensure int32 type
+                df_ambit["ambit_index"] = ambit_index + 1
+            df_ambit["ambit_index"] = df_ambit["ambit_index"].astype("int32")  # Ensure int32 type
             all_dfs.append(df_ambit)
 
         except Exception as e:

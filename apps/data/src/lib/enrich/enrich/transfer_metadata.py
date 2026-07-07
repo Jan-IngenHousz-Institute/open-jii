@@ -6,16 +6,16 @@ project-transfer webhook. Follows the same pattern as user_metadata.py:
 takes a DataFrame, fetches secrets, calls the backend, returns enriched DataFrame.
 """
 
-import json
 import base64
-from typing import Dict, Any, List, Optional
+import json
+from typing import Any
 
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
-    StructType,
-    StructField,
-    StringType,
     BooleanType,
+    StringType,
+    StructField,
+    StructType,
 )
 
 from .backend_client import BackendClient
@@ -25,20 +25,23 @@ def log(msg: str) -> None:
     """Print to stdout so output appears in Databricks notebook cells."""
     print(f"[transfer_metadata] {msg}")
 
+
 # Output schema for the backend_transfer table
-TRANSFER_RESULT_SCHEMA = StructType([
-    StructField("transfer_id", StringType(), False),
-    StructField("project_id", StringType(), True),
-    StructField("creator_user_id", StringType(), True),
-    StructField("experiment_id", StringType(), True),
-    StructField("protocol_id", StringType(), True),
-    StructField("macro_id", StringType(), True),
-    StructField("macro_filename", StringType(), True),
-    StructField("macro_name", StringType(), True),
-    StructField("flow_id", StringType(), True),
-    StructField("success", BooleanType(), False),
-    StructField("error", StringType(), True),
-])
+TRANSFER_RESULT_SCHEMA = StructType(
+    [
+        StructField("transfer_id", StringType(), False),
+        StructField("project_id", StringType(), True),
+        StructField("creator_user_id", StringType(), True),
+        StructField("experiment_id", StringType(), True),
+        StructField("protocol_id", StringType(), True),
+        StructField("macro_id", StringType(), True),
+        StructField("macro_filename", StringType(), True),
+        StructField("macro_name", StringType(), True),
+        StructField("flow_id", StringType(), True),
+        StructField("success", BooleanType(), False),
+        StructField("error", StringType(), True),
+    ]
+)
 
 _NAME_MAX_LENGTH = 255
 _TRANSFER_SUFFIX = " (PhotosynQ)"
@@ -49,9 +52,7 @@ def _transfer_name(name: str) -> str:
     to stay within the 255-character database limit."""
     max_base = _NAME_MAX_LENGTH - len(_TRANSFER_SUFFIX)
     if len(name) > max_base:
-        log(
-            f"Name truncated from {len(name)} to {max_base} chars: '{name[:40]}…'"
-        )
+        log(f"Name truncated from {len(name)} to {max_base} chars: '{name[:40]}…'")
     return name[:max_base] + _TRANSFER_SUFFIX
 
 
@@ -69,9 +70,7 @@ _VALUE_TYPE_TO_KIND = {
 }
 
 
-def _build_protocol_payload(
-    proto_list: Optional[List[Dict]], creator_user_id: str
-) -> Optional[Dict[str, Any]]:
+def _build_protocol_payload(proto_list: list[dict] | None, creator_user_id: str) -> dict[str, Any] | None:
     """Build the protocol section of the webhook payload from the first protocol."""
     if not proto_list:
         return None
@@ -92,20 +91,14 @@ def _build_protocol_payload(
     }
 
 
-def _build_macro_payload(
-    macro_list: Optional[List[Dict]], creator_user_id: str
-) -> Optional[Dict[str, Any]]:
+def _build_macro_payload(macro_list: list[dict] | None, creator_user_id: str) -> dict[str, Any] | None:
     """Build the macro section of the webhook payload from the first macro.
     Encodes javascript_code as base64 as required by the backend."""
     if not macro_list:
         return None
     macro = macro_list[0]
     raw_code = macro.get("code")
-    b64_code = (
-        base64.b64encode(raw_code.encode("utf-8")).decode("utf-8")
-        if raw_code
-        else None
-    )
+    b64_code = base64.b64encode(raw_code.encode("utf-8")).decode("utf-8") if raw_code else None
     raw_desc = macro.get("description")
     description = f"<p>{raw_desc}</p>" if raw_desc else raw_desc
     return {
@@ -118,8 +111,8 @@ def _build_macro_payload(
 
 
 def _build_questions_payload(
-    questions_raw: Optional[List[Dict]],
-) -> List[Dict[str, Any]]:
+    questions_raw: list[dict] | None,
+) -> list[dict[str, Any]]:
     """Map PhotosynQ questions to the ProjectTransferQuestionInput schema."""
     if not questions_raw:
         return []
@@ -130,12 +123,10 @@ def _build_questions_payload(
         kind = _VALUE_TYPE_TO_KIND.get(vt, "open_ended")
         text = q.get("question_text") or q.get("label")
         if text and len(text) > 64:
-            log(
-                f"Question text truncated from {len(text)} to 64 chars: '{text[:40]}…'"
-            )
+            log(f"Question text truncated from {len(text)} to 64 chars: '{text[:40]}…'")
         text = text[:64] if text else text  # webhook max length
 
-        entry: Dict[str, Any] = {"kind": kind, "text": text}
+        entry: dict[str, Any] = {"kind": kind, "text": text}
         opts = q.get("options")
         if opts:
             entry["options"] = list(opts)
@@ -145,9 +136,9 @@ def _build_questions_payload(
 
 
 def _build_transfer_description(
-    original_description: Optional[str],
-    protocol_name: Optional[str],
-    macro_name: Optional[str],
+    original_description: str | None,
+    protocol_name: str | None,
+    macro_name: str | None,
 ) -> str:
     """Build an enriched experiment description for transferred projects.
 
@@ -174,9 +165,7 @@ def _build_transfer_description(
     return "".join(paragraphs)
 
 
-def _call_transfer_webhook(
-    row: Dict[str, Any], client: BackendClient
-) -> Dict[str, Any]:
+def _call_transfer_webhook(row: dict[str, Any], client: BackendClient) -> dict[str, Any]:
     """
     Call the backend project-transfer webhook for a single transfer.
 
@@ -187,12 +176,8 @@ def _call_transfer_webhook(
     creator_user_id = row["creator_user_id"]
 
     try:
-        protocol_payload = _build_protocol_payload(
-            row.get("protocols_list"), creator_user_id
-        )
-        macro_payload = _build_macro_payload(
-            row.get("macros_list"), creator_user_id
-        )
+        protocol_payload = _build_protocol_payload(row.get("protocols_list"), creator_user_id)
+        macro_payload = _build_macro_payload(row.get("macros_list"), creator_user_id)
         questions_payload = _build_questions_payload(row.get("questions"))
 
         protocol_name = protocol_payload["name"] if protocol_payload else None
@@ -217,7 +202,7 @@ def _call_transfer_webhook(
                 for loc in locations_raw
             ]
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "experiment": {
                 "name": row.get("project_name"),
                 "description": description,
@@ -232,9 +217,7 @@ def _call_transfer_webhook(
         if questions_payload:
             payload["questions"] = questions_payload
 
-        result = client._make_request(
-            "/api/v1/webhooks/project-transfer", payload
-        )
+        result = client._make_request("/api/v1/webhooks/project-transfer", payload)
 
         return {
             "transfer_id": transfer_id,
@@ -297,9 +280,6 @@ def execute_transfers(df: DataFrame, environment: str, dbutils, spark) -> DataFr
     )
 
     rows = df.collect()
-    results = [
-        _call_transfer_webhook(row.asDict(recursive=True), client)
-        for row in rows
-    ]
+    results = [_call_transfer_webhook(row.asDict(recursive=True), client) for row in rows]
 
     return spark.createDataFrame(results, schema=TRANSFER_RESULT_SCHEMA)

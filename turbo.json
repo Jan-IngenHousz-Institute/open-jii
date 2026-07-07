@@ -9,8 +9,7 @@
         ".next/**",
         "!.next/cache/**",
         "build/**",
-        "dist/**",
-        "apps/data/src/lib/**/dist/**"
+        "dist/**"
       ],
       "env": [
         "NODE_ENV",

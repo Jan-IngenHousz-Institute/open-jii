@@ -1,6 +1,8 @@
 """Patches corrupted data downstream of bronze. See README.md."""
+
 __version__ = "0.1.0"
 
+from . import repairs  # noqa: F401  (import triggers @inline_repair registrations)
 from .manifest import (
     InlineRepair,
     Severity,
@@ -8,7 +10,6 @@ from .manifest import (
     inline_repair,
     list_repairs,
 )
-from . import repairs  # noqa: F401  (import triggers @inline_repair registrations)
 
 __all__ = [
     "InlineRepair",

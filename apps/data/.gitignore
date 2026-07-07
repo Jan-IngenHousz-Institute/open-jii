@@ -1,20 +1,27 @@
-# Poetry
+# Python / uv
 .venv/
+.python-version-local
+# The repo-root .gitignore excludes .python-version globally; un-ignore here
+# so this app's pinned uv Python version is tracked.
+!.python-version
 dist/
+build/
+*.egg
 *.egg-info/
+*.whl
 
-# Python
+# Bytecode + caches
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.ruff_cache/
 .coverage
+.coverage.*
+coverage.xml
+htmlcov/
 .mypy_cache/
-
-# Build artifacts
-build/
-*.egg
-*.whl
+.pyright/
 
 # Databricks
 .databricks/
@@ -22,3 +29,4 @@ build/
 # IDE
 .vscode/
 .idea/
+.DS_Store
