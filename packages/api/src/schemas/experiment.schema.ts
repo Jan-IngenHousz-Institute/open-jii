@@ -1773,7 +1773,7 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 // --- Export Data Schemas ---
 export const zInitiateExportBody = z.object({
   tableName: z.string().describe("Name of the table to export"),
-  format: z.enum(["csv", "ndjson", "json-array", "parquet"]).describe("Export format"),
+  format: z.enum(["csv", "ndjson", "json-array", "parquet", "xlsx"]).describe("Export format"),
   anonymizeContributors: z
     .boolean()
     .optional()
@@ -1794,7 +1794,7 @@ export const zExportRecord = z.object({
   exportId: z.string().uuid().nullable(),
   experimentId: z.string().uuid(),
   tableName: z.string(),
-  format: z.enum(["csv", "ndjson", "json-array", "parquet"]),
+  format: z.enum(["csv", "ndjson", "json-array", "parquet", "xlsx"]),
   status: z.enum(["queued", "pending", "running", "completed", "failed"]),
   filePath: z.string().nullable(),
   rowCount: z.number().int().nullable(),

@@ -730,7 +730,7 @@ module "data_downloads_volume" {
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
   volume_name  = "data-exports"
-  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
+  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet, Excel)"
 
   grants = {
     node_service_principal = {
@@ -986,7 +986,7 @@ module "data_export_job" {
   source = "../../modules/databricks/job"
 
   name        = "Data-Export-Job-PROD"
-  description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
+  description = "Exports experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel) to Unity Catalog volumes"
 
   max_concurrent_runs           = 5
   use_serverless                = true
