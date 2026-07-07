@@ -209,7 +209,7 @@ export function ExperimentTableHeader({
       <TableRow className="h-2">
         {headerGroup.headers.map((header, headerIndex) => {
           const columnDef = header.column.columnDef;
-          const meta = columnDef.meta as { type?: string } | undefined;
+          const meta: { type?: string } | undefined = columnDef.meta;
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);

@@ -440,11 +440,11 @@ describe("MetadataUploadStep", () => {
       } = {},
     ): Promise<{ onClose: () => void }> => {
       mockParseClipboard.mockResolvedValue(sampleData);
-      mockMutateAsync.mockImplementation(
-        options.mutateError
-          ? () => Promise.reject(options.mutateError as Error)
-          : () => Promise.resolve({}),
-      );
+      if (options.mutateError) {
+        mockMutateAsync.mockRejectedValue(options.mutateError);
+      } else {
+        mockMutateAsync.mockResolvedValue({});
+      }
 
       const onClose = options.onClose ?? vi.fn();
       renderStep({ onClose });
@@ -499,7 +499,7 @@ describe("MetadataUploadStep", () => {
     });
 
     it("shows generic error when save fails with non-Error", async () => {
-      await loadDataAndSave({ mutateError: "unknown" as unknown as Error });
+      await loadDataAndSave({ mutateError: "unknown" });
 
       fireEvent.click(getSaveButton());
 

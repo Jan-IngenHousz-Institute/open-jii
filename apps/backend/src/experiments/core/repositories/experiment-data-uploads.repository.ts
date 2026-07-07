@@ -172,19 +172,38 @@ export class ExperimentDataUploadsRepository {
       return Number.isFinite(n) ? n : null;
     };
 
-    return schemaData.rows.map((row) => ({
-      uploadId: row[uploadIdIdx] ?? "",
-      experimentId: row[experimentIdIdx] ?? "",
-      uploadTableId: uploadTableIdIdx >= 0 ? emptyToNull(row[uploadTableIdIdx]) : null,
-      uploadTableName: uploadTableNameIdx >= 0 ? emptyToNull(row[uploadTableNameIdx]) : null,
-      sourceKind: zExperimentUploadSourceKind.parse(row[sourceKindIdx]),
-      status: zExperimentUploadHistoryStatus.parse(row[statusIdx]),
-      fileCount: parseIntOrNull(row[fileCountIdx]),
-      rowCount: parseIntOrNull(row[rowCountIdx]),
-      createdBy: row[createdByIdx] ?? "",
-      createdAt: row[createdAtIdx] ?? "",
-      completedAt: emptyToNull(row[completedAtIdx]),
-      errorMessage: emptyToNull(row[errorMessageIdx]),
-    }));
+    // A single row with an unrecognized source_kind/status (e.g. a legacy kind
+    // that's since been removed) must not fail the whole history read; skip it,
+    // consistent with the safeParse-and-skip in getActiveUploads/getFailedUploads.
+    return schemaData.rows.flatMap((row) => {
+      const sourceKind = zExperimentUploadSourceKind.safeParse(row[sourceKindIdx]);
+      const status = zExperimentUploadHistoryStatus.safeParse(row[statusIdx]);
+      if (!sourceKind.success || !status.success) {
+        this.logger.warn({
+          msg: "Skipping upload history row with unrecognized source_kind/status",
+          operation: "mapCompletedRows",
+          uploadId: row[uploadIdIdx],
+          sourceKind: row[sourceKindIdx],
+          status: row[statusIdx],
+        });
+        return [];
+      }
+      return [
+        {
+          uploadId: row[uploadIdIdx] ?? "",
+          experimentId: row[experimentIdIdx] ?? "",
+          uploadTableId: uploadTableIdIdx >= 0 ? emptyToNull(row[uploadTableIdIdx]) : null,
+          uploadTableName: uploadTableNameIdx >= 0 ? emptyToNull(row[uploadTableNameIdx]) : null,
+          sourceKind: sourceKind.data,
+          status: status.data,
+          fileCount: parseIntOrNull(row[fileCountIdx]),
+          rowCount: parseIntOrNull(row[rowCountIdx]),
+          createdBy: row[createdByIdx] ?? "",
+          createdAt: row[createdAtIdx] ?? "",
+          completedAt: emptyToNull(row[completedAtIdx]),
+          errorMessage: emptyToNull(row[errorMessageIdx]),
+        },
+      ];
+    });
   }
 }

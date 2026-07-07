@@ -25,7 +25,7 @@ function makeNode(overrides: Partial<FlowNode> & { id: string; type: string }): 
 }
 
 function makeEdge(source: string, target: string): FlowEdge {
-  return { id: `${source}->${target}`, source, target } as FlowEdge;
+  return { id: `${source}->${target}`, source, target };
 }
 
 describe("orderFlowNodes", () => {

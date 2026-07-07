@@ -88,7 +88,7 @@ describe("CommentModal", () => {
     vi.spyOn(Keyboard, "dismiss").mockImplementation(() => undefined);
     vi.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler) => {
       backPressHandler = handler as () => boolean;
-      return { remove: vi.fn() } as never;
+      return { remove: vi.fn() };
     });
   });
 

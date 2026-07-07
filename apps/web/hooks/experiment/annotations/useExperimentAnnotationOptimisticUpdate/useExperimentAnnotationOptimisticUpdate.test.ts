@@ -244,12 +244,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const { result } = renderHook(() => useExperimentAnnotationOptimisticUpdate());
       const { removeBulk } = result.current;
 
-      const updatedData = removeBulk(
-        emptyData,
-        "test_table",
-        ["row1"],
-        "comment" as ExperimentAnnotationType,
-      );
+      const updatedData = removeBulk(emptyData, "test_table", ["row1"], "comment");
 
       expect(updatedData).toBe(emptyData);
     });
@@ -540,7 +535,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         dataWithAnnotations,
         "test_table",
         ["row1", "row2"],
-        "comment" as ExperimentAnnotationType,
+        "comment",
       );
 
       expect(updatedData).not.toBe(dataWithAnnotations);
@@ -596,12 +591,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const { result } = renderHook(() => useExperimentAnnotationOptimisticUpdate());
       const { removeBulk } = result.current;
 
-      const updatedData = removeBulk(
-        dataWithMissingIds,
-        "test_table",
-        ["row1", "row2"],
-        "comment" as ExperimentAnnotationType,
-      );
+      const updatedData = removeBulk(dataWithMissingIds, "test_table", ["row1", "row2"], "comment");
 
       const rows = updatedData[0]?.data?.rows;
       expect(rows).toBeDefined();
@@ -618,12 +608,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const { result } = renderHook(() => useExperimentAnnotationOptimisticUpdate());
       const { removeBulk } = result.current;
 
-      const updatedData = removeBulk(
-        mockExperimentData,
-        "different_table",
-        ["row1"],
-        "comment" as ExperimentAnnotationType,
-      );
+      const updatedData = removeBulk(mockExperimentData, "different_table", ["row1"], "comment");
 
       expect(updatedData).toBe(mockExperimentData);
     });
@@ -645,12 +630,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
       const { result } = renderHook(() => useExperimentAnnotationOptimisticUpdate());
       const { removeBulk } = result.current;
 
-      const updatedData = removeBulk(
-        emptyData,
-        "test_table",
-        ["row1"],
-        "comment" as ExperimentAnnotationType,
-      );
+      const updatedData = removeBulk(emptyData, "test_table", ["row1"], "comment");
 
       expect(updatedData).toBe(emptyData);
     });
@@ -679,7 +659,7 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
         dataWithNullAnnotations,
         "test_table",
         ["row1", "row2", "row3"],
-        "comment" as ExperimentAnnotationType,
+        "comment",
       );
 
       const rows = updatedData[0]?.data?.rows;

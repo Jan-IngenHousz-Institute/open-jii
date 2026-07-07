@@ -133,7 +133,7 @@ export class ExperimentDataAnnotationsRepository {
     });
 
     if (annotations.length === 0) {
-      return success({ rowsAffected: 0 } as ExperimentAnnotationRowsAffected);
+      return success({ rowsAffected: 0 });
     }
 
     const now = new Date();
@@ -315,7 +315,7 @@ export class ExperimentDataAnnotationsRepository {
     });
 
     if (rowIds.length === 0) {
-      return success({ rowsAffected: 0 } as ExperimentAnnotationRowsAffected);
+      return success({ rowsAffected: 0 });
     }
 
     const rowIdList = rowIds.map((id) => `'${id}'`).join(", ");

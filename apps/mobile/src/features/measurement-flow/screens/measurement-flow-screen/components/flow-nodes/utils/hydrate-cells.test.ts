@@ -16,7 +16,7 @@ const qCell = (id: string): QuestionCell => ({
   type: "question",
   isCollapsed: false,
   name: id,
-  question: { kind: "number", text: id, required: false } as QuestionCell["question"],
+  question: { kind: "number", text: id, required: false },
   isAnswered: false,
 });
 const pCell = (id: string, protocolId: string): ProtocolCell => ({

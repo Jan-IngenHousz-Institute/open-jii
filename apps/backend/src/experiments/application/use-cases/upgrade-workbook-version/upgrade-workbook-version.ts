@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
@@ -104,7 +103,7 @@ export class UpgradeWorkbookVersionUseCase {
         }
 
         // Refresh the materialised flow row so mobile reads the new graph.
-        const flowGraph = cellsToFlowGraph(version.cells as WorkbookCell[]);
+        const flowGraph = cellsToFlowGraph(version.cells);
         const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
         if (flowResult.isFailure()) {
           return flowResult;

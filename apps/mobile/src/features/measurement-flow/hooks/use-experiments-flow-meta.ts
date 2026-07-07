@@ -3,7 +3,6 @@ import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
 import { orpc } from "~/shared/api/orpc";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
-import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
   requiresSensor: boolean;
@@ -36,10 +35,7 @@ export function useExperimentsFlowMeta(
     const body = r.data;
     if (!id || !body?.graph) return;
 
-    const nodes = orderFlowNodes(
-      body.graph.nodes as FlowNode[],
-      (body.graph.edges as FlowEdge[]) ?? [],
-    );
+    const nodes = orderFlowNodes(body.graph.nodes, body.graph.edges ?? []);
     const requiresSensor = nodes.some((n) => n.type === "measurement");
     const questionsOnly = isQuestionsOnlyFlow(nodes);
     out[id] = {

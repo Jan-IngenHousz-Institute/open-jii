@@ -58,7 +58,7 @@ describe("findNextMandatoryStep", () => {
   it("does not skip a required question with remember enabled when value is empty", () => {
     const nodes = [
       makeQuestion("q1"),
-      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
+      { ...makeQuestion("q2"), content: { kind: "text", required: true } },
       makeQuestion("q3"),
     ];
     expect(next(0, nodes, 0, answers({ rememberAnswerSettings: { q2: true } }))).toBe(1);
@@ -67,7 +67,7 @@ describe("findNextMandatoryStep", () => {
   it("skips a required question with remember enabled when it already has a value", () => {
     const nodes = [
       makeQuestion("q1"),
-      { ...makeQuestion("q2"), content: { kind: "text", required: true } } as FlowNode,
+      { ...makeQuestion("q2"), content: { kind: "text", required: true } },
       makeQuestion("q3"),
     ];
     const a = answers({
@@ -83,7 +83,7 @@ describe("findNextMandatoryStep", () => {
       {
         ...makeQuestion("q2"),
         content: { kind: "multi_choice", required: true, options: ["a", "b"] },
-      } as FlowNode,
+      },
       makeQuestion("q3"),
     ];
     expect(next(0, nodes, 0, answers({ autoincrementSettings: { q2: true } }))).toBe(1);

@@ -66,7 +66,7 @@ export function QuestionCellComponent({
 
   const handleTextChange = useCallback(
     (text: string) => {
-      onUpdate({ ...cell, question: { ...question, text } as typeof question });
+      onUpdate({ ...cell, question: { ...question, text } });
     },
     [cell, question, onUpdate],
   );
@@ -80,7 +80,7 @@ export function QuestionCellComponent({
 
   const handleRequiredToggle = useCallback(
     (required: boolean) => {
-      onUpdate({ ...cell, question: { ...question, required } as typeof question });
+      onUpdate({ ...cell, question: { ...question, required } });
     },
     [cell, question, onUpdate],
   );

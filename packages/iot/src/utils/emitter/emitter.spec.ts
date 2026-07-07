@@ -111,7 +111,7 @@ describe("Emitter", () => {
     const listener = vi.fn();
 
     emitter.on("empty", listener);
-    await emitter.emit("empty", undefined as unknown as void);
+    await emitter.emit("empty", undefined);
 
     expect(listener).toHaveBeenCalled();
   });

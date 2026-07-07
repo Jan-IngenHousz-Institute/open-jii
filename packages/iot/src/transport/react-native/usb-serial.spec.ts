@@ -117,7 +117,7 @@ describe("RNUSBSerialAdapter", () => {
       });
 
       // Simulate receiving invalid hex (odd length) that causes fromHex to throw
-      const rawCallback = port.onReceived.mock.calls[0]?.[0] as (event: { data: string }) => void;
+      const rawCallback = port.onReceived.mock.calls[0]?.[0];
       rawCallback({ data: "Z" });
 
       expect(consoleSpy).toHaveBeenCalledWith("Error decoding hex data:", expect.any(Error));

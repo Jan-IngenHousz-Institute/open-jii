@@ -33,7 +33,7 @@ describe("<ExperimentLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments-archive/test-id");
-    vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+    vi.mocked(useParams).mockReturnValue({ id: "test-id" });
   });
 
   describe("Loading State", () => {
@@ -90,7 +90,7 @@ describe("<ExperimentLayout />", () => {
       // Simulate a successful response whose `experiment` is null — the
       // layout defends against this even though it's outside the typed shape.
       server.mount(contract.experiments.getExperimentAccess, {
-        body: { experiment: null, hasAccess: false, isAdmin: false } as never,
+        body: { experiment: null, hasAccess: false, isAdmin: false },
       });
       renderLayout();
 
@@ -195,7 +195,7 @@ describe("<ExperimentLayout />", () => {
 
   describe("Different Locales", () => {
     it("generates correct links for different locale", async () => {
-      vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+      vi.mocked(useParams).mockReturnValue({ id: "test-id" });
       vi.mocked(usePathname).mockReturnValue("/de/platform/experiments-archive/test-id");
       vi.mocked(useLocale).mockReturnValue("de");
       server.mount(contract.experiments.getExperimentAccess, {
@@ -218,7 +218,7 @@ describe("<ExperimentLayout />", () => {
 
     it("renders tabs for different locale", async () => {
       vi.mocked(usePathname).mockReturnValue("/de/platform/experiments/test-id/data/sensors");
-      vi.mocked(useParams).mockReturnValue({ id: "test-id" } as never);
+      vi.mocked(useParams).mockReturnValue({ id: "test-id" });
       vi.mocked(useLocale).mockReturnValue("de");
       server.mount(contract.experiments.getExperimentAccess, { body: defaultAccess });
       renderLayout();

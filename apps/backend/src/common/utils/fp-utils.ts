@@ -152,13 +152,13 @@ export class Failure<E> {
 
   // Map and chain for monadic operations
   map<U>(_fn: (value: never) => U): Result<U, E> {
-    return this as unknown as Result<U, E>;
+    return this;
   }
 
   chain<U, F = E>(
     _fn: (value: never) => Result<U, F> | Promise<Result<U, F>>,
   ): Result<U, E> | Promise<Result<U, E>> {
-    return this as unknown as Result<U, E>;
+    return this;
   }
 
   // Fold to handle both success and failure cases

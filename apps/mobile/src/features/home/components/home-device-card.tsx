@@ -7,6 +7,7 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { cn } from "~/shared/ui/cn";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 const MAC_PATTERN = /^(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
@@ -55,30 +56,14 @@ export function HomeDeviceCard() {
       <View className="bg-card shadow-xs rounded-2xl p-3.5 shadow-black/10">
         <View className="flex-row items-center">
           <View
-            className="mr-3 items-center justify-center"
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 14,
-              backgroundColor: isConnected ? colors.jii.mint : "#fff4d6",
-              position: "relative",
-            }}
+            className={cn(
+              "h-13 w-13 relative mr-3 items-center justify-center rounded-[14px]",
+              isConnected ? "bg-jii-mint" : "bg-[#fff4d6]",
+            )}
           >
             <Bluetooth size={22} color={isConnected ? colors.jii.darkGreen : "#8a6800"} />
             {isConnected ? (
-              <View
-                style={{
-                  position: "absolute",
-                  right: -2,
-                  bottom: -2,
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: colors.semantic.success,
-                  borderWidth: 2,
-                  borderColor: "#FFFFFF",
-                }}
-              />
+              <View className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#09b732]" />
             ) : null}
           </View>
 

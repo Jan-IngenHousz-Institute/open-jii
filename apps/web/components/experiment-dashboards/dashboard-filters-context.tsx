@@ -42,7 +42,7 @@ interface DashboardFiltersProviderProps {
 export function DashboardFiltersProvider({ widgets, children }: DashboardFiltersProviderProps) {
   const [overrides, setOverrides] = useState<OverrideMap>({});
 
-  const filterWidgetsById = useMemo(() => indexFilterWidgets(widgets), [widgets]);
+  const filterWidgetsById = useFilterWidgetIndex(widgets);
 
   useGarbageCollectStaleOverrides(filterWidgetsById, setOverrides);
 
@@ -152,6 +152,27 @@ function indexFilterWidgets(
     }
   }
   return map;
+}
+
+/**
+ * Index keyed on filter-widget CONTENT, not `widgets` identity. The editor
+ * form emits a fresh widgets array on every keystroke in any widget (e.g.
+ * rich-text html); an identity-keyed memo would rebuild the index, churn the
+ * context value, and re-render every chart on the dashboard per input.
+ */
+function useFilterWidgetIndex(
+  widgets: ExperimentDashboardWidget[],
+): Map<string, ExperimentFilterWidget> {
+  const filterWidgets = widgets.filter((widget) => widget.type === "filter");
+  const signature = JSON.stringify(filterWidgets);
+
+  const indexRef = useRef<{ signature: string; map: Map<string, ExperimentFilterWidget> } | null>(
+    null,
+  );
+  if (indexRef.current?.signature !== signature) {
+    indexRef.current = { signature, map: indexFilterWidgets(filterWidgets) };
+  }
+  return indexRef.current.map;
 }
 
 function resolveWidgetValue(

@@ -43,7 +43,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         cell.id,
         "measurement",
         cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
-        { protocolId: cell.payload.protocolId } as Content,
+        { protocolId: cell.payload.protocolId },
         isStart,
       );
 
@@ -52,20 +52,20 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         cell.id,
         "analysis",
         cell.payload.name ?? `Macro ${cell.payload.macroId.slice(0, 8)}`,
-        { macroId: cell.payload.macroId } as Content,
+        { macroId: cell.payload.macroId },
         isStart,
       );
 
     case "question":
       // Cell `name` is the column-key label; data pipeline canonicalises it into a column key downstream.
-      return makeNode(cell.id, "question", cell.name, cell.question as Content, isStart);
+      return makeNode(cell.id, "question", cell.name, cell.question, isStart);
 
     case "markdown":
       return makeNode(
         cell.id,
         "instruction",
         cell.content.slice(0, 64),
-        { text: cell.content } as Content,
+        { text: cell.content },
         isStart,
       );
 
@@ -77,7 +77,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         {
           paths: cell.paths.map((p) => ({ id: p.id, label: p.label, color: p.color })),
           defaultPathId: cell.defaultPathId,
-        } as Content,
+        },
         isStart,
       );
 

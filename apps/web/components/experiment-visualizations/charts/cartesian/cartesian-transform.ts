@@ -757,7 +757,7 @@ function buildSeries({
     sizeref: isScatter ? sizeContext?.sizeref : undefined,
     sizemin: isScatter ? sizeContext?.sizemin : undefined,
     text: chartConfig.text,
-    textposition: chartConfig.textposition as CartesianSeries["textposition"],
+    textposition: chartConfig.textposition,
     textfont: chartConfig.textfont,
     error_x: chartConfig.error_x,
     error_y: errorY,

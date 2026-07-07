@@ -27,7 +27,7 @@ function makeFile(name: string, options?: { relativePath?: string; size?: number
 function makeFileList(files: File[]): FileList {
   return Object.assign(files, {
     item: (i: number) => files[i] ?? null,
-  }) as unknown as FileList;
+  });
 }
 
 // ── hook + mutation ────────────────────────────────────────────

@@ -10,6 +10,7 @@ import {
   zInvitationIdPathParam,
   zInvitationList,
   zListInvitationsQuery,
+  zMarkWhatsNewSeenBody,
   zSearchUsersQuery,
   zUpdateInvitationRoleBody,
   zUser,
@@ -18,6 +19,7 @@ import {
   zUserMetadataWebhookResponse,
   zUserProfile,
   zUserProfileList,
+  zWhatsNewSeenResponse,
 } from "./user.schema";
 
 export const userContract = {
@@ -65,4 +67,11 @@ export const userContract = {
     .route({ method: "DELETE", path: "/api/v1/invitations/{invitationId}", successStatus: 204 })
     .input(zInvitationIdPathParam)
     .output(z.void()),
+  getWhatsNewSeen: oc
+    .route({ method: "GET", path: "/api/v1/whats-new/seen", successStatus: 200 })
+    .output(zWhatsNewSeenResponse),
+  markWhatsNewSeen: oc
+    .route({ method: "POST", path: "/api/v1/whats-new/seen", successStatus: 200 })
+    .input(zMarkWhatsNewSeenBody)
+    .output(zWhatsNewSeenResponse),
 };

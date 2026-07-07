@@ -68,7 +68,7 @@ describe("ExportListStep", () => {
 
   it("renders error state", async () => {
     server.mount(contract.experiments.listExports, {
-      body: { message: "Server error" } as never,
+      body: { message: "Server error" },
       status: 500,
     });
 

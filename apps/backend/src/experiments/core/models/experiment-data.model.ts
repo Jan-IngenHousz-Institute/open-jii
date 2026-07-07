@@ -41,8 +41,8 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
 export const UPLOAD_TABLE_CONFIG: TableConfig = {
   displayName: "Uploaded Data",
   defaultSortColumn: "uploaded_at",
-  exceptColumns: ["experiment_id", "upload_table_name", "upload_id"],
-  variantColumns: ["uploaded_data"],
+  exceptColumns: ["experiment_id", "upload_table_id", "upload_table_name", "upload_id"],
+  variantColumns: ["uploaded_data", "custom_metadata"],
 };
 
 /**

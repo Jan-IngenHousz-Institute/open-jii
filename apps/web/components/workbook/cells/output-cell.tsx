@@ -268,9 +268,7 @@ export function OutputCellComponent({
             {isQuestionAnswer(cell.data) && (
               <div className="flex items-center gap-2 rounded-lg bg-[#005E5E]/[0.04] px-3 py-2">
                 <CheckCircle2 className="size-3.5 shrink-0 text-[#005E5E]" />
-                <span className="text-[13px] text-[#011111]">
-                  {(cell.data as { answer: string }).answer}
-                </span>
+                <span className="text-[13px] text-[#011111]">{cell.data.answer}</span>
               </div>
             )}
 

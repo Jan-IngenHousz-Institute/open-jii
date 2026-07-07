@@ -165,7 +165,7 @@ export class FlowMapper {
         sourcePosition: config.defaultSourcePosition,
         targetPosition: config.defaultTargetPosition,
         data: nodeData,
-      } as Node;
+      };
     });
 
     const edges: Edge[] = apiFlow.graph.edges.map((apiEdge) => ({
@@ -312,7 +312,7 @@ export class FlowMapper {
     });
 
     const apiEdges = edges.map((edge) => {
-      const label = (edge.data as FlowEdgeData | undefined)?.label;
+      const label = edge.data?.label;
       return {
         id: edge.id,
         source: edge.source,

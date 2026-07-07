@@ -236,21 +236,27 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
     pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
+    pathname.startsWith(`/${locale}/releases`) ||
     pathname.startsWith(`/${locale}/policies`);
 
   const showSolid = (isHomePage && !isIntersecting) || isGreenMode;
+
+  // Home nav sits over the dark hero (white logo); every other page uses the yellow platform logo
+  const logoSrc = isHomePage
+    ? "/openJII-logo-BW-horizontal-white.png"
+    : "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
 
   return (
     <header
       className="pointer-events-auto sticky left-0 z-50 w-full"
       style={{ top: "var(--banner-offset, 0px)" }}
     >
-      {/* Gradient layer — hero/dark mode */}
+      {/* Gradient layer - hero/dark mode */}
       <div
         aria-hidden="true"
-        className={`absolute inset-0 -z-10 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
+        className={`bg-linear-to-b absolute inset-0 -z-10 from-black/80 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
       />
-      {/* Solid layer — green/nav mode */}
+      {/* Solid layer - green/nav mode */}
       <div
         aria-hidden="true"
         className={`bg-sidebar absolute inset-0 -z-10 border-b border-white/40 shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
@@ -259,11 +265,11 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
-            src="/openJII-logo-BW-vertical-white.png"
+            src={logoSrc}
             alt="openJII logo"
-            width={210}
-            height={52}
-            className="h-11 w-auto"
+            width={isHomePage ? 94 : 150}
+            height={44}
+            className="h-11 w-auto max-w-none shrink-0"
           />
         </div>
 

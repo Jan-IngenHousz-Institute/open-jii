@@ -122,7 +122,7 @@ const { defaultNodes, defaultEdges, isRFLike } = vi.hoisted(() => {
         isStartNode: false,
         isEndNode: false,
         stepSpecification: {},
-      } as Record<string, unknown>,
+      },
       position: { x: 0, y: 0 },
     },
   ];
@@ -238,10 +238,7 @@ describe("<FlowEditor /> (stable suite)", () => {
       arr.map((x) =>
         typeof x === "string"
           ? x
-          : typeof x === "object" &&
-              x !== null &&
-              "id" in x &&
-              typeof (x as { id: unknown }).id === "string"
+          : typeof x === "object" && x !== null && "id" in x && typeof x.id === "string"
             ? (x as { id: string }).id
             : "",
       );
@@ -313,7 +310,7 @@ describe("<FlowEditor /> (stable suite)", () => {
       {
         id: "a",
         type: "INSTRUCTION",
-        data: { title: "A", isStartNode: false, isEndNode: false } as Record<string, unknown>,
+        data: { title: "A", isStartNode: false, isEndNode: false },
         position: { x: 0, y: 0 },
       },
     ];
@@ -329,7 +326,7 @@ describe("<FlowEditor /> (stable suite)", () => {
       {
         id: "b",
         type: "ANALYSIS",
-        data: { title: "B", isStartNode: false, isEndNode: false } as Record<string, unknown>,
+        data: { title: "B", isStartNode: false, isEndNode: false },
         position: { x: 0, y: 0 },
       },
       {
@@ -340,7 +337,7 @@ describe("<FlowEditor /> (stable suite)", () => {
           isStartNode: false,
           isEndNode: false,
           stepSpecification: {},
-        } as Record<string, unknown>,
+        },
         position: { x: 50, y: 50 },
       },
     ];
@@ -349,7 +346,7 @@ describe("<FlowEditor /> (stable suite)", () => {
         id: "ebc",
         source: "b",
         target: "c",
-        data: { label: "bc" } as Record<string, unknown>,
+        data: { label: "bc" },
       },
     ];
 

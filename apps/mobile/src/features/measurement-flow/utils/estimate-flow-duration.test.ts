@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
-const node = (type: FlowNode["type"]): FlowNode =>
-  ({ id: type, type, name: type, content: {}, isStart: false }) as FlowNode;
+const node = (type: FlowNode["type"]): FlowNode => ({
+  id: type,
+  type,
+  name: type,
+  content: {},
+  isStart: false,
+});
 
 describe("estimateFlowDuration", () => {
   it("returns 0 for an empty flow", () => {

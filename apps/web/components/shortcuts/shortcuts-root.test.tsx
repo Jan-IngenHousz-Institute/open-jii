@@ -1,4 +1,5 @@
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { render, fireEvent, screen } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -59,6 +60,17 @@ describe("ShortcutsRoot", () => {
     expect(handler).toHaveBeenCalledTimes(1);
     expect(router.push).not.toHaveBeenCalled();
     window.removeEventListener(NOTIFICATION_BELL_OPEN_EVENT, handler);
+  });
+
+  it("g-then-r opens the What's new panel instead of navigating", () => {
+    const handler = vi.fn();
+    window.addEventListener(WHATS_NEW_OPEN_EVENT, handler);
+    const { router } = renderShortcuts();
+    key("g");
+    key("r");
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(router.push).not.toHaveBeenCalled();
+    window.removeEventListener(WHATS_NEW_OPEN_EVENT, handler);
   });
 
   it("C creates route-aware (on /platform/experiments -> new)", () => {

@@ -3,8 +3,13 @@ import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { __testing_deriveStepInfo as deriveStepInfo } from "../use-flow-step-info";
 
-const node = (id: string, type: FlowNode["type"]): FlowNode =>
-  ({ id, type, name: id, content: {}, isStart: false }) as FlowNode;
+const node = (id: string, type: FlowNode["type"]): FlowNode => ({
+  id,
+  type,
+  name: id,
+  content: {},
+  isStart: false,
+});
 
 // [instruction, question, BRANCH, measurement] — one branch in the middle.
 const withBranch: FlowNode[] = [

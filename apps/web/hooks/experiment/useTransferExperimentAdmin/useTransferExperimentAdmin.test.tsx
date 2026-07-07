@@ -86,7 +86,7 @@ describe("useTransferExperimentAdmin", () => {
       status: 500,
       // No `message` field, so parseApiError yields undefined and the hook
       // uses its translated fallback.
-      body: { unexpected: true } as never,
+      body: { unexpected: true },
     });
 
     const { result } = renderHook(() => useTransferExperimentAdmin());
