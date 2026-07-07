@@ -24,6 +24,22 @@ fragment ComponentReleaseNoteFields on ComponentReleaseNote {
   active
 }
 
+# Full note including embedded rich-text media (inline images/videos). Used only for the
+# single-note detail page: expanding body links per item exceeds Contentful's query-complexity
+# limit across a whole collection, so the list/feed queries deliberately omit it.
+fragment ComponentReleaseNoteDetailFields on ComponentReleaseNote {
+  ...ComponentReleaseNoteFields
+  body {
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
+  }
+}
+
 # Active release notes for the caller's surface, newest first. `surfaces` is a single-select
 # (web / mobile / both); callers pass e.g. ["web", "both"] so the "both" entries always show.
 # This mirrors the alert banner's `audience` filtering (componentAlerts.graphql).
@@ -70,7 +86,7 @@ query releaseNoteBySlug($slug: String!, $locale: String, $preview: Boolean) {
     where: { slug: $slug, active: true }
   ) {
     items {
-      ...ComponentReleaseNoteFields
+      ...ComponentReleaseNoteDetailFields
     }
   }
 }

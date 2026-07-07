@@ -33,6 +33,7 @@ export { ReleaseNoteEntry } from "./features/release-notes/release-note-entry";
 export { ReleaseNoteArticle } from "./features/release-notes/release-note-article";
 export { ReleaseHero } from "./features/release-notes/release-hero";
 export type { ComponentReleaseNoteFieldsFragment } from "./lib/__generated/sdk";
+export type { ComponentReleaseNoteDetailFieldsFragment } from "./lib/__generated/sdk";
 export {
   getCategoryMeta,
   normalizeCategory,
