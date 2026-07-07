@@ -8,7 +8,8 @@ import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { ComponentReleaseNoteDetailFieldsFragment as ReleaseNoteFields } from "../../lib/__generated/sdk";
-import { CtfRichText, type EmbeddedEntryType } from "../contentful/ctf-rich-text";
+import { CtfRichText } from "../contentful/ctf-rich-text";
+import type { EmbeddedEntryType } from "../contentful/ctf-rich-text";
 import { ReleaseHero } from "./release-hero";
 
 interface ReleaseNoteArticleProps {
@@ -35,7 +36,7 @@ export const ReleaseNoteArticle: React.FC<ReleaseNoteArticleProps> = ({ entry })
 
       {live.body?.json && (
         <div className="max-w-none" {...inspectorProps({ fieldId: "body" })}>
-          <CtfRichText json={live.body.json as Document} links={live.body.links} />
+          <CtfRichText json={live.body.json} links={live.body.links} />
         </div>
       )}
     </article>
