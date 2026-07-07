@@ -63,9 +63,9 @@ export function UploadCreateView({
     hasSyncedTargetDefault.current = true;
 
     if (hasExistingTables) {
-      form.reset({ targetKind: "existing", sourceKind, uploadTableId: undefined });
+      form.setValue("targetKind", "existing");
     }
-  }, [tables, hasExistingTables, sourceKind, form]);
+  }, [tables, hasExistingTables, form]);
 
   const extensions = isAmbyte ? [] : UPLOAD_KIND_CONSTANTS[sourceKind].extensions;
   const formatLabel = t(`experimentData.uploadDataModal.history.sourceKind.${sourceKind}`);
