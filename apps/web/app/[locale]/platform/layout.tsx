@@ -64,7 +64,7 @@ export default async function AppLayout({
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
-          <NavigationTopbar locale={locale} user={session.user} />
+          <NavigationTopbar locale={locale} user={session.user} releaseNotes={releaseNotes} />
           <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
             <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
               <Breadcrumbs locale={locale} />
