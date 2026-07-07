@@ -38,7 +38,7 @@ export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLogi
       });
     } else {
       await authClient.signIn.social({
-        provider: provider.id as "github",
+        provider: provider.id,
         callbackURL: redirectUrl,
         errorCallbackURL: errorURL,
       });

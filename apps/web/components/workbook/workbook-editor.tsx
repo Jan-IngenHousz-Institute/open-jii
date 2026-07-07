@@ -424,7 +424,7 @@ export function WorkbookEditor({
             ...updated[sourceIndex],
             answer: undefined,
             isAnswered: false,
-          } as WorkbookCell;
+          };
         }
       }
 

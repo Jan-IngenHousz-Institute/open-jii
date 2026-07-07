@@ -14,13 +14,17 @@ const {
   mockFetchForceUpdate,
   mockIsRestoring,
   mockNativeVersion,
-} = vi.hoisted(() => ({
-  foregroundListeners: new Set<() => void>(),
-  mockEnvLoaded: { value: true },
-  mockFetchForceUpdate: vi.fn(),
-  mockIsRestoring: { value: false },
-  mockNativeVersion: { value: "1.0.0" as string | null },
-}));
+} = vi.hoisted(() => {
+  const mockNativeVersion: { value: string | null } = { value: "1.0.0" };
+
+  return {
+    foregroundListeners: new Set<() => void>(),
+    mockEnvLoaded: { value: true },
+    mockFetchForceUpdate: vi.fn(),
+    mockIsRestoring: { value: false },
+    mockNativeVersion,
+  };
+});
 
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();

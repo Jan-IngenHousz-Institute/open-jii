@@ -127,7 +127,7 @@ function formatValue(v: unknown): string {
   try {
     return JSON.stringify(v);
   } catch {
-    return String(v as unknown); // fallback;
+    return "[unserializable]";
   }
 }
 

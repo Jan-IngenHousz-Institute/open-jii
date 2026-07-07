@@ -30,13 +30,13 @@ function pickProtocolJson(code: unknown): ProtocolJson | null {
   if (Array.isArray(code)) {
     const items = code as unknown[];
     const first: unknown = items[0];
-    return first && typeof first === "object" ? (first as ProtocolJson) : null;
+    return first && typeof first === "object" ? first : null;
   }
   if (typeof code === "object") {
     const obj = code as Record<string, unknown>;
-    if (obj._protocol_set_) return obj as ProtocolJson;
+    if (obj._protocol_set_) return obj;
     if (obj.protocol_json && typeof obj.protocol_json === "object") {
-      return obj.protocol_json as ProtocolJson;
+      return obj.protocol_json;
     }
   }
   return null;

@@ -250,7 +250,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
         throw result.error ?? new Error("Command failed");
       }
       trace.end("ok");
-      return (result.data ?? "") as string | object;
+      return result.data ?? "";
     } catch (error) {
       trace.end("error", { err: error instanceof Error ? error.message : String(error) });
       throw error;

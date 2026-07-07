@@ -81,7 +81,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
-    return pinnedVersionData.cells as WorkbookCell[];
+    return pinnedVersionData.cells;
   }, [pinnedVersionData]);
 
   const derivedFlow = useMemo(() => {
@@ -169,7 +169,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                 </div>
                 <WorkbookDraftEditor
                   id={workbookId}
-                  initialCells={workbookDraft.cells as WorkbookCell[]}
+                  initialCells={workbookDraft.cells}
                   createdBy={workbookDraft.createdBy}
                   name={workbookDraft.name}
                   onSaved={handleDraftSaved}

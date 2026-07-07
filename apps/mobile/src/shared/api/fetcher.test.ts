@@ -159,7 +159,7 @@ describe("customApiFetcher", () => {
       });
     });
 
-    const p = customApiFetcher({ ...args, signal: upstream.signal } as ApiFetcherArgs);
+    const p = customApiFetcher({ ...args, signal: upstream.signal });
     upstream.abort();
 
     await expect(p).rejects.toThrow();
