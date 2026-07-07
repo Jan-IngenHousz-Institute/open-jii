@@ -152,9 +152,7 @@ module "iot_core" {
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 
-  enable_large_iot_sqs  = true
-  large_iot_bucket_name = module.large_iot_s3.bucket_id
-  large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
+  large_iot_bucket_arn = module.large_iot_s3.bucket_arn
 }
 
 module "cognito" {
@@ -541,8 +539,6 @@ module "centrum_pipeline" {
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
     "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
-    "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
-    "LARGE_IOT_INGEST_ENABLED"   = "true"
   }
 
   continuous_mode  = true
@@ -2177,9 +2173,6 @@ module "grafana_dashboard" {
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
-
-  large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
-  large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
 
   providers = {
     grafana.amg = grafana.amg

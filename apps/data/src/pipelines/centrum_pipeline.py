@@ -105,14 +105,6 @@ SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 LARGE_IOT_S3_PATH = spark.conf.get("LARGE_IOT_S3_PATH", "")
-LARGE_IOT_SQS_QUEUE_URL = spark.conf.get("LARGE_IOT_SQS_QUEUE_URL", "")
-LARGE_IOT_INGEST_ENABLED = spark.conf.get("LARGE_IOT_INGEST_ENABLED", "false").strip().lower() == "true"
-
-if LARGE_IOT_INGEST_ENABLED:
-    if not LARGE_IOT_S3_PATH:
-        raise ValueError("LARGE_IOT_S3_PATH must be set when LARGE_IOT_INGEST_ENABLED is true")
-    if not LARGE_IOT_SQS_QUEUE_URL:
-        raise ValueError("LARGE_IOT_SQS_QUEUE_URL must be set when LARGE_IOT_INGEST_ENABLED is true")
 
 RAW_LARGE_IOT_TABLE = "raw_large_iot_data"
 
@@ -431,85 +423,85 @@ def clean_data():
         )
     )
 
-    if LARGE_IOT_INGEST_ENABLED:
-        large_iot_df = dlt.read_stream(RAW_LARGE_IOT_TABLE)
+    large_iot_df = dlt.read_stream(RAW_LARGE_IOT_TABLE)
 
-        large_iot_clean = (
-            large_iot_df
-            .withColumn(
-                "sample",
-                decompress_sample(F.col("sample"), F.col("_sample_encoding"))
-            )
-            .withColumn(
-                "macros",
-                F.when(
-                    F.col("macros").isNotNull(),
-                    F.transform(
-                        F.col("macros"),
-                        lambda m: F.struct(
-                            _remap_macro_id(m["id"]).alias("id"),
-                            m["name"].alias("name"),
-                            m["filename"].alias("filename")
-                        )
-                    )
-                ).otherwise(F.array())
-            )
-            .withColumn(
-                "questions",
-                F.coalesce(F.col("questions"), F.array())
-            )
-            .withColumn(
-                "annotations",
-                F.coalesce(F.col("annotations"), F.array())
-            )
-            .withColumn("processed_timestamp", F.current_timestamp())
-            .withColumn("date", F.to_date("timestamp"))
-            .withColumn("hour", F.hour("timestamp"))
-            .withColumn(
-                "ingest_latency_ms",
-                (F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")) * 1000
-            )
-            .withColumn(
-                "id",
-                F.abs(
-                    F.hash(
-                        F.col("experiment_id"),
-                        F.col("device_id"),
-                        F.col("timestamp"),
-                        F.col("sample"),
-                        F.col("ingestion_timestamp"),
+    large_iot_clean = (
+        large_iot_df
+        .withColumn(
+            "sample",
+            decompress_sample(F.col("sample"), F.col("_sample_encoding"))
+        )
+        .withColumn(
+            "macros",
+            F.when(
+                F.col("macros").isNotNull(),
+                F.transform(
+                    F.col("macros"),
+                    lambda m: F.struct(
+                        _remap_macro_id(m["id"]).alias("id"),
+                        m["name"].alias("name"),
+                        m["filename"].alias("filename")
                     )
                 )
-            )
-            .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
-            .select(
-                "id",
-                "device_id",
-                "device_name",
-                "device_version",
-                "device_battery",
-                "device_firmware",
-                "sample",
-                "output",
-                "macros",
-                "questions",
-                "annotations",
-                "user_id",
-                "timezone",
-                "experiment_id",
-                "timestamp",
-                "date",
-                "hour",
-                "ingest_latency_ms",
-                "processed_timestamp",
-                "skip_macro_processing",
+            ).otherwise(F.array())
+        )
+        .withColumn(
+            "questions",
+            F.coalesce(F.col("questions"), F.array())
+        )
+        .withColumn(
+            "annotations",
+            F.coalesce(F.col("annotations"), F.array())
+        )
+        .withColumn("processed_timestamp", F.current_timestamp())
+        .withColumn("date", F.to_date("timestamp"))
+        .withColumn("hour", F.hour("timestamp"))
+        .withColumn(
+            "ingest_latency_ms",
+            (F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")) * 1000
+        )
+        .withColumn(
+            "id",
+            F.abs(
+                F.hash(
+                    F.col("experiment_id"),
+                    F.col("device_id"),
+                    F.col("timestamp"),
+                    F.col("sample"),
+                    F.col("ingestion_timestamp"),
+                )
             )
         )
+        .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
+        .select(
+            "id",
+            "device_id",
+            "device_name",
+            "device_version",
+            "device_battery",
+            "device_firmware",
+            "sample",
+            "output",
+            "macros",
+            "questions",
+            "annotations",
+            "user_id",
+            "timezone",
+            "experiment_id",
+            "timestamp",
+            "date",
+            "hour",
+            "ingest_latency_ms",
+            "processed_timestamp",
+            "skip_macro_processing",
+        )
+    )
 
-        return bronze_clean.unionByName(imported_clean).unionByName(large_iot_clean)
-
-    # Union bronze-sourced data with imported data
-    return bronze_clean.unionByName(imported_clean)
+    return (
+        bronze_clean
+        .unionByName(imported_clean)
+        .unionByName(large_iot_clean)
+    )
 
 # COMMAND ----------
 
@@ -1290,6 +1282,41 @@ def raw_imported_data():
                 F.abs(F.hash(*[F.col(c) for c in df.columns])).cast("string")
             )
         )
+        .withColumn("ingestion_timestamp", F.current_timestamp())
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Raw Large IoT Data - Streaming Table
+@dlt.table(
+    name=RAW_LARGE_IOT_TABLE,
+    comment="Streaming table: Large IoT payloads (>128 KB) uploaded to S3 via pre-signed URL, partitioned by experiment_id",
+    table_properties={
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
+    },
+    partition_cols=["experiment_id"]
+)
+def raw_large_iot_data():
+    """Streaming ingestion of large IoT payloads from S3 via Auto Loader directory listing. Peer of raw_imported_data."""
+    df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .option("recursiveFileLookup", "true")
+        .option("ignoreMissingFiles", "true")
+        .schema(large_iot_schema)
+        .load(LARGE_IOT_S3_PATH)
+    )
+
+    # experiment_id lives in the S3 key (large-iot/{experimentId}/{uuid}.json), not the payload.
+    path_experiment_id = F.regexp_extract(F.col("_metadata.file_path"), r"large-iot/([^/]+)/", 1)
+
+    return (
+        df
+        .withColumn("experiment_id", F.coalesce(F.col("experiment_id"), path_experiment_id))
         .withColumn("ingestion_timestamp", F.current_timestamp())
     )
 
