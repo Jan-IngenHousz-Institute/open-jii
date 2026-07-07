@@ -44,6 +44,12 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
+  // Better Auth organization plugin: the user's currently active organization.
+  activeOrganizationId: uuid("active_organization_id").references(() => organizations.id, {
+    onDelete: "set null",
+  }),
+  // Better Auth organization plugin (teams): the session's active team.
+  activeTeamId: uuid("active_team_id"),
   ...timestamps,
 });
 
@@ -106,20 +112,109 @@ export const profiles = pgTable("profiles", {
     .references(() => users.id)
     .unique()
     .notNull(),
-  organizationId: uuid("organization_id").references(() => organizations.id),
   ...timestamps,
 });
 
-// Organizations Table
+// Organizations Table.
+// Backs the Better Auth organization plugin (model "organization"): the plugin
+// owns slug/logo/metadata; type/description/website/location are openJII
+// additionalFields kept from the original organizations table.
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique(),
+  logo: text("logo"),
+  metadata: text("metadata"),
   type: organizationTypeEnum("type"),
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),
   ...timestamps,
 });
+
+// Organization Members (Better Auth organization plugin, model "member").
+// Per-org role string (owner/admin/member + future custom roles). Distinct from
+// experimentMembers, which becomes the per-resource grant layer in a later phase.
+export const organizationMembers = pgTable(
+  "organization_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").default("member").notNull(),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("organization_members_org_user_uniq").on(t.organizationId, t.userId),
+    index("organization_members_user_idx").on(t.userId),
+  ],
+);
+
+// Organization Invitations (Better Auth organization plugin, model "invitation").
+// Separate from the legacy `invitations` table (platform/experiment), which is kept
+// during the transition and deprecated later.
+export const organizationInvitations = pgTable("organization_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role"),
+  status: text("status").default("pending").notNull(),
+  inviterId: uuid("inviter_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Better Auth teams: optional team the invite is for.
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`(now() AT TIME ZONE 'UTC')`)
+    .notNull(),
+});
+
+// Teams (Better Auth organization plugin, model "team"): a sub-group within an org.
+export const teams = pgTable(
+  "teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    updatedAt: timestamp("updated_at"),
+  },
+  (t) => [index("teams_organization_idx").on(t.organizationId)],
+);
+
+// Team Members (Better Auth organization plugin, model "teamMember").
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("team_members_team_user_uniq").on(t.teamId, t.userId),
+    index("team_members_user_idx").on(t.userId),
+  ],
+);
 
 // Sensors Table
 export const sensors = pgTable("sensors", {

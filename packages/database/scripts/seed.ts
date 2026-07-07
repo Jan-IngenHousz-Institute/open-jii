@@ -1,6 +1,7 @@
 import { eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
+import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
 import {
   users,
   profiles,
@@ -10,6 +11,7 @@ import {
   experiments,
   experimentMembers,
   flows,
+  organizations,
 } from "../src/schema";
 
 const SEED_EMAIL = "seed@openjii.local";
@@ -90,14 +92,24 @@ async function clearSeedData() {
     .select({ id: users.id })
     .from(users)
     .where(eq(users.email, SEED_EMAIL));
-  if (seedUsers.length > 0) {
-    await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
-    await db.delete(users).where(eq(users.id, seedUsers[0].id));
-  }
 
   // Contributor users keyed by fixed UUIDs. We can't filter by email
   // pattern since the silver pipeline picks the contributor UUIDs, not us.
   const contributorIds = CONTRIBUTOR_SEEDS.map((c) => c.id);
+
+  // Personal organizations provisioned for those seed users (Phase 1 org
+  // provisioning). Deleting the org cascade-removes its organization_members.
+  const seedUserIds = [...seedUsers.map((u) => u.id), ...contributorIds];
+  if (seedUserIds.length > 0) {
+    await db
+      .delete(organizations)
+      .where(inArray(organizations.slug, seedUserIds.map(personalOrgSlug)));
+  }
+
+  if (seedUsers.length > 0) {
+    await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
+    await db.delete(users).where(eq(users.id, seedUsers[0].id));
+  }
   await db.delete(profiles).where(inArray(profiles.userId, contributorIds));
   await db.delete(users).where(inArray(users.id, contributorIds));
 }
@@ -125,6 +137,9 @@ async function main() {
     lastName: "User",
     activated: true,
   });
+
+  // Provision the seed user's personal organization (Phase 1 org provisioning).
+  await ensurePersonalOrganization(db, user);
 
   console.log(`  Created user: ${user.id}`);
 
@@ -488,6 +503,10 @@ async function main() {
       role: "member" as const,
     })),
   );
+  // Provision each contributor's personal organization (Phase 1 org provisioning).
+  for (const c of CONTRIBUTOR_SEEDS) {
+    await ensurePersonalOrganization(db, { id: c.id, name: c.name });
+  }
   console.log(`  Created ${CONTRIBUTOR_SEEDS.length} contributor users + members`);
 
   // 6. Create flows for 3 experiments

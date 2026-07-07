@@ -1,14 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import {
-  users,
-  organizations,
-  profiles,
-  accounts,
-  sessions,
-  experimentMembers,
-  eq,
-} from "@repo/database";
+import { users, profiles, accounts, sessions, experimentMembers, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -521,7 +513,6 @@ describe("UserRepository", () => {
       expect(profile.lastName).toBe("User");
       expect(profile.bio).toBeNull();
       expect(profile.avatarUrl).toBeNull();
-      expect(profile.organizationId).toBeNull();
       expect(profile.deletedAt).not.toBeNull();
 
       // Experiment memberships for this user should be deleted
@@ -534,11 +525,10 @@ describe("UserRepository", () => {
   });
 
   describe("createOrUpdateUserProfile", () => {
-    it("should create a new user profile with a new organization", async () => {
+    it("should create a new user profile", async () => {
       const dto = {
         firstName: "Alice",
         lastName: "Smith",
-        organization: "NewOrg",
       };
 
       const result = await repository.createOrUpdateUserProfile(testUserId, dto);
@@ -548,15 +538,7 @@ describe("UserRepository", () => {
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: dto.organization,
       });
-
-      // Check organization was created
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, dto.organization));
-      expect(orgs.length).toBe(1);
 
       // Check profile was created
       const profs = await testApp.database
@@ -572,7 +554,6 @@ describe("UserRepository", () => {
       const initialDto = {
         firstName: "Bob",
         lastName: "Jones",
-        organization: "Org1",
       };
       await repository.createOrUpdateUserProfile(testUserId, initialDto);
 
@@ -580,7 +561,6 @@ describe("UserRepository", () => {
       const updateDto = {
         firstName: "Robert",
         lastName: "Jones",
-        organization: "Org1",
       };
       const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
 
@@ -599,7 +579,7 @@ describe("UserRepository", () => {
       // Cleanup
     });
 
-    it("should create a user profile without an organization", async () => {
+    it("should create a user profile without optional fields", async () => {
       const dto = {
         firstName: "Charlie",
         lastName: "Brown",
@@ -612,7 +592,6 @@ describe("UserRepository", () => {
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: undefined,
       });
 
       // Check profile was created
@@ -624,37 +603,11 @@ describe("UserRepository", () => {
       expect(profs[0].firstName).toBe(dto.firstName);
     });
 
-    it("should use existing organization if it already exists", async () => {
-      // Pre-create organization
-      const orgName = "ExistingOrg";
-      await testApp.database.insert(organizations).values({ name: orgName }).returning();
-
-      const dto = {
-        firstName: "Dana",
-        lastName: "White",
-        organization: orgName,
-      };
-
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.organization).toBe(orgName);
-
-      // Should not create a duplicate organization
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, orgName));
-      expect(orgs.length).toBe(1);
-    });
-
     it("should create a user profile with bio", async () => {
       const dto = {
         firstName: "John",
         lastName: "Smith",
         bio: "Software engineer with 10 years of experience.",
-        organization: "TechCorp",
       };
 
       const result = await repository.createOrUpdateUserProfile(testUserId, dto);
@@ -665,7 +618,6 @@ describe("UserRepository", () => {
         firstName: dto.firstName,
         lastName: dto.lastName,
         bio: dto.bio,
-        organization: dto.organization,
       });
 
       // Check profile was created with bio

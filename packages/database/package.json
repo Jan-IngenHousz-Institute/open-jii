@@ -29,6 +29,7 @@
     "db:studio": "pnpm env:default drizzle-kit studio",
     "db:push": "pnpm env:default drizzle-kit push",
     "db:generate": "pnpm env:default drizzle-kit generate",
+    "db:backfill:orgs": "pnpm env:default tsx scripts/backfill-personal-orgs.ts",
     "db:compose": "docker compose -f ./docker-compose.yml --env-file .env.default",
     "db:start": "pnpm db:compose up -d --wait",
     "db:stop": "pnpm db:compose down",
