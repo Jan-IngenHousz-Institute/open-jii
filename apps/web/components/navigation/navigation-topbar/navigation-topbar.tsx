@@ -4,6 +4,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { mainNavigation, userNavigation, iconMap } from "@/components/navigation/navigation-config";
 import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { ActivityPopover } from "@/components/navigation/navigation-topbar/activity-popover";
+import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Menu, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { User } from "@repo/auth/types";
+import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
@@ -31,9 +33,10 @@ import { NavUser } from "../nav-user/nav-user";
 interface NavigationTopbarProps {
   locale: string;
   user: User;
+  releaseNotes?: ReleaseNoteFields[];
 }
 
-export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
+export function NavigationTopbar({ locale, user, releaseNotes = [] }: NavigationTopbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
@@ -198,7 +201,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                   </nav>
 
                   {/* Additional Navigation Links */}
-                  <div className="space-y-1 py-2">
+                  <div className="space-y-1 py-2 pb-8">
                     {Object.values(userNavigation).map((item) => (
                       <NavigationMobileNavItem
                         key={item.titleKey}
@@ -243,6 +246,13 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                       </span>
                     </button>
                   </div>
+                </div>
+
+                <div className="border-t border-white/10 py-3">
+                  <WhatsNewFooterItem
+                    entries={releaseNotes}
+                    onOpen={() => setIsMobileMenuOpen(false)}
+                  />
                 </div>
               </div>
             </div>
