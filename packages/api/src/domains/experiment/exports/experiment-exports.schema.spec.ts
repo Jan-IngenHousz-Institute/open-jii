@@ -24,7 +24,7 @@ describe("Export Data Schemas", () => {
   });
 
   it("zExperimentInitiateExportBody accepts all valid formats", () => {
-    for (const format of ["csv", "ndjson", "json-array", "parquet"] as const) {
+    for (const format of ["csv", "ndjson", "json-array", "parquet", "xlsx"] as const) {
       expect(zExperimentInitiateExportBody.parse({ tableName: "t1", format })).toEqual({
         tableName: "t1",
         format,

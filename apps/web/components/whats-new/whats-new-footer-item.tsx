@@ -13,7 +13,13 @@ import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
  * unread dot when there are new entries. Styled for the dark sidebar (white text), matching the
  * search button above it.
  */
-export function WhatsNewFooterItem({ entries }: { entries: ReleaseNoteFields[] }) {
+export function WhatsNewFooterItem({
+  entries,
+  onOpen,
+}: {
+  entries: ReleaseNoteFields[];
+  onOpen?: () => void;
+}) {
   const { t } = useTranslation("navigation");
   const lastSeen = useWhatsNewLastSeen();
   // Wait for the query to resolve — treating a loading `undefined` as "never seen" flashes every
@@ -25,7 +31,10 @@ export function WhatsNewFooterItem({ entries }: { entries: ReleaseNoteFields[] }
   return (
     <button
       type="button"
-      onClick={() => window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT))}
+      onClick={() => {
+        onOpen?.();
+        window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
+      }}
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }

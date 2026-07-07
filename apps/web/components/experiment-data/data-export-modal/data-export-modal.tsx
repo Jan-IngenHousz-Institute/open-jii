@@ -7,6 +7,7 @@ import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 import { parseApiError } from "~/util/apiError";
 
+import type { ExperimentInitiateExportBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import {
@@ -68,14 +69,14 @@ export function DataExportModal({
     },
   });
 
-  const handleCreateExport = (format: string) => {
+  const handleCreateExport = (format: ExperimentInitiateExportBody["format"]) => {
     setCreationStatus("creating");
 
     initiateExport(
       {
         id: experimentId,
         tableName,
-        format: format as "csv" | "ndjson" | "json-array" | "parquet",
+        format,
         // Omit when not overridden so backend falls back to the stored setting.
         ...(anonymizeOverride !== undefined && {
           anonymizeContributors: anonymizeOverride,

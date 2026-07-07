@@ -20,7 +20,10 @@ import { useListExports } from "~/hooks/experiment/useListExports/useListExports
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
-import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentExportRecord,
+  ExperimentInitiateExportBody,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -45,7 +48,7 @@ interface ExportListStepProps {
   experimentId: string;
   tableName: string;
   displayName?: string;
-  onCreateExport: (format: string) => void;
+  onCreateExport: (format: ExperimentInitiateExportBody["format"]) => void;
   onClose: () => void;
   creationStatus?: CreationStatus;
 }
@@ -117,6 +120,7 @@ const FORMAT_LABELS: Record<string, string> = {
   ndjson: "NDJSON",
   "json-array": "JSON Array",
   parquet: "Parquet",
+  xlsx: "Excel",
 };
 
 const formatDateTime = (dateString: string | null): string => {
@@ -362,6 +366,7 @@ export function ExportListStep({
                 JSON Array
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
