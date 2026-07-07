@@ -60,7 +60,7 @@
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
-      "description": "Bekijk eerdere uploads of start een nieuwe.",
+      "description": "Bekijk eerdere uploads of start een nieuwe. Geüploade gegevens verschijnen na de volgende verwerkingsronde in de gegevenstabellen van het experiment, niet meteen.",
       "createDescription": "Kies waar de gegevens terechtkomen en voeg je bestanden toe. Het schema wordt afgeleid uit het bestand.",
       "targetKind": {
         "new": "Nieuwe tabel aanmaken",

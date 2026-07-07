@@ -60,7 +60,7 @@
     },
     "uploadDataModal": {
       "title": "Upload data",
-      "description": "Review past uploads or start a new one.",
+      "description": "Review past uploads or start a new one. Uploaded data appears in the experiment's data tables after the next processing run, not immediately.",
       "createDescription": "Choose where the data lands, then add your files. Schema is inferred from the file.",
       "targetKind": {
         "new": "Create new table",
