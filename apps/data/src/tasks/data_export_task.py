@@ -214,7 +214,7 @@ def export_data(df, row_count):
                     "limit per sheet. Use CSV or Parquet for tables this wide."
                 )
             df = flatten_complex_columns(df)
-            df.coalesce(1).write.mode("overwrite").format("excel").option("header", True).save(OUTPUT_PATH)
+            df.coalesce(1).write.mode("overwrite").option("header", True).excel(OUTPUT_PATH)
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         
