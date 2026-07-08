@@ -79,7 +79,6 @@ subgraph "Ingestion"
 MQTT[AWS IoT Core]
 K[Kinesis]
 S3L[S3]
-SQS[SQS]
 AL[Auto Loader]
 end
 
@@ -100,7 +99,7 @@ S -->|"gzip+b64 MQTT"| MQTT
 M -->|"gzip+b64 MQTT"| MQTT
 MQTT --> K --> B
 L -->|"pre-signed URL"| S3L
-S3L --> SQS --> AL --> B
+S3L --> AL --> B
 W --> B
 T --> AL --> B
 B --> SV --> G
@@ -114,7 +113,7 @@ G --> EXP
 **Data Flow:**
 
 1. **Real-time sensor data**: IoT devices and mobile app publish gzip+base64-encoded MQTT messages → AWS IoT Core → Kinesis → Bronze `raw_data` → Silver `clean_data` → Gold `experiment_device_data`
-2. **Large IoT payloads**: Client requests pre-signed S3 URL from backend (`/api/v1/iot/upload-url`) → uploads JSON directly to S3 (`s3://bucket/large-iot/{experimentId}/{uuid}.json`) → S3 sends notification to SQS → Databricks Auto Loader ingests into Bronze `raw_large_iot_data` → same Silver/Gold flow as real-time data
+2. **Large IoT payloads**: Client requests pre-signed S3 URL from backend (`/api/v1/iot/upload-url`) → uploads JSON directly to S3 (`s3://bucket/large-iot/{experimentId}/{uuid}.json`) → Databricks Auto Loader (directory listing) ingests into Bronze `raw_large_iot_data` → same Silver/Gold flow as real-time data
 3. **Web uploads & project transfers**: Files uploaded to S3 → Auto Loader → Bronze `raw_imported_data` → same Silver/Gold flow
 
 See [Data Ingestion Architecture](/docs/data-platform/ingestion-architecture) for detailed documentation on the medallion architecture, VARIANT columns, table identity model, and export system.
@@ -144,7 +143,7 @@ The `@repo/iot` package provides a layered architecture for sensor communication
 ## Key Architectural Patterns
 
 - **Centralized data schema**: Single `centrum` schema with VARIANT columns for flexible JSON storage, replacing per-experiment schemas
-- **Event-driven ingestion**: MQTT → IoT Core → Kinesis → Databricks streaming tables; S3 → SQS notifications → Auto Loader for large IoT payloads and project uploads
+- **Event-driven ingestion**: MQTT → IoT Core → Kinesis → Databricks streaming tables; S3 → Auto Loader (directory listing) for large IoT payloads and project uploads
 - **Async exports**: Background Databricks jobs with status tracking and multi-format support (CSV, NDJSON, JSON, Parquet)
 - **Many-to-many protocol/macro compatibility**: Join table linking protocols and macros independently
 - **Invitation system**: Email-based invitations with auto-acceptance on first sign-in

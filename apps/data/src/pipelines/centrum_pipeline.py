@@ -458,7 +458,7 @@ def clean_data():
         .withColumn("hour", F.hour("timestamp"))
         .withColumn(
             "ingest_latency_ms",
-            (F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")) * 1000
+            F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
         )
         .withColumn(
             "id",
@@ -468,7 +468,6 @@ def clean_data():
                     F.col("device_id"),
                     F.col("timestamp"),
                     F.col("sample"),
-                    F.col("ingestion_timestamp"),
                 )
             )
         )
