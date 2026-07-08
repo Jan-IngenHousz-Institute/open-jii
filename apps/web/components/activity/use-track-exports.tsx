@@ -13,7 +13,6 @@ const FORMAT_LABELS: Record<string, string> = {
   ndjson: "NDJSON",
   "json-array": "JSON Array",
   parquet: "Parquet",
-  xlsx: "Excel",
 };
 
 function mapStatus(s: ExportRecord["status"]): ActivityJobStatus {

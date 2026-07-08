@@ -149,26 +149,6 @@ describe("ExportListStep", () => {
     expect(onCreateExport).toHaveBeenCalledWith("csv");
   });
 
-  it("calls onCreateExport with xlsx via the Excel dropdown option", async () => {
-    mountExports([]);
-    const onCreateExport = vi.fn();
-
-    render(<ExportListStep {...defaultProps} onCreateExport={onCreateExport} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("experimentData.exportModal.noExports")).toBeInTheDocument();
-    });
-
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: /experimentData\.exportModal\.createExport/i }),
-    );
-
-    await user.click(await screen.findByRole("menuitem", { name: "Excel" }));
-
-    expect(onCreateExport).toHaveBeenCalledWith("xlsx");
-  });
-
   it("calls downloadExport when download button is clicked", async () => {
     mountExports([completedExport]);
 

@@ -866,7 +866,7 @@ describe("Experiment Schema", () => {
     });
 
     it("zInitiateExportBody accepts all valid formats", () => {
-      for (const format of ["csv", "ndjson", "json-array", "parquet", "xlsx"] as const) {
+      for (const format of ["csv", "ndjson", "json-array", "parquet"] as const) {
         expect(zInitiateExportBody.parse({ tableName: "t1", format })).toEqual({
           tableName: "t1",
           format,

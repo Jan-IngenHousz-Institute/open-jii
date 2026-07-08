@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Data Export Task
-# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel)
+# Standalone task to export experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet)
 # This task runs independently and outputs files to Unity Catalog volumes
 
 # COMMAND ----------
@@ -33,7 +33,7 @@ def log(msg: str, level: str = "INFO"):
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 TABLE_NAME = dbutils.widgets.get("TABLE_NAME")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
-FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, parquet, or xlsx
+FORMAT = dbutils.widgets.get("FORMAT").lower()  # csv, ndjson, json-array, or parquet
 USER_ID = dbutils.widgets.get("USER_ID")  # User who initiated the export
 ENVIRONMENT = dbutils.widgets.get("ENVIRONMENT") if dbutils.widgets.get("ENVIRONMENT") else "DEV"
 try:
@@ -157,25 +157,7 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
 # COMMAND ----------
 
 # DBTITLE 1,Export Data
-# Excel worksheets are hard-capped at 1,048,576 rows (incl. header) and 16,384 columns.
-EXCEL_MAX_ROWS = 1_048_576
-EXCEL_MAX_COLUMNS = 16_384
-
-
-def flatten_complex_columns(df):
-    """
-    Serialise struct/array/map columns to JSON strings and cast VARIANT to string.
-    Flat formats (CSV, Excel) can't hold nested types; VARIANT already stores JSON.
-    """
-    for field in df.schema.fields:
-        if isinstance(field.dataType, (StructType, ArrayType, MapType)):
-            df = df.withColumn(field.name, to_json(col(field.name)))
-        elif isinstance(field.dataType, VariantType):
-            df = df.withColumn(field.name, col(field.name).cast("string"))
-    return df
-
-
-def export_data(df, row_count):
+def export_data(df):
     """
     Export data in the requested format
     """
@@ -183,7 +165,15 @@ def export_data(df, row_count):
         log(f"Exporting to {FORMAT.upper()}: {OUTPUT_PATH}")
         
         if FORMAT == "csv":
-            df = flatten_complex_columns(df)
+            # CSV doesn't support complex types (structs, arrays, maps, variants)
+            # Convert them to JSON strings
+            for field in df.schema.fields:
+                if isinstance(field.dataType, (StructType, ArrayType, MapType)):
+                    df = df.withColumn(field.name, to_json(col(field.name)))
+                elif isinstance(field.dataType, VariantType):
+                    # VARIANT already stores JSON; cast to string for CSV compatibility
+                    df = df.withColumn(field.name, col(field.name).cast("string"))
+            
             df.coalesce(1).write.mode("overwrite").option("header", True).option("escape", '"').csv(OUTPUT_PATH)
         elif FORMAT == "ndjson":
             # Write as newline-delimited JSON (NDJSON/JSONL)
@@ -201,20 +191,6 @@ def export_data(df, row_count):
             dbutils.fs.put(f"{OUTPUT_PATH}/_SUCCESS", "", overwrite=True)
         elif FORMAT == "parquet":
             df.coalesce(1).write.mode("overwrite").parquet(OUTPUT_PATH)
-        elif FORMAT == "xlsx":
-            if row_count >= EXCEL_MAX_ROWS:
-                raise ValueError(
-                    f"Export has {row_count} rows, which exceeds Excel's {EXCEL_MAX_ROWS}-row "
-                    "limit per sheet. Use CSV or Parquet for datasets this large."
-                )
-            column_count = len(df.columns)
-            if column_count > EXCEL_MAX_COLUMNS:
-                raise ValueError(
-                    f"Export has {column_count} columns, which exceeds Excel's {EXCEL_MAX_COLUMNS}-column "
-                    "limit per sheet. Use CSV or Parquet for tables this wide."
-                )
-            df = flatten_complex_columns(df)
-            df.coalesce(1).write.mode("overwrite").format("excel").option("header", True).save(OUTPUT_PATH)
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         
@@ -340,7 +316,7 @@ def main():
         df = anonymize_contributors(df, EXPERIMENT_ID)
 
     # Export data in requested format
-    output_path = export_data(df, row_count)
+    output_path = export_data(df)
     
     # Get actual file path
     file_path = get_export_file_path(output_path)
