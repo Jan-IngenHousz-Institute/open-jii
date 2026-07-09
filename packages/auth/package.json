@@ -3,19 +3,19 @@
   "version": "0.0.1",
   "exports": {
     "./server": {
-      "types": "./src/server.d.ts",
+      "types": "./src/server.ts",
       "default": "./dist/server.js"
     },
     "./client": {
-      "types": "./src/clients/client.web.d.ts",
+      "types": "./src/clients/client.web.ts",
       "default": "./dist/clients/client.web.js"
     },
     "./client.native": {
-      "types": "./src/clients/client.native.d.ts",
+      "types": "./src/clients/client.native.ts",
       "default": "./dist/clients/client.native.js"
     },
     "./types": {
-      "types": "./src/types.d.ts",
+      "types": "./src/types.ts",
       "default": "./dist/types.js"
     }
   },
@@ -29,10 +29,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/expo": "1.5.6",
+    "@better-auth/expo": "1.6.23",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
-    "better-auth": "1.5.6",
+    "better-auth": "1.6.23",
     "nodemailer": "catalog:"
   },
   "devDependencies": {
