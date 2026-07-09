@@ -1,94 +1,62 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
-import { uniq } from "~/shared/utils/uniq";
 
-async function precacheExperimentMacrosFn(
-  experimentId: string,
-  queryClient: ReturnType<typeof useQueryClient>,
-): Promise<string[]> {
-  // Fetch the experiment flow
-  const flowResponse: any = await tsr.experiments.getFlow.query({
-    params: { id: experimentId },
-  });
-
-  const nodes = flowResponse.body?.graph?.nodes ?? [];
-
-  // Extract all analysis nodes and their macroIds
-  const macroIds = nodes
-    .filter((node: FlowNode) => node.type === "analysis" && node.content?.macroId)
-    .map((node: FlowNode) => node.content.macroId as string)
-    .filter((id): id is string => !!id);
-
-  // Remove duplicates
-  const uniqueMacroIds = uniq<string>(macroIds);
-
-  // Prefetch each macro
-  await Promise.all(
-    uniqueMacroIds.map((macroId: string) =>
-      queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
-        queryFn: async () => {
-          const response = await tsr.macros.getMacro.query({
-            params: { id: macroId },
-          });
-          return { body: response.body };
-        },
-      }),
-    ),
-  );
-
-  return uniqueMacroIds;
+interface ExperimentRef {
+  id: string;
+  workbookId: string | null;
+  workbookVersionId: string | null;
 }
 
-async function precacheExperimentProtocolsFn(
-  experimentId: string,
+/** Reads the experiment's workbook refs from the already-cached list. */
+function findExperimentRef(
   queryClient: ReturnType<typeof useQueryClient>,
-): Promise<string[]> {
-  // Fetch the experiment flow
-  const flowResponse: any = await tsr.experiments.getFlow.query({
-    params: { id: experimentId },
-  });
-
-  const nodes = flowResponse.body?.graph?.nodes ?? [];
-
-  // Extract all measurement nodes and their protocolIds
-  const protocolIds = nodes
-    .filter((node: FlowNode) => node.type === "measurement" && node.content?.protocolId)
-    .map((node: FlowNode) => node.content.protocolId as string)
-    .filter((id): id is string => !!id);
-
-  // Remove duplicates
-  const uniqueProtocolIds = uniq<string>(protocolIds);
-
-  // Prefetch each protocol
-  await Promise.all(
-    uniqueProtocolIds.map((protocolId: string) =>
-      queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
-        queryFn: async () => {
-          const response = await tsr.protocols.getProtocol.query({
-            params: { id: protocolId },
-          });
-          return { body: response.body };
-        },
-      }),
-    ),
-  );
-
-  return uniqueProtocolIds;
+  experimentId: string,
+): ExperimentRef | undefined {
+  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(contentKeys.experiments);
+  return cached?.body?.find((e) => e.id === experimentId);
 }
 
-async function precacheExperimentDataFn(
+// Finite so an incomplete (offline/failed) precache can retry on reconnect.
+const PRECACHE_STALE_TIME = 5 * 60 * 1000;
+
+/**
+ * Warms the offline cache for an experiment's flow by caching its workbook
+ * version (cells + pinned protocol/macro snapshots). Throws if it can't, so the
+ * precache reports incomplete and retries on reconnect.
+ */
+async function precacheExperimentWorkbookFn(
   experimentId: string,
   queryClient: ReturnType<typeof useQueryClient>,
-): Promise<{ macroIds: string[]; protocolIds: string[] }> {
-  const [macroIds, protocolIds] = await Promise.all([
-    precacheExperimentMacrosFn(experimentId, queryClient),
-    precacheExperimentProtocolsFn(experimentId, queryClient),
-  ]);
+): Promise<{ workbookVersionId: string }> {
+  let ref = findExperimentRef(queryClient, experimentId);
+  if (!ref) {
+    await queryClient.fetchQuery({
+      queryKey: contentKeys.experiments,
+      queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
+      meta: { suppressToast: true },
+    });
+    ref = findExperimentRef(queryClient, experimentId);
+  }
 
-  return { macroIds, protocolIds };
+  if (!ref?.workbookId || !ref.workbookVersionId) {
+    throw new Error(`No workbook version for experiment ${experimentId}`);
+  }
+
+  const { workbookId, workbookVersionId } = ref;
+  await queryClient.fetchQuery({
+    queryKey: ["workbook-version", workbookId, workbookVersionId],
+    queryFn: () =>
+      tsr.workbooks.getWorkbookVersion.query({
+        params: { id: workbookId, versionId: workbookVersionId },
+      }),
+    meta: { suppressToast: true },
+    // A pinned version is immutable, so reuse the cache instead of refetching
+    // (a stale refetch would fail offline even with the version already cached).
+    staleTime: Infinity,
+  });
+
+  return { workbookVersionId };
 }
 
 export function usePrecachedExperimentData(experimentId: string | undefined) {
@@ -96,9 +64,10 @@ export function usePrecachedExperimentData(experimentId: string | undefined) {
 
   return useQuery({
     queryKey: ["precache-experiment-data", experimentId],
-    queryFn: () => precacheExperimentDataFn(experimentId ?? "", queryClient),
+    queryFn: () => precacheExperimentWorkbookFn(experimentId ?? "", queryClient),
     enabled: !!experimentId,
-    staleTime: Infinity,
+    meta: { suppressToast: true },
+    staleTime: PRECACHE_STALE_TIME,
     gcTime: Infinity,
   });
 }

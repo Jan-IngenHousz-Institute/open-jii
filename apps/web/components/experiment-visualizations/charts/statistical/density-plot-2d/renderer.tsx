@@ -38,6 +38,7 @@ export function DensityPlot2DRenderer({
   }
 
   const seriesColor = Array.isArray(chartConfig.color) ? chartConfig.color[0] : chartConfig.color;
+  const showMarkers = chartConfig.density2dShowMarkers !== false;
   const markerSize = chartConfig.density2dMarkerSize ?? 4;
   const markerOpacity = chartConfig.density2dMarkerOpacity ?? 0.4;
   const contourFill = Boolean(chartConfig.density2dContourFill);
@@ -56,6 +57,7 @@ export function DensityPlot2DRenderer({
           x={pairs?.x ?? []}
           y={pairs?.y ?? []}
           config={chartConfig}
+          showMarkers={showMarkers}
           markerSize={markerSize}
           markerOpacity={markerOpacity}
           markerColor={seriesColor}

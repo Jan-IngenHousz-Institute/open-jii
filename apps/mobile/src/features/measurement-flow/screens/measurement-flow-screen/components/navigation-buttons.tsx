@@ -2,13 +2,13 @@ import React from "react";
 import { Keyboard, View } from "react-native";
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-actions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 import { BackButton } from "./back-button";
-import { advanceWithAnswer } from "./flow-nodes/utils/advance-with-answer";
 import { NextButton } from "./next-button";
 
 export function NavigationButtons() {
@@ -38,9 +38,15 @@ export function NavigationButtons() {
   const isInstructionOrQuestion =
     currentNode?.type === "instruction" || currentNode?.type === "question";
 
-  // Show navigation buttons only for instruction/question nodes, not on the submit/review screen
+  // Show navigation buttons only for instruction/question nodes, not on the
+  // submit/review screen. Branch nodes route automatically and must never show
+  // Back/Next (the `!== "branch"` guard is defensive — branch isn't an
+  // instruction/question anyway).
   const shouldShowNavigationButtons =
-    !!experimentId && isInstructionOrQuestion && !isQuestionsSubmitPending;
+    !!experimentId &&
+    isInstructionOrQuestion &&
+    currentNode?.type !== "branch" &&
+    !isQuestionsSubmitPending;
 
   if (!shouldShowNavigationButtons) {
     return null;

@@ -1,0 +1,58 @@
+# EAS build only needs mobile app + its workspace deps
+
+# Exclude unrelated apps and heavy directories
+
+# Apps not needed for mobile build
+
+apps/backend
+apps/data
+apps/docs
+apps/macro-sandbox
+apps/node-red
+apps/tools
+apps/web
+
+# Infrastructure
+
+infrastructure
+
+# Coverage & build outputs
+
+coverage
+.next
+.open-next
+out
+build
+dist
+.cache
+*.tsbuildinfo
+.asyncapi
+.openapi
+.expo
+
+# Secrets (mirror .gitignore; never ship to the builder)
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# AI artifacts (huge: worktrees, sessions)
+
+.claude
+.wolf
+
+# CI/CD
+
+.github
+
+# Misc
+
+.vscode
+.turbo
+.vercel
+*.zip
+*.md
+!apps/mobile/README.md

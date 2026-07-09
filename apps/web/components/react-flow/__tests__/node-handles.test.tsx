@@ -3,7 +3,6 @@ import { Position } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import type { NodeType } from "../node-config";
 import { NodeHandles, getHandlePositionClasses } from "../node-handles";
 
 vi.mock("../node-config", () => ({
@@ -122,7 +121,7 @@ describe("NodeHandles", () => {
         hasOutput
         inputPosition={Position.Left}
         outputPosition={Position.Right}
-        nodeType={"QUESTION" as NodeType}
+        nodeType={"QUESTION"}
       />,
     );
     const handles = screen.getAllByRole("handle");

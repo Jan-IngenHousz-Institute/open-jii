@@ -201,7 +201,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
             href={viewHref}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              "focus-visible:ring-primary/40 text-[13px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2",
+              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
               TEXT_STRONG,
             )}
           >

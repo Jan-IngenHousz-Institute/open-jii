@@ -1,26 +1,35 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type {
+  FlowState,
+  MatchedPath,
+  ScanResult,
+} from "~/features/measurement-flow/domain/flow-transitions";
 import {
-  FlowNode,
-  isQuestionsOnlyFlow,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+  dismissQuestionsSubmitState,
+  finishFlowState,
+  initialFlowState,
+  navigateToQuestionFromOverviewState,
+  nextStepState,
+  previousStepState,
+  recordBranchJumpState,
+  resetFlowState,
+  retryIterationState,
+  returnToOverviewState,
+  startNewIterationState,
+} from "~/features/measurement-flow/domain/flow-transitions";
+import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
-interface MeasurementFlowStore {
-  experimentId?: string;
-  experimentLabel?: string;
-  protocolId?: string;
-  currentStep: number;
-  flowNodes: FlowNode[];
-  currentFlowStep: number;
-  iterationCount: number;
-  isFlowFinished: boolean;
-  isQuestionsSubmitPending: boolean;
-  scanResult?: any;
-  isFromOverview: boolean;
+import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+
+interface MeasurementFlowStore extends FlowState {
+  // AutoProceededSummary anchor: first manual question at the start of the
+  // current iteration (set by useIterationStateSync). Deliberately NOT
+  // persisted; on relaunch it is recomputed by the resume-path sync.
+  iterationAnchor?: { iteration: number; nodeId?: string };
 
   setExperimentId: (experimentId: string, experimentLabel?: string) => void;
-  setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
   setCurrentFlowStep: (step: number) => void;
   nextStep: () => void;
@@ -28,178 +37,109 @@ interface MeasurementFlowStore {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
+  setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
+  setLastMatchedPath: (path: MatchedPath | undefined) => void;
+  incrementBranchVisit: (nodeId: string) => void;
+  recordBranchJump: (landing: number) => void;
   resetFlow: () => void;
+  startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
-  setScanResult: (result: any) => void;
+  setScanResult: (result: ScanResult | undefined) => void;
+  setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
 }
 
-// The store is persisted so a mid-flow blur (background, kill, tab switch)
-// is itself the "pause": the next launch rehydrates the same active flow
-// and the home screen renders the resume card based on whether experimentId
-// is set. No separate snapshot store needed.
+// Persisted store: a mid-flow blur (background/kill/tab switch) is itself the
+// "pause"; relaunch rehydrates the active flow, incl. workbook cells/edges and
+// branch state so a resumed branching flow keeps routing offline. Progression
+// rules live in ../domain/flow-transitions.ts; the actions here just delegate.
 export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
-      experimentId: undefined,
-      experimentLabel: undefined,
-      protocolId: undefined,
-      currentStep: 0,
-      flowNodes: [],
-      currentFlowStep: 0,
-      iterationCount: 0,
-      isFlowFinished: false,
-      isQuestionsSubmitPending: false,
-      scanResult: undefined,
-      isFromOverview: false,
+      ...initialFlowState,
+      iterationAnchor: undefined,
 
       setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
-      setProtocolId: (protocolId) => set({ protocolId }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            const nextFlowStep = state.currentFlowStep + 1;
-            const isCompleted = nextFlowStep >= state.flowNodes.length;
-            if (isCompleted) {
-              if (isQuestionsOnlyFlow(state.flowNodes)) {
-                return {
-                  isQuestionsSubmitPending: true,
-                  currentFlowStep: state.flowNodes.length,
-                };
-              }
-              return {
-                currentFlowStep: 0,
-                iterationCount: state.iterationCount + 1,
-              };
-            }
-            return { currentFlowStep: nextFlowStep };
-          }
-          return { currentStep: state.currentStep + 1 };
-        }),
+      nextStep: () => set(nextStepState),
+      previousStep: () => set(previousStepState),
 
-      previousStep: () =>
-        set((state) => {
-          if (state.isFromOverview) {
-            return {
-              currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-              isFromOverview: false,
-            };
-          }
-          if (state.experimentId && state.flowNodes.length > 0) {
-            if (state.isQuestionsSubmitPending) {
-              return {
-                isQuestionsSubmitPending: false,
-                currentFlowStep: state.flowNodes.length - 1,
-              };
-            }
-            if (state.currentFlowStep > 0) {
-              return { currentFlowStep: state.currentFlowStep - 1 };
-            } else {
-              return {
-                experimentId: undefined,
-                experimentLabel: undefined,
-                currentStep: 0,
-                flowNodes: [],
-                currentFlowStep: 0,
-                iterationCount: 0,
-                isFlowFinished: false,
-                isQuestionsSubmitPending: false,
-                scanResult: undefined,
-                protocolId: undefined,
-              };
-            }
-          }
-          return { currentStep: Math.max(0, state.currentStep - 1) };
-        }),
-
-      // Route through resetFlow so the persisted slice (flowNodes,
-      // currentFlowStep, iterationCount, scanResult, …) is cleared too.
+      // Route through resetFlow so the persisted slice is cleared too.
       reset: () => get().resetFlow(),
 
-      setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
-
-      resetFlow: () =>
+      setFlowNodes: (nodes) =>
         set({
-          experimentId: undefined,
-          experimentLabel: undefined,
-          currentStep: 0,
-          flowNodes: [],
+          flowNodes: nodes,
           currentFlowStep: 0,
-          iterationCount: 0,
-          isFlowFinished: false,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          protocolId: undefined,
-          isFromOverview: false,
+          cells: [],
+          edges: [],
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
+          branchReturnStack: [],
         }),
 
-      retryCurrentIteration: () =>
-        set(() => ({
+      setFlowGraph: (nodes, edges, cells) =>
+        set({
+          flowNodes: nodes,
+          edges,
+          cells,
           currentFlowStep: 0,
-          isQuestionsSubmitPending: false,
-          scanResult: undefined,
-          isFromOverview: false,
+          branchVisitCounts: {},
+          lastMatchedPath: undefined,
+          branchReturnStack: [],
+        }),
+
+      setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
+
+      incrementBranchVisit: (nodeId) =>
+        set((state) => ({
+          branchVisitCounts: {
+            ...state.branchVisitCounts,
+            [nodeId]: (state.branchVisitCounts[nodeId] ?? 0) + 1,
+          },
         })),
 
-      finishFlow: () =>
-        set((state) => ({
-          currentFlowStep: state.flowNodes.length,
-          isFlowFinished: true,
-          isQuestionsSubmitPending: false,
-          isFromOverview: false,
-        })),
+      recordBranchJump: (landing) => set((state) => recordBranchJumpState(state, landing)),
+
+      resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
+
+      startNewIteration: () => set(startNewIterationState),
+
+      retryCurrentIteration: () => set(retryIterationState()),
+
+      finishFlow: () => set(finishFlowState),
 
       setScanResult: (result) => set({ scanResult: result }),
+      setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () =>
-        set((state) => ({
-          isQuestionsSubmitPending: false,
-          currentFlowStep: 0,
-          iterationCount: state.iterationCount + 1,
-          scanResult: undefined,
-        })),
+      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
 
       navigateToQuestionFromOverview: (questionIndex) =>
-        set({
-          currentFlowStep: questionIndex,
-          isFromOverview: true,
-          isQuestionsSubmitPending: false,
-        }),
+        set(navigateToQuestionFromOverviewState(questionIndex)),
 
-      returnToOverview: () =>
-        set((state) => {
-          if (isQuestionsOnlyFlow(state.flowNodes)) {
-            return {
-              isQuestionsSubmitPending: true,
-              isFromOverview: false,
-            };
-          }
-          return {
-            currentFlowStep: state.flowNodes.findIndex((n) => n.type === "measurement"),
-            isFromOverview: false,
-          };
-        }),
+      returnToOverview: () => set(returnToOverviewState),
     }),
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
+      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
+      // plot or a stale "Experiment" name; the upgrade starts them clean.
+      version: 1,
+      migrate: (persisted, version) =>
+        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // protocolId was dropped from the persisted slice (now derived from
+      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
+      // as an ignored extra key.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
-        protocolId: state.protocolId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,
@@ -208,6 +148,11 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
         isFromOverview: state.isFromOverview,
+        cells: state.cells,
+        edges: state.edges,
+        branchVisitCounts: state.branchVisitCounts,
+        lastMatchedPath: state.lastMatchedPath,
+        branchReturnStack: state.branchReturnStack,
       }),
     },
   ),

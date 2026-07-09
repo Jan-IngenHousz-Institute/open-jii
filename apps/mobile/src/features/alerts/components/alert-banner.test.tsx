@@ -12,10 +12,6 @@ vi.mock("~/shared/ui/ctf-rich-text", () => ({
     React.createElement(Text, null, JSON.stringify(json)),
 }));
 
-vi.mock("~/shared/stores/environment-store", () => ({
-  useEnvVar: () => "https://app.example.com",
-}));
-
 const makeAlert = (overrides: Record<string, unknown> = {}) =>
   ({
     sys: { id: "alert-1" },
@@ -72,27 +68,31 @@ describe("AlertBanner", () => {
     expect(screen.getByText(JSON.stringify(json))).toBeTruthy();
   });
 
-  it("opens a relative CTA link against the web base URL", () => {
-    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+  it("opens an absolute link URL as-is when the CTA is pressed", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockImplementation(() => Promise.resolve());
     render(
       <AlertBanner
-        alert={makeAlert({ link: { url: "/about", label: "Learn more" } })}
+        alert={makeAlert({ link: { url: "https://example.com/x", label: "Learn more" } })}
         onDismiss={vi.fn()}
+        baseUrl="https://app.openjii.org"
       />,
     );
     fireEvent.press(screen.getByText("Learn more"));
-    expect(openURL).toHaveBeenCalledWith("https://app.example.com/about");
+    expect(openURL).toHaveBeenCalledWith("https://example.com/x");
+    openURL.mockRestore();
   });
 
-  it("opens an absolute CTA link unchanged", () => {
-    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+  it("resolves a relative link URL against baseUrl before opening", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockImplementation(() => Promise.resolve());
     render(
       <AlertBanner
-        alert={makeAlert({ link: { url: "https://other.example.com/x", label: "Learn more" } })}
+        alert={makeAlert({ link: { url: "/releases", label: "See releases" } })}
         onDismiss={vi.fn()}
+        baseUrl="https://app.openjii.org"
       />,
     );
-    fireEvent.press(screen.getByText("Learn more"));
-    expect(openURL).toHaveBeenCalledWith("https://other.example.com/x");
+    fireEvent.press(screen.getByText("See releases"));
+    expect(openURL).toHaveBeenCalledWith("https://app.openjii.org/releases");
+    openURL.mockRestore();
   });
 });

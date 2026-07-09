@@ -44,13 +44,11 @@
     "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "test:render": "tsx --env-file=.env src/scripts/test-render.ts",
-    "dev": "tsc --watch & email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
-    "email:dev": "email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
+    "dev": "docker compose up -d mailcatcher && (tsc --watch & email dev --dir src/emails -p 3001)",
     "export": "email export",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "start:mailcatcher": "docker compose -f docker-compose.yml up mailcatcher"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@contentful/rich-text-react-renderer": "16.0.2",
@@ -66,7 +64,7 @@
     "@types/react": "catalog:react19",
     "eslint": "catalog:",
     "react": "catalog:react19",
-    "react-email": "5.2.10",
+    "react-email": "6.6.6",
     "tsx": "^4.21.0",
     "typescript": "catalog:"
   }

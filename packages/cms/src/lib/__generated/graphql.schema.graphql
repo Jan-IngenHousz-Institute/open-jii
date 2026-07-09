@@ -118,6 +118,8 @@ type AssetLinkingCollections {
   componentFeatureCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentFeatureCursorCollection
   componentPartnerCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentPartnerCollection
   componentPartnerCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentPartnerCursorCollection
+  componentReleaseNoteCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentReleaseNoteCollection
+  componentReleaseNoteCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentReleaseNoteCursorCollection
   componentRichImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentRichImageCollection
   componentRichImageCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentRichImageCursorCollection
   componentSeoCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentSeoCollection
@@ -515,6 +517,8 @@ input ComponentButtonFilter {
 type ComponentButtonLinkingCollections {
   componentAlertCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentAlertCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentAlertCollection
   componentAlertCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentAlertCursorCollection
+  componentReleaseNoteCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentReleaseNoteCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentReleaseNoteCollection
+  componentReleaseNoteCursorCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsComponentReleaseNoteCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentReleaseNoteCursorCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
   entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
   footerCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): FooterCollection
@@ -581,6 +585,60 @@ enum ComponentButtonLinkingCollectionsComponentAlertCursorCollectionOrder {
   title_DESC
   type_ASC
   type_DESC
+}
+
+enum ComponentButtonLinkingCollectionsComponentReleaseNoteCollectionOrder {
+  active_ASC
+  active_DESC
+  category_ASC
+  category_DESC
+  internalName_ASC
+  internalName_DESC
+  publishedAt_ASC
+  publishedAt_DESC
+  slug_ASC
+  slug_DESC
+  summary_ASC
+  summary_DESC
+  surfaces_ASC
+  surfaces_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+enum ComponentButtonLinkingCollectionsComponentReleaseNoteCursorCollectionOrder {
+  active_ASC
+  active_DESC
+  category_ASC
+  category_DESC
+  internalName_ASC
+  internalName_DESC
+  publishedAt_ASC
+  publishedAt_DESC
+  slug_ASC
+  slug_DESC
+  summary_ASC
+  summary_DESC
+  surfaces_ASC
+  surfaces_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
@@ -1259,6 +1317,182 @@ enum ComponentPartnerOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentReleaseNote)
+"""
+type ComponentReleaseNote implements Entry & _Node {
+  _id: ID!
+  active(locale: String, useFallbackLocale: Boolean): Boolean
+  body(locale: String, useFallbackLocale: Boolean): ComponentReleaseNoteBody
+  category(locale: String, useFallbackLocale: Boolean): String
+  contentfulMetadata: ContentfulMetadata!
+  cta(locale: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): ComponentButton
+  internalName(locale: String, useFallbackLocale: Boolean): String
+  linkedFrom(allowedLocales: [String]): ComponentReleaseNoteLinkingCollections
+  media(locale: String, preview: Boolean, useFallbackLocale: Boolean): Asset
+  publishedAt(locale: String, useFallbackLocale: Boolean): DateTime
+  seoFields(locale: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentSeoFilter): ComponentSeo
+  slug(locale: String, useFallbackLocale: Boolean): String
+  summary(locale: String, useFallbackLocale: Boolean): String
+  surfaces(locale: String, useFallbackLocale: Boolean): String
+  sys: Sys!
+  title(locale: String, useFallbackLocale: Boolean): String
+}
+
+type ComponentReleaseNoteBody {
+  json: JSON!
+  links: ComponentReleaseNoteBodyLinks!
+}
+
+type ComponentReleaseNoteBodyAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type ComponentReleaseNoteBodyEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type ComponentReleaseNoteBodyLinks {
+  assets: ComponentReleaseNoteBodyAssets!
+  entries: ComponentReleaseNoteBodyEntries!
+  resources: ComponentReleaseNoteBodyResources!
+}
+
+type ComponentReleaseNoteBodyResources {
+  block: [ComponentReleaseNoteBodyResourcesBlock!]!
+  hyperlink: [ComponentReleaseNoteBodyResourcesHyperlink!]!
+  inline: [ComponentReleaseNoteBodyResourcesInline!]!
+}
+
+type ComponentReleaseNoteBodyResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentReleaseNoteBodyResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentReleaseNoteBodyResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentReleaseNoteCollection {
+  items: [ComponentReleaseNote]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type ComponentReleaseNoteCursorCollection {
+  items: [ComponentReleaseNote]!
+  limit: Int!
+  pages: CursorPages!
+}
+
+input ComponentReleaseNoteFilter {
+  AND: [ComponentReleaseNoteFilter]
+  OR: [ComponentReleaseNoteFilter]
+  active: Boolean
+  active_exists: Boolean
+  active_not: Boolean
+  body_contains: String
+  body_exists: Boolean
+  body_not_contains: String
+  category: String
+  category_contains: String
+  category_exists: Boolean
+  category_in: [String]
+  category_not: String
+  category_not_contains: String
+  category_not_in: [String]
+  contentfulMetadata: ContentfulMetadataFilter
+  cta: cfComponentButtonNestedFilter
+  cta_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  media_exists: Boolean
+  publishedAt: DateTime
+  publishedAt_exists: Boolean
+  publishedAt_gt: DateTime
+  publishedAt_gte: DateTime
+  publishedAt_in: [DateTime]
+  publishedAt_lt: DateTime
+  publishedAt_lte: DateTime
+  publishedAt_not: DateTime
+  publishedAt_not_in: [DateTime]
+  seoFields: cfComponentSeoNestedFilter
+  seoFields_exists: Boolean
+  slug: String
+  slug_contains: String
+  slug_exists: Boolean
+  slug_in: [String]
+  slug_not: String
+  slug_not_contains: String
+  slug_not_in: [String]
+  summary: String
+  summary_contains: String
+  summary_exists: Boolean
+  summary_in: [String]
+  summary_not: String
+  summary_not_contains: String
+  summary_not_in: [String]
+  surfaces: String
+  surfaces_contains: String
+  surfaces_exists: Boolean
+  surfaces_in: [String]
+  surfaces_not: String
+  surfaces_not_contains: String
+  surfaces_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type ComponentReleaseNoteLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
+  entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
+}
+
+enum ComponentReleaseNoteOrder {
+  active_ASC
+  active_DESC
+  category_ASC
+  category_DESC
+  internalName_ASC
+  internalName_DESC
+  publishedAt_ASC
+  publishedAt_DESC
+  slug_ASC
+  slug_DESC
+  summary_ASC
+  summary_DESC
+  surfaces_ASC
+  surfaces_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
 """
 type ComponentRichImage implements Entry & _Node {
@@ -1406,12 +1640,68 @@ input ComponentSeoFilter {
 }
 
 type ComponentSeoLinkingCollections {
+  componentReleaseNoteCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsComponentReleaseNoteCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): ComponentReleaseNoteCollection
+  componentReleaseNoteCursorCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsComponentReleaseNoteCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): ComponentReleaseNoteCursorCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): EntryCollection
   entryCursorCollection(limit: Int = 100, locale: String, pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): EntryCursorCollection
   pageBlogPostCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): PageBlogPostCollection
   pageBlogPostCursorCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsPageBlogPostCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): PageBlogPostCursorCollection
   pageLandingCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsPageLandingCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean): PageLandingCollection
   pageLandingCursorCollection(limit: Int = 100, locale: String, order: [ComponentSeoLinkingCollectionsPageLandingCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean): PageLandingCursorCollection
+}
+
+enum ComponentSeoLinkingCollectionsComponentReleaseNoteCollectionOrder {
+  active_ASC
+  active_DESC
+  category_ASC
+  category_DESC
+  internalName_ASC
+  internalName_DESC
+  publishedAt_ASC
+  publishedAt_DESC
+  slug_ASC
+  slug_DESC
+  summary_ASC
+  summary_DESC
+  surfaces_ASC
+  surfaces_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+enum ComponentSeoLinkingCollectionsComponentReleaseNoteCursorCollectionOrder {
+  active_ASC
+  active_DESC
+  category_ASC
+  category_DESC
+  internalName_ASC
+  internalName_DESC
+  publishedAt_ASC
+  publishedAt_DESC
+  slug_ASC
+  slug_DESC
+  summary_ASC
+  summary_DESC
+  surfaces_ASC
+  surfaces_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder {
@@ -3865,6 +4155,9 @@ type Query {
   componentPartner(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): ComponentPartner
   componentPartnerCollection(limit: Int = 100, locale: String, order: [ComponentPartnerOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentPartnerFilter): ComponentPartnerCollection
   componentPartnerCursorCollection(limit: Int = 100, locale: String, order: [ComponentPartnerOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentPartnerFilter): ComponentPartnerCursorCollection
+  componentReleaseNote(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): ComponentReleaseNote
+  componentReleaseNoteCollection(limit: Int = 100, locale: String, order: [ComponentReleaseNoteOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentReleaseNoteFilter): ComponentReleaseNoteCollection
+  componentReleaseNoteCursorCollection(limit: Int = 100, locale: String, order: [ComponentReleaseNoteOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentReleaseNoteFilter): ComponentReleaseNoteCursorCollection
   componentRichImage(id: String!, locale: String, preview: Boolean, useFallbackLocale: Boolean): ComponentRichImage
   componentRichImageCollection(limit: Int = 100, locale: String, order: [ComponentRichImageOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentRichImageFilter): ComponentRichImageCollection
   componentRichImageCursorCollection(limit: Int = 100, locale: String, order: [ComponentRichImageOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentRichImageFilter): ComponentRichImageCursorCollection

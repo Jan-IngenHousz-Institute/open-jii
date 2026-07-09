@@ -60,7 +60,7 @@
     },
     "uploadDataModal": {
       "title": "Gegevens uploaden",
-      "description": "Bekijk eerdere uploads of start een nieuwe.",
+      "description": "Bekijk eerdere uploads of start een nieuwe. Geüploade gegevens verschijnen na de volgende verwerkingsronde in de gegevenstabellen van het experiment, niet meteen.",
       "createDescription": "Kies waar de gegevens terechtkomen en voeg je bestanden toe. Het schema wordt afgeleid uit het bestand.",
       "targetKind": {
         "new": "Nieuwe tabel aanmaken",
@@ -94,8 +94,8 @@
         "noTarget": "Kies of benoem een doeltabel",
         "invalidName": "Naam moet beginnen met een letter; gebruik letters, cijfers of underscores (max. 63)",
         "noFiles": "Selecteer ten minste één gegevensbestand",
-        "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, Excel, JSON, NDJSON)",
-        "mixedFormats": "Alle bestanden in één upload moeten hetzelfde formaat hebben",
+        "unsupportedFormat": "'{{fileName}}' is geen ondersteund bestandsformaat (CSV, TSV, parquet, JSON, NDJSON)",
+        "wrongFormat": "'{{fileName}}' is geen {{format}}-bestand",
         "oversizedFiles_one": "{{count}} bestand overschrijdt de maximaal toegestane grootte",
         "oversizedFiles_other": "{{count}} bestanden overschrijden de maximaal toegestane grootte",
         "tooManyFiles": "Te veel bestanden: selecteer er maximaal {{max}}",
@@ -146,7 +146,6 @@
           "csv": "CSV",
           "tsv": "TSV",
           "parquet": "Parquet",
-          "xlsx": "Excel",
           "json": "JSON",
           "ndjson": "NDJSON"
         },

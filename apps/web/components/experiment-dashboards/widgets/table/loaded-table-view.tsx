@@ -74,7 +74,9 @@ export function LoadedTableView({
     filters: mergedFilters,
   });
 
-  const rows = tableRows ?? [];
+  // Stable ref: while loading `tableRows` is undefined, and a fresh `[]` each
+  // render makes react-table's autoReset re-fire forever (microtask loop).
+  const rows = useMemo(() => tableRows ?? [], [tableRows]);
   const totalPages = tableMetadata?.totalPages ?? 1;
   const columns = useMemo(
     () => projectAndOrderColumns(tableMetadata?.columns, selectedColumns),
@@ -85,6 +87,9 @@ export function LoadedTableView({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    // Pagination is server-side (`page` state + query), so react-table's
+    // page auto-reset is both redundant and the trigger for the loop above.
+    autoResetPageIndex: false,
   });
 
   if (error) {

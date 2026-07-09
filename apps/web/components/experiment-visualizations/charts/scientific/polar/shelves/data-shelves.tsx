@@ -76,7 +76,7 @@ export const polarDataShelves: ShelfDef[] = [
   },
   {
     key: "color",
-    labelKey: "workspace.shelves.colorDimension",
+    labelKey: "workspace.shelves.groupBy",
     icon: Palette,
     Component: PolarColorShelf,
     summary: (form) => {

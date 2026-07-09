@@ -1,0 +1,25 @@
+{
+  "navLabel": "What's new",
+  "title": "What's new on mobile",
+  "fullChangelog": "Full changelog",
+  "showMore": "Read more",
+  "showLess": "Show less",
+  "empty": "No release notes yet.",
+  "emptySubtitle": "When there is something new to share, it will show up here.",
+  "offline": {
+    "title": "You're offline",
+    "subtitle": "Connect to the internet to see the latest updates."
+  },
+  "card": {
+    "title": "What's new",
+    "subtitleUnread_one": "{{count}} new update",
+    "subtitleUnread_other": "{{count}} new updates",
+    "subtitleCaughtUp": "You're all caught up"
+  },
+  "category": {
+    "new_feature": "New feature",
+    "improvement": "Improvement",
+    "bug_fix": "Bug fix",
+    "announcement": "Announcement"
+  }
+}

@@ -76,6 +76,40 @@ jobs:
           ref: ${{ inputs.ref || github.ref_name }}
           persist-credentials: false
 
+      - name: Find previous release branch
+        id: prev
+        run: |
+          git fetch --all
+          RELEASE_BRANCH="${{ inputs.ref || github.ref_name }}"
+          RELEASE_DATE="${RELEASE_BRANCH#release/}"
+          to_sortable() { local d="$1"; echo "${d:4:4}${d:2:2}${d:0:2}"; }
+          CURRENT_SORTABLE=$(to_sortable "$RELEASE_DATE")
+          PREVIOUS_BRANCH=""
+          PREVIOUS_SORTABLE=""
+          while IFS= read -r line; do
+            branch=$(echo "$line" | sed 's|.*origin/||' | xargs)
+            if [[ "$branch" =~ ^release/([0-9]{8})$ ]] && [[ "$branch" != "$RELEASE_BRANCH" ]]; then
+              date="${BASH_REMATCH[1]}"
+              sortable=$(to_sortable "$date")
+              if [[ "$sortable" < "$CURRENT_SORTABLE" ]]; then
+                if [[ -z "$PREVIOUS_SORTABLE" || "$sortable" > "$PREVIOUS_SORTABLE" ]]; then
+                  PREVIOUS_SORTABLE="$sortable"
+                  PREVIOUS_BRANCH="origin/$branch"
+                fi
+              fi
+            fi
+          done < <(git branch -r | grep 'origin/release/')
+          echo "Found previous release branch: ${PREVIOUS_BRANCH:-none}"
+          echo "previous_branch=$PREVIOUS_BRANCH" >> $GITHUB_OUTPUT
+
+          if [[ -n "$PREVIOUS_BRANCH" ]]; then
+            BASE_REF=$(git merge-base HEAD "$PREVIOUS_BRANCH")
+          else
+            BASE_REF=""
+          fi
+          echo "Using base_ref: ${BASE_REF:-none}"
+          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+
       - name: Sync Linear release
         uses: linear/linear-release-action@v0
         with:
@@ -83,8 +117,18 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           command: sync
           version: ${{ inputs.ref || github.ref_name }}
+          base_ref: ${{ steps.prev.outputs.base_ref }}
           stage: production
-          include_paths: "apps/web/**,apps/backend/**,apps/data/**,infra/**"
+          include_paths: "apps/web/**,apps/backend/**,apps/data/**,infrastructure/**"
+          dry_run: ${{ inputs.dry_run }}
+
+      - name: Complete Linear release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY_WEB }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          command: complete
+          version: ${{ inputs.ref || github.ref_name }}
           dry_run: ${{ inputs.dry_run }}
 
   label-deployed-prs:

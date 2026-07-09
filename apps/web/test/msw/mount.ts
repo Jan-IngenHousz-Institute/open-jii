@@ -164,5 +164,5 @@ export function createMount(server: SetupServer): MountFn {
     server.use(handler);
     return spy;
   }
-  return mount as MountFn;
+  return mount;
 }

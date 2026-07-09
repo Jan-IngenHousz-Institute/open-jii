@@ -78,7 +78,7 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
         <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", LIST_TEXT_STRONG)}>
           <Link
             href={viewHref}
-            className="focus-visible:ring-primary/40 hover:underline focus-visible:outline-none focus-visible:ring-2"
+            className="focus-visible:ring-primary/40 focus-visible:outline-hidden hover:underline focus-visible:ring-2"
           >
             {dashboard.name}
           </Link>

@@ -17,6 +17,8 @@
       "version": "Version",
       "runProtocol": "Run Protocol",
       "running": "Running...",
+      "interactionTitle": "Follow the instrument",
+      "interactionHint": "This protocol pauses for you to open and close the clamp. Watch the device and act when its lights prompt you.",
       "results": "Results",
       "success": "Success",
       "failed": "Failed",

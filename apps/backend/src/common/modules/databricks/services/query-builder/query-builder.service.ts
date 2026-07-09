@@ -140,6 +140,7 @@ export class QueryBuilderService {
       whereClause,
       whereConditions,
       filters,
+      distinct,
       orderBy,
       orderDirection,
       limit,
@@ -147,6 +148,10 @@ export class QueryBuilderService {
     } = params;
 
     const builder = this.variantQuery().from(table).select(columns);
+
+    if (distinct) {
+      builder.distinct();
+    }
 
     variants.forEach(({ columnName, schema }) => {
       builder.parseVariant(columnName, schema, `parsed_${columnName}`);

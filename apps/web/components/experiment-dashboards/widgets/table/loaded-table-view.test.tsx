@@ -77,7 +77,7 @@ describe("LoadedTableView", () => {
       <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />,
     );
 
-    // Step 1 — navigate off page 1.
+    // Navigate off page 1.
     const next = await screen.findByLabelText("Go to next page");
     await user.click(next);
     await waitFor(() => {
@@ -85,9 +85,8 @@ describe("LoadedTableView", () => {
       expect(last.query.page).toBe("2");
     });
 
-    // Step 2 — apply a filter. The hook strips `page` from the URL while
-    // filters are active, so we just verify the new request actually fired
-    // with the filter; the reset itself is proven in step 3.
+    // Apply a filter: the new request still paginates (page=1), and the
+    // filter rides along on the URL.
     rerender(
       <LoadedTableView
         tableName="raw_data"
@@ -99,15 +98,6 @@ describe("LoadedTableView", () => {
     await waitFor(() => {
       const last = spy.calls[spy.calls.length - 1];
       expect(last.query.filters).toBeDefined();
-      expect(last.query.page).toBeUndefined();
-    });
-
-    // Step 3 — drop the filter again. Page is back in the URL; it must be
-    // "1" (reset), not "2" (the pre-filter state).
-    rerender(<LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />);
-    await waitFor(() => {
-      const last = spy.calls[spy.calls.length - 1];
-      expect(last.query.filters).toBeUndefined();
       expect(last.query.page).toBe("1");
     });
   });
@@ -151,5 +141,40 @@ describe("LoadedTableView", () => {
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
     // The column is projected into the rendered table head.
     expect(screen.getByRole("columnheader", { name: /value/i })).toBeInTheDocument();
+  });
+
+  it("survives a re-render while data is still loading (no autoReset loop)", async () => {
+    server.mount(contract.experiments.getExperimentTables, {
+      body: [createExperimentTable({ identifier: "raw_data" })],
+    });
+    // Hold the data in a loading state briefly so the re-render lands while
+    // `tableRows` is undefined — the window where an unstable `[]` data ref
+    // used to send react-table's autoReset into an infinite microtask loop.
+    server.mount(contract.experiments.getExperimentData, {
+      delay: 50,
+      body: [
+        createExperimentDataTable({
+          name: "raw_data",
+          page: 1,
+          pageSize: 25,
+          totalPages: 1,
+          totalRows: 1,
+          data: {
+            columns: [{ name: "value", type_name: "DOUBLE", type_text: "DOUBLE" }],
+            rows: [{ value: 9 }],
+            totalRows: 1,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+
+    const { rerender } = render(
+      <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />,
+    );
+    rerender(<LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />);
+
+    // Reaching the loaded row (not timing out) is the regression assertion.
+    await waitFor(() => expect(screen.getByText("9")).toBeInTheDocument());
   });
 });

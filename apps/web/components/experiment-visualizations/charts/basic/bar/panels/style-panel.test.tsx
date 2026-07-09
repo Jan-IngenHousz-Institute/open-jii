@@ -69,49 +69,4 @@ describe("BarStylePanel", () => {
     expandSection("workspace.style.barOptions");
     expect(screen.queryByText("workspace.style.barnorm")).not.toBeInTheDocument();
   });
-
-  it("renders the line-series subsection when any Y source has traceType=line", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "harvest",
-          dataSources: [
-            { tableName: "harvest", columnName: "variety", role: "x" },
-            { tableName: "harvest", columnName: "yield", role: "y", traceType: "line" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.lineSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the scatter-series subsection when any Y source has traceType=scatter", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "harvest",
-          dataSources: [
-            { tableName: "harvest", columnName: "variety", role: "x" },
-            { tableName: "harvest", columnName: "yield", role: "y", traceType: "scatter" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.scatterSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the area-series subsection when any Y source has traceType=area", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "harvest",
-          dataSources: [
-            { tableName: "harvest", columnName: "variety", role: "x" },
-            { tableName: "harvest", columnName: "yield", role: "y", traceType: "area" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.areaSeriesOptions")).toBeInTheDocument();
-  });
 });

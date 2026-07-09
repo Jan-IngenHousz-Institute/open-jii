@@ -1,12 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { getBreadcrumbTrail } from "@/lib/breadcrumbs/getBreadcrumbTrail";
 import { usePathname } from "next/navigation";
-import { enrichPathSegments } from "~/app/actions/breadcrumbs";
+import { useMemo } from "react";
 
 export function useBreadcrumbs(locale: string) {
   const pathname = usePathname();
 
-  return useQuery({
-    queryKey: ["breadcrumbs", pathname, locale],
-    queryFn: () => enrichPathSegments(pathname, locale),
-  });
+  return useMemo(() => getBreadcrumbTrail(pathname, locale), [pathname, locale]);
 }

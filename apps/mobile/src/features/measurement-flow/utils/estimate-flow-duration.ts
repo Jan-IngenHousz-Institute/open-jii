@@ -1,4 +1,4 @@
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 /**
  * Rough duration estimate for a measurement flow, in minutes. The numbers

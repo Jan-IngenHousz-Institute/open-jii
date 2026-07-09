@@ -16,7 +16,7 @@ const cardVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
         false: "border-gray-200 bg-white",
       },
     },
@@ -59,10 +59,7 @@ const getLanguageColor = (language: string) => {
 
 function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
   const { data } = useMacroCompatibleProtocols(macroId, enabled);
-  const protocols: MacroProtocolEntry[] = useMemo(
-    () => (data?.body as MacroProtocolEntry[] | undefined) ?? [],
-    [data],
-  );
+  const protocols: MacroProtocolEntry[] = useMemo(() => data?.body ?? [], [data]);
 
   if (protocols.length === 0) return null;
 

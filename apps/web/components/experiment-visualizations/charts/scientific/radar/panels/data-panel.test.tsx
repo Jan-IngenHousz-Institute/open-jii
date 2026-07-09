@@ -44,9 +44,7 @@ describe("RadarDataPanel", () => {
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.radarAxes" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
   });
 
   it("seeds the first axis trigger from the existing y data source", () => {

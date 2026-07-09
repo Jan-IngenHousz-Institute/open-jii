@@ -33,7 +33,7 @@ export function ExpandableWidget({ title, children }: ExpandableWidgetProps) {
       aria-label={t("widget.expand")}
       onClick={handleOpen}
       data-no-drag=""
-      className="bg-card text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 pointer-events-auto inline-flex translate-y-1 items-center justify-center rounded-t-md border-x border-t px-2 py-1 opacity-0 shadow-sm transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 group-hover/widget:translate-y-0 group-hover/widget:opacity-100"
+      className="bg-card text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 shadow-xs focus-visible:outline-hidden pointer-events-auto inline-flex translate-y-1 items-center justify-center rounded-t-md border-x border-t px-2 py-1 opacity-0 transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 focus-visible:ring-2 group-hover/widget:translate-y-0 group-hover/widget:opacity-100"
     >
       <Maximize2 className="size-3.5" />
     </button>

@@ -288,26 +288,19 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
       cleanedFilters && cleanedFilters.length > 0 ? JSON.stringify(cleanedFilters) : undefined,
     [cleanedFilters],
   );
-  // When filters are active the backend switches off the paginated path.
-  // Sending page/pageSize would be ignored; stripping them keeps the cache
-  // key tight and the URL readable.
-  const hasFilters = filtersJson !== undefined;
 
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
       query: {
         tableName,
-        page: hasFilters ? undefined : page,
-        pageSize: hasFilters ? undefined : pageSize,
+        page,
+        pageSize,
         orderBy,
         orderDirection,
         filters: filtersJson,
       },
     },
-    // page/pageSize are stripped from the request when filters are active, so
-    // they must not appear in the key or we'd split the cache on a value the
-    // server never sees.
     queryKey: [
       "experiment",
       experimentId,
@@ -315,7 +308,8 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
       orderBy,
       orderDirection,
       filtersJson,
-      ...(hasFilters ? [] : [page, pageSize]),
+      page,
+      pageSize,
     ],
     staleTime: STALE_TIME,
     enabled,

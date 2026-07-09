@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type {
   UserMetadataWebhookPayload,
+  UserMetadataWebhookResponse,
   WebhookErrorResponse,
 } from "@repo/api/schemas/user.schema";
 
@@ -304,8 +305,8 @@ describe("UserWebhookController", () => {
         });
     });
 
-    it("should reject requests with malformed user IDs", async () => {
-      // Define webhook payload with invalid UUID
+    it("should omit malformed user IDs instead of rejecting the batch", async () => {
+      // One bad id must not 400 the whole batch; it is filtered server-side.
       const webhookPayload = {
         userIds: ["not-a-valid-uuid"],
       };
@@ -322,12 +323,16 @@ describe("UserWebhookController", () => {
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
-        .expect(StatusCodes.BAD_REQUEST);
+        .expect(StatusCodes.OK)
+        .expect(({ body }: { body: UserMetadataWebhookResponse }) => {
+          expect(body.success).toBe(true);
+          expect(body.users).toEqual([]);
+        });
     });
 
     it("should reject requests with too many user IDs", async () => {
-      // Define webhook payload with more than 100 user IDs (max limit)
-      const tooManyUserIds = Array.from({ length: 101 }, () => faker.string.uuid());
+      // Define webhook payload with more than 500 user IDs (max limit)
+      const tooManyUserIds = Array.from({ length: 501 }, () => faker.string.uuid());
       const webhookPayload: UserMetadataWebhookPayload = {
         userIds: tooManyUserIds,
       };

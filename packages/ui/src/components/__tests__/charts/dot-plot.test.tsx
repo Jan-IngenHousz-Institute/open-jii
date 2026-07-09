@@ -39,6 +39,7 @@ vi.mock("../../charts/utils", () => ({
   })),
   getRenderer: vi.fn((useWebGL) => (useWebGL ? "webgl" : "svg")),
   getPlotType: vi.fn((type, renderer) => `${type}${renderer === "webgl" ? "gl" : ""}`),
+  truncateCategoryTicks: vi.fn((axis) => axis),
 }));
 
 describe("DotPlot", () => {

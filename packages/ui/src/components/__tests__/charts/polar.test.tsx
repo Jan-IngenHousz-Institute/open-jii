@@ -27,6 +27,15 @@ vi.mock("../../charts/utils", () => ({
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
   ),
+  legendAnchorFor: vi.fn(() => ({})),
+  responsiveChrome: vi.fn((config: any) => ({
+    title: config.title ? { text: config.title } : undefined,
+    showlegend: config.showLegend !== false,
+    legend: {},
+    autosize: true,
+    paper_bgcolor: config.backgroundColor || "white",
+  })),
+  tierAxisFontSizes: vi.fn(() => ({ tick: 12, axisTitle: 14 })),
 }));
 
 describe("PolarPlot", () => {
@@ -336,7 +345,7 @@ describe("PolarPlot", () => {
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.radialaxis).toMatchObject({
-      title: "Radius",
+      title: { text: "Radius", font: { size: 14 } },
       range: [0, 10],
       tickmode: "array",
       tick0: 1,
@@ -358,7 +367,7 @@ describe("PolarPlot", () => {
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.radialaxis).toMatchObject({
-      title: "R",
+      title: { text: "R", font: { size: 14 } },
       tickmode: "linear",
       tick0: 0,
       angle: 90,
@@ -396,7 +405,7 @@ describe("PolarPlot", () => {
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.angularaxis).toMatchObject({
-      title: "Angle",
+      title: { text: "Angle", font: { size: 14 } },
       tickmode: "array",
       tick0: 5,
       dtick: 30,
@@ -418,7 +427,7 @@ describe("PolarPlot", () => {
 
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.angularaxis).toMatchObject({
-      title: "θ",
+      title: { text: "θ", font: { size: 14 } },
       tickmode: "linear",
       tick0: 0,
       dtick: 45,
@@ -446,7 +455,6 @@ describe("PolarPlot", () => {
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.hole).toBe(0.3);
     expect(chartLayout.polar.bgcolor).toBe("#f0f0f0");
-    expect(chartLayout.plot_bgcolor).toBe("#f0f0f0");
   });
 
   it("applies default hole and background", () => {
@@ -455,7 +463,6 @@ describe("PolarPlot", () => {
     const chartLayout = JSON.parse(getByTestId("chart-layout").textContent || "{}");
     expect(chartLayout.polar.hole).toBe(0);
     expect(chartLayout.polar.bgcolor).toBe("white");
-    expect(chartLayout.plot_bgcolor).toBe("white");
   });
 
   it("handles multiple series", () => {

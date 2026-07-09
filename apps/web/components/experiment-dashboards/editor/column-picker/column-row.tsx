@@ -38,7 +38,7 @@ export function ColumnRow({ name, column, onRemove }: ColumnRowProps) {
     >
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 inline-flex h-full cursor-grab items-center px-1 focus-visible:outline-none focus-visible:ring-1 active:cursor-grabbing"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex h-full cursor-grab items-center px-1 focus-visible:ring-1 active:cursor-grabbing"
         aria-label={t("columnPicker.dragHandle", { name })}
         {...attributes}
         {...listeners}

@@ -1,4 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
+import { z } from "zod";
 
 import {
   eq,
@@ -73,7 +74,10 @@ export class UserRepository {
 
   async findUsersByIds(userIds: string[]): Promise<Result<UserProfileMetadata[]>> {
     return tryCatch(async () => {
-      if (userIds.length === 0) {
+      // users.id is a uuid column; a non-uuid id would raise a Postgres cast
+      // error and fail the whole batch, so drop malformed ids here.
+      const validIds = userIds.filter((id) => z.string().uuid().safeParse(id).success);
+      if (validIds.length === 0) {
         return [];
       }
 
@@ -86,7 +90,7 @@ export class UserRepository {
         })
         .from(users)
         .innerJoin(profiles, eq(users.id, profiles.userId))
-        .where(inArray(users.id, userIds));
+        .where(inArray(users.id, validIds));
 
       return result;
     });
@@ -336,6 +340,38 @@ export class UserRepository {
         activated: result[0].activated,
         avatarUrl: result[0].avatarUrl,
       } as UserProfileDto;
+    });
+  }
+
+  /**
+   * Returns when the user last opened the "What's new" panel, or null if they
+   * never have (or have no profile yet) — null means everything is unread.
+   */
+  async findWhatsNewLastSeen(userId: string): Promise<Result<Date | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({ whatsNewLastSeenAt: profiles.whatsNewLastSeenAt })
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1);
+
+      return result.length > 0 ? result[0].whatsNewLastSeenAt : null;
+    });
+  }
+
+  /**
+   * Stamps the user's "What's new" last-seen timestamp to now, clearing the unread indicator
+   * across their devices. Returns the new timestamp (null if the user has no profile row).
+   */
+  async markWhatsNewSeen(userId: string): Promise<Result<Date | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .update(profiles)
+        .set({ whatsNewLastSeenAt: sql`now() AT TIME ZONE 'UTC'` })
+        .where(eq(profiles.userId, userId))
+        .returning({ whatsNewLastSeenAt: profiles.whatsNewLastSeenAt });
+
+      return result.length > 0 ? result[0].whatsNewLastSeenAt : null;
     });
   }
 }

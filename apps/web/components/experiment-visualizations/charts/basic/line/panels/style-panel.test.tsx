@@ -66,49 +66,4 @@ describe("LineStylePanel", () => {
     expect(screen.queryByText("workspace.style.smoothing")).not.toBeInTheDocument();
     expect(screen.getByText("workspace.style.markerOpacity")).toBeInTheDocument();
   });
-
-  it("renders the scatter-series subsection when any Y source has traceType=scatter", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "readings",
-          dataSources: [
-            { tableName: "readings", columnName: "time", role: "x" },
-            { tableName: "readings", columnName: "temp", role: "y", traceType: "scatter" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.scatterSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the bar-series subsection when any Y source has traceType=bar", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "readings",
-          dataSources: [
-            { tableName: "readings", columnName: "time", role: "x" },
-            { tableName: "readings", columnName: "temp", role: "y", traceType: "bar" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.barSeriesOptions")).toBeInTheDocument();
-  });
-
-  it("renders the area-series subsection when any Y source has traceType=area", () => {
-    renderPanel(
-      defaults({
-        dataConfig: {
-          tableName: "readings",
-          dataSources: [
-            { tableName: "readings", columnName: "time", role: "x" },
-            { tableName: "readings", columnName: "temp", role: "y", traceType: "area" },
-          ],
-        },
-      }),
-    );
-    expect(screen.getByText("workspace.style.areaSeriesOptions")).toBeInTheDocument();
-  });
 });

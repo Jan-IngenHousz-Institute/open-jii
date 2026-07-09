@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
+import { stableStringify } from "../../../../common/utils/stable-json";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { WorkbookDto } from "../../../core/models/workbook.model";
@@ -49,9 +50,9 @@ export class IsWorkbookUpgradableUseCase {
     const latest = latestResult.value;
     if (!latest) return success(false);
 
+    // Key-order-insensitive: jsonb snapshots come back re-normalised (OJD-1626).
     const cellsChanged =
-      JSON.stringify(designOf(workbook.cells)) !==
-      JSON.stringify(designOf(latest.cells as WorkbookCell[]));
+      stableStringify(designOf(workbook.cells)) !== stableStringify(designOf(latest.cells));
     if (cellsChanged) return success(true);
 
     const protocolIds = [
@@ -73,7 +74,7 @@ export class IsWorkbookUpgradableUseCase {
     const snapshots = latest.entitySnapshots;
     for (const [id, p] of protocolsResult.value) {
       const snap = snapshots.protocols[id] as { code: unknown } | undefined;
-      if (JSON.stringify(snap?.code) !== JSON.stringify(p.code)) return success(true);
+      if (stableStringify(snap?.code) !== stableStringify(p.code)) return success(true);
     }
     for (const [id, m] of macrosResult.value) {
       const snap = snapshots.macros[id] as { code: string } | undefined;

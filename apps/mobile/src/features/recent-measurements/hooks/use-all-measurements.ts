@@ -4,7 +4,7 @@ import { countMeasurementsByStatus, getMeasurementsList } from "~/shared/db/meas
 import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 
 import { queryKeys, statusesForFilter } from "../services/measurement-list-cache";
-import type { MeasurementFilter, MeasurementItem } from "../services/measurement-list-cache";
+import type { MeasurementFilter } from "../services/measurement-list-cache";
 
 export type { MeasurementStatus } from "~/shared/db/measurements-storage";
 export type { MeasurementFilter, MeasurementItem } from "../services/measurement-list-cache";
@@ -29,7 +29,7 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
         limit: PAGE_SIZE,
         offset: pageParam,
       });
-      return rows.map((r) => ({ ...r, key: r.id }) as MeasurementItem);
+      return rows.map((r) => ({ ...r, key: r.id }));
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {
@@ -103,7 +103,7 @@ export function useTopMeasurements(n: number) {
         limit: n,
         offset: 0,
       });
-      return rows.map((r) => ({ ...r, key: r.id }) as MeasurementItem);
+      return rows.map((r) => ({ ...r, key: r.id }));
     },
     networkMode: "always",
     refetchOnMount: true,

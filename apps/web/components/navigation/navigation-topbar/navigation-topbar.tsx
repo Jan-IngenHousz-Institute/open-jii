@@ -4,6 +4,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { mainNavigation, userNavigation, iconMap } from "@/components/navigation/navigation-config";
 import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { ActivityPopover } from "@/components/navigation/navigation-topbar/activity-popover";
+import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Menu, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { User } from "@repo/auth/types";
+import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
@@ -31,9 +33,10 @@ import { NavUser } from "../nav-user/nav-user";
 interface NavigationTopbarProps {
   locale: string;
   user: User;
+  releaseNotes?: ReleaseNoteFields[];
 }
 
-export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
+export function NavigationTopbar({ locale, user, releaseNotes = [] }: NavigationTopbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
@@ -164,7 +167,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                     <input
                       type="text"
                       placeholder="Search by keyword..."
-                      className="placeholder:text-sidebar-search-placeholder h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20 focus:outline-none"
+                      className="placeholder:text-sidebar-search-placeholder focus:outline-hidden h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20"
                     />
                     <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2" />
                   </div>
@@ -198,7 +201,7 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                   </nav>
 
                   {/* Additional Navigation Links */}
-                  <div className="space-y-1 py-2">
+                  <div className="space-y-1 py-2 pb-8">
                     {Object.values(userNavigation).map((item) => (
                       <NavigationMobileNavItem
                         key={item.titleKey}
@@ -243,6 +246,13 @@ export function NavigationTopbar({ locale, user }: NavigationTopbarProps) {
                       </span>
                     </button>
                   </div>
+                </div>
+
+                <div className="border-t border-white/10 py-3">
+                  <WhatsNewFooterItem
+                    entries={releaseNotes}
+                    onOpen={() => setIsMobileMenuOpen(false)}
+                  />
                 </div>
               </div>
             </div>

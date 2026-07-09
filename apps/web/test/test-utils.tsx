@@ -33,6 +33,8 @@ import type { ReactElement } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import type { FieldValues, UseFormProps } from "react-hook-form";
 
+import { TooltipProvider } from "@repo/ui/components/tooltip";
+
 // ── Provider wrapper ────────────────────────────────────────────
 
 /**
@@ -67,7 +69,9 @@ function AllProviders({ children, queryClient }: WrapperProps) {
   return (
     <QueryClientProvider client={client}>
       <tsr.ReactQueryProvider>
-        <ActivityProvider>{children}</ActivityProvider>
+        <TooltipProvider delayDuration={0}>
+          <ActivityProvider>{children}</ActivityProvider>
+        </TooltipProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );
@@ -121,18 +125,13 @@ function renderHook<TResult, TProps = undefined>(
     return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
-  const hookResult = rtlRenderHook<TResult, TProps>(hook as (props: TProps) => TResult, {
+  const hookResult = rtlRenderHook<TResult, TProps>(hook, {
     wrapper: Wrapper,
     ...(initialProps !== undefined && { initialProps }),
   });
   // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
   const router = useRouter();
-  return { ...hookResult, router } as {
-    result: { current: TResult };
-    rerender: (props?: TProps) => void;
-    unmount: () => void;
-    router: AppRouterInstance;
-  };
+  return { ...hookResult, router };
 }
 
 // ── renderWithForm ──────────────────────────────────────────────

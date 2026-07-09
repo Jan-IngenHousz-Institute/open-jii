@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { SwipeableMeasurementRow } from "~/features/recent-measurements/components/swipeable-measurement-row";
 import type { MeasurementItem } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { isUnsynced } from "~/shared/db/measurements-storage";
 
 interface Props {
   item: MeasurementItem;
@@ -19,7 +20,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
   onSync,
   peekToken,
 }: Props) {
-  const canFlag = item.status === "pending" || item.status === "failed";
+  const canFlag = isUnsynced(item.status);
   return (
     <SwipeableMeasurementRow
       id={item.key}

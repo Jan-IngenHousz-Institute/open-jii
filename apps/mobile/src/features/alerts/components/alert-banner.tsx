@@ -2,9 +2,9 @@ import { cva } from "class-variance-authority";
 import { AlertTriangle, ArrowRight, Info, Sparkles, Wrench, X } from "lucide-react-native";
 import React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
-import { useEnvVar } from "~/shared/stores/environment-store";
 import { CtfRichText } from "~/shared/ui/ctf-rich-text";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { resolveExternalUrl } from "~/shared/utils/resolve-external-url";
 
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 import { getSeverity } from "@repo/cms/alert";
@@ -56,24 +56,16 @@ export interface AlertBannerProps {
   alert: ComponentAlertFieldsFragment;
   onDismiss: () => void;
   topPadding?: number;
+  /** App origin used to resolve a relative link url; full urls are opened as-is. */
+  baseUrl?: string;
 }
 
-/**
- * Resolves a CMS alert link to an absolute URL openable by `Linking`.
- * Absolute URLs pass through; relative paths (e.g. `/about`) are joined onto
- * the web base URL.
- */
-function resolveLinkUrl(url: string, webBaseUrl: string): string {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
-  return `${webBaseUrl.replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
-}
-
-export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerProps) {
+export function AlertBanner({ alert, onDismiss, topPadding = 0, baseUrl }: AlertBannerProps) {
   const severity = getSeverity(alert);
   const themeColors = useThemeColors();
-  const webBaseUrl = useEnvVar("NEXT_AUTH_URI");
 
   const Icon = typeIcons[alert.type ?? ""] ?? null;
+  const linkHref = alert.link?.url ? resolveExternalUrl(alert.link.url, baseUrl) : undefined;
 
   return (
     <View className={bannerVariants({ severity })}>
@@ -101,14 +93,10 @@ export function AlertBanner({ alert, onDismiss, topPadding = 0 }: AlertBannerPro
           )}
         </Text>
 
-        {alert.link?.url && alert.link?.label && (
+        {linkHref && alert.link?.label && (
           <Pressable
             className={actionButtonVariants({ severity })}
-            onPress={() => {
-              if (alert.link?.url) {
-                void Linking.openURL(resolveLinkUrl(alert.link.url, webBaseUrl));
-              }
-            }}
+            onPress={() => void Linking.openURL(linkHref)}
           >
             <Text className="text-sm font-medium text-white">{alert.link.label}</Text>
             <ArrowRight size={14} color="white" />

@@ -20,7 +20,7 @@ import { useListExports } from "~/hooks/experiment/useListExports/useListExports
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
-import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
+import type { ExportRecord, InitiateExportBody } from "@repo/api/schemas/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -45,7 +45,7 @@ interface ExportListStepProps {
   experimentId: string;
   tableName: string;
   displayName?: string;
-  onCreateExport: (format: string) => void;
+  onCreateExport: (format: InitiateExportBody["format"]) => void;
   onClose: () => void;
   creationStatus?: CreationStatus;
 }
@@ -117,6 +117,7 @@ const FORMAT_LABELS: Record<string, string> = {
   ndjson: "NDJSON",
   "json-array": "JSON Array",
   parquet: "Parquet",
+  xlsx: "Excel",
 };
 
 const formatDateTime = (dateString: string | null): string => {
@@ -173,7 +174,7 @@ const ExportCard = ({
     <div
       className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${borderColor}`}
     >
-      <div className="flex-shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
+      <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
         <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
       </div>
 
@@ -210,7 +211,7 @@ const ExportCard = ({
           size="icon"
           onClick={() => onDownload(exportRecord.exportId ?? "")}
           disabled={isDownloading}
-          className="h-8 w-8 flex-shrink-0"
+          className="h-8 w-8 shrink-0"
         >
           {isDownloading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -362,6 +363,7 @@ export function ExportListStep({
                 JSON Array
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateExport("parquet")}>Parquet</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateExport("xlsx")}>Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

@@ -1464,7 +1464,7 @@ export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
 // --- Generic Upload (user-defined tabular tables) ---
 export const zUploadSourceKind = z
-  .enum(["ambyte", "csv", "tsv", "parquet", "xlsx", "json", "ndjson"])
+  .enum(["ambyte", "csv", "tsv", "parquet", "json", "ndjson"])
   .describe("Source format for the upload");
 
 // Per-kind constants consumed by the backend (volume path, busboy limits, etc.)
@@ -1497,12 +1497,6 @@ export const UPLOAD_KIND_CONSTANTS = {
     maxFileSize: 200 * 1024 * 1024,
     maxFileCount: 100,
     extensions: [".parquet"],
-  },
-  xlsx: {
-    volumeSourceType: "uploads",
-    maxFileSize: 50 * 1024 * 1024,
-    maxFileCount: 100,
-    extensions: [".xlsx", ".xls"],
   },
   json: {
     volumeSourceType: "uploads",
@@ -1592,7 +1586,9 @@ export const zUploadFormFields = z.discriminatedUnion("targetKind", [
   z.object({
     targetKind: z.literal("existing"),
     sourceKind: zUploadSourceKind,
-    uploadTableId: z.string().uuid(),
+    uploadTableId: z
+      .string({ required_error: "Select a table to append to" })
+      .uuid("Select a table to append to"),
   }),
 ]);
 export type UploadFormFields = z.infer<typeof zUploadFormFields>;
@@ -1630,7 +1626,6 @@ export const zParquetFilename = bareBasenameSchema(
   "parquet",
   UPLOAD_KIND_CONSTANTS.parquet.extensions,
 );
-export const zXlsxFilename = bareBasenameSchema("Excel", UPLOAD_KIND_CONSTANTS.xlsx.extensions);
 export const zJsonFilename = bareBasenameSchema("JSON", UPLOAD_KIND_CONSTANTS.json.extensions);
 export const zNdjsonFilename = bareBasenameSchema(
   "NDJSON",
@@ -1719,7 +1714,6 @@ export const UPLOAD_FILENAME_SCHEMAS = {
   csv: zCsvFilename,
   tsv: zTsvFilename,
   parquet: zParquetFilename,
-  xlsx: zXlsxFilename,
   json: zJsonFilename,
   ndjson: zNdjsonFilename,
 } as const satisfies Record<z.infer<typeof zUploadSourceKind>, z.ZodTypeAny>;
@@ -1779,7 +1773,7 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 // --- Export Data Schemas ---
 export const zInitiateExportBody = z.object({
   tableName: z.string().describe("Name of the table to export"),
-  format: z.enum(["csv", "ndjson", "json-array", "parquet"]).describe("Export format"),
+  format: z.enum(["csv", "ndjson", "json-array", "parquet", "xlsx"]).describe("Export format"),
   anonymizeContributors: z
     .boolean()
     .optional()
@@ -1800,7 +1794,7 @@ export const zExportRecord = z.object({
   exportId: z.string().uuid().nullable(),
   experimentId: z.string().uuid(),
   tableName: z.string(),
-  format: z.enum(["csv", "ndjson", "json-array", "parquet"]),
+  format: z.enum(["csv", "ndjson", "json-array", "parquet", "xlsx"]),
   status: z.enum(["queued", "pending", "running", "completed", "failed"]),
   filePath: z.string().nullable(),
   rowCount: z.number().int().nullable(),

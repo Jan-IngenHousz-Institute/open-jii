@@ -169,12 +169,12 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
           success: response.status === "success",
           data: response.data,
           error: response.error ? new Error(response.error) : undefined,
-        } as CommandResult<T>;
+        };
       } catch (error) {
         return {
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
-        } as CommandResult<T>;
+        };
       }
     });
   }

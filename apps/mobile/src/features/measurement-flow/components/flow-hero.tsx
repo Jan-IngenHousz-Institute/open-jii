@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
+import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 
@@ -28,6 +29,7 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("measurementFlow");
   const { currentStep, totalSteps, stepTypeKey, progress } = useFlowStepInfo();
+  const lastMatchedPath = useMeasurementFlowStore((s) => s.lastMatchedPath);
 
   const progressValue = useSharedValue(progress);
   useEffect(() => {
@@ -67,6 +69,29 @@ export function FlowHero({ title, onExitPress }: FlowHeroProps) {
             >
               {title}
             </Text>
+            {/* Which branch path the flow last routed through, so the
+                researcher knows whether they're in e.g. the "remeasure" or
+                "good" branch. The dot uses the path's authored color. */}
+            {lastMatchedPath && (
+              <View className="mt-2 flex-row">
+                <View
+                  className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1"
+                  style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+                >
+                  <View
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: lastMatchedPath.color }}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    className="text-[11px] font-semibold text-white"
+                    accessibilityLabel={t("hero.branchPathA11y", { label: lastMatchedPath.label })}
+                  >
+                    {lastMatchedPath.label}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
           <Pressable
             accessibilityRole="button"

@@ -10,4 +10,8 @@ export interface ViolinPlotChartOptions {
   violinShowBox?: boolean;
   violinShowMeanline?: boolean;
   violinPoints?: "outliers" | "all" | "suspectedoutliers" | "false";
+  /** Inner box fill + outline color (overrides the default white/dark). */
+  violinBoxColor?: string;
+  /** Marker color when points are visible (overrides per-series color). */
+  violinMarkerColor?: string;
 }

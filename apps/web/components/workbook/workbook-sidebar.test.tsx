@@ -24,7 +24,7 @@ describe("WorkbookSidebar", () => {
     vi.clearAllMocks();
   });
 
-  it("renders cell list with the type label as title (question shows 'Question' + text below)", () => {
+  it("shows the question's name as its title (icon + color signal the type, not a 'Question' label)", () => {
     render(
       <WorkbookSidebar
         cells={[markdownCell, questionCell, protocolCell]}
@@ -32,10 +32,10 @@ describe("WorkbookSidebar", () => {
       />,
     );
     expect(screen.getByText("Markdown")).toBeInTheDocument();
-    // For question cells the title is now the literal type label "Question"
-    // (in pink) and the question text shows in the subtitle row.
-    expect(screen.getByText("Question")).toBeInTheDocument();
-    expect(screen.queryByText("soil_moisture")).not.toBeInTheDocument();
+    // Question rows now show their label (data column name) as the title; the
+    // type is conveyed by the per-type icon and color instead of the word.
+    expect(screen.getByText("soil_moisture")).toBeInTheDocument();
+    expect(screen.queryByText("Question")).not.toBeInTheDocument();
     expect(screen.getByText("Protocol")).toBeInTheDocument();
   });
 

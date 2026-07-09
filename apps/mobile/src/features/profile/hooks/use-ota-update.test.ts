@@ -21,7 +21,12 @@ vi.mock("sonner-native", () => ({
   toast: {
     info: mocks.toastInfo,
     success: mocks.toastSuccess,
+    error: vi.fn(),
   },
+}));
+
+vi.mock("~/shared/i18n", () => ({
+  i18n: { t: (key: string) => key },
 }));
 
 vi.stubGlobal("__DEV__", false);
@@ -64,8 +69,8 @@ describe("useOtaUpdate", () => {
     mocks.fetchUpdateAsync.mockResolvedValue({ isNew: false });
     const { unmount } = renderHook(() => useOtaUpdate());
     await vi.runAllTimersAsync();
-    expect(mocks.toastInfo).toHaveBeenCalledWith("Update available", {
-      description: "Downloading…",
+    expect(mocks.toastInfo).toHaveBeenCalledWith("profile:ota.updateAvailableTitle", {
+      description: "profile:ota.updateAvailableBody",
     });
     expect(mocks.fetchUpdateAsync).toHaveBeenCalledOnce();
     unmount();
@@ -80,8 +85,8 @@ describe("useOtaUpdate", () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Update ready", {
-      description: "Restarting to apply.",
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("profile:ota.updateReadyTitle", {
+      description: "profile:ota.updateReadyBody",
       duration: 2000,
     });
     expect(mocks.reloadAsync).not.toHaveBeenCalled();

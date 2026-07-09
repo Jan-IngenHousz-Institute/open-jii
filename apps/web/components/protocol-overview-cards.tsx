@@ -27,7 +27,7 @@ const cardVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-sm",
+        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
         false: "border-gray-200 bg-white",
       },
     },
@@ -39,10 +39,7 @@ const cardVariants = cva(
 
 function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
   const { data } = useProtocolCompatibleMacros(protocolId, enabled);
-  const macros: ProtocolMacroEntry[] = useMemo(
-    () => (data?.body as ProtocolMacroEntry[] | undefined) ?? [],
-    [data],
-  );
+  const macros: ProtocolMacroEntry[] = useMemo(() => data?.body ?? [], [data]);
 
   if (macros.length === 0) return null;
 

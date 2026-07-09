@@ -52,7 +52,7 @@ export function MacroCompatibleProtocolsCard({
   const compatibleQuery = useMacroCompatibleProtocols(macroId);
   const isLoading = compatibleQuery.isLoading;
   const compatibleProtocols: MacroProtocolEntry[] = useMemo(
-    () => (compatibleQuery.data?.body as MacroProtocolEntry[] | undefined) ?? [],
+    () => compatibleQuery.data?.body ?? [],
     [compatibleQuery.data],
   );
 
@@ -81,14 +81,14 @@ export function MacroCompatibleProtocolsCard({
     await addMutation.mutateAsync({
       params: { id: macroId },
       body: { protocolIds: [protocolId] },
-    } as never);
+    });
     setProtocolSearch("");
   };
 
   const handleRemoveProtocol = async (protocolId: string) => {
     await removeMutation.mutateAsync({
       params: { id: macroId, protocolId },
-    } as never);
+    });
   };
 
   const content = (
@@ -113,7 +113,7 @@ export function MacroCompatibleProtocolsCard({
           {compatibleProtocols.map((entry) => (
             <div
               key={entry.protocol.id}
-              className="group rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+              className="shadow-xs group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">

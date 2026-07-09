@@ -443,5 +443,65 @@ describe("NavTabs", () => {
       expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: /data/i })).toBeInTheDocument();
     });
+
+    it("collapses the dropdown again once a tab is selected", async () => {
+      const user = userEvent.setup();
+
+      render(
+        <NavTabs value="overview">
+          <NavTabsList>
+            <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+            <NavTabsTrigger value="data">Data</NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /overview/i }));
+      await user.click(screen.getByRole("tab", { name: /data/i }));
+
+      // Selecting a row closes the popover, so the tab rows collapse back to the button.
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+      expect(screen.getByRole("button")).toBeInTheDocument();
+    });
+
+    it("runs a consumer-supplied onClick and still closes the dropdown on selection", async () => {
+      const user = userEvent.setup();
+      const onClick = vi.fn();
+
+      render(
+        <NavTabs value="overview">
+          <NavTabsList onClick={onClick}>
+            <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+            <NavTabsTrigger value="data">Data</NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /overview/i }));
+      await user.click(screen.getByRole("tab", { name: /data/i }));
+
+      // The consumer's handler is composed with the internal one (not clobbered by it)...
+      expect(onClick).toHaveBeenCalled();
+      // ...and the internal close behavior still fires.
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    });
+
+    it("labels the closed dropdown from an asChild trigger's inner content", () => {
+      render(
+        <NavTabs value="data">
+          <NavTabsList>
+            <NavTabsTrigger value="overview" asChild>
+              <a href="/overview">Overview</a>
+            </NavTabsTrigger>
+            <NavTabsTrigger value="data" asChild>
+              <a href="/data">Data</a>
+            </NavTabsTrigger>
+          </NavTabsList>
+        </NavTabs>,
+      );
+
+      // The active trigger wraps a link, so its label lives one level in — the button still reads "Data".
+      expect(screen.getByRole("button", { name: /data/i })).toBeInTheDocument();
+    });
   });
 });

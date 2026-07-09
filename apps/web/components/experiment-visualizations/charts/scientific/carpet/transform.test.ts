@@ -32,9 +32,11 @@ describe("transformCarpetData", () => {
     expect(result.degenerateReason).toBeNull();
     expect(result.carpetData).toHaveLength(1);
     expect(result.contourData).toHaveLength(1);
-    // 2 x 2 grid → 4 expanded (a, b) pairs.
+    // 2 x 2 grid: 4 expanded (a, b) pairs plus matching x/y for screen coords.
     expect(result.carpetData[0].a).toHaveLength(4);
     expect(result.carpetData[0].b).toHaveLength(4);
+    expect(result.carpetData[0].x).toHaveLength(4);
+    expect(result.carpetData[0].y).toHaveLength(4);
     expect(result.contourData[0].a).toEqual([1, 2]);
     expect(result.contourData[0].b).toEqual([1, 2]);
   });
@@ -95,5 +97,75 @@ describe("transformCarpetData", () => {
     const cfg: ChartFormConfig = { carpetContourColoring: "lines" };
     const result = transformCarpetData(wellShaped, sources, cfg);
     expect(result.contourData[0].contours?.showlines).toBe(true);
+  });
+
+  it("forces showlines on when labels are requested so plotly can place them", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const cfg: ChartFormConfig = {
+      carpetContourColoring: "fill",
+      carpetShowContourLabels: true,
+    };
+    const result = transformCarpetData(wellShaped, sources, cfg);
+    expect(result.contourData[0].contours?.showlines).toBe(true);
+    expect(result.contourData[0].contours?.showlabels).toBe(true);
+  });
+
+  it("emits explicit contour start/end/size so plotly never enters autocontour", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(wellShaped, sources, baseConfig);
+    const contours = result.contourData[0].contours;
+    expect(typeof contours?.start).toBe("number");
+    expect(typeof contours?.end).toBe("number");
+    expect(typeof contours?.size).toBe("number");
+    expect(contours?.start).toBeLessThan(contours?.end ?? 0);
+    expect(contours?.size).toBeGreaterThan(0);
+  });
+
+  it("emits z as a [b][a]-shaped 2D matrix (plotly carpet/heatmap convention)", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(wellShaped, sources, baseConfig);
+    const z = result.contourData[0].z;
+    expect(z).toHaveLength(2);
+    expect(z[0]).toHaveLength(2);
+  });
+
+  it("wires showGrid through to both a and b carpet axes", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const offResult = transformCarpetData(wellShaped, sources, { showGrid: false });
+    expect(offResult.carpetData[0].aaxis?.showgrid).toBe(false);
+    expect(offResult.carpetData[0].baxis?.showgrid).toBe(false);
+    const onResult = transformCarpetData(wellShaped, sources, { showGrid: true });
+    expect(onResult.carpetData[0].aaxis?.showgrid).toBe(true);
+    expect(onResult.carpetData[0].baxis?.showgrid).toBe(true);
+  });
+
+  it("emits monotonically sorted a / b axes regardless of row order", () => {
+    // Non-monotonic carpet axes crash plotly's contourcarpet makeCrossings;
+    // shuffled dashboard rows used to produce that. Axes must come out sorted.
+    const shuffled = [
+      { x: 2, y: 2, z: 40 },
+      { x: 1, y: 2, z: 20 },
+      { x: 2, y: 1, z: 30 },
+      { x: 1, y: 1, z: 10 },
+    ];
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const result = transformCarpetData(shuffled, sources, baseConfig);
+    expect(result.contourData[0].a).toEqual([1, 2]);
+    expect(result.contourData[0].b).toEqual([1, 2]);
+    // z stays aligned to the sorted axes: (a=1, b=1) => 10, (a=2, b=2) => 40.
+    // contourcarpet z is z[bIdx][aIdx].
+    expect(result.contourData[0].z[0][0]).toBe(10);
+    expect(result.contourData[0].z[1][1]).toBe(40);
+  });
+
+  it("propagates carpetReverseScale onto the contour trace", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    expect(
+      transformCarpetData(wellShaped, sources, { carpetReverseScale: true }).contourData[0],
+    ).toHaveProperty("reversescale", true);
+    expect(transformCarpetData(wellShaped, sources, baseConfig).contourData[0]).toHaveProperty(
+      "reversescale",
+      false,
+    );
   });
 });

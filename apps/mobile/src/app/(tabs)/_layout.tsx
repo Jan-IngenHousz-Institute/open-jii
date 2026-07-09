@@ -1,17 +1,25 @@
 import { Tabs, useRouter } from "expo-router";
-import { FlaskConical, House, Settings, Workflow } from "lucide-react-native";
+import { FlaskConical, House, Workflow } from "lucide-react-native";
 import { Easing, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DeviceSheet } from "~/features/connection/components/device-sheet";
 import { useAutoReconnect } from "~/features/connection/hooks/use-auto-reconnect";
+import { useDeviceChip } from "~/features/connection/hooks/use-device-chip";
 import { RecentTabIcon } from "~/features/recent-measurements/components/recent-tab-icon";
 import { usePruneExpiredMeasurements } from "~/features/recent-measurements/hooks/use-prune-expired-measurements";
+import { WhatsNewSheet } from "~/features/release-notes/components/whats-new-sheet";
 import { useTranslation } from "~/shared/i18n";
 import { AnimatedTabBar } from "~/shared/ui/animated-tab-bar";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { DevIndicator } from "~/shared/ui/widgets/dev-indicator";
 import { DeviceChip } from "~/shared/ui/widgets/device-chip";
 import { OpenJiiLogo } from "~/shared/ui/widgets/openjii-logo";
+
+// Wired locally so the device/battery subscriptions re-render only the
+// chip, not the enclosing header/layout.
+function HeaderDeviceChip() {
+  return <DeviceChip {...useDeviceChip()} />;
+}
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
@@ -56,7 +64,7 @@ export default function TabLayout() {
             fontSize: 24,
           },
           headerShadowVisible: false,
-          headerRight: () => <DeviceChip />,
+          headerRight: () => <HeaderDeviceChip />,
         }}
       >
         <Tabs.Screen
@@ -102,14 +110,6 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="calibration"
-          options={{
-            title: "Calibration",
-            tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
-            href: null,
-          }}
-        />
-        <Tabs.Screen
           name="profile"
           options={{
             title: "Profile",
@@ -121,6 +121,7 @@ export default function TabLayout() {
       </Tabs>
 
       <DeviceSheet />
+      <WhatsNewSheet />
     </View>
   );
 }

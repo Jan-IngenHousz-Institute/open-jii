@@ -28,7 +28,7 @@ import type { ChartFormValues } from "../../../charts/chart-config";
 import { COLORSCALES } from "../../../charts/colors/colorscales";
 import { firstDataSourceByRole, makeDataSource } from "../../../charts/data/data-sources";
 import { useDataSourcesFieldArray } from "../../context/data-sources-field-array-context";
-import { CategoricalColorPreview } from "./categorical-color-preview";
+import { CategoricalColorMap } from "./categorical-color-map";
 import { ContinuousColorSettings } from "./continuous-color-settings";
 
 interface ColorDimensionShelfProps {
@@ -108,12 +108,12 @@ export function ColorDimensionShelf({
           onValueChange={handleColumnChange}
         >
           <SelectTrigger>
-            <SelectValue placeholder={t("workspace.shelves.colorPlaceholder")} />
+            <SelectValue placeholder={t("workspace.shelves.groupByPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">
               <span className="text-muted-foreground italic">
-                {t("workspace.shelves.noColorMapping")}
+                {t("workspace.shelves.groupByNone")}
               </span>
             </SelectItem>
             {columns.map((column) => (
@@ -148,7 +148,7 @@ export function ColorDimensionShelf({
                     {t("workspace.shelves.colorMode")}
                   </FormLabel>
                   <Select
-                    value={(field.value as string | undefined) ?? "continuous"}
+                    value={field.value ?? "continuous"}
                     onValueChange={(v) => field.onChange(v)}
                   >
                     <FormControl>
@@ -180,7 +180,7 @@ export function ColorDimensionShelf({
           )}
 
           {colorMode === "categorical" ? (
-            <CategoricalColorPreview />
+            <CategoricalColorMap form={form} columns={columns} />
           ) : (
             <ContinuousColorSettings
               control={form.control}
@@ -201,7 +201,7 @@ export function ColorDimensionShelf({
     <Collapsible open={open} onOpenChange={setOpen} asChild>
       <section className="space-y-3">
         <CollapsibleTrigger className="flex w-full items-center gap-2 text-left">
-          <h3 className="text-sm font-semibold">{t("workspace.shelves.colorDimension")}</h3>
+          <h3 className="text-sm font-semibold">{t("workspace.shelves.groupBy")}</h3>
           {colorColumn && <span className="text-muted-foreground text-xs">({colorColumn})</span>}
           <ChevronDown
             className={cn(

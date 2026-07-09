@@ -29,7 +29,7 @@ function item(id: string, status: Status): MeasurementItem {
     questions: [],
     hasComment: false,
     dayKey: "2026-01-01",
-  } as MeasurementItem;
+  };
 }
 
 function seedList(qc: QueryClient, filter: MeasurementFilter, rows: MeasurementItem[]) {

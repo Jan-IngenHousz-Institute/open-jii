@@ -21,16 +21,9 @@ function toNumericAxis(values: readonly (string | number)[]): number[] | null {
   return out;
 }
 
-// Plotly's `contourcarpet` reads `reversescale` at the trace root, but
-// `CarpetContourSeriesData` from the UI wrapper doesn't expose it. Widen
-// the element type here rather than casting at each emit site.
-type CarpetContourSeriesDataWithReverse = CarpetContourSeriesData & {
-  reversescale?: boolean;
-};
-
 export interface CarpetTransformResult {
   carpetData: CarpetSeriesData[];
-  contourData: CarpetContourSeriesDataWithReverse[];
+  contourData: CarpetContourSeriesData[];
   degenerateReason: CarpetDegenerateReason | null;
 }
 
@@ -91,31 +84,32 @@ export function transformCarpetData(
     return { carpetData: [], contourData: [], degenerateReason: "sparseGrid" };
   }
 
-  // Carpet's a is the X factor axis, b is the Y factor axis. The carpet
-  // trace wants a fully-expanded grid (length M*N pushed in (i, j) order);
-  // the contour overlay takes 1D aValues / bValues plus 2D z[i][j].
-  // pivotToMatrix returns z[yi][xi], so transpose to carpet's [aIdx][bIdx].
   const aValuesNumeric = toNumericAxis(xCategories);
   const bValuesNumeric = toNumericAxis(yCategories);
   if (aValuesNumeric === null || bValuesNumeric === null) {
-    // Numeric-only role contract should prevent this, but a stale
-    // dataConfig on a renamed column could land here.
     return { carpetData: [], contourData: [], degenerateReason: "singleAxisValue" };
   }
 
+  // Plotly carpet needs a/b/x/y all length M*N for explicit screen coords.
   const expandedA: number[] = [];
   const expandedB: number[] = [];
+  const expandedX: number[] = [];
+  const expandedY: number[] = [];
   for (const a of aValuesNumeric) {
     for (const b of bValuesNumeric) {
       expandedA.push(a);
       expandedB.push(b);
+      expandedX.push(a);
+      expandedY.push(b);
     }
   }
 
+  // Plotly contourcarpet z is z[bIdx][aIdx] (heatmap/convert_column_xyz.js
+  // bins 1D columns rows=b, cols=a). pivotToMatrix already returns that.
   const carpetZ: number[][] = [];
-  for (let i = 0; i < aValuesNumeric.length; i++) {
+  for (let j = 0; j < bValuesNumeric.length; j++) {
     const row: number[] = [];
-    for (let j = 0; j < bValuesNumeric.length; j++) {
+    for (let i = 0; i < aValuesNumeric.length; i++) {
       row.push(z[j]?.[i] ?? NaN);
     }
     carpetZ.push(row);
@@ -125,13 +119,33 @@ export function transformCarpetData(
   const ncontours = Math.max(2, Math.floor(chartConfig.carpetNContours ?? 15));
   const showLabels = Boolean(chartConfig.carpetShowContourLabels);
 
+  // Pass explicit contour bounds; Plotly's autocontour state collapses to
+  // start >= end on style-toggle re-renders and crashes makeCrossings.
+  let zMin = Number.POSITIVE_INFINITY;
+  let zMax = Number.NEGATIVE_INFINITY;
+  for (const row of carpetZ) {
+    for (const v of row) {
+      if (!Number.isFinite(v)) continue;
+      if (v < zMin) zMin = v;
+      if (v > zMax) zMax = v;
+    }
+  }
+  const zSpan = zMax - zMin;
+  const contourSize = zSpan / ncontours;
+  const contourStart = zMin + contourSize / 2;
+  const contourEnd = zMax - contourSize / 2;
+
+  const showGrid = chartConfig.showGrid !== false;
+
   return {
     carpetData: [
       {
         a: expandedA,
         b: expandedB,
-        aaxis: { title: xColumn },
-        baxis: { title: yColumn },
+        x: expandedX,
+        y: expandedY,
+        aaxis: { title: xColumn, showgrid: showGrid },
+        baxis: { title: yColumn, showgrid: showGrid },
       },
     ],
     contourData: [
@@ -144,7 +158,11 @@ export function transformCarpetData(
         showscale: chartConfig.carpetShowColorbar !== false,
         ncontours,
         contours: {
-          showlines: coloring !== "fill",
+          start: contourStart,
+          end: contourEnd,
+          size: contourSize,
+          // Labels need lines to attach to.
+          showlines: coloring !== "fill" || showLabels,
           showlabels: showLabels,
           coloring,
         },

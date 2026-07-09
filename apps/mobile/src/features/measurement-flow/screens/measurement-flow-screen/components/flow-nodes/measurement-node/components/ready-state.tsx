@@ -6,11 +6,10 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import type { FlowNode } from "../../../../types";
-
-const answerText = cva("flex-shrink text-base", {
+const answerText = cva("shrink text-base", {
   variants: {
     state: {
       answered: "font-semibold",

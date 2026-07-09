@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
@@ -75,6 +74,12 @@ export class AttachWorkbookUseCase {
           version = versionResult.value;
         }
 
+        if (version.workbookId !== workbookId) {
+          return failure(
+            AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),
+          );
+        }
+
         const updateResult = await this.experimentRepository.update(experimentId, {
           workbookId,
           workbookVersionId: version.id,
@@ -85,7 +90,7 @@ export class AttachWorkbookUseCase {
         }
 
         // Materialise a flow row from the version's cells; mobile still reads from `flows`.
-        const flowGraph = cellsToFlowGraph(version.cells as WorkbookCell[]);
+        const flowGraph = cellsToFlowGraph(version.cells);
         const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
         if (flowResult.isFailure()) {
           return flowResult;

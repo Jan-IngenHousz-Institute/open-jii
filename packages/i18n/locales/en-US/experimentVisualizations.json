@@ -288,6 +288,7 @@
       "yAxis": "Y axis",
       "barYAxisHelp": "Optional. Leave empty to count rows per X value.",
       "colorDimension": "Color dimension",
+      "seriesColorDisabledByColorDimension": "Series color is set by the color dimension. Remove it to pick a color per series.",
       "facetDimension": "Facet (small multiples)",
       "facetNone": "None (single chart)",
       "facetHelp": "Splits the chart into one subplot per unique value of the picked column. Tune the grid in the Style tab.",
@@ -359,6 +360,16 @@
       "colorMode": "Mode",
       "colorModeCategorical": "Categorical (per value)",
       "colorModeCategoricalHelp": "Each unique value gets its own color. Cycles through the palette above past 12.",
+      "colorMap": {
+        "title": "Category colors",
+        "resetAll": "Reset all",
+        "resetOne": "Reset {{name}} to palette color",
+        "pickerLabel": "Pick color for {{name}}",
+        "loading": "Loading category values...",
+        "empty": "No values available for this column yet.",
+        "truncated": "Showing the first {{count}} values; the rest fall back to the palette.",
+        "nullLabel": "(empty)"
+      },
       "colorModeContinuous": "Continuous (gradient)",
       "filters": "Filters",
       "groupBy": "Group by",
@@ -488,6 +499,7 @@
       "markerSize": "Marker size",
       "markerShape": "Marker shape",
       "markerOpacity": "Marker opacity",
+      "markerColor": "Marker color",
       "referenceLineAdd": "Add reference line",
       "referenceLineAxis": "Axis",
       "referenceLineColor": "Color",
@@ -566,6 +578,7 @@
       "correlationMatrixOptions": "Correlation options",
       "cumulative": "Cumulative",
       "density2dContourFill": "Contour fill",
+      "density2dShowMarkers": "Show markers",
       "densityAppearance": "Appearance",
       "densityBandwidth": "Bandwidth",
       "densityCumulative": "Cumulative",
@@ -697,6 +710,7 @@
       "violinScalemode": "Scale mode",
       "violinShowBox": "Show box",
       "violinShowMeanline": "Show mean line",
+      "violinBoxColor": "Box color",
       "violinSide": "Side",
       "violinSpanmode": "Span mode",
       "violinmode": "Group mode",
@@ -710,7 +724,6 @@
       "windRoseDirectionBins": "Direction bins",
       "windRoseLabels": "Labels",
       "windRoseOptions": "Wind rose options",
-      "windRoseRadialAxisTitle": "Radial axis title",
       "windRoseShowDirectionLabels": "Show direction labels",
       "windRoseValueBins": "Value bins"
     },
@@ -831,7 +844,10 @@
       "blackbody": "Blackbody",
       "earth": "Earth",
       "electric": "Electric",
-      "bluered": "Blue-Red"
+      "bluered": "Blue-Red",
+      "orrd": "Orange-Red",
+      "magma": "Magma",
+      "openjii": "openJII"
     },
     "bar": {
       "aggregation": "Aggregation",

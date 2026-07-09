@@ -47,9 +47,7 @@ describe("PolarDataPanel", () => {
     expect(
       screen.getByRole("heading", { name: "workspace.shelves.polarRadial" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "workspace.shelves.colorDimension" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "workspace.shelves.groupBy" })).toBeInTheDocument();
   });
 
   it("seeds the theta column from the existing data source", () => {

@@ -2,10 +2,9 @@ import { X } from "lucide-react-native";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { QuestionContent } from "~/shared/measurements/flow-node";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
-
-import { QuestionContent } from "../../../../types";
 
 interface NumberQuestionProps {
   content: QuestionContent;

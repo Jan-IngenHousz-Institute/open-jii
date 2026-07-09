@@ -1,10 +1,11 @@
 # Databricks notebook source
 # DBTITLE 1,Data Upload Task
 # Dispatches an upload run to the right processor based on SOURCE_KIND.
-# - csv/tsv/parquet/xlsx/json/ndjson: pandas parse, encode each row as JSON
-#   in uploaded_data, write parquet to processed-uploads (centrum pipeline ingests
-#   into raw_uploaded_data with a parsed VARIANT column; nested per-row values
-#   are preserved).
+# - csv/tsv/json/ndjson: pandas parse, encode each row as JSON in uploaded_data,
+#   write parquet to processed-uploads (centrum pipeline ingests into
+#   raw_uploaded_data with a parsed VARIANT column; nested per-row values preserved).
+# - parquet: native Spark read (not pandas/pyarrow) so Databricks logical types
+#   like VARIANT load; each row JSON-encoded into uploaded_data, same sink.
 # - ambyte: parse ambyte trace folders and JSON-encode each measurement row
 #           into uploaded_data; written to processed-uploads alongside the tabular sinks.
 # Add more SOURCE_KIND handlers below as new upload formats are added.
@@ -20,6 +21,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
@@ -64,7 +66,7 @@ logger.info(
 
 # COMMAND ----------
 
-# DBTITLE 1,Tabular Processor (csv/tsv/parquet/xlsx)
+# DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
     """Shared pipeline for tabular uploads: pandas parse → JSON-encode rows → write parquet.
 
@@ -103,7 +105,9 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
 
     for path in matched_files:
         try:
-            local_path = path.replace("dbfs:", "/dbfs") if path.startswith("dbfs:") else path
+            # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
+            # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
+            local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
             df = parser(local_path)
             df = df.where(pd.notnull(df), None)
             rows = df.to_dict(orient="records")
@@ -171,25 +175,88 @@ def process_tsv_upload() -> dict:
 
 
 def process_parquet_upload() -> dict:
-    return _process_tabular_upload("parquet", (".parquet",), pd.read_parquet)
+    """Parquet uploads via the native Spark reader (not pandas/pyarrow), so files
+    written with newer parquet logical types (e.g. VARIANT in platform exports)
+    load without a reader-version mismatch. Each row is JSON-encoded into
+    uploaded_data with to_json(struct("*")), matching the shared parquet sink.
+    Self-contained because the read path is Spark, not the pandas pipeline."""
+    if not UPLOAD_TABLE_NAME:
+        raise Exception("UPLOAD_TABLE_NAME is required for source_kind=parquet")
+    if not UPLOAD_TABLE_ID:
+        raise Exception("UPLOAD_TABLE_ID is required for source_kind=parquet")
+    if not UPLOAD_ID:
+        raise Exception("UPLOAD_ID is required for source_kind=parquet")
 
+    upload_base_path = (
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
+    )
+    processed_output_path = (
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
+    )
 
-def process_xlsx_upload() -> dict:
-    # Excel files can have multiple sheets; concat them so users don't lose data.
-    def _read_excel_all_sheets(path: str):
-        sheets = pd.read_excel(path, sheet_name=None)
-        if not sheets:
-            return pd.DataFrame()
-        if len(sheets) == 1:
-            return next(iter(sheets.values()))
-        frames = []
-        for sheet_name, sheet_df in sheets.items():
-            sheet_df = sheet_df.copy()
-            sheet_df["sheet"] = sheet_name
-            frames.append(sheet_df)
-        return pd.concat(frames, ignore_index=True)
+    try:
+        entries = dbutils.fs.ls(upload_base_path)
+    except Exception as e:
+        raise Exception(f"Upload directory not found: {upload_base_path}. Error: {e}")
 
-    return _process_tabular_upload("xlsx", (".xlsx", ".xls"), _read_excel_all_sheets)
+    matched_files = [e.path for e in entries if e.path.lower().endswith(".parquet")]
+    if not matched_files:
+        raise Exception(f"No parquet files found in {upload_base_path}")
+
+    logger.info(f"Found {len(matched_files)} parquet file(s) to process")
+
+    uploaded_at = datetime.now(timezone.utc)
+    combined = None
+    file_count = 0
+    error_count = 0
+
+    for path in matched_files:
+        try:
+            # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
+            spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
+            row_json = spark.read.parquet(spark_path).select(
+                F.to_json(F.struct("*")).alias("uploaded_data")
+            )
+            combined = row_json if combined is None else combined.unionByName(row_json)
+            file_count += 1
+        except Exception as e:
+            logger.error(f"Error parsing {path}: {e}")
+            error_count += 1
+
+    if combined is None:
+        raise Exception(f"No rows parsed from {file_count} files ({error_count} errors)")
+
+    result = combined.select(
+        F.lit(EXPERIMENT_ID).cast("string").alias("experiment_id"),
+        F.lit(UPLOAD_TABLE_ID).cast("string").alias("upload_table_id"),
+        F.lit(UPLOAD_TABLE_NAME).cast("string").alias("upload_table_name"),
+        F.lit(UPLOAD_ID).cast("string").alias("upload_id"),
+        F.lit(USER_ID).cast("string").alias("created_by"),
+        F.lit(uploaded_at).cast("timestamp").alias("uploaded_at"),
+        F.col("uploaded_data"),
+        # Unique per-row id within this upload; the task writes it, the gold table reads it.
+        F.monotonically_increasing_id().alias("row_index"),
+    )
+
+    output_path = f"{processed_output_path}/upload_{UPLOAD_ID}"
+
+    try:
+        dbutils.fs.mkdirs(processed_output_path)
+    except Exception:
+        pass
+
+    result.write.mode("overwrite").parquet(output_path)
+    # Count the written output instead of result: a second action on the plan
+    # would recompute it, and persist/cache is unsupported on serverless compute.
+    row_count = spark.read.parquet(output_path).count()
+
+    logger.info(f"Saved {row_count} rows to {output_path}")
+    return {
+        "rows_written": row_count,
+        "files_processed": file_count,
+        "files_failed": error_count,
+        "output_path": output_path,
+    }
 
 
 def process_json_upload() -> dict:
@@ -198,12 +265,15 @@ def process_json_upload() -> dict:
     def _read_json_array(path: str):
         with open(path) as f:
             data = json.load(f)
+        # A single top-level object is one record; wrap it so it lands as one row.
+        if isinstance(data, dict):
+            data = [data]
         if not isinstance(data, list):
             raise Exception(
-                f"JSON file must be a top-level array of objects, got {type(data).__name__}"
+                f"JSON must be an object or an array of objects, got {type(data).__name__}"
             )
         if data and not isinstance(data[0], dict):
-            raise Exception("JSON file array elements must be objects")
+            raise Exception("JSON array elements must be objects")
         return pd.DataFrame(data)
 
     return _process_tabular_upload("json", (".json",), _read_json_array)
@@ -223,7 +293,7 @@ def process_ambyte_upload() -> dict:
     """Parse ambyte trace folders into rows, encode each row as JSON in uploaded_data,
     and write a single parquet under processed-uploads — same sink as the tabular
     processors. The downstream raw_uploaded_data / experiment_uploaded_data DLT
-    tables ingest these alongside csv/tsv/parquet/xlsx/json/ndjson uploads."""
+    tables ingest these alongside csv/tsv/parquet/json/ndjson uploads."""
     if not YEAR_PREFIX:
         raise Exception("YEAR_PREFIX is required for source_kind=ambyte")
     if not UPLOAD_TABLE_NAME:
@@ -233,8 +303,10 @@ def process_ambyte_upload() -> dict:
     if not UPLOAD_ID:
         raise Exception("UPLOAD_ID is required for source_kind=ambyte")
 
+    # Ambyte files land under the shared "uploads" volume dir (the backend uses
+    # volumeSourceType="uploads" for every kind), not a dedicated ambyte dir.
     ambyte_base_path = (
-        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/ambyte/{UPLOAD_DIRECTORY}"
+        f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/uploads/{UPLOAD_DIRECTORY}"
     )
     processed_output_path = (
         f"/Volumes/{CATALOG_NAME}/centrum/data-imports/{EXPERIMENT_ID}/processed-uploads"
@@ -261,10 +333,14 @@ def process_ambyte_upload() -> dict:
 
     logger.info(f"Found {len(byte_parent_folders)} valid byte parent folder(s)")
 
+    # Ambyte files are named by their record date, which can trail into the previous
+    # calendar year; accept both the upload year and the one before it.
+    year_prefixes = (YEAR_PREFIX, str(int(YEAR_PREFIX) - 1))
+
     for ambyte_folder in byte_parent_folders:
         ambyte_folder_name = os.path.basename(ambyte_folder.rstrip("/"))
         try:
-            files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
+            files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=year_prefixes)
             files_per_byte = [lst for lst in files_per_byte if lst]
 
             df = process_trace_files(ambyte_folder_name, files_per_byte)
@@ -401,7 +477,6 @@ PROCESSORS = {
     "csv": process_csv_upload,
     "tsv": process_tsv_upload,
     "parquet": process_parquet_upload,
-    "xlsx": process_xlsx_upload,
     "json": process_json_upload,
     "ndjson": process_ndjson_upload,
     "ambyte": process_ambyte_upload,

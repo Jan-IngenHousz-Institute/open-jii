@@ -376,7 +376,7 @@ describe("<ExperimentSidePanel />", () => {
   it("EdgeSidePanel opens when selectedEdge is provided and wires update/delete", async () => {
     const user = userEvent.setup();
     const { props } = renderPanel({
-      selectedEdge: { id: "e1", source: "n1", target: "n2", data: {} as Edge } as Edge,
+      selectedEdge: { id: "e1", source: "n1", target: "n2", data: {} },
     });
 
     expect(screen.queryByTestId("edge-panel")).toBeTruthy();
@@ -442,7 +442,7 @@ describe("<ExperimentSidePanel />", () => {
       isDisabled: true,
       selectedNode: node,
       nodeType: "QUESTION",
-      selectedEdge: { id: "e2", source: "nA", target: "nB", data: {} as Edge } as Edge,
+      selectedEdge: { id: "e2", source: "nA", target: "nB", data: {} },
     });
 
     const input = screen.getByPlaceholderText("sidePanelFlow.labelPlaceholder");

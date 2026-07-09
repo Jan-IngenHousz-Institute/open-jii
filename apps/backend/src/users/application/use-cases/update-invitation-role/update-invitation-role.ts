@@ -33,7 +33,7 @@ export class UpdateInvitationRoleUseCase {
     const findResult = await this.invitationRepository.findById(invitationId);
 
     if (findResult.isFailure()) {
-      return findResult as Result<InvitationDto>;
+      return findResult;
     }
 
     const invitation = findResult.value;

@@ -32,6 +32,15 @@ vi.mock("../../charts/utils", () => ({
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
   ),
+  legendAnchorFor: vi.fn(() => ({})),
+  responsiveChrome: vi.fn((config: any) => ({
+    title: config.title ? { text: config.title } : undefined,
+    showlegend: config.showLegend !== false,
+    legend: {},
+    autosize: true,
+    paper_bgcolor: config.backgroundColor || "white",
+  })),
+  tierAxisFontSizes: vi.fn(() => ({ tick: 12, axisTitle: 14 })),
 }));
 
 // Sample data for testing

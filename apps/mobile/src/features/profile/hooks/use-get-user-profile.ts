@@ -1,8 +1,9 @@
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
 
 export function useGetUserProfile(userId: string | undefined, enabled = true) {
   const { data, isLoading, error } = tsr.users.getUserProfile.useQuery({
-    queryKey: ["userProfile", userId],
+    queryKey: contentKeys.userProfile(userId),
     queryData: { params: { id: userId ?? "" } },
     enabled: enabled && !!userId,
     // A brand-new account hasn't created a profile yet; don't retry on 404.

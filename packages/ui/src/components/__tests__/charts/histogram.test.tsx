@@ -418,9 +418,11 @@ describe("Histogram", () => {
     });
 
     it("supports horizontal orientation", () => {
+      // Wrapper passes x/y through verbatim; the transform layer places
+      // binned values on the correct axis per orientation.
       const data = [
         {
-          x: [1, 2, 3, 4, 5],
+          y: [1, 2, 3, 4, 5],
           name: "Test",
           orientation: "h" as const,
         },
@@ -450,7 +452,7 @@ describe("Histogram", () => {
       expect(chartData[0].orientation).toBe("h");
     });
 
-    it("supports mixed orientation data", () => {
+    it("passes both x and y through when both are set on a horizontal series", () => {
       const data = [
         {
           x: [1, 2, 3, 4, 5],
@@ -464,8 +466,8 @@ describe("Histogram", () => {
 
       const chartData = JSON.parse(screen.getByTestId("chart-data").textContent || "[]");
 
-      expect(chartData[0].x).toEqual([10, 20, 30]); // y data becomes x for horizontal
-      expect(chartData[0].y).toEqual([1, 2, 3, 4, 5]); // x data becomes y for horizontal
+      expect(chartData[0].x).toEqual([1, 2, 3, 4, 5]);
+      expect(chartData[0].y).toEqual([10, 20, 30]);
     });
   });
 

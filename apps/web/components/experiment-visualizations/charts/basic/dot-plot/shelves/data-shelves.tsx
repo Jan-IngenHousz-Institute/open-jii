@@ -5,7 +5,7 @@ import { useMemo } from "react";
 
 import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
 
-import { GroupByShelf } from "../../../../workspace/shelves/group-by-shelf";
+import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";
 import { XAxisShelf } from "../../../../workspace/shelves/x-axis-shelf";
 import { YAxisShelf } from "../../../../workspace/shelves/y-axis-shelf";
 import { dataSourcesByRole, firstDataSourceByRole } from "../../../data/data-sources";
@@ -27,7 +27,7 @@ function DotPlotYShelf({ form, columns }: ChartPanelProps) {
 function DotPlotGroupShelf({ form, columns, flat }: ChartPanelProps) {
   // Hue equivalent: one dot per category per Y series per group value.
   const groupColumns = useMemo(() => filterColumnsForRole(columns, "dot-plot", "color"), [columns]);
-  return <GroupByShelf form={form} columns={groupColumns} flat={flat} />;
+  return <ColorDimensionShelf form={form} columns={groupColumns} categoricalOnly flat={flat} />;
 }
 
 export const dotPlotDataShelves: ShelfDef[] = [

@@ -2,6 +2,7 @@ import {
   CHEATSHEET_OPEN_EVENT,
   COMMAND_PALETTE_OPEN_EVENT,
 } from "@/components/shortcuts/shortcuts-root";
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { render, screen, userEvent, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -22,8 +23,8 @@ describe("CommandPalette", () => {
     expect(await screen.findByPlaceholderText("Search pages and actions…")).toBeInTheDocument();
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Create experiment")).toBeInTheDocument();
+    expect(screen.getByText("Open What's new")).toBeInTheDocument();
     expect(screen.getByText("Open documentation")).toBeInTheDocument();
-    expect(screen.queryByText(/Open What's new/i)).not.toBeInTheDocument();
   });
 
   it("navigates to each page / create action it lists", async () => {
@@ -36,7 +37,7 @@ describe("CommandPalette", () => {
       ["Protocols", "/en-US/platform/protocols"],
       ["Macros", "/en-US/platform/macros"],
       ["Transfer requests", "/en-US/platform/transfer-request"],
-      ["Settings", "/en-US/platform/account/settings"],
+      ["Settings", "/en-US/platform/account"],
       ["Create experiment", "/en-US/platform/experiments/new"],
     ];
     for (const [label, path] of cases) {
@@ -55,6 +56,17 @@ describe("CommandPalette", () => {
     await user.click(await screen.findByText("Show keyboard shortcuts"));
     expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(CHEATSHEET_OPEN_EVENT, handler);
+  });
+
+  it("dispatches the whats-new event from the palette action", async () => {
+    const handler = vi.fn();
+    window.addEventListener(WHATS_NEW_OPEN_EVENT, handler);
+    const user = userEvent.setup();
+    render(<CommandPalette locale="en-US" />);
+    openPalette();
+    await user.click(await screen.findByText("Open What's new"));
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener(WHATS_NEW_OPEN_EVENT, handler);
   });
 
   it("opens external docs without navigating", async () => {

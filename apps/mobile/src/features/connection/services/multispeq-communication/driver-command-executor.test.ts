@@ -9,6 +9,22 @@ import { createDriverCommandExecutor } from "./driver-command-executor";
 import { bluetoothClassicTransport } from "./transports/bluetooth-classic-transport";
 import { serialPortTransport } from "./transports/serial-port-transport";
 
+// The transport subscribes to the native disconnect event; capture the callback
+// and the returned remove() so tests can drive an unexpected OS disconnect.
+const btMock = vi.hoisted(() => ({
+  disconnectCb: undefined as ((e: { device?: { address?: string } }) => void) | undefined,
+  lastRemove: undefined as ReturnType<typeof vi.fn> | undefined,
+}));
+vi.mock("react-native-bluetooth-classic", () => ({
+  default: {
+    onDeviceDisconnected: vi.fn((cb: (e: { device?: { address?: string } }) => void) => {
+      btMock.disconnectCb = cb;
+      btMock.lastRemove = vi.fn();
+      return { remove: btMock.lastRemove };
+    }),
+  },
+}));
+
 const CANCEL_FRAME = `-1+${MULTISPEQ_FRAMING.LINE_ENDING}`;
 
 /** Generic mock ITransportAdapter with a hook to feed device data. */
@@ -148,6 +164,24 @@ describe("createDriverCommandExecutor", () => {
 
     expect(transport.disconnect).toHaveBeenCalled();
   });
+
+  it("cancels the in-flight command when the transport reports a disconnect", async () => {
+    const transport = mockTransport();
+    let statusCb: ((connected: boolean) => void) | undefined;
+    transport.onStatusChanged.mockImplementation((cb: (connected: boolean) => void) => {
+      statusCb = cb;
+    });
+    const executor = createDriverCommandExecutor(transport);
+
+    const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    statusCb?.(false);
+
+    const err = await settled;
+    expect((err as Error).message).toBe("Command cancelled");
+    expect(transport.send).toHaveBeenCalledWith(CANCEL_FRAME);
+  });
 });
 
 describe("bluetoothClassicTransport", () => {
@@ -155,8 +189,10 @@ describe("bluetoothClassicTransport", () => {
   function mockBtDevice(reply: string) {
     let dataCb: ((event: { data: string }) => void) | undefined;
     return {
+      address: "aa:bb:cc:dd:ee:ff",
       onDataReceived: (cb: (event: { data: string }) => void) => {
         dataCb = cb;
+        return { remove: vi.fn() };
       },
       write: vi.fn().mockImplementation(() => {
         // The lib delivers complete messages with the "\n" delimiter stripped.
@@ -183,8 +219,10 @@ describe("bluetoothClassicTransport", () => {
   function controllableBtDevice(writeOk = true) {
     let dataCb: ((event: { data: unknown }) => void) | undefined;
     return {
+      address: "aa:bb:cc:dd:ee:ff",
       onDataReceived: (cb: (event: { data: unknown }) => void) => {
         dataCb = cb;
+        return { remove: vi.fn() };
       },
       write: vi.fn().mockResolvedValue(writeOk),
       disconnect: vi.fn().mockResolvedValue(undefined),
@@ -247,6 +285,34 @@ describe("bluetoothClassicTransport", () => {
 
     expect(device.disconnect).toHaveBeenCalled();
   });
+
+  it("on an unexpected OS disconnect: flips status, notifies, and removes both listeners", () => {
+    const dataRemove = vi.fn();
+    const device = {
+      address: "aa:bb:cc:dd:ee:ff",
+      onDataReceived: vi.fn(() => ({ remove: dataRemove })),
+      write: vi.fn().mockResolvedValue(true),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+    };
+    const transport = bluetoothClassicTransport(
+      device as unknown as Parameters<typeof bluetoothClassicTransport>[0],
+    );
+    const onStatus = vi.fn();
+    transport.onStatusChanged(onStatus);
+    expect(transport.isConnected()).toBe(true);
+
+    // An event for a different device is ignored.
+    btMock.disconnectCb?.({ device: { address: "zz:zz" } });
+    expect(transport.isConnected()).toBe(true);
+    expect(onStatus).not.toHaveBeenCalled();
+
+    // The matching device drops the connection and tears down both listeners.
+    btMock.disconnectCb?.({ device: { address: "aa:bb:cc:dd:ee:ff" } });
+    expect(transport.isConnected()).toBe(false);
+    expect(onStatus).toHaveBeenCalledWith(false);
+    expect(dataRemove).toHaveBeenCalled();
+    expect(btMock.lastRemove).toHaveBeenCalled();
+  });
 });
 
 describe("serialPortTransport", () => {
@@ -289,5 +355,19 @@ describe("serialPortTransport", () => {
 
     await transport.disconnect();
     expect(destroyed).toHaveBeenCalled();
+  });
+
+  it("treats a send failure (closed port) as a disconnect", async () => {
+    const emitter = new Emitter<SerialPortEvents>();
+    emitter.on("sendDataToDevice", () => {
+      throw new Error("device not open");
+    });
+    const transport = serialPortTransport(emitter);
+    const onStatus = vi.fn();
+    transport.onStatusChanged(onStatus);
+
+    await expect(transport.send("x")).rejects.toThrow("device not open");
+    expect(onStatus).toHaveBeenCalledWith(false);
+    expect(transport.isConnected()).toBe(false);
   });
 });

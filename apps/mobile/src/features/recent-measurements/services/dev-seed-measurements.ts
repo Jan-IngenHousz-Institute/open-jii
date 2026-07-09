@@ -1,14 +1,17 @@
-import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { getOutbox } from "~/shared/composition/upload";
 import { saveMeasurement } from "~/shared/db/measurements-storage";
 import type { Measurement } from "~/shared/db/measurements-storage";
+import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
 
 // __DEV__-only seeding. Generates N fake measurements straight into the DB
 // as "pending" and enqueues them, so the Outbox + Transport + retry paths
 // can be exercised against a real burst without driving a MultispeQ device.
 
-const DEV_EXPERIMENT_ID = "00000000-0000-0000-0000-000000000dev";
+// Valid-uuid placeholders: these flow through the real ingest path and trip
+// uuid validation downstream if malformed.
+const DEV_EXPERIMENT_ID = "00000000-0000-0000-0000-000000000def";
 const DEV_PROTOCOL_ID = "00000000-0000-0000-0000-0000000000d0";
+const DEV_USER_ID = "00000000-0000-0000-0000-0000deadbeef";
 
 function buildFakeMeasurement(index: number): Measurement {
   const timestamp = new Date().toISOString();
@@ -22,7 +25,7 @@ function buildFakeMeasurement(index: number): Measurement {
       _seed_index: index,
       sample: [{ light_intensity: 1000 + index, leaf_temp: 22 + (index % 5) }],
       timestamp,
-      user_id: "dev-user",
+      user_id: DEV_USER_ID,
       questions: [],
       macros: [],
       annotations: null,

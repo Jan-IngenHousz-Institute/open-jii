@@ -62,7 +62,7 @@ interface Mod {
 }
 
 async function freshModule(): Promise<Mod> {
-  return (await import("~/features/connection/services/mqtt/aws-iot-auth")) as unknown as Mod;
+  return await import("~/features/connection/services/mqtt/aws-iot-auth");
 }
 
 describe("getCredentials — backend endpoint", () => {

@@ -4,12 +4,11 @@ import { Variable } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
-import type { AggregationItem } from "@repo/api/schemas/experiment.schema";
 import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
 import { useTranslation } from "@repo/i18n";
 
 import { MultiColumnShelf } from "../../../../workspace/shelves/multi-column-shelf";
-import { aliasForCorrelationPair } from "../../../data/correlation-alias";
+import { correlationPairFunctions } from "../../../data/correlation-alias";
 import { dataSourcesByRole } from "../../../data/data-sources";
 import type { ChartPanelProps, ShelfDef } from "../../../types";
 
@@ -35,18 +34,7 @@ function CorrelationVariablesShelf({ form, columns }: ChartPanelProps) {
   );
 
   useEffect(() => {
-    const unique = Array.from(new Set(pickedYColumns));
-    const functions: AggregationItem[] = [];
-    for (let i = 0; i < unique.length; i++) {
-      for (let j = i + 1; j < unique.length; j++) {
-        functions.push({
-          column: unique[i],
-          function: "corr",
-          secondColumn: unique[j],
-          alias: aliasForCorrelationPair(unique[i], unique[j]),
-        });
-      }
-    }
+    const functions = correlationPairFunctions(pickedYColumns);
     // Aggregation needs at least one of groupBy / functions to be valid.
     // With < 2 unique columns there are no pairs, so drop aggregation and
     // let the renderer's empty-state explain why.

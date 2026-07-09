@@ -72,12 +72,12 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
           {/* openJII Brand/Description aligned left */}
           <div className="flex flex-col items-start">
             <Image
-              src="/openJII-logo-BW-horizontal-white.png"
+              src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt="openJII Logo"
-              width={140}
-              height={80}
+              width={170}
+              height={50}
               priority
-              className="-ml-2 -mt-3"
+              className="mb-3 h-12 w-auto"
             />
             <p
               className="mb-4 leading-relaxed text-white"
@@ -121,6 +121,13 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
             <p className="text-sm text-white" {...inspectorProps({ fieldId: "copyright" })}>
               {currentFooter.copyright}
             </p>
+            <span className="hidden text-white sm:inline">•</span>
+            <Link
+              href={buildHref("/releases")}
+              className="hover:text-jii-bright-green text-sm text-white transition-colors"
+            >
+              Releases
+            </Link>
             <span className="hidden text-white sm:inline">•</span>
             <Link
               href={buildHref("/cookie-settings")}

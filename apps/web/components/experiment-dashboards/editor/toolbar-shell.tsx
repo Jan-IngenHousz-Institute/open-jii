@@ -25,7 +25,7 @@ export function ToolbarShell({ visible, children }: ToolbarShellProps) {
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
         "bg-card/90 sticky bottom-6 z-30 mx-auto flex w-fit max-w-full items-center",
-        "gap-1 rounded-full border p-1 shadow-lg backdrop-blur-sm",
+        "backdrop-blur-xs gap-1 rounded-full border p-1 shadow-lg",
         "transition-opacity duration-300 ease-out",
         visible ? "opacity-100" : "pointer-events-none opacity-0",
       )}

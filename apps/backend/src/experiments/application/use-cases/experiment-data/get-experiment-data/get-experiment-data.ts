@@ -67,9 +67,11 @@ export class GetExperimentDataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
+        // Leave page/pageSize undefined; the repo discriminates "paginated
+        // read" from "all matching rows" by their presence.
         const {
-          page = 1,
-          pageSize = 5,
+          page,
+          pageSize,
           tableName,
           columns,
           orderBy,

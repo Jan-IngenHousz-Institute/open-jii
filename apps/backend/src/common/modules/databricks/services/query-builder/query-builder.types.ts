@@ -15,6 +15,13 @@ export interface FilterCondition {
   column: string;
   operator: FilterOperator;
   value: FilterValue;
+  /**
+   * Experiment id salt. When set, the filter compares the contributor
+   * pseudonym derived from `column` (a `<contributor>.id` path) instead of the
+   * raw id, so an anonymized picker's pseudonym matches without the real id
+   * ever reaching the client. Mirrors `ContributorAnonymizerService.pseudonymFor`.
+   */
+  contributorPseudonymSalt?: string;
 }
 
 // `cumsum` is a window function (`SUM(...) OVER (ORDER BY <axis>)`); it

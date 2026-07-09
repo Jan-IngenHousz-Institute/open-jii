@@ -20,6 +20,8 @@ import {
   zInvitationIdPathParam,
   zListInvitationsQuery,
   zDeletionBlockersResponse,
+  zWhatsNewSeenResponse,
+  zMarkWhatsNewSeenBody,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -170,5 +172,32 @@ export const userContract = c.router({
     },
     summary: "Revoke invitation",
     description: "Revokes a pending invitation so it can no longer be accepted.",
+  },
+
+  getWhatsNewSeen: {
+    method: "GET",
+    path: "/api/v1/whats-new/seen",
+    responses: {
+      200: zWhatsNewSeenResponse,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get the caller's What's new last-seen timestamp",
+    description:
+      "Returns the timestamp the authenticated user last opened the What's new panel, used to compute the unread indicator. null means the user has never opened it.",
+  },
+
+  markWhatsNewSeen: {
+    method: "POST",
+    path: "/api/v1/whats-new/seen",
+    body: zMarkWhatsNewSeenBody,
+    responses: {
+      200: zWhatsNewSeenResponse,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Mark What's new as seen",
+    description:
+      "Sets the authenticated user's What's new last-seen timestamp to now, clearing the unread indicator across their devices. Returns the new timestamp.",
   },
 });

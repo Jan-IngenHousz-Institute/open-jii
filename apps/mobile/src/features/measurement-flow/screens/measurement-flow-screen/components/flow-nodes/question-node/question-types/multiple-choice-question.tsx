@@ -5,10 +5,9 @@ import React, { useCallback, useMemo } from "react";
 import { View, Text } from "react-native";
 import { calculateGridLayout } from "~/features/measurement-flow/screens/measurement-flow-screen/components/flow-nodes/question-node/question-types/utils/grid-layout";
 import { useTranslation } from "~/shared/i18n";
+import { FlowNode } from "~/shared/measurements/flow-node";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-
-import { FlowNode } from "../../../../types";
 
 interface MultipleChoiceQuestionProps {
   node: FlowNode;

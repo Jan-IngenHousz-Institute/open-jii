@@ -2,7 +2,10 @@ import { ActivityProvider } from "@/components/activity/activity-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PageContainer } from "@/components/page-container";
+import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
+import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -52,14 +55,16 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
+  const releaseNotes = await fetchWebReleaseNotes(locale);
+
   return (
     <SidebarProvider>
       <ActivityProvider>
-        <NavigationSidebarWrapper locale={locale} />
+        <NavigationSidebarWrapper locale={locale} releaseNotes={releaseNotes} />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
-          <NavigationTopbar locale={locale} user={session.user} />
+          <NavigationTopbar locale={locale} user={session.user} releaseNotes={releaseNotes} />
           <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
             <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
               <Breadcrumbs locale={locale} />
@@ -70,6 +75,8 @@ export default async function AppLayout({
         <ShortcutsRoot locale={locale} />
         <CommandPalette locale={locale} />
         <Toaster />
+        <ShortcutHint />
+        <WhatsNewSheet entries={releaseNotes} />
       </ActivityProvider>
     </SidebarProvider>
   );

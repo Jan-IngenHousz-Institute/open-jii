@@ -66,7 +66,7 @@ export function QuestionCellComponent({
 
   const handleTextChange = useCallback(
     (text: string) => {
-      onUpdate({ ...cell, question: { ...question, text } as typeof question });
+      onUpdate({ ...cell, question: { ...question, text } });
     },
     [cell, question, onUpdate],
   );
@@ -80,7 +80,7 @@ export function QuestionCellComponent({
 
   const handleRequiredToggle = useCallback(
     (required: boolean) => {
-      onUpdate({ ...cell, question: { ...question, required } as typeof question });
+      onUpdate({ ...cell, question: { ...question, required } });
     },
     [cell, question, onUpdate],
   );
@@ -330,7 +330,7 @@ export function QuestionCellComponent({
               <button
                 type="button"
                 aria-label={`Rename question (current: ${cell.name})`}
-                className="cursor-pointer rounded px-0.5 hover:underline focus:outline-none focus-visible:underline"
+                className="focus:outline-hidden cursor-pointer rounded px-0.5 hover:underline focus-visible:underline"
                 style={{ color: "#C58AAE" }}
               >
                 {cell.name}
@@ -360,7 +360,7 @@ export function QuestionCellComponent({
                 className={cn(
                   "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
                   question.kind === kind
-                    ? "shadow-sm"
+                    ? "shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                   readOnly && "pointer-events-none",
                 )}
@@ -376,13 +376,27 @@ export function QuestionCellComponent({
             ))}
           </div>
 
-          <Input
-            value={question.text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Type your question here..."
-            className="border-[#CDD5DB] bg-white text-sm placeholder:text-[#CDD5DB]"
-            disabled={readOnly}
-          />
+          <div className="space-y-1.5">
+            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#011111]">
+              Question text
+              <span className="text-[#C58AAE]" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <Input
+              value={question.text}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="Type your question here..."
+              className="border-[#C58AAE]/40 bg-white text-sm placeholder:text-[#CDD5DB] focus-visible:ring-[#C58AAE]/30"
+              disabled={readOnly}
+              aria-label="Question text"
+            />
+            {!readOnly && (
+              <p className="text-muted-foreground text-xs">
+                Shown to participants when they answer. The label above is the data column name.
+              </p>
+            )}
+          </div>
 
           {!readOnly && (
             <label className="text-muted-foreground flex items-center gap-2 text-xs">

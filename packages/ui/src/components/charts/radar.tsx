@@ -3,9 +3,17 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  responsiveChrome,
+  tierAxisFontSizes,
+} from "./utils";
 
 export interface RadarSeriesData extends BaseSeries {
   r: number[];
@@ -63,6 +71,8 @@ export function RadarPlot({
   radialAxisVisible = true,
   angularAxisVisible = true,
 }: RadarPlotProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterpolar", renderer);
 
@@ -121,23 +131,23 @@ export function RadarPlot({
       }) as any as PlotData,
   );
 
-  // Create polar layout for radar chart with responsive sizing
+  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const layout = {
-    title: config.title ? { text: config.title } : undefined,
-    // Remove fixed width/height to allow container-based sizing
-    paper_bgcolor: config.backgroundColor || "white",
-    autosize: true, // Enable responsive sizing
+    ...responsiveChrome(config, sizing),
 
     polar: {
       radialaxis: {
         visible: radialAxisVisible,
         range: rangeMode === "tozero" ? [0, undefined] : undefined,
         rangemode: rangeMode,
+        tickfont: { size: fontSizes.tick },
         gridcolor: "#E6E6E6",
         linecolor: "#444",
+        showgrid: config.showGrid !== false,
       },
       angularaxis: {
         visible: angularAxisVisible,
+        showgrid: config.showGrid !== false,
         tickmode: categories ? "array" : "linear",
         ...(categories
           ? {
@@ -146,6 +156,7 @@ export function RadarPlot({
             }
           : {}),
         tickangle: tickAngle,
+        tickfont: { size: fontSizes.tick },
         direction: "clockwise",
         period: 360,
         gridcolor: "#E6E6E6",
@@ -154,14 +165,12 @@ export function RadarPlot({
       },
       gridshape: gridShape,
     },
-
-    showlegend: config.showLegend !== false,
   } as any;
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

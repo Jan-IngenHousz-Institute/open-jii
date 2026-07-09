@@ -31,6 +31,15 @@ vi.mock("../../charts/utils", () => ({
     responsive: true,
     displayModeBar: false,
   })),
+  legendAnchorFor: vi.fn(() => ({})),
+  responsiveChrome: vi.fn((config: any) => ({
+    title: config.title ? { text: config.title } : undefined,
+    showlegend: config.showLegend !== false,
+    legend: {},
+    autosize: true,
+    paper_bgcolor: config.backgroundColor || "white",
+  })),
+  tierAxisFontSizes: vi.fn(() => ({ tick: 12, axisTitle: 14 })),
 }));
 
 describe("TernaryPlot", () => {
@@ -368,16 +377,19 @@ describe("TernaryPlot", () => {
       showticklabels: false,
     });
     expect(plotLayout.ternary?.baxis?.title).toEqual({ text: "Component B", font: { size: 14 } });
-    expect(plotLayout.ternary?.caxis?.title).toEqual({ text: "Component C" });
+    expect(plotLayout.ternary?.caxis?.title).toEqual({
+      text: "Component C",
+      font: { size: 14 },
+    });
   });
 
   it("applies default axis configuration", () => {
     render(<TernaryPlot data={mockData} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
-    expect(plotLayout.ternary?.aaxis?.title).toBe("A");
-    expect(plotLayout.ternary?.baxis?.title).toBe("B");
-    expect(plotLayout.ternary?.caxis?.title).toBe("C");
+    expect(plotLayout.ternary?.aaxis?.title).toEqual({ text: "A", font: { size: 14 } });
+    expect(plotLayout.ternary?.baxis?.title).toEqual({ text: "B", font: { size: 14 } });
+    expect(plotLayout.ternary?.caxis?.title).toEqual({ text: "C", font: { size: 14 } });
     expect(plotLayout.ternary?.aaxis?.showgrid).toBe(true);
     expect(plotLayout.ternary?.aaxis?.showline).toBe(true);
     expect(plotLayout.ternary?.aaxis?.showticklabels).toBe(true);
@@ -585,7 +597,7 @@ describe("TernaryPlot", () => {
     render(<TernaryPlot data={undefinedBaxisData} baxis={{}} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
-    expect(plotLayout.ternary.baxis.title).toBe("B");
+    expect(plotLayout.ternary.baxis.title).toEqual({ text: "B", font: { size: 14 } });
   });
 
   // Additional tests for missing branch coverage
@@ -625,7 +637,7 @@ describe("TernaryPlot", () => {
     render(<TernaryPlot data={stringTitleData} baxis={{ title: "String Title" }} />);
 
     const plotLayout = JSON.parse(screen.getByTestId("plot-layout").textContent || "{}");
-    expect(plotLayout.ternary.baxis.title).toEqual({ text: "String Title" });
+    expect(plotLayout.ternary.baxis.title).toEqual({ text: "String Title", font: { size: 14 } });
   });
 });
 

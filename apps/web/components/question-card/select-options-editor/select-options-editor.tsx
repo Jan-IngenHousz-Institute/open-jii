@@ -67,6 +67,10 @@ export function SelectOptionsEditor({
           )}
         </div>
 
+        <p className="text-xs text-gray-400">
+          {t("questionCard.optionCharLimitHint", { max: OPTION_MAX_LENGTH })}
+        </p>
+
         {options.length > 0 ? (
           options.length > LARGE_OPTION_COUNT ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
@@ -91,9 +95,12 @@ export function SelectOptionsEditor({
                     placeholder={t("questionCard.answerOptionPlaceholder")}
                     disabled={disabled}
                     maxLength={OPTION_MAX_LENGTH}
-                    className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                    className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 focus:outline-hidden flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
                   />
-                  <span className="w-12 shrink-0 text-right text-xs tabular-nums text-gray-400">
+                  <span
+                    className="w-12 shrink-0 text-right text-xs tabular-nums text-gray-400"
+                    title={t("questionCard.optionCharLimitHint", { max: OPTION_MAX_LENGTH })}
+                  >
                     {option.length}/{OPTION_MAX_LENGTH}
                   </span>
                   <button

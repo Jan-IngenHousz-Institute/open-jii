@@ -16,9 +16,11 @@ export function isMultispeqDevice(device: Device): boolean {
 }
 
 function rank(device: Device): number {
-  if (isMultispeqDevice(device)) return 0;
-  if (isNamedDevice(device)) return 1;
-  return 2;
+  // Cabled USB/serial is the most intentional choice, so rank it above wireless.
+  if (device.type === "usb") return 0;
+  if (isMultispeqDevice(device)) return 1;
+  if (isNamedDevice(device)) return 2;
+  return 3;
 }
 
 export function sortDevices(devices: Device[]): Device[] {
@@ -29,10 +31,26 @@ export function sortDevices(devices: Device[]): Device[] {
   });
 }
 
+// Add or refresh (name/rssi) by id+type so streamed discovery dedupes in place.
+export function mergeDevice(list: Device[], device: Device): Device[] {
+  const i = list.findIndex((d) => d.id === device.id && d.type === device.type);
+  if (i === -1) return [...list, device];
+  const next = list.slice();
+  const prev = next[i];
+  // A partial rediscovery (empty name / no rssi) must not downgrade richer seeded data.
+  next[i] = {
+    ...prev,
+    ...device,
+    name: device.name.trim() ? device.name : prev.name,
+    rssi: device.rssi ?? prev.rssi,
+  };
+  return next;
+}
+
 export function partitionDevices(devices: Device[]): { named: Device[]; unnamed: Device[] } {
   const sorted = sortDevices(devices);
   return {
-    named: sorted.filter((d) => rank(d) < 2),
-    unnamed: sorted.filter((d) => rank(d) === 2),
+    named: sorted.filter((d) => rank(d) < 3),
+    unnamed: sorted.filter((d) => rank(d) === 3),
   };
 }

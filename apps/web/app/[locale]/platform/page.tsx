@@ -1,6 +1,7 @@
 import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
+import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
@@ -23,7 +24,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="fluid" className="space-y-6">
       {/* Dashboard Banner */}
       <div className="-mt-6">
         <DashboardBanner
@@ -63,6 +64,6 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
       >
         <BlogPostsSection locale={locale} />
       </DashboardSection>
-    </div>
+    </PageContainer>
   );
 }

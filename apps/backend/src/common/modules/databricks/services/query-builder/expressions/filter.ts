@@ -7,7 +7,7 @@ import type { FilterCondition } from "../query-builder.types";
  * defensive checks here only cover what would still generate invalid SQL.
  */
 export function buildFilterCondition(filter: FilterCondition, builder: BaseQueryBuilder): string {
-  const col = builder.escapeIdentifier(filter.column);
+  const col = contributorPseudonymColumn(filter, builder);
   const { operator, value } = filter;
 
   switch (operator) {
@@ -68,4 +68,20 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       return `${col} BETWEEN ${builder.escapeScalarValue(start)} AND ${builder.escapeScalarValue(end)}`;
     }
   }
+}
+
+/**
+ * Column SQL for a filter. When `contributorPseudonymSalt` is set the column
+ * is wrapped in the deterministic contributor pseudonym so an anonymized
+ * picker's pseudonym matches the raw `<contributor>.id`. Kept byte-identical
+ * to `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
+ * upper-hex of `sha2('<experimentId>:<id>', 256)`.
+ */
+function contributorPseudonymColumn(filter: FilterCondition, builder: BaseQueryBuilder): string {
+  const col = builder.escapeIdentifier(filter.column);
+  if (filter.contributorPseudonymSalt === undefined) {
+    return col;
+  }
+  const salt = builder.escapeValue(`${filter.contributorPseudonymSalt}:`);
+  return `concat('Contributor-', upper(substr(sha2(concat(${salt}, ${col}), 256), 1, 6)))`;
 }

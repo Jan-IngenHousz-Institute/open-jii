@@ -5,7 +5,8 @@ import {
   CHEATSHEET_OPEN_EVENT,
   COMMAND_PALETTE_OPEN_EVENT,
 } from "@/components/shortcuts/shortcuts-root";
-import { HelpCircle, Keyboard, Send } from "lucide-react";
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
+import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -105,7 +106,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "Pages",
         icon: iconMap.Settings,
         shortcut: "G S",
-        run: () => navigate(`/${locale}/platform/account/settings`),
+        run: () => navigate(`/${locale}/platform/account`),
       },
       {
         id: "action.create-experiment",
@@ -113,6 +114,17 @@ export function CommandPalette({ locale }: { locale: string }) {
         group: "Actions",
         icon: iconMap.CirclePlus,
         run: () => navigate(`/${locale}/platform/experiments/new`),
+      },
+      {
+        id: "action.whats-new",
+        label: "Open What's new",
+        group: "Actions",
+        icon: Sparkles,
+        shortcut: "G R",
+        run: () => {
+          setOpen(false);
+          window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
+        },
       },
       {
         id: "action.cheatsheet",

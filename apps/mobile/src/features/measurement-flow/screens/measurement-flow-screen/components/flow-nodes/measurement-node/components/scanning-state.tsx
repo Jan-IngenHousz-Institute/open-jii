@@ -9,10 +9,12 @@ interface ScanningStateProps {
   protocolName?: string;
   /** Live transfer progress of the in-flight command, if any. */
   progress?: CommandProgress;
-  /** Epoch ms the scan started — drives the elapsed-time readout. */
+  /** Epoch ms the scan started, drives the elapsed-time readout. */
   scanStartedAt?: number;
-  /** Estimated protocol runtime (ms), if known — sizes the progress bar. */
+  /** Estimated protocol runtime (ms), if known, sizes the progress bar. */
   estimatedMs?: number;
+  /** Protocol pauses for a physical open/close of the clamp (par_led gates). */
+  requiresInteraction?: boolean;
 }
 
 /** Format a duration as `m:ss`, or `Ns` under a minute. */
@@ -29,12 +31,12 @@ function formatDuration(ms: number): string {
  * Feedback shown while a measurement runs.
  *
  * A MultispeQ executes its protocol SILENTLY and only returns a result at the
- * very end — there is genuinely no mid-measurement device signal to surface.
+ * very end, there is genuinely no mid-measurement device signal to surface.
  * This is confirmed two ways: the PhotosynQ protocol docs describe a single
  * round-trip (protocol in → silent run → one result burst), and our BLE
  * transport only delivers one assembled message (it buffers every notification
  * until `__EOM__`). So a "last signal Xs ago" readout would just be elapsed
- * time wearing a costume — there is nothing real to count.
+ * time wearing a costume, there is nothing real to count.
  *
  * The honest progress signal is therefore time: a big, always-ticking elapsed
  * clock shown against the protocol's estimate. The activity line states plainly
@@ -46,12 +48,13 @@ export function ScanningState({
   progress,
   scanStartedAt,
   estimatedMs,
+  requiresInteraction,
 }: ScanningStateProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
 
   // Tick once a second so the elapsed clock advances even while the device is
-  // silent — the timer, not a device event, is what proves liveness here.
+  // silent, the timer, not a device event, is what proves liveness here.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!scanStartedAt) return;
@@ -87,7 +90,7 @@ export function ScanningState({
 
       <ActivityIndicator size="large" color={colors.brand} />
 
-      {/* Total elapsed — the primary, always-visible clock. Tabular figures so
+      {/* Total elapsed, the primary, always-visible clock. Tabular figures so
           the width doesn't jitter as the digits tick. */}
       <Text
         className={clsx("text-center text-4xl font-bold", classes.text)}
@@ -114,6 +117,20 @@ export function ScanningState({
 
       {/* Secondary: plainly states the device is silent, flips to "receiving". */}
       <Text className={clsx("text-center text-xs", classes.textMuted)}>{activityLabel}</Text>
+
+      {/* Interactive protocols pause for the user to open/close the clamp. The
+          device gives no app-visible signal when it is waiting, so tell the user
+          up front to follow the instrument's own prompts. */}
+      {requiresInteraction && (
+        <View className="bg-muted mt-2 max-w-xs rounded-lg p-3">
+          <Text className={clsx("text-center text-sm font-semibold", classes.text)}>
+            {t("measurementFlow:measurementNode.scanning.interactionTitle")}
+          </Text>
+          <Text className={clsx("mt-1 text-center text-xs leading-relaxed", classes.textMuted)}>
+            {t("measurementFlow:measurementNode.scanning.interactionHint")}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

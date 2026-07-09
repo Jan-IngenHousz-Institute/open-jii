@@ -179,8 +179,8 @@ export function RichTextarea({
       // keeps the legacy 300px-tall textarea look.
       className={
         compact
-          ? "border-input focus-visible:ring-ring flex h-full w-full flex-col overflow-hidden rounded-md border bg-transparent text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
-          : "border-input focus-visible:ring-ring flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          ? "border-input focus-visible:ring-ring shadow-xs focus-visible:outline-hidden flex h-full w-full flex-col overflow-hidden rounded-md border bg-transparent text-sm focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+          : "border-input focus-visible:ring-ring shadow-xs focus-visible:outline-hidden flex w-full flex-col overflow-hidden rounded-md border bg-transparent text-base focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
       }
       data-rta-compact={compact ? "" : undefined}
       onBlur={onBlur}

@@ -68,11 +68,10 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   return webglTypes[baseType] || baseType;
 }
 
-// ISO 8601 date / datetime, with optional time, fractional seconds, and
-// timezone. Loose enough to catch the common shapes that come back from
-// Postgres / Databricks (e.g. `2025-08-26`, `2025-08-26 14:30:00`,
-// `2025-08-26T14:30:00.123Z`).
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+// ISO 8601 (year, year-month, or date with optional time / fractional
+// seconds / timezone). Year-month covers date_trunc('month', ...) output.
+const ISO_DATE_RE =
+  /^\d{4}(-\d{2}(-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?)?)?$/;
 
 /**
  * Infer the right Plotly axis type for a column of values. Treating ISO
@@ -128,6 +127,92 @@ export function refineAxisType(
   return base;
 }
 
+/** Sizing-tier flags shared by the tier-aware layout helpers. */
+export interface ChartTierOptions {
+  snug?: boolean;
+  compact?: boolean;
+  veryCompact?: boolean;
+  ultraCompact?: boolean;
+  cellSnug?: boolean;
+  cellCompact?: boolean;
+  cellVeryCompact?: boolean;
+  cellUltraCompact?: boolean;
+  hasColorbar?: boolean;
+}
+
+/** Max tick-label characters per cell tier before ellipsis kicks in. */
+function tierMaxTickChars(options: ChartTierOptions): number {
+  const cellVeryCompact = options.cellVeryCompact ?? options.veryCompact ?? false;
+  const cellCompact = options.cellCompact ?? options.compact ?? cellVeryCompact;
+  const cellSnug = options.cellSnug ?? options.snug ?? cellCompact;
+  return cellVeryCompact ? 8 : cellCompact ? 12 : cellSnug ? 18 : 24;
+}
+
+/** Tick-count cap per cell tier; mirrors `createBaseLayout`'s `nticks`. */
+function tierTickCap(options: ChartTierOptions): number | undefined {
+  const cellVeryCompact = options.cellVeryCompact ?? options.veryCompact ?? false;
+  const cellCompact = options.cellCompact ?? options.compact ?? cellVeryCompact;
+  const cellSnug = options.cellSnug ?? options.snug ?? cellCompact;
+  return cellVeryCompact ? 5 : cellCompact ? 8 : cellSnug ? 12 : undefined;
+}
+
+/** Ellipsize one tick label to the tier's char budget (for charts that build their own ticktext). */
+export function truncateTickLabel(label: string, options: ChartTierOptions = {}): string {
+  const maxChars = tierMaxTickChars(options);
+  return label.length > maxChars ? `${label.slice(0, Math.max(1, maxChars - 1))}…` : label;
+}
+
+/**
+ * Ellipsize long category tick labels so automargin cannot grow until the
+ * plot area collapses. Array tick mode disables Plotly's nticks thinning,
+ * so past the tier's tick cap every Nth category is sampled. Hover reads
+ * point data, not ticktext. No-op on non-category axes, explicit ticks,
+ * or when every label fits.
+ */
+export function truncateCategoryTicks(
+  axis: Partial<LayoutAxis>,
+  values: ReadonlyArray<unknown>,
+  options: ChartTierOptions = {},
+): Partial<LayoutAxis> {
+  if (axis.type !== "category") return axis;
+  if (axis.tickvals !== undefined || axis.ticktext !== undefined) return axis;
+
+  const seen = new Set<string>();
+  const categories: string[] = [];
+  for (const v of values) {
+    if (v == null || v === "") continue;
+    const s = v instanceof Date ? v.toISOString() : String(v);
+    if (seen.has(s)) continue;
+    seen.add(s);
+    categories.push(s);
+  }
+
+  const maxChars = tierMaxTickChars(options);
+  const cap = tierTickCap(options);
+  const needsTruncation = categories.some((c) => c.length > maxChars);
+  const overCap = cap !== undefined && categories.length > cap;
+  if (!needsTruncation && !overCap) return axis;
+
+  // Sample in display order so array-mode ticks stay evenly spaced; tick
+  // positions anchor by value, so order only affects sampling evenness.
+  const order = typeof axis.categoryorder === "string" ? axis.categoryorder : "";
+  const displayOrdered = order.startsWith("category")
+    ? [...categories].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    : categories;
+  if (order === "category descending") displayOrdered.reverse();
+
+  const step =
+    cap !== undefined && displayOrdered.length > cap ? Math.ceil(displayOrdered.length / cap) : 1;
+  const sampled = displayOrdered.filter((_, i) => i % step === 0);
+
+  return {
+    ...axis,
+    tickmode: "array",
+    tickvals: sampled,
+    ticktext: sampled.map((c) => truncateTickLabel(c, options)),
+  };
+}
+
 /**
  * Creates base layout for all charts with PlotlyChartConfig.
  *
@@ -141,6 +226,72 @@ export function refineAxisType(
  * only flip when the container crosses a breakpoint; full-size charts
  * get the regular layout regardless.
  */
+
+type LegendPosition = NonNullable<PlotlyChartConfig["legendPosition"]>;
+
+/** Map a legendPosition to its Plotly `layout.legend` anchor block.
+ *  Shared with polar / radar / ternary / wind-rose so they get the same
+ *  position dropdown as cartesian charts. `top` / `bottom` use container
+ *  coords so the legend doesn't overlap axis tick / title bands. */
+export function legendAnchorFor(position: LegendPosition) {
+  const anchors = {
+    right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" },
+    left: {
+      x: 0,
+      y: 1,
+      xref: "container",
+      xanchor: "left",
+      yanchor: "top",
+      orientation: "v",
+    },
+    top: {
+      x: 0.5,
+      y: 1,
+      yref: "container",
+      xanchor: "center",
+      yanchor: "top",
+      orientation: "h",
+    },
+    bottom: {
+      x: 0.5,
+      y: 0,
+      yref: "container",
+      xanchor: "center",
+      yanchor: "bottom",
+      orientation: "h",
+    },
+    "inside-top-right": {
+      x: 0.98,
+      y: 0.98,
+      xanchor: "right",
+      yanchor: "top",
+      orientation: "v",
+    },
+    "inside-top-left": {
+      x: 0.02,
+      y: 0.98,
+      xanchor: "left",
+      yanchor: "top",
+      orientation: "v",
+    },
+    "inside-bottom-right": {
+      x: 0.98,
+      y: 0.02,
+      xanchor: "right",
+      yanchor: "bottom",
+      orientation: "v",
+    },
+    "inside-bottom-left": {
+      x: 0.02,
+      y: 0.02,
+      xanchor: "left",
+      yanchor: "bottom",
+      orientation: "v",
+    },
+  } as const;
+  return anchors[position];
+}
+
 export function createBaseLayout(
   config: PlotlyChartConfig,
   options: {
@@ -220,70 +371,9 @@ export function createBaseLayout(
   //  - "inside-*": paper coords inside the plot area, anchored to a
   //    corner. Slight inset (0.02 / 0.98) keeps the legend off the axis
   //    spines.
-  const baseLegendAnchor = (
-    {
-      right: { x: 1.02, y: 1, xanchor: "left", yanchor: "top", orientation: "v" } as const,
-      // Y axis ticks + title also live in `margin.l`. Paper coords reconcile
-      // with axis automargin via `max` and end up sharing the same band,
-      // overlapping the ticks; container coords route through
-      // `_reservedMargin` which composes additively.
-      left: {
-        x: 0,
-        y: 1,
-        xref: "container" as const,
-        xanchor: "left" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      top: {
-        x: 0.5,
-        y: 1,
-        yref: "container" as const,
-        xanchor: "center" as const,
-        yanchor: "top" as const,
-        orientation: "h" as const,
-      },
-      bottom: {
-        x: 0.5,
-        y: 0,
-        yref: "container" as const,
-        xanchor: "center" as const,
-        yanchor: "bottom" as const,
-        orientation: "h" as const,
-      },
-      "inside-top-right": {
-        x: 0.98,
-        y: 0.98,
-        xanchor: "right" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      "inside-top-left": {
-        x: 0.02,
-        y: 0.98,
-        xanchor: "left" as const,
-        yanchor: "top" as const,
-        orientation: "v" as const,
-      },
-      "inside-bottom-right": {
-        x: 0.98,
-        y: 0.02,
-        xanchor: "right" as const,
-        yanchor: "bottom" as const,
-        orientation: "v" as const,
-      },
-      "inside-bottom-left": {
-        x: 0.02,
-        y: 0.02,
-        xanchor: "left" as const,
-        yanchor: "bottom" as const,
-        orientation: "v" as const,
-      },
-    } as const
-  )[effectiveLegendPosition];
+  const baseLegendAnchor = legendAnchorFor(effectiveLegendPosition);
   // When a colorbar shares the right gutter, push the legend a little
-  // further out: `x: 1.18` clears the colorbar bar AND its rotated
-  // title text (default ~50px combined past plot edge).
+  // further out so it clears the colorbar bar and its rotated title.
   const legendAnchor =
     hasColorbar && effectiveLegendPosition === "right"
       ? { ...baseLegendAnchor, x: 1.18 }
@@ -377,6 +467,9 @@ export function createBaseLayout(
       bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
       bordercolor: gridColor,
       borderwidth: 1,
+      // Keep emit order across stack modes; Plotly's default reverses it
+      // for stacked traces.
+      traceorder: "normal",
       font: {
         size: veryCompact ? 9 : compact ? 10 : snug ? 11 : 12,
         color: textColor,
@@ -455,6 +548,59 @@ export function createBaseLayout(
           easing: config.animation.easing || "cubic",
         }
       : undefined,
+  };
+}
+
+/**
+ * Coordinate-agnostic chrome slice of `createBaseLayout` (title, legend,
+ * margins, autosize). Non-cartesian charts (polar / ternary / carpet)
+ * spread this into their layouts without inheriting `xaxis` / `yaxis`.
+ */
+export function responsiveChrome(
+  config: PlotlyChartConfig,
+  options: ChartTierOptions = {},
+): Partial<Layout> {
+  const {
+    title,
+    showlegend,
+    legend,
+    hoverlabel,
+    margin,
+    autosize,
+    width,
+    height,
+    paper_bgcolor,
+    font,
+    hovermode,
+    dragmode,
+  } = createBaseLayout(config, options);
+  return {
+    title,
+    showlegend,
+    legend,
+    hoverlabel,
+    margin,
+    autosize,
+    ...(width !== undefined ? { width } : {}),
+    ...(height !== undefined ? { height } : {}),
+    paper_bgcolor,
+    font,
+    hovermode,
+    dragmode,
+  };
+}
+
+/** Tick / axis-title font sizes for a tier; mirrors `createBaseLayout`'s axes. */
+export function tierAxisFontSizes(options: ChartTierOptions = {}): {
+  tick: number;
+  axisTitle: number;
+} {
+  const veryCompact = options.veryCompact ?? false;
+  const compact = options.compact ?? veryCompact;
+  const snug = options.snug ?? compact;
+  return {
+    tick: veryCompact ? 9 : compact ? 10 : snug ? 11 : 12,
+    axisTitle: veryCompact ? 10 : compact ? 11 : snug ? 13 : 14,
   };
 }
 
@@ -627,11 +773,17 @@ export function createPlotlyConfig(
  * bottom row keeps them when X is shared) and which should hide their
  * Y-axis title (only the leftmost column keeps it).
  */
-function cellPosition(
+export function cellPosition(
   cellIndex: number,
   rows: number,
   columns: number,
-): { row: number; column: number; isLastRow: boolean; isFirstColumn: boolean } {
+): {
+  row: number;
+  column: number;
+  isLastRow: boolean;
+  isFirstColumn: boolean;
+  isLastColumn: boolean;
+} {
   const row = Math.floor(cellIndex / columns);
   const column = cellIndex % columns;
   return {
@@ -639,6 +791,7 @@ function cellPosition(
     column,
     isLastRow: row === rows - 1,
     isFirstColumn: column === 0,
+    isLastColumn: column === columns - 1,
   };
 }
 
@@ -707,6 +860,8 @@ export function extendLayoutForFacets(
      * full) so titles shrink as cells get smaller.
      */
     titleFontSize?: number;
+    /** cellUltraCompact tier: drop all axis / cell / shared titles, ticks only. */
+    ultraCompactCells?: boolean;
   },
 ): Partial<Layout> {
   const xTemplate = baseLayout.xaxis as Record<string, unknown> | undefined;
@@ -728,6 +883,7 @@ export function extendLayoutForFacets(
   // per-cell axis title so it doesn't render on top of the shared one.
   const sharedXTitleOn = options.sharedXTitle === true;
   const sharedYTitleOn = options.sharedYTitle === true;
+  const ultraCompactCells = options.ultraCompactCells === true;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     const { isLastRow, isFirstColumn } = cellPosition(i, options.rows, options.columns);
@@ -742,13 +898,13 @@ export function extendLayoutForFacets(
       // every cell that's in the bottom row of its own column. When
       // `sharedXTitle` is on, suppress entirely (the grid emits a
       // single annotation below the whole canvas instead).
-      title: sharedXTitleOn ? undefined : isLastRow ? xTitle : undefined,
+      title: sharedXTitleOn || ultraCompactCells ? undefined : isLastRow ? xTitle : undefined,
     };
     // Y axis: same pattern, leftmost column carries the labels and title.
     const yOverrides: FacetAxisOverrides = {
       matches: !isFirstCell && options.sharedY !== false ? "y" : undefined,
       showticklabels: options.sharedY !== false ? isFirstColumn : undefined,
-      title: sharedYTitleOn ? undefined : isFirstColumn ? yTitle : undefined,
+      title: sharedYTitleOn || ultraCompactCells ? undefined : isFirstColumn ? yTitle : undefined,
     };
     // The unsuffixed `xaxis` / `yaxis` keys hold cell 0's config; the
     // numbered keys take cells 1..N-1. Plotly's grid pattern reads both.
@@ -771,7 +927,7 @@ export function extendLayoutForFacets(
   const existingAnnotations =
     (baseLayout.annotations as Array<Record<string, unknown>> | undefined) ?? [];
   const cellTitleFontSize = options.titleFontSize ?? 12;
-  const cellTitles = cells
+  const cellTitles = (ultraCompactCells ? [] : cells)
     .filter((c) => c.title.length > 0)
     .map((cell) => ({
       text: cell.title,
@@ -795,7 +951,7 @@ export function extendLayoutForFacets(
   const xTitleFont = (xTitle?.font as Record<string, unknown> | undefined) ?? { size: 14 };
   const yTitleFont = (yTitle?.font as Record<string, unknown> | undefined) ?? { size: 14 };
   const sharedTitles: Array<Record<string, unknown>> = [];
-  if (sharedXTitleOn && xTitle?.text) {
+  if (!ultraCompactCells && sharedXTitleOn && xTitle?.text) {
     sharedTitles.push({
       text: xTitle.text,
       xref: "paper",
@@ -811,7 +967,7 @@ export function extendLayoutForFacets(
       font: xTitleFont,
     });
   }
-  if (sharedYTitleOn && yTitle?.text) {
+  if (!ultraCompactCells && sharedYTitleOn && yTitle?.text) {
     sharedTitles.push({
       text: yTitle.text,
       xref: "paper",
@@ -833,7 +989,7 @@ export function extendLayoutForFacets(
   // Bump margin floors so paper-anchored shared titles aren't clipped.
   // Plotly's annotations don't participate in `automargin`, so we have
   // to reserve the band ourselves.
-  if (sharedXTitleOn || sharedYTitleOn) {
+  if (!ultraCompactCells && (sharedXTitleOn || sharedYTitleOn)) {
     const existingMargin = (out.margin as Record<string, number> | undefined) ?? {};
     out.margin = {
       ...existingMargin,

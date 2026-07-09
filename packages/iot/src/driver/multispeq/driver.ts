@@ -19,12 +19,12 @@ import type { CommandResult, ExecuteOptions } from "../driver-base";
 import { MULTISPEQ_COMMANDS, MULTISPEQ_CONSOLE } from "./commands";
 import type { MultispeqTransportConfig } from "./config";
 import { MULTISPEQ_FRAMING } from "./config";
-import { resolveCommandTimeoutMs } from "./estimate-protocol-duration";
 import type {
   MultispeqStreamEvents,
   MultispeqCommandResult,
   MultispeqDeviceInfo,
 } from "./interface";
+import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
 
 /** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
 function summarizeCommand(commandStr: string, maxLength = 120): string {
@@ -148,7 +148,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
           success: true,
           data: response.data as T,
           checksum: response.checksum,
-        } as CommandResult<T>;
+        };
       } catch (error) {
         this.log.warn("command failed", {
           elapsedMs: Date.now() - startedAt,
@@ -157,7 +157,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         return {
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
-        } as CommandResult<T>;
+        };
       }
     });
   }

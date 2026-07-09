@@ -175,8 +175,8 @@ class BackendClient:
             raise BackendIntegrationError("user_ids must be a list")
             
         # Limit batch size to avoid API limits
-        if len(user_ids) > 100:
-            raise BackendIntegrationError(f"Too many user IDs in batch: {len(user_ids)} (max 100)")
+        if len(user_ids) > 500:
+            raise BackendIntegrationError(f"Too many user IDs in batch: {len(user_ids)} (max 500)")
             
         # Filter out None/empty values
         valid_user_ids = [uid for uid in user_ids if uid is not None and str(uid).strip()]

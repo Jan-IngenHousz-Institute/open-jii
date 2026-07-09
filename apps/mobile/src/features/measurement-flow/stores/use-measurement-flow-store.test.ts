@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
@@ -15,6 +15,9 @@ const makeMeasurement = (id: string): FlowNode =>
 const makeAnalysis = (id: string): FlowNode =>
   ({ id, type: "analysis", name: id, content: {} }) as FlowNode;
 
+const makeBranch = (id: string): FlowNode =>
+  ({ id, type: "branch", name: id, content: {} }) as FlowNode;
+
 /**
  * Reset the store to its initial state before each test.
  * Zustand stores persist across tests, so we must re-initialize.
@@ -22,7 +25,6 @@ const makeAnalysis = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
-    protocolId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -31,6 +33,11 @@ function resetStore() {
     isQuestionsSubmitPending: false,
     scanResult: undefined,
     isFromOverview: false,
+    cells: [],
+    edges: [],
+    lastMatchedPath: undefined,
+    branchVisitCounts: {},
+    branchReturnStack: [],
   });
 }
 
@@ -43,7 +50,6 @@ describe("useMeasurementFlowStore", () => {
     it("exposes the correct default values", () => {
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
@@ -59,11 +65,6 @@ describe("useMeasurementFlowStore", () => {
     it("setExperimentId updates experimentId", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
       expect(useMeasurementFlowStore.getState().experimentId).toBe("exp-1");
-    });
-
-    it("setProtocolId updates protocolId", () => {
-      useMeasurementFlowStore.getState().setProtocolId("proto-1");
-      expect(useMeasurementFlowStore.getState().protocolId).toBe("proto-1");
     });
 
     it("setCurrentStep updates currentStep", () => {
@@ -143,6 +144,20 @@ describe("useMeasurementFlowStore", () => {
       expect(state.currentFlowStep).toBe(flowNodes.length);
     });
 
+    it("pauses for review when a questions+branch flow completes (no data to upload)", () => {
+      const flowNodes = [makeQuestion("q1"), makeBranch("b1"), makeQuestion("q2")];
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes,
+        currentFlowStep: 2,
+        iterationCount: 0,
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.isQuestionsSubmitPending).toBe(true);
+      expect(state.currentFlowStep).toBe(flowNodes.length);
+    });
+
     it("increments currentStep when no experiment is selected", () => {
       useMeasurementFlowStore.setState({ currentStep: 2 });
       useMeasurementFlowStore.getState().nextStep();
@@ -200,7 +215,6 @@ describe("useMeasurementFlowStore", () => {
     it("resets to experiment selection when at first step", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         flowNodes: [makeQuestion("q1")],
         currentFlowStep: 0,
         iterationCount: 3,
@@ -208,7 +222,6 @@ describe("useMeasurementFlowStore", () => {
       useMeasurementFlowStore.getState().previousStep();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(0);
@@ -231,17 +244,15 @@ describe("useMeasurementFlowStore", () => {
   });
 
   describe("reset", () => {
-    it("clears experimentId, protocolId, currentStep and isFromOverview", () => {
+    it("clears experimentId, currentStep and isFromOverview", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         currentStep: 5,
         isFromOverview: true,
       });
       useMeasurementFlowStore.getState().reset();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.isFromOverview).toBe(false);
     });
@@ -251,7 +262,6 @@ describe("useMeasurementFlowStore", () => {
     it("fully resets the flow state", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
-        protocolId: "p-1",
         currentStep: 2,
         flowNodes: [makeQuestion("q1")],
         currentFlowStep: 3,
@@ -264,7 +274,6 @@ describe("useMeasurementFlowStore", () => {
       useMeasurementFlowStore.getState().resetFlow();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
-      expect(state.protocolId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
@@ -376,6 +385,186 @@ describe("useMeasurementFlowStore", () => {
       });
       useMeasurementFlowStore.getState().returnToOverview();
       expect(useMeasurementFlowStore.getState().isQuestionsSubmitPending).toBe(true);
+    });
+  });
+
+  describe("branch state", () => {
+    it("setFlowGraph sets nodes/edges/cells and resets branch + step state", () => {
+      useMeasurementFlowStore.setState({
+        currentFlowStep: 5,
+        branchVisitCounts: { b1: 3 },
+        lastMatchedPath: { label: "old", color: "#000" },
+        branchReturnStack: [{ landing: 5, step: 2 }],
+      });
+      const nodes = [makeQuestion("q1")];
+      const edges = [{ id: "e1", source: "q1", target: "q2" }];
+      const cells = [
+        {
+          id: "q1",
+          type: "question",
+          isCollapsed: false,
+          name: "q1",
+          question: { kind: "number", text: "q1", required: false },
+          isAnswered: false,
+        },
+      ] as never;
+
+      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.flowNodes).toEqual(nodes);
+      expect(state.edges).toEqual(edges);
+      expect(state.cells).toEqual(cells);
+      expect(state.currentFlowStep).toBe(0);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+      expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it("incrementBranchVisit accumulates per node id", () => {
+      const { incrementBranchVisit } = useMeasurementFlowStore.getState();
+      incrementBranchVisit("b1");
+      incrementBranchVisit("b1");
+      incrementBranchVisit("b2");
+      expect(useMeasurementFlowStore.getState().branchVisitCounts).toEqual({ b1: 2, b2: 1 });
+    });
+
+    it("setLastMatchedPath sets and clears the chip", () => {
+      useMeasurementFlowStore.getState().setLastMatchedPath({ label: "A", color: "#f00" });
+      expect(useMeasurementFlowStore.getState().lastMatchedPath).toEqual({
+        label: "A",
+        color: "#f00",
+      });
+      useMeasurementFlowStore.getState().setLastMatchedPath(undefined);
+      expect(useMeasurementFlowStore.getState().lastMatchedPath).toBeUndefined();
+    });
+
+    it("setFlowNodes clears branch state (legacy path)", () => {
+      useMeasurementFlowStore.setState({
+        cells: [{ id: "x" }] as never,
+        edges: [{ id: "e1", source: "x", target: "y" }],
+        branchVisitCounts: { b1: 1 },
+        lastMatchedPath: { label: "x", color: "#000" },
+        branchReturnStack: [{ landing: 4, step: 1 }],
+      });
+      useMeasurementFlowStore.getState().setFlowNodes([makeQuestion("q1")]);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.cells).toEqual([]);
+      expect(state.edges).toEqual([]);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+      expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it.each([
+      "startNewIteration",
+      "retryCurrentIteration",
+      "resetFlow",
+      "dismissQuestionsSubmit",
+    ] as const)("%s clears branch visit counts, matched path and return stack", (action) => {
+      useMeasurementFlowStore.setState({
+        branchVisitCounts: { b1: 4 },
+        lastMatchedPath: { label: "x", color: "#000" },
+        branchReturnStack: [{ landing: 3, step: 0 }],
+      });
+      useMeasurementFlowStore.getState()[action]();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+      expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it("nextStep clears branch state when an iteration wraps", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeMeasurement("m1")],
+        currentFlowStep: 1,
+        branchVisitCounts: { b1: 2 },
+        lastMatchedPath: { label: "x", color: "#000" },
+        branchReturnStack: [{ landing: 1, step: 0 }],
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(0);
+      expect(state.iterationCount).toBe(1);
+      expect(state.branchVisitCounts).toEqual({});
+      expect(state.lastMatchedPath).toBeUndefined();
+      expect(state.branchReturnStack).toEqual([]);
+    });
+  });
+
+  describe("branch back navigation", () => {
+    it("recordBranchJump pushes the step before a sequentially-reached branch", () => {
+      // User was on q1 (index 1) before the branch at index 2 jumped to 5.
+      useMeasurementFlowStore.setState({ currentFlowStep: 2 });
+      useMeasurementFlowStore.getState().recordBranchJump(5);
+      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([
+        { landing: 5, step: 1 },
+      ]);
+    });
+
+    it("recordBranchJump inherits the return target for a chained branch", () => {
+      // Branch at 2 jumped to branch at 5 (return step 1); 5 then jumps to 8.
+      useMeasurementFlowStore.setState({
+        currentFlowStep: 5,
+        branchReturnStack: [{ landing: 5, step: 1 }],
+      });
+      useMeasurementFlowStore.getState().recordBranchJump(8);
+      expect(useMeasurementFlowStore.getState().branchReturnStack).toEqual([
+        { landing: 8, step: 1 },
+      ]);
+    });
+
+    it("previousStep unwinds a branch jump instead of stepping into a skipped node", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeBranch("b1"), makeQuestion("q2"), makeQuestion("q3")],
+        currentFlowStep: 3,
+        branchReturnStack: [{ landing: 3, step: 0 }],
+      });
+      useMeasurementFlowStore.getState().previousStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(0);
+      expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it("previousStep steps linearly when the current node is not a branch landing", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeBranch("b1"), makeQuestion("q2"), makeQuestion("q3")],
+        currentFlowStep: 3,
+        // Landing was index 2; the user has since advanced to 3.
+        branchReturnStack: [{ landing: 2, step: 0 }],
+      });
+      useMeasurementFlowStore.getState().previousStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(2);
+      expect(state.branchReturnStack).toEqual([{ landing: 2, step: 0 }]);
+    });
+
+    it("exits the flow when a branch jumped from before the flow start", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeBranch("b1"), makeQuestion("q1"), makeQuestion("q2")],
+        currentFlowStep: 2,
+        branchReturnStack: [{ landing: 2, step: -1 }],
+      });
+      useMeasurementFlowStore.getState().previousStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.experimentId).toBeUndefined();
+      expect(state.flowNodes).toEqual([]);
+      expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it("steps linearly back from a loop-back target when no return was recorded", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeQuestion("q1"), makeMeasurement("m1"), makeBranch("b1")],
+        currentFlowStep: 1, // looped back here; no branchReturnStack entry
+        branchReturnStack: [],
+      });
+      useMeasurementFlowStore.getState().previousStep();
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
     });
   });
 });

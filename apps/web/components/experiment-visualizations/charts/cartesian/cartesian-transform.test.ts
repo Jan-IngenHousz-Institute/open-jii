@@ -58,7 +58,7 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries[1].name).toBe("b");
   });
 
-  it("emits one trace per (Y × category) on a categorical color split", () => {
+  it("emits one trace per (Y x category) on a categorical color split", () => {
     const rows = [
       { x: 1, v: 10, g: "A" },
       { x: 2, v: 20, g: "B" },
@@ -74,7 +74,7 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries[1].x).toEqual([2, 4]);
   });
 
-  it("emits 2 Y × 2 categories = 4 traces with `Y — category` names", () => {
+  it("emits 2 Y x 2 categories = 4 traces with `Y — category` names", () => {
     const rows = [
       { x: 1, a: 10, b: 100, g: "A" },
       { x: 2, a: 20, b: 200, g: "B" },
@@ -84,6 +84,10 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, config, baseOptions);
     expect(result.chartSeries).toHaveLength(4);
     expect(result.chartSeries.map((s) => s.name)).toEqual(["a — A", "a — B", "b — A", "b — B"]);
+    // Every (series x category) combo shows in the legend; keying the
+    // legendgroup on the series alone used to hide all but the first category.
+    const visible = result.chartSeries.filter((s) => s.showlegend !== false).map((s) => s.name);
+    expect(visible).toEqual(["a — A", "a — B", "b — A", "b — B"]);
   });
 
   it("uses continuous-color path when supportsContinuousColor and color column is numeric", () => {
@@ -147,5 +151,144 @@ describe("transformCartesianData", () => {
     const config: ChartFormConfig = { facetRowOrder: "bottom-to-top" };
     const result = transformCartesianData(rows, sources, config, baseOptions);
     expect(result.subplots?.roworder).toBe("bottom to top");
+  });
+
+  it("sorts categorical color buckets alphabetically so palette indices stay stable", () => {
+    const rows = [
+      { x: 1, v: 10, g: "B" },
+      { x: 2, v: 20, g: "A" },
+      { x: 3, v: 30, g: "C" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    expect(result.chartSeries.map((s) => s.name)).toEqual(["A", "B", "C"]);
+  });
+
+  it("dedupes the legend across facet cells when each cell has a different category", () => {
+    const rows = [
+      { v: 1, g: "Arabidopsis", site: "A" },
+      { v: 2, g: "Tomato", site: "B" },
+    ];
+    const sources = [ds("y", "v"), ds("color", "g"), ds("facet", "site")];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    const visibleInLegend = result.chartSeries.filter((s) => s.showlegend !== false);
+    expect(visibleInLegend.map((s) => s.name).sort()).toEqual(["Arabidopsis", "Tomato"]);
+  });
+
+  it("shows every (series x category) once across facet cells with multiple Y series", () => {
+    const rows = [
+      { a: 1, b: 10, g: "Students", region: "North" },
+      { a: 2, b: 20, g: "Teachers", region: "North" },
+      { a: 3, b: 30, g: "Students", region: "South" },
+      { a: 4, b: 40, g: "Teachers", region: "South" },
+    ];
+    const sources = [ds("y", "a"), ds("y", "b"), ds("color", "g"), ds("facet", "region")];
+    const config: ChartFormConfig = { colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, baseOptions);
+    const visible = result.chartSeries.filter((s) => s.showlegend !== false).map((s) => s.name);
+    // Both groups for both series, each exactly once (not collapsed to just Students).
+    expect(visible.sort()).toEqual([
+      "a — Students",
+      "a — Teachers",
+      "b — Students",
+      "b — Teachers",
+    ]);
+  });
+
+  it("stacks area traces with `stack-${axis}` so primary and secondary axes stack independently", () => {
+    const rows = [
+      { x: 1, a: 5, b: 50 },
+      { x: 2, a: 10, b: 100 },
+    ];
+    const sources = [
+      ds("x", "x"),
+      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
+      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+    ];
+    const config: ChartFormConfig = { stackMode: "stacked" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    expect(result.chartSeries.every((s) => s.stackgroup === undefined)).toBe(true);
+    const primary = result.chartSeries.find((s) => s.axis !== "secondary");
+    const secondary = result.chartSeries.find((s) => s.axis === "secondary");
+    expect(primary?.fill).toBe("tozeroy");
+    expect(secondary?.fill).toBe("tozeroy");
+  });
+
+  it("cumulates y values across categories within a stack group", () => {
+    const rows = [
+      { x: 1, v: 5, g: "A" },
+      { x: 1, v: 7, g: "B" },
+      { x: 2, v: 6, g: "A" },
+      { x: 2, v: 9, g: "B" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { stackMode: "stacked", colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    const a = result.chartSeries.find((s) => s.name === "A");
+    const b = result.chartSeries.find((s) => s.name === "B");
+    expect(a?.y).toEqual([5, 6]);
+    expect(b?.y).toEqual([12, 15]);
+  });
+
+  it("normalises to percent when stackMode is 'percent'", () => {
+    const rows = [
+      { x: 1, v: 25, g: "A" },
+      { x: 1, v: 75, g: "B" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "g")];
+    const config: ChartFormConfig = { stackMode: "percent", colorMode: "categorical" };
+    const result = transformCartesianData(rows, sources, config, {
+      ...baseOptions,
+      defaultTraceType: "area",
+    });
+    const a = result.chartSeries.find((s) => s.name === "A");
+    const b = result.chartSeries.find((s) => s.name === "B");
+    expect(a?.y).toEqual([25]);
+    expect(b?.y).toEqual([100]);
+  });
+
+  it("routes secondary-axis series onto per-cell overlay axes in facet mode", () => {
+    const rows = [
+      { x: 1, a: 10, b: 100, site: "X" },
+      { x: 2, a: 20, b: 200, site: "Y" },
+    ];
+    const sources = [
+      ds("x", "x"),
+      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
+      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+      ds("facet", "site"),
+    ];
+    const result = transformCartesianData(rows, sources, baseConfig, baseOptions);
+
+    // Two cells (X, Y) → primary axes y / y2; overlays live above the grid.
+    expect(result.subplots?.cells.map((c) => c.secondaryYaxisId)).toEqual(["y3", "y4"]);
+
+    const cellX = result.chartSeries.filter((s) => s.xaxisId === "x");
+    const cellY = result.chartSeries.filter((s) => s.xaxisId === "x2");
+    const primaryX = cellX.find((s) => s.axis !== "secondary");
+    const secondaryX = cellX.find((s) => s.axis === "secondary");
+    const secondaryY = cellY.find((s) => s.axis === "secondary");
+
+    expect(primaryX?.yaxisId).toBe("y");
+    expect(secondaryX?.yaxisId).toBe("y3");
+    expect(secondaryY?.yaxisId).toBe("y4");
+  });
+
+  it("does not add overlay axes when no Y series targets the secondary axis", () => {
+    const rows = [
+      { x: 1, a: 10, site: "X" },
+      { x: 2, a: 20, site: "Y" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "a"), ds("facet", "site")];
+    const result = transformCartesianData(rows, sources, baseConfig, baseOptions);
+    expect(result.subplots?.cells.every((c) => c.secondaryYaxisId === undefined)).toBe(true);
   });
 });

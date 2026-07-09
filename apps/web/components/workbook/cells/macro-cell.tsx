@@ -21,7 +21,6 @@ import {
 } from "@repo/ui/components/select";
 
 import { CellWrapper } from "../cell-wrapper";
-import type { EditorLanguage } from "../workbook-code-editor";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 
 interface MacroCellProps {
@@ -200,7 +199,7 @@ export function MacroCellComponent({
         <WorkbookCodeEditor
           value={localCode ?? macroCode ?? ""}
           onChange={isOwner && !readOnly ? handleCodeChange : undefined}
-          language={(macroLanguage ?? language) as EditorLanguage}
+          language={macroLanguage ?? language}
           minHeight={isOwner && !readOnly ? "120px" : "80px"}
           maxHeight={isOwner && !readOnly ? "500px" : "400px"}
           readOnly={readOnly ?? !isOwner}

@@ -6,14 +6,13 @@ import { describe, it, expect, vi } from "vitest";
 
 import { EdgeSidePanel } from "../edge-panel";
 
-const makeEdge = (overrides?: Partial<Edge>): Edge =>
-  ({
-    id: "e1",
-    source: "n1",
-    target: "n2",
-    data: { label: "init", extra: "x" } as Record<string, unknown>,
-    ...overrides,
-  }) as Edge;
+const makeEdge = (overrides?: Partial<Edge>): Edge => ({
+  id: "e1",
+  source: "n1",
+  target: "n2",
+  data: { label: "init", extra: "x" },
+  ...overrides,
+});
 
 describe("<EdgeSidePanel />", () => {
   it("shows and edits label from data.label; calls onEdgeUpdate; can delete", async () => {
@@ -56,7 +55,7 @@ describe("<EdgeSidePanel />", () => {
   it("falls back to edge.label when data.label is missing and updates via data.label", async () => {
     const onUpdate = vi.fn();
     const edge = makeEdge({
-      data: { foo: "bar" } as Record<string, unknown>,
+      data: { foo: "bar" },
       label: "LBL",
     });
 
