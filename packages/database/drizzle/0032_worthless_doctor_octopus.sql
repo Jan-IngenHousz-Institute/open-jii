@@ -30,7 +30,7 @@ CREATE TABLE "teams" (
 	"name" varchar(255) NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
-	"updated_at" timestamp
+	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "profiles" DROP CONSTRAINT "profiles_organization_id_organizations_id_fk";

@@ -187,10 +187,7 @@ export const teams = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
-    updatedAt: timestamp("updated_at"),
+    ...timestamps,
   },
   (t) => [index("teams_organization_idx").on(t.organizationId)],
 );
