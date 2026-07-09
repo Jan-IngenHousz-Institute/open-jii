@@ -17,14 +17,21 @@ interface FlowAnswersStore {
   isRememberAnswerEnabled: (name: string) => boolean;
 }
 
+const EMPTY_ANSWERS: Pick<
+  FlowAnswersStore,
+  "answersHistory" | "autoincrementSettings" | "rememberAnswerSettings"
+> = {
+  answersHistory: [],
+  autoincrementSettings: {},
+  rememberAnswerSettings: {},
+};
+
 // Persisted alongside useMeasurementFlowStore: a paused flow needs its
 // answers to come back on resume after a kill/background.
 export const useFlowAnswersStore = create<FlowAnswersStore>()(
   persist(
     (set, get) => ({
-      answersHistory: [],
-      autoincrementSettings: {},
-      rememberAnswerSettings: {},
+      ...EMPTY_ANSWERS,
 
       setAnswer: (cycle: number, name: string, value: string) => {
         set((state) => {
@@ -44,7 +51,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
       },
 
       clearHistory: () => {
-        set({ answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} });
+        set(EMPTY_ANSWERS);
       },
 
       getAnswer: (cycle, name) => get().answersHistory[cycle]?.[name],
@@ -70,9 +77,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
       // discarded on upgrade instead of resuming against a reset flow.
       version: 1,
       migrate: (persisted, version) =>
-        (version < 1
-          ? { answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} }
-          : persisted) as FlowAnswersStore,
+        (version < 1 || !persisted ? EMPTY_ANSWERS : persisted) as FlowAnswersStore,
       partialize: (state) => ({
         answersHistory: state.answersHistory,
         autoincrementSettings: state.autoincrementSettings,
