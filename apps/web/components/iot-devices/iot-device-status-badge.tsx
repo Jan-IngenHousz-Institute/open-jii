@@ -33,7 +33,7 @@ export function IotDeviceStatusBadge({ status }: { status: IotDeviceStatus }) {
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}
     >
       <Icon className="h-3 w-3" />
-      {t(`devices.status.${status}`)}
+      {t(`iot.devices.status.${status}`)}
     </span>
   );
 }

@@ -47,22 +47,22 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
     <PageContainer width="fluid" className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">{t("devices.title")}</h1>
-          <p className="text-muted-foreground">{t("devices.description")}</p>
+          <h1 className="text-4xl font-bold text-gray-900">{t("iot.devices.title")}</h1>
+          <p className="text-muted-foreground">{t("iot.devices.description")}</p>
         </div>
         <Button onClick={openRegister}>
           <Plus className="h-4 w-4" />
-          {t("devices.register")}
+          {t("iot.devices.register")}
         </Button>
       </div>
 
       <NavTabs value={isAll ? "all" : "overview"} className="flex w-full flex-1 flex-col">
         <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
-            <Link href={base}>{t("devices.tabs.overview")}</Link>
+            <Link href={base}>{t("iot.devices.tabs.overview")}</Link>
           </NavTabsTrigger>
           <NavTabsTrigger value="all" asChild>
-            <Link href={`${base}/all`}>{t("devices.tabs.devices")}</Link>
+            <Link href={`${base}/all`}>{t("iot.devices.tabs.devices")}</Link>
           </NavTabsTrigger>
         </NavTabsList>
 

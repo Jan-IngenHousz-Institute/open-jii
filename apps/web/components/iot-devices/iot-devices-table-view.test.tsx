@@ -24,7 +24,7 @@ describe("IotDevicesTableView", () => {
 
     render(<IotDevicesTableView />);
 
-    expect(await screen.findByText("devices.loadError")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.loadError")).toBeInTheDocument();
   });
 
   it("shows the empty state when there are no devices", async () => {
@@ -32,7 +32,7 @@ describe("IotDevicesTableView", () => {
 
     render(<IotDevicesTableView />);
 
-    expect(await screen.findByText("devices.empty.title")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.empty.title")).toBeInTheDocument();
   });
 
   it("filters the table by search", async () => {
@@ -44,7 +44,7 @@ describe("IotDevicesTableView", () => {
     render(<IotDevicesTableView />);
     await screen.findByRole("link", { name: "Alpha" });
 
-    await user.type(screen.getByPlaceholderText("devices.searchPlaceholder"), "Beta");
+    await user.type(screen.getByPlaceholderText("iot.devices.searchPlaceholder"), "Beta");
 
     await waitFor(() =>
       expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument(),

@@ -22,6 +22,11 @@ export async function NavigationSidebarWrapper({
     namespaces: ["common"],
   });
 
+  const { t: tIot } = await initTranslations({
+    locale,
+    namespaces: ["iot"],
+  });
+
   // Prepare navigation data server-side using config
   const navigationData = {
     navDashboard: [
@@ -44,6 +49,18 @@ export async function NavigationSidebarWrapper({
         isActive: true,
         items: mainNavigation.experiments.items.map((item) => ({
           title: tNavigation(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
+      },
+    ],
+    navDevices: [
+      {
+        title: tIot(mainNavigation.devices.titleKey),
+        url: mainNavigation.devices.url(locale),
+        icon: mainNavigation.devices.icon,
+        isActive: true,
+        items: mainNavigation.devices.items.map((item) => ({
+          title: tIot(item.titleKey, { ns: item.namespace }),
           url: item.url(locale),
         })),
       },

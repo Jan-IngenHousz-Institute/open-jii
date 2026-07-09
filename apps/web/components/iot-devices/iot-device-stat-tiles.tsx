@@ -10,25 +10,25 @@ export function IotDeviceStatTiles({ devices }: { devices: IotDevice[] }) {
 
   const tiles = [
     {
-      label: t("devices.tabs.all"),
+      label: t("iot.devices.tabs.all"),
       count: devices.length,
       Icon: Cpu,
       iconClass: "text-[#68737B]",
     },
     {
-      label: t("devices.status.active"),
+      label: t("iot.devices.status.active"),
       count: devices.filter((d) => d.status === "active").length,
       Icon: CheckCircle2,
       iconClass: "text-green-600",
     },
     {
-      label: t("devices.status.pending"),
+      label: t("iot.devices.status.pending"),
       count: devices.filter((d) => d.status === "pending").length,
       Icon: Clock,
       iconClass: "text-yellow-600",
     },
     {
-      label: t("devices.status.revoked"),
+      label: t("iot.devices.status.revoked"),
       count: devices.filter((d) => d.status === "revoked").length,
       Icon: XCircle,
       iconClass: "text-red-600",

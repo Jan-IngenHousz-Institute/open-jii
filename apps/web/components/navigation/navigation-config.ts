@@ -82,7 +82,7 @@ export const mainNavigation = {
     ] as NavLink[],
   },
   devices: {
-    titleKey: "devices.tabLabel",
+    titleKey: "iot.devices.tabLabel",
     namespace: "iot",
     url: (locale: string) => `/${locale}/platform/devices`,
     icon: "RadioReceiver",

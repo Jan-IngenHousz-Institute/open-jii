@@ -40,7 +40,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
     onSuccess: () => {
-      toast({ title: t("devices.remove.success") });
+      toast({ title: t("iot.devices.remove.success") });
       router.push(backHref);
     },
   });
@@ -54,12 +54,14 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
     if (status === 404 || status === 400) {
       notFound();
     }
-    return <ErrorDisplay error={error} title={t("devices.loadError")} />;
+    return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
   }
 
   if (!data) {
     return (
-      <div className="text-muted-foreground p-8 text-center">{t("devices.detail.notFound")}</div>
+      <div className="text-muted-foreground p-8 text-center">
+        {t("iot.devices.detail.notFound")}
+      </div>
     );
   }
 
@@ -74,7 +76,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-sm"
         >
           <ChevronLeft className="h-4 w-4" />
-          {t("devices.detail.back")}
+          {t("iot.devices.detail.back")}
         </Link>
 
         <div className="flex items-center gap-3">
@@ -83,41 +85,45 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
         </div>
 
         <div className="flex flex-wrap items-start gap-10 border-b border-[#EDF2F6] pb-8">
-          <MetaField label={t("devices.detail.meta.serial")} value={device.serialNumber} />
-          <MetaField label={t("devices.detail.meta.type")} value={device.deviceType} />
+          <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
+          <MetaField label={t("iot.devices.detail.meta.type")} value={device.deviceType} />
           <MetaField
-            label={t("devices.detail.meta.status")}
-            value={t(`devices.status.${device.status}`)}
+            label={t("iot.devices.detail.meta.status")}
+            value={t(`iot.devices.status.${device.status}`)}
           />
           <MetaField
-            label={t("devices.detail.meta.registered")}
+            label={t("iot.devices.detail.meta.registered")}
             value={formatDate(device.createdAt)}
           />
-          <MetaField label={t("devices.detail.meta.thingName")} value={device.thingName} />
+          <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
         </div>
       </div>
 
       <div className="mt-8 max-w-3xl space-y-6">
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle className="text-base">{t("devices.detail.credentials.title")}</CardTitle>
+            <CardTitle className="text-base">{t("iot.devices.detail.credentials.title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-sm">{t("devices.detail.credentials.none")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.devices.detail.credentials.none")}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-destructive/30 shadow-none">
           <CardHeader>
             <CardTitle className="text-destructive text-base">
-              {t("devices.detail.dangerZone.title")}
+              {t("iot.devices.detail.dangerZone.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium">{t("devices.detail.dangerZone.deleteLabel")}</p>
+              <p className="text-sm font-medium">
+                {t("iot.devices.detail.dangerZone.deleteLabel")}
+              </p>
               <p className="text-muted-foreground text-sm">
-                {t("devices.detail.dangerZone.deleteDescription")}
+                {t("iot.devices.detail.dangerZone.deleteDescription")}
               </p>
             </div>
             <Button
@@ -126,7 +132,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
               onClick={() => setConfirmingDelete(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              {t("devices.actions.delete")}
+              {t("iot.devices.actions.delete")}
             </Button>
           </CardContent>
         </Card>
@@ -135,9 +141,9 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("devices.remove.title")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("iot.devices.remove.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("devices.remove.confirm", { name: displayName })}
+              {t("iot.devices.remove.confirm", { name: displayName })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -153,7 +159,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                t("devices.actions.delete")
+                t("iot.devices.actions.delete")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -19,9 +19,9 @@ describe("IotDevicesOverview", () => {
     render(<IotDevicesOverview />);
 
     expect(await screen.findByRole("link", { name: "Recent One" })).toBeInTheDocument();
-    expect(screen.getByText("devices.recent.title")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.recent.title")).toBeInTheDocument();
     // Summary tiles reuse the status labels ("All" tile + per-status tiles).
-    expect(screen.getByText("devices.tabs.all")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.tabs.all")).toBeInTheDocument();
   });
 
   it("shows the empty state when there are no devices", async () => {
@@ -29,6 +29,6 @@ describe("IotDevicesOverview", () => {
 
     render(<IotDevicesOverview />);
 
-    expect(await screen.findByText("devices.empty.title")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.empty.title")).toBeInTheDocument();
   });
 });

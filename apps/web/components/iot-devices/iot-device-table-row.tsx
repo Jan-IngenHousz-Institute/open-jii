@@ -51,7 +51,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
       { params: { deviceId: device.id } },
       {
         onSuccess: () => {
-          toast({ title: t("devices.remove.success") });
+          toast({ title: t("iot.devices.remove.success") });
           setConfirmingDelete(false);
         },
       },
@@ -97,7 +97,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={t("devices.actions.more")}
+                  aria-label={t("iot.devices.actions.more")}
                   className={cn(
                     "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
                     LIST_TEXT_MUTED,
@@ -110,7 +110,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
                 <DropdownMenuItem asChild>
                   <Link href={viewHref}>
                     <Eye className="mr-2 size-4" />
-                    {t("devices.actions.view")}
+                    {t("iot.devices.actions.view")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -122,7 +122,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="mr-2 size-4" />
-                  {t("devices.actions.delete")}
+                  {t("iot.devices.actions.delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -133,9 +133,9 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("devices.remove.title")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("iot.devices.remove.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("devices.remove.confirm", { name: displayName })}
+              {t("iot.devices.remove.confirm", { name: displayName })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -151,7 +151,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
               {isDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                t("devices.actions.delete")
+                t("iot.devices.actions.delete")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -34,7 +34,7 @@ export function IotDevicesOverview() {
   );
 
   if (isError) {
-    return <ErrorDisplay error={error} title={t("devices.loadError")} />;
+    return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
   }
 
   if (!isLoading && devices.length === 0) {
@@ -49,10 +49,10 @@ export function IotDevicesOverview() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-[#011111]">{t("devices.recent.title")}</h2>
+          <h2 className="text-lg font-medium text-[#011111]">{t("iot.devices.recent.title")}</h2>
           <Button asChild variant="link" className="!p-0">
             <Link href={allHref}>
-              {t("devices.recent.viewAll")}
+              {t("iot.devices.recent.viewAll")}
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>

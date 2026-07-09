@@ -78,7 +78,7 @@ export function IotDevicesTableView() {
   };
 
   if (isError) {
-    return <ErrorDisplay error={error} title={t("devices.loadError")} />;
+    return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
   }
 
   if (!isLoading && devices.length === 0) {
@@ -91,16 +91,16 @@ export function IotDevicesTableView() {
         <NavTabs value={status} onValueChange={changeStatus}>
           <NavTabsList>
             <NavTabsTrigger value="all" count={counts.all}>
-              {t("devices.tabs.all")}
+              {t("iot.devices.tabs.all")}
             </NavTabsTrigger>
             <NavTabsTrigger value="active" count={counts.active}>
-              {t("devices.status.active")}
+              {t("iot.devices.status.active")}
             </NavTabsTrigger>
             <NavTabsTrigger value="pending" count={counts.pending}>
-              {t("devices.status.pending")}
+              {t("iot.devices.status.pending")}
             </NavTabsTrigger>
             <NavTabsTrigger value="revoked" count={counts.revoked}>
-              {t("devices.status.revoked")}
+              {t("iot.devices.status.revoked")}
             </NavTabsTrigger>
           </NavTabsList>
         </NavTabs>
@@ -109,7 +109,7 @@ export function IotDevicesTableView() {
           <Input
             value={search}
             onChange={(e) => changeSearch(e.target.value)}
-            placeholder={t("devices.searchPlaceholder")}
+            placeholder={t("iot.devices.searchPlaceholder")}
             className="pl-9"
           />
         </div>
@@ -117,10 +117,10 @@ export function IotDevicesTableView() {
 
       {!isLoading && filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[#CDD5DB] p-10 text-center text-sm text-[#68737B]">
-          <p className="font-medium text-[#011111]">{t("devices.zeroResults.title")}</p>
-          <p className="mt-1">{t("devices.zeroResults.description")}</p>
+          <p className="font-medium text-[#011111]">{t("iot.devices.zeroResults.title")}</p>
+          <p className="mt-1">{t("iot.devices.zeroResults.description")}</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-            {t("devices.zeroResults.clear")}
+            {t("iot.devices.zeroResults.clear")}
           </Button>
         </div>
       ) : (
@@ -129,7 +129,7 @@ export function IotDevicesTableView() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs">
-                {t("devices.pageOf", { page: currentPage, total: totalPages })}
+                {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
               </span>
               <Pagination className="m-0 w-auto">
                 <PaginationContent>

@@ -20,7 +20,7 @@ describe("IotDeviceDetail", () => {
 
     expect(await screen.findByRole("heading", { name: "Field Sensor" })).toBeInTheDocument();
     expect(screen.getByText("SN-42")).toBeInTheDocument();
-    expect(screen.getByText("devices.detail.credentials.none")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.credentials.none")).toBeInTheDocument();
   });
 
   it("deletes from the danger zone and navigates back to the list", async () => {
@@ -32,9 +32,9 @@ describe("IotDeviceDetail", () => {
     const { router } = render(<IotDeviceDetail deviceId={device.id} />);
     await screen.findByRole("heading", { name: "Doomed" });
 
-    await user.click(screen.getByRole("button", { name: "devices.actions.delete" }));
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.delete" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "devices.actions.delete" }));
+    await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.params.deviceId).toBe(device.id);

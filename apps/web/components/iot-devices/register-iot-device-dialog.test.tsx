@@ -18,15 +18,18 @@ describe("RegisterIotDeviceDialog", () => {
 
     render(<RegisterIotDeviceDialog open onOpenChange={onOpenChange} />);
 
-    await user.type(screen.getByPlaceholderText("devices.dialog.serialPlaceholder"), "AA:BB:CC");
-    await user.type(screen.getByPlaceholderText("devices.dialog.typePlaceholder"), "ambyte");
-    await user.click(screen.getByRole("button", { name: "devices.dialog.submit" }));
+    await user.type(
+      screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"),
+      "AA:BB:CC",
+    );
+    await user.type(screen.getByPlaceholderText("iot.devices.dialog.typePlaceholder"), "ambyte");
+    await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.body).toMatchObject({ serialNumber: "AA:BB:CC", deviceType: "ambyte" });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "devices.dialog.createSuccess" }),
+      expect.objectContaining({ title: "iot.devices.dialog.createSuccess" }),
     );
   });
 
@@ -35,7 +38,7 @@ describe("RegisterIotDeviceDialog", () => {
     const user = userEvent.setup();
 
     render(<RegisterIotDeviceDialog open onOpenChange={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "devices.dialog.submit" }));
+    await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
     expect(await screen.findAllByText(/at least 1 character/i)).not.toHaveLength(0);
     expect(spy.called).toBe(false);
@@ -46,9 +49,9 @@ describe("RegisterIotDeviceDialog", () => {
     const user = userEvent.setup();
 
     render(<RegisterIotDeviceDialog open onOpenChange={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("devices.dialog.serialPlaceholder"), "AA:BB");
-    await user.type(screen.getByPlaceholderText("devices.dialog.typePlaceholder"), "ambyte");
-    await user.click(screen.getByRole("button", { name: "devices.dialog.submit" }));
+    await user.type(screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"), "AA:BB");
+    await user.type(screen.getByPlaceholderText("iot.devices.dialog.typePlaceholder"), "ambyte");
+    await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.body).not.toHaveProperty("name");

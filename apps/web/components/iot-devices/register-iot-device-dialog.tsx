@@ -53,8 +53,8 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
     onSuccess: () => {
       toast({
-        title: t("devices.dialog.createSuccess"),
-        description: t("devices.dialog.createSuccessDetail"),
+        title: t("iot.devices.dialog.createSuccess"),
+        description: t("iot.devices.dialog.createSuccessDetail"),
       });
       form.reset();
       onOpenChange(false);
@@ -73,7 +73,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
       },
       {
         onError: () => {
-          toast({ title: t("devices.dialog.createError"), variant: "destructive" });
+          toast({ title: t("iot.devices.dialog.createError"), variant: "destructive" });
         },
       },
     );
@@ -83,8 +83,8 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("devices.dialog.title")}</DialogTitle>
-          <DialogDescription>{t("devices.dialog.description")}</DialogDescription>
+          <DialogTitle>{t("iot.devices.dialog.title")}</DialogTitle>
+          <DialogDescription>{t("iot.devices.dialog.description")}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -95,9 +95,13 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("devices.dialog.serialLabel")}</FormLabel>
+                  <FormLabel>{t("iot.devices.dialog.serialLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("devices.dialog.serialPlaceholder")} {...field} trim />
+                    <Input
+                      placeholder={t("iot.devices.dialog.serialPlaceholder")}
+                      {...field}
+                      trim
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -110,9 +114,9 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("devices.dialog.typeLabel")}</FormLabel>
+                  <FormLabel>{t("iot.devices.dialog.typeLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("devices.dialog.typePlaceholder")} {...field} trim />
+                    <Input placeholder={t("iot.devices.dialog.typePlaceholder")} {...field} trim />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,10 +129,10 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("devices.dialog.nameLabel")}</FormLabel>
+                  <FormLabel>{t("iot.devices.dialog.nameLabel")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={t("devices.dialog.namePlaceholder")}
+                      placeholder={t("iot.devices.dialog.namePlaceholder")}
                       {...field}
                       value={field.value ?? ""}
                     />
@@ -149,7 +153,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("devices.dialog.submit")}
+                {t("iot.devices.dialog.submit")}
               </Button>
             </DialogFooter>
           </form>

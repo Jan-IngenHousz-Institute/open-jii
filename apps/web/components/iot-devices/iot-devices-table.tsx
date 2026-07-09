@@ -29,11 +29,11 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
       <Table>
         <TableHeader>
           <TableRow className={cn("hover:bg-transparent", LIST_HEADER_BG, LIST_TABLE_BORDER)}>
-            <ColumnHead>{t("devices.columns.name")}</ColumnHead>
-            <ColumnHead>{t("devices.columns.status")}</ColumnHead>
-            <ColumnHead>{t("devices.columns.type")}</ColumnHead>
-            <ColumnHead>{t("devices.columns.serial")}</ColumnHead>
-            <ColumnHead>{t("devices.columns.created")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.name")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.serial")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.created")}</ColumnHead>
             <TableHead aria-hidden className="w-12" />
           </TableRow>
         </TableHeader>
