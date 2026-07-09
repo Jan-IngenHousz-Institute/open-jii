@@ -5,12 +5,16 @@ import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 0). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. Update fixtures ONLY with a
-// deliberate change (additive/removal) or a version bump + migrate.
+// stores (pinned at version 1). A silent shape change wipes a field
+// researcher's paused flow on rehydrate. v1 deliberately discards pre-fix v0
+// payloads; update fixtures ONLY with a deliberate change or a version bump.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
+
+// A pre-fix v0 envelope for each store: rehydrating it must reset to defaults.
+const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
+const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
 // v0 envelope for a paused mid-flow session, parked on the measurement node.
 // Every value differs from the store default so a key dropped from partialize
@@ -67,7 +71,7 @@ const MEASUREMENT_FIXTURE = `{
     "branchVisitCounts": { "node-b1": 2 },
     "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
-  "version": 0
+  "version": 1
 }`;
 
 // v0 envelope after two completed answer iterations with per-question
@@ -81,7 +85,7 @@ const ANSWERS_FIXTURE = `{
     "autoincrementSettings": { "plant_id": true, "leaf_count": false },
     "rememberAnswerSettings": { "leaf_count": true, "plant_id": false }
   },
-  "version": 0
+  "version": 1
 }`;
 
 const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> })
@@ -106,7 +110,7 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v0 wire format", () => {
+describe("measurement-flow-storage v1 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -129,7 +133,7 @@ describe("measurement-flow-storage v0 wire format", () => {
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(0);
+    expect(envelope.version).toBe(1);
     expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
@@ -158,7 +162,7 @@ describe("measurement-flow-storage v0 wire format", () => {
   });
 });
 
-describe("flow-answers-storage v0 wire format", () => {
+describe("flow-answers-storage v1 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(ANSWERS_KEY, ANSWERS_FIXTURE);
     await useFlowAnswersStore.persist.rehydrate();
@@ -174,7 +178,7 @@ describe("flow-answers-storage v0 wire format", () => {
     useFlowAnswersStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(ANSWERS_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(0);
+    expect(envelope.version).toBe(1);
     expect(envelope.state).toEqual(ANSWERS_STATE);
   });
 
@@ -188,5 +192,28 @@ describe("flow-answers-storage v0 wire format", () => {
       "autoincrementSettings",
       "rememberAnswerSettings",
     ]);
+  });
+});
+
+// The v0 -> v1 bump deliberately discards flows persisted by pre-fix builds
+// (they can hold a mis-seeded plot or a stale "Experiment" name). These run
+// last: rehydrating a v0 payload resets the singleton stores to defaults.
+describe("flow stores discard pre-fix v0 payloads on upgrade", () => {
+  it("resets the measurement flow store to initial state", async () => {
+    await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V0);
+    await useMeasurementFlowStore.persist.rehydrate();
+    const state = useMeasurementFlowStore.getState();
+    expect(state.experimentId).toBeUndefined();
+    expect(state.iterationCount).toBe(0);
+    expect(state.flowNodes).toEqual([]);
+  });
+
+  it("clears the answer history", async () => {
+    await AsyncStorage.setItem(ANSWERS_KEY, ANSWERS_V0);
+    await useFlowAnswersStore.persist.rehydrate();
+    const state = useFlowAnswersStore.getState();
+    expect(state.answersHistory).toEqual([]);
+    expect(state.autoincrementSettings).toEqual({});
+    expect(state.rememberAnswerSettings).toEqual({});
   });
 });

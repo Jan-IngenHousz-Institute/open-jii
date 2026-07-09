@@ -17,14 +17,21 @@ interface FlowAnswersStore {
   isRememberAnswerEnabled: (name: string) => boolean;
 }
 
+const EMPTY_ANSWERS: Pick<
+  FlowAnswersStore,
+  "answersHistory" | "autoincrementSettings" | "rememberAnswerSettings"
+> = {
+  answersHistory: [],
+  autoincrementSettings: {},
+  rememberAnswerSettings: {},
+};
+
 // Persisted alongside useMeasurementFlowStore: a paused flow needs its
 // answers to come back on resume after a kill/background.
 export const useFlowAnswersStore = create<FlowAnswersStore>()(
   persist(
     (set, get) => ({
-      answersHistory: [],
-      autoincrementSettings: {},
-      rememberAnswerSettings: {},
+      ...EMPTY_ANSWERS,
 
       setAnswer: (cycle: number, name: string, value: string) => {
         set((state) => {
@@ -44,7 +51,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
       },
 
       clearHistory: () => {
-        set({ answersHistory: [], autoincrementSettings: {}, rememberAnswerSettings: {} });
+        set(EMPTY_ANSWERS);
       },
 
       getAnswer: (cycle, name) => get().answersHistory[cycle]?.[name],
@@ -65,12 +72,12 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
     {
       name: "flow-answers-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // The persisted shape is the v0 wire format, pinned by
-      // flow-store-persistence.test.ts. NEVER rename/remove a field here
-      // without bumping `version` and writing a real `migrate` — zustand
-      // silently DROPS persisted state on version mismatch.
-      version: 0,
-      migrate: (persisted) => persisted as FlowAnswersStore,
+      // v1 wire format, pinned by flow-store-persistence.test.ts. Bumped in
+      // tandem with the flow store so a pre-fix (v0) answer history is
+      // discarded on upgrade instead of resuming against a reset flow.
+      version: 1,
+      migrate: (persisted, version) =>
+        (version < 1 || !persisted ? EMPTY_ANSWERS : persisted) as FlowAnswersStore,
       partialize: (state) => ({
         answersHistory: state.answersHistory,
         autoincrementSettings: state.autoincrementSettings,

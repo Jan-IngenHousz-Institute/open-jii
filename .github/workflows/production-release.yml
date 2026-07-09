@@ -102,6 +102,14 @@ jobs:
           echo "Found previous release branch: ${PREVIOUS_BRANCH:-none}"
           echo "previous_branch=$PREVIOUS_BRANCH" >> $GITHUB_OUTPUT
 
+          if [[ -n "$PREVIOUS_BRANCH" ]]; then
+            BASE_REF=$(git merge-base HEAD "$PREVIOUS_BRANCH")
+          else
+            BASE_REF=""
+          fi
+          echo "Using base_ref: ${BASE_REF:-none}"
+          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+
       - name: Sync Linear release
         uses: linear/linear-release-action@v0
         with:
@@ -109,7 +117,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           command: sync
           version: ${{ inputs.ref || github.ref_name }}
-          base_ref: ${{ steps.prev.outputs.previous_branch }}
+          base_ref: ${{ steps.prev.outputs.base_ref }}
           stage: production
           include_paths: "apps/web/**,apps/backend/**,apps/data/**,infrastructure/**"
           dry_run: ${{ inputs.dry_run }}
