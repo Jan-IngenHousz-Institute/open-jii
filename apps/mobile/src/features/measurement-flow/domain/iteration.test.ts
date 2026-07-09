@@ -126,6 +126,31 @@ describe("seedNextIterationAnswer (autoincrement)", () => {
     });
     expect(seed).toBeNull();
   });
+
+  it("carries a remembered non-choice answer into the next iteration", () => {
+    const node = makeQuestion("note");
+    const remembered = answers({ rememberAnswerSettings: { note: true } });
+    expect(
+      seedNextIterationAnswer({
+        node,
+        answerValue: "cloudy",
+        iterationCount: 2,
+        answers: remembered,
+      }),
+    ).toEqual({ cycle: 3, name: "note", value: "cloudy" });
+  });
+
+  it("returns null for a multi_choice without auto-increment enabled", () => {
+    const node = makeMultiChoice("plot", ["plot-1", "plot-2"]);
+    expect(
+      seedNextIterationAnswer({
+        node,
+        answerValue: "plot-1",
+        iterationCount: 0,
+        answers: answers(),
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("firstManualQuestionNodeId", () => {
