@@ -1,8 +1,11 @@
 "use client";
 
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
+import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import { Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Eye, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDevice } from "@repo/api/schemas/iot.schema";
@@ -17,84 +20,113 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
-import { Badge } from "@repo/ui/components/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { TableCell, TableRow } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
+import { cn } from "@repo/ui/lib/utils";
 
-const STATUS_VARIANT: Record<IotDevice["status"], "secondary" | "default" | "destructive"> = {
-  pending: "secondary",
-  active: "default",
-  revoked: "destructive",
-};
+import { IotDeviceStatusBadge } from "./iot-device-status-badge";
+import { LIST_TABLE_BORDER, LIST_TEXT_MUTED, LIST_TEXT_STRONG } from "./iot-devices-list-tokens";
 
-interface IotDeviceTableRowProps {
-  device: IotDevice;
-}
-
-export function IotDeviceTableRow({ device }: IotDeviceTableRowProps) {
+export function IotDeviceTableRow({ device }: { device: IotDevice }) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
+  const locale = useLocale();
+  const router = useRouter();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const { mutate: deleteIotDevice, isPending: isDeleting } = useDeleteIotDevice({
-    onSuccess: () => {
-      toast({ title: t("devices.remove.success") });
-      setConfirmingDelete(false);
-    },
-  });
+  const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice();
 
+  const viewHref = `/${locale}/platform/devices/${device.id}`;
   const displayName = device.name ?? device.serialNumber;
 
-  const handleDeleteSelect = (e: Event) => {
-    e.preventDefault();
-    setConfirmingDelete(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    deleteIotDevice({ params: { deviceId: device.id } });
+  const handleDelete = () => {
+    deleteDevice(
+      { params: { deviceId: device.id } },
+      {
+        onSuccess: () => {
+          toast({ title: t("devices.remove.success") });
+          setConfirmingDelete(false);
+        },
+      },
+    );
   };
 
   return (
     <>
-      <TableRow className="group">
-        <TableCell className="font-medium">{displayName}</TableCell>
-        <TableCell className="font-mono text-xs">{device.serialNumber}</TableCell>
-        <TableCell>{device.deviceType}</TableCell>
-        <TableCell>
-          <Badge variant={STATUS_VARIANT[device.status]}>
-            {t(`devices.status.${device.status}`)}
-          </Badge>
+      <TableRow
+        className={cn(
+          "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
+          LIST_TABLE_BORDER,
+        )}
+        onClick={() => router.push(viewHref)}
+      >
+        <TableCell className="px-6 py-3">
+          <Link
+            href={viewHref}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
+              LIST_TEXT_STRONG,
+            )}
+          >
+            {displayName}
+          </Link>
         </TableCell>
-        <TableCell className="text-muted-foreground tabular-nums">
+        <TableCell className="px-6 py-3">
+          <IotDeviceStatusBadge status={device.status} />
+        </TableCell>
+        <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
+          {device.deviceType}
+        </TableCell>
+        <TableCell className={cn("px-6 py-3 font-mono text-xs", LIST_TEXT_MUTED)}>
+          {device.serialNumber}
+        </TableCell>
+        <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", LIST_TEXT_MUTED)}>
           {formatDate(device.createdAt)}
         </TableCell>
-        <TableCell className="w-12 text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("devices.actions.delete")}
-                className="hover:bg-accent data-[state=open]:bg-accent text-muted-foreground inline-flex size-8 items-center justify-center rounded-md"
-              >
-                <MoreHorizontal className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                onSelect={handleDeleteSelect}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-4" />
-                {t("devices.actions.delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <TableCell className="w-12 px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+          <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("devices.actions.more")}
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
+                    LIST_TEXT_MUTED,
+                  )}
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href={viewHref}>
+                    <Eye className="mr-2 size-4" />
+                    {t("devices.actions.view")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setConfirmingDelete(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  {t("devices.actions.delete")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </TableCell>
       </TableRow>
 
@@ -110,7 +142,10 @@ export function IotDeviceTableRow({ device }: IotDeviceTableRowProps) {
             <AlertDialogCancel disabled={isDeleting}>{tCommon("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isDeleting}
-              onClick={handleDeleteConfirm}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? (

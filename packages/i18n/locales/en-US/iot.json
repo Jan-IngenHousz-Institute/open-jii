@@ -41,7 +41,7 @@
       "title": "Devices",
       "description": "Register hardware devices as AWS IoT Things. Certificates are issued in a later step.",
       "register": "Register device",
-      "empty": "No devices registered yet.",
+      "searchPlaceholder": "Search by name or serial number",
       "loadError": "Failed to load devices.",
       "columns": {
         "name": "Name",
@@ -55,8 +55,30 @@
         "active": "Active",
         "revoked": "Revoked"
       },
+      "tabs": {
+        "overview": "Overview",
+        "devices": "Devices",
+        "all": "All"
+      },
+      "recent": {
+        "title": "Recent devices",
+        "viewAll": "View all devices"
+      },
+      "pageOf": "Page {{page}} of {{total}}",
       "actions": {
+        "more": "Device actions",
+        "view": "View details",
         "delete": "Delete"
+      },
+      "empty": {
+        "title": "No devices yet",
+        "description": "Register a device to create its record and an AWS IoT Thing. A certificate is issued in a later step to activate it.",
+        "cta": "Register device"
+      },
+      "zeroResults": {
+        "title": "No devices match your filters",
+        "description": "Try a different search term or status filter.",
+        "clear": "Clear filters"
       },
       "dialog": {
         "title": "Register device",
@@ -69,12 +91,34 @@
         "namePlaceholder": "Greenhouse sensor 1",
         "submit": "Register",
         "createSuccess": "Device registered",
+        "createSuccessDetail": "A certificate will be issued to activate it.",
         "createError": "Failed to register device"
       },
       "remove": {
         "title": "Delete device",
         "confirm": "This permanently deletes {{name}} and its AWS IoT Thing.",
         "success": "Device deleted"
+      },
+      "detail": {
+        "back": "Back to devices",
+        "notFound": "Device not found.",
+        "overview": "Overview",
+        "meta": {
+          "serial": "Serial number",
+          "type": "Type",
+          "status": "Status",
+          "registered": "Registered",
+          "thingName": "AWS IoT Thing"
+        },
+        "credentials": {
+          "title": "Credentials",
+          "none": "No certificate issued yet. A certificate will be issued in a later step to activate this device."
+        },
+        "dangerZone": {
+          "title": "Danger zone",
+          "deleteLabel": "Delete this device",
+          "deleteDescription": "Permanently removes the device and its AWS IoT Thing. This cannot be undone."
+        }
       }
     }
   }

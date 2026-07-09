@@ -52,7 +52,10 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
     onSuccess: () => {
-      toast({ title: t("devices.dialog.createSuccess") });
+      toast({
+        title: t("devices.dialog.createSuccess"),
+        description: t("devices.dialog.createSuccessDetail"),
+      });
       form.reset();
       onOpenChange(false);
     },

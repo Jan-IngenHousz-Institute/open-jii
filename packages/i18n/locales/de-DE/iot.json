@@ -41,7 +41,7 @@
       "title": "Geräte",
       "description": "Registrieren Sie Hardware-Geräte als AWS IoT Things. Zertifikate werden in einem späteren Schritt ausgestellt.",
       "register": "Gerät registrieren",
-      "empty": "Noch keine Geräte registriert.",
+      "searchPlaceholder": "Nach Name oder Seriennummer suchen",
       "loadError": "Geräte konnten nicht geladen werden.",
       "columns": {
         "name": "Name",
@@ -55,8 +55,30 @@
         "active": "Aktiv",
         "revoked": "Widerrufen"
       },
+      "tabs": {
+        "overview": "Übersicht",
+        "devices": "Geräte",
+        "all": "Alle"
+      },
+      "recent": {
+        "title": "Neueste Geräte",
+        "viewAll": "Alle Geräte anzeigen"
+      },
+      "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
+        "more": "Geräteaktionen",
+        "view": "Details anzeigen",
         "delete": "Löschen"
+      },
+      "empty": {
+        "title": "Noch keine Geräte",
+        "description": "Registrieren Sie ein Gerät, um seinen Datensatz und ein AWS IoT Thing zu erstellen. Ein Zertifikat wird in einem späteren Schritt ausgestellt, um es zu aktivieren.",
+        "cta": "Gerät registrieren"
+      },
+      "zeroResults": {
+        "title": "Keine Geräte entsprechen Ihren Filtern",
+        "description": "Versuchen Sie einen anderen Suchbegriff oder Statusfilter.",
+        "clear": "Filter zurücksetzen"
       },
       "dialog": {
         "title": "Gerät registrieren",
@@ -69,12 +91,34 @@
         "namePlaceholder": "Gewächshaus-Sensor 1",
         "submit": "Registrieren",
         "createSuccess": "Gerät registriert",
+        "createSuccessDetail": "Ein Zertifikat wird ausgestellt, um es zu aktivieren.",
         "createError": "Gerät konnte nicht registriert werden"
       },
       "remove": {
         "title": "Gerät löschen",
         "confirm": "Dies löscht {{name}} und das zugehörige AWS IoT Thing endgültig.",
         "success": "Gerät gelöscht"
+      },
+      "detail": {
+        "back": "Zurück zu Geräten",
+        "notFound": "Gerät nicht gefunden.",
+        "overview": "Übersicht",
+        "meta": {
+          "serial": "Seriennummer",
+          "type": "Typ",
+          "status": "Status",
+          "registered": "Registriert",
+          "thingName": "AWS IoT Thing"
+        },
+        "credentials": {
+          "title": "Anmeldedaten",
+          "none": "Noch kein Zertifikat ausgestellt. Ein Zertifikat wird in einem späteren Schritt ausgestellt, um dieses Gerät zu aktivieren."
+        },
+        "dangerZone": {
+          "title": "Gefahrenzone",
+          "deleteLabel": "Dieses Gerät löschen",
+          "deleteDescription": "Entfernt das Gerät und sein AWS IoT Thing endgültig. Dies kann nicht rückgängig gemacht werden."
+        }
       }
     }
   }
