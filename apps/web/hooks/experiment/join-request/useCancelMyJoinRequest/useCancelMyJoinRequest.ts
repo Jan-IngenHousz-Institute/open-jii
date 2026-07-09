@@ -1,4 +1,4 @@
-import { getOrpcError, orpc } from "@/lib/orpc";
+import { orpc } from "@/lib/orpc";
 import { parseApiError } from "@/util/apiError";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -27,11 +27,9 @@ export const useCancelMyJoinRequest = (options?: UseCancelMyJoinRequestOptions) 
       },
       onError: (...args) => {
         const [error] = args;
-        const orpcError = getOrpcError(error);
         toast({
           description:
-            parseApiError(orpcError?.data)?.message ??
-            t("experimentSettings.requestCancelledError"),
+            parseApiError(error)?.message ?? t("experimentSettings.requestCancelledError"),
           variant: "destructive",
         });
         options?.onError?.(...args);

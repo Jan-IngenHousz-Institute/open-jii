@@ -5,7 +5,6 @@ import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { getOrpcError } from "@/lib/orpc";
 import { useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -67,7 +66,7 @@ export function WorkbookDraftEditor({
       try {
         await updateWorkbook({ id, cells: next });
       } catch (err) {
-        const message = parseApiError(getOrpcError(err)?.data ?? err)?.message;
+        const message = parseApiError(err)?.message;
         if (message) toast({ description: message, variant: "destructive" });
         throw err;
       }

@@ -22,15 +22,14 @@ export const useDeleteUser = (options?: UseDeleteUserOptions) => {
       ...options,
       onError: (error, ...rest) => {
         const orpcError = getOrpcError(error);
-        toast({ description: parseApiError(orpcError?.data)?.message, variant: "destructive" });
+        toast({ description: parseApiError(error)?.message, variant: "destructive" });
         if (orpcError) {
           options?.onError?.(orpcError, ...rest);
         }
       },
       onSettled: async (...args) => {
-        // Ensure any component reading the user or userProfile refetches.
+        // Ensure any component reading the user profile refetches.
         await queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
-        await queryClient.invalidateQueries({ queryKey: ["user"] });
         await options?.onSettled?.(...args);
       },
     }),

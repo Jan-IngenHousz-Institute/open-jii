@@ -187,7 +187,7 @@ it("fetches locations", async () => {
   server.mount(contract.experiments.getExperimentLocations, { body: locations });
 
   const { result } = renderHook(() => useExperimentLocations("exp-1"));
-  await waitFor(() => expect(result.current.data?.body).toHaveLength(2));
+  await waitFor(() => expect(result.current.data).toHaveLength(2));
 });
 ```
 

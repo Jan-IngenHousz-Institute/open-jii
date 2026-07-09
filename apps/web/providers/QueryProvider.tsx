@@ -1,6 +1,5 @@
 "use client";
 
-import { getOrpcError } from "@/lib/orpc";
 import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -14,7 +13,7 @@ const queryClient = new QueryClient({
     onError: (error) => {
       // oRPC nests the server error payload under ORPCError.data; fall back to
       // the raw error for non-oRPC throws (e.g. the native upload's UploadError).
-      const parsedError = parseApiError(getOrpcError(error)?.data ?? error);
+      const parsedError = parseApiError(error);
       toast({
         title: parsedError?.message ?? "Error",
         variant: "destructive",

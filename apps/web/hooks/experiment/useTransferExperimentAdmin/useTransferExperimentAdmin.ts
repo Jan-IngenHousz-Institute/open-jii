@@ -40,8 +40,7 @@ export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminO
         const orpcError = getOrpcError(error);
         toast({
           description:
-            parseApiError(orpcError?.data)?.message ??
-            t("dangerZone.delete.blockers.transferError"),
+            parseApiError(error)?.message ?? t("dangerZone.delete.blockers.transferError"),
           variant: "destructive",
         });
         if (orpcError) {
@@ -49,8 +48,14 @@ export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminO
         }
       },
       onSettled: async (...args) => {
-        await queryClient.invalidateQueries({ queryKey: ["deletion-blockers"] });
-        await queryClient.invalidateQueries({ queryKey: ["experiment-members"] });
+        // Bulk transfer spans multiple experiments/users, so invalidate every
+        // instance of each query (prefix match, no input) rather than one id.
+        await queryClient.invalidateQueries({
+          queryKey: orpc.users.getDeletionBlockers.key(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentMembers.key(),
+        });
         options?.onSettled?.(...args);
       },
     }),

@@ -1,6 +1,5 @@
 "use client";
 
-import { getOrpcError } from "@/lib/orpc";
 import { useState } from "react";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
@@ -84,7 +83,7 @@ function AccountSettingsContent({
       setProfile(nextProfile);
     } catch (err) {
       toast({
-        description: parseApiError(getOrpcError(err)?.data)?.message,
+        description: parseApiError(err)?.message,
         variant: "destructive",
       });
       throw err;
