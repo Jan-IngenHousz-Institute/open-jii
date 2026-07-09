@@ -40,7 +40,11 @@ export const zIotDeviceList = z.array(zIotDevice);
 export const zRegisterIotDeviceBody = z.object({
   serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
-  deviceType: z.string().min(1).max(255).describe("IotDevice class, maps to the ingest topic sensorType"),
+  deviceType: z
+    .string()
+    .min(1)
+    .max(255)
+    .describe("IotDevice class, maps to the ingest topic sensorType"),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;
