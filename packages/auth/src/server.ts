@@ -16,7 +16,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 const cookieDomain = process.env.COOKIE_DOMAIN;
 
 // Configure custom OAuth providers (ORCID via genericOAuth plugin)
-const customOAuthProviders = [];
+const customOAuthProviders: ReturnType<typeof orcidProvider>[] = [];
 
 if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
   customOAuthProviders.push(

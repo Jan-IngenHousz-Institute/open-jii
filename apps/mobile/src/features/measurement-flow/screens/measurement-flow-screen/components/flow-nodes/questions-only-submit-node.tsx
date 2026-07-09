@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
+import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -27,6 +28,7 @@ const log = createLogger("questions-submit");
 export function QuestionsOnlySubmitNode() {
   const {
     experimentId,
+    experimentLabel,
     iterationCount,
     flowNodes,
     dismissQuestionsSubmit,
@@ -49,9 +51,12 @@ export function QuestionsOnlySubmitNode() {
 
   const displayTimestamp = useRef<string>(getSyncedLocalISO()).current;
 
-  const experimentName =
-    experiments.find((e) => e.value === experimentId)?.label ??
-    t("measurementFlow:questionsSubmit.defaultExperimentName");
+  const experimentName = resolveExperimentName({
+    experimentLabel,
+    experiments,
+    experimentId,
+    fallback: t("measurementFlow:questionsSubmit.defaultExperimentName"),
+  });
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);

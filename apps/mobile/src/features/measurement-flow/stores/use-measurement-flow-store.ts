@@ -128,12 +128,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v0 wire format, pinned by flow-store-persistence.test.ts. NEVER
-      // rename/remove a field without bumping `version` + a real `migrate`:
-      // zustand silently DROPS persisted state on version mismatch, wiping a
-      // researcher's paused flow.
-      version: 0,
-      migrate: (persisted) => persisted as MeasurementFlowStore,
+      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
+      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
+      // plot or a stale "Experiment" name; the upgrade starts them clean.
+      version: 1,
+      migrate: (persisted, version) =>
+        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
       // protocolId was dropped from the persisted slice (now derived from
       // flowNodes via flowProtocolId); legacy payloads carrying it merge in
       // as an ignored extra key.
