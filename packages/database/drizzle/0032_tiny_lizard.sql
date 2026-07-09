@@ -54,6 +54,7 @@ CREATE UNIQUE INDEX "team_members_team_user_uniq" ON "team_members" USING btree 
 CREATE INDEX "team_members_user_idx" ON "team_members" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "teams_organization_idx" ON "teams" USING btree ("organization_id");--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_active_organization_id_organizations_id_fk" FOREIGN KEY ("active_organization_id") REFERENCES "public"."organizations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_active_team_id_teams_id_fk" FOREIGN KEY ("active_team_id") REFERENCES "public"."teams"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiles" DROP COLUMN "organization_id";--> statement-breakpoint
 ALTER TABLE "organizations" ADD CONSTRAINT "organizations_slug_unique" UNIQUE("slug");--> statement-breakpoint
 -- Clean up legacy institution organizations: pre-Better-Auth rows created from the
@@ -61,4 +62,38 @@ ALTER TABLE "organizations" ADD CONSTRAINT "organizations_slug_unique" UNIQUE("s
 -- they are invisible to the organization plugin and safe to remove.
 DELETE FROM "organizations" o
 WHERE o."slug" IS NULL
-  AND NOT EXISTS (SELECT 1 FROM "organization_members" m WHERE m."organization_id" = o."id");
+  AND NOT EXISTS (SELECT 1 FROM "organization_members" m WHERE m."organization_id" = o."id");--> statement-breakpoint
+-- Provision a personal organization for every existing user that has a
+-- non-deleted profile, mirroring the auth databaseHooks that provision new
+-- users on signup. Set-based and idempotent (ON CONFLICT DO NOTHING), so it is
+-- a no-op for users who already self-provisioned on login. Folded into this
+-- migration (rather than a separate hand-run script) so provisioning happens
+-- automatically and atomically on db:migrate in every environment.
+INSERT INTO "organizations" ("name", "slug")
+SELECT
+  CASE
+    WHEN TRIM(p."first_name" || ' ' || p."last_name") <> ''
+      THEN TRIM(p."first_name" || ' ' || p."last_name") || '''s workspace'
+    ELSE 'Personal workspace'
+  END,
+  'personal-' || u."id"::text
+FROM "users" u
+JOIN "profiles" p ON p."user_id" = u."id"
+WHERE p."deleted_at" IS NULL
+ON CONFLICT ("slug") DO NOTHING;--> statement-breakpoint
+-- Make each of those users the owner of their personal organization.
+INSERT INTO "organization_members" ("organization_id", "user_id", "role")
+SELECT o."id", u."id", 'owner'
+FROM "users" u
+JOIN "profiles" p ON p."user_id" = u."id"
+JOIN "organizations" o ON o."slug" = 'personal-' || u."id"::text
+WHERE p."deleted_at" IS NULL
+ON CONFLICT DO NOTHING;--> statement-breakpoint
+-- Point already-authenticated sessions at the user's personal org so
+-- currently-logged-in users get a non-null active organization without having
+-- to sign in again. Only fills NULLs; never overrides an explicit choice.
+UPDATE "sessions" s
+SET "active_organization_id" = o."id"
+FROM "organizations" o
+WHERE o."slug" = 'personal-' || s."user_id"::text
+  AND s."active_organization_id" IS NULL;

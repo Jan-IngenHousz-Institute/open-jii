@@ -9,6 +9,8 @@ import {
   organizations,
   organizationMembers,
   personalOrgSlug,
+  personalOrgName,
+  ensurePersonalOrganization,
   eq,
 } from "@repo/database";
 
@@ -531,6 +533,43 @@ describe("UserRepository", () => {
         .from(experimentMembers)
         .where(eq(experimentMembers.userId, userToDeleteId));
       expect(memberships.length).toBe(0);
+    });
+
+    it("anonymizes the personal organization name so it no longer embeds PII", async () => {
+      // Arrange: a user whose personal org name embeds their real name.
+      const userToDeleteId = await testApp.createTestUser({
+        name: "Jane Secret",
+        email: "jane.secret@example.com",
+      });
+      const orgId = await ensurePersonalOrganization(testApp.database, {
+        id: userToDeleteId,
+        name: "Jane Secret",
+      });
+      const [before] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(before.name).toBe("Jane Secret's workspace");
+
+      // Act
+      const result = await repository.delete(userToDeleteId);
+      expect(result.isSuccess()).toBe(true);
+
+      // Assert: name scrubbed of PII; org (and ownership) intentionally kept.
+      const [after] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(after.name).toBe(personalOrgName("Deleted User"));
+      expect(after.name).not.toContain("Jane");
+      expect(after.name).not.toContain("Secret");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, orgId));
+      expect(members).toHaveLength(1);
+      expect(members[0].userId).toBe(userToDeleteId);
     });
   });
 

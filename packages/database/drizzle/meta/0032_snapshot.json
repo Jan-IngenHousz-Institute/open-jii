@@ -1,5 +1,5 @@
 {
-  "id": "09e46f5d-570c-426e-9d38-0932a097f3ba",
+  "id": "63056999-541e-49f2-8127-f6256b1bf2a3",
   "prevId": "25cc6d66-6a35-4951-864c-675cb7bd574e",
   "version": "7",
   "dialect": "postgresql",
@@ -1919,6 +1919,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "active_organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "sessions_active_team_id_teams_id_fk": {
+          "name": "sessions_active_team_id_teams_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "active_team_id"
           ],
           "columnsTo": [
             "id"

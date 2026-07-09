@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import type { DatabaseInstance } from "./database";
+import type { DbOrTx } from "./database";
 import { organizationMembers, organizations } from "./schema";
 
 /** Deterministic, collision-free slug for a user's personal organization. */
@@ -19,7 +19,7 @@ export function personalOrgName(userName?: string | null): string {
  * Returns the organization id. Safe to call on every sign-in.
  */
 export async function ensurePersonalOrganization(
-  db: DatabaseInstance,
+  db: DbOrTx,
   user: { id: string; name?: string | null },
 ): Promise<string> {
   const slug = personalOrgSlug(user.id);
@@ -73,7 +73,7 @@ export async function ensurePersonalOrganization(
  * Better Auth users.name captured at signup. Returns the organization id.
  */
 export async function syncPersonalOrganizationName(
-  db: DatabaseInstance,
+  db: DbOrTx,
   user: { id: string; name?: string | null },
 ): Promise<string> {
   const organizationId = await ensurePersonalOrganization(db, user);

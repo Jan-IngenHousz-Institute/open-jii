@@ -15,9 +15,12 @@ import {
   // authenticators table removed - Better Auth uses accounts table
   experiments,
   experimentMembers,
+  organizations,
   sql,
   isNull,
   syncPersonalOrganizationName,
+  personalOrgSlug,
+  personalOrgName,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -240,6 +243,14 @@ export class UserRepository {
             emailVerified: false,
           })
           .where(eq(users.id, id));
+
+        // 5. Scrub the personal org name (embeds the real name as
+        //    "<First Last>'s workspace"). Org + membership are kept: soft-delete
+        //    keeps the user row, and the org retains ownership of what it owns.
+        await tx
+          .update(organizations)
+          .set({ name: personalOrgName("Deleted User") })
+          .where(eq(organizations.slug, personalOrgSlug(id)));
       });
     });
   }
@@ -264,16 +275,19 @@ export class UserRepository {
           })
           .where(eq(profiles.userId, userId));
       } else {
-        // Create profile
-        await this.database.insert(profiles).values({
-          ...createUserProfileDto,
-          userId,
-        });
+        // First registration: create the profile and name the personal org from
+        // it (first + last) in one transaction, so a failed sync rolls the
+        // profile insert back too.
+        await this.database.transaction(async (tx) => {
+          await tx.insert(profiles).values({
+            ...createUserProfileDto,
+            userId,
+          });
 
-        // First registration: name the personal org from the profile (first + last)
-        await syncPersonalOrganizationName(this.database, {
-          id: userId,
-          name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
+          await syncPersonalOrganizationName(tx, {
+            id: userId,
+            name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
+          });
         });
       }
 

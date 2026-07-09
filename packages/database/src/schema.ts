@@ -49,7 +49,9 @@ export const sessions = pgTable("sessions", {
     onDelete: "set null",
   }),
   // Better Auth organization plugin (teams): the session's active team.
-  activeTeamId: uuid("active_team_id"),
+  activeTeamId: uuid("active_team_id").references(() => teams.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
