@@ -35,6 +35,47 @@
       "connectToDeviceDescription": "Verbinden Sie sich mit einem Gerät und testen Sie Ihr Protokoll vor dem Speichern",
       "browserNotSupported": "Ihr Browser unterstützt weder Web Bluetooth noch Web Serial APIs.",
       "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop."
+    },
+    "devices": {
+      "tabLabel": "Geräte",
+      "title": "Geräte",
+      "description": "Registrieren Sie Hardware-Geräte als AWS IoT Things. Zertifikate werden in einem späteren Schritt ausgestellt.",
+      "register": "Gerät registrieren",
+      "empty": "Noch keine Geräte registriert.",
+      "loadError": "Geräte konnten nicht geladen werden.",
+      "columns": {
+        "name": "Name",
+        "serial": "Seriennummer",
+        "type": "Typ",
+        "status": "Status",
+        "created": "Registriert"
+      },
+      "status": {
+        "pending": "Ausstehend",
+        "active": "Aktiv",
+        "revoked": "Widerrufen"
+      },
+      "actions": {
+        "delete": "Löschen"
+      },
+      "dialog": {
+        "title": "Gerät registrieren",
+        "description": "Registrieren Sie ein Hardware-Gerät als AWS IoT Thing. In diesem Schritt wird kein Zertifikat ausgestellt.",
+        "serialLabel": "Seriennummer",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Gerätetyp",
+        "typePlaceholder": "ambyte",
+        "nameLabel": "Name (optional)",
+        "namePlaceholder": "Gewächshaus-Sensor 1",
+        "submit": "Registrieren",
+        "createSuccess": "Gerät registriert",
+        "createError": "Gerät konnte nicht registriert werden"
+      },
+      "remove": {
+        "title": "Gerät löschen",
+        "confirm": "Dies löscht {{name}} und das zugehörige AWS IoT Thing endgültig.",
+        "success": "Gerät gelöscht"
+      }
     }
   }
 }

@@ -35,6 +35,47 @@
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
       "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+    },
+    "devices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Register hardware devices as AWS IoT Things. Certificates are issued in a later step.",
+      "register": "Register device",
+      "empty": "No devices registered yet.",
+      "loadError": "Failed to load devices.",
+      "columns": {
+        "name": "Name",
+        "serial": "Serial number",
+        "type": "Type",
+        "status": "Status",
+        "created": "Registered"
+      },
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "revoked": "Revoked"
+      },
+      "actions": {
+        "delete": "Delete"
+      },
+      "dialog": {
+        "title": "Register device",
+        "description": "Register a hardware device as an AWS IoT Thing. No certificate is issued at this stage.",
+        "serialLabel": "Serial number",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Device type",
+        "typePlaceholder": "ambyte",
+        "nameLabel": "Name (optional)",
+        "namePlaceholder": "Greenhouse sensor 1",
+        "submit": "Register",
+        "createSuccess": "Device registered",
+        "createError": "Failed to register device"
+      },
+      "remove": {
+        "title": "Delete device",
+        "confirm": "This permanently deletes {{name}} and its AWS IoT Thing.",
+        "success": "Device deleted"
+      }
     }
   }
 }

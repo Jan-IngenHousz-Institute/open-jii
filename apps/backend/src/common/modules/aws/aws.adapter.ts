@@ -16,6 +16,8 @@ import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
 import { CognitoService } from "./services/cognito/cognito.service";
 import type { IotCredentials } from "./services/cognito/cognito.types";
 import { AwsConfigService } from "./services/config/config.service";
+import { AwsIotService } from "./services/iot/iot.service";
+import type { CreateThingInput, CreatedThing } from "./services/iot/iot.types";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
 import { AwsS3Service } from "./services/s3/s3.service";
@@ -31,6 +33,7 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     private readonly awsLambdaService: AwsLambdaService,
     private readonly awsConfigService: AwsConfigService,
     private readonly awsS3Service: AwsS3Service,
+    private readonly awsIotService: AwsIotService,
   ) {}
 
   /**
@@ -142,6 +145,17 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
 
   async getIotUploadUrl(experimentId: string): Promise<Result<IotUploadUrl>> {
     return this.awsS3Service.getIotUploadUrl(experimentId);
+  }
+
+  /**
+   * Register an AWS IoT Thing for a device (no certificate attached).
+   */
+  async createThing(input: CreateThingInput): Promise<Result<CreatedThing>> {
+    return this.awsIotService.createThing(input);
+  }
+
+  async deleteThing(thingName: string): Promise<Result<void>> {
+    return this.awsIotService.deleteThing(thingName);
   }
 
   /**
