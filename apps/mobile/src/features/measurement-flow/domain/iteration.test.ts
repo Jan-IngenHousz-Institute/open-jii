@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { AnswersSnapshot } from "./iteration";
-import { findNextMandatoryStep, firstManualQuestionNodeId } from "./iteration";
+import {
+  findNextMandatoryStep,
+  firstManualQuestionNodeId,
+  seedNextIterationAnswer,
+} from "./iteration";
 
 const makeQuestion = (id: string): FlowNode =>
   ({ id, type: "question", name: id, content: { kind: "text" } }) as FlowNode;
+
+const makeMultiChoice = (id: string, options: string[]): FlowNode =>
+  ({ id, type: "question", name: id, content: { kind: "multi_choice", options } }) as FlowNode;
 
 const makeInstruction = (id: string): FlowNode =>
   ({ id, type: "instruction", name: id, content: {} }) as FlowNode;
@@ -87,6 +94,37 @@ describe("findNextMandatoryStep", () => {
       makeQuestion("q3"),
     ];
     expect(next(0, nodes, 0, answers({ autoincrementSettings: { q2: true } }))).toBe(1);
+  });
+});
+
+describe("seedNextIterationAnswer (autoincrement)", () => {
+  const a = answers({ autoincrementSettings: { plot: true } });
+
+  it("rotates a multi_choice to the next option", () => {
+    const node = makeMultiChoice("plot", ["plot-1", "plot-2", "plot-3"]);
+    expect(
+      seedNextIterationAnswer({ node, answerValue: "plot-1", iterationCount: 0, answers: a }),
+    ).toEqual({ cycle: 1, name: "plot", value: "plot-2" });
+  });
+
+  it("wraps from the last option back to the first", () => {
+    const node = makeMultiChoice("plot", ["plot-1", "plot-2", "plot-3"]);
+    expect(
+      seedNextIterationAnswer({ node, answerValue: "plot-3", iterationCount: 0, answers: a }),
+    ).toEqual({ cycle: 1, name: "plot", value: "plot-1" });
+  });
+
+  // Regression: the "autoincrement jumps to a random plot elsewhere" bug. A
+  // stale/unrecognised prior answer must NOT wrap to options[0] (the first plot).
+  it("does not jump to the first plot when the current answer is not a known option", () => {
+    const node = makeMultiChoice("plot", ["plot-1", "plot-2", "plot-3"]);
+    const seed = seedNextIterationAnswer({
+      node,
+      answerValue: "plot-99",
+      iterationCount: 4,
+      answers: a,
+    });
+    expect(seed).toBeNull();
   });
 });
 
