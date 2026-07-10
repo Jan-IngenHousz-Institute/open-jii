@@ -1,6 +1,0 @@
-# Never commit generated credentials or the cert output dir.
-iot-certs/
-*.pem
-*.key
-*.crt
-provisioning-summary.csv
