@@ -7,6 +7,7 @@ import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-bad
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { parseApiError } from "~/util/apiError";
 
@@ -64,6 +65,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
             hasAccess={isCreator}
             onSave={handleTitleSave}
             isPending={isUpdating}
+            icon={<BookOpen className="h-6 w-6" />}
           />
           <AutosaveIndicator status={indicatorStatus} />
         </div>

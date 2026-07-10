@@ -18,7 +18,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
-import { GitBranch, List } from "lucide-react";
+import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useMemo } from "react";
@@ -141,55 +141,59 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   return (
     <PageContainer width="fluid" className="space-y-3">
-      <LinkedWorkbookCard
-        experimentId={id}
-        locale={locale}
-        workbookId={workbookId}
-        workbookVersionId={workbookVersionId}
-        hasAccess={hasAccess}
-        isWorkbookOwner={isWorkbookOwner}
-      />
+      <AutosaveStatusProvider>
+        {canEdit && (
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
+                <Link
+                  href={`/${locale}/platform/workbooks/${workbookId}`}
+                  className="text-primary font-medium underline underline-offset-2"
+                >
+                  {t("flow.editOpenWorkbookLink")}
+                </Link>
+              </p>
+            </div>
+            <EditAutosaveStatus />
+          </div>
+        )}
 
-      <NavTabs defaultValue="list">
-        <div className="flex justify-end">
-          <NavTabsList className="h-8">
-            <NavTabsTrigger value="list" className="text-xs">
-              <List className="h-3.5 w-3.5" />
-              {t("flow.viewList")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="graph" className="text-xs">
-              <GitBranch className="h-3.5 w-3.5" />
-              {t("flow.viewGraph")}
-            </NavTabsTrigger>
-          </NavTabsList>
-        </div>
+        <LinkedWorkbookCard
+          experimentId={id}
+          locale={locale}
+          workbookId={workbookId}
+          workbookVersionId={workbookVersionId}
+          hasAccess={hasAccess}
+          isWorkbookOwner={isWorkbookOwner}
+        />
 
-        <NavTabsContent value="list" className="mt-3">
-          <AutosaveStatusProvider>
+        <NavTabs defaultValue="list">
+          <div className="border-border border-b">
+            <NavTabsList>
+              <NavTabsTrigger value="list">
+                <List className="h-4 w-4" />
+                {t("flow.viewList")}
+              </NavTabsTrigger>
+              <NavTabsTrigger value="graph">
+                <GitBranch className="h-4 w-4" />
+                {t("flow.viewGraph")}
+              </NavTabsTrigger>
+            </NavTabsList>
+          </div>
+
+          <NavTabsContent value="list" className="mt-6">
             {canEdit ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-muted-foreground text-sm">
-                    {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
-                    <Link
-                      href={`/${locale}/platform/workbooks/${workbookId}`}
-                      className="text-primary font-medium underline underline-offset-2"
-                    >
-                      {t("flow.editOpenWorkbookLink")}
-                    </Link>
-                  </p>
-                  <EditAutosaveStatus />
-                </div>
-                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                  <WorkbookDraftEditor
-                    id={workbookId}
-                    initialCells={workbookDraft.cells}
-                    createdBy={workbookDraft.createdBy}
-                    name={workbookDraft.name}
-                    onSaved={handleDraftSaved}
-                  />
-                </WorkbookEntitySavedProvider>
-              </div>
+              <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
+                <WorkbookDraftEditor
+                  id={workbookId}
+                  initialCells={workbookDraft.cells}
+                  createdBy={workbookDraft.createdBy}
+                  name={workbookDraft.name}
+                  onSaved={handleDraftSaved}
+                />
+              </WorkbookEntitySavedProvider>
             ) : (
               <WorkbookEditor
                 cells={versionedCells}
@@ -198,13 +202,13 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                 readOnly
               />
             )}
-          </AutosaveStatusProvider>
-        </NavTabsContent>
+          </NavTabsContent>
 
-        <NavTabsContent value="graph" className="mt-3">
-          <FlowEditor initialFlow={derivedFlow} isDisabled />
-        </NavTabsContent>
-      </NavTabs>
+          <NavTabsContent value="graph" className="mt-6">
+            <FlowEditor initialFlow={derivedFlow} isDisabled />
+          </NavTabsContent>
+        </NavTabs>
+      </AutosaveStatusProvider>
     </PageContainer>
   );
 }

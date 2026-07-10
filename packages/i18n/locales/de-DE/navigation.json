@@ -42,13 +42,6 @@
     "macros": "Makros",
     "workbooks": "Arbeitsmappen"
   },
-  "breadcrumbs": {
-    "home": "Startseite",
-    "experiments": "Experimente",
-    "new": "Neu",
-    "edit": "Bearbeiten",
-    "view": "Ansehen"
-  },
   "whatsNew": {
     "navLabel": "Neuigkeiten",
     "title": "Neuigkeiten im Web",

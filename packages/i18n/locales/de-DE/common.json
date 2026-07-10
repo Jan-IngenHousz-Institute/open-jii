@@ -388,18 +388,6 @@
     "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "goToPlatform": "Zur openJII-Plattform gehen"
   },
-  "breadcrumbs": {
-    "home": "Startseite",
-    "platform": "Plattform",
-    "experiments": "Experimente",
-    "protocols": "Protokolle",
-    "macros": "Makros",
-    "new": "Neu",
-    "edit": "Bearbeiten",
-    "view": "Ansehen",
-    "account": "Konto",
-    "settings": "Einstellungen"
-  },
   "experimentData": {
     "title": "Experimentdaten",
     "dataSources": {

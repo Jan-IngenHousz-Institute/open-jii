@@ -279,18 +279,6 @@
     "statistics": "Statistieken",
     "quickActions": "Snelle acties"
   },
-  "breadcrumbs": {
-    "home": "Home",
-    "platform": "Platform",
-    "experiments": "Experimenten",
-    "protocols": "Protocollen",
-    "macros": "Macro's",
-    "new": "Nieuw",
-    "edit": "Bewerken",
-    "view": "Bekijken",
-    "account": "Account",
-    "settings": "Instellingen"
-  },
   "experimentData": {
     "title": "Experimentgegevens",
     "dataSources": {

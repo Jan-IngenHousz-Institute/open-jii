@@ -544,18 +544,6 @@
     "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
     "goToPlatform": "Go to the openJII platform"
   },
-  "breadcrumbs": {
-    "home": "Home",
-    "platform": "Platform",
-    "experiments": "Experiments",
-    "protocols": "Protocols",
-    "macros": "Macros",
-    "new": "New",
-    "edit": "Edit",
-    "view": "View",
-    "account": "Account",
-    "settings": "Settings"
-  },
   "experimentData": {
     "title": "Experiment Data",
     "dataSources": {
