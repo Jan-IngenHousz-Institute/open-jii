@@ -38,22 +38,31 @@ export class RotateCertificateUseCase {
 
     const attachResult = await this.awsIot.attachThingPrincipal(thingName, certificateArn);
     if (attachResult.isFailure()) {
-      await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
-      await this.deviceRepository.updateStatus(thingName, "active");
+      const r1 = await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
+      if (r1.isFailure()) this.logger.warn({ msg: "Cleanup failed: revoke new cert", certificateId, error: r1.error });
+      const r2 = await this.deviceRepository.updateStatus(thingName, "active");
+      if (!r2) this.logger.warn({ msg: "Cleanup failed: reset status to active", thingName });
       return attachResult;
     }
 
     const policyName = this.configService.getOrThrow<string>("IOT_DEVICE_POLICY_NAME");
     const policyResult = await this.awsIot.attachPolicy(policyName, certificateArn);
     if (policyResult.isFailure()) {
-      await this.awsIot.detachThingPrincipal(thingName, certificateArn);
-      await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
-      await this.deviceRepository.updateStatus(thingName, "active");
+      const r1 = await this.awsIot.detachThingPrincipal(thingName, certificateArn);
+      if (r1.isFailure()) this.logger.warn({ msg: "Cleanup failed: detach new principal", thingName, error: r1.error });
+      const r2 = await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
+      if (r2.isFailure()) this.logger.warn({ msg: "Cleanup failed: revoke new cert", certificateId, error: r2.error });
+      const r3 = await this.deviceRepository.updateStatus(thingName, "active");
+      if (!r3) this.logger.warn({ msg: "Cleanup failed: reset status to active", thingName });
       return policyResult;
     }
 
-    await this.awsIot.updateCertificateStatus(device.certificateId, "INACTIVE");
-    await this.awsIot.detachThingPrincipal(thingName, device.certificateArn);
+    // New cert is live — retire the old one. These are best-effort: the device is
+    // already operational with the new cert, so log failures but do not abort.
+    const deactivateOld = await this.awsIot.updateCertificateStatus(device.certificateId, "INACTIVE");
+    if (deactivateOld.isFailure()) this.logger.warn({ msg: "Failed to deactivate old cert", certificateId: device.certificateId, error: deactivateOld.error });
+    const detachOld = await this.awsIot.detachThingPrincipal(thingName, device.certificateArn);
+    if (detachOld.isFailure()) this.logger.warn({ msg: "Failed to detach old principal", thingName, error: detachOld.error });
     await this.deviceRepository.updateCertificate(thingName, certificateId, certificateArn);
     await this.deviceRepository.updateStatus(thingName, "active");
 
