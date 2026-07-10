@@ -60,6 +60,13 @@ describe("NavigationSidebarWrapper", () => {
         isActive: boolean;
         items: { title: string; url: string }[];
       }[];
+      navDevices: {
+        title: string;
+        url: string;
+        icon: string;
+        isActive: boolean;
+        items: { title: string; url: string }[];
+      }[];
     };
 
     expect(navigationData.navDashboard).toHaveLength(1);
@@ -85,6 +92,14 @@ describe("NavigationSidebarWrapper", () => {
     expect(navigationData.navExperiments[0].items[1]).toMatchObject({
       title: "sidebar.overview",
       url: "/en/platform/experiments",
+    });
+
+    expect(navigationData.navDevices).toHaveLength(1);
+    expect(navigationData.navDevices[0]).toMatchObject({
+      title: "iot.devices.tabLabel",
+      url: "/en/platform/devices",
+      icon: "RadioReceiver",
+      isActive: true,
     });
   });
 

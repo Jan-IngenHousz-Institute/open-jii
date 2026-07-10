@@ -111,6 +111,38 @@ describe("CellWrapper", () => {
     expect(screen.getByTestId("badge")).toBeInTheDocument();
   });
 
+  it("keeps a long label on a single truncated line and exposes the full text on hover", () => {
+    // A long name previously wrapped to 2-5 lines depending on width, ballooning
+    // the header to a different height at every breakpoint. It must now truncate.
+    const longLabel =
+      "Copy of [Alice] Read-only demo protocol c7732d58 with a very long trailing name";
+    renderWrapper({ label: longLabel });
+
+    const labelEl = screen.getByText(longLabel);
+    expect(labelEl).toHaveClass("truncate");
+    expect(labelEl).toHaveClass("min-w-0");
+    expect(labelEl).toHaveAttribute("title", longLabel);
+  });
+
+  it("uses labelText for the hover title when the label is not a string", () => {
+    renderWrapper({
+      label: <span data-testid="node-label">Node label</span>,
+      labelText: "Plain text name",
+    });
+
+    expect(screen.getByTitle("Plain text name")).toContainElement(screen.getByTestId("node-label"));
+  });
+
+  it("pins header badges with shrink-0 so they do not wrap as the name grows", () => {
+    // The name absorbs all the shrinkage; the device / forked-from / status
+    // badges keep their intrinsic width on one line.
+    renderWrapper({
+      headerBadges: <span data-testid="badge">MultispeQ</span>,
+    });
+
+    expect(screen.getByTestId("badge").parentElement).toHaveClass("shrink-0");
+  });
+
   describe("RunTimer (running cell elapsed time)", () => {
     afterEach(() => {
       cleanup();

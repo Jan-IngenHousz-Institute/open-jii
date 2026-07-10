@@ -229,8 +229,15 @@
     {
       "idx": 32,
       "version": "7",
-      "when": 1783667970161,
-      "tag": "0032_thick_eddie_brock",
+      "when": 1783680202553,
+      "tag": "0032_premium_sprite",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783691941595,
+      "tag": "0033_lame_shard",
       "breakpoints": true
     }
   ]

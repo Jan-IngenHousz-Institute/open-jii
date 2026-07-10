@@ -183,20 +183,6 @@ module "iot_core" {
   enable_large_iot_sqs  = true
   large_iot_bucket_name = module.large_iot_s3.bucket_id
   large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
-
-  device_types = {
-    ambyte = {
-      description           = "openJII AMBYTE plant sensor"
-      searchable_attributes = ["serial_number", "firmware_version"]
-    }
-  }
-
-  device_groups = {
-    all-devices = {
-      description  = "All openJII IoT devices"
-      parent_group = null
-    }
-  }
 }
 
 module "cognito" {
@@ -1854,6 +1840,14 @@ module "backend_ecs" {
       value = join(",", module.iot_core.iot_policy_names)
     },
     {
+      name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"
+      value = module.iot_core.device_thing_type_name
+    },
+    {
+      name  = "AWS_IOT_DEVICE_THING_GROUP_NAME"
+      value = module.iot_core.device_thing_group_name
+    },
+    {
       name  = "EMAIL_BASE_URL"
       value = "https://${module.route53.environment_domain}"
     },
@@ -1892,15 +1886,7 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
-    },
-    {
-      name  = "IOT_DEVICE_POLICY_NAME"
-      value = module.iot_core.provisioned_device_policy_name
-    },
-    {
-      name  = "IOT_RESOURCE_PREFIX"
-      value = "open-jii-${var.environment}"
-    },
+    }
   ]
 
   # Additional IAM policies for the task role
@@ -1908,7 +1894,6 @@ module "backend_ecs" {
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
-    module.iot_core.backend_iot_provision_policy_arn,
   ]
 
   tags = {

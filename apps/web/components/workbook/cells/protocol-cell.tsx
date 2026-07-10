@@ -2,12 +2,13 @@
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Check, Copy, ExternalLink, Hand, Loader2, Microscope } from "lucide-react";
+import { Check, Copy, ExternalLink, GitFork, Hand, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -18,10 +19,17 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
 
 interface ProtocolCellProps {
   cell: ProtocolCellType;
@@ -51,6 +59,7 @@ export function ProtocolCellComponent({
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
   const { t } = useTranslation("iot");
+  const { t: tWorkbook } = useTranslation("workbook");
 
   const useSnapshot = snapshot != null;
   const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
@@ -67,8 +76,15 @@ export function ProtocolCellComponent({
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
   const isEditable = isOwner && !readOnly;
+  // Read-only purely because the viewer did not create this protocol (not
+  // because the cell is rendered from a pinned snapshot or in a read-only host).
+  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
+  // Lineage: this protocol is itself a fork of another one.
+  const forkedFrom = useSnapshot ? undefined : protocolData?.body.forkedFrom;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
+  const { mutateAsync: forkProtocol, isPending: isForking } = useProtocolCreate();
+  const onEntitySaved = useWorkbookEntitySaved();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
 
@@ -89,12 +105,13 @@ export function ProtocolCellComponent({
           params: { id: protocolId },
           body: { code: JSON.parse(code) as Record<string, unknown>[] },
         });
+        onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
       }
     },
-    [protocolId, saveProtocol],
+    [protocolId, saveProtocol, onEntitySaved],
   );
 
   const isValidCode = useCallback((code: string) => {
@@ -150,6 +167,31 @@ export function ProtocolCellComponent({
     void copy(localCode ?? protocolCode ?? "");
   };
 
+  // Fork a protocol the viewer does not own into an editable copy they do, then
+  // point this cell at the copy so it becomes editable in place.
+  const handleFork = useCallback(async () => {
+    const src = protocolData?.body;
+    if (!src) return;
+    try {
+      const suffix = crypto.randomUUID().slice(0, 8);
+      const res = await forkProtocol({
+        body: {
+          name: `Copy of ${src.name}`.slice(0, 246) + ` ${suffix}`,
+          description: src.description ?? undefined,
+          code: src.code,
+          family: src.family,
+          forkedFrom: src.id,
+        },
+      });
+      onUpdate({
+        ...cell,
+        payload: { ...cell.payload, protocolId: res.body.id, name: res.body.name },
+      });
+    } catch {
+      // useProtocolCreate already surfaces the error toast.
+    }
+  }, [protocolData, forkProtocol, onUpdate, cell]);
+
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";
 
   return (
@@ -165,12 +207,51 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        protocolFamily || (isEditable && localCode != null) ? (
+        protocolFamily ||
+        (isEditable && localCode != null) ||
+        isReadOnlyForNonOwner ||
+        forkedFrom ? (
           <div className="flex items-center gap-2">
             {protocolFamily ? (
               <span className="text-xs capitalize text-[#68737B]">
                 {getSensorFamilyLabel(protocolFamily)}
               </span>
+            ) : null}
+            {forkedFrom ? (
+              <Link
+                href={`/platform/protocols/${forkedFrom}`}
+                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+              >
+                {tWorkbook("cells.forkedFrom")}
+              </Link>
+            ) : null}
+            {isReadOnlyForNonOwner ? (
+              <>
+                <span className="text-muted-foreground text-xs">
+                  {tWorkbook("cells.protocolReadOnly")}
+                </span>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        aria-label={tWorkbook("cells.fork")}
+                        onClick={() => void handleFork()}
+                        disabled={isForking}
+                      >
+                        {isForking ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <GitFork className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{tWorkbook("cells.fork")}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             ) : null}
             {isEditable && localCode != null ? (
               <AutosaveIndicator status={autosave.status} variant="compact" />
@@ -229,7 +310,7 @@ export function ProtocolCellComponent({
           language="json"
           minHeight={isEditable ? "120px" : "80px"}
           maxHeight={isEditable ? "500px" : "400px"}
-          readOnly={readOnly ?? !isOwner}
+          readOnly={!isEditable}
         />
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load protocol code</p>

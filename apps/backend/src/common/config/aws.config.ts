@@ -14,6 +14,8 @@ export default registerAs("aws", () => ({
   },
   iot: {
     policyNames: process.env.AWS_IOT_POLICY_NAMES,
+    deviceThingTypeName: process.env.AWS_IOT_DEVICE_THING_TYPE_NAME,
+    deviceThingGroupName: process.env.AWS_IOT_DEVICE_THING_GROUP_NAME,
   },
   lambda: {
     macroSandboxPythonFunctionName: process.env.AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME,

@@ -35,6 +35,84 @@
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
       "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+    },
+    "devices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Register hardware devices as AWS IoT Things. Certificates are issued in a later step.",
+      "register": "Register device",
+      "searchPlaceholder": "Search by name or serial number",
+      "loadError": "Failed to load devices.",
+      "columns": {
+        "name": "Name",
+        "serial": "Serial number",
+        "type": "Type",
+        "status": "Status",
+        "created": "Registered"
+      },
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "revoked": "Revoked"
+      },
+      "tabs": {
+        "all": "All"
+      },
+      "pageOf": "Page {{page}} of {{total}}",
+      "actions": {
+        "more": "Device actions",
+        "view": "View details",
+        "delete": "Delete"
+      },
+      "empty": {
+        "title": "No devices yet",
+        "description": "Register a device to create its record and an AWS IoT Thing. A certificate is issued in a later step to activate it.",
+        "cta": "Register device"
+      },
+      "zeroResults": {
+        "title": "No devices match your filters",
+        "description": "Try a different search term or status filter.",
+        "clear": "Clear filters"
+      },
+      "dialog": {
+        "title": "Register device",
+        "description": "Register a hardware device as an AWS IoT Thing. No certificate is issued at this stage.",
+        "serialLabel": "Serial number",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Device type",
+        "typePlaceholder": "ambyte",
+        "nameLabel": "Name (optional)",
+        "namePlaceholder": "Greenhouse sensor 1",
+        "submit": "Register",
+        "createSuccess": "Device registered",
+        "createSuccessDetail": "A certificate will be issued to activate it.",
+        "createError": "Failed to register device"
+      },
+      "remove": {
+        "title": "Delete device",
+        "confirm": "This permanently deletes {{name}} and its AWS IoT Thing.",
+        "success": "Device deleted"
+      },
+      "detail": {
+        "back": "Back to devices",
+        "notFound": "Device not found.",
+        "meta": {
+          "serial": "Serial number",
+          "type": "Type",
+          "status": "Status",
+          "registered": "Registered",
+          "thingName": "AWS IoT Thing"
+        },
+        "credentials": {
+          "title": "Credentials",
+          "none": "No certificate issued yet. A certificate will be issued in a later step to activate this device."
+        },
+        "dangerZone": {
+          "title": "Danger zone",
+          "deleteLabel": "Delete this device",
+          "deleteDescription": "Permanently removes the device and its AWS IoT Thing. This cannot be undone."
+        }
+      }
     }
   }
 }

@@ -5,6 +5,7 @@ import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v
 import { env } from "~/env";
 
 import { experimentContract } from "@repo/api/contracts/experiment.contract";
+import { iotContract } from "@repo/api/contracts/iot.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
 import { protocolContract } from "@repo/api/contracts/protocol.contract";
 import { userContract } from "@repo/api/contracts/user.contract";
@@ -18,6 +19,7 @@ const c = initContract();
 // Export the main API contract
 export const contract = c.router({
   experiments: experimentContract,
+  iot: iotContract,
   macros: macroContract,
   protocols: protocolContract,
   users: userContract,

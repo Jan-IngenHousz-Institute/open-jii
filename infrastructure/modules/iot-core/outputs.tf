@@ -9,6 +9,16 @@ output "iot_topic_rule_names" {
   value       = [for rule in aws_iot_topic_rule.iot_rules : rule.name]
 }
 
+output "device_thing_type_name" {
+  description = "Name of the IoT Thing type applied to platform-managed devices"
+  value       = aws_iot_thing_type.device.name
+}
+
+output "device_thing_group_name" {
+  description = "Name of the IoT Thing group that holds all platform-managed devices"
+  value       = aws_iot_thing_group.managed_devices.name
+}
+
 output "iot_kinesis_role_arn" {
   description = "ARN of the IoT Kinesis IAM Role"
   value       = aws_iam_role.iot_kinesis_role.arn
@@ -37,15 +47,5 @@ output "large_iot_dlq_name" {
 output "databricks_large_iot_read_policy_arn" {
   description = "ARN of the IAM policy granting the Databricks storage-credential role read access to the large-iot bucket and SQS queue (null when enable_large_iot_sqs is false)"
   value       = var.enable_large_iot_sqs ? aws_iam_policy.databricks_large_iot_read[0].arn : null
-}
-
-output "provisioned_device_policy_name" {
-  description = "Name of the IoT policy attached to provisioned devices"
-  value       = aws_iot_policy.provisioned_device_policy.name
-}
-
-output "backend_iot_provision_policy_arn" {
-  description = "ARN of the IAM policy granting the ECS backend task role direct IoT provisioning actions"
-  value       = aws_iam_policy.backend_iot_provision.arn
 }
 

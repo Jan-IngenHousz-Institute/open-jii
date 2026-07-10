@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { primaryKey, check, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   pgTable,
@@ -274,6 +275,11 @@ export const protocols = pgTable("protocols", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Source protocol this was forked from (a copy made by a non-creator so they
+  // can edit it); null for originals.
+  forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
@@ -292,6 +298,10 @@ export const macros = pgTable("macros", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Source macro this was forked from; null for originals.
+  forkedFrom: uuid("forked_from").references((): AnyPgColumn => macros.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
@@ -406,6 +416,10 @@ export const workbooks = pgTable(
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
+    // Source workbook this was duplicated from; null for originals.
+    forkedFrom: uuid("forked_from").references((): AnyPgColumn => workbooks.id, {
+      onDelete: "set null",
+    }),
     ...timestamps,
   },
   (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
@@ -459,25 +473,22 @@ export const experimentDashboards = pgTable(
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
 
+export const deviceStatusEnum = pgEnum("device_status", ["pending", "active", "revoked"]);
+
 export const iotDevices = pgTable(
   "iot_devices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    thingName: text("thing_name").unique().notNull(),
-    serialNumber: text("serial_number").unique().notNull(),
-    deviceClass: text("device_class").notNull(),
-    certificateId: text("certificate_id").notNull(),
-    certificateArn: text("certificate_arn").notNull(),
-    status: text("status").notNull().default("active"),
-    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
-    provisionedAt: timestamp("provisioned_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
+    thingName: text("thing_name").notNull().unique(),
+    thingArn: text("thing_arn").notNull(),
+    serialNumber: text("serial_number").notNull().unique(),
+    name: varchar("name", { length: 255 }),
+    deviceType: text("device_type").notNull(),
+    status: deviceStatusEnum("status").default("pending").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
       .notNull(),
-    rotatedAt: timestamp("rotated_at"),
-    revokedAt: timestamp("revoked_at"),
     ...timestamps,
   },
-  (table) => [
-    check("iot_devices_status_check", sql`${table.status} IN ('active', 'rotating', 'revoked')`),
-  ],
+  (t) => [index("iot_devices_created_by_idx").on(t.createdBy)],
 );
