@@ -56,13 +56,7 @@
         "revoked": "Revoked"
       },
       "tabs": {
-        "overview": "Overview",
-        "devices": "Devices",
         "all": "All"
-      },
-      "recent": {
-        "title": "Recent devices",
-        "viewAll": "View all devices"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
@@ -102,7 +96,6 @@
       "detail": {
         "back": "Back to devices",
         "notFound": "Device not found.",
-        "overview": "Overview",
         "meta": {
           "serial": "Serial number",
           "type": "Type",

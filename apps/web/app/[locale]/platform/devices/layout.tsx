@@ -7,12 +7,10 @@ import {
 import { PageContainer } from "@/components/page-container";
 import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
 export default function DevicesLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -29,11 +27,9 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
   const { openRegister } = useDevicesRegister();
 
   const base = `/${locale}/platform/devices`;
-  const isAll = pathname.startsWith(`${base}/all`);
-  const isOverview = pathname === base || pathname === `${base}/`;
-  // Any other /devices/<segment> is an individual device detail, which renders
-  // without the section header/tabs (it provides its own back link).
-  const isDetail = !isAll && !isOverview;
+  // Any deeper segment (/devices/<deviceId>) is an individual device detail,
+  // which renders without the section header (it provides its own back link).
+  const isDetail = pathname !== base && pathname !== `${base}/`;
 
   if (isDetail) {
     return (
@@ -56,18 +52,7 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
 
-      <NavTabs value={isAll ? "all" : "overview"} className="flex w-full flex-1 flex-col">
-        <NavTabsList>
-          <NavTabsTrigger value="overview" asChild>
-            <Link href={base}>{t("iot.devices.tabs.overview")}</Link>
-          </NavTabsTrigger>
-          <NavTabsTrigger value="all" asChild>
-            <Link href={`${base}/all`}>{t("iot.devices.tabs.devices")}</Link>
-          </NavTabsTrigger>
-        </NavTabsList>
-
-        <div className="mt-6 flex flex-1 flex-col">{children}</div>
-      </NavTabs>
+      {children}
     </PageContainer>
   );
 }

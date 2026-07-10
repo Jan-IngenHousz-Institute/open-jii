@@ -1,4 +1,4 @@
-import { IotDevicesOverview } from "@/components/iot-devices/iot-devices-overview";
+import { IotDevicesTableView } from "@/components/iot-devices/iot-devices-table-view";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function DevicesPage() {
-  return <IotDevicesOverview />;
+  return <IotDevicesTableView />;
 }

@@ -56,13 +56,7 @@
         "revoked": "Widerrufen"
       },
       "tabs": {
-        "overview": "Übersicht",
-        "devices": "Geräte",
         "all": "Alle"
-      },
-      "recent": {
-        "title": "Neueste Geräte",
-        "viewAll": "Alle Geräte anzeigen"
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
@@ -102,7 +96,6 @@
       "detail": {
         "back": "Zurück zu Geräten",
         "notFound": "Gerät nicht gefunden.",
-        "overview": "Übersicht",
         "meta": {
           "serial": "Seriennummer",
           "type": "Typ",
