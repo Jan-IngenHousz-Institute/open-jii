@@ -60,7 +60,9 @@
     "recommended": "Empfohlen",
     "compatibleWithProtocol": "Kompatibel mit {{protocolName}} Protokoll",
     "showAll": "Alle anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "forkedFrom": "Geforkt von",
+    "viewOriginal": "Original ansehen"
   },
   "navigation": {
     "experiments": "Experimente",

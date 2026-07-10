@@ -62,7 +62,9 @@
     "recommended": "Recommended",
     "compatibleWithProtocol": "Compatible with {{protocolName}} protocol",
     "showAll": "Show all",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "forkedFrom": "Forked from",
+    "viewOriginal": "View original"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -851,7 +853,7 @@
     "analyticsDisabledToast": "Analytics cookies have been disabled."
   },
   "autosave": {
-    "saving": "Saving\u2026",
+    "saving": "Saving…",
     "saved": "All changes saved",
     "failed": "Couldn't save your changes"
   },
@@ -860,21 +862,21 @@
     "remove": "Remove {{name}}",
     "emptyState": "No columns selected.",
     "addColumn": "Add column",
-    "searchPlaceholder": "Search columns\u2026",
+    "searchPlaceholder": "Search columns…",
     "noColumnsLeft": "No columns left to add."
   },
   "dataFilters": {
     "placeholderSubstring": "Substring",
     "placeholderValue": "Value",
-    "placeholderCommaSeparated": "value1, value2, \u2026",
+    "placeholderCommaSeparated": "value1, value2, …",
     "rangeFrom": "From",
     "rangeTo": "To",
     "pickDate": "Pick a date",
     "pickValue": "Pick a value",
     "pickValues": "Pick values",
     "selectedCount": "{{count}} selected",
-    "searchPlaceholder": "Search\u2026",
-    "loading": "Loading\u2026",
+    "searchPlaceholder": "Search…",
+    "loading": "Loading…",
     "noValues": "No values found.",
     "truncatedNotice": "Showing first {{count}} values; refine the search to find more.",
     "removeValue": "Remove {{name}}",
@@ -886,7 +888,7 @@
     "removeFilter": "Remove filter",
     "removeFilterOn": "Remove filter on {{name}}",
     "noFiltersHint": "No filters. All matching rows are included.",
-    "filterByColumnPlaceholder": "Filter by column\u2026",
+    "filterByColumnPlaceholder": "Filter by column…",
     "noColumnsToFilter": "No columns to filter on.",
     "kindTemporal": "Date / time",
     "kindNumeric": "Numeric",
@@ -906,7 +908,7 @@
   "ui": {
     "actions": {
       "error": "Something went wrong",
-      "deleting": "Deleting\u2026"
+      "deleting": "Deleting…"
     }
   }
 }

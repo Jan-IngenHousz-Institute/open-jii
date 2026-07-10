@@ -10,7 +10,7 @@ export const zWorkbook = z.object({
   metadata: z.record(z.string(), z.unknown()),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
-  forkedFrom: z.string().uuid().nullable(),
+  forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   isUpgradable: z.boolean().optional(),

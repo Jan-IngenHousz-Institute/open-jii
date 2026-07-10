@@ -4,6 +4,7 @@ import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
@@ -124,6 +125,18 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         <h4 className="text-sm font-medium">{tCommon("common.createdBy")}</h4>
         <p className="text-muted-foreground text-sm">{macro.createdByName ?? "-"}</p>
       </div>
+
+      {macro.forkedFrom ? (
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
+          <Link
+            href={`/${locale}/platform/macros/${macro.forkedFrom}`}
+            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+          >
+            {tCommon("common.viewOriginal")}
+          </Link>
+        </div>
+      ) : null}
 
       {/* Compatible Protocols Section */}
       <div

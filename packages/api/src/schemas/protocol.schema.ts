@@ -12,7 +12,7 @@ export const zProtocol = z.object({
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
-  forkedFrom: z.string().uuid().nullable(),
+  forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

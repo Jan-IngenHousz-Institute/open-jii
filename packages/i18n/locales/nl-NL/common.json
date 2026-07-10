@@ -50,7 +50,9 @@
     "megabytes": "MB",
     "comingSoon": "Binnenkort",
     "showAll": "Alles tonen",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "forkedFrom": "Geforkt van",
+    "viewOriginal": "Origineel bekijken"
   },
   "navigation": {
     "experiments": "Experimenten",
