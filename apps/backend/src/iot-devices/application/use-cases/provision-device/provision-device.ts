@@ -55,14 +55,16 @@ export class ProvisionDeviceUseCase {
     const groupResult = await this.awsIot.addThingToThingGroup(thingName, thingGroupName);
     if (groupResult.isFailure()) {
       const r = await this.awsIot.deleteThing(thingName);
-      if (r.isFailure()) this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r.error });
+      if (r.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r.error });
       return groupResult;
     }
 
     const certResult = await this.awsIot.createKeysAndCertificate();
     if (certResult.isFailure()) {
       const r = await this.awsIot.deleteThing(thingName);
-      if (r.isFailure()) this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r.error });
+      if (r.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r.error });
       return certResult;
     }
     const { certificateId, certificateArn, certificatePem, privateKey } = certResult.value;
@@ -70,9 +72,11 @@ export class ProvisionDeviceUseCase {
     const attachResult = await this.awsIot.attachThingPrincipal(thingName, certificateArn);
     if (attachResult.isFailure()) {
       const r1 = await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
-      if (r1.isFailure()) this.logger.warn({ msg: "Cleanup failed: revoke cert", certificateId, error: r1.error });
+      if (r1.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: revoke cert", certificateId, error: r1.error });
       const r2 = await this.awsIot.deleteThing(thingName);
-      if (r2.isFailure()) this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r2.error });
+      if (r2.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r2.error });
       return attachResult;
     }
 
@@ -80,11 +84,18 @@ export class ProvisionDeviceUseCase {
     const policyResult = await this.awsIot.attachPolicy(policyName, certificateArn);
     if (policyResult.isFailure()) {
       const r1 = await this.awsIot.detachThingPrincipal(thingName, certificateArn);
-      if (r1.isFailure()) this.logger.warn({ msg: "Cleanup failed: detachThingPrincipal", thingName, error: r1.error });
+      if (r1.isFailure())
+        this.logger.warn({
+          msg: "Cleanup failed: detachThingPrincipal",
+          thingName,
+          error: r1.error,
+        });
       const r2 = await this.awsIot.updateCertificateStatus(certificateId, "REVOKED");
-      if (r2.isFailure()) this.logger.warn({ msg: "Cleanup failed: revoke cert", certificateId, error: r2.error });
+      if (r2.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: revoke cert", certificateId, error: r2.error });
       const r3 = await this.awsIot.deleteThing(thingName);
-      if (r3.isFailure()) this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r3.error });
+      if (r3.isFailure())
+        this.logger.warn({ msg: "Cleanup failed: deleteThing", thingName, error: r3.error });
       return policyResult;
     }
 

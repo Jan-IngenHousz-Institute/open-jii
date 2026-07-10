@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+// eslint-disable-next-line no-restricted-imports
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { tsr } from "~/shared/api/tsr";
 import { createLogger } from "~/shared/observability/logger";

@@ -60,6 +60,7 @@ resource "aws_iam_policy" "backend_iot_provision" {
       Action = [
         "iot:CreateThing",
         "iot:DeleteThing",
+        "iot:AddThingToThingGroup",
         "iot:CreateKeysAndCertificate",
         "iot:AttachThingPrincipal",
         "iot:DetachThingPrincipal",
