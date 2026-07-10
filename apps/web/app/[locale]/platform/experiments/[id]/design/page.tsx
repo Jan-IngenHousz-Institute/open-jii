@@ -12,6 +12,7 @@ import {
 } from "@/components/shared/autosave/autosave-status-context";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
+import { WorkbookEntitySavedProvider } from "@/components/workbook/workbook-entity-saved-context";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
@@ -188,13 +189,15 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                     </p>
                   </AlertDescription>
                 </Alert>
-                <WorkbookDraftEditor
-                  id={workbookId}
-                  initialCells={workbookDraft.cells}
-                  createdBy={workbookDraft.createdBy}
-                  name={workbookDraft.name}
-                  onSaved={handleDraftSaved}
-                />
+                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
+                  <WorkbookDraftEditor
+                    id={workbookId}
+                    initialCells={workbookDraft.cells}
+                    createdBy={workbookDraft.createdBy}
+                    name={workbookDraft.name}
+                    onSaved={handleDraftSaved}
+                  />
+                </WorkbookEntitySavedProvider>
               </div>
             ) : (
               <WorkbookEditor

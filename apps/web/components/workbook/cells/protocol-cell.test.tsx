@@ -8,6 +8,7 @@ import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
+import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
 import { ProtocolCellComponent } from "./protocol-cell";
 
 vi.mock("../workbook-code-editor", () => ({
@@ -223,6 +224,35 @@ describe("ProtocolCellComponent", () => {
     await vi.advanceTimersByTimeAsync(1100);
     await waitFor(() => expect(updateSpy.called).toBe(true));
     expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
+    vi.useRealTimers();
+  });
+
+  it("notifies the host after a successful save so the experiment can re-pin", async () => {
+    // Protocol/macro code saves bypass the workbook cells autosave, so they must
+    // signal via WorkbookEntitySavedProvider for the design page to auto-upgrade.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    server.mount(contract.protocols.updateProtocol, { body: createProtocol({ id: "p1" }) });
+    const onEntitySaved = vi.fn();
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <WorkbookEntitySavedProvider onEntitySaved={onEntitySaved}>
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />
+      </WorkbookEntitySavedProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    await vi.advanceTimersByTimeAsync(1100);
+    await waitFor(() => expect(onEntitySaved).toHaveBeenCalled());
     vi.useRealTimers();
   });
 

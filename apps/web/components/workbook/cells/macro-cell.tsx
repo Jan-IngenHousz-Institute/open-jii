@@ -27,6 +27,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
 
 interface MacroCellProps {
   cell: MacroCellType;
@@ -77,6 +78,7 @@ export function MacroCellComponent({
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
 
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
+  const onEntitySaved = useWorkbookEntitySaved();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
 
@@ -93,12 +95,13 @@ export function MacroCellComponent({
     async (code: string) => {
       try {
         await saveMacro({ params: { id: macroId }, body: { code: encodeBase64(code) } });
+        onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
       }
     },
-    [macroId, saveMacro],
+    [macroId, saveMacro, onEntitySaved],
   );
 
   const autosave = useAutosave<string>({

@@ -22,6 +22,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
 
 interface ProtocolCellProps {
   cell: ProtocolCellType;
@@ -73,6 +74,7 @@ export function ProtocolCellComponent({
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
+  const onEntitySaved = useWorkbookEntitySaved();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
 
@@ -93,12 +95,13 @@ export function ProtocolCellComponent({
           params: { id: protocolId },
           body: { code: JSON.parse(code) as Record<string, unknown>[] },
         });
+        onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
       }
     },
-    [protocolId, saveProtocol],
+    [protocolId, saveProtocol, onEntitySaved],
   );
 
   const isValidCode = useCallback((code: string) => {
