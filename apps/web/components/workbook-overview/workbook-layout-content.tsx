@@ -121,7 +121,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
                 href={`/platform/workbooks/${workbook.forkedFrom}`}
                 className="text-sm leading-[21px] text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
               >
-                {t("workbooks.actions.open")}
+                {tCommon("common.viewOriginal")}
               </Link>
             </div>
           ) : null}

@@ -2,7 +2,7 @@ import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -75,6 +75,12 @@ describe("ProtocolCellComponent", () => {
       typeof useSession
     >);
     server.mount(contract.protocols.getProtocol, { body: protocol });
+  });
+
+  // Guarantee fake timers never leak into a later test if an assertion throws
+  // before a test's own vi.useRealTimers() runs.
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("shows the protocol name and its code once loaded", async () => {
