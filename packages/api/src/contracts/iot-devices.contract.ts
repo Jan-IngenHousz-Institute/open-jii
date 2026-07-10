@@ -1,4 +1,5 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 import { zErrorResponse } from "../schemas/experiment.schema";
 import {
@@ -39,7 +40,7 @@ export const iotDevicesContract = c.router({
   get: {
     method: "GET",
     path: "/api/v1/iot-devices/:thingName",
-    pathParams: c.type<{ thingName: string }>(),
+    pathParams: z.object({ thingName: z.string() }),
     responses: {
       200: zIotDevice,
       401: zErrorResponse,
@@ -51,8 +52,8 @@ export const iotDevicesContract = c.router({
   rotateCertificate: {
     method: "POST",
     path: "/api/v1/iot-devices/:thingName/rotate-certificate",
-    pathParams: c.type<{ thingName: string }>(),
-    body: c.type<Record<string, never>>(),
+    pathParams: z.object({ thingName: z.string() }),
+    body: z.object({}),
     responses: {
       200: zRotateCertificateResponse,
       401: zErrorResponse,
@@ -67,7 +68,7 @@ export const iotDevicesContract = c.router({
   decommission: {
     method: "DELETE",
     path: "/api/v1/iot-devices/:thingName",
-    pathParams: c.type<{ thingName: string }>(),
+    pathParams: z.object({ thingName: z.string() }),
     responses: {
       200: zIotDevice,
       401: zErrorResponse,
