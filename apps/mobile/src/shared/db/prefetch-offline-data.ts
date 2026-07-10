@@ -1,12 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line no-restricted-imports
 import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { tsr } from "~/shared/api/tsr";
 import { createLogger } from "~/shared/observability/logger";
 import { uniq } from "~/shared/utils/uniq";
-import { extractAssetIdsFromCells } from "~/shared/utils/workbook-assets";
-
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 const log = createLogger("prefetch");
 
@@ -57,46 +53,15 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
     staleTime: 0,
   });
 
-  const experiments = (experimentsResponse?.body ?? []) as {
-    id: string;
-    workbookId: string | null;
-    workbookVersionId: string | null;
-  }[];
+  const experiments = (experimentsResponse?.body ?? []) as { id: string }[];
 
-  // 2. For each experiment, cache its run source and extract protocol/macro IDs.
-  //    Workbook-backed experiments cache the workbook version (cells carry the
-  //    branch conditions needed for offline evaluation); legacy experiments
-  //    cache the flow graph as before.
+  // 2. For each experiment, fetch the flow and extract protocol/macro IDs
   const allProtocolIds: string[] = [];
   const allMacroIds: string[] = [];
 
   const flowResults = await Promise.allSettled(
-    experiments.map(async (experiment) => {
+    experiments.map(async (experiment: { id: string }) => {
       try {
-        if (experiment.workbookId && experiment.workbookVersionId) {
-          const workbookId = experiment.workbookId;
-          const workbookVersionId = experiment.workbookVersionId;
-          try {
-            const versionResponse = await queryClient.fetchQuery({
-              queryKey: ["workbook-version", workbookId, workbookVersionId],
-              queryFn: () =>
-                tsr.workbooks.getWorkbookVersion.query({
-                  params: { id: workbookId, versionId: workbookVersionId },
-                }),
-              staleTime: 0,
-            });
-
-            const cells =
-              (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
-            const { protocolIds, macroIds } = extractAssetIdsFromCells(cells);
-            allProtocolIds.push(...protocolIds);
-            allMacroIds.push(...macroIds);
-            return;
-          } catch {
-            // Fall through to legacy flow-graph resolution below.
-          }
-        }
-
         const flowResponse: any = await queryClient.fetchQuery({
           queryKey: ["experiment-flow", experiment.id],
           queryFn: async () => {
@@ -122,7 +87,7 @@ async function _prefetchOfflineData(queryClient: QueryClient, userId?: string): 
         allMacroIds.push(...macroIds);
       } catch (err) {
         throw new Error(
-          `Run-source fetch failed for experiment ${experiment.id}: ${err instanceof Error ? err.message : String(err)}`,
+          `Flow fetch failed for experiment ${experiment.id}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }),
