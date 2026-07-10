@@ -19,7 +19,6 @@ export function useMacroCreate(options?: UseMacroCreateOptions) {
     ...options,
     onSuccess: (...args) => {
       void queryClient.invalidateQueries({ queryKey: ["macros"] });
-      toast({ description: t("macros.macroCreated") });
       options?.onSuccess?.(...args);
     },
     onError: (error, ...rest) => {

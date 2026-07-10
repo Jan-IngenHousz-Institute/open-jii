@@ -1,6 +1,7 @@
 "use client";
 
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { Leaf } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import { useTranslation } from "@repo/i18n";
@@ -49,6 +50,7 @@ export function ExperimentTitle({
       hasAccess={hasAccess && !isArchived}
       onSave={handleSave}
       isPending={isUpdating}
+      icon={<Leaf className="h-6 w-6" />}
     />
   );
 }

@@ -268,6 +268,18 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByText("-")).toBeInTheDocument();
   });
 
+  it("renders a 'view original' link when the protocol is a fork", () => {
+    renderComponent({ protocol: { ...mockProtocol, forkedFrom: "p-src" } });
+    expect(screen.getByText("common.forkedFrom")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "common.viewOriginal" });
+    expect(link.getAttribute("href")).toContain("/platform/protocols/p-src");
+  });
+
+  it("does not render the fork link for a non-fork protocol", () => {
+    renderComponent();
+    expect(screen.queryByText("common.forkedFrom")).not.toBeInTheDocument();
+  });
+
   it("passes collapsed summary to DetailsSidebarCard", () => {
     renderComponent();
     const sidebarCard = screen.getByTestId("details-sidebar-card");
