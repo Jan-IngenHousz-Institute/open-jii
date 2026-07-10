@@ -34,7 +34,7 @@
     "notUsed": "Nicht verwendet",
     "usedByCount_one": "{{count}} Experiment",
     "usedByCount_other": "{{count}} Experimente",
-    "duplicateName": "Kopie von {{name}}",
+    "duplicateName": "Fork von {{name}}",
     "columns": {
       "name": "Name",
       "usedBy": "Verwendet von",
@@ -45,7 +45,8 @@
       "open": "Öffnen",
       "duplicate": "Duplizieren",
       "delete": "Löschen",
-      "more": "Weitere Aktionen"
+      "more": "Weitere Aktionen",
+      "fork": "Forken"
     },
     "messages": {
       "deleteSuccess": "Arbeitsmappe gelöscht",
@@ -64,7 +65,8 @@
       "branch_other": "{{count}} Verzweigungen",
       "markdown_one": "{{count}} Notiz",
       "markdown_other": "{{count}} Notizen"
-    }
+    },
+    "forkedFrom": "Geforkt von"
   },
   "output": {
     "label": "Ausgabe",
@@ -85,5 +87,11 @@
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
     "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
+  },
+  "cells": {
+    "protocolReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
+    "macroReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
+    "fork": "Zum Bearbeiten forken",
+    "forkedFrom": "Geforkt von"
   }
 }

@@ -122,8 +122,15 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
         Resource = var.cognito_identity_pool_arn
       },
       {
-        Effect   = "Allow"
-        Action   = ["iot:AttachPolicy"]
+        Effect = "Allow"
+        Action = [
+          "iot:AttachPolicy",
+          "iot:CreateThing",
+          "iot:DeleteThing",
+          "iot:DescribeThing",
+          "iot:AddThingToThingGroup",
+          "iot:RemoveThingFromThingGroup"
+        ]
         Resource = "*"
       }
     ]

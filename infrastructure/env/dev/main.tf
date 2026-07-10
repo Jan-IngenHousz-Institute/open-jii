@@ -1835,6 +1835,14 @@ module "backend_ecs" {
       value = join(",", module.iot_core.iot_policy_names)
     },
     {
+      name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"
+      value = module.iot_core.device_thing_type_name
+    },
+    {
+      name  = "AWS_IOT_DEVICE_THING_GROUP_NAME"
+      value = module.iot_core.device_thing_group_name
+    },
+    {
       name  = "EMAIL_BASE_URL"
       value = "https://${module.route53.environment_domain}"
     },

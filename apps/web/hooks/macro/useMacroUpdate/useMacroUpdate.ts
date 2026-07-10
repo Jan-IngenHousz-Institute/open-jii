@@ -76,6 +76,11 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       await queryClient.invalidateQueries({
         queryKey: ["macros"],
       });
+      // Editing shared macro code changes workbook drift; refetch so an attached
+      // experiment's upgrade prompt reacts immediately.
+      await queryClient.invalidateQueries({
+        queryKey: ["workbook"],
+      });
     },
     onSuccess: (data) => {
       // Call the provided onSuccess callback if it exists
