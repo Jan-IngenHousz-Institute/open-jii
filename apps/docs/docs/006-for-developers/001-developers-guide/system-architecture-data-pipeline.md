@@ -83,7 +83,7 @@ AL[Auto Loader]
 end
 
 subgraph "Databricks — centrum schema"
-B["Bronze<br/>raw_data<br/>raw_imported_data<br/>raw_large_iot_data"]
+B["Bronze<br/>raw_data<br/>raw_imported_data<br/>raw_large_data"]
 SV["Silver<br/>clean_data"]
 G["Gold<br/>experiment_raw_data<br/>experiment_device_data<br/>experiment_macro_data"]
 EV["Enriched Views"]
@@ -113,7 +113,7 @@ G --> EXP
 **Data Flow:**
 
 1. **Real-time sensor data**: IoT devices and mobile app publish gzip+base64-encoded MQTT messages → AWS IoT Core → Kinesis → Bronze `raw_data` → Silver `clean_data` → Gold `experiment_device_data`
-2. **Large IoT payloads**: Client requests pre-signed S3 URL from backend (`/api/v1/iot/upload-url`) → uploads JSON directly to S3 (`s3://bucket/large-iot/{experimentId}/{uuid}.json`) → Databricks Auto Loader (directory listing) ingests into Bronze `raw_large_iot_data` → same Silver/Gold flow as real-time data
+2. **Large IoT payloads**: Client requests pre-signed S3 URL from backend (`/api/v1/iot/upload-url`) → uploads JSON directly to S3 (`s3://bucket/large-iot/{experimentId}/{uuid}.json`) → Databricks Auto Loader (directory listing) ingests into Bronze `raw_large_data` → same Silver/Gold flow as real-time data
 3. **Web uploads & project transfers**: Files uploaded to S3 → Auto Loader → Bronze `raw_imported_data` → same Silver/Gold flow
 
 See [Data Ingestion Architecture](/docs/data-platform/ingestion-architecture) for detailed documentation on the medallion architecture, VARIANT columns, table identity model, and export system.

@@ -106,7 +106,7 @@ MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 LARGE_IOT_S3_PATH = spark.conf.get("LARGE_IOT_S3_PATH", "")
 
-RAW_LARGE_IOT_TABLE = "raw_large_iot_data"
+RAW_LARGE_IOT_TABLE = "raw_large_data"
 
 EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
