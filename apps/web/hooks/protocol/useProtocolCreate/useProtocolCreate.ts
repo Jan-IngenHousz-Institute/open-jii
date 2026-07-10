@@ -19,7 +19,6 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
   return route.useMutation({
     ...options,
     onSuccess: (...args) => {
-      toast({ description: t("protocols.protocolCreated") });
       options.onSuccess?.(...args);
     },
     onMutate: async () => {
