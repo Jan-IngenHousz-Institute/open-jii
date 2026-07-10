@@ -6,6 +6,8 @@ export interface AwsConfig {
   cognitoIdentityPoolId: string;
   cognitoDeveloperProviderName: string;
   iotPolicyNames: string[];
+  deviceThingTypeName: string;
+  deviceThingGroupName: string;
   lambda: {
     macroSandboxPythonFunctionName: string;
     macroSandboxJavascriptFunctionName: string;
@@ -23,6 +25,8 @@ export const awsConfigSchema = z.object({
   cognitoIdentityPoolId: z.string().min(1),
   cognitoDeveloperProviderName: z.string().min(1),
   iotPolicyNames: z.array(z.string().min(1)).min(1),
+  deviceThingTypeName: z.string().min(1),
+  deviceThingGroupName: z.string().min(1),
   lambda: z.object({
     macroSandboxPythonFunctionName: z.string().min(1),
     macroSandboxJavascriptFunctionName: z.string().min(1),
