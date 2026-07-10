@@ -1,16 +1,20 @@
 "use client";
 
+import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
 import type { MacroCell as MacroCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Select,
@@ -19,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
@@ -56,6 +61,7 @@ export function MacroCellComponent({
   const language = cell.payload.language;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
+  const { t } = useTranslation("workbook");
 
   const useSnapshot = snapshot != null;
   const { data: macroData, isLoading: liveLoading } = useMacro(macroId, !useSnapshot);
@@ -65,46 +71,42 @@ export function MacroCellComponent({
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
   const macroLanguage = macroData?.language;
   const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
+  const isEditable = isOwner && !readOnly;
+  // Read-only purely because the viewer did not create this macro (not because
+  // the cell is rendered from a pinned snapshot or in a read-only host).
+  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
 
-  const { mutate: saveMacro } = useMacroUpdate(macroId);
+  const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
 
   const [localCode, setLocalCode] = useState<string | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (macroCode != null && localCode == null) {
       setLocalCode(macroCode);
-      savedKeyRef.current = macroCode;
     }
   }, [macroCode, localCode]);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
-
-  const handleCodeChange = useCallback(
-    (code: string) => {
-      setLocalCode(code);
-
-      if (code === savedKeyRef.current) return;
-
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        saveMacro(
-          { params: { id: macroId }, body: { code: encodeBase64(code) } },
-          {
-            onSuccess: () => {
-              savedKeyRef.current = code;
-            },
-          },
-        );
-      }, 1000);
+  // Mirror the protocol cell: persist via the shared `useAutosave` hook so a
+  // failed save surfaces a toast and the indicator flips to "error" instead of
+  // silently dropping the edit.
+  const save = useCallback(
+    async (code: string) => {
+      try {
+        await saveMacro({ params: { id: macroId }, body: { code: encodeBase64(code) } });
+      } catch (err) {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        throw err;
+      }
     },
     [macroId, saveMacro],
   );
+
+  const autosave = useAutosave<string>({
+    value: localCode ?? "",
+    toKey: (code) => code,
+    save,
+    enabled: isEditable && localCode != null,
+  });
 
   const handleCopy = () => {
     const text = localCode ?? macroCode ?? "";
@@ -113,7 +115,11 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      saveMacro({ params: { id: macroId }, body: { language: lang } });
+      void saveMacro({ params: { id: macroId }, body: { language: lang } }).catch(
+        (err: unknown) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+      );
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
     [macroId, saveMacro, cell, onUpdate],
@@ -136,6 +142,11 @@ export function MacroCellComponent({
       readOnly={readOnly}
       forceActionsVisible={langSelectOpen}
       onRun={onRun}
+      headerBadges={
+        isEditable && localCode != null ? (
+          <AutosaveIndicator status={autosave.status} variant="compact" />
+        ) : undefined
+      }
       headerActions={
         <div className="flex items-center gap-1">
           <Button
@@ -196,15 +207,20 @@ export function MacroCellComponent({
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         </div>
       ) : localCode != null || macroCode != null ? (
-        <WorkbookCodeEditor
-          value={localCode ?? macroCode ?? ""}
-          onChange={isOwner && !readOnly ? handleCodeChange : undefined}
-          language={macroLanguage ?? language}
-          minHeight={isOwner && !readOnly ? "120px" : "80px"}
-          maxHeight={isOwner && !readOnly ? "500px" : "400px"}
-          readOnly={readOnly ?? !isOwner}
-          syntaxLinting={isOwner && !readOnly}
-        />
+        <>
+          {isReadOnlyForNonOwner && (
+            <p className="text-muted-foreground px-3 pt-2 text-xs">{t("cells.macroReadOnly")}</p>
+          )}
+          <WorkbookCodeEditor
+            value={localCode ?? macroCode ?? ""}
+            onChange={isEditable ? setLocalCode : undefined}
+            language={macroLanguage ?? language}
+            minHeight={isEditable ? "120px" : "80px"}
+            maxHeight={isEditable ? "500px" : "400px"}
+            readOnly={readOnly ?? !isOwner}
+            syntaxLinting={isEditable}
+          />
+        </>
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load macro code</p>
       )}

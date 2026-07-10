@@ -129,6 +129,48 @@ describe("MacroCellComponent", () => {
     >);
   });
 
+  it("shows a save status indicator for the owner", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+
+    renderMacroCell();
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved");
+    });
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
+  it("shows a read-only hint and no save status when the viewer is not the creator", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "other-user" } },
+    } as ReturnType<typeof useSession>);
+
+    renderMacroCell();
+
+    await waitFor(() => {
+      expect(screen.getByText("cells.macroReadOnly")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
+  it("does not show the read-only hint when rendering a pinned snapshot", async () => {
+    renderMacroCell({ snapshot: { code: btoa("print('pinned')") } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox")).toHaveValue("print('pinned')");
+    });
+    expect(screen.queryByText("cells.macroReadOnly")).not.toBeInTheDocument();
+  });
+
   it("renders the pinned snapshot code instead of the live macro row", async () => {
     // The live row has different code; with a snapshot present the live fetch is
     // disabled and the pinned snapshot must win.

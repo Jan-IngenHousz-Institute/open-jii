@@ -85,5 +85,9 @@
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
     "timeseriesError": "Cannot decode this output against the source protocol"
+  },
+  "cells": {
+    "protocolReadOnly": "Read-only. Only the creator can edit this protocol.",
+    "macroReadOnly": "Read-only. Only the creator can edit this macro."
   }
 }

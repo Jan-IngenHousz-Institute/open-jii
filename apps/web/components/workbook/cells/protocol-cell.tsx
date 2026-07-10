@@ -51,6 +51,7 @@ export function ProtocolCellComponent({
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
   const { t } = useTranslation("iot");
+  const { t: tWorkbook } = useTranslation("workbook");
 
   const useSnapshot = snapshot != null;
   const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
@@ -67,6 +68,9 @@ export function ProtocolCellComponent({
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.body.family;
   const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
   const isEditable = isOwner && !readOnly;
+  // Read-only purely because the viewer did not create this protocol (not
+  // because the cell is rendered from a pinned snapshot or in a read-only host).
+  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
 
@@ -223,14 +227,21 @@ export function ProtocolCellComponent({
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         </div>
       ) : localCode != null || protocolCode != null ? (
-        <WorkbookCodeEditor
-          value={localCode ?? protocolCode ?? ""}
-          onChange={isEditable ? setLocalCode : undefined}
-          language="json"
-          minHeight={isEditable ? "120px" : "80px"}
-          maxHeight={isEditable ? "500px" : "400px"}
-          readOnly={readOnly ?? !isOwner}
-        />
+        <>
+          {isReadOnlyForNonOwner && (
+            <p className="text-muted-foreground px-3 pt-2 text-xs">
+              {tWorkbook("cells.protocolReadOnly")}
+            </p>
+          )}
+          <WorkbookCodeEditor
+            value={localCode ?? protocolCode ?? ""}
+            onChange={isEditable ? setLocalCode : undefined}
+            language="json"
+            minHeight={isEditable ? "120px" : "80px"}
+            maxHeight={isEditable ? "500px" : "400px"}
+            readOnly={readOnly ?? !isOwner}
+          />
+        </>
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load protocol code</p>
       )}

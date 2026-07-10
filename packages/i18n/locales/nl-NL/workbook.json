@@ -85,5 +85,9 @@
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
     "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
+  },
+  "cells": {
+    "protocolReadOnly": "Alleen-lezen. Alleen de maker kan dit protocol bewerken.",
+    "macroReadOnly": "Alleen-lezen. Alleen de maker kan deze macro bewerken."
   }
 }

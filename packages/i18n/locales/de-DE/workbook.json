@@ -85,5 +85,9 @@
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
     "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
+  },
+  "cells": {
+    "protocolReadOnly": "Schreibgeschützt. Nur der Ersteller kann dieses Protokoll bearbeiten.",
+    "macroReadOnly": "Schreibgeschützt. Nur der Ersteller kann dieses Makro bearbeiten."
   }
 }
