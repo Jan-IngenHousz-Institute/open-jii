@@ -217,7 +217,7 @@ export function MacroCellComponent({
             language={macroLanguage ?? language}
             minHeight={isEditable ? "120px" : "80px"}
             maxHeight={isEditable ? "500px" : "400px"}
-            readOnly={readOnly ?? !isOwner}
+            readOnly={!isEditable}
             syntaxLinting={isEditable}
           />
         </>

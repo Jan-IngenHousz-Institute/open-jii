@@ -306,8 +306,8 @@ describe("ProtocolCellComponent", () => {
 
   it("exposes the latest edited code to the run flow immediately, before the debounce", async () => {
     // The run flow reads the live editor code rather than re-fetching from the
-    // server, so an edit is runnable straight away — no waiting out the 1000ms
-    // autosave debounce, and never a stale saved version.
+    // server, so an edit is runnable straight away (no waiting out the 1000ms
+    // autosave debounce), and never a stale saved version.
     server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
@@ -467,6 +467,31 @@ describe("ProtocolCellComponent", () => {
         expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
       );
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("stays read-only for a non-owner even when the parent passes readOnly={false}", async () => {
+      // A workbook owner editing their workbook passes readOnly={false} down to
+      // every cell; a protocol they did not create must still be non-editable.
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+
+      render(
+        <ProtocolCellComponent
+          cell={makeProtocolCell()}
+          onUpdate={vi.fn()}
+          onDelete={vi.fn()}
+          readOnly={false}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
+      );
     });
   });
 });

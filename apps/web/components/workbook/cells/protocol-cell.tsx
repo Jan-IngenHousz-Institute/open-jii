@@ -239,7 +239,7 @@ export function ProtocolCellComponent({
             language="json"
             minHeight={isEditable ? "120px" : "80px"}
             maxHeight={isEditable ? "500px" : "400px"}
-            readOnly={readOnly ?? !isOwner}
+            readOnly={!isEditable}
           />
         </>
       ) : (
