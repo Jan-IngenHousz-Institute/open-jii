@@ -2,12 +2,22 @@
  * Semantic release configuration for Docs app
  * Tag format: docs-vX.Y.Z
  */
+import {
+  analyzeCommits,
+  fail,
+  generateNotes,
+  success,
+} from "@open-jii/release-tools/monorepo-deps.js";
+
 import baseConfig from "../../.releaserc.js";
 
 export default {
   ...baseConfig,
-  extends: "semantic-release-monorepo",
   tagFormat: "docs-v${version}",
+  analyzeCommits,
+  generateNotes,
+  success,
+  fail,
   plugins: [
     ...baseConfig.plugins,
     [

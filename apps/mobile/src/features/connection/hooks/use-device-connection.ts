@@ -1,7 +1,8 @@
-import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { connectionKeys } from "~/features/connection/services/connection-keys";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
@@ -10,66 +11,22 @@ import {
   disconnectFromDevice,
   unpairDevice,
 } from "../services/device-connection-manager/device-connection";
+import { getConnectedDevice } from "../services/device-connection-manager/device-queries";
+import { mergeDevice } from "../services/device-connection-manager/device-sort";
 import {
-  getConnectedDevice,
-  getAllDevices,
-} from "../services/device-connection-manager/device-queries";
-
-const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
-
-/**
- * Bind once-per-app-lifetime listeners that keep the scanner executor in
- * sync with the connected-device cache:
- *
- *   1. Native onDeviceDisconnected — fires immediately when the OS reports
- *      a disconnect (when it bothers to). Invalidates the query so the UI
- *      flips to the disconnect state ASAP.
- *   2. QueryCache subscriber on the connected-device key — catches the
- *      polling-detected disconnect case (common on Android when the device
- *      is simply powered off and no native event fires) AND the native
- *      event case after the invalidation refetches null. Either way, the
- *      scanner executor store gets cleared exactly when data transitions
- *      from non-null → null.
- *
- * Previously the QueryCache-subscriber path lived as a useEffect inside
- * useConnectedDevice, which ran once per consumer. The module-level
- * subscription is one listener for the whole app, and removes the only
- * useEffect that lived in this hook file.
- */
-let listenersBound = false;
-function initConnectedDeviceListeners(client: QueryClient) {
-  if (listenersBound) return;
-  listenersBound = true;
-
-  RNBluetoothClassic.onDeviceDisconnected(() => {
-    void client.invalidateQueries({ queryKey: CONNECTED_DEVICE_KEY });
-  });
-
-  let prev: Device | null | undefined = client.getQueryData(CONNECTED_DEVICE_KEY);
-  client.getQueryCache().subscribe((event) => {
-    if (event.type !== "updated") return;
-    if (event.query.queryKey[0] !== CONNECTED_DEVICE_KEY[0]) return;
-    const next = event.query.state.data as Device | null | undefined;
-    if (prev && !next) {
-      void useScannerCommandExecutorStore.getState().setDevice(undefined);
-    }
-    prev = next;
-  });
-}
+  bluetoothDeviceToDevice,
+  discoveredEventToDevice,
+  serialDeviceToDevice,
+} from "../services/device-connection-manager/device-utils";
+import { listSerialPortDevices } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 
 export function useConnectedDevice() {
-  const client = useQueryClient();
-  initConnectedDeviceListeners(client);
-
   return useQuery({
-    queryKey: CONNECTED_DEVICE_KEY,
+    queryKey: connectionKeys.connectedDevice,
     queryFn: getConnectedDevice,
     networkMode: "always",
-    // Poll so we catch disconnects even when the native
-    // onDeviceDisconnected event doesn't fire (common on Android
-    // when the device is simply powered off). The module-level
-    // QueryCache subscriber turns these polling-detected transitions
-    // into the scanner-store cleanup.
+    // Poll to catch disconnects the native event misses (common on Android when
+    // powered off); mountConnectionLifecycle turns the transition into cleanup.
     refetchInterval: 3000,
   });
 }
@@ -90,9 +47,7 @@ export function useConnectToDevice() {
         // Remember this device so the measurement flow can offer an inline
         // reconnect button if the connection is lost during a session.
         setLastConnectedDevice(device);
-        await client.invalidateQueries({
-          queryKey: ["connected-device"],
-        });
+        await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
       } finally {
         setConnectingDeviceId(undefined);
       }
@@ -100,16 +55,12 @@ export function useConnectToDevice() {
     async disconnectFromDevice(device: Device) {
       await disconnectFromDevice(device);
       await setDevice(undefined);
-      await client.invalidateQueries({
-        queryKey: ["connected-device"],
-      });
+      await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
     },
     async unpairDevice(device: Device) {
       await unpairDevice(device);
 
-      await client.invalidateQueries({
-        queryKey: ["connected-device"],
-      });
+      await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
 
       // Update scanner command executor store based on current connected device state
       // (in case the unpaired device was the connected one)
@@ -119,11 +70,62 @@ export function useConnectToDevice() {
   };
 }
 
+/**
+ * Streams nearby devices as the OS discovers them instead of blocking on the full
+ * scan. Seeds with attached serial + bonded/connected BLE, then merges each
+ * discovery event. Return shape matches the previous useQuery consumers.
+ */
 export function useAllDevices() {
-  return useQuery({
-    queryKey: ["all-devices"],
-    queryFn: () => getAllDevices(),
-    enabled: false,
-    networkMode: "always",
-  });
+  const [data, setData] = useState<Device[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const sub = RNBluetoothClassic.onDeviceDiscovered((event) => {
+      const device = discoveredEventToDevice(event);
+      if (!device) return;
+      setData((prev) => mergeDevice(prev, device));
+    });
+    return () => {
+      mountedRef.current = false;
+      sub.remove();
+      void RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
+    };
+  }, []);
+
+  const refetch = useCallback(async () => {
+    setIsFetching(true);
+    await RNBluetoothClassic.cancelDiscovery().catch(() => undefined);
+    // Seed with already-known devices (serial first) so the list isn't empty.
+    const [serial, bonded, connected] = await Promise.allSettled([
+      listSerialPortDevices(),
+      RNBluetoothClassic.getBondedDevices(),
+      RNBluetoothClassic.getConnectedDevices(),
+    ]);
+    // Bail if the sheet closed during the await: don't seed or restart a scan
+    // with no active subscriber.
+    if (!mountedRef.current) return;
+    const seed = [
+      ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
+      // bluetoothDeviceToDevice is address-guarded and returns null for entries
+      // without a usable address, so drop those rather than seeding bad rows.
+      ...(bonded.status === "fulfilled"
+        ? bonded.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
+        : []),
+      ...(connected.status === "fulfilled"
+        ? connected.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
+        : []),
+    ].reduce<Device[]>(mergeDevice, []);
+    setData(seed);
+    try {
+      await RNBluetoothClassic.startDiscovery();
+    } catch {
+      // No permission or scan failure; seeded/streamed results stay.
+    } finally {
+      if (mountedRef.current) setIsFetching(false);
+    }
+  }, []);
+
+  return { data, refetch, isFetching };
 }

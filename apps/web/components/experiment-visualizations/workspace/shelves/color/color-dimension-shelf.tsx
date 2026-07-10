@@ -148,7 +148,7 @@ export function ColorDimensionShelf({
                     {t("workspace.shelves.colorMode")}
                   </FormLabel>
                   <Select
-                    value={(field.value as string | undefined) ?? "continuous"}
+                    value={field.value ?? "continuous"}
                     onValueChange={(v) => field.onChange(v)}
                   >
                     <FormControl>
@@ -180,7 +180,7 @@ export function ColorDimensionShelf({
           )}
 
           {colorMode === "categorical" ? (
-            <CategoricalColorMap form={form} />
+            <CategoricalColorMap form={form} columns={columns} />
           ) : (
             <ContinuousColorSettings
               control={form.control}

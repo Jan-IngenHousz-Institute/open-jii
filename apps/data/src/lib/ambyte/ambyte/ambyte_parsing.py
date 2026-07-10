@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import os
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
 
@@ -182,12 +182,14 @@ def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6
     return sorted(set(results))
 
 
-def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tuple[List[List[list]], str]:
+def load_files_per_byte(
+    byte_folder_path: str, year_prefix: Union[str, Tuple[str, ...]] = "2025"
+) -> Tuple[List[List[list]], str]:
     """Load trace files from each byte subfolder (1-4) or from unknown_ambit using full DBFS reads.
 
     Args:
         byte_folder_path: Base folder containing subfolders 1..4 or unknown_ambit
-        year_prefix: File name prefix filter
+        year_prefix: File name prefix filter; a tuple accepts files matching any prefix.
     """
     files_per_byte: List[List[list]] = [[] for _ in range(4)]
 

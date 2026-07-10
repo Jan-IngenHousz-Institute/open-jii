@@ -6,14 +6,16 @@ const {
   mockGetMeasurements,
   mockMarkAsSuccessful,
   mockMarkAsFailed,
-  mockAddNetworkStateListener,
+  mockOnlineIsOnline,
+  mockOnlineSubscribe,
   mockOnAppForeground,
 } = vi.hoisted(() => ({
   mockGetMeasurementById: vi.fn(),
   mockGetMeasurements: vi.fn(),
   mockMarkAsSuccessful: vi.fn(),
   mockMarkAsFailed: vi.fn(),
-  mockAddNetworkStateListener: vi.fn(),
+  mockOnlineIsOnline: vi.fn(() => true),
+  mockOnlineSubscribe: vi.fn((_cb: (online: boolean) => void) => () => undefined),
   mockOnAppForeground: vi.fn(),
 }));
 
@@ -22,10 +24,11 @@ vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurements: mockGetMeasurements,
   markAsSuccessful: mockMarkAsSuccessful,
   markAsFailed: mockMarkAsFailed,
+  UNSYNCED_STATUSES: ["pending", "failed"],
 }));
 
-vi.mock("expo-network", () => ({
-  addNetworkStateListener: mockAddNetworkStateListener,
+vi.mock("@tanstack/react-query", () => ({
+  onlineManager: { isOnline: mockOnlineIsOnline, subscribe: mockOnlineSubscribe },
 }));
 
 vi.mock("~/shared/device/app-lifecycle", () => ({
@@ -47,11 +50,11 @@ vi.mock("~/shared/observability/trace", () => ({
   })),
 }));
 
-// Fresh module graph per test — the Outbox carries module-level state we
+// Fresh module graph per test - the Outbox carries module-level state we
 // don't want bleeding across cases. Re-importing MqttError from the same
 // fresh realm is *load-bearing*: the Outbox uses `instanceof MqttError`
 // for retry classification, and a class from a stale realm would never
-// match — silently flipping terminal errors into retryable ones.
+// match - silently flipping terminal errors into retryable ones.
 async function freshOutbox(
   transport: Transport,
   opts?: { concurrency?: number; retryBackoffMs?: readonly number[] },
@@ -74,7 +77,7 @@ function makeTransport(): Transport & {
 } {
   const calls: { topic: string; payload: any }[] = [];
   // FIFO queues so concurrent publish() calls all keep their own
-  // resolver — the previous single-slot field silently dropped the first
+  // resolver - the previous single-slot field silently dropped the first
   // in-flight publish under concurrency > 1.
   const resolvers: (() => void)[] = [];
   const rejecters: ((err: Error) => void)[] = [];
@@ -135,7 +138,8 @@ describe("Outbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMeasurements.mockResolvedValue([]);
-    mockAddNetworkStateListener.mockReturnValue({ remove: () => undefined });
+    mockOnlineIsOnline.mockReturnValue(true);
+    mockOnlineSubscribe.mockReturnValue(() => undefined);
   });
 
   afterEach(() => {
@@ -166,12 +170,12 @@ describe("Outbox", () => {
       await freshOutbox(transport);
       await flushMicrotasks();
 
-      expect(mockAddNetworkStateListener).toHaveBeenCalledTimes(1);
+      expect(mockOnlineSubscribe).toHaveBeenCalledTimes(1);
       expect(mockOnAppForeground).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe("worker — happy path", () => {
+  describe("worker - happy path", () => {
     it("publishes the row payload with _client_id and marks the row successful", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(
         row({ id: "row-1", topic: "exp/p", result: { v: 42 } }),
@@ -198,7 +202,7 @@ describe("Outbox", () => {
 
     it("keeps a delivered upload 'successful' even if the DB status write throws", async () => {
       // PUBACK arrives, then markAsSuccessful throws (e.g. SQLite busy). The
-      // worker must NOT mark the row failed — the message was delivered — and
+      // worker must NOT mark the row failed - the message was delivered - and
       // must still emit a 'successful' settle.
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "db-1" }));
       mockMarkAsSuccessful.mockRejectedValueOnce(new Error("sqlite busy"));
@@ -220,7 +224,7 @@ describe("Outbox", () => {
     });
   });
 
-  describe("worker — skip paths", () => {
+  describe("worker - skip paths", () => {
     it("skips when the row is missing (e.g. deleted mid-flight)", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(null);
       const transport = makeTransport();
@@ -248,7 +252,7 @@ describe("Outbox", () => {
     });
   });
 
-  describe("worker — error classification", () => {
+  describe("worker - error classification", () => {
     it("marks the row failed when the transport rejects with a terminal MqttError", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "row-1" }));
       const transport = makeTransport();
@@ -264,7 +268,7 @@ describe("Outbox", () => {
     });
 
     it("retries (does NOT mark failed) when the transport rejects with a retryable kind", async () => {
-      // Two consecutive Disconnected rejections — the second succeeds.
+      // Two consecutive Disconnected rejections - the second succeeds.
       mockGetMeasurementById.mockResolvedValue(row({ id: "row-1" }));
       const transport = makeTransport();
       // One backoff step so AsyncRetryer will try a second time. Empty
@@ -276,7 +280,7 @@ describe("Outbox", () => {
       transport.rejectNext(new MqttError("Disconnected", "kicked"));
       await flushMicrotasks(40);
 
-      // A retry happened — second publish call landed.
+      // A retry happened - second publish call landed.
       for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
       expect(transport.calls.length).toBe(2);
       transport.resolveNext();
@@ -302,7 +306,7 @@ describe("Outbox", () => {
       transport.rejectNext(new MqttError("Disconnected", "kicked-1"));
       await flushMicrotasks(40);
 
-      // Retry fired — second (final) attempt publishes, then also rejects.
+      // Retry fired - second (final) attempt publishes, then also rejects.
       for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
       expect(transport.calls.length).toBe(2);
       transport.rejectNext(new MqttError("Disconnected", "kicked-2"));
@@ -328,7 +332,7 @@ describe("Outbox", () => {
       outbox.enqueue("row-1");
       await flushMicrotasks(10);
 
-      // markEnqueued is the state source of truth — a duplicate enqueue
+      // markEnqueued is the state source of truth - a duplicate enqueue
       // bails before adding to the underlying queue.
       expect(outbox.isProcessing("row-1")).toBe(true);
     });
@@ -408,7 +412,7 @@ describe("Outbox", () => {
       await flushMicrotasks();
       const cold = mockGetMeasurements.mock.calls.length;
 
-      // Foregrounded immediately after cold start — well inside the
+      // Foregrounded immediately after cold start - well inside the
       // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
       // skipped entirely.
       assertDefined<() => void>(foregroundCb, "foreground callback")();
@@ -436,36 +440,27 @@ describe("Outbox", () => {
   });
 
   describe("network listener", () => {
-    it("pauses the queue when the network goes offline and resumes on reconnect", async () => {
-      // Capture the network callback for direct invocation.
-      let networkCb: ((state: { isInternetReachable: boolean | null | undefined }) => void) | null =
-        null;
-      mockAddNetworkStateListener.mockImplementation((cb: typeof networkCb) => {
-        networkCb = cb;
-        return { remove: () => undefined };
+    it("pauses the queue when offline and resumes on reconnect", async () => {
+      let onlineCb: ((online: boolean) => void) | null = null;
+      mockOnlineSubscribe.mockImplementation((cb: (online: boolean) => void) => {
+        onlineCb = cb;
+        return () => undefined;
       });
 
       mockGetMeasurementById.mockResolvedValue(row({ id: "net-a" }));
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
       await flushMicrotasks();
-      expect(networkCb).not.toBeNull();
+      expect(onlineCb).not.toBeNull();
 
-      // Go offline before enqueueing — the queue is stopped, so the
-      // worker should not pick up the item.
-      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
-        networkCb,
-        "network callback",
-      )({ isInternetReachable: false });
+      // Offline: the queue is stopped, so the worker does not pick up the item.
+      assertDefined<(online: boolean) => void>(onlineCb, "online callback")(false);
       outbox.enqueue("net-a");
       await flushMicrotasks(10);
       expect(transport.calls).toHaveLength(0);
 
-      // Back online — queue starts draining and the worker publishes.
-      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
-        networkCb,
-        "network callback",
-      )({ isInternetReachable: true });
+      // Back online: the queue drains and the worker publishes.
+      assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
@@ -473,14 +468,12 @@ describe("Outbox", () => {
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a");
     });
 
-    it("does not pause on undefined isInternetReachable (treat unknown as online)", async () => {
-      // expo-network briefly emits undefined around state transitions; the
-      // outbox must not treat that as offline (it'd stall the queue).
-      let networkCb: ((state: { isInternetReachable: boolean | null | undefined }) => void) | null =
-        null;
-      mockAddNetworkStateListener.mockImplementation((cb: typeof networkCb) => {
-        networkCb = cb;
-        return { remove: () => undefined };
+    it("starts paused while offline at construction (no upload until online)", async () => {
+      mockOnlineIsOnline.mockReturnValue(false);
+      let onlineCb: ((online: boolean) => void) | null = null;
+      mockOnlineSubscribe.mockImplementation((cb: (online: boolean) => void) => {
+        onlineCb = cb;
+        return () => undefined;
       });
 
       mockGetMeasurementById.mockResolvedValue(row({ id: "net-b" }));
@@ -488,11 +481,11 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
       await flushMicrotasks();
 
-      assertDefined<(state: { isInternetReachable: boolean | null | undefined }) => void>(
-        networkCb,
-        "network callback",
-      )({ isInternetReachable: undefined });
       outbox.enqueue("net-b");
+      await flushMicrotasks(10);
+      expect(transport.calls).toHaveLength(0);
+
+      assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
       for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
@@ -615,7 +608,7 @@ describe("Outbox", () => {
     it("detaches the network + foreground listeners", async () => {
       const removeNetwork = vi.fn();
       const removeForeground = vi.fn();
-      mockAddNetworkStateListener.mockReturnValue({ remove: removeNetwork });
+      mockOnlineSubscribe.mockReturnValue(removeNetwork);
       mockOnAppForeground.mockReturnValue(removeForeground);
 
       const transport = makeTransport();
@@ -646,7 +639,7 @@ describe("Outbox", () => {
 
     it("is idempotent", async () => {
       const removeNetwork = vi.fn();
-      mockAddNetworkStateListener.mockReturnValue({ remove: removeNetwork });
+      mockOnlineSubscribe.mockReturnValue(removeNetwork);
       mockOnAppForeground.mockReturnValue(() => undefined);
 
       const transport = makeTransport();

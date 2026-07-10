@@ -52,7 +52,7 @@ export function MacroCompatibleProtocolsCard({
   const compatibleQuery = useMacroCompatibleProtocols(macroId);
   const isLoading = compatibleQuery.isLoading;
   const compatibleProtocols: MacroProtocolEntry[] = useMemo(
-    () => (compatibleQuery.data?.body as MacroProtocolEntry[] | undefined) ?? [],
+    () => compatibleQuery.data?.body ?? [],
     [compatibleQuery.data],
   );
 
@@ -81,14 +81,14 @@ export function MacroCompatibleProtocolsCard({
     await addMutation.mutateAsync({
       params: { id: macroId },
       body: { protocolIds: [protocolId] },
-    } as never);
+    });
     setProtocolSearch("");
   };
 
   const handleRemoveProtocol = async (protocolId: string) => {
     await removeMutation.mutateAsync({
       params: { id: macroId, protocolId },
-    } as never);
+    });
   };
 
   const content = (

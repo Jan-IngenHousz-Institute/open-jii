@@ -65,5 +65,5 @@ export interface StoredMetadataShape {
 }
 
 export function asStoredMetadata(record: ExperimentMetadata): StoredMetadataShape {
-  return record.metadata as StoredMetadataShape;
+  return record.metadata;
 }

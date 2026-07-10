@@ -8,7 +8,6 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 function pickIcon(device: Device, size: number, color: string) {
   if (device.type === "usb") return <Usb size={size} color={color} />;
-  if (device.type === "ble") return <Bluetooth size={size} color={color} />;
   if (device.type === "bluetooth-classic") return <Bluetooth size={size} color={color} />;
   return <Radio size={size} color={color} />;
 }
@@ -40,8 +39,7 @@ export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDev
 
   const sigKey = signalKey(device.rssi);
 
-  const macId =
-    device.type === "bluetooth-classic" || device.type === "ble" ? shortMac(device.id) : null;
+  const macId = device.type === "bluetooth-classic" ? shortMac(device.id) : null;
   const hasName = device.name.trim().length > 0;
   const title = hasName ? device.name : (macId ?? t("deviceList.fallbackName"));
   const subParts: string[] = [];

@@ -90,7 +90,7 @@ export type RenderedChartConfig = ChartFormConfig & PlotlyChartConfig;
 export function narrowChartConfig(visualization: {
   config?: Record<string, unknown>;
 }): RenderedChartConfig {
-  return (visualization.config ?? {}) as RenderedChartConfig;
+  return visualization.config ?? {};
 }
 
 /**

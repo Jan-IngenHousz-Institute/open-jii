@@ -67,7 +67,7 @@ function renderLayout({
   session?: { data: { user: { id: string } } } | { data: null };
   children?: React.ReactNode;
 } = {}) {
-  vi.mocked(useParams).mockReturnValue({ id: macroId } as ReturnType<typeof useParams>);
+  vi.mocked(useParams).mockReturnValue({ id: macroId });
   vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 
   return render(<MacroLayout>{children}</MacroLayout>);

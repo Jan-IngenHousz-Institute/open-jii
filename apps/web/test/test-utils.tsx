@@ -125,18 +125,13 @@ function renderHook<TResult, TProps = undefined>(
     return <AllProviders queryClient={queryClient}>{children}</AllProviders>;
   }
 
-  const hookResult = rtlRenderHook<TResult, TProps>(hook as (props: TProps) => TResult, {
+  const hookResult = rtlRenderHook<TResult, TProps>(hook, {
     wrapper: Wrapper,
     ...(initialProps !== undefined && { initialProps }),
   });
   // eslint-disable-next-line react-hooks/rules-of-hooks -- useRouter is globally mocked in setup.ts
   const router = useRouter();
-  return { ...hookResult, router } as {
-    result: { current: TResult };
-    rerender: (props?: TProps) => void;
-    unmount: () => void;
-    router: AppRouterInstance;
-  };
+  return { ...hookResult, router };
 }
 
 // ── renderWithForm ──────────────────────────────────────────────

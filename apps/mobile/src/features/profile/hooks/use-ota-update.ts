@@ -1,6 +1,7 @@
 import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { toast } from "sonner-native";
+import { i18n } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("ota");
@@ -17,12 +18,14 @@ export function useOtaUpdate(): void {
         const check = await Updates.checkForUpdateAsync();
         if (cancelled || !check.isAvailable) return;
 
-        toast.info("Update available", { description: "Downloading…" });
+        toast.info(i18n.t("profile:ota.updateAvailableTitle"), {
+          description: i18n.t("profile:ota.updateAvailableBody"),
+        });
         const fetched = await Updates.fetchUpdateAsync();
         if (cancelled || !fetched.isNew) return;
 
-        toast.success("Update ready", {
-          description: "Restarting to apply.",
+        toast.success(i18n.t("profile:ota.updateReadyTitle"), {
+          description: i18n.t("profile:ota.updateReadyBody"),
           duration: 2000,
         });
         reloadTimer = setTimeout(() => {
@@ -30,8 +33,8 @@ export function useOtaUpdate(): void {
           Updates.reloadAsync().catch((err) => {
             if (cancelled) return;
             log.error("reload failed", { err: (err as Error)?.message });
-            toast.error("Restart failed", {
-              description: "Please restart the app manually to apply update.",
+            toast.error(i18n.t("profile:ota.restartFailedTitle"), {
+              description: i18n.t("profile:ota.restartFailedBody"),
             });
           });
         }, 2000);

@@ -1,10 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
-import { uniq } from "~/shared/utils/uniq";
-import { extractAssetIdsFromCells } from "~/shared/utils/workbook-assets";
-
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 interface ExperimentRef {
   id: string;
@@ -17,80 +13,50 @@ function findExperimentRef(
   queryClient: ReturnType<typeof useQueryClient>,
   experimentId: string,
 ): ExperimentRef | undefined {
-  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(["experiments"]);
+  const cached = queryClient.getQueryData<{ body?: ExperimentRef[] }>(contentKeys.experiments);
   return cached?.body?.find((e) => e.id === experimentId);
 }
 
+// Finite so an incomplete (offline/failed) precache can retry on reconnect.
+const PRECACHE_STALE_TIME = 5 * 60 * 1000;
+
 /**
- * Resolves the protocol/macro ids an experiment references, from its workbook
- * version (preferred — also caches the cells for offline branch evaluation) or
- * from the legacy flow graph.
+ * Warms the offline cache for an experiment's flow by caching its workbook
+ * version (cells + pinned protocol/macro snapshots). Throws if it can't, so the
+ * precache reports incomplete and retries on reconnect.
  */
-async function resolveAssetIds(
+async function precacheExperimentWorkbookFn(
   experimentId: string,
   queryClient: ReturnType<typeof useQueryClient>,
-): Promise<{ protocolIds: string[]; macroIds: string[] }> {
-  const ref = findExperimentRef(queryClient, experimentId);
-
-  if (ref?.workbookId && ref.workbookVersionId) {
-    const workbookId = ref.workbookId;
-    const versionId = ref.workbookVersionId;
-    try {
-      const versionResponse = await queryClient.fetchQuery({
-        queryKey: ["workbook-version", workbookId, versionId],
-        queryFn: async () =>
-          tsr.workbooks.getWorkbookVersion.query({ params: { id: workbookId, versionId } }),
-      });
-      const cells = (versionResponse as { body?: { cells?: WorkbookCell[] } })?.body?.cells ?? [];
-      return extractAssetIdsFromCells(cells);
-    } catch {
-      // Fall through to legacy flow-graph resolution below.
-    }
+): Promise<{ workbookVersionId: string }> {
+  let ref = findExperimentRef(queryClient, experimentId);
+  if (!ref) {
+    await queryClient.fetchQuery({
+      queryKey: contentKeys.experiments,
+      queryFn: () => tsr.experiments.listExperiments.query({ query: { filter: "member" } }),
+      meta: { suppressToast: true },
+    });
+    ref = findExperimentRef(queryClient, experimentId);
   }
 
-  const flowResponse: any = await tsr.experiments.getFlow.query({ params: { id: experimentId } });
-  const nodes = flowResponse.body?.graph?.nodes ?? [];
-  return {
-    protocolIds: nodes
-      .filter((node: FlowNode) => node.type === "measurement" && node.content?.protocolId)
-      .map((node: FlowNode) => node.content.protocolId as string),
-    macroIds: nodes
-      .filter((node: FlowNode) => node.type === "analysis" && node.content?.macroId)
-      .map((node: FlowNode) => node.content.macroId as string),
-  };
-}
+  if (!ref?.workbookId || !ref.workbookVersionId) {
+    throw new Error(`No workbook version for experiment ${experimentId}`);
+  }
 
-async function precacheExperimentDataFn(
-  experimentId: string,
-  queryClient: ReturnType<typeof useQueryClient>,
-): Promise<{ macroIds: string[]; protocolIds: string[] }> {
-  const { protocolIds, macroIds } = await resolveAssetIds(experimentId, queryClient);
-
-  const uniqueProtocolIds = uniq<string>(protocolIds);
-  const uniqueMacroIds = uniq<string>(macroIds);
-
-  await Promise.all([
-    ...uniqueProtocolIds.map((protocolId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["protocol", protocolId],
-        queryFn: async () => {
-          const response = await tsr.protocols.getProtocol.query({ params: { id: protocolId } });
-          return { body: response.body };
-        },
+  const { workbookId, workbookVersionId } = ref;
+  await queryClient.fetchQuery({
+    queryKey: ["workbook-version", workbookId, workbookVersionId],
+    queryFn: () =>
+      tsr.workbooks.getWorkbookVersion.query({
+        params: { id: workbookId, versionId: workbookVersionId },
       }),
-    ),
-    ...uniqueMacroIds.map((macroId) =>
-      queryClient.prefetchQuery({
-        queryKey: ["macro", macroId],
-        queryFn: async () => {
-          const response = await tsr.macros.getMacro.query({ params: { id: macroId } });
-          return { body: response.body };
-        },
-      }),
-    ),
-  ]);
+    meta: { suppressToast: true },
+    // A pinned version is immutable, so reuse the cache instead of refetching
+    // (a stale refetch would fail offline even with the version already cached).
+    staleTime: Infinity,
+  });
 
-  return { macroIds: uniqueMacroIds, protocolIds: uniqueProtocolIds };
+  return { workbookVersionId };
 }
 
 export function usePrecachedExperimentData(experimentId: string | undefined) {
@@ -98,9 +64,10 @@ export function usePrecachedExperimentData(experimentId: string | undefined) {
 
   return useQuery({
     queryKey: ["precache-experiment-data", experimentId],
-    queryFn: () => precacheExperimentDataFn(experimentId ?? "", queryClient),
+    queryFn: () => precacheExperimentWorkbookFn(experimentId ?? "", queryClient),
     enabled: !!experimentId,
-    staleTime: Infinity,
+    meta: { suppressToast: true },
+    staleTime: PRECACHE_STALE_TIME,
     gcTime: Infinity,
   });
 }

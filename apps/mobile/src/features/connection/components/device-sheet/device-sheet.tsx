@@ -1,17 +1,17 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useQuery } from "@tanstack/react-query";
-import { Bluetooth, ChevronDown, X } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bluetooth, ChevronDown, Usb, X } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { toast } from "sonner-native";
+import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import {
   useAllDevices,
-  useConnectToDevice,
   useConnectedDevice,
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { useDeviceSheetActions } from "~/features/connection/hooks/use-device-sheet-actions";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
 import {
   hasBluetoothPermission,
@@ -20,8 +20,8 @@ import {
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
-import type { Device } from "~/shared/types/device";
 import { Button } from "~/shared/ui/Button";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { IconSync } from "./icon-sync";
@@ -33,13 +33,13 @@ export function DeviceSheet() {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation("connection");
-  const sheetRef = useRef<BottomSheetModal>(null);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({ visible: isOpen });
 
   const { data: connectedDevice } = useConnectedDevice();
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
-  const batteryLevel = useDeviceConnectionStore((s) => s.batteryLevel);
+  const batteryLevel = useBatteryLevel();
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
-  const { connectToDevice, disconnectFromDevice, connectingDeviceId } = useConnectToDevice();
+  const { handleConnect, handleDisconnect, connectingDeviceId } = useDeviceSheetActions();
 
   const [showAllDevices, setShowAllDevices] = useState(false);
   const { data: bluetoothPermissionGranted = true, refetch: refreshBluetoothPermission } = useQuery(
@@ -63,40 +63,22 @@ export function DeviceSheet() {
   const handleAllowBluetooth = useCallback(async () => {
     const granted = await requestBluetoothPermission();
     if (granted) {
+      // Discovery is kicked off by the open+permission effect below once the
+      // permission query reflects the grant.
       void refreshBluetoothPermission();
-      void refreshDevices();
     }
-  }, [refreshBluetoothPermission, refreshDevices]);
+  }, [refreshBluetoothPermission]);
 
+  // Stream devices as soon as the sheet opens (with permission); the list fills
+  // in as they're discovered instead of waiting for the full scan.
   useEffect(() => {
-    if (isOpen) sheetRef.current?.present();
-    else sheetRef.current?.dismiss();
-  }, [isOpen]);
-
-  const renderBackdrop = useCallback(
-    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    ),
-    [],
-  );
-
-  const handleConnect = async (device: Device) => {
-    try {
-      await connectToDevice(device);
-    } catch {
-      toast.error(t("setup.errorConnect"));
-    }
-  };
-
-  const handleDisconnect = async (device: Device) => {
-    try {
-      await disconnectFromDevice(device);
-    } catch {
-      toast.error(t("setup.errorDisconnect"));
-    }
-  };
+    if (isOpen && bluetoothPermissionGranted) void refreshDevices();
+  }, [isOpen, bluetoothPermissionGranted, refreshDevices]);
 
   const hasConnected = !!connectedDevice;
+  // Reflect the connection type on the current-device card (cable vs over-the-air).
+  const CurrentDeviceIcon =
+    (connectedDevice ?? lastConnectedDevice)?.type === "usb" ? Usb : Bluetooth;
 
   return (
     <BottomSheetModal
@@ -134,7 +116,7 @@ export function DeviceSheet() {
                 backgroundColor: hasConnected ? colors.jii.mint : "rgba(0,0,0,0.04)",
               }}
             >
-              <Bluetooth
+              <CurrentDeviceIcon
                 size={22}
                 color={hasConnected ? colors.jii.darkGreen : themeColors.inactive}
               />
@@ -152,7 +134,11 @@ export function DeviceSheet() {
                   <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
                     {batteryLevel != null
                       ? t("deviceSheet.currentSubMultispeQNoFirmware", { battery: batteryLevel })
-                      : "MultispeQ"}
+                      : t(
+                          connectedDevice.type === "usb"
+                            ? "deviceSheet.connectedViaCable"
+                            : "deviceSheet.connectedViaBluetooth",
+                        )}
                   </Text>
                 </>
               ) : lastConnectedDevice ? (

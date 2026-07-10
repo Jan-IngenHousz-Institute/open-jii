@@ -1,10 +1,11 @@
+import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { BranchCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { evaluateBranch } from "@repo/api/utils/evaluate-branch";
 
-import { FlowNode } from "../../../types";
 import { hydrateCells } from "./hydrate-cells";
 
 // Caps branch goto-loops; mirrors web's useWorkbookExecution MAX_VISITS_PER_CELL.
@@ -49,7 +50,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     iterationCount: flow.iterationCount,
     getAnswer,
     scanResult: flow.scanResult,
-    protocolId: flow.protocolId,
+    protocolId: flowProtocolId(flow.flowNodes),
   });
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");
@@ -70,7 +71,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     if (idx >= 0 && idx !== flow.currentFlowStep) {
       // Only a forward jump skips over un-visited nodes that Back must unwind
       // past. A backward (loop-back) jump skips nothing, so Back steps linearly
-      // from the target — recording a return there would push Back forward.
+      // from the target; recording a return there would push Back forward.
       if (idx > flow.currentFlowStep) flow.recordBranchJump(idx);
       flow.setCurrentFlowStep(idx);
       return;

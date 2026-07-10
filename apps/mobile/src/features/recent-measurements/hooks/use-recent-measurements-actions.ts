@@ -4,8 +4,8 @@ import type {
   MeasurementItem,
 } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { useExportMeasurements } from "~/features/recent-measurements/hooks/use-export-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
-import { exportMeasurementsToFile } from "~/features/recent-measurements/services/export-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
@@ -48,6 +48,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     updateMeasurementComment,
   } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
+  const { exportMeasurements } = useExportMeasurements();
 
   const confirmSync = (m: MeasurementItem) =>
     confirmAndRun(t, {
@@ -112,12 +113,6 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       },
     });
 
-  const handleExport = () => {
-    void exportMeasurementsToFile().catch(() => {
-      toast.error(t("recentMeasurements:alerts.exportError"));
-    });
-  };
-
   const saveComment = async (m: StoredMeasurement, text: string) => {
     await updateMeasurementComment(m.id, m.data, text);
     invalidate();
@@ -132,7 +127,7 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     confirmDelete,
     confirmSyncAll,
     confirmDeleteAllSynced,
-    handleExport,
+    handleExport: exportMeasurements,
     saveComment,
   };
 }

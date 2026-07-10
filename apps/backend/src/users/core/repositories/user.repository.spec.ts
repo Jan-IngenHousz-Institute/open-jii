@@ -845,4 +845,103 @@ describe("UserRepository", () => {
       expect(userIds.filter((id) => id === testUser2Id)).toHaveLength(1);
     });
   });
+
+  describe("findWhatsNewLastSeen", () => {
+    it("should return null when the user has never opened the What's new panel", async () => {
+      // Act
+      const result = await repository.findWhatsNewLastSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("should return the stored timestamp when the user has opened the panel before", async () => {
+      // Arrange: stamp a last-seen timestamp directly in the database
+      const lastSeenAt = new Date("2026-01-15T10:30:00.000Z");
+      await testApp.database
+        .update(profiles)
+        .set({ whatsNewLastSeenAt: lastSeenAt })
+        .where(eq(profiles.userId, testUserId));
+
+      // Act
+      const result = await repository.findWhatsNewLastSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+      expect(result.value?.getTime()).toBe(lastSeenAt.getTime());
+    });
+
+    it("should return null when the user has no profile row", async () => {
+      // Arrange
+      const userWithoutProfileId = await testApp.createTestUser({
+        createProfile: false,
+      });
+
+      // Act
+      const result = await repository.findWhatsNewLastSeen(userWithoutProfileId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
+  describe("markWhatsNewSeen", () => {
+    it("should stamp the last-seen timestamp and return it", async () => {
+      // Act
+      const result = await repository.markWhatsNewSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+
+      // Verify the timestamp was persisted in the database
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].whatsNewLastSeenAt).not.toBeNull();
+      expect(profs[0].whatsNewLastSeenAt?.getTime()).toBe(result.value?.getTime());
+    });
+
+    it("should overwrite an existing last-seen timestamp with a newer one", async () => {
+      // Arrange: stamp an old last-seen timestamp directly in the database
+      const previousSeenAt = new Date("2020-01-01T00:00:00.000Z");
+      await testApp.database
+        .update(profiles)
+        .set({ whatsNewLastSeenAt: previousSeenAt })
+        .where(eq(profiles.userId, testUserId));
+
+      // Act
+      const result = await repository.markWhatsNewSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+      expect(result.value?.getTime()).toBeGreaterThan(previousSeenAt.getTime());
+    });
+
+    it("should return null when the user has no profile row", async () => {
+      // Arrange
+      const userWithoutProfileId = await testApp.createTestUser({
+        createProfile: false,
+      });
+
+      // Act
+      const result = await repository.markWhatsNewSeen(userWithoutProfileId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
 });

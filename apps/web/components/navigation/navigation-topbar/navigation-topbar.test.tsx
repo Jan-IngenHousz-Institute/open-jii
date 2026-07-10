@@ -1,3 +1,4 @@
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import React from "react";
@@ -68,6 +69,21 @@ describe("NavigationTopbar", () => {
     await waitFor(() => {
       expect(screen.getByText("navigation.logout")).toBeInTheDocument();
     });
+  });
+
+  it("shows the whats-new footer in the mobile menu", async () => {
+    const handler = vi.fn();
+    const user = userEvent.setup();
+    window.addEventListener(WHATS_NEW_OPEN_EVENT, handler);
+
+    render(<NavigationTopbar locale="en" user={testUser} />);
+    await user.click(screen.getByLabelText("Open menu"));
+
+    const whatsNew = await screen.findByRole("button", { name: "whatsNew.navLabel" });
+    await user.click(whatsNew);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener(WHATS_NEW_OPEN_EVENT, handler);
   });
 
   it("signs out and navigates home via mobile menu", async () => {

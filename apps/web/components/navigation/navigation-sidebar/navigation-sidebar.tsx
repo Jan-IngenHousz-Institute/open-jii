@@ -2,11 +2,13 @@
 
 import { CommandKHint } from "@/components/command/kbd";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
+import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
+import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
 
 import { NavItems } from "../nav-items/nav-items";
@@ -50,11 +52,13 @@ export function AppSidebar({
   locale,
   navigationData,
   translations,
+  releaseNotes = [],
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   locale: string;
   navigationData: NavigationData;
   translations: Translations;
+  releaseNotes?: ReleaseNoteFields[];
 }) {
   // const { toggleSidebar, state } = useSidebar();
   // const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -124,6 +128,10 @@ export function AppSidebar({
           <NavItems items={processedNavExperiments} />
           <NavItems items={processedNavWorkbooks} />
           <NavItems items={processedNavLibrary} />
+        </div>
+
+        <div className="border-t border-white/10 px-4 py-2">
+          <WhatsNewFooterItem entries={releaseNotes} />
         </div>
       </div>
       <SidebarRail resizable />

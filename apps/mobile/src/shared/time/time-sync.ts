@@ -7,6 +7,7 @@ import { DateTime } from "luxon";
 import { toast } from "sonner-native";
 import { getApiClient } from "~/shared/api/client";
 import { onAppForeground } from "~/shared/device/app-lifecycle";
+import { i18n } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("time-sync");
@@ -259,7 +260,7 @@ export async function ensureSynced(): Promise<void> {
     const timer = setTimeout(() => {
       syncWaiters = syncWaiters.filter((r) => r !== resolve);
       log.warn("ensureSynced timed out");
-      toast.error("Time sync unavailable. Please check your connection and try again.");
+      toast.error(i18n.t("common:timeSyncUnavailable"));
       reject(new Error("[time-sync] Timed out waiting for initial sync"));
     }, ENSURE_SYNCED_TIMEOUT_MS);
 

@@ -36,6 +36,10 @@ vi.mock("sonner-native", () => ({
   toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() },
 }));
 
+vi.mock("~/shared/i18n", () => ({
+  i18n: { t: (key: string) => key },
+}));
+
 let mockServerUtcMs = Date.now();
 let getTimeCallCount = 0;
 vi.mock("~/shared/api/client", () => ({
@@ -525,9 +529,7 @@ describe("time-sync", () => {
 
       const error = await resultPromise;
       expect(error.message).toMatch("Timed out waiting for initial sync");
-      expect(toast.error).toHaveBeenCalledWith(
-        "Time sync unavailable. Please check your connection and try again.",
-      );
+      expect(toast.error).toHaveBeenCalledWith("common:timeSyncUnavailable");
 
       getApiClientSpy.mockRestore();
     });

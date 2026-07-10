@@ -1,18 +1,14 @@
 import { useEffect } from "react";
-import {
-  useExperimentFlowQuery,
-  useWorkbookVersionQuery,
-} from "~/features/experiments/hooks/use-experiment-flow-query";
+import { useWorkbookVersionQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
+import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { tsr } from "~/shared/api/tsr";
 
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 
-// Loads an experiment's flow into the store. Workbook-backed experiments fetch
-// the workbook version and derive the graph locally via the shared
-// `cellsToFlowGraph` (replacing the getFlow call, keeping cells for branch
-// eval); others fall back to the legacy getFlow path (branch-free).
+// Loads an experiment's workbook flow into the store: fetch the workbook version
+// and derive the graph locally via cellsToFlowGraph (cells kept for branch eval).
+// Every experiment is workbook-backed; one without a workbook surfaces an error.
 export function useLoadExperimentFlow(experimentId: string | undefined): {
   isLoading: boolean;
   error: unknown;
@@ -38,48 +34,43 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   const workbookVersionId = selected?.workbookVersionId ?? undefined;
   const hasWorkbook = !!workbookId && !!workbookVersionId;
 
-  // Only fall back to the legacy flow once we positively know there is no
-  // workbook to read (the experiment list has resolved without one).
-  const useFlowFallback = !!experimentId && experimentsData != null && !hasWorkbook;
-
   const {
     data: versionData,
     isLoading: isVersionLoading,
     error: versionError,
   } = useWorkbookVersionQuery(workbookId, workbookVersionId);
 
-  const {
-    data: flowData,
-    isLoading: isFlowLoading,
-    error: flowError,
-  } = useExperimentFlowQuery(experimentId, useFlowFallback);
-
-  // Workbook path: derive the graph locally in document order (NOT orderFlowNodes,
-  // which collapses branches by following only the first outgoing edge).
+  // Derive the graph in document order (preserve branches; don't collapse to a
+  // single path) and hydrate each node so scan + upload read offline off it.
   useEffect(() => {
-    const cells = versionData?.body?.cells;
+    const body = versionData?.body;
+    const cells = body?.cells;
     if (!cells) return;
     const { nodes, edges } = cellsToFlowGraph(cells);
-    setFlowGraph(nodes, edges, cells);
+    setFlowGraph(hydrateFlowNodes(nodes, cells, body?.entitySnapshots), edges, cells);
   }, [versionData, setFlowGraph]);
 
-  // Legacy path: linearize the stored flow graph (branch-free).
-  useEffect(() => {
-    if (hasWorkbook) return;
-    if (!flowData?.body?.graph) return;
-    const { nodes = [], edges = [] } = flowData.body.graph;
-    setFlowNodes(orderFlowNodes(nodes, edges));
-  }, [hasWorkbook, flowData, setFlowNodes]);
+  // The list resolved but the experiment has no workbook: every experiment is
+  // workbook-backed, so surface an error rather than hang.
+  const noWorkbook = !!experimentId && experimentsData != null && !hasWorkbook;
 
-  const isReady = hasWorkbook ? !!versionData?.body?.cells : !!flowData?.body?.graph;
-  // A list error leaves experimentsData null; don't treat that as "still loading",
-  // and surface it so the screen can show an error instead of hanging.
-  const isLoading = hasWorkbook
-    ? isVersionLoading
-    : isExperimentsLoading ||
-      isFlowLoading ||
-      (!!experimentId && experimentsData == null && !experimentsError);
-  const error = hasWorkbook ? versionError : (experimentsError ?? flowError);
+  const isReady = !!versionData?.body?.cells;
+
+  // Clear a previously-loaded graph when this load fails, so consumers don't keep
+  // rendering the prior experiment's nodes.
+  useEffect(() => {
+    if (!isReady && (noWorkbook || versionError)) setFlowNodes([]);
+  }, [isReady, noWorkbook, versionError, setFlowNodes]);
+
+  const isLoading =
+    !noWorkbook &&
+    (isExperimentsLoading ||
+      isVersionLoading ||
+      (!!experimentId && experimentsData == null && !experimentsError));
+  const error =
+    experimentsError ??
+    versionError ??
+    (noWorkbook ? new Error(`Experiment ${experimentId} has no workbook version`) : undefined);
 
   return { isLoading, error, isReady };
 }

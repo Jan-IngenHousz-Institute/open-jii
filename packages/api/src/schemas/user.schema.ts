@@ -76,7 +76,7 @@ export const zWebhookAuthHeader = z.object({
 export const zUserMetadataWebhookPayload = z.object({
   // Accept any string so one malformed id can't 400 the whole batch; the
   // backend filters to valid uuids and omits the rest.
-  userIds: z.array(z.string()).min(1).max(100),
+  userIds: z.array(z.string()).min(1).max(500),
 });
 
 export const zUserMetadata = z.object({
@@ -176,6 +176,16 @@ export const zListInvitationsQuery = z.object({
   resourceId: z.string().uuid(),
 });
 
+export const zWhatsNewSeenResponse = z.object({
+  lastSeenAt: z
+    .string()
+    .datetime()
+    .nullable()
+    .describe("ISO timestamp the user last opened the What's new panel; null = never seen"),
+});
+
+export const zMarkWhatsNewSeenBody = z.object({});
+
 // Invitation types
 export type InvitationStatus = z.infer<typeof zInvitationStatus>;
 export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
@@ -184,3 +194,5 @@ export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
 export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
 export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
 export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;
+export type WhatsNewSeenResponse = z.infer<typeof zWhatsNewSeenResponse>;
+export type MarkWhatsNewSeenBody = z.infer<typeof zMarkWhatsNewSeenBody>;

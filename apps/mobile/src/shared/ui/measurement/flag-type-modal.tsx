@@ -1,0 +1,80 @@
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { clsx } from "clsx";
+import { Check, X } from "lucide-react-native";
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "~/shared/i18n";
+import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
+import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+
+import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+
+const FLAG_VALUES = Object.keys(FLAG_TYPE_LABELS) as AnnotationFlagType[];
+
+interface FlagTypeModalProps {
+  visible: boolean;
+  selected: AnnotationFlagType | null;
+  onSelect: (flagType: AnnotationFlagType | null) => void;
+  onCancel: () => void;
+}
+
+export function FlagTypeModal({ visible, selected, onSelect, onCancel }: FlagTypeModalProps) {
+  const colors = useThemeColors();
+  const { t } = useTranslation(["common", "recentMeasurements"]);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
+  const insets = useSafeAreaInsets();
+
+  return (
+    <BottomSheetModal
+      ref={sheetRef}
+      enableDynamicSizing
+      backdropComponent={renderBackdrop}
+      onDismiss={onCancel}
+      handleIndicatorStyle={{ backgroundColor: colors.inactive }}
+      backgroundStyle={{ backgroundColor: colors.card }}
+      stackBehavior="push"
+    >
+      <BottomSheetView className="gap-2 px-4" style={{ paddingBottom: insets.bottom + 16 }}>
+        <View className="flex-row items-center justify-between pb-2">
+          <Text className="text-on-surface text-lg font-bold">
+            {t("recentMeasurements:flagModal.title")}
+          </Text>
+          <TouchableOpacity onPress={onCancel} className="p-1">
+            <X size={24} color={colors.onSurface} />
+          </TouchableOpacity>
+        </View>
+
+        {FLAG_VALUES.map((value) => (
+          <TouchableOpacity
+            key={value}
+            onPress={() => onSelect(value)}
+            className={clsx(
+              "flex-row items-center justify-between rounded-xl px-4 py-3",
+              selected === value ? "bg-muted" : "",
+            )}
+            activeOpacity={0.7}
+          >
+            <Text className="text-on-surface text-base">
+              {t(`recentMeasurements:flagType.${value}`)}
+            </Text>
+            {selected === value && <Check size={18} color={colors.onSurface} />}
+          </TouchableOpacity>
+        ))}
+
+        {selected && (
+          <TouchableOpacity
+            onPress={() => onSelect(null)}
+            className="mt-1 items-center py-2"
+            activeOpacity={0.7}
+          >
+            <Text className="text-muted-foreground text-sm">
+              {t("recentMeasurements:flagModal.removeFlag")}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </BottomSheetView>
+    </BottomSheetModal>
+  );
+}

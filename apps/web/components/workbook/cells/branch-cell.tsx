@@ -108,7 +108,7 @@ export function BranchCellComponent({
         return Object.keys(data[0] as Record<string, unknown>);
       }
       if (typeof data === "object") {
-        return Object.keys(data as Record<string, unknown>);
+        return Object.keys(data);
       }
       return [];
     },

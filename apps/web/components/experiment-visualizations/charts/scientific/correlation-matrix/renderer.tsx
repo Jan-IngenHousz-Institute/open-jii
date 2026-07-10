@@ -8,6 +8,7 @@ import { CorrelationMatrix } from "@repo/ui/components/charts/heatmap";
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
 import { resolveColorscale } from "../../colors/colorscales";
+import { correlationPairFunctions } from "../../data/correlation-alias";
 import { useChartData } from "../../hooks/use-chart-data";
 import type { ChartRendererProps } from "../../types";
 import { transformCorrelationMatrixData } from "./transform";
@@ -21,19 +22,39 @@ export function CorrelationMatrixRenderer({
 
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
-  const distinctYCount = new Set(
-    dataSources
-      .filter((ds) => ds.role === "y" && ds.columnName.length > 0)
-      .map((ds) => ds.columnName),
-  ).size;
+  const yColumns = useMemo(
+    () =>
+      dataSources
+        .filter((ds) => ds.role === "y" && ds.columnName.length > 0)
+        .map((ds) => ds.columnName),
+    [dataSources],
+  );
+  const distinctYCount = new Set(yColumns).size;
+
+  // Derive the corr aggregation here rather than trusting the saved config:
+  // the data-shelf only seeds it while editing, so a dashboard's stale value
+  // would fetch raw rows and render an all-NaN matrix.
+  const visualizationForFetch = useMemo(() => {
+    const functions = correlationPairFunctions(yColumns);
+    return {
+      ...visualization,
+      dataConfig: {
+        ...visualization.dataConfig,
+        aggregation: functions.length > 0 ? { groupBy: undefined, functions } : undefined,
+      },
+    };
+  }, [visualization, yColumns]);
 
   // Skip the SQL request entirely when correlation can't be computed.
   // Fewer than 2 distinct picks means no pairs and the renderer shows
   // the empty-state. Without `enabled: false` the hook would still
   // fetch raw rows for the picked columns (noise that never gets used).
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: distinctYCount >= 2,
-  });
+  const { rows, isLoading, error } = useChartData(
+    visualizationForFetch,
+    experimentId,
+    providedData,
+    { enabled: distinctYCount >= 2 },
+  );
 
   const { matrix, labels } = useMemo(() => {
     if (visualization.chartType !== "correlation-matrix") {

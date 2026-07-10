@@ -1,7 +1,4 @@
-import {
-  FlowEdge,
-  FlowNode,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 export function orderFlowNodes(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[] {
   if (!nodes || nodes.length === 0) {

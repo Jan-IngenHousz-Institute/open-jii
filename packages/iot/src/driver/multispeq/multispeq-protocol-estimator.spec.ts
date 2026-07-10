@@ -187,6 +187,49 @@ describe("estimateProtocolDurationMs", () => {
     expect(estimateProtocolDurationMs(protocol)).toBe(2001);
   });
 
+  it("counts a standalone pre_illumination block that has no pulses", () => {
+    // Documented construct: a pulseless block that only pre-illuminates the
+    // sample (help.photosynq.com pre-illumination example is a 10 min soak).
+    expect(
+      estimateProtocolDurationMs([
+        { _protocol_set_: [{ label: "Pre-Illumination", pre_illumination: [2, 200, 600_000] }] },
+      ]),
+    ).toBe(600_000);
+  });
+
+  it("multiplies a pulseless pre_illumination block by protocol_repeats", () => {
+    expect(
+      estimateProtocolDurationMs([
+        { _protocol_set_: [{ pre_illumination: [2, 200, 10_000], protocol_repeats: 3 }] },
+      ]),
+    ).toBe(30_000);
+  });
+
+  it("sums the multi-LED pre_illumination form", () => {
+    expect(
+      estimateProtocolDurationMs([
+        {
+          _protocol_set_: [
+            {
+              pre_illumination: [
+                [2, 200, 600_000],
+                [3, 100, 300_000],
+              ],
+            },
+          ],
+        },
+      ]),
+    ).toBe(900_000);
+  });
+
+  it("sums a ramped pre_illumination duration array", () => {
+    expect(
+      estimateProtocolDurationMs([
+        { _protocol_set_: [{ pre_illumination: [2, 200, [1_000, 2_000, 3_000]] }] },
+      ]),
+    ).toBe(6_000);
+  });
+
   it("treats repeats/averages as at least 1 when missing", () => {
     const protocol = [
       {

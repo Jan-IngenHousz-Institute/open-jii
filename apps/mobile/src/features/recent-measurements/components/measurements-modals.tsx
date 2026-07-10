@@ -1,9 +1,9 @@
 import React from "react";
-import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
+import { CommentModal } from "~/shared/ui/measurement/comment-modal";
+import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
 export type ModalState =
   | { kind: "none" }
@@ -18,7 +18,15 @@ interface Props {
 
 export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
   if (state.kind === "questions") {
-    return <MeasurementQuestionsModal visible measurement={state.measurement} onClose={onClose} />;
+    const m = state.measurement;
+    return (
+      <MeasurementQuestionsModal
+        visible
+        measurement={m}
+        onClose={onClose}
+        onSaveComment={(text) => onSaveComment(m, text)}
+      />
+    );
   }
 
   if (state.kind === "comment") {

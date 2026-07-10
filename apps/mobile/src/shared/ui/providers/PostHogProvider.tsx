@@ -21,6 +21,9 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Offline gating lives in getPostHogClient (its fetch is connectivity-gated),
+  // so nothing to wire here.
+
   if (!isReady || !client.current) {
     return <Fragment>{children}</Fragment>;
   }

@@ -1,14 +1,5 @@
 import { tsr } from "~/shared/api/tsr";
 
-export function useExperimentFlowQuery(experimentId: string | undefined, enabled = true) {
-  return tsr.experiments.getFlow.useQuery({
-    queryKey: ["experiment-flow", experimentId],
-    queryData: { params: { id: experimentId ?? "" } },
-    enabled: enabled && !!experimentId,
-    networkMode: "offlineFirst",
-  });
-}
-
 /**
  * Loads a published workbook version (with full cell data, including branch
  * conditions) for an experiment that has a workbook attached. Used by the

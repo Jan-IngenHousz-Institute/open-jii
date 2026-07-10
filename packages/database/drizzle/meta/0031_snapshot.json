@@ -1,5 +1,5 @@
 {
-  "id": "dbc4a601-3689-4af0-b7e8-9c734cef8179",
+  "id": "25cc6d66-6a35-4951-864c-675cb7bd574e",
   "prevId": "226948eb-85d8-421d-b363-f4569ecaa212",
   "version": "7",
   "dialect": "postgresql",
@@ -1027,136 +1027,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.iot_devices": {
-      "name": "iot_devices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "thing_name": {
-          "name": "thing_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "serial_number": {
-          "name": "serial_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "device_class": {
-          "name": "device_class",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "certificate_id": {
-          "name": "certificate_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "certificate_arn": {
-          "name": "certificate_arn",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "owner_user_id": {
-          "name": "owner_user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "provisioned_at": {
-          "name": "provisioned_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "rotated_at": {
-          "name": "rotated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "iot_devices_owner_user_id_users_id_fk": {
-          "name": "iot_devices_owner_user_id_users_id_fk",
-          "tableFrom": "iot_devices",
-          "tableTo": "users",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "iot_devices_thing_name_unique": {
-          "name": "iot_devices_thing_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "thing_name"
-          ]
-        },
-        "iot_devices_serial_number_unique": {
-          "name": "iot_devices_serial_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "serial_number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "iot_devices_status_check": {
-          "name": "iot_devices_status_check",
-          "value": "\"iot_devices\".\"status\" IN ('active', 'rotating', 'revoked')"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.macros": {
       "name": "macros",
       "schema": "",
@@ -1372,6 +1242,12 @@
         },
         "deleted_at": {
           "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "whats_new_last_seen_at": {
+          "name": "whats_new_last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false

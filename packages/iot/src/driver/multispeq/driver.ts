@@ -148,7 +148,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
           success: true,
           data: response.data as T,
           checksum: response.checksum,
-        } as CommandResult<T>;
+        };
       } catch (error) {
         this.log.warn("command failed", {
           elapsedMs: Date.now() - startedAt,
@@ -157,7 +157,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         return {
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
-        } as CommandResult<T>;
+        };
       }
     });
   }

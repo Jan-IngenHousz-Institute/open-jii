@@ -2,10 +2,10 @@ import React from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ParsedTableData } from "~/features/experiments/utils/parse-experiment-data";
-import { Chart } from "~/features/measurement-flow/components/measurement-result/components/chart";
-import { KeyValue } from "~/features/measurement-flow/components/measurement-result/components/key-value";
-import { MeasurementHeader } from "~/features/measurement-flow/components/measurement-result/components/measurement-header";
 import { useTranslation } from "~/shared/i18n";
+import { Chart } from "~/shared/ui/measurement/chart";
+import { KeyValue } from "~/shared/ui/measurement/key-value";
+import { MeasurementHeader } from "~/shared/ui/measurement/measurement-header";
 
 interface TableDetailModalProps {
   visible: boolean;

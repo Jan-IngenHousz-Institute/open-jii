@@ -1,10 +1,10 @@
-import { createFilterWidget } from "@/test/factories";
+import { createFilterWidget, createRichTextWidget } from "@/test/factories";
 import { render, screen, act } from "@/test/test-utils";
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { DashboardWidget, DataFilter } from "@repo/api/schemas/experiment.schema";
 
 import {
   DashboardFiltersProvider,
@@ -232,5 +232,51 @@ describe("useDashboardFilterWidget", () => {
     expect(result.current.merged).toEqual([
       { column: "device_id", operator: "equals", value: "D9" },
     ]);
+  });
+
+  it("keeps the merged-filter identity stable when a non-filter widget churns", () => {
+    const filterWidget = createFilterWidget({
+      config: {
+        tableName: "raw_data",
+        column: "device_id",
+        operator: "equals",
+        defaultValue: "D1",
+      },
+    });
+    const richText = createRichTextWidget({ config: { html: "<p>a</p>" } });
+
+    function Harness({ widgets }: { widgets: DashboardWidget[] }) {
+      return (
+        <DashboardFiltersProvider widgets={widgets}>
+          <Probe />
+        </DashboardFiltersProvider>
+      );
+    }
+    const captured: DataFilter[][] = [];
+    function Probe() {
+      captured.push(useDashboardFiltersForTable("raw_data"));
+      return null;
+    }
+
+    const { rerender } = render(<Harness widgets={[filterWidget, richText]} />);
+    // Simulate an editor keystroke: fresh array + fresh widget objects, only
+    // the rich-text html changed.
+    rerender(
+      <Harness widgets={[{ ...filterWidget }, { ...richText, config: { html: "<p>ab</p>" } }]} />,
+    );
+    expect(captured.length).toBeGreaterThanOrEqual(2);
+    expect(captured.at(-1)).toBe(captured[0]);
+
+    // Control: a filter-widget change must still invalidate.
+    rerender(
+      <Harness
+        widgets={[
+          { ...filterWidget, config: { ...filterWidget.config, defaultValue: "D2" } },
+          richText,
+        ]}
+      />,
+    );
+    expect(captured.at(-1)).not.toBe(captured[0]);
+    expect(captured.at(-1)).toEqual([{ column: "device_id", operator: "equals", value: "D2" }]);
   });
 });

@@ -1,16 +1,16 @@
 import { CircleAlert, Repeat2, Search, X, Bookmark, ScanQrCode } from "lucide-react-native";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Keyboard } from "react-native";
+import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-actions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import { FlowNode } from "~/shared/measurements/flow-node";
 import { Checkbox } from "~/shared/ui/Checkbox";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
-import { FlowNode } from "../../../types";
 import { QRScannerModal } from "../qr-scanner-modal";
-import { advanceWithAnswer } from "../utils/advance-with-answer";
 import { AutoProceededSummary } from "./auto-proceeded-summary";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";

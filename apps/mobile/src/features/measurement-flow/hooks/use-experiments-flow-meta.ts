@@ -1,12 +1,9 @@
 import { useQueries } from "@tanstack/react-query";
-import { isQuestionsOnlyFlow } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
-import type {
-  FlowEdge,
-  FlowNode,
-} from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
+import { contentKeys } from "~/shared/api/content-query-keys";
 import { tsr } from "~/shared/api/tsr";
+import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
   requiresSensor: boolean;
@@ -17,8 +14,8 @@ export interface ExperimentFlowMeta {
 
 /**
  * Fetch the per-experiment flow graphs in parallel so the picker cards can
- * render sensor/questions tags and node-count metadata. Uses the same query
- * key as `useExperimentFlowQuery` so the eventual single-experiment selection
+ * render sensor/questions tags and node-count metadata. Uses the
+ * ["experiment-flow", id] key so the eventual single-experiment selection
  * hits a warm cache.
  *
  * Note: this fires N concurrent requests. The list endpoint should grow a
@@ -29,7 +26,7 @@ export function useExperimentsFlowMeta(
 ): Record<string, ExperimentFlowMeta> {
   const results = useQueries({
     queries: experimentIds.map((id) => ({
-      queryKey: ["experiment-flow", id] as const,
+      queryKey: contentKeys.experimentFlow(id),
       queryFn: async () => {
         const res = await tsr.experiments.getFlow.query({ params: { id } });
         return res.status === 200 ? res.body : null;
@@ -44,10 +41,7 @@ export function useExperimentsFlowMeta(
     const body = r.data;
     if (!id || !body?.graph) return;
 
-    const nodes = orderFlowNodes(
-      body.graph.nodes as FlowNode[],
-      (body.graph.edges as FlowEdge[]) ?? [],
-    );
+    const nodes = orderFlowNodes(body.graph.nodes, body.graph.edges ?? []);
     const requiresSensor = nodes.some((n) => n.type === "measurement");
     const questionsOnly = isQuestionsOnlyFlow(nodes);
     out[id] = {

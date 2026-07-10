@@ -164,10 +164,7 @@ describe("RNBLEAdapter", () => {
       });
 
       // Simulate notification with invalid base64 that causes atob to throw
-      const monitorCallback = device.monitorCharacteristicForService.mock.calls[0]?.[2] as (
-        error: Error | null,
-        characteristic: { value: string | null } | null,
-      ) => void;
+      const monitorCallback = device.monitorCharacteristicForService.mock.calls[0]?.[2];
       monitorCallback(null, { value: "!!!invalid-base64!!!" });
 
       expect(consoleSpy).toHaveBeenCalledWith("Error processing BLE data:", expect.any(Error));
