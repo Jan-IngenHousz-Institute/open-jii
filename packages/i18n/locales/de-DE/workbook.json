@@ -73,7 +73,7 @@
     "expand": "Ausgabe ausklappen",
     "collapse": "Ausgabe einklappen",
     "clear": "Ausgabe löschen",
-    "empty": "Keine Messdaten verfügbar — führen Sie zuerst eine Protokollzelle aus",
+    "empty": "Keine Messdaten verfügbar - führen Sie zuerst eine Protokollzelle aus",
     "noData": "Keine Ausgabedaten",
     "tabTable": "Tabelle",
     "tabJson": "JSON",
@@ -92,6 +92,11 @@
     "protocolReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "macroReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "fork": "Zum Bearbeiten forken",
-    "forkedFrom": "Geforkt von"
+    "forkedFrom": "Geforkt von",
+    "rename": "Umbenennen",
+    "renameSave": "Namen speichern",
+    "renameCancel": "Abbrechen",
+    "renameConflict": "Dieser Name ist bereits vergeben",
+    "renameFailed": "Umbenennen fehlgeschlagen"
   }
 }

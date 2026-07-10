@@ -85,7 +85,7 @@ function setUpgradable(isUpgradable: boolean) {
 }
 
 const card = () => <LinkedWorkbookCard {...props} />;
-const upgradeButton = () => screen.queryByRole("button", { name: /flow\.upgradeToLatest/i });
+const upgradeButton = () => screen.queryByRole("button", { name: /flow\.reviewAndUpgrade/i });
 
 describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
   beforeEach(() => {

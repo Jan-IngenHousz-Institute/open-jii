@@ -461,6 +461,22 @@ export const experimentContract = c.router({
       "Publishes the latest workbook cells as a new version (or reuses the latest if unchanged) and updates the experiment to reference it.",
   },
 
+  setWorkbookVersion: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/workbook/version",
+    pathParams: zIdPathParam,
+    body: z.object({ versionId: z.string().uuid() }),
+    responses: {
+      200: zAttachWorkbookResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Pin the experiment to a specific workbook version",
+    description:
+      "Repins the experiment to an existing published version (rollback or roll-forward) without publishing a new one.",
+  },
+
   uploadData: {
     method: "POST",
     path: "/api/v1/experiments/:id/uploads",

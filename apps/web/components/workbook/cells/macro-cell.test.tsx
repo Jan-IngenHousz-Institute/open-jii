@@ -373,4 +373,52 @@ describe("MacroCellComponent", () => {
       typeof useSession
     >);
   });
+
+  describe("inline rename", () => {
+    it("renames the macro and repoints the cell label for the owner", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const updateSpy = server.mount(contract.macros.updateMacro, {
+        body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
+      });
+      const onUpdate = vi.fn();
+      renderMacroCell({ onUpdate });
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Renamed Macro");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      expect(updateSpy.body).toEqual({ name: "Renamed Macro" });
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ payload: expect.objectContaining({ name: "Renamed Macro" }) }),
+        ),
+      );
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
+    it("does not offer rename to non-owners", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      renderMacroCell({}, { createdBy: "other-user" });
+
+      await screen.findByText("My Macro");
+      expect(screen.queryByLabelText("cells.rename")).not.toBeInTheDocument();
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+  });
 });

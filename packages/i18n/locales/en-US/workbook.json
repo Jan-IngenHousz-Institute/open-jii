@@ -73,7 +73,7 @@
     "expand": "Expand output",
     "collapse": "Collapse output",
     "clear": "Clear output",
-    "empty": "No measurement data available — run a protocol cell first",
+    "empty": "No measurement data available - run a protocol cell first",
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
@@ -92,6 +92,11 @@
     "protocolReadOnly": "Read-only. Fork it to edit.",
     "macroReadOnly": "Read-only. Fork it to edit.",
     "fork": "Fork to edit",
-    "forkedFrom": "Forked from"
+    "forkedFrom": "Forked from",
+    "rename": "Rename",
+    "renameSave": "Save name",
+    "renameCancel": "Cancel",
+    "renameConflict": "That name is already taken",
+    "renameFailed": "Rename failed"
   }
 }

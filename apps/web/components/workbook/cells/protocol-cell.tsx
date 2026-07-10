@@ -27,6 +27,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CellTitle } from "../cell-title";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
@@ -192,12 +193,51 @@ export function ProtocolCellComponent({
     }
   }, [protocolData, forkProtocol, onUpdate, cell]);
 
+  // Rename the shared protocol row and repoint the cell label at the new name.
+  // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
+  const [isRenaming, setIsRenaming] = useState(false);
+  const handleRename = useCallback(
+    async (next: string) => {
+      setIsRenaming(true);
+      try {
+        const res = await saveProtocol({ params: { id: protocolId }, body: { name: next } });
+        onUpdate({ ...cell, payload: { ...cell.payload, name: res.body.name } });
+      } catch (err) {
+        const parsed = parseApiError(err);
+        toast({
+          description:
+            parsed?.code === "REPOSITORY_DUPLICATE"
+              ? tWorkbook("cells.renameConflict")
+              : (parsed?.message ?? tWorkbook("cells.renameFailed")),
+          variant: "destructive",
+        });
+        throw err;
+      } finally {
+        setIsRenaming(false);
+      }
+    },
+    [protocolId, saveProtocol, onUpdate, cell, tWorkbook],
+  );
+
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";
 
   return (
     <CellWrapper
       icon={<Microscope className="h-3.5 w-3.5" />}
-      label={displayName}
+      label={
+        <CellTitle
+          name={displayName}
+          canRename={isEditable}
+          onRename={handleRename}
+          isPending={isRenaming}
+          labels={{
+            rename: tWorkbook("cells.rename"),
+            save: tWorkbook("cells.renameSave"),
+            cancel: tWorkbook("cells.renameCancel"),
+          }}
+        />
+      }
+      labelText={displayName}
       accentColor="#2D3142"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
