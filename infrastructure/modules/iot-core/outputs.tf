@@ -9,6 +9,16 @@ output "iot_topic_rule_names" {
   value       = [for rule in aws_iot_topic_rule.iot_rules : rule.name]
 }
 
+output "device_thing_type_name" {
+  description = "Name of the IoT Thing type applied to platform-managed devices"
+  value       = aws_iot_thing_type.device.name
+}
+
+output "device_thing_group_name" {
+  description = "Name of the IoT Thing group that holds all platform-managed devices"
+  value       = aws_iot_thing_group.managed_devices.name
+}
+
 output "iot_kinesis_role_arn" {
   description = "ARN of the IoT Kinesis IAM Role"
   value       = aws_iam_role.iot_kinesis_role.arn

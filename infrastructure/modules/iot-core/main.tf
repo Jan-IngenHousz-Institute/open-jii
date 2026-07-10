@@ -118,6 +118,29 @@ resource "aws_iot_policy" "iot_policy" {
   })
 }
 
+# --------------------------------------------------
+# Managed device registry (Thing type + group)
+# --------------------------------------------------
+# Devices registered through the platform are created as Things of this type and
+# added to the managed-devices group. Certificates and their scoped policy are
+# attached in a later slice; nothing here issues credentials.
+resource "aws_iot_thing_type" "device" {
+  name = "open_jii_${var.environment}_device"
+
+  properties {
+    description           = "Platform-managed IoT device"
+    searchable_attributes = ["deviceType", "serialNumber"]
+  }
+}
+
+resource "aws_iot_thing_group" "managed_devices" {
+  name = "open_jii_${var.environment}_managed_devices"
+
+  properties {
+    description = "All platform-registered IoT devices"
+  }
+}
+
 # --------------------------------------------
 # IAM Role and Policy for Kinesis Integration
 # --------------------------------------------
