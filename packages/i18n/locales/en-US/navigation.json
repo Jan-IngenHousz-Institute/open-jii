@@ -42,13 +42,6 @@
     "otherDevices": "Other devices",
     "otherDevice1": "Other device 1"
   },
-  "breadcrumbs": {
-    "home": "Home",
-    "experiments": "Experiments",
-    "new": "New",
-    "edit": "Edit",
-    "view": "View"
-  },
   "whatsNew": {
     "navLabel": "What's new",
     "title": "What's new on web",

@@ -34,7 +34,7 @@
     "notUsed": "Niet gebruikt",
     "usedByCount_one": "{{count}} experiment",
     "usedByCount_other": "{{count}} experimenten",
-    "duplicateName": "Kopie van {{name}}",
+    "duplicateName": "Fork van {{name}}",
     "columns": {
       "name": "Naam",
       "usedBy": "Gebruikt door",
@@ -45,7 +45,8 @@
       "open": "Openen",
       "duplicate": "Dupliceren",
       "delete": "Verwijderen",
-      "more": "Meer acties"
+      "more": "Meer acties",
+      "fork": "Forken"
     },
     "messages": {
       "deleteSuccess": "Werkboek verwijderd",
@@ -64,7 +65,8 @@
       "branch_other": "{{count}} Vertakkingen",
       "markdown_one": "{{count}} Notitie",
       "markdown_other": "{{count}} Notities"
-    }
+    },
+    "forkedFrom": "Geforkt van"
   },
   "output": {
     "label": "Uitvoer",
@@ -85,5 +87,11 @@
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
     "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
+  },
+  "cells": {
+    "protocolReadOnly": "Alleen-lezen. Fork het om te bewerken.",
+    "macroReadOnly": "Alleen-lezen. Fork het om te bewerken.",
+    "fork": "Forken om te bewerken",
+    "forkedFrom": "Geforkt van"
   }
 }

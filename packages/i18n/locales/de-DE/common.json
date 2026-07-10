@@ -60,7 +60,9 @@
     "recommended": "Empfohlen",
     "compatibleWithProtocol": "Kompatibel mit {{protocolName}} Protokoll",
     "showAll": "Alle anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "forkedFrom": "Geforkt von",
+    "viewOriginal": "Original ansehen"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -385,18 +387,6 @@
     "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
     "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "goToPlatform": "Zur openJII-Plattform gehen"
-  },
-  "breadcrumbs": {
-    "home": "Startseite",
-    "platform": "Plattform",
-    "experiments": "Experimente",
-    "protocols": "Protokolle",
-    "macros": "Makros",
-    "new": "Neu",
-    "edit": "Bearbeiten",
-    "view": "Ansehen",
-    "account": "Konto",
-    "settings": "Einstellungen"
   },
   "experimentData": {
     "title": "Experimentdaten",
