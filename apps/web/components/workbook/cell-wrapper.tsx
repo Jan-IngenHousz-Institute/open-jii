@@ -65,9 +65,6 @@ interface CellWrapperProps {
   onRun?: () => void;
   headerBadges?: ReactNode;
   headerActions?: ReactNode;
-  // Always-visible, right-aligned header slot (not hidden until hover like
-  // headerActions). Used for persistent metadata such as the macro language.
-  headerMeta?: ReactNode;
   forceActionsVisible?: boolean;
   deleteIcon?: ReactNode;
   deleteLabel?: string;
@@ -89,7 +86,6 @@ export function CellWrapper({
   onRun,
   headerBadges,
   headerActions,
-  headerMeta,
   forceActionsVisible = false,
   deleteIcon,
   deleteLabel,
@@ -168,7 +164,6 @@ export function CellWrapper({
           {headerBadges}
 
           <div className="ml-auto flex items-center gap-1">
-            {headerMeta}
             <div
               className={
                 forceActionsVisible

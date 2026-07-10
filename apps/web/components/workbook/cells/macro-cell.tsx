@@ -83,6 +83,8 @@ export function MacroCellComponent({
   // Read-only purely because the viewer did not create this macro (not because
   // the cell is rendered from a pinned snapshot or in a read-only host).
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
+  // Lineage: this macro is itself a fork of another one.
+  const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
   const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
@@ -183,8 +185,16 @@ export function MacroCellComponent({
       forceActionsVisible={langSelectOpen}
       onRun={onRun}
       headerBadges={
-        isReadOnlyForNonOwner || (isEditable && localCode != null) ? (
+        isReadOnlyForNonOwner || (isEditable && localCode != null) || forkedFrom ? (
           <div className="flex items-center gap-2">
+            {forkedFrom ? (
+              <Link
+                href={`/platform/macros/${forkedFrom}`}
+                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+              >
+                {t("cells.forkedFrom")}
+              </Link>
+            ) : null}
             {isReadOnlyForNonOwner ? (
               <>
                 <span className="text-muted-foreground text-xs">{t("cells.macroReadOnly")}</span>
@@ -217,31 +227,6 @@ export function MacroCellComponent({
           </div>
         ) : undefined
       }
-      headerMeta={
-        isOwner ? (
-          <Select
-            value={macroLanguage ?? language}
-            onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
-            open={langSelectOpen}
-            onOpenChange={setLangSelectOpen}
-          >
-            <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent px-2 text-xs shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.entries(languageLabels) as [MacroLanguage, string][]).map(([val, label]) => (
-                <SelectItem key={val} value={val} className="text-xs">
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-muted-foreground px-2 text-xs">
-            {languageLabels[macroLanguage ?? language]}
-          </span>
-        )
-      }
       headerActions={
         <div className="flex items-center gap-1">
           <Button
@@ -260,6 +245,31 @@ export function MacroCellComponent({
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>
+          {isOwner ? (
+            <Select
+              value={macroLanguage ?? language}
+              onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
+              open={langSelectOpen}
+              onOpenChange={setLangSelectOpen}
+            >
+              <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent px-2 text-xs shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(languageLabels) as [MacroLanguage, string][]).map(
+                  ([val, label]) => (
+                    <SelectItem key={val} value={val} className="text-xs">
+                      {label}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-muted-foreground px-2 text-xs">
+              {languageLabels[macroLanguage ?? language]}
+            </span>
+          )}
           <Button
             variant="ghost"
             size="sm"

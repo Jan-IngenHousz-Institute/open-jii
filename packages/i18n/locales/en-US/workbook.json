@@ -34,7 +34,7 @@
     "notUsed": "Not used",
     "usedByCount_one": "{{count}} experiment",
     "usedByCount_other": "{{count}} experiments",
-    "duplicateName": "Copy of {{name}}",
+    "duplicateName": "Fork of {{name}}",
     "columns": {
       "name": "Name",
       "usedBy": "Used by",
@@ -45,7 +45,8 @@
       "open": "Open",
       "duplicate": "Duplicate",
       "delete": "Delete",
-      "more": "More actions"
+      "more": "More actions",
+      "fork": "Fork"
     },
     "messages": {
       "deleteSuccess": "Workbook deleted",
@@ -64,7 +65,8 @@
       "branch_other": "{{count}} Branches",
       "markdown_one": "{{count}} Note",
       "markdown_other": "{{count}} Notes"
-    }
+    },
+    "forkedFrom": "Forked from"
   },
   "output": {
     "label": "Output",
@@ -89,6 +91,7 @@
   "cells": {
     "protocolReadOnly": "Read-only. Fork it to edit.",
     "macroReadOnly": "Read-only. Fork it to edit.",
-    "fork": "Fork to edit"
+    "fork": "Fork to edit",
+    "forkedFrom": "Forked from"
   }
 }

@@ -93,7 +93,7 @@ describe("WorkbookList row actions", () => {
     const row = screen.getByText("Source WB").closest("tr");
     if (!row) throw new Error("row not found");
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
-    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
@@ -107,7 +107,7 @@ describe("WorkbookList row actions", () => {
     const row = screen.getByText("Source WB").closest("tr");
     if (!row) throw new Error("row not found");
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
-    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),

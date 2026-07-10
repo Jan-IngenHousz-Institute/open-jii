@@ -79,6 +79,8 @@ export function ProtocolCellComponent({
   // Read-only purely because the viewer did not create this protocol (not
   // because the cell is rendered from a pinned snapshot or in a read-only host).
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
+  // Lineage: this protocol is itself a fork of another one.
+  const forkedFrom = useSnapshot ? undefined : protocolData?.body.forkedFrom;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
   const { mutateAsync: forkProtocol, isPending: isForking } = useProtocolCreate();
@@ -205,12 +207,23 @@ export function ProtocolCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        protocolFamily || (isEditable && localCode != null) || isReadOnlyForNonOwner ? (
+        protocolFamily ||
+        (isEditable && localCode != null) ||
+        isReadOnlyForNonOwner ||
+        forkedFrom ? (
           <div className="flex items-center gap-2">
             {protocolFamily ? (
               <span className="text-xs capitalize text-[#68737B]">
                 {getSensorFamilyLabel(protocolFamily)}
               </span>
+            ) : null}
+            {forkedFrom ? (
+              <Link
+                href={`/platform/protocols/${forkedFrom}`}
+                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+              >
+                {tWorkbook("cells.forkedFrom")}
+              </Link>
             ) : null}
             {isReadOnlyForNonOwner ? (
               <>
