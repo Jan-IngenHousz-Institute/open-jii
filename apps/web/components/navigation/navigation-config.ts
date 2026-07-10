@@ -81,6 +81,13 @@ export const mainNavigation = {
       },
     ] as NavLink[],
   },
+  devices: {
+    titleKey: "iot.devices.tabLabel",
+    namespace: "iot",
+    url: (locale: string) => `/${locale}/platform/devices`,
+    icon: "RadioReceiver",
+    items: [] as NavLink[],
+  },
   workbooks: {
     titleKey: "sidebar.workbooks",
     namespace: "navigation",

@@ -44,6 +44,8 @@ export enum ErrorCodes {
   AWS_COGNITO_TOKEN_FAILED = "AWS_COGNITO_TOKEN_FAILED", // Cognito OpenID token retrieval failed
   AWS_COGNITO_CREDENTIALS_FAILED = "AWS_COGNITO_CREDENTIALS_FAILED", // Cognito credentials retrieval failed
   AWS_IOT_ATTACH_POLICY_FAILED = "AWS_IOT_ATTACH_POLICY_FAILED", // IoT policy attachment to Cognito identity failed
+  AWS_IOT_CREATE_THING_FAILED = "AWS_IOT_CREATE_THING_FAILED", // IoT CreateThing / group attachment failed
+  AWS_IOT_DELETE_THING_FAILED = "AWS_IOT_DELETE_THING_FAILED", // IoT DeleteThing failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
   AWS_OPERATION_FAILED = "AWS_OPERATION_FAILED", // Other AWS operations failed
 
@@ -86,6 +88,13 @@ export enum ErrorCodes {
   PROTOCOL_MACROS_ADD_FAILED = "PROTOCOL_MACROS_ADD_FAILED", // Failed to add compatible macros
   PROTOCOL_MACROS_REMOVE_FAILED = "PROTOCOL_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
   PROTOCOL_MACROS_LIST_FAILED = "PROTOCOL_MACROS_LIST_FAILED", // Failed to list compatible macros
+
+  // ==================== Domain Operations - IoT Devices ====================
+  // Location: src/iot/application/use-cases/
+  IOT_DEVICE_REGISTER_FAILED = "IOT_DEVICE_REGISTER_FAILED", // Failed to register device
+  IOT_DEVICE_DELETE_FAILED = "IOT_DEVICE_DELETE_FAILED", // Failed to delete device
+  IOT_DEVICE_NOT_FOUND = "IOT_DEVICE_NOT_FOUND", // Device not found
+  IOT_DEVICE_ALREADY_EXISTS = "IOT_DEVICE_ALREADY_EXISTS", // Device serial number or thing name already registered
 
   // ==================== Domain Operations - Users ====================
   // Location: src/users/application/use-cases/
