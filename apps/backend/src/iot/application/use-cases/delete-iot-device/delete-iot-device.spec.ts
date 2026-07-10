@@ -49,6 +49,31 @@ describe("DeleteIotDeviceUseCase", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("revokes and detaches a live certificate before deleting the Thing", async () => {
+    const revokeSpy = vi
+      .spyOn(awsAdapter, "setCertificateStatus")
+      .mockResolvedValue(success(undefined));
+    const detachSpy = vi
+      .spyOn(awsAdapter, "detachThingPrincipal")
+      .mockResolvedValue(success(undefined));
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      status: "active",
+      certificateId: "cert-live",
+      certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-live",
+    });
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(revokeSpy).toHaveBeenCalledWith("cert-live", "REVOKED");
+    expect(detachSpy).toHaveBeenCalledWith(
+      device.thingName,
+      "arn:aws:iot:eu-central-1:000000000000:cert/cert-live",
+    );
+    expect(deleteThingSpy).toHaveBeenCalledWith(device.thingName);
+  });
+
   it("returns 404 for a missing device", async () => {
     const result = await useCase.execute(faker.string.uuid(), userId);
 

@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { zIotCredentials, zIotDevice, zRegisterIotDeviceBody } from "./iot.schema";
+import {
+  zIotCredentials,
+  zIotDevice,
+  zRegisterIotDeviceBody,
+  zIssueIotCredentialsResponse,
+} from "./iot.schema";
 
 describe("Iot Schema", () => {
   describe("zIotCredentials", () => {
@@ -111,6 +116,8 @@ describe("Iot Schema", () => {
       name: "Device 1",
       deviceType: "ambyte",
       status: "pending",
+      certificateId: null,
+      certificateArn: null,
       createdBy: "22222222-2222-4222-8222-222222222222",
       createdAt: "2025-01-01T00:00:00.000Z",
       updatedAt: "2025-01-10T00:00:00.000Z",
@@ -124,12 +131,45 @@ describe("Iot Schema", () => {
       expect(zIotDevice.safeParse({ ...validDevice, name: null }).success).toBe(true);
     });
 
+    it("accepts an active device with certificate fields", () => {
+      const active = {
+        ...validDevice,
+        status: "active",
+        certificateId: "cert-1",
+        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-1",
+      };
+      expect(zIotDevice.safeParse(active).success).toBe(true);
+    });
+
+    it("accepts the rotating status", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, status: "rotating" }).success).toBe(true);
+    });
+
     it("rejects an unknown status", () => {
       expect(zIotDevice.safeParse({ ...validDevice, status: "connected" }).success).toBe(false);
     });
 
     it("rejects a non-uuid id", () => {
       expect(zIotDevice.safeParse({ ...validDevice, id: "not-a-uuid" }).success).toBe(false);
+    });
+  });
+
+  describe("zIssueIotCredentialsResponse", () => {
+    const validBundle = {
+      certificateId: "cert-1",
+      certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-1",
+      certificatePem: "-----BEGIN CERTIFICATE-----",
+      publicKey: "-----BEGIN PUBLIC KEY-----",
+      privateKey: "-----BEGIN RSA PRIVATE KEY-----",
+    };
+
+    it("accepts a full credential bundle", () => {
+      expect(zIssueIotCredentialsResponse.safeParse(validBundle).success).toBe(true);
+    });
+
+    it("rejects a bundle missing the private key", () => {
+      const { privateKey: _pk, ...withoutKey } = validBundle;
+      expect(zIssueIotCredentialsResponse.safeParse(withoutKey).success).toBe(false);
     });
   });
 });

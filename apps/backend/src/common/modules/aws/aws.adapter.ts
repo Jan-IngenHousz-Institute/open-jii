@@ -17,7 +17,12 @@ import { CognitoService } from "./services/cognito/cognito.service";
 import type { IotCredentials } from "./services/cognito/cognito.types";
 import { AwsConfigService } from "./services/config/config.service";
 import { AwsIotService } from "./services/iot/iot.service";
-import type { CreateThingInput, CreatedThing } from "./services/iot/iot.types";
+import type {
+  CreateThingInput,
+  CreatedThing,
+  CertificateResult,
+  CertificateStatus,
+} from "./services/iot/iot.types";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
 import { AwsS3Service } from "./services/s3/s3.service";
@@ -156,6 +161,43 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
 
   async deleteThing(thingName: string): Promise<Result<void>> {
     return this.awsIotService.deleteThing(thingName);
+  }
+
+  /**
+   * Issue a new X.509 keypair + certificate (active). The PEM and private key
+   * are returned once and never persisted.
+   */
+  async createDeviceCertificate(): Promise<Result<CertificateResult>> {
+    return this.awsIotService.createKeysAndCertificate();
+  }
+
+  async attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
+    return this.awsIotService.attachThingPrincipal(thingName, certificateArn);
+  }
+
+  async detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
+    return this.awsIotService.detachThingPrincipal(thingName, certificateArn);
+  }
+
+  /**
+   * Attach every configured device policy to the certificate. One policy per
+   * ingest channel, so a device cert carries all of them.
+   */
+  async attachDevicePolicies(certificateArn: string): Promise<Result<void>> {
+    for (const policyName of this.awsConfigService.iotPolicyNames) {
+      const result = await this.awsIotService.attachPolicy(policyName, certificateArn);
+      if (result.isFailure()) {
+        return result;
+      }
+    }
+    return success(undefined);
+  }
+
+  async setCertificateStatus(
+    certificateId: string,
+    status: CertificateStatus,
+  ): Promise<Result<void>> {
+    return this.awsIotService.updateCertificateStatus(certificateId, status);
   }
 
   /**

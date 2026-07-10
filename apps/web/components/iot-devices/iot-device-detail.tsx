@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ca
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
+import { IotDeviceCredentialsCard } from "./iot-device-credentials-card";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
 export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
@@ -100,16 +101,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
       </div>
 
       <div className="mt-8 max-w-3xl space-y-6">
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.devices.detail.credentials.title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-sm">
-              {t("iot.devices.detail.credentials.none")}
-            </p>
-          </CardContent>
-        </Card>
+        <IotDeviceCredentialsCard device={device} />
 
         <Card className="border-destructive/30 shadow-none">
           <CardHeader>

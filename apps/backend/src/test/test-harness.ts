@@ -422,7 +422,9 @@ export class TestHarness {
     thingName?: string;
     name?: string;
     deviceType?: string;
-    status?: "pending" | "active" | "revoked";
+    status?: "pending" | "active" | "rotating" | "revoked";
+    certificateId?: string;
+    certificateArn?: string;
   }) {
     const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
     const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
@@ -435,6 +437,8 @@ export class TestHarness {
         name: data.name ?? "Test device",
         deviceType: data.deviceType ?? "generic",
         status: data.status ?? "pending",
+        certificateId: data.certificateId ?? null,
+        certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,
       })
       .returning();

@@ -53,6 +53,7 @@
       "status": {
         "pending": "Pending",
         "active": "Active",
+        "rotating": "Rotating",
         "revoked": "Revoked"
       },
       "tabs": {
@@ -104,14 +105,47 @@
           "thingName": "AWS IoT Thing"
         },
         "credentials": {
-          "title": "Credentials",
-          "none": "No certificate issued yet. A certificate will be issued in a later step to activate this device."
+          "title": "Credentials"
         },
         "dangerZone": {
           "title": "Danger zone",
           "deleteLabel": "Delete this device",
           "deleteDescription": "Permanently removes the device and its AWS IoT Thing. This cannot be undone."
         }
+      },
+      "credentials": {
+        "pendingDescription": "This device has no certificate yet. Issue one to activate it and let it connect to AWS IoT.",
+        "issue": "Issue certificate",
+        "reissue": "Re-issue certificate",
+        "issueError": "Failed to issue certificate",
+        "activeLabel": "Certificate active",
+        "rotate": "Rotate certificate",
+        "rotatingDescription": "A certificate rotation is in progress.",
+        "revokedDescription": "The certificate was revoked, so this device can no longer connect. Issue a new certificate to bring it back online.",
+        "revoke": "Revoke certificate",
+        "revokeTitle": "Revoke certificate",
+        "revokeConfirm": "This revokes the device certificate immediately. The device will no longer be able to connect. You can issue a new certificate later.",
+        "revokeSuccess": "Certificate revoked",
+        "revokeError": "Failed to revoke certificate",
+        "dialogTitle": "Device certificate issued",
+        "dialogDescription": "Download and install the certificate and key files on the device so it can connect to AWS IoT. They can't be retrieved after you close this.",
+        "showOnceWarning": "This is the only time you can download these files. Store them somewhere safe before closing.",
+        "sectionCertificate": "Device certificate",
+        "certificate": "Device certificate",
+        "sectionKeys": "Key files",
+        "keysDescription": "The key files are unique to this certificate and can't be downloaded again after you close this.",
+        "publicKey": "Public key file",
+        "privateKey": "Private key file",
+        "sectionRootCa": "Root CA certificates",
+        "rootCaDescription": "Download the root CA that matches your endpoint and cipher suite. You can also download these later.",
+        "rootCaLearnMore": "Learn about CA certificates",
+        "rootCa1": "Amazon Root CA 1",
+        "rootCa1Sub": "RSA 2048 bit key",
+        "rootCa3": "Amazon Root CA 3",
+        "rootCa3Sub": "ECC 256 bit key",
+        "copy": "Copy",
+        "download": "Download",
+        "downloadAll": "Download all"
       }
     }
   }

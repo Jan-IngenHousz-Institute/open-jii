@@ -336,6 +336,66 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("createDeviceCertificate", () => {
+    it("delegates to AwsIotService.createKeysAndCertificate", async () => {
+      const cert = {
+        certificateId: "c1",
+        certificateArn: "arn:c1",
+        certificatePem: "PEM",
+        privateKey: "KEY",
+      };
+      vi.spyOn(awsIotService, "createKeysAndCertificate").mockResolvedValue(success(cert));
+
+      const result = await awsAdapter.createDeviceCertificate();
+
+      assertSuccess(result);
+      expect(result.value).toEqual(cert);
+    });
+  });
+
+  describe("attachDevicePolicies", () => {
+    it("attaches every configured policy to the certificate", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
+      for (const policyName of awsConfigService.iotPolicyNames) {
+        expect(attachSpy).toHaveBeenCalledWith(policyName, "arn:cert");
+      }
+    });
+
+    it("stops and propagates the first policy attachment failure", async () => {
+      const error = AppError.internal(
+        "attach failed",
+        ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED,
+      );
+      const attachSpy = vi.spyOn(awsIotService, "attachPolicy").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED);
+      expect(attachSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("setCertificateStatus", () => {
+    it("delegates to AwsIotService.updateCertificateStatus", async () => {
+      const spy = vi
+        .spyOn(awsIotService, "updateCertificateStatus")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.setCertificateStatus("cert-1", "REVOKED");
+
+      assertSuccess(result);
+      expect(spy).toHaveBeenCalledWith("cert-1", "REVOKED");
+    });
+  });
+
   describe("getFunctionNameForLanguage", () => {
     it("should return the python function name for 'python'", () => {
       const name = awsAdapter.getFunctionNameForLanguage("python");

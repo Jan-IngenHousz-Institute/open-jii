@@ -139,4 +139,63 @@ describe("IotDeviceController", () => {
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.NOT_FOUND);
     });
   });
+
+  describe("credential endpoints", () => {
+    const CERT = {
+      certificateId: "cert-1",
+      certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-1",
+      certificatePem: "PEM",
+      publicKey: "PUB",
+      privateKey: "KEY",
+    };
+
+    it("issues credentials for a pending device (201)", async () => {
+      vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+      vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<typeof CERT> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body.privateKey).toBe("KEY");
+      expect(response.body.certificatePem).toBe("PEM");
+    });
+
+    it("revokes credentials for an active device (200)", async () => {
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-1",
+        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-1",
+      });
+      const path = testApp.resolvePath(contract.iot.revokeIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .delete(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("revoked");
+    });
+
+    it("returns 401 when unauthenticated", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      await testApp.post(path).send({}).expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
 });

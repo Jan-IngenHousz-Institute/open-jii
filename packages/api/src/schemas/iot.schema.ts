@@ -20,7 +20,7 @@ export const zIotUploadUrl = z.object({
 });
 
 // --- IoT IotDevices ---
-export const zIotDeviceStatus = z.enum(["pending", "active", "revoked"]);
+export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoked"]);
 
 export const zIotDevice = z.object({
   id: z.string().uuid(),
@@ -30,6 +30,8 @@ export const zIotDevice = z.object({
   name: z.string().nullable(),
   deviceType: z.string(),
   status: zIotDeviceStatus,
+  certificateId: z.string().nullable(),
+  certificateArn: z.string().nullable(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -53,6 +55,16 @@ export const zIotDevicePathParam = z.object({
   deviceId: z.string().uuid().describe("ID of the device"),
 });
 
+// Show-once certificate bundle. Returned only at issuance/rotation and never
+// persisted or retrievable again.
+export const zIssueIotCredentialsResponse = z.object({
+  certificateId: z.string(),
+  certificateArn: z.string(),
+  certificatePem: z.string(),
+  publicKey: z.string(),
+  privateKey: z.string(),
+});
+
 // --- Inferred types ---
 export type IotCredentials = z.infer<typeof zIotCredentials>;
 export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
@@ -62,3 +74,4 @@ export type IotDevice = z.infer<typeof zIotDevice>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
+export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;
