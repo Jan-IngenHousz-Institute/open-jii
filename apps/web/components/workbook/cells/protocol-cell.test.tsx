@@ -557,5 +557,44 @@ describe("ProtocolCellComponent", () => {
       const forkedCell = onUpdate.mock.calls.at(-1)?.[0] as ProtocolCell | undefined;
       expect(forkedCell?.payload.protocolId).toBe("p1-fork");
     });
+
+    it("leaves the cell unchanged when forking a non-owned protocol fails", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const createSpy = server.mount(contract.protocols.createProtocol, {
+        status: 500,
+        body: undefined,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      const forkButton = await screen.findByRole("button", { name: /cells\.fork/ });
+      await user.click(forkButton);
+
+      await waitFor(() => expect(createSpy.called).toBe(true));
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("renders a link to the original when the protocol is itself a fork", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", forkedFrom: "p-src" }),
+    });
+
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    const link = await screen.findByRole("link", { name: "cells.forkedFrom" });
+    expect(link).toHaveAttribute("href", "/platform/protocols/p-src");
   });
 });
