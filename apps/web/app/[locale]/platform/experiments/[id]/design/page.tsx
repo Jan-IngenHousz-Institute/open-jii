@@ -17,7 +17,8 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
-import { GitBranch, List } from "lucide-react";
+import { GitBranch, Info, List, Pencil } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useMemo } from "react";
 
@@ -25,6 +26,7 @@ import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n/client";
+import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -163,10 +165,29 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         <NavTabsContent value="list" className="mt-6">
           <AutosaveStatusProvider>
             {canEdit ? (
-              <>
-                <div className="mb-3 flex items-center justify-end">
+              <div className="border-primary/30 space-y-4 rounded-lg border border-dashed p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="text-primary h-4 w-4" />
+                    <span className="text-sm font-medium">{t("flow.editingTitle")}</span>
+                  </div>
                   <EditAutosaveStatus />
                 </div>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="space-y-1.5">
+                    <p>{t("flow.editAutoApplyNotice")}</p>
+                    <p>
+                      {t("flow.editIsolatedHint")}{" "}
+                      <Link
+                        href={`/${locale}/platform/workbooks/${workbookId}`}
+                        className="text-primary font-medium underline underline-offset-2"
+                      >
+                        {t("flow.editOpenWorkbookLink")}
+                      </Link>
+                    </p>
+                  </AlertDescription>
+                </Alert>
                 <WorkbookDraftEditor
                   id={workbookId}
                   initialCells={workbookDraft.cells}
@@ -174,7 +195,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                   name={workbookDraft.name}
                   onSaved={handleDraftSaved}
                 />
-              </>
+              </div>
             ) : (
               <WorkbookEditor
                 cells={versionedCells}
