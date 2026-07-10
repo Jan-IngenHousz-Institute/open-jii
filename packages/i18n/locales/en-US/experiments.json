@@ -109,7 +109,7 @@
     "createFailed": "Failed to create workbook",
     "editingTitle": "Editing this experiment's workbook",
     "editAutoApplyNotice": "Every change you save here is applied to this experiment automatically.",
-    "editIsolatedHint": "To try changes without affecting this experiment, edit from the workbook page instead — edits there stay separate until you upgrade the version.",
+    "editIsolatedHint": "To try changes without affecting this experiment, edit from the workbook page instead; edits there stay separate until you upgrade the version.",
     "editOpenWorkbookLink": "Open the workbook page"
   },
   "overview": "Overview",
