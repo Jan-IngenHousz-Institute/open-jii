@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 import type { Result } from "../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../common/utils/fp-utils";
@@ -14,6 +15,7 @@ export class RotateCertificateUseCase {
   constructor(
     @Inject(AWS_IOT_PORT) private readonly awsIot: AwsIotPort,
     @Inject(DEVICE_REPOSITORY) private readonly deviceRepository: DeviceRepository,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(thingName: string): Promise<Result<CertificateResult>> {
@@ -41,7 +43,7 @@ export class RotateCertificateUseCase {
       return attachResult;
     }
 
-    const policyName = `open_jii_${device.deviceClass}_provisioned_device_policy`;
+    const policyName = this.configService.getOrThrow<string>("IOT_DEVICE_POLICY_NAME");
     const policyResult = await this.awsIot.attachPolicy(policyName, certificateArn);
     if (policyResult.isFailure()) {
       await this.awsIot.detachThingPrincipal(thingName, certificateArn);

@@ -62,6 +62,7 @@ export function ExperimentSelectionStep() {
     const q = search.trim().toLowerCase();
     if (!q) return sorted;
     return sorted.filter(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       (e) => e.label.toLowerCase().includes(q) || (e.description ?? "").toLowerCase().includes(q),
     );
   }, [sorted, search]);

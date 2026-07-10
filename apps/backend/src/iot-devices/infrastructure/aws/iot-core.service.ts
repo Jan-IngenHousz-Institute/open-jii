@@ -1,4 +1,5 @@
 import {
+  AddThingToThingGroupCommand,
   AttachPolicyCommand,
   AttachThingPrincipalCommand,
   CreateKeysAndCertificateCommand,
@@ -33,16 +34,24 @@ export class AwsIotCoreService implements AwsIotPort {
     thingName: string,
     deviceClass: string,
     serialNumber: string,
+    thingTypeName: string,
   ): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.client.send(
         new CreateThingCommand({
           thingName,
+          thingTypeName,
           attributePayload: {
             attributes: { device_class: deviceClass, serial_number: serialNumber },
           },
         }),
       );
+    }, mapError);
+  }
+
+  async addThingToThingGroup(thingName: string, thingGroupName: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.client.send(new AddThingToThingGroupCommand({ thingName, thingGroupName }));
     }, mapError);
   }
 

@@ -3,27 +3,28 @@ import { initContract } from "@ts-rest/core";
 import { zErrorResponse } from "../schemas/experiment.schema";
 import {
   zIotDevice,
+  zProvisionDeviceRequest,
+  zProvisionDeviceResponse,
   zRotateCertificateResponse,
-  zValidateProvisioningRequest,
-  zValidateProvisioningResponse,
 } from "../schemas/iot-devices.schema";
 
 const c = initContract();
 
 export const iotDevicesContract = c.router({
-  validate: {
+  provision: {
     method: "POST",
-    path: "/api/v1/iot-devices/validate",
-    body: zValidateProvisioningRequest,
+    path: "/api/v1/iot-devices/provision",
+    body: zProvisionDeviceRequest,
     responses: {
-      200: zValidateProvisioningResponse,
-      400: zErrorResponse,
+      201: zProvisionDeviceResponse,
+      409: zErrorResponse,
       500: zErrorResponse,
     },
-    summary: "Pre-provisioning validation hook",
+    summary: "Provision a new IoT device",
     description:
-      "Called by the pre-provisioning Lambda before AWS IoT issues a unique certificate. " +
-      "Checks that the serial number is not already provisioned and creates the device registry entry.",
+      "Creates an IoT Thing in AWS IoT Core, issues a unique X.509 certificate, and records the " +
+      "device in the registry. Returns the certificate PEM and private key — store them on the device. " +
+      "Called from the mobile app while the user is authenticated.",
   },
   list: {
     method: "GET",

@@ -6,8 +6,8 @@ import { AwsModule } from "../common/modules/aws/aws.module";
 import { DecommissionDeviceUseCase } from "./application/use-cases/decommission-device/decommission-device";
 import { GetDeviceUseCase } from "./application/use-cases/get-device/get-device";
 import { ListDevicesUseCase } from "./application/use-cases/list-devices/list-devices";
+import { ProvisionDeviceUseCase } from "./application/use-cases/provision-device/provision-device";
 import { RotateCertificateUseCase } from "./application/use-cases/rotate-certificate/rotate-certificate";
-import { ValidateProvisioningUseCase } from "./application/use-cases/validate-provisioning/validate-provisioning";
 import { AWS_IOT_PORT } from "./core/ports/aws-iot.port";
 import { DEVICE_REPOSITORY } from "./core/repositories/device.repository";
 import { AwsIotCoreService } from "./infrastructure/aws/iot-core.service";
@@ -18,7 +18,7 @@ import { IotDevicesController } from "./presentation/iot-devices.controller";
   imports: [ConfigModule, AwsModule, DatabaseModule],
   controllers: [IotDevicesController],
   providers: [
-    ValidateProvisioningUseCase,
+    ProvisionDeviceUseCase,
     GetDeviceUseCase,
     ListDevicesUseCase,
     RotateCertificateUseCase,

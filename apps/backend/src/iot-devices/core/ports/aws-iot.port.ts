@@ -10,7 +10,13 @@ export interface CertificateResult {
 }
 
 export interface AwsIotPort {
-  createThing(thingName: string, deviceClass: string, serialNumber: string): Promise<Result<void>>;
+  createThing(
+    thingName: string,
+    deviceClass: string,
+    serialNumber: string,
+    thingTypeName: string,
+  ): Promise<Result<void>>;
+  addThingToThingGroup(thingName: string, thingGroupName: string): Promise<Result<void>>;
   deleteThing(thingName: string): Promise<Result<void>>;
   createKeysAndCertificate(): Promise<Result<CertificateResult>>;
   attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>>;

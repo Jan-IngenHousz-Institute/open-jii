@@ -191,10 +191,3 @@ variable "grafana_auth_service_token" {
   type        = string
   sensitive   = true
 }
-
-variable "internal_api_key" {
-  description = "Shared secret for Lambda → backend internal calls (device provisioning validation)"
-  type        = string
-  sensitive   = true
-  default     = "Populate+before_before_merge"
-}

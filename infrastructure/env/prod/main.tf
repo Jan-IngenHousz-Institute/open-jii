@@ -156,8 +156,6 @@ module "iot_core" {
   large_iot_bucket_name = module.large_iot_s3.bucket_id
   large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
 
-  provisioning_lambda_arn = module.device_provisioning_lambda.function_arn
-
   device_types = {
     ambyte = {
       description           = "openJII AMBYTE plant sensor"
@@ -170,23 +168,6 @@ module "iot_core" {
       description  = "All openJII IoT devices"
       parent_group = null
     }
-  }
-}
-
-module "device_provisioning_lambda" {
-  source = "../../modules/lambda"
-
-  environment   = var.environment
-  function_name = "device-provisioning"
-  timeout       = 5
-  memory_size   = 128
-
-  layers      = ["arn:aws:lambda:${var.aws_region}:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:69"]
-  secret_arns = [module.auth_secrets.secret_arn]
-
-  environment_variables = {
-    BACKEND_URL     = "https://${module.route53.api_domain}"
-    AUTH_SECRET_ARN = module.auth_secrets.secret_arn
   }
 }
 
@@ -1253,9 +1234,8 @@ module "auth_secrets" {
     AUTH_SECRET        = var.auth_secret
     AUTH_GITHUB_ID     = var.github_oauth_client_id
     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
-    AUTH_ORCID_ID      = var.orcid_oauth_client_id
-    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
-    INTERNAL_API_KEY   = var.internal_api_key
+    AUTH_ORCID_ID     = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET = var.orcid_oauth_client_secret
   })
 
   tags = {
@@ -1751,10 +1731,6 @@ module "backend_ecs" {
       name      = "CONTENTFUL_ACCESS_TOKEN"
       valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_ACCESS_TOKEN::"
     },
-    {
-      name      = "INTERNAL_API_KEY"
-      valueFrom = "${module.auth_secrets.secret_arn}:INTERNAL_API_KEY::"
-    },
   ]
 
   # Environment variables for the backend service
@@ -1875,6 +1851,14 @@ module "backend_ecs" {
       name  = "AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME"
       value = module.large_iot_s3.bucket_id
     },
+    {
+      name  = "IOT_DEVICE_POLICY_NAME"
+      value = module.iot_core.provisioned_device_policy_name
+    },
+    {
+      name  = "IOT_RESOURCE_PREFIX"
+      value = "open-jii-${var.environment}"
+    },
   ]
 
   # Additional IAM policies for the task role
@@ -1882,6 +1866,7 @@ module "backend_ecs" {
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
+    module.iot_core.backend_iot_provision_policy_arn,
   ]
 
   tags = {

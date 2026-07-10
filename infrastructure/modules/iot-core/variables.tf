@@ -96,7 +96,3 @@ variable "device_groups" {
   default = {}
 }
 
-variable "provisioning_lambda_arn" {
-  description = "ARN of the pre-provisioning Lambda. If empty no Lambda permission is created."
-  type        = string
-}

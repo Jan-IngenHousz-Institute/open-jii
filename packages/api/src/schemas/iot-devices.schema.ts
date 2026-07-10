@@ -16,14 +16,17 @@ export const zIotDevice = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const zValidateProvisioningRequest = z.object({
+export const zProvisionDeviceRequest = z.object({
   serialNumber: z.string().min(1),
   deviceClass: z.string().min(1),
 });
 
-export const zValidateProvisioningResponse = z.object({
-  allowed: z.boolean(),
-  reason: z.string().optional(),
+export const zProvisionDeviceResponse = z.object({
+  thingName: z.string(),
+  certificateId: z.string(),
+  certificateArn: z.string(),
+  certificatePem: z.string(),
+  privateKey: z.string(),
 });
 
 export const zRotateCertificateResponse = z.object({
@@ -33,6 +36,6 @@ export const zRotateCertificateResponse = z.object({
 });
 
 export type IotDevice = z.infer<typeof zIotDevice>;
-export type ValidateProvisioningRequest = z.infer<typeof zValidateProvisioningRequest>;
-export type ValidateProvisioningResponse = z.infer<typeof zValidateProvisioningResponse>;
+export type ProvisionDeviceRequest = z.infer<typeof zProvisionDeviceRequest>;
+export type ProvisionDeviceResponse = z.infer<typeof zProvisionDeviceResponse>;
 export type RotateCertificateResponse = z.infer<typeof zRotateCertificateResponse>;

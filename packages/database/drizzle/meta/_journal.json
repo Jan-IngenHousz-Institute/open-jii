@@ -225,6 +225,13 @@
       "when": 1782737363482,
       "tag": "0031_hot_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783667970161,
+      "tag": "0032_thick_eddie_brock",
+      "breakpoints": true
     }
   ]
 }
