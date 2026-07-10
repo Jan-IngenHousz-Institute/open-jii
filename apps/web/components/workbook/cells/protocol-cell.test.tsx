@@ -523,5 +523,39 @@ describe("ProtocolCellComponent", () => {
         expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
       );
     });
+
+    it("forks a non-owned protocol and points the cell at the editable copy", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          name: "Alice Proto",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+        }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const createSpy = server.mount(contract.protocols.createProtocol, {
+        status: 201,
+        body: createProtocol({ id: "p1-fork", createdBy: "viewer", forkedFrom: "p1" }),
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      const forkButton = await screen.findByRole("button", { name: /cells\.fork/ });
+      await user.click(forkButton);
+
+      await waitFor(() => expect(createSpy.called).toBe(true));
+      expect(createSpy.body).toMatchObject({ forkedFrom: "p1" });
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const forkedCell = onUpdate.mock.calls.at(-1)?.[0] as ProtocolCell | undefined;
+      expect(forkedCell?.payload.protocolId).toBe("p1-fork");
+    });
   });
 });

@@ -2,11 +2,12 @@
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
-import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -23,6 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CellWrapper } from "../cell-wrapper";
@@ -78,6 +85,7 @@ export function MacroCellComponent({
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
 
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
+  const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
   const onEntitySaved = useWorkbookEntitySaved();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
@@ -116,6 +124,35 @@ export function MacroCellComponent({
     void copy(text);
   };
 
+  // Fork a macro the viewer does not own into an editable copy they do, then
+  // point this cell at the copy so it becomes editable in place.
+  const handleFork = useCallback(async () => {
+    if (!macroData) return;
+    try {
+      const suffix = crypto.randomUUID().slice(0, 8);
+      const res = await forkMacro({
+        body: {
+          name: `Copy of ${macroData.name}`.slice(0, 246) + ` ${suffix}`,
+          description: macroData.description ?? undefined,
+          language: macroData.language,
+          code: macroData.code,
+          forkedFrom: macroData.id,
+        },
+      });
+      onUpdate({
+        ...cell,
+        payload: {
+          ...cell.payload,
+          macroId: res.body.id,
+          language: res.body.language,
+          name: res.body.name,
+        },
+      });
+    } catch {
+      // useMacroCreate already surfaces the error toast.
+    }
+  }, [macroData, forkMacro, onUpdate, cell]);
+
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
       void saveMacro({ params: { id: macroId }, body: { language: lang } }).catch(
@@ -146,9 +183,64 @@ export function MacroCellComponent({
       forceActionsVisible={langSelectOpen}
       onRun={onRun}
       headerBadges={
-        isEditable && localCode != null ? (
-          <AutosaveIndicator status={autosave.status} variant="compact" />
+        isReadOnlyForNonOwner || (isEditable && localCode != null) ? (
+          <div className="flex items-center gap-2">
+            {isReadOnlyForNonOwner ? (
+              <>
+                <span className="text-muted-foreground text-xs">{t("cells.macroReadOnly")}</span>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        aria-label={t("cells.fork")}
+                        onClick={() => void handleFork()}
+                        disabled={isForking}
+                      >
+                        {isForking ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <GitFork className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("cells.fork")}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            ) : null}
+            {isEditable && localCode != null ? (
+              <AutosaveIndicator status={autosave.status} variant="compact" />
+            ) : null}
+          </div>
         ) : undefined
+      }
+      headerMeta={
+        isOwner ? (
+          <Select
+            value={macroLanguage ?? language}
+            onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
+            open={langSelectOpen}
+            onOpenChange={setLangSelectOpen}
+          >
+            <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent px-2 text-xs shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(languageLabels) as [MacroLanguage, string][]).map(([val, label]) => (
+                <SelectItem key={val} value={val} className="text-xs">
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-muted-foreground px-2 text-xs">
+            {languageLabels[macroLanguage ?? language]}
+          </span>
+        )
       }
       headerActions={
         <div className="flex items-center gap-1">
@@ -168,32 +260,6 @@ export function MacroCellComponent({
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>
-          {isOwner && (
-            <Select
-              value={macroLanguage ?? language}
-              onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
-              open={langSelectOpen}
-              onOpenChange={setLangSelectOpen}
-            >
-              <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent px-2 text-xs shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.entries(languageLabels) as [MacroLanguage, string][]).map(
-                  ([val, label]) => (
-                    <SelectItem key={val} value={val} className="text-xs">
-                      {label}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-          )}
-          {!isOwner && (
-            <span className="text-muted-foreground px-2 text-xs">
-              {languageLabels[macroLanguage ?? language]}
-            </span>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -210,20 +276,15 @@ export function MacroCellComponent({
           <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
         </div>
       ) : localCode != null || macroCode != null ? (
-        <>
-          {isReadOnlyForNonOwner && (
-            <p className="text-muted-foreground px-3 pt-2 text-xs">{t("cells.macroReadOnly")}</p>
-          )}
-          <WorkbookCodeEditor
-            value={localCode ?? macroCode ?? ""}
-            onChange={isEditable ? setLocalCode : undefined}
-            language={macroLanguage ?? language}
-            minHeight={isEditable ? "120px" : "80px"}
-            maxHeight={isEditable ? "500px" : "400px"}
-            readOnly={!isEditable}
-            syntaxLinting={isEditable}
-          />
-        </>
+        <WorkbookCodeEditor
+          value={localCode ?? macroCode ?? ""}
+          onChange={isEditable ? setLocalCode : undefined}
+          language={macroLanguage ?? language}
+          minHeight={isEditable ? "120px" : "80px"}
+          maxHeight={isEditable ? "500px" : "400px"}
+          readOnly={!isEditable}
+          syntaxLinting={isEditable}
+        />
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load macro code</p>
       )}

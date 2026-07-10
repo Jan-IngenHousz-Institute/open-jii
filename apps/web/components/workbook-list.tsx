@@ -169,6 +169,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
           description: workbook.description ?? undefined,
           cells: workbook.cells,
           metadata: workbook.metadata,
+          forkedFrom: workbook.id,
         },
       },
       {
