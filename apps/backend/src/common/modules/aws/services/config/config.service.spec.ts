@@ -50,6 +50,14 @@ describe("AwsConfigService", () => {
           .filter(Boolean),
       );
     });
+
+    it("should return the correct deviceThingTypeName", () => {
+      expect(service.deviceThingTypeName).toBe(process.env.AWS_IOT_DEVICE_THING_TYPE_NAME);
+    });
+
+    it("should return the correct deviceThingGroupName", () => {
+      expect(service.deviceThingGroupName).toBe(process.env.AWS_IOT_DEVICE_THING_GROUP_NAME);
+    });
   });
 
   describe("config validation", () => {
