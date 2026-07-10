@@ -33,10 +33,12 @@ module "vpc" {
   nat_gateway_count = 1
 
   # Disable resources not needed in sandbox
-  create_aurora_resources    = false
-  create_alb_resources       = false
-  create_ecs_resources       = false
-  create_migration_resources = false
+  create_aurora_resources            = false
+  create_alb_resources               = false
+  create_ecs_resources               = false
+  create_migration_resources         = false
+  create_macro_sandbox_resources     = false
+  create_metrics_publisher_resources = false
 }
 
 module "vpc_endpoints" {
