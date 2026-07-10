@@ -59,7 +59,7 @@ export function findNextMandatoryStep(args: {
 }
 
 // Seed produced by committing `answerValue` on `node`: auto-increment rotates
-// a multi_choice to its next option, remember copies the value — both into
+// a multi_choice to its next option, remember copies the value; both into
 // the NEXT iteration. Null when nothing should carry.
 export function seedNextIterationAnswer(args: {
   node: FlowNode;
@@ -73,6 +73,9 @@ export function seedNextIterationAnswer(args: {
     if (isAutoincrementEnabled(answers, node.id) && answerValue) {
       const options: string[] = content.options ?? [];
       const currentIndex = options.indexOf(answerValue);
+      // Unknown/stale value: keep the manual answer rather than jumping to
+      // options[0]. Mirrors the idx<0 skip in carryForwardAnswers.
+      if (currentIndex < 0) return null;
       const nextIndex = (currentIndex + 1) % options.length;
       return { cycle: iterationCount + 1, name: node.id, value: options[nextIndex] };
     }
