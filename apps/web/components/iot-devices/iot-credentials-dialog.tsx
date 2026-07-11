@@ -22,7 +22,7 @@ import {
 } from "@repo/ui/components/dialog";
 
 import { AMAZON_ROOT_CA_1_PEM, AMAZON_ROOT_CA_3_PEM } from "./amazon-root-ca";
-import { IotCredentialFile, downloadText } from "./iot-credential-file";
+import { IotCredentialFile, downloadZip } from "./iot-credential-file";
 
 const AMAZON_CA_DOCS =
   "https://docs.aws.amazon.com/iot/latest/developerguide/server-authentication.html";
@@ -54,7 +54,7 @@ export function IotCredentialsDialog({
         ]
       : [];
 
-  const downloadAll = () => files.forEach((file) => downloadText(file.filename, file.content));
+  const downloadAll = () => downloadZip(`${thingName}-credentials.zip`, files);
 
   return (
     <Dialog open={credentials !== null} onOpenChange={onOpenChange}>

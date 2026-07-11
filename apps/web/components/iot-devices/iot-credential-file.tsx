@@ -1,20 +1,32 @@
 "use client";
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { strToU8, zipSync } from "fflate";
 import { Check, Copy, Download } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
-export function downloadText(filename: string, content: string) {
-  const blob = new Blob([content], { type: "application/x-pem-file" });
+function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadText(filename: string, content: string) {
+  triggerDownload(new Blob([content], { type: "application/x-pem-file" }), filename);
+}
+
+export function downloadZip(filename: string, files: { filename: string; content: string }[]) {
+  const entries: Record<string, Uint8Array> = {};
+  for (const file of files) {
+    entries[file.filename] = strToU8(file.content);
+  }
+  triggerDownload(new Blob([zipSync(entries)], { type: "application/zip" }), filename);
 }
 
 interface IotCredentialFileProps {
