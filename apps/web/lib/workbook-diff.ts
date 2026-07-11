@@ -18,10 +18,11 @@ function stableStringify(value: unknown): string {
   const deepSort = (v: unknown): unknown => {
     if (Array.isArray(v)) return v.map(deepSort);
     if (v !== null && typeof v === "object") {
-      return Object.keys(v as Record<string, unknown>)
+      const obj = v as Record<string, unknown>;
+      return Object.keys(obj)
         .sort()
         .reduce<Record<string, unknown>>((acc, key) => {
-          acc[key] = deepSort((v as Record<string, unknown>)[key]);
+          acc[key] = deepSort(obj[key]);
           return acc;
         }, {});
     }

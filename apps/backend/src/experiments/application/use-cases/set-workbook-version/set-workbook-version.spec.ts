@@ -88,6 +88,16 @@ describe("SetWorkbookVersionUseCase", () => {
     expect(access.value.experiment?.workbookVersionId).toBe(v1Id);
   });
 
+  it("rejects when the experiment has no attached workbook", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "No workbook experiment",
+      userId: adminUserId,
+    });
+    const result = await setUseCase.execute(experiment.id, v1Id, adminUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(400);
+  });
+
   it("rejects a non-admin", async () => {
     const result = await setUseCase.execute(experimentId, v1Id, memberUserId);
     assertFailure(result);

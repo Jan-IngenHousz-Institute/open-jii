@@ -636,13 +636,9 @@ describe("ProtocolCellComponent", () => {
 
       await waitFor(() => expect(updateSpy.called).toBe(true));
       expect(updateSpy.body).toEqual({ name: "Fluorescence" });
-      await waitFor(() =>
-        expect(onUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            payload: expect.objectContaining({ name: "Fluorescence" }),
-          }),
-        ),
-      );
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as ProtocolCell;
+      expect(updated.payload.name).toBe("Fluorescence");
     });
 
     it("does not offer rename to non-owners", async () => {

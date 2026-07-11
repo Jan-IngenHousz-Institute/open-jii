@@ -85,7 +85,11 @@ import {
   zUpdateExperimentDashboardResponse,
 } from "../schemas/experiment.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
-import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../schemas/workbook-version.schema";
+import {
+  zAttachWorkbookBody,
+  zAttachWorkbookResponse,
+  zSetWorkbookVersionBody,
+} from "../schemas/workbook-version.schema";
 
 const c = initContract();
 
@@ -465,7 +469,7 @@ export const experimentContract = c.router({
     method: "POST",
     path: "/api/v1/experiments/:id/workbook/version",
     pathParams: zIdPathParam,
-    body: z.object({ versionId: z.string().uuid() }),
+    body: zSetWorkbookVersionBody,
     responses: {
       200: zAttachWorkbookResponse,
       400: zErrorResponse,

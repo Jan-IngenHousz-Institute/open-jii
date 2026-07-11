@@ -69,17 +69,19 @@ export class SetWorkbookVersionUseCase {
           );
         }
 
-        const updateResult = await this.experimentRepository.update(experimentId, {
-          workbookVersionId: target.id,
-        });
-        if (updateResult.isFailure()) return updateResult;
-
-        // Refresh the materialised flow row so mobile reads the pinned graph.
+        // Refresh the materialised flow row first, then re-pin. If the flow
+        // upsert fails, the experiment stays on the old (consistent) version
+        // rather than pointing at a version whose flow never updated.
         const flowResult = await this.flowRepository.upsert(
           experimentId,
           cellsToFlowGraph(target.cells),
         );
         if (flowResult.isFailure()) return flowResult;
+
+        const updateResult = await this.experimentRepository.update(experimentId, {
+          workbookVersionId: target.id,
+        });
+        if (updateResult.isFailure()) return updateResult;
 
         this.logger.log({
           msg: "Experiment pinned to a specific workbook version",

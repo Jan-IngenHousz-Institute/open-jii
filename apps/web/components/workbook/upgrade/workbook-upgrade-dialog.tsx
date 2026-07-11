@@ -254,7 +254,10 @@ export function WorkbookUpgradeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpgrading}>
             {t("cancel")}
           </Button>
-          <Button onClick={onConfirm} disabled={isUpgrading || !ready}>
+          <Button
+            onClick={onConfirm}
+            disabled={isUpgrading || !ready || verdict == null || errors.length > 0}
+          >
             {isUpgrading ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -312,7 +315,9 @@ function IssueList({
   return (
     <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs">
       {issues.map((issue, i) => (
-        <li key={`${issue.code}-${issue.cellId ?? i}`}>{issueMessage(t, issue)}</li>
+        <li key={`${issue.code}-${issue.cellId ?? ""}-${issue.ref ?? ""}-${i}`}>
+          {issueMessage(t, issue)}
+        </li>
       ))}
     </ul>
   );

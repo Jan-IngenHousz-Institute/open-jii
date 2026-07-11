@@ -49,6 +49,10 @@ export const zAttachWorkbookBody = z.object({
   workbookId: z.string().uuid(),
 });
 
+export const zSetWorkbookVersionBody = z.object({
+  versionId: z.string().uuid(),
+});
+
 export const zAttachWorkbookResponse = z.object({
   workbookId: z.string().uuid(),
   workbookVersionId: z.string().uuid(),
@@ -59,5 +63,6 @@ export type WorkbookVersion = z.infer<typeof zWorkbookVersion>;
 export type WorkbookVersionSummary = z.infer<typeof zWorkbookVersionSummary>;
 export type WorkbookVersionList = z.infer<typeof zWorkbookVersionList>;
 export type AttachWorkbookBody = z.infer<typeof zAttachWorkbookBody>;
+export type SetWorkbookVersionBody = z.infer<typeof zSetWorkbookVersionBody>;
 export type AttachWorkbookResponse = z.infer<typeof zAttachWorkbookResponse>;
 export type EntitySnapshots = z.infer<typeof zEntitySnapshots>;

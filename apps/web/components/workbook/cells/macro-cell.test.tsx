@@ -395,11 +395,9 @@ describe("MacroCellComponent", () => {
 
       await waitFor(() => expect(updateSpy.called).toBe(true));
       expect(updateSpy.body).toEqual({ name: "Renamed Macro" });
-      await waitFor(() =>
-        expect(onUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({ payload: expect.objectContaining({ name: "Renamed Macro" }) }),
-        ),
-      );
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
+      expect(updated.payload.name).toBe("Renamed Macro");
 
       vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
         typeof useSession

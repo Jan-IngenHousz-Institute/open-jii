@@ -102,7 +102,7 @@ export function CellTitle({
           setDraft(name);
           setEditing(true);
         }}
-        className="shrink-0 opacity-0 transition-opacity group-hover/title:opacity-100"
+        className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/title:opacity-100"
       >
         <Pencil className="h-3 w-3" />
       </button>

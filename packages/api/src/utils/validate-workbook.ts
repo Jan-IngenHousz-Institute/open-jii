@@ -66,9 +66,14 @@ export function validateWorkbook(
   const cellIds = new Set(cells.map((c) => c.id));
   const families = new Set<SensorFamily>();
   const seenBranchRefs = new Set<string>();
+  // A macro ultimately consumes the output of an upstream measurement. Approximate
+  // that as "some protocol cell precedes it in document order" so a protocol-less
+  // macro chain flags every macro, not just the first. Tracked in one pass (O(n)).
+  let sawProtocol = false;
 
   for (const cell of cells) {
     if (cell.type === "protocol") {
+      sawProtocol = true;
       const protocol = ctx.protocols[cell.payload.protocolId];
       if (!protocol) {
         issues.push({
@@ -83,14 +88,24 @@ export function validateWorkbook(
       }
     }
 
-    if (cell.type === "macro" && !(cell.payload.macroId in ctx.macros)) {
-      issues.push({
-        level: "error",
-        code: "missing-macro",
-        cellId: cell.id,
-        cellLabel: cellLabelOf(cell),
-        ref: cell.payload.macroId,
-      });
+    if (cell.type === "macro") {
+      if (!(cell.payload.macroId in ctx.macros)) {
+        issues.push({
+          level: "error",
+          code: "missing-macro",
+          cellId: cell.id,
+          cellLabel: cellLabelOf(cell),
+          ref: cell.payload.macroId,
+        });
+      }
+      if (!sawProtocol) {
+        issues.push({
+          level: "warning",
+          code: "macro-without-input",
+          cellId: cell.id,
+          cellLabel: cellLabelOf(cell),
+        });
+      }
     }
 
     if (cell.type === "branch") {
@@ -122,22 +137,6 @@ export function validateWorkbook(
       }
     }
   }
-
-  // A macro ultimately consumes the output of an upstream measurement.
-  // Approximate that as "some protocol cell precedes it in document order" so a
-  // protocol-less macro chain flags every macro, not just the first.
-  cells.forEach((cell, index) => {
-    if (cell.type !== "macro") return;
-    const hasUpstream = cells.slice(0, index).some((c) => c.type === "protocol");
-    if (!hasUpstream) {
-      issues.push({
-        level: "warning",
-        code: "macro-without-input",
-        cellId: cell.id,
-        cellLabel: cellLabelOf(cell),
-      });
-    }
-  });
 
   if (families.size > 1) {
     issues.push({
