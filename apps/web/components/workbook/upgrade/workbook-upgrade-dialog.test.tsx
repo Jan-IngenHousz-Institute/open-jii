@@ -1,4 +1,10 @@
-import { createProtocol, createProtocolCell, createWorkbook } from "@/test/factories";
+import {
+  createMacro,
+  createMacroCell,
+  createProtocol,
+  createProtocolCell,
+  createWorkbook,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -80,6 +86,40 @@ describe("WorkbookUpgradeDialog", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /flow\.confirmUpgrade/ }));
     expect(props.onConfirm).toHaveBeenCalled();
+  });
+
+  it("shows a changed macro in the code diff", async () => {
+    const macroCell = createMacroCell({
+      id: "cell-m",
+      payload: { macroId: "mac-1", language: "python", name: "My Macro" },
+    });
+    const version: WorkbookVersion = {
+      id: PINNED_VERSION_ID,
+      workbookId: WORKBOOK_ID,
+      version: 1,
+      cells: [macroCell],
+      metadata: {},
+      entitySnapshots: { protocols: {}, macros: { "mac-1": { code: btoa("print('v0')") } } },
+      createdAt: "2025-01-01T00:00:00.000Z",
+      createdBy: "user-1",
+    };
+    server.mount(contract.workbooks.getWorkbookVersion, { body: version });
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [macroCell] }),
+    });
+    server.mount(contract.macros.getMacro, {
+      body: createMacro({
+        id: "mac-1",
+        name: "My Macro",
+        code: btoa("print('v1')"),
+        createdBy: "user-1",
+      }),
+    });
+
+    renderDialog();
+
+    expect(await screen.findByText("My Macro")).toBeInTheDocument();
+    expect(await screen.findByText("flow.upgradeDiff.status.changed")).toBeInTheDocument();
   });
 
   it("flags a missing protocol as a blocking error", async () => {
