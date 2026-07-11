@@ -39,7 +39,7 @@
     "devices": {
       "tabLabel": "Geräte",
       "title": "Geräte",
-      "description": "Registrieren Sie Hardware-Geräte als AWS IoT Things. Zertifikate werden in einem späteren Schritt ausgestellt.",
+      "description": "Registrieren und verwalten Sie Ihre Hardware-Geräte. Zertifikate werden in einem späteren Schritt ausgestellt.",
       "register": "Gerät registrieren",
       "searchPlaceholder": "Nach Name oder Seriennummer suchen",
       "loadError": "Geräte konnten nicht geladen werden.",
@@ -59,6 +59,32 @@
       "tabs": {
         "all": "Alle"
       },
+      "sections": {
+        "overview": "Übersicht",
+        "devices": "Geräte",
+        "groups": "Gruppen",
+        "onboarding": "Einrichtung",
+        "monitoring": "Überwachung"
+      },
+      "detailTabs": {
+        "overview": "Übersicht",
+        "credentials": "Anmeldedaten",
+        "onboarding": "Einrichtung",
+        "members": "Mitglieder",
+        "lineage": "Herkunft",
+        "monitoring": "Überwachung"
+      },
+      "overview": {
+        "total": "Geräte insgesamt"
+      },
+      "comingSoon": {
+        "title": "Demnächst verfügbar",
+        "groups": "Organisieren Sie Geräte in Gruppen, die Sie gemeinsam verwalten, bereitstellen und einrichten können.",
+        "onboarding": "Richten Sie Geräte für Experimente ein: Übergeben Sie jedem Gerät seine Verbindung, sein Experiment und seine Workbook-Prozedur.",
+        "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
+        "members": "Teilen Sie die Geräteverwaltung mit Mitarbeitenden, so wie Experimente den Zugriff teilen.",
+        "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen."
+      },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
         "more": "Geräteaktionen",
@@ -67,7 +93,7 @@
       },
       "empty": {
         "title": "Noch keine Geräte",
-        "description": "Registrieren Sie ein Gerät, um seinen Datensatz und ein AWS IoT Thing zu erstellen. Ein Zertifikat wird in einem späteren Schritt ausgestellt, um es zu aktivieren.",
+        "description": "Registrieren Sie ein Gerät, um seinen Datensatz zu erstellen. Ein Zertifikat wird in einem späteren Schritt ausgestellt, um es zu aktivieren.",
         "cta": "Gerät registrieren"
       },
       "zeroResults": {
@@ -77,7 +103,7 @@
       },
       "dialog": {
         "title": "Gerät registrieren",
-        "description": "Registrieren Sie ein Hardware-Gerät als AWS IoT Thing. In diesem Schritt wird kein Zertifikat ausgestellt.",
+        "description": "Registrieren Sie ein Hardware-Gerät. In diesem Schritt wird kein Zertifikat ausgestellt.",
         "serialLabel": "Seriennummer",
         "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
         "typeLabel": "Gerätetyp",
@@ -91,7 +117,7 @@
       },
       "remove": {
         "title": "Gerät löschen",
-        "confirm": "Dies löscht {{name}} und das zugehörige AWS IoT Thing endgültig.",
+        "confirm": "Dies löscht {{name}} und seinen Gerätedatensatz endgültig.",
         "success": "Gerät gelöscht"
       },
       "detail": {
@@ -102,7 +128,7 @@
           "type": "Typ",
           "status": "Status",
           "registered": "Registriert",
-          "thingName": "AWS IoT Thing"
+          "thingName": "Gerätekennung"
         },
         "credentials": {
           "title": "Anmeldedaten"
@@ -110,7 +136,7 @@
         "dangerZone": {
           "title": "Gefahrenzone",
           "deleteLabel": "Dieses Gerät löschen",
-          "deleteDescription": "Entfernt das Gerät und sein AWS IoT Thing endgültig. Dies kann nicht rückgängig gemacht werden."
+          "deleteDescription": "Entfernt das Gerät und seinen Cloud-Datensatz endgültig. Dies kann nicht rückgängig gemacht werden."
         }
       },
       "credentials": {

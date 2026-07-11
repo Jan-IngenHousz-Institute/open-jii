@@ -39,7 +39,7 @@
     "devices": {
       "tabLabel": "Devices",
       "title": "Devices",
-      "description": "Register hardware devices as AWS IoT Things. Certificates are issued in a later step.",
+      "description": "Register and manage your hardware devices. Certificates are issued in a later step.",
       "register": "Register device",
       "searchPlaceholder": "Search by name or serial number",
       "loadError": "Failed to load devices.",
@@ -59,6 +59,32 @@
       "tabs": {
         "all": "All"
       },
+      "sections": {
+        "overview": "Overview",
+        "devices": "Devices",
+        "groups": "Groups",
+        "onboarding": "Onboarding",
+        "monitoring": "Monitoring"
+      },
+      "detailTabs": {
+        "overview": "Overview",
+        "credentials": "Credentials",
+        "onboarding": "Onboarding",
+        "members": "Members",
+        "lineage": "Lineage",
+        "monitoring": "Monitoring"
+      },
+      "overview": {
+        "total": "Total devices"
+      },
+      "comingSoon": {
+        "title": "Coming soon",
+        "groups": "Organize devices into groups you can manage, provision, and onboard together.",
+        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure.",
+        "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
+        "members": "Share device management with collaborators, the way experiments share access.",
+        "lineage": "Trace this device's identity through to its ingested measurements."
+      },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
         "more": "Device actions",
@@ -67,7 +93,7 @@
       },
       "empty": {
         "title": "No devices yet",
-        "description": "Register a device to create its record and an AWS IoT Thing. A certificate is issued in a later step to activate it.",
+        "description": "Register a device to create its record. A certificate is issued in a later step to activate it.",
         "cta": "Register device"
       },
       "zeroResults": {
@@ -77,7 +103,7 @@
       },
       "dialog": {
         "title": "Register device",
-        "description": "Register a hardware device as an AWS IoT Thing. No certificate is issued at this stage.",
+        "description": "Register a hardware device. No certificate is issued at this stage.",
         "serialLabel": "Serial number",
         "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
         "typeLabel": "Device type",
@@ -91,7 +117,7 @@
       },
       "remove": {
         "title": "Delete device",
-        "confirm": "This permanently deletes {{name}} and its AWS IoT Thing.",
+        "confirm": "This permanently deletes {{name}} and its device record.",
         "success": "Device deleted"
       },
       "detail": {
@@ -102,7 +128,7 @@
           "type": "Type",
           "status": "Status",
           "registered": "Registered",
-          "thingName": "AWS IoT Thing"
+          "thingName": "Device identifier"
         },
         "credentials": {
           "title": "Credentials"
@@ -110,7 +136,7 @@
         "dangerZone": {
           "title": "Danger zone",
           "deleteLabel": "Delete this device",
-          "deleteDescription": "Permanently removes the device and its AWS IoT Thing. This cannot be undone."
+          "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
         }
       },
       "credentials": {
