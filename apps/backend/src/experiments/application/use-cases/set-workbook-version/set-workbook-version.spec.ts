@@ -1,8 +1,9 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "../upgrade-workbook-version/upgrade-workbook-version";
 import { SetWorkbookVersionUseCase } from "./set-workbook-version";
@@ -15,6 +16,7 @@ describe("SetWorkbookVersionUseCase", () => {
   let publishUseCase: PublishVersionUseCase;
   let workbookRepo: WorkbookRepository;
   let experimentRepo: ExperimentRepository;
+  let flowRepo: FlowRepository;
 
   let adminUserId: string;
   let memberUserId: string;
@@ -38,6 +40,7 @@ describe("SetWorkbookVersionUseCase", () => {
     publishUseCase = testApp.module.get(PublishVersionUseCase);
     workbookRepo = testApp.module.get(WorkbookRepository);
     experimentRepo = testApp.module.get(ExperimentRepository);
+    flowRepo = testApp.module.get(FlowRepository);
 
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -96,6 +99,19 @@ describe("SetWorkbookVersionUseCase", () => {
     const result = await setUseCase.execute(experiment.id, v1Id, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
+  });
+
+  it("leaves the experiment on its current version when the flow refresh fails", async () => {
+    vi.spyOn(flowRepo, "upsert").mockResolvedValue(failure(AppError.internal("flow upsert boom")));
+
+    const result = await setUseCase.execute(experimentId, v1Id, adminUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
+
+    // Experiment must NOT have been re-pinned since the flow never updated.
+    const access = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(access);
+    expect(access.value.experiment?.workbookVersionId).toBe(v2Id);
   });
 
   it("rejects a non-admin", async () => {

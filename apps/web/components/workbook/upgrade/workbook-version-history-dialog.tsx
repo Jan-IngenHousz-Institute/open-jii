@@ -60,7 +60,10 @@ export function WorkbookVersionHistoryDialog({
   const setVersion = useSetWorkbookVersion(experimentId);
   const [pending, setPending] = useState<VersionSummary | null>(null);
 
-  const handleRestore = () => {
+  const handleRestore = (e: React.MouseEvent) => {
+    // Keep the alert open while the mutation runs so the pending spinner shows;
+    // AlertDialogAction would otherwise close it on click.
+    e.preventDefault();
     if (!pending) return;
     const target = pending;
     setVersion.mutate(
@@ -73,6 +76,7 @@ export function WorkbookVersionHistoryDialog({
         },
         onError: () => {
           toast({ description: t("flow.versionHistory.restoreFailed"), variant: "destructive" });
+          setPending(null);
         },
       },
     );

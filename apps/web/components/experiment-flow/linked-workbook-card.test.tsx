@@ -64,6 +64,17 @@ describe("LinkedWorkbookCard", () => {
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
   });
 
+  it("opens the version history dialog from the history button", async () => {
+    mountDefaults();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "flow.versionHistory.open" }));
+
+    expect(await screen.findByText("flow.versionHistory.title")).toBeInTheDocument();
+  });
+
   it("shows upgrade banner when a newer version is available", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);

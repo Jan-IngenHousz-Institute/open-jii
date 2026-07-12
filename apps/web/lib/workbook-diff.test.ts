@@ -53,6 +53,20 @@ describe("diffCells", () => {
     ]);
   });
 
+  it("reports a changed markdown cell with no label", () => {
+    const markdown = (id: string, content: string): WorkbookCell => ({
+      id,
+      type: "markdown",
+      isCollapsed: false,
+      content,
+    });
+    const changes = diffCells([markdown("m1", "before")], [markdown("m1", "after")]);
+    expect(changes).toEqual([
+      expect.objectContaining({ type: "changed", cellId: "m1", cellType: "markdown" }),
+    ]);
+    expect(changes[0].label).toBeUndefined();
+  });
+
   it("ignores runtime fields and output cells (a re-run is not a change)", () => {
     const before = [protocol("p1"), question("q1", "reading")];
     const answered: WorkbookCell = {

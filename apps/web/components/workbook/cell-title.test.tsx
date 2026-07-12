@@ -40,6 +40,31 @@ describe("CellTitle", () => {
     expect(onRename).not.toHaveBeenCalled();
   });
 
+  it("commits the new name on Enter", async () => {
+    const onRename = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CellTitle name="Old" canRename onRename={onRename} labels={labels} />);
+
+    await user.click(screen.getByLabelText("Rename"));
+    await user.clear(screen.getByLabelText("Rename"));
+    await user.type(screen.getByLabelText("Rename"), "Via Enter{Enter}");
+
+    await waitFor(() => expect(onRename).toHaveBeenCalledWith("Via Enter"));
+  });
+
+  it("cancels editing via the cancel button", async () => {
+    const onRename = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CellTitle name="Keep" canRename onRename={onRename} labels={labels} />);
+
+    await user.click(screen.getByLabelText("Rename"));
+    await user.type(screen.getByLabelText("Rename"), "discarded");
+    await user.click(screen.getByLabelText("Cancel"));
+
+    expect(onRename).not.toHaveBeenCalled();
+    expect(screen.getByText("Keep")).toBeInTheDocument();
+  });
+
   it("cancels editing on Escape without saving", async () => {
     const onRename = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
