@@ -11,6 +11,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 from enrich.user_metadata import add_user_column
+from enrich.device_metadata import add_device_registry
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
 from enrich.macro_execution import make_execute_macro_udf
@@ -88,6 +89,7 @@ EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
+EXPERIMENT_DEVICES_TABLE = "experiment_devices"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
@@ -627,8 +629,9 @@ def experiment_device_data():
     Aggregate device stats per experiment from clean_data.
     """
     silver_df = dlt.read(SILVER_TABLE)
-    
-    return (
+    devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
+
+    aggregated = (
         silver_df
         .filter("experiment_id IS NOT NULL")
         .groupBy("experiment_id", "device_id", "device_firmware")
@@ -650,17 +653,30 @@ def experiment_device_data():
                 )
             )
         )
+    )
+
+    # Attach the registry-resolved device struct via the trusted client_id
+    # (NULL for Cognito/unregistered rows — left join keeps every device row).
+    return (
+        aggregated
+        .join(
+            devices,
+            (aggregated.experiment_id == devices.experiment_id)
+            & (aggregated.client_id == devices.client_id),
+            "left"
+        )
         .select(
-            "id",
-            "experiment_id",
-            "device_id",
-            "client_id",
-            "device_firmware",
-            "device_name",
-            "device_version",
-            "device_battery",
-            "total_measurements",
-            "processed_timestamp"
+            aggregated.id,
+            aggregated.experiment_id,
+            aggregated.device_id,
+            aggregated.client_id,
+            aggregated.device_firmware,
+            aggregated.device_name,
+            aggregated.device_version,
+            aggregated.device_battery,
+            aggregated.total_measurements,
+            aggregated.processed_timestamp,
+            devices.device,
         )
     )
 
@@ -972,6 +988,39 @@ def experiment_contributors():
     unique_users = sensor_users.unionByName(upload_users).distinct()
 
     return add_user_column(unique_users, ENVIRONMENT, dbutils)
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Devices
+@dlt.table(
+    name=EXPERIMENT_DEVICES_TABLE,
+    comment="Gold layer: Registry-resolved devices per experiment (client_id -> device), full refresh each run.",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true",
+        "delta.enableRowTracking": "true",
+        "delta.enableChangeDataFeed": "true",
+    }
+)
+def experiment_devices():
+    """Devices observed per experiment, resolved against the registry via the
+    broker-authenticated client_id (== Thing name for X.509 devices). Cognito
+    rows have a non-Thing client_id and resolve to a NULL device struct.
+
+    Mirrors experiment_contributors: distinct keys from the data, enriched once
+    per run from the backend, then joined by the gold device dimension.
+    """
+    unique_devices = (
+        dlt.read(SILVER_TABLE)
+        .filter("experiment_id IS NOT NULL")
+        .filter("client_id IS NOT NULL")
+        .select("experiment_id", "client_id")
+        .distinct()
+    )
+
+    return add_device_registry(unique_devices, ENVIRONMENT, dbutils)
 
 # COMMAND ----------
 
