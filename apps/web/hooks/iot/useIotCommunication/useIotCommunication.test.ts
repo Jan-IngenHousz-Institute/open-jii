@@ -107,8 +107,8 @@ describe("useIotCommunication", () => {
       expect(result.current).toBeDefined();
     });
 
-    it("supports ambit sensor family", () => {
-      const { result } = renderHook(() => useIotCommunication("ambit", "bluetooth"));
+    it("supports ambyte sensor family", () => {
+      const { result } = renderHook(() => useIotCommunication("ambyte", "bluetooth"));
       expect(result.current).toBeDefined();
     });
   });
@@ -147,8 +147,8 @@ describe("useIotCommunication", () => {
       });
     });
 
-    it("successfully connects with ambit sensor family via bluetooth", async () => {
-      const { result } = renderHook(() => useIotCommunication("ambit", "bluetooth"));
+    it("successfully connects with ambyte sensor family via bluetooth", async () => {
+      const { result } = renderHook(() => useIotCommunication("ambyte", "bluetooth"));
 
       void result.current.connect();
 
@@ -158,8 +158,8 @@ describe("useIotCommunication", () => {
       });
     });
 
-    it("successfully connects with ambit sensor family via serial", async () => {
-      const { result } = renderHook(() => useIotCommunication("ambit", "serial"));
+    it("successfully connects with ambyte sensor family via serial", async () => {
+      const { result } = renderHook(() => useIotCommunication("ambyte", "serial"));
 
       void result.current.connect();
 

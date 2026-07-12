@@ -453,7 +453,7 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "ambit", code: multispeqProtocolCode() } },
+        data: { body: { family: "ambyte", code: multispeqProtocolCode() } },
         isLoading: false,
       });
       render(

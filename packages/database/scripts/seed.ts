@@ -128,11 +128,11 @@ async function main() {
 
   console.log(`  Created user: ${user.id}`);
 
-  // 2. Create protocols (10 total — 6 multispeq, 4 ambit; some with sortOrder)
+  // 2. Create protocols (10 total — 6 multispeq, 4 ambyte; some with sortOrder)
   const protocolData: {
     name: string;
     description: string;
-    family: "multispeq" | "ambit";
+    family: "multispeq" | "ambyte";
     code: Record<string, unknown>[];
     sortOrder?: number;
   }[] = [
@@ -187,16 +187,16 @@ async function main() {
     {
       name: "[Seed] Soil Moisture Probe",
       description:
-        "Ambit-based soil moisture and temperature measurement at configurable depth intervals.",
-      family: "ambit",
+        "Ambyte-based soil moisture and temperature measurement at configurable depth intervals.",
+      family: "ambyte",
       code: [{ _protocol_set: [{ label: "SoilMoisture", interval: 5, depth_cm: 15 }] }],
       sortOrder: 1,
     },
     {
       name: "[Seed] Ambient Light & Temperature",
       description:
-        "Reads ambient PAR, UV index, and air temperature using an Ambit environmental sensor array.",
-      family: "ambit",
+        "Reads ambient PAR, UV index, and air temperature using an Ambyte environmental sensor array.",
+      family: "ambyte",
       code: [{ _protocol_set: [{ label: "AmbientEnv", sample_rate: 10 }] }],
       sortOrder: 2,
     },
@@ -204,7 +204,7 @@ async function main() {
       name: "[Seed] Soil EC & pH Logger",
       description:
         "Logs electrical conductivity and pH in soil solution for nutrient availability monitoring.",
-      family: "ambit",
+      family: "ambyte",
       code: [{ _protocol_set: [{ label: "SoilEC", interval: 30 }] }],
       sortOrder: 3,
     },
@@ -212,7 +212,7 @@ async function main() {
       name: "[Seed] Canopy Temperature Monitor",
       description:
         "Infrared canopy temperature monitoring for crop water stress index calculations.",
-      family: "ambit",
+      family: "ambyte",
       code: [{ _protocol_set: [{ label: "CanopyTemp", ir_emissivity: 0.95, interval: 60 }] }],
       sortOrder: 4,
     },

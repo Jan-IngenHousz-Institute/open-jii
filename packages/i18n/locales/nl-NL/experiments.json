@@ -173,7 +173,7 @@
     },
     "fileUpload": {
       "title": "Ambyte-gegevens uploaden",
-      "description": "Selecteer een Ambyte-map (bijv. \"Ambyte_10\") of afzonderlijke ambit-submappen (bijv. \"1\", \"2\", \"3\", \"4\"). De map moet .txt-meetbestanden bevatten.",
+      "description": "Selecteer een Ambyte-map (bijv. \"Ambyte_10\") of afzonderlijke ambyte-submappen (bijv. \"1\", \"2\", \"3\", \"4\"). De map moet .txt-meetbestanden bevatten.",
       "selectFolder": "Selecteer Ambyte-map",
       "changeSelection": "Mapselectie wijzigen",
       "browseInstruction": "Klik om te bladeren naar een Ambyte-gegevensmap",

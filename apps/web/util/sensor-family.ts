@@ -14,13 +14,14 @@ export interface SensorFamilyOption {
 const SENSOR_FAMILY_LABELS: Record<SensorFamily, string> = {
   generic: "Generic",
   multispeq: "MultispeQ",
-  ambit: "Ambit",
+  ambyte: "Ambyte",
+  minipar: "MiniPAR",
 };
 
 /**
- * Families that are not yet available for selection.
+ * Families that are not yet available for local connection (ingest-only).
  */
-const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambit"]);
+const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "minipar"]);
 
 /**
  * Selectable sensor family options derived from the API enum.

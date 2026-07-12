@@ -254,7 +254,7 @@
     },
     "fileUpload": {
       "title": "Ambyte-Daten hochladen",
-      "description": "Wählen Sie einen Ambyte-Ordner (z. B. \"Ambyte_10\") oder einzelne Ambit-Unterordner (z. B. \"1\", \"2\", \"3\", \"4\"). Der Ordner sollte .txt-Messdateien enthalten.",
+      "description": "Wählen Sie einen Ambyte-Ordner (z. B. \"Ambyte_10\") oder einzelne Ambyte-Unterordner (z. B. \"1\", \"2\", \"3\", \"4\"). Der Ordner sollte .txt-Messdateien enthalten.",
       "selectFolder": "Ambyte-Ordner auswählen",
       "changeSelection": "Ordnerauswahl ändern",
       "browseInstruction": "Klicken Sie hier, um nach einem Ambyte-Datenordner zu suchen",

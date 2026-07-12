@@ -22,7 +22,8 @@ describe("RegisterIotDeviceDialog", () => {
       screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"),
       "AA:BB:CC",
     );
-    await user.type(screen.getByPlaceholderText("iot.devices.dialog.typePlaceholder"), "ambyte");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
     await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
@@ -50,7 +51,8 @@ describe("RegisterIotDeviceDialog", () => {
 
     render(<RegisterIotDeviceDialog open onOpenChange={vi.fn()} />);
     await user.type(screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"), "AA:BB");
-    await user.type(screen.getByPlaceholderText("iot.devices.dialog.typePlaceholder"), "ambyte");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
     await user.click(screen.getByRole("button", { name: "iot.devices.dialog.submit" }));
 
     await waitFor(() => expect(spy.called).toBe(true));

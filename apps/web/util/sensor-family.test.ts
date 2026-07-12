@@ -28,10 +28,10 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
     }
   });
 
-  it("should mark ambit as disabled", () => {
-    const ambit = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "ambit");
-    expect(ambit).toBeDefined();
-    expect(ambit?.disabled).toBe(true);
+  it("should mark ambyte as disabled", () => {
+    const ambyte = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "ambyte");
+    expect(ambyte).toBeDefined();
+    expect(ambyte?.disabled).toBe(true);
   });
 
   it("should mark generic as enabled", () => {
@@ -54,7 +54,7 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
 
     expect(byValue.generic.label).toBe("Generic");
     expect(byValue.multispeq.label).toBe("MultispeQ");
-    expect(byValue.ambit.label).toBe("Ambit");
+    expect(byValue.ambyte.label).toBe("Ambyte");
   });
 });
 
@@ -67,7 +67,7 @@ describe("getSensorFamilyLabel", () => {
     expect(getSensorFamilyLabel("multispeq")).toBe("MultispeQ");
   });
 
-  it("should return 'Ambit' for ambit", () => {
-    expect(getSensorFamilyLabel("ambit")).toBe("Ambit");
+  it("should return 'Ambyte' for ambyte", () => {
+    expect(getSensorFamilyLabel("ambyte")).toBe("Ambyte");
   });
 });

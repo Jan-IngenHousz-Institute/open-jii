@@ -518,9 +518,9 @@ describe("useWorkbookExecution", () => {
     it("allows changing sensor family", () => {
       const { result } = renderExecution([]);
 
-      act(() => result.current.setSensorFamily("ambit"));
+      act(() => result.current.setSensorFamily("ambyte"));
 
-      expect(result.current.sensorFamily).toBe("ambit");
+      expect(result.current.sensorFamily).toBe("ambyte");
     });
   });
 });

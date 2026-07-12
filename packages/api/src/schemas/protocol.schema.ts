@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const zSensorFamily = z.enum(["multispeq", "ambit", "generic"]);
+export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic"]);
 
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({

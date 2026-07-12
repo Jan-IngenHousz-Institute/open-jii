@@ -15,7 +15,7 @@ const getFamilyColor = (family: string) => {
   switch (family) {
     case "multispeq":
       return "bg-badge-published";
-    case "ambit":
+    case "ambyte":
       return "bg-badge-active";
     default:
       return "bg-badge-archived";

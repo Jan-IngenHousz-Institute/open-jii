@@ -91,7 +91,12 @@ export const organizationTypeEnum = pgEnum("organization_type", [
 ]);
 
 // Sensor Family Enum
-export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit", "generic"]);
+export const sensorFamilyEnum = pgEnum("sensor_family", [
+  "multispeq",
+  "ambyte",
+  "minipar",
+  "generic",
+]);
 
 // Profiles Table
 export const profiles = pgTable("profiles", {
@@ -119,17 +124,6 @@ export const organizations = pgTable("organizations", {
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),
-  ...timestamps,
-});
-
-// Sensors Table
-export const sensors = pgTable("sensors", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  serialNumber: varchar("serial_number", { length: 100 }).unique().notNull(),
-  name: text("name").notNull(),
-  family: sensorFamilyEnum("family").notNull(),
-  location: text("location"),
-  isActive: boolean("is_active").default(true).notNull(),
   ...timestamps,
 });
 
@@ -488,7 +482,7 @@ export const iotDevices = pgTable(
     thingArn: text("thing_arn").notNull(),
     serialNumber: text("serial_number").notNull().unique(),
     name: varchar("name", { length: 255 }),
-    deviceType: text("device_type").notNull(),
+    deviceType: sensorFamilyEnum("device_type").notNull(),
     status: deviceStatusEnum("status").default("pending").notNull(),
     certificateId: text("certificate_id"),
     certificateArn: text("certificate_arn"),
