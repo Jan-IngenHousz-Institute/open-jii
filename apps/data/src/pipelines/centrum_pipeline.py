@@ -161,8 +161,12 @@ def raw_data():
             F.regexp_extract(F.col("partitionKey"), r"/experiment/([^/]+)/", 1),
             F.lit(None).cast(StringType())
         ))
+        # clientid() from the IoT rule is the broker-authenticated Thing name (X.509 devices);
+        # extracted top-level to avoid evolving the non-resettable bronze parsed_data struct.
+        .withColumn("client_id", F.get_json_object(F.col("data").cast("string"), "$.client_id"))
         .select(
             "experiment_id",
+            "client_id",
             "parsed_data",
             "ingestion_timestamp",
             "ingest_date",
@@ -317,6 +321,7 @@ def clean_data():
     bronze_clean = df.select(
         "id",
         "device_id",
+        "client_id",
         "device_name",
         "device_version",
         "device_battery",
@@ -348,6 +353,8 @@ def clean_data():
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
         .withColumn("timezone", F.lit(None).cast("string"))
+        # Imported/transfer rows have no MQTT client identity.
+        .withColumn("client_id", F.lit(None).cast("string"))
         # Build macros array from macro columns (empty when no macro)
         # Apply legacy macro ID remapping inline
         .withColumn(
@@ -377,6 +384,7 @@ def clean_data():
         .select(
             "id",
             "device_id",
+            "client_id",
             "device_name",
             "device_version",
             "device_battery",
@@ -628,6 +636,7 @@ def experiment_device_data():
             F.max("device_name").alias("device_name"),
             F.max("device_version").alias("device_version"),
             F.max("device_battery").alias("device_battery"),
+            F.max("client_id").alias("client_id"),
             F.count("*").alias("total_measurements"),
             F.max("processed_timestamp").alias("processed_timestamp")
         )
@@ -645,6 +654,7 @@ def experiment_device_data():
             "id",
             "experiment_id",
             "device_id",
+            "client_id",
             "device_firmware",
             "device_name",
             "device_version",
