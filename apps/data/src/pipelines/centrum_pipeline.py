@@ -595,6 +595,7 @@ def experiment_raw_data():
             "id",
             "experiment_id",
             "device_id",
+            "client_id",
             "device_name",
             "timestamp",
             "timezone",
@@ -709,6 +710,7 @@ def experiment_macro_data():
             "id",
             "experiment_id",
             "device_id",
+            "client_id",
             "device_name",
             "timestamp",
             "timezone",
@@ -726,6 +728,7 @@ def experiment_macro_data():
             "id",
             "experiment_id",
             "device_id",
+            "client_id",
             "device_name",
             "timestamp",
             "timezone",
@@ -801,6 +804,7 @@ def experiment_macro_data():
             F.col("macro_row_id").alias("id"),
             F.col("id").alias("raw_id"),
             "device_id",
+            "client_id",
             "device_name",
             "timestamp",
             "timezone",
@@ -1076,15 +1080,22 @@ def enriched_experiment_raw_data():
     """Enriched raw data with user profiles, annotations, and user metadata."""
     raw_data = dlt.read(EXPERIMENT_RAW_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
     annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
     metadata_source = dlt.read(METADATA_SOURCE_TABLE)
-    
+
     enriched = (
         raw_data
         .join(
             contributors,
             (raw_data.experiment_id == contributors.experiment_id) &
             (raw_data.user_id == contributors.user_id),
+            "left"
+        )
+        .join(
+            devices,
+            (raw_data.experiment_id == devices.experiment_id) &
+            (raw_data.client_id == devices.client_id),
             "left"
         )
         .select(
@@ -1100,6 +1111,7 @@ def enriched_experiment_raw_data():
             raw_data.questions_data,
             raw_data.annotations,
             contributors.user.alias("contributor"),
+            devices.device.alias("device"),
             raw_data.data,
             raw_data.processed_timestamp
         )
@@ -1145,15 +1157,22 @@ def enriched_experiment_macro_data():
     """Enriched macro data with user profiles, annotations, and user metadata."""
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
+    devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
     annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
     metadata_source = dlt.read(METADATA_SOURCE_TABLE)
-    
+
     enriched = (
         macro_data
         .join(
             contributors,
             (macro_data.experiment_id == contributors.experiment_id) &
             (macro_data.user_id == contributors.user_id),
+            "left"
+        )
+        .join(
+            devices,
+            (macro_data.experiment_id == devices.experiment_id) &
+            (macro_data.client_id == devices.client_id),
             "left"
         )
         .select(
@@ -1167,6 +1186,7 @@ def enriched_experiment_macro_data():
             macro_data.timezone,
             macro_data.date,
             contributors.user.alias("contributor"),
+            devices.device.alias("device"),
             macro_data.macro_id,
             macro_data.macro_name,
             macro_data.macro_filename,
