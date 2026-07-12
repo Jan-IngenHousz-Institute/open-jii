@@ -28,6 +28,10 @@ import {
   macros,
   workbooks,
   workbookVersions,
+  accounts,
+  experimentDashboards,
+  experimentVisualizations,
+  experimentJoinRequests,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -121,8 +125,10 @@ export class TestHarness {
       await this.clearDatabase();
       this.resetMockAdapters();
     } catch (e) {
-      console.log("Failed to clean up database for integration tests.", e);
-      // Don't throw the error to allow tests to continue
+      // Fail loudly: a swallowed cleanup error leaves the shared test DB
+      // polluted, which surfaces later as confusing duplicate-key failures.
+      console.error("Failed to clean up database for integration tests.", e);
+      throw e;
     }
   }
 
@@ -181,8 +187,12 @@ export class TestHarness {
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
+    await this.database.delete(experimentJoinRequests).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
+    // Dashboards/visualizations reference experiments, delete before experiments
+    await this.database.delete(experimentVisualizations).execute();
+    await this.database.delete(experimentDashboards).execute();
     await this.database.delete(workbookVersions).execute();
     await this.database.delete(workbooks).execute();
     // Flows reference experiments, so delete flows before experiments
@@ -195,8 +205,9 @@ export class TestHarness {
     await this.database.delete(organizations).execute();
     // IoT devices reference users, delete before users
     await this.database.delete(iotDevices).execute();
-    // Sessions reference users, delete before users
+    // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
+    await this.database.delete(accounts).execute();
     await this.database.delete(users).execute();
   }
 
