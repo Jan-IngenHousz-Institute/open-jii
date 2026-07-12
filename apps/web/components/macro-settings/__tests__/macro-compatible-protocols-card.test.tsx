@@ -51,14 +51,19 @@ const mockCompatibleProtocols = [
   },
   {
     macroId: "00000000-0000-0000-0000-000000000001",
-    protocol: { id: PROTO_2_ID, name: "Humidity Protocol", family: "ambit", createdBy: CREATOR_ID },
+    protocol: {
+      id: PROTO_2_ID,
+      name: "Humidity Protocol",
+      family: "ambyte",
+      createdBy: CREATOR_ID,
+    },
     addedAt: "2024-01-01T00:00:00.000Z",
   },
 ];
 
 const mockAllProtocols = [
   createProtocol({ id: PROTO_1_ID, name: "Temperature Protocol", family: "multispeq" }),
-  createProtocol({ id: PROTO_2_ID, name: "Humidity Protocol", family: "ambit" }),
+  createProtocol({ id: PROTO_2_ID, name: "Humidity Protocol", family: "ambyte" }),
   createProtocol({ id: PROTO_3_ID, name: "Light Protocol", family: "multispeq" }),
 ];
 
@@ -105,7 +110,7 @@ describe("<MacroCompatibleProtocolsCard />", () => {
     });
     expect(screen.getByText("multispeq")).toBeInTheDocument();
     expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
-    expect(screen.getByText("ambit")).toBeInTheDocument();
+    expect(screen.getByText("ambyte")).toBeInTheDocument();
   });
 
   it("should render protocol links with correct hrefs", async () => {

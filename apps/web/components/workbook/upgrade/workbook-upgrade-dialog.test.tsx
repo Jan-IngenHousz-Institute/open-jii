@@ -260,7 +260,7 @@ describe("WorkbookUpgradeDialog", () => {
                 id: "prot-b",
                 name: "Proto B",
                 code: [{ b: 2 }],
-                family: "ambit",
+                family: "ambyte",
                 createdBy: "user-1",
               }),
         ),

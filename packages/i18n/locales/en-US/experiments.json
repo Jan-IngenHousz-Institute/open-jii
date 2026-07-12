@@ -362,7 +362,7 @@
     },
     "fileUpload": {
       "title": "Upload Ambyte Data",
-      "description": "Select an Ambyte folder (e.g., \"Ambyte_10\") or individual ambit subfolders (e.g., \"1\", \"2\", \"3\", \"4\"). The folder should contain .txt measurement files.",
+      "description": "Select an Ambyte folder (e.g., \"Ambyte_10\") or individual ambyte subfolders (e.g., \"1\", \"2\", \"3\", \"4\"). The folder should contain .txt measurement files.",
       "selectFolder": "Select Ambyte folder",
       "changeSelection": "Change folder selection",
       "browseInstruction": "Click to browse for an Ambyte data folder",

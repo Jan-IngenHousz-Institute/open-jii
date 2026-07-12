@@ -389,12 +389,12 @@ describe("ProtocolRepository", () => {
       });
       await testApp.createProtocol({
         name: "Quux probe",
-        family: "ambit",
+        family: "ambyte",
         createdBy: testUserId,
       });
 
       expect(await searchProtocolNames("multispeq")).toContain("Vorple leaf scan");
-      expect(await searchProtocolNames("ambit")).toContain("Quux probe");
+      expect(await searchProtocolNames("ambyte")).toContain("Quux probe");
     });
 
     it("should do prefix matching", async () => {

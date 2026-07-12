@@ -132,14 +132,14 @@ describe("validateWorkbook", () => {
     const cells = [protocolCell("p1", "prot-1"), protocolCell("p2", "prot-2")];
     const result = validateWorkbook(
       cells,
-      ctx({ "prot-1": { family: "multispeq" }, "prot-2": { family: "ambit" } }),
+      ctx({ "prot-1": { family: "multispeq" }, "prot-2": { family: "ambyte" } }),
     );
     expect(result.ok).toBe(true);
     expect(result.issues).toContainEqual(
       expect.objectContaining({
         level: "warning",
         code: "mixed-sensor-families",
-        detail: "ambit, multispeq",
+        detail: "ambyte, multispeq",
       }),
     );
   });
