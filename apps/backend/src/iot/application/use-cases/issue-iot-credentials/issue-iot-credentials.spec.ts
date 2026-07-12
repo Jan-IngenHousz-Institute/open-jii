@@ -139,10 +139,107 @@ describe("IssueIotCredentialsUseCase", () => {
     expect(stored.value?.status).toBe("pending");
   });
 
+  it("propagates the failure when the certificate cannot be created", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(
+      failure(AppError.internal("cert failed")),
+    );
+    const device = await createDevice("pending");
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("cert failed");
+  });
+
   it("returns not found for an unknown device", async () => {
     const result = await useCase.execute("11111111-1111-4111-8111-111111111111", userId);
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  it("propagates a repository lookup failure", async () => {
+    vi.spyOn(repo, "findByIdForOwner").mockResolvedValue(
+      failure(AppError.internal("db unavailable")),
+    );
+
+    const result = await useCase.execute("11111111-1111-4111-8111-111111111111", userId);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("db unavailable");
+  });
+
+  it("detaches and revokes the certificate when policy attachment fails", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(
+      failure(AppError.internal("policy failed")),
+    );
+    const detachSpy = vi
+      .spyOn(awsAdapter, "detachThingPrincipal")
+      .mockResolvedValue(success(undefined));
+    const revokeSpy = vi
+      .spyOn(awsAdapter, "setCertificateStatus")
+      .mockResolvedValue(success(undefined));
+    const device = await createDevice("pending");
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
+    expect(detachSpy).toHaveBeenCalledWith(device.thingName, CERT.certificateArn);
+    expect(revokeSpy).toHaveBeenCalledWith(CERT.certificateId, "REVOKED");
+
+    const stored = await repo.findByIdForOwner(device.id, userId);
+    assertSuccess(stored);
+    expect(stored.value?.status).toBe("pending");
+  });
+
+  it("rolls the certificate back when persistence fails", async () => {
+    mockHappyPath();
+    const revokeSpy = vi
+      .spyOn(awsAdapter, "setCertificateStatus")
+      .mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    const device = await createDevice("pending");
+    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("write failed")));
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("write failed");
+    expect(revokeSpy).toHaveBeenCalledWith(CERT.certificateId, "REVOKED");
+  });
+
+  it("fails with an internal error when persistence matches no row", async () => {
+    mockHappyPath();
+    vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    const device = await createDevice("pending");
+    vi.spyOn(repo, "update").mockResolvedValue(success(undefined));
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
+  });
+
+  it("returns the original failure even when best-effort cleanup also fails", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(
+      failure(AppError.internal("policy failed")),
+    );
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(
+      failure(AppError.internal("detach failed")),
+    );
+    vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(
+      failure(AppError.internal("revoke failed")),
+    );
+    const device = await createDevice("pending");
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("policy failed");
   });
 });

@@ -4,9 +4,10 @@ import { contract } from "@repo/api/contract";
 import type { IotDevice, IotDeviceList } from "@repo/api/schemas/iot.schema";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
-import { success } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 
 const RETURNED_THING = {
   thingName: "ambyte_TEST-SERIAL",
@@ -33,6 +34,7 @@ describe("IotDeviceController", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
@@ -100,6 +102,17 @@ describe("IotDeviceController", () => {
         .get(contract.iot.listIotDevices.path)
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("returns 500 when the list use case fails", async () => {
+      vi.spyOn(testApp.module.get(ListIotDevicesUseCase), "execute").mockResolvedValue(
+        failure(AppError.internal("db unavailable")),
+      );
+
+      await testApp
+        .get(contract.iot.listIotDevices.path)
+        .withAuth(userId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 
@@ -196,6 +209,64 @@ describe("IotDeviceController", () => {
       });
 
       await testApp.post(path).send({}).expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("rotates credentials for an active device (201)", async () => {
+      vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+      vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-old",
+        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
+      });
+      const path = testApp.resolvePath(contract.iot.rotateIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<typeof CERT> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body.certificateId).toBe(CERT.certificateId);
+      expect(response.body.privateKey).toBe("KEY");
+    });
+
+    it("returns 400 when rotating a device that is not active", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolvePath(contract.iot.rotateIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      await testApp.post(path).withAuth(userId).send({}).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 400 when issuing for a device that already has a certificate", async () => {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-live",
+        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-live",
+      });
+      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      await testApp.post(path).withAuth(userId).send({}).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 400 when revoking a device without a certificate", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolvePath(contract.iot.revokeIotCredentials.path, {
+        deviceId: device.id,
+      });
+
+      await testApp.delete(path).withAuth(userId).expect(StatusCodes.BAD_REQUEST);
     });
   });
 });

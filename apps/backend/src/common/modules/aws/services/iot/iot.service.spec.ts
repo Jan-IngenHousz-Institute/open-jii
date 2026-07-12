@@ -193,6 +193,15 @@ describe("AwsIotService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
     });
+
+    it("maps an SDK error to a detach-principal failure", async () => {
+      iotMock.on(DetachThingPrincipalCommand).rejects(new Error("nope"));
+
+      const result = await service.detachThingPrincipal("thing-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
   });
 
   describe("attachPolicy", () => {
