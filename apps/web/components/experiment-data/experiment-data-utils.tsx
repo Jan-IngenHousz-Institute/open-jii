@@ -3,6 +3,7 @@ import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { ExperimentDataTableAnnotationsCell } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
+import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 import type {
   DataRow,
   TableMetadata,
@@ -105,6 +106,9 @@ export function formatValue(
     [ColumnPrimitiveType.STRING]: () => <ExperimentDataTableTextCell text={value as string} />,
     [WellKnownColumnTypes.CONTRIBUTOR]: () => (
       <ExperimentDataTableUserCell data={value as string} columnName={columnName ?? "User"} />
+    ),
+    [WellKnownColumnTypes.DEVICE]: () => (
+      <ExperimentDataTableTextCell text={deviceDisplayName(value)} />
     ),
     [WellKnownColumnTypes.ANNOTATIONS]: () => (
       <ExperimentDataTableAnnotationsCell

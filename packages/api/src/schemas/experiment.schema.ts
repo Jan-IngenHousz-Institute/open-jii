@@ -1443,12 +1443,18 @@ export const zAnnotationsColumnType = z.literal(
 
 export const zContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
 
+export const zDeviceColumnType = z.literal(
+  "STRUCT<id: STRING, serial_number: STRING, owner: STRING, status: STRING, device_type: STRING>",
+);
+
 export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
 export type ContributorColumnType = z.infer<typeof zContributorColumnType>;
+export type DeviceColumnType = z.infer<typeof zDeviceColumnType>;
 
 export const WellKnownColumnTypes = {
   ANNOTATIONS: zAnnotationsColumnType.value,
   CONTRIBUTOR: zContributorColumnType.value,
+  DEVICE: zDeviceColumnType.value,
 } as const;
 
 export const zColumnInfo = z.object({
