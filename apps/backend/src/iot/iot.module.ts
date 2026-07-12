@@ -6,6 +6,7 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
+import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
@@ -17,13 +18,15 @@ import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
+import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
 import { IotDeviceController } from "./presentation/iot-device.controller";
 import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [AwsModule, AnalyticsModule, ExperimentModule],
-  controllers: [IotController, IotDeviceController],
+  controllers: [IotController, IotDeviceController, DeviceRegistryWebhookController],
   providers: [
+    GetDeviceRegistryUseCase,
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,
     RegisterIotDeviceUseCase,

@@ -12,7 +12,10 @@ import {
   zRegisterIotDeviceBody,
   zRegisterIotDeviceResponse,
   zIssueIotCredentialsResponse,
+  zDeviceRegistryWebhookPayload,
+  zDeviceRegistryWebhookResponse,
 } from "../schemas/iot.schema";
+import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 
 const c = initContract();
 
@@ -43,6 +46,22 @@ export const iotContract = c.router({
     description:
       "Returns a pre-signed S3 PutObject URL for uploading IoT payloads larger than 128 KB. " +
       "The URL is valid for 15 minutes. Upload the JSON payload directly to the returned URL using HTTP PUT.",
+  },
+
+  // --- Device registry webhook (Databricks lineage) ---
+  getDeviceRegistry: {
+    method: "POST",
+    path: "/api/v1/iot/devices/registry",
+    body: zDeviceRegistryWebhookPayload,
+    headers: zWebhookAuthHeader,
+    responses: {
+      200: zDeviceRegistryWebhookResponse,
+      400: zWebhookErrorResponse,
+      401: zWebhookErrorResponse,
+    },
+    summary: "Resolve thing names to registry rows for Databricks pipelines",
+    description:
+      "Resolves thing names to their registered device rows (id, serial, type, status, owner) so the lineage pipeline can join measurements to the registry.",
   },
 
   // --- IotDevice registry ---
