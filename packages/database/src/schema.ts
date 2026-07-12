@@ -473,7 +473,12 @@ export const experimentDashboards = pgTable(
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
 
-export const deviceStatusEnum = pgEnum("device_status", ["pending", "active", "revoked"]);
+export const deviceStatusEnum = pgEnum("device_status", [
+  "pending",
+  "active",
+  "rotating",
+  "revoked",
+]);
 
 export const iotDevices = pgTable(
   "iot_devices",
@@ -485,6 +490,8 @@ export const iotDevices = pgTable(
     name: varchar("name", { length: 255 }),
     deviceType: text("device_type").notNull(),
     status: deviceStatusEnum("status").default("pending").notNull(),
+    certificateId: text("certificate_id"),
+    certificateArn: text("certificate_arn"),
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),

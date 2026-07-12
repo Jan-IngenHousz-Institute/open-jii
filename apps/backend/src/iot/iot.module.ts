@@ -7,8 +7,11 @@ import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-devic
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
+import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "./application/use-cases/list-iot-devices/list-iot-devices";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
+import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
+import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
 import { IotDeviceController } from "./presentation/iot-device.controller";
@@ -24,6 +27,9 @@ import { IotController } from "./presentation/iot.controller";
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,
     DeleteIotDeviceUseCase,
+    IssueIotCredentialsUseCase,
+    RevokeIotCredentialsUseCase,
+    RotateIotCredentialsUseCase,
     IotDeviceRepository,
     {
       provide: AWS_PORT,

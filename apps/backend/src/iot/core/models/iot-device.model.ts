@@ -14,3 +14,7 @@ export const selectIotDeviceSchema = createSelectSchema(iotDevices);
 
 export type CreateIotDeviceDto = z.infer<typeof createIotDeviceSchema>;
 export type IotDeviceDto = z.infer<typeof selectIotDeviceSchema>;
+
+export type UpdateIotDeviceDto = Partial<
+  Pick<IotDeviceDto, "status" | "certificateId" | "certificateArn" | "name">
+>;

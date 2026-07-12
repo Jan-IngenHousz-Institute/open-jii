@@ -1,4 +1,5 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 import { zErrorResponse } from "../schemas/experiment.schema";
 import {
@@ -10,6 +11,7 @@ import {
   zIotUploadUrlRequest,
   zRegisterIotDeviceBody,
   zRegisterIotDeviceResponse,
+  zIssueIotCredentialsResponse,
 } from "../schemas/iot.schema";
 
 const c = initContract();
@@ -94,5 +96,52 @@ export const iotContract = c.router({
     },
     summary: "Delete a device",
     description: "Deletes the device registration and its AWS IoT Thing",
+  },
+
+  issueIotCredentials: {
+    method: "POST",
+    path: "/api/v1/devices/:deviceId/credentials",
+    pathParams: zIotDevicePathParam,
+    body: z.object({}),
+    responses: {
+      201: zIssueIotCredentialsResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Issue device credentials",
+    description:
+      "Issues an X.509 certificate for a pending device, attaches it to the Thing, and activates the device. Returns the certificate PEM and private key once; they are never retrievable again.",
+  },
+
+  rotateIotCredentials: {
+    method: "POST",
+    path: "/api/v1/devices/:deviceId/credentials/rotate",
+    pathParams: zIotDevicePathParam,
+    body: z.object({}),
+    responses: {
+      201: zIssueIotCredentialsResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Rotate device credentials",
+    description:
+      "Issues a new certificate for an active device, retires the previous one, and returns the new certificate PEM and private key once.",
+  },
+
+  revokeIotCredentials: {
+    method: "DELETE",
+    path: "/api/v1/devices/:deviceId/credentials",
+    pathParams: zIotDevicePathParam,
+    responses: {
+      200: zIotDevice,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Revoke device credentials",
+    description:
+      "Revokes the device certificate and marks the device as revoked. The device can no longer connect.",
   },
 });
