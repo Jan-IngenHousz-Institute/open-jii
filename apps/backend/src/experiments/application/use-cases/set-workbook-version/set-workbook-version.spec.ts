@@ -71,6 +71,7 @@ describe("SetWorkbookVersionUseCase", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
