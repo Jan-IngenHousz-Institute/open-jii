@@ -406,6 +406,49 @@ describe("MacroCellComponent", () => {
       >);
     });
 
+    it("merges a concurrent language change into the resolved rename", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.macros.getMacro, { body: baseMacro });
+      server.mount(contract.macros.updateMacro, {
+        body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
+        delay: 100,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <MacroCellComponent cell={cell} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Renamed Macro");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      // A language switch lands while the rename save is still in flight.
+      rerender(
+        <MacroCellComponent
+          cell={{ ...cell, payload: { ...cell.payload, language: "r" } }}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
+      // The rename must preserve the concurrent language switch, not revert it.
+      expect(updated.payload.language).toBe("r");
+      expect(updated.payload.name).toBe("Renamed Macro");
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
     it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {
       vi.mocked(useSession).mockReturnValue({
         data: { user: { id: "user-1" } },

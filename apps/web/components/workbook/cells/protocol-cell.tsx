@@ -193,6 +193,12 @@ export function ProtocolCellComponent({
     }
   }, [protocolData, forkProtocol, onUpdate, cell]);
 
+  // Track the latest cell so the async rename merges its result into current
+  // state rather than a stale snapshot captured when the save began (e.g. a
+  // concurrent collapse toggle would otherwise be clobbered).
+  const cellRef = useRef(cell);
+  cellRef.current = cell;
+
   // Rename the shared protocol row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
   const [isRenaming, setIsRenaming] = useState(false);
@@ -201,7 +207,8 @@ export function ProtocolCellComponent({
       setIsRenaming(true);
       try {
         const res = await saveProtocol({ params: { id: protocolId }, body: { name: next } });
-        onUpdate({ ...cell, payload: { ...cell.payload, name: res.body.name } });
+        const latest = cellRef.current;
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.body.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({
@@ -216,7 +223,7 @@ export function ProtocolCellComponent({
         setIsRenaming(false);
       }
     },
-    [protocolId, saveProtocol, onUpdate, cell, tWorkbook],
+    [protocolId, saveProtocol, onUpdate, tWorkbook],
   );
 
   const displayName = cell.payload.name ?? protocolName ?? "Protocol";

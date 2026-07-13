@@ -9,7 +9,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
@@ -170,6 +170,12 @@ export function MacroCellComponent({
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
+  // Track the latest cell so the async rename merges its result into current
+  // state rather than a stale snapshot captured when the save began (e.g. a
+  // concurrent language change or collapse toggle would otherwise be clobbered).
+  const cellRef = useRef(cell);
+  cellRef.current = cell;
+
   // Rename the shared macro row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
   const [isRenaming, setIsRenaming] = useState(false);
@@ -178,7 +184,8 @@ export function MacroCellComponent({
       setIsRenaming(true);
       try {
         const res = await saveMacro({ params: { id: macroId }, body: { name: next } });
-        onUpdate({ ...cell, payload: { ...cell.payload, name: res.body.name } });
+        const latest = cellRef.current;
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.body.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({
@@ -193,7 +200,7 @@ export function MacroCellComponent({
         setIsRenaming(false);
       }
     },
-    [macroId, saveMacro, onUpdate, cell, t],
+    [macroId, saveMacro, onUpdate, t],
   );
 
   const displayName = cell.payload.name ?? macroName ?? "Macro";

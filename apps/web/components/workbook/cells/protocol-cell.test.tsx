@@ -641,6 +641,52 @@ describe("ProtocolCellComponent", () => {
       expect(updated.payload.name).toBe("Fluorescence");
     });
 
+    it("merges a concurrent cell change into the resolved rename", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          name: "Light Sensor",
+          code: [{ measurement: "light" }],
+          createdBy: OWNER_ID,
+        }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.protocols.updateProtocol, {
+        body: createProtocol({ id: "p1", name: "Fluorescence" }),
+        delay: 100,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Fluorescence");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      // A collapse toggle lands while the rename save is still in flight.
+      rerender(
+        <ProtocolCellComponent
+          cell={makeProtocolCell({ isCollapsed: true })}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as ProtocolCell;
+      // The rename must preserve the concurrent collapse, not revert it.
+      expect(updated.isCollapsed).toBe(true);
+      expect(updated.payload.name).toBe("Fluorescence");
+    });
+
     it("does not offer rename to non-owners", async () => {
       server.mount(contract.protocols.getProtocol, {
         body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
