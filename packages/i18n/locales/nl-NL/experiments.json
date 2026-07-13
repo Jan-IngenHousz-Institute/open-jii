@@ -71,7 +71,8 @@
       "INSTRUCTION": "Instructie",
       "QUESTION": "Vraag",
       "MEASUREMENT": "Meting",
-      "ANALYSIS": "Analyse"
+      "ANALYSIS": "Analyse",
+      "COMMAND": "Opdracht"
     },
     "questionTooltip": {
       "title": "Gegevenskolomnaam",

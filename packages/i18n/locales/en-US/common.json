@@ -141,6 +141,8 @@
     "needMemberAccess": "You need to be a member to access experiment settings",
     "needAdminAccessArchived": "Settings access denied for archived experiments",
     "measurementPanelTitle": "Measurement Protocol",
+    "commandPanelTitle": "Device Command",
+    "commandPanelPlaceholder": "Type a command, e.g. battery",
     "detailsTitle": "Details",
     "detailsDescription": "Enter the basic information about your experiment",
     "membersVisibilityTitle": "Members & Visibility",

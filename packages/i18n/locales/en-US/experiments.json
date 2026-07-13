@@ -98,7 +98,8 @@
       "INSTRUCTION": "Instruction",
       "QUESTION": "Question",
       "MEASUREMENT": "Measurement",
-      "ANALYSIS": "Analysis"
+      "ANALYSIS": "Analysis",
+      "COMMAND": "Command"
     },
     "questionTooltip": {
       "title": "Data Column Name",

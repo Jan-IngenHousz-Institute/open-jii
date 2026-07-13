@@ -27,9 +27,10 @@ export function resolveInlineCommand({ format, content }: InlineCommand): Resolv
 }
 
 /** Non-throwing variant for editor validation. */
-export function validateInlineCommand({ format, content }: InlineCommand):
-  | { ok: true; value: ResolvedCommand }
-  | { ok: false; error: string } {
+export function validateInlineCommand({
+  format,
+  content,
+}: InlineCommand): { ok: true; value: ResolvedCommand } | { ok: false; error: string } {
   if (content.trim().length === 0) {
     return { ok: false, error: "Command content is required" };
   }
