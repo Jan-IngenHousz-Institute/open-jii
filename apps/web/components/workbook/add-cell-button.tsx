@@ -1,6 +1,14 @@
 "use client";
 
-import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope, Terminal } from "lucide-react";
+import {
+  BookOpen,
+  Code,
+  FileText,
+  GitBranch,
+  HelpCircle,
+  Microscope,
+  Terminal,
+} from "lucide-react";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";

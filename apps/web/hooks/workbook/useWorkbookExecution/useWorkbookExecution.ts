@@ -243,7 +243,10 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "No device connected - connect a device to run this command"),
+          makeErrorOutputCell(
+            cell.id,
+            "No device connected - connect a device to run this command",
+          ),
         );
       }
 
