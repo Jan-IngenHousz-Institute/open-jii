@@ -5,7 +5,7 @@ import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { stableStringify } from "../../../../common/utils/stable-json";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { CommandRepository } from "../../../../commands/core/repositories/command.repository";
 import { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 
@@ -34,7 +34,7 @@ export class IsWorkbookUpgradableUseCase {
 
   constructor(
     private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly protocolRepository: ProtocolRepository,
+    private readonly commandRepository: CommandRepository,
     private readonly macroRepository: MacroRepository,
   ) {}
 
@@ -55,25 +55,25 @@ export class IsWorkbookUpgradableUseCase {
       stableStringify(designOf(workbook.cells)) !== stableStringify(designOf(latest.cells));
     if (cellsChanged) return success(true);
 
-    const protocolIds = [
+    const commandIds = [
       ...new Set(
-        workbook.cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : [])),
+        workbook.cells.flatMap((c) => (c.type === "command" ? [c.payload.commandId] : [])),
       ),
     ];
     const macroIds = [
       ...new Set(workbook.cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
 
-    const [protocolsResult, macrosResult] = await Promise.all([
-      this.protocolRepository.findByIds(protocolIds),
+    const [commandsResult, macrosResult] = await Promise.all([
+      this.commandRepository.findByIds(commandIds),
       this.macroRepository.findScriptsByIds(macroIds),
     ]);
-    if (protocolsResult.isFailure()) return protocolsResult;
+    if (commandsResult.isFailure()) return commandsResult;
     if (macrosResult.isFailure()) return macrosResult;
 
     const snapshots = latest.entitySnapshots;
-    for (const [id, p] of protocolsResult.value) {
-      const snap = snapshots.protocols[id] as { code: unknown } | undefined;
+    for (const [id, p] of commandsResult.value) {
+      const snap = snapshots.commands[id] as { code: unknown } | undefined;
       if (stableStringify(snap?.code) !== stableStringify(p.code)) return success(true);
     }
     for (const [id, m] of macrosResult.value) {

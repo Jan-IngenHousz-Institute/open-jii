@@ -68,9 +68,9 @@ export enum ErrorCodes {
   MACRO_UPDATE_FAILED = "MACRO_UPDATE_FAILED", // Failed to update macro
   MACRO_DELETE_FAILED = "MACRO_DELETE_FAILED", // Failed to delete macro
   MACRO_NOT_FOUND = "MACRO_NOT_FOUND", // Macro not found
-  MACRO_PROTOCOLS_ADD_FAILED = "MACRO_PROTOCOLS_ADD_FAILED", // Failed to add compatible protocols
-  MACRO_PROTOCOLS_REMOVE_FAILED = "MACRO_PROTOCOLS_REMOVE_FAILED", // Failed to remove compatible protocol
-  MACRO_PROTOCOLS_LIST_FAILED = "MACRO_PROTOCOLS_LIST_FAILED", // Failed to list compatible protocols
+  MACRO_COMMANDS_ADD_FAILED = "MACRO_COMMANDS_ADD_FAILED", // Failed to add compatible commands
+  MACRO_COMMANDS_REMOVE_FAILED = "MACRO_COMMANDS_REMOVE_FAILED", // Failed to remove compatible command
+  MACRO_COMMANDS_LIST_FAILED = "MACRO_COMMANDS_LIST_FAILED", // Failed to list compatible commands
   MACRO_EXECUTION_FAILED = "MACRO_EXECUTION_FAILED", // Lambda macro execution failed
   MACRO_BATCH_VALIDATION_FAILED = "MACRO_BATCH_VALIDATION_FAILED", // Batch request validation failed
 
@@ -83,15 +83,15 @@ export enum ErrorCodes {
   WORKBOOK_VERSION_NOT_FOUND = "WORKBOOK_VERSION_NOT_FOUND", // Workbook version not found
   WORKBOOK_VERSION_CREATE_FAILED = "WORKBOOK_VERSION_CREATE_FAILED", // Failed to create workbook version
 
-  // ==================== Domain Operations - Protocols ====================
-  // Location: src/protocols/application/use-cases/
-  PROTOCOL_CREATE_FAILED = "PROTOCOL_CREATE_FAILED", // Failed to create protocol
-  PROTOCOL_UPDATE_FAILED = "PROTOCOL_UPDATE_FAILED", // Failed to update protocol
-  PROTOCOL_DELETE_FAILED = "PROTOCOL_DELETE_FAILED", // Failed to delete protocol
-  PROTOCOL_NOT_FOUND = "PROTOCOL_NOT_FOUND", // Protocol not found
-  PROTOCOL_MACROS_ADD_FAILED = "PROTOCOL_MACROS_ADD_FAILED", // Failed to add compatible macros
-  PROTOCOL_MACROS_REMOVE_FAILED = "PROTOCOL_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
-  PROTOCOL_MACROS_LIST_FAILED = "PROTOCOL_MACROS_LIST_FAILED", // Failed to list compatible macros
+  // ==================== Domain Operations - Commands ====================
+  // Location: src/commands/application/use-cases/
+  COMMAND_CREATE_FAILED = "COMMAND_CREATE_FAILED", // Failed to create command
+  COMMAND_UPDATE_FAILED = "COMMAND_UPDATE_FAILED", // Failed to update command
+  COMMAND_DELETE_FAILED = "COMMAND_DELETE_FAILED", // Failed to delete command
+  COMMAND_NOT_FOUND = "COMMAND_NOT_FOUND", // Command not found
+  COMMAND_MACROS_ADD_FAILED = "COMMAND_MACROS_ADD_FAILED", // Failed to add compatible macros
+  COMMAND_MACROS_REMOVE_FAILED = "COMMAND_MACROS_REMOVE_FAILED", // Failed to remove compatible macro
+  COMMAND_MACROS_LIST_FAILED = "COMMAND_MACROS_LIST_FAILED", // Failed to list compatible macros
 
   // ==================== Domain Operations - IoT Devices ====================
   // Location: src/iot/application/use-cases/
@@ -127,11 +127,11 @@ export enum ErrorCodes {
   EXPERIMENT_DATA_UPLOAD_FAILED = "EXPERIMENT_DATA_UPLOAD_FAILED", // Data upload failed
   EXPERIMENT_DATA_DOWNLOAD_FAILED = "EXPERIMENT_DATA_DOWNLOAD_FAILED", // Data download failed
 
-  // ==================== Domain Operations - Experiments Protocols ====================
+  // ==================== Domain Operations - Experiments Commands ====================
   // Location: src/experiments/application/use-cases/
-  EXPERIMENT_PROTOCOLS_ADD_FAILED = "EXPERIMENT_PROTOCOLS_ADD_FAILED", // Failed to add protocols
-  EXPERIMENT_PROTOCOLS_REMOVE_FAILED = "EXPERIMENT_PROTOCOLS_REMOVE_FAILED", // Failed to remove protocol
-  EXPERIMENT_PROTOCOLS_LIST_FAILED = "EXPERIMENT_PROTOCOLS_LIST_FAILED", // Failed to list protocols
+  EXPERIMENT_COMMANDS_ADD_FAILED = "EXPERIMENT_COMMANDS_ADD_FAILED", // Failed to add commands
+  EXPERIMENT_COMMANDS_REMOVE_FAILED = "EXPERIMENT_COMMANDS_REMOVE_FAILED", // Failed to remove command
+  EXPERIMENT_COMMANDS_LIST_FAILED = "EXPERIMENT_COMMANDS_LIST_FAILED", // Failed to list commands
 
   // ==================== Domain Operations - Experiments Locations ====================
   // Location: src/experiments/application/use-cases/

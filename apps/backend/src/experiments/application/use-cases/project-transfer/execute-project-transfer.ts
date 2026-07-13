@@ -11,8 +11,8 @@ import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateMacroUseCase } from "../../../../macros/application/use-cases/create-macro/create-macro";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
-import { CreateProtocolUseCase } from "../../../../protocols/application/use-cases/create-protocol/create-protocol";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { CreateCommandUseCase } from "../../../../commands/application/use-cases/create-command/create-command";
+import { CommandRepository } from "../../../../commands/core/repositories/command.repository";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import type { CreateWorkbookDto } from "../../../../workbooks/core/models/workbook.model";
@@ -34,10 +34,10 @@ export class ExecuteProjectTransferUseCase {
     private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly locationRepository: LocationRepository,
     private readonly createFlowUseCase: CreateFlowUseCase,
-    private readonly createProtocolUseCase: CreateProtocolUseCase,
+    private readonly createCommandUseCase: CreateCommandUseCase,
     private readonly createMacroUseCase: CreateMacroUseCase,
     private readonly macroRepository: MacroRepository,
-    private readonly protocolRepository: ProtocolRepository,
+    private readonly commandRepository: CommandRepository,
     private readonly userRepository: UserRepository,
     private readonly workbookRepository: WorkbookRepository,
     private readonly publishVersionUseCase: PublishVersionUseCase,
@@ -51,40 +51,40 @@ export class ExecuteProjectTransferUseCase {
       msg: "Executing project transfer",
       operation: "executeProjectTransfer",
       experimentName: data.experiment.name,
-      protocolName: data.protocol?.name,
+      commandName: data.command?.name,
       macroName: data.macro?.name,
     });
 
-    // 1. Create or reuse Protocol (if provided)
-    let protocolId: string | null = null;
-    if (data.protocol) {
-      // Check if a protocol with the same name already exists
-      const existingProtocol = await this.protocolRepository.findByName(data.protocol.name);
+    // 1. Create or reuse Command (if provided)
+    let commandId: string | null = null;
+    if (data.command) {
+      // Check if a command with the same name already exists
+      const existingCommand = await this.commandRepository.findByName(data.command.name);
 
-      if (existingProtocol.isSuccess() && existingProtocol.value) {
-        protocolId = existingProtocol.value.id;
+      if (existingCommand.isSuccess() && existingCommand.value) {
+        commandId = existingCommand.value.id;
         this.logger.log({
-          msg: "Reusing existing protocol with same name",
+          msg: "Reusing existing command with same name",
           operation: "executeProjectTransfer",
-          protocolId,
-          protocolName: data.protocol.name,
+          commandId,
+          commandName: data.command.name,
         });
       } else {
-        const protocolResult = await this.createProtocolUseCase.execute(
+        const commandResult = await this.createCommandUseCase.execute(
           {
-            name: data.protocol.name,
-            description: data.protocol.description ?? null,
-            code: JSON.stringify(data.protocol.code),
-            family: data.protocol.family,
+            name: data.command.name,
+            description: data.command.description ?? null,
+            code: JSON.stringify(data.command.code),
+            family: data.command.family,
           },
-          data.protocol.createdBy,
+          data.command.createdBy,
         );
 
-        if (protocolResult.isFailure()) {
-          return protocolResult;
+        if (commandResult.isFailure()) {
+          return commandResult;
         }
 
-        protocolId = protocolResult.value.id;
+        commandId = commandResult.value.id;
       }
     }
 
@@ -181,9 +181,9 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 6. Create flow (non-fatal, requires both protocol and macro)
+    // 6. Create flow (non-fatal, requires both command and macro)
     let flowId: string | null = null;
-    if (protocolId && macroId) {
+    if (commandId && macroId) {
       const questionNodes: FlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
         id: `q_${i}`,
         type: "question" as const,
@@ -204,7 +204,7 @@ export class ExecuteProjectTransferUseCase {
           id: `m_${offset}`,
           type: "measurement",
           name: "Measurement",
-          content: { protocolId },
+          content: { commandId },
           isStart: offset === 0,
         },
         {
@@ -309,7 +309,7 @@ export class ExecuteProjectTransferUseCase {
       msg: "Project transfer completed",
       operation: "executeProjectTransfer",
       experimentId: experiment.id,
-      protocolId,
+      commandId,
       macroId,
       flowId,
     });
@@ -343,7 +343,7 @@ export class ExecuteProjectTransferUseCase {
     return success({
       success: true,
       experimentId: experiment.id,
-      protocolId,
+      commandId,
       macroId,
       macroFilename,
       macroName,

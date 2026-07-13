@@ -42,7 +42,7 @@ describe("ProjectTransferWebhookController", () => {
   }
 
   describe("handleProjectTransfer", () => {
-    it("should create experiment, protocol, and macro and return 201", async () => {
+    it("should create experiment, command, and macro and return 201", async () => {
       const testUserId = await testApp.createTestUser({});
 
       const webhookPayload: ProjectTransferWebhookPayload = {
@@ -50,7 +50,7 @@ describe("ProjectTransferWebhookController", () => {
           name: "Transfer Exp",
           createdBy: testUserId,
         },
-        protocol: {
+        command: {
           name: "Transfer Proto",
           code: [{ step: "measure" }],
           family: "multispeq",
@@ -77,7 +77,7 @@ describe("ProjectTransferWebhookController", () => {
       const body = response.body as ProjectTransferWebhookResponse;
       expect(body.success).toBe(true);
       expect(body.experimentId).toBeDefined();
-      expect(body.protocolId).toBeDefined();
+      expect(body.commandId).toBeDefined();
       expect(body.macroId).toBeDefined();
       expect(body.macroFilename).toBeDefined();
       expect(body.macroName).toBeDefined();
@@ -88,7 +88,7 @@ describe("ProjectTransferWebhookController", () => {
 
       const webhookPayload: ProjectTransferWebhookPayload = {
         experiment: { name: "E", createdBy: testUserId },
-        protocol: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
+        command: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
         macro: { name: "M", language: "javascript", code: "Y29kZQ==", createdBy: testUserId },
       };
 
@@ -106,7 +106,7 @@ describe("ProjectTransferWebhookController", () => {
 
       const webhookPayload: ProjectTransferWebhookPayload = {
         experiment: { name: "E", createdBy: testUserId },
-        protocol: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
+        command: { name: "P", code: [{}], family: "multispeq", createdBy: testUserId },
         macro: { name: "M", language: "javascript", code: "Y29kZQ==", createdBy: testUserId },
       };
 
@@ -127,7 +127,7 @@ describe("ProjectTransferWebhookController", () => {
     it("should reject invalid payload (missing experiment name)", async () => {
       const payload = {
         experiment: { createdBy: faker.string.uuid() },
-        protocol: { name: "P", code: [{}], createdBy: faker.string.uuid() },
+        command: { name: "P", code: [{}], createdBy: faker.string.uuid() },
         macro: { name: "M", code: "Y29kZQ==", createdBy: faker.string.uuid() },
       };
 
@@ -151,7 +151,7 @@ describe("ProjectTransferWebhookController", () => {
           createdBy: testUserId,
           locations: [{ name: "Site A", latitude: 42.36, longitude: -71.06 }],
         },
-        protocol: {
+        command: {
           name: "Proto With Loc",
           code: [{ step: "measure" }],
           family: "multispeq",
@@ -186,7 +186,7 @@ describe("ProjectTransferWebhookController", () => {
           name: "Exp With Questions",
           createdBy: testUserId,
         },
-        protocol: {
+        command: {
           name: "Proto With Q",
           code: [{ step: "measure" }],
           family: "multispeq",

@@ -76,7 +76,7 @@ describe("FlowRepository", () => {
           id: "n3",
           type: "measurement" as const,
           name: "Take reading",
-          content: { protocolId: crypto.randomUUID(), params: { duration: 10 } },
+          content: { commandId: crypto.randomUUID(), params: { duration: 10 } },
         },
       ],
       edges: [...graph1.edges, { id: "e2", source: "n2", target: "n3" }],

@@ -8,7 +8,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { CommandRepository } from "../../../../commands/core/repositories/command.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { EmailPort } from "../../../core/ports/email.port";
@@ -50,8 +50,8 @@ describe("ExecuteProjectTransferUseCase", () => {
         name: "Transfer Experiment",
         createdBy: testUserId,
       },
-      protocol: {
-        name: "Transfer Protocol",
+      command: {
+        name: "Transfer Command",
         code: [{ step: "measure" }],
         family: "multispeq",
         createdBy: testUserId,
@@ -68,7 +68,7 @@ describe("ExecuteProjectTransferUseCase", () => {
   };
 
   describe("execute", () => {
-    it("should successfully create experiment, protocol, and macro", async () => {
+    it("should successfully create experiment, command, and macro", async () => {
       const payload = buildPayload();
 
       const result = await useCase.execute(payload);
@@ -76,7 +76,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.success).toBe(true);
       expect(result.value.experimentId).toBeDefined();
-      expect(result.value.protocolId).toBeDefined();
+      expect(result.value.commandId).toBeDefined();
       expect(result.value.macroId).toBeDefined();
       expect(result.value.macroFilename).toBeDefined();
       expect(result.value.macroName).toBeDefined();
@@ -164,8 +164,8 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.success).toBe(true);
     });
 
-    it("should fail when protocol creation fails", async () => {
-      vi.spyOn(ProtocolRepository.prototype, "create").mockResolvedValue(
+    it("should fail when command creation fails", async () => {
+      vi.spyOn(CommandRepository.prototype, "create").mockResolvedValue(
         failure(AppError.internal("DB error")),
       );
 
@@ -176,15 +176,15 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertFailure(result);
     });
 
-    it("should fail when protocol creation returns empty array", async () => {
-      vi.spyOn(ProtocolRepository.prototype, "create").mockResolvedValue(success([]));
+    it("should fail when command creation returns empty array", async () => {
+      vi.spyOn(CommandRepository.prototype, "create").mockResolvedValue(success([]));
 
       const payload = buildPayload();
       const result = await useCase.execute(payload);
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("Failed to create protocol");
+      expect(result.error.message).toContain("Failed to create command");
     });
 
     it("should fail when macro creation fails", async () => {
@@ -228,7 +228,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.flowId).toBeDefined();
     });
 
-    it("should succeed without protocol and macro (experiment only)", async () => {
+    it("should succeed without command and macro (experiment only)", async () => {
       const result = await useCase.execute({
         experiment: {
           name: "Experiment Only Transfer",
@@ -239,21 +239,21 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.success).toBe(true);
       expect(result.value.experimentId).toBeDefined();
-      expect(result.value.protocolId).toBeNull();
+      expect(result.value.commandId).toBeNull();
       expect(result.value.macroId).toBeNull();
       expect(result.value.macroFilename).toBeNull();
       expect(result.value.macroName).toBeNull();
       expect(result.value.flowId).toBeNull();
     });
 
-    it("should succeed with only protocol (no macro)", async () => {
+    it("should succeed with only command (no macro)", async () => {
       const result = await useCase.execute({
         experiment: {
-          name: "Protocol Only Transfer",
+          name: "Command Only Transfer",
           createdBy: testUserId,
         },
-        protocol: {
-          name: "Solo Protocol",
+        command: {
+          name: "Solo Command",
           code: [{ step: "measure" }],
           family: "multispeq",
           createdBy: testUserId,
@@ -261,8 +261,8 @@ describe("ExecuteProjectTransferUseCase", () => {
       });
 
       assertSuccess(result);
-      expect(result.value.protocolId).toBeDefined();
-      expect(result.value.protocolId).not.toBeNull();
+      expect(result.value.commandId).toBeDefined();
+      expect(result.value.commandId).not.toBeNull();
       expect(result.value.macroId).toBeNull();
       expect(result.value.macroFilename).toBeNull();
       expect(result.value.macroName).toBeNull();
@@ -356,23 +356,23 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.success).toBe(true);
     });
 
-    it("should reuse existing protocol when one with the same name exists", async () => {
-      const protocolRepo = testApp.module.get(ProtocolRepository);
-      const protocolName = "Shared Protocol";
+    it("should reuse existing command when one with the same name exists", async () => {
+      const commandRepo = testApp.module.get(CommandRepository);
+      const commandName = "Shared Command";
 
-      // Pre-create the protocol
-      const preCreated = await protocolRepo.create(
-        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+      // Pre-create the command
+      const preCreated = await commandRepo.create(
+        { name: commandName, description: null, code: "[]", family: "multispeq" },
         testUserId,
       );
       assertSuccess(preCreated);
-      const existingProtocolId = preCreated.value[0].id;
+      const existingCommandId = preCreated.value[0].id;
 
-      const createSpy = vi.spyOn(protocolRepo, "create");
+      const createSpy = vi.spyOn(commandRepo, "create");
 
       const payload = buildPayload({
-        protocol: {
-          name: protocolName,
+        command: {
+          name: commandName,
           code: [{ step: "measure" }],
           family: "multispeq",
           createdBy: testUserId,
@@ -381,7 +381,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       const result = await useCase.execute(payload);
 
       assertSuccess(result);
-      expect(result.value.protocolId).toBe(existingProtocolId);
+      expect(result.value.commandId).toBe(existingCommandId);
       // create should NOT be called because we reuse the existing one
       expect(createSpy).not.toHaveBeenCalled();
     });
@@ -416,19 +416,19 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(createSpy).not.toHaveBeenCalled();
     });
 
-    it("should reuse both protocol and macro when both names already exist", async () => {
-      const protocolRepo = testApp.module.get(ProtocolRepository);
+    it("should reuse both command and macro when both names already exist", async () => {
+      const commandRepo = testApp.module.get(CommandRepository);
       const macroRepo = testApp.module.get(MacroRepository);
-      const protocolName = "Both Shared Protocol";
+      const commandName = "Both Shared Command";
       const macroName = "Both Shared Macro";
 
-      // Pre-create protocol and macro
-      const preProtocol = await protocolRepo.create(
-        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+      // Pre-create command and macro
+      const preCommand = await commandRepo.create(
+        { name: commandName, description: null, code: "[]", family: "multispeq" },
         testUserId,
       );
-      assertSuccess(preProtocol);
-      const existingProtocolId = preProtocol.value[0].id;
+      assertSuccess(preCommand);
+      const existingCommandId = preCommand.value[0].id;
 
       const preMacro = await macroRepo.create(
         { name: macroName, description: null, language: "javascript", code: "Y29uc29sZQ==" },
@@ -438,8 +438,8 @@ describe("ExecuteProjectTransferUseCase", () => {
       const existingMacroId = preMacro.value[0].id;
 
       const payload = buildPayload({
-        protocol: {
-          name: protocolName,
+        command: {
+          name: commandName,
           code: [{ step: "measure" }],
           family: "multispeq",
           createdBy: testUserId,
@@ -454,7 +454,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       const result = await useCase.execute(payload);
 
       assertSuccess(result);
-      expect(result.value.protocolId).toBe(existingProtocolId);
+      expect(result.value.commandId).toBe(existingCommandId);
       expect(result.value.macroId).toBe(existingMacroId);
     });
   });

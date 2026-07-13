@@ -9,14 +9,14 @@ import { macroContract } from "@repo/api/contracts/macro.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
-import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
+import { AddCompatibleCommandsUseCase } from "../application/use-cases/add-compatible-commands/add-compatible-commands";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
 import { ExecuteMacroUseCase } from "../application/use-cases/execute-macro/execute-macro";
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
-import { ListCompatibleProtocolsUseCase } from "../application/use-cases/list-compatible-protocols/list-compatible-protocols";
+import { ListCompatibleCommandsUseCase } from "../application/use-cases/list-compatible-commands/list-compatible-commands";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
-import { RemoveCompatibleProtocolUseCase } from "../application/use-cases/remove-compatible-protocol/remove-compatible-protocol";
+import { RemoveCompatibleCommandUseCase } from "../application/use-cases/remove-compatible-command/remove-compatible-command";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
@@ -34,9 +34,9 @@ export class MacroController {
     private readonly listMacrosUseCase: ListMacrosUseCase,
     private readonly updateMacroUseCase: UpdateMacroUseCase,
     private readonly deleteMacroUseCase: DeleteMacroUseCase,
-    private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
-    private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
-    private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
+    private readonly listCompatibleCommandsUseCase: ListCompatibleCommandsUseCase,
+    private readonly addCompatibleCommandsUseCase: AddCompatibleCommandsUseCase,
+    private readonly removeCompatibleCommandUseCase: RemoveCompatibleCommandUseCase,
   ) {}
 
   @TsRestHandler(macroContract.createMacro)
@@ -152,10 +152,10 @@ export class MacroController {
     });
   }
 
-  @TsRestHandler(macroContract.listCompatibleProtocols)
-  listCompatibleProtocols() {
-    return tsRestHandler(macroContract.listCompatibleProtocols, async ({ params }) => {
-      const result = await this.listCompatibleProtocolsUseCase.execute(params.id);
+  @TsRestHandler(macroContract.listCompatibleCommands)
+  listCompatibleCommands() {
+    return tsRestHandler(macroContract.listCompatibleCommands, async ({ params }) => {
+      const result = await this.listCompatibleCommandsUseCase.execute(params.id);
 
       if (result.isSuccess()) {
         return {
@@ -168,12 +168,12 @@ export class MacroController {
     });
   }
 
-  @TsRestHandler(macroContract.addCompatibleProtocols)
-  addCompatibleProtocols(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.addCompatibleProtocols, async ({ params, body }) => {
-      const result = await this.addCompatibleProtocolsUseCase.execute(
+  @TsRestHandler(macroContract.addCompatibleCommands)
+  addCompatibleCommands(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.addCompatibleCommands, async ({ params, body }) => {
+      const result = await this.addCompatibleCommandsUseCase.execute(
         params.id,
-        body.protocolIds,
+        body.commandIds,
         session.user.id,
       );
 
@@ -188,12 +188,12 @@ export class MacroController {
     });
   }
 
-  @TsRestHandler(macroContract.removeCompatibleProtocol)
-  removeCompatibleProtocol(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.removeCompatibleProtocol, async ({ params }) => {
-      const result = await this.removeCompatibleProtocolUseCase.execute(
+  @TsRestHandler(macroContract.removeCompatibleCommand)
+  removeCompatibleCommand(@Session() session: UserSession) {
+    return tsRestHandler(macroContract.removeCompatibleCommand, async ({ params }) => {
+      const result = await this.removeCompatibleCommandUseCase.execute(
         params.id,
-        params.protocolId,
+        params.commandId,
         session.user.id,
       );
 

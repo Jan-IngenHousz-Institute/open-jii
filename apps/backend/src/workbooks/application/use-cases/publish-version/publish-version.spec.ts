@@ -102,9 +102,9 @@ describe("PublishVersionUseCase", () => {
     const cells = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
       },
     ];
     const workbook = await testApp.createWorkbook({

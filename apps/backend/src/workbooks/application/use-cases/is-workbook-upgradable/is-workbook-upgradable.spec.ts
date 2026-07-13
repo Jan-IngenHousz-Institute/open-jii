@@ -1,5 +1,5 @@
 import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { CommandRepository } from "../../../../commands/core/repositories/command.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { WorkbookDto } from "../../../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
@@ -120,8 +120,8 @@ describe("IsWorkbookUpgradableUseCase", () => {
   });
 
   // Key-order insensitivity is covered in stable-json.spec.ts.
-  it("tracks drift in a referenced protocol's code", async () => {
-    const protocol = await testApp.createProtocol({
+  it("tracks drift in a referenced command's code", async () => {
+    const command = await testApp.createCommand({
       name: "P",
       code: [{ pulses: [10, 20] }],
       createdBy: userId,
@@ -131,25 +131,25 @@ describe("IsWorkbookUpgradableUseCase", () => {
       cells: [
         {
           id: "p1",
-          type: "protocol",
+          type: "command",
           isCollapsed: false,
-          payload: { protocolId: protocol.id, version: 1 },
+          payload: { commandId: command.id, version: 1 },
         },
       ],
       createdBy: userId,
     });
-    await publishV1(workbook); // snapshots the protocol's current code
+    await publishV1(workbook); // snapshots the command's current code
 
-    // Unchanged protocol -> not upgradable.
+    // Unchanged command -> not upgradable.
     const before = await workbookRepo.findById(workbook.id);
     assertSuccess(before);
     const unchanged = await useCase.execute(expectValue(before.value));
     assertSuccess(unchanged);
     expect(unchanged.value).toBe(false);
 
-    // The referenced protocol's code changes -> upgradable.
-    const protocolRepo = testApp.module.get(ProtocolRepository);
-    await protocolRepo.update(protocol.id, { code: [{ pulses: [10, 30] }] });
+    // The referenced command's code changes -> upgradable.
+    const commandRepo = testApp.module.get(CommandRepository);
+    await commandRepo.update(command.id, { code: [{ pulses: [10, 30] }] });
     const after = await workbookRepo.findById(workbook.id);
     assertSuccess(after);
     const drifted = await useCase.execute(expectValue(after.value));

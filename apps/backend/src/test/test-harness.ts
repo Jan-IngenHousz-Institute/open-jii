@@ -22,7 +22,7 @@ import {
   sessions,
   auditLogs,
   profiles,
-  protocols,
+  commands,
   organizations,
   flows,
   macros,
@@ -188,7 +188,7 @@ export class TestHarness {
     // Flows reference experiments, so delete flows before experiments
     await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();
-    await this.database.delete(protocols).execute();
+    await this.database.delete(commands).execute();
     // Macros reference users, so delete macros before users
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
@@ -391,26 +391,26 @@ export class TestHarness {
   }
 
   /**
-   * Helper to create a protocol for testing
+   * Helper to create a command for testing
    */
-  public async createProtocol(data: {
+  public async createCommand(data: {
     name: string;
     description?: string;
     code?: Record<string, unknown>[];
     family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
   }) {
-    const [protocol] = await this.database
-      .insert(protocols)
+    const [command] = await this.database
+      .insert(commands)
       .values({
         name: data.name,
-        description: data.description ?? "Test protocol description",
+        description: data.description ?? "Test command description",
         code: data.code ?? [{}],
         family: data.family ?? "multispeq",
         createdBy: data.createdBy,
       })
       .returning();
-    return protocol;
+    return command;
   }
 
   /**

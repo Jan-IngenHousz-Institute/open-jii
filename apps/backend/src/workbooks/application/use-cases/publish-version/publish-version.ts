@@ -6,7 +6,7 @@ import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema"
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
-import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { CommandRepository } from "../../../../commands/core/repositories/command.repository";
 import type { WorkbookVersionDto } from "../../../core/models/workbook-version.model";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
@@ -18,7 +18,7 @@ export class PublishVersionUseCase {
   constructor(
     private readonly workbookRepository: WorkbookRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly protocolRepository: ProtocolRepository,
+    private readonly commandRepository: CommandRepository,
     private readonly macroRepository: MacroRepository,
   ) {}
 
@@ -43,23 +43,23 @@ export class PublishVersionUseCase {
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
     const cells = workbook.cells as WorkbookCell[];
-    const protocolIds = [
-      ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
+    const commandIds = [
+      ...new Set(cells.flatMap((c) => (c.type === "command" ? [c.payload.commandId] : []))),
     ];
     const macroIds = [
       ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
 
-    const [protocolsResult, macrosResult] = await Promise.all([
-      this.protocolRepository.findByIds(protocolIds),
+    const [commandsResult, macrosResult] = await Promise.all([
+      this.commandRepository.findByIds(commandIds),
       this.macroRepository.findScriptsByIds(macroIds),
     ]);
-    if (protocolsResult.isFailure()) return protocolsResult;
+    if (commandsResult.isFailure()) return commandsResult;
     if (macrosResult.isFailure()) return macrosResult;
 
-    const entitySnapshots: EntitySnapshots = { protocols: {}, macros: {} };
-    for (const [id, p] of protocolsResult.value) {
-      entitySnapshots.protocols[id] = { code: p.code, family: p.family };
+    const entitySnapshots: EntitySnapshots = { commands: {}, macros: {} };
+    for (const [id, p] of commandsResult.value) {
+      entitySnapshots.commands[id] = { code: p.code, family: p.family };
     }
     for (const [id, m] of macrosResult.value) {
       entitySnapshots.macros[id] = { code: m.code };

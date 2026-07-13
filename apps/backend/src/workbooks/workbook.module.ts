@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { MacroModule } from "../macros/macro.module";
-import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
+import { CommandRepository } from "../commands/core/repositories/command.repository";
 import { CreateWorkbookUseCase } from "./application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "./application/use-cases/delete-workbook/delete-workbook";
 import { GetWorkbookVersionUseCase } from "./application/use-cases/get-workbook-version/get-workbook-version";
@@ -21,7 +21,7 @@ import { WorkbookController } from "./presentation/workbook.controller";
   providers: [
     WorkbookRepository,
     WorkbookVersionRepository,
-    ProtocolRepository,
+    CommandRepository,
     CreateWorkbookUseCase,
     GetWorkbookUseCase,
     ListWorkbooksUseCase,

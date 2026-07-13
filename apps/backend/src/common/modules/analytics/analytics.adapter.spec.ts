@@ -34,12 +34,12 @@ describe("AnalyticsAdapter", () => {
         .mockResolvedValue(true);
 
       const result = await adapter.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "user-123",
       );
 
       expect(flagsServiceSpy).toHaveBeenCalledWith(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "user-123",
       );
       expect(result).toBe(true);
@@ -51,11 +51,11 @@ describe("AnalyticsAdapter", () => {
         .mockResolvedValue(false);
 
       const result = await adapter.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
       );
 
       expect(flagsServiceSpy).toHaveBeenCalledWith(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "anonymous",
       );
       expect(result).toBe(false);
@@ -67,7 +67,7 @@ describe("AnalyticsAdapter", () => {
         .mockResolvedValue(true);
 
       const result = await adapter.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "test-user",
       );
 
@@ -81,11 +81,11 @@ describe("AnalyticsAdapter", () => {
         .mockRejectedValue(new Error("Service error"));
 
       await expect(
-        adapter.isFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING),
+        adapter.isFeatureFlagEnabled(FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING),
       ).rejects.toThrow("Service error");
 
       expect(flagsServiceSpy).toHaveBeenCalledWith(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "anonymous",
       );
     });

@@ -160,12 +160,12 @@ describe("FlagsService", () => {
       mockGetPostHogServerClient.mockReturnValue(mockClient);
 
       const result = await service.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
       );
 
       expect(result).toBe(true);
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "anonymous",
       );
     });
@@ -174,10 +174,10 @@ describe("FlagsService", () => {
       mockGetPostHogServerClient.mockReturnValue(null);
 
       const result = await service.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
       );
 
-      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING]);
     });
 
     it("should use custom distinctId when provided", async () => {
@@ -188,13 +188,13 @@ describe("FlagsService", () => {
       mockGetPostHogServerClient.mockReturnValue(mockClient);
 
       const result = await service.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "user-123",
       );
 
       expect(result).toBe(false);
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
         "user-123",
       );
     });
@@ -207,10 +207,10 @@ describe("FlagsService", () => {
       mockGetPostHogServerClient.mockReturnValue(mockClient);
 
       const result = await service.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
       );
 
-      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING]);
     });
 
     it("should handle errors and return default value", async () => {
@@ -221,10 +221,10 @@ describe("FlagsService", () => {
       mockGetPostHogServerClient.mockReturnValue(mockClient);
 
       const result = await service.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+        FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING,
       );
 
-      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
+      expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING]);
     });
   });
 

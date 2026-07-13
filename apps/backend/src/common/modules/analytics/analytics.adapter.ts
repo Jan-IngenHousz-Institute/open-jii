@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { FeatureFlagKey } from "@repo/analytics";
 
-import type { AnalyticsPort } from "../../../protocols/core/ports/analytics.port";
+import type { AnalyticsPort } from "../../../commands/core/ports/analytics.port";
 import { FlagsService } from "./services/flags/flags.service";
 
 /**

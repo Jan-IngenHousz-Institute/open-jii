@@ -19,7 +19,7 @@ import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
-import { ProtocolModule } from "./protocols/protocol.module";
+import { CommandModule } from "./commands/command.module";
 import { UserModule } from "./users/user.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
 
@@ -43,7 +43,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     ExperimentModule,
     IotModule,
     MacroModule,
-    ProtocolModule,
+    CommandModule,
     UserModule,
     WorkbookModule,
     HealthModule,
