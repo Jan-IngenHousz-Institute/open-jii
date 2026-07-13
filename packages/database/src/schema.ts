@@ -258,8 +258,8 @@ export const auditLogs = pgTable("audit_logs", {
   details: jsonb("details"),
 });
 
-// Protocols Table
-export const protocols = pgTable("protocols", {
+// Commands Table
+export const commands = pgTable("commands", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
@@ -269,9 +269,9 @@ export const protocols = pgTable("protocols", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
-  // Source protocol this was forked from (a copy made by a non-creator so they
+  // Source command this was forked from (a copy made by a non-creator so they
   // can edit it); null for originals.
-  forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
+  forkedFrom: uuid("forked_from").references((): AnyPgColumn => commands.id, {
     onDelete: "set null",
   }),
   ...timestamps,
@@ -299,12 +299,12 @@ export const macros = pgTable("macros", {
   ...timestamps,
 });
 
-// Protocol-Macro Compatibility (many-to-many)
-export const protocolMacros = pgTable(
-  "protocol_macros",
+// Command-Macro Compatibility (many-to-many)
+export const commandMacros = pgTable(
+  "command_macros",
   {
-    protocolId: uuid("protocol_id")
-      .references(() => protocols.id, { onDelete: "cascade" })
+    commandId: uuid("command_id")
+      .references(() => commands.id, { onDelete: "cascade" })
       .notNull(),
     macroId: uuid("macro_id")
       .references(() => macros.id, { onDelete: "cascade" })
@@ -313,7 +313,7 @@ export const protocolMacros = pgTable(
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.protocolId, table.macroId] })],
+  (table) => [primaryKey({ columns: [table.commandId, table.macroId] })],
 );
 
 // Flows Table - stores a single graph JSON per experiment (1:1)
@@ -430,7 +430,7 @@ export const workbookVersions = pgTable(
     version: integer("version").notNull(),
     cells: jsonb("cells").notNull(),
     metadata: jsonb("metadata").notNull().default({}),
-    entitySnapshots: jsonb("entity_snapshots").notNull().default({ protocols: {}, macros: {} }),
+    entitySnapshots: jsonb("entity_snapshots").notNull().default({ commands: {}, macros: {} }),
     createdAt: timestamp("created_at")
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),

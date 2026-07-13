@@ -4,9 +4,9 @@ import { db } from "../src/database";
 import {
   users,
   profiles,
-  protocols,
+  commands,
   macros,
-  protocolMacros,
+  commandMacros,
   experiments,
   experimentMembers,
   flows,
@@ -81,8 +81,8 @@ async function clearSeedData() {
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
   }
 
-  // Protocols cascade-delete protocolMacros
-  await db.delete(protocols).where(like(protocols.name, SEED_PREFIX));
+  // Commands cascade-delete commandMacros
+  await db.delete(commands).where(like(commands.name, SEED_PREFIX));
   await db.delete(macros).where(like(macros.name, SEED_PREFIX));
 
   // User + profile (seed user)
@@ -128,8 +128,8 @@ async function main() {
 
   console.log(`  Created user: ${user.id}`);
 
-  // 2. Create protocols (10 total — 6 multispeq, 4 ambyte; some with sortOrder)
-  const protocolData: {
+  // 2. Create commands (10 total — 6 multispeq, 4 ambyte; some with sortOrder)
+  const commandData: {
     name: string;
     description: string;
     family: "multispeq" | "ambyte";
@@ -218,12 +218,12 @@ async function main() {
     },
   ];
 
-  const createdProtocols = await db
-    .insert(protocols)
-    .values(protocolData.map((p) => ({ ...p, createdBy: user.id })))
+  const createdCommands = await db
+    .insert(commands)
+    .values(commandData.map((p) => ({ ...p, createdBy: user.id })))
     .returning();
 
-  console.log(`  Created ${createdProtocols.length} protocols`);
+  console.log(`  Created ${createdCommands.length} commands`);
 
   // 3. Create macros (12 total — 5 python, 3 javascript, 2 r; some with sortOrder)
   const macroData: {
@@ -347,46 +347,46 @@ async function main() {
 
   console.log(`  Created ${createdMacros.length} macros`);
 
-  // 4. Link protocols ↔ macros (diverse cross-links)
-  const p = createdProtocols;
+  // 4. Link commands ↔ macros (diverse cross-links)
+  const p = createdCommands;
   const m = createdMacros;
   const pmLinks = [
     // Chlorophyll Fluorescence → Phi2 Quantum Yield, Data Formatter, Outlier Detection
-    { protocolId: p[0].id, macroId: m[0].id },
-    { protocolId: p[0].id, macroId: m[5].id },
-    { protocolId: p[0].id, macroId: m[3].id },
+    { commandId: p[0].id, macroId: m[0].id },
+    { commandId: p[0].id, macroId: m[5].id },
+    { commandId: p[0].id, macroId: m[3].id },
     // Leaf Thickness → SPAD Estimator, Statistical Summary
-    { protocolId: p[1].id, macroId: m[1].id },
-    { protocolId: p[1].id, macroId: m[8].id },
+    { commandId: p[1].id, macroId: m[1].id },
+    { commandId: p[1].id, macroId: m[8].id },
     // SPAD Chlorophyll Index → SPAD Estimator, NDVI Calculator, Outlier Detection
-    { protocolId: p[2].id, macroId: m[1].id },
-    { protocolId: p[2].id, macroId: m[4].id },
-    { protocolId: p[2].id, macroId: m[3].id },
+    { commandId: p[2].id, macroId: m[1].id },
+    { commandId: p[2].id, macroId: m[4].id },
+    { commandId: p[2].id, macroId: m[3].id },
     // PAR → Data Formatter, Unit Converter
-    { protocolId: p[3].id, macroId: m[5].id },
-    { protocolId: p[3].id, macroId: m[6].id },
+    { commandId: p[3].id, macroId: m[5].id },
+    { commandId: p[3].id, macroId: m[6].id },
     // ECS → ECS Decay Analysis, Statistical Summary
-    { protocolId: p[4].id, macroId: m[2].id },
-    { protocolId: p[4].id, macroId: m[8].id },
+    { commandId: p[4].id, macroId: m[2].id },
+    { commandId: p[4].id, macroId: m[8].id },
     // Leaf Reflectance NDVI → NDVI Calculator, Data Formatter
-    { protocolId: p[5].id, macroId: m[4].id },
-    { protocolId: p[5].id, macroId: m[5].id },
+    { commandId: p[5].id, macroId: m[4].id },
+    { commandId: p[5].id, macroId: m[5].id },
     // Soil Moisture → Geolocation Tagger, Unit Converter
-    { protocolId: p[6].id, macroId: m[7].id },
-    { protocolId: p[6].id, macroId: m[6].id },
+    { commandId: p[6].id, macroId: m[7].id },
+    { commandId: p[6].id, macroId: m[6].id },
     // Ambient Light & Temp → Data Formatter, ANOVA Analysis
-    { protocolId: p[7].id, macroId: m[5].id },
-    { protocolId: p[7].id, macroId: m[9].id },
+    { commandId: p[7].id, macroId: m[5].id },
+    { commandId: p[7].id, macroId: m[9].id },
     // Soil EC & pH → Statistical Summary, Geolocation Tagger
-    { protocolId: p[8].id, macroId: m[8].id },
-    { protocolId: p[8].id, macroId: m[7].id },
+    { commandId: p[8].id, macroId: m[8].id },
+    { commandId: p[8].id, macroId: m[7].id },
     // Canopy Temperature → Outlier Detection, ANOVA Analysis
-    { protocolId: p[9].id, macroId: m[3].id },
-    { protocolId: p[9].id, macroId: m[9].id },
+    { commandId: p[9].id, macroId: m[3].id },
+    { commandId: p[9].id, macroId: m[9].id },
   ];
 
-  await db.insert(protocolMacros).values(pmLinks);
-  console.log(`  Created ${pmLinks.length} protocol-macro links`);
+  await db.insert(commandMacros).values(pmLinks);
+  console.log(`  Created ${pmLinks.length} command-macro links`);
 
   // 5. Create experiments. Two experiments use fixed UUIDs so they line up
   // with dev/staging Databricks measurement data; the other three get
