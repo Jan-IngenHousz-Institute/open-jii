@@ -547,6 +547,12 @@ export const workbooks = pgTable(
       onDelete: "set null",
     }),
     ...timestamps,
+    // Weighted full-text search vector: name (A) + description (B). See migration for the
+    // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B')`,
+    ),
   },
   (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
 );

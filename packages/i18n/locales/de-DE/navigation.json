@@ -72,7 +72,8 @@
     "results": {
       "experiments": "Experimente",
       "protocols": "Protokolle",
-      "macros": "Makros"
+      "macros": "Makros",
+      "workbooks": "Arbeitsmappen"
     },
     "status": {
       "searching": "Suche...",

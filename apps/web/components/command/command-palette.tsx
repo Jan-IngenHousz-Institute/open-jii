@@ -39,6 +39,7 @@ const RESULT_GROUPS: { type: SearchResultType; headingKey: string }[] = [
   { type: "experiment", headingKey: "commandPalette.results.experiments" },
   { type: "protocol", headingKey: "commandPalette.results.protocols" },
   { type: "macro", headingKey: "commandPalette.results.macros" },
+  { type: "workbook", headingKey: "commandPalette.results.workbooks" },
 ];
 
 export function CommandPalette({ locale }: { locale: string }) {
@@ -184,6 +185,7 @@ export function CommandPalette({ locale }: { locale: string }) {
       experiment: [],
       protocol: [],
       macro: [],
+      workbook: [],
     };
     for (const result of results) groups[result.type].push(result);
     return groups;
@@ -198,6 +200,8 @@ export function CommandPalette({ locale }: { locale: string }) {
           return navigate(`/${locale}/platform/protocols/${result.id}`);
         case "macro":
           return navigate(`/${locale}/platform/macros/${result.id}`);
+        case "workbook":
+          return navigate(`/${locale}/platform/workbooks/${result.id}`);
       }
     },
     [locale, navigate],

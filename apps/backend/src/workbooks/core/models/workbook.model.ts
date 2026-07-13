@@ -9,6 +9,7 @@ export const createWorkbookSchema = createInsertSchema(workbooks).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
 export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit({
@@ -16,9 +17,10 @@ export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
-export const selectWorkbookSchema = createSelectSchema(workbooks).extend({
+export const selectWorkbookSchema = createSelectSchema(workbooks).omit({ searchVector: true }).extend({
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
   createdByName: z.string().optional(),

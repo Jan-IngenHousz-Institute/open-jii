@@ -1,5 +1,5 @@
 {
-  "id": "4ac5f499-e032-46aa-80da-1506100b3f8f",
+  "id": "8441d129-32cc-4616-a327-cc9d3f8a0196",
   "prevId": "25dd01c8-b557-49bc-b0e7-858435308490",
   "version": "7",
   "dialect": "postgresql",
@@ -2641,6 +2641,16 @@
           "primaryKey": false,
           "notNull": true,
           "default": "(now() AT TIME ZONE 'UTC')"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "setweight(to_tsvector('english', coalesce(\"workbooks\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"workbooks\".\"description\", '')), 'B')",
+            "type": "stored"
+          }
         }
       },
       "indexes": {

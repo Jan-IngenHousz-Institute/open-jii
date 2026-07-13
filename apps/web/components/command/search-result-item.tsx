@@ -1,7 +1,7 @@
 "use client";
 
 import { stripHtml } from "@/util/strip-html";
-import { Code, FileSliders, Leaf } from "lucide-react";
+import { BookOpen, Code, FileSliders, Leaf } from "lucide-react";
 import * as React from "react";
 
 import type { SearchResult, SearchResultType } from "@repo/api/schemas/search.schema";
@@ -12,6 +12,7 @@ const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }
   experiment: Leaf,
   protocol: FileSliders,
   macro: Code,
+  workbook: BookOpen,
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {

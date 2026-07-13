@@ -1,9 +1,28 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, experiments, ilike, profiles, sql, workbooks } from "@repo/database";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  experimentMembers,
+  experiments,
+  getTableColumns,
+  ilike,
+  isNull,
+  macros,
+  ne,
+  or,
+  profiles,
+  protocols,
+  sql,
+  workbooks,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -16,12 +35,24 @@ export interface WorkbookFilter {
   userId?: string;
 }
 
+// All workbook columns except the internal full-text `search_vector` (never returned to clients).
+const { searchVector: _workbookSearchVector, ...workbookColumns } = getTableColumns(workbooks);
+
 // Number of experiments currently referencing a workbook. A correlated subquery
 // keeps findAll/findById single-query (no N+1).
 function experimentCountSql() {
   return sql<number>`(select count(*)::int from ${experiments} where ${experiments.workbookId} = ${workbooks.id})`.mapWith(
     Number,
   );
+}
+
+// Set of protocol/macro ids referenced by the workbook's cells.
+function cellRefIds(cellType: "protocol" | "macro", idKey: "protocolId" | "macroId") {
+  return sql`(
+    SELECT (cell->'payload'->>${idKey})::uuid
+    FROM jsonb_array_elements(${workbooks.cells}) AS cell
+    WHERE cell->>'type' = ${cellType}
+  )`;
 }
 
 @Injectable()
@@ -39,28 +70,95 @@ export class WorkbookRepository {
           ...data,
           createdBy: userId,
         })
-        .returning();
+        .returning(workbookColumns);
       return results as WorkbookDto[];
     });
   }
 
-  async findAll(filter?: WorkbookFilter): Promise<Result<WorkbookDto[]>> {
+  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
       let query = this.database
         .select({
-          workbooks,
+          workbooks: workbookColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           experimentCount: experimentCountSql(),
         })
         .from(workbooks)
         .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
-        .orderBy(asc(workbooks.name));
+        .$dynamic();
 
       const conditions: (SQL | undefined)[] = [];
 
-      if (filter?.search) {
-        conditions.push(ilike(workbooks.name, `%${filter.search}%`));
+      const search = filter?.search;
+      // Creator name matched at query time alongside the name/description vector. Deactivated or
+      // deleted creators are excluded from name matching.
+      const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const creatorMatch = (term: string) =>
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
+      // Match the name/description of a linked, non-archived experiment. Private experiment text
+      // is only searchable by members; without a requesting user, only public experiments match.
+      const linkedExperimentMatch = (term: string) =>
+        exists(
+          this.database
+            .select()
+            .from(experiments)
+            .where(
+              and(
+                eq(experiments.workbookId, workbooks.id),
+                ne(experiments.status, "archived"),
+                filter?.userId
+                  ? or(
+                      eq(experiments.visibility, "public"),
+                      exists(
+                        this.database
+                          .select()
+                          .from(experimentMembers)
+                          .where(
+                            and(
+                              eq(experimentMembers.experimentId, experiments.id),
+                              eq(experimentMembers.userId, filter.userId),
+                            ),
+                          ),
+                      ),
+                    )
+                  : eq(experiments.visibility, "public"),
+                ftsMatch(experiments.searchVector, experiments.name, term),
+              ),
+            ),
+        );
+
+      // Match a protocol/macro referenced by a cell, by the LIVE entity name (cells store the id;
+      // the payload name is optional and can go stale). Both are globally readable — no access filter.
+      const linkedProtocolMatch = (term: string) =>
+        exists(
+          this.database
+            .select()
+            .from(protocols)
+            .where(
+              and(
+                ftsMatch(protocols.searchVector, protocols.name, term),
+                sql`${protocols.id} IN ${cellRefIds("protocol", "protocolId")}`,
+              ),
+            ),
+        );
+      const linkedMacroMatch = (term: string) =>
+        exists(
+          this.database
+            .select()
+            .from(macros)
+            .where(
+              and(
+                ftsMatch(macros.searchVector, macros.name, term),
+                sql`${macros.id} IN ${cellRefIds("macro", "macroId")}`,
+              ),
+            ),
+        );
+
+      if (search) {
+        conditions.push(
+          sql`(${ftsMatch(workbooks.searchVector, workbooks.name, search)} OR ${creatorMatch(search)} OR ${linkedExperimentMatch(search)} OR ${linkedProtocolMatch(search)} OR ${linkedMacroMatch(search)})`,
+        );
       }
 
       if (filter?.filter === "my" && filter.userId) {
@@ -68,7 +166,18 @@ export class WorkbookRepository {
       }
 
       if (conditions.length > 0) {
-        query = query.where(and(...conditions)) as typeof query;
+        query = query.where(and(...conditions));
+      }
+
+      if (search) {
+        const rank = sql<number>`(${ftsRank(workbooks.searchVector, workbooks.name, search)} + 0.05 * (CASE WHEN ${creatorMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedExperimentMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedProtocolMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedMacroMatch(search)} THEN 1 ELSE 0 END))`;
+        query = query.orderBy(desc(rank), asc(workbooks.name));
+      } else {
+        query = query.orderBy(asc(workbooks.name));
+      }
+
+      if (limit !== undefined) {
+        query = query.limit(limit);
       }
 
       const results = await query;
@@ -87,7 +196,7 @@ export class WorkbookRepository {
     return tryCatch(async () => {
       const result = await this.database
         .select({
-          workbooks,
+          workbooks: workbookColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           experimentCount: experimentCountSql(),
@@ -119,7 +228,7 @@ export class WorkbookRepository {
           updatedAt: new Date(),
         })
         .where(eq(workbooks.id, id))
-        .returning();
+        .returning(workbookColumns);
 
       return results as unknown as WorkbookDto[];
     });
@@ -127,7 +236,10 @@ export class WorkbookRepository {
 
   async delete(id: string): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(workbooks).where(eq(workbooks.id, id)).returning();
+      const results = await this.database
+        .delete(workbooks)
+        .where(eq(workbooks.id, id))
+        .returning(workbookColumns);
       return results as unknown as WorkbookDto[];
     });
   }

@@ -3,13 +3,13 @@ import { z } from "zod";
 /** Query params for global cross-entity search. */
 export const zGlobalSearchQuery = z.object({
   query: z.string().trim().min(1).max(200).describe("Search term"),
-  // The backend caps each entity type at 8 results across 3 types, so 24 is the most that can ever
+  // The backend caps each entity type at 8 results across 4 types, so 32 is the most that can ever
   // be returned — advertise that ceiling instead of over-promising up to 50.
-  limit: z.coerce.number().int().min(1).max(24).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(32).optional().default(20),
 });
 
 /** Entity types surfaced by global search (users are intentionally excluded — no profile page). */
-export const zSearchResultType = z.enum(["experiment", "protocol", "macro"]);
+export const zSearchResultType = z.enum(["experiment", "protocol", "macro", "workbook"]);
 
 /** A single normalized, ranked search result. */
 export const zSearchResult = z.object({

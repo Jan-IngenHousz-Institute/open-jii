@@ -712,7 +712,7 @@ describe("ExperimentRepository", () => {
       expect(result.value.some((e) => e.name === "Maize field trial")).toBe(true);
     });
 
-    it("matches an experiment by a location field", async () => {
+    it("matches every experiment location field", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Maize field trial",
         userId: testUserId,
@@ -720,13 +720,62 @@ describe("ExperimentRepository", () => {
       });
       await testApp.addExperimentLocation({
         experimentId: experiment.id,
-        name: "Greenhouse",
-        country: "Wakanda",
+        name: "Northridge Station",
+        country: "Zedland",
+        region: "Quibble Valley",
+        municipality: "Flergborough",
+        addressLabel: "42 Wombat Avenue",
       });
 
-      const result = await repository.findAll(testUserId, undefined, undefined, "Wakanda");
+      for (const term of ["northridge", "zedland", "quibble", "flergborough", "wombat"]) {
+        const result = await repository.findAll(testUserId, undefined, undefined, term);
+        assertSuccess(result);
+        expect(result.value.some((candidate) => candidate.name === "Maize field trial")).toBe(true);
+      }
+    });
+
+    it("does prefix matching", async () => {
+      await testApp.createExperiment({
+        name: "Spectral reflectance assay",
+        userId: testUserId,
+      });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "spectr");
       assertSuccess(result);
-      expect(result.value.some((e) => e.name === "Maize field trial")).toBe(true);
+      expect(
+        result.value.some((experiment) => experiment.name === "Spectral reflectance assay"),
+      ).toBe(true);
+    });
+
+    it("matches names case-insensitively", async () => {
+      await testApp.createExperiment({
+        name: "Casefold Canopy Trial",
+        userId: testUserId,
+      });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "CASEFOLD");
+      assertSuccess(result);
+      expect(result.value.some((experiment) => experiment.name === "Casefold Canopy Trial")).toBe(
+        true,
+      );
+    });
+
+    it("does stemming", async () => {
+      await testApp.createExperiment({ name: "Running field trials", userId: testUserId });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "run");
+      assertSuccess(result);
+      expect(result.value.some((experiment) => experiment.name === "Running field trials")).toBe(
+        true,
+      );
+    });
+
+    it("matches names containing punctuation", async () => {
+      await testApp.createExperiment({ name: "Ridge-01 canopy", userId: testUserId });
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "ridge-01");
+      assertSuccess(result);
+      expect(result.value.some((experiment) => experiment.name === "Ridge-01 canopy")).toBe(true);
     });
 
     it("excludes deactivated contributors from name matching entirely", async () => {
@@ -781,6 +830,20 @@ describe("ExperimentRepository", () => {
       const byMember = await repository.findAll(testUserId, undefined, undefined, "Deleted Member");
       assertSuccess(byMember);
       expect(byMember.value.some((e) => e.name === "Sorghum field trial")).toBe(false);
+    });
+
+    it("respects the requested search result limit", async () => {
+      for (const suffix of ["Alpha", "Bravo", "Charlie"]) {
+        await testApp.createExperiment({
+          name: `Limitprobe ${suffix}`,
+          userId: testUserId,
+        });
+      }
+
+      const result = await repository.findAll(testUserId, undefined, undefined, "limitprobe", 2);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
     });
   });
 

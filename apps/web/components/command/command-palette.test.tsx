@@ -150,6 +150,13 @@ describe("CommandPalette", () => {
           subtitle: null,
           meta: "multispeq",
         },
+        {
+          type: "workbook",
+          id: "33333333-3333-3333-3333-333333333333",
+          title: "Photosynthesis workbook",
+          subtitle: null,
+          meta: null,
+        },
       ],
     });
     const user = userEvent.setup();
@@ -160,12 +167,14 @@ describe("CommandPalette", () => {
 
     expect(await screen.findByText("Photosynthesis trial")).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis protocol")).toBeInTheDocument();
+    expect(screen.getByText("Photosynthesis workbook")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.results.experiments")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.results.protocols")).toBeInTheDocument();
+    expect(screen.getByText("commandPalette.results.workbooks")).toBeInTheDocument();
 
-    await user.click(screen.getByText("Photosynthesis trial"));
+    await user.click(screen.getByText("Photosynthesis workbook"));
     expect(router.push).toHaveBeenCalledWith(
-      "/en-US/platform/experiments/11111111-1111-1111-1111-111111111111",
+      "/en-US/platform/workbooks/33333333-3333-3333-3333-333333333333",
     );
   });
 

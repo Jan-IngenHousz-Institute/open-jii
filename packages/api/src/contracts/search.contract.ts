@@ -19,6 +19,6 @@ export const searchContract = c.router({
     },
     summary: "Global cross-entity search",
     description:
-      "Relevance-ranked full-text + fuzzy search across experiments, protocols and macros.",
+      "Relevance-ranked full-text + fuzzy search across experiments, protocols, macros and workbooks.",
   },
 });

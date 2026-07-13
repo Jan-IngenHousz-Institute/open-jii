@@ -6,6 +6,7 @@ import { Result, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 
 /** Max results taken per entity type before cross-type merging. */
 const PER_TYPE_LIMIT = 8;
@@ -25,6 +26,7 @@ export class GlobalSearchUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
+    private readonly workbookRepository: WorkbookRepository,
   ) {}
 
   async execute(
@@ -38,15 +40,17 @@ export class GlobalSearchUseCase {
     // by exactly the same rules — there is one search definition per entity, and global search
     // is purely a consumer of it. Each `findAll` already returns rows in descending relevance.
     const perType = Math.min(PER_TYPE_LIMIT, limit);
-    const [experiments, protocols, macros] = await Promise.all([
+    const [experiments, protocols, macros, workbooks] = await Promise.all([
       this.experimentRepository.findAll(userId, undefined, undefined, query, perType),
       this.protocolRepository.findAll(query, undefined, undefined, perType),
       this.macroRepository.findAll({ search: query }, perType),
+      this.workbookRepository.findAll({ search: query, userId }, perType),
     ]);
 
     if (isFailure(experiments)) return experiments;
     if (isFailure(protocols)) return protocols;
     if (isFailure(macros)) return macros;
+    if (isFailure(workbooks)) return workbooks;
 
     // Each `findAll` ranks within its own type, but those scores aren't exposed (or comparable)
     // across types, so we merge by rank position: the top hit of every type scores ~1, and items
@@ -56,6 +60,7 @@ export class GlobalSearchUseCase {
       ...toResults(experiments.value, "experiment", () => null),
       ...toResults(protocols.value, "protocol", (p) => p.family),
       ...toResults(macros.value, "macro", (m) => m.language),
+      ...toResults(workbooks.value, "workbook", () => null),
     ]
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);

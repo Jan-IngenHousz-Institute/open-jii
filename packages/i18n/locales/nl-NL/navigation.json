@@ -68,7 +68,8 @@
     "results": {
       "experiments": "Experimenten",
       "protocols": "Protocollen",
-      "macros": "Macro's"
+      "macros": "Macro's",
+      "workbooks": "Werkboeken"
     },
     "status": {
       "searching": "Zoeken...",

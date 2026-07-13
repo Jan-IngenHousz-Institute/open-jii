@@ -1,3 +1,5 @@
+import { eq, experiments } from "@repo/database";
+
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { GlobalSearchUseCase } from "./global-search";
@@ -27,7 +29,7 @@ describe("GlobalSearchUseCase", () => {
     await testApp.teardown();
   });
 
-  it("returns ranked matches across experiments, protocols and macros", async () => {
+  it("returns ranked matches across experiments, protocols, macros and workbooks", async () => {
     await testApp.createExperiment({
       name: "Photosynthesis trial",
       userId,
@@ -35,6 +37,7 @@ describe("GlobalSearchUseCase", () => {
     });
     await testApp.createProtocol({ name: "Photosynthesis protocol", createdBy: userId });
     await testApp.createMacro({ name: "Photosynthesis macro", createdBy: userId });
+    await testApp.createWorkbook({ name: "Photosynthesis workbook", createdBy: userId });
 
     const result = await useCase.execute(userId, "photosynthesis", 20);
 
@@ -43,6 +46,11 @@ describe("GlobalSearchUseCase", () => {
     expect(types).toContain("experiment");
     expect(types).toContain("protocol");
     expect(types).toContain("macro");
+    expect(types).toContain("workbook");
+    // The workbook result carries no type-specific meta label (like experiments).
+    const workbook = result.value.results.find((r) => r.type === "workbook");
+    expect(workbook?.title).toBe("Photosynthesis workbook");
+    expect(workbook?.meta).toBeNull();
   });
 
   it("matches description text (FTS) and tolerates typos in the name (trigram)", async () => {
@@ -95,6 +103,62 @@ describe("GlobalSearchUseCase", () => {
     assertSuccess(byFamily);
     const protocol = byFamily.value.results.find((r) => r.title === "Leaf scan");
     expect(protocol?.meta).toBe("multispeq");
+  });
+
+  it("finds a workbook through a linked private experiment the user can access", async () => {
+    const workbook = await testApp.createWorkbook({
+      name: "Trellis notebook",
+      createdBy: userId,
+    });
+    const { experiment } = await testApp.createExperiment({
+      name: "Orbitron canopy trial",
+      userId,
+      visibility: "private",
+    });
+    await testApp.database
+      .update(experiments)
+      .set({ workbookId: workbook.id })
+      .where(eq(experiments.id, experiment.id));
+
+    const result = await useCase.execute(userId, "orbitron", 20);
+
+    assertSuccess(result);
+    expect(
+      result.value.results.some(
+        (searchResult) =>
+          searchResult.type === "workbook" && searchResult.title === "Trellis notebook",
+      ),
+    ).toBe(true);
+  });
+
+  it("finds a workbook through a linked protocol or macro name in its cells", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Zorptastic fluorometry",
+      createdBy: userId,
+    });
+    const macro = await testApp.createMacro({ name: "Wibblonian transform", createdBy: userId });
+    await testApp.createWorkbook({
+      name: "Plain notebook A",
+      createdBy: userId,
+      cells: [{ id: "c1", type: "protocol", payload: { protocolId: protocol.id, version: 1 } }],
+    });
+    await testApp.createWorkbook({
+      name: "Plain notebook B",
+      createdBy: userId,
+      cells: [{ id: "c1", type: "macro", payload: { macroId: macro.id, language: "python" } }],
+    });
+
+    const byProtocol = await useCase.execute(userId, "zorptastic", 20);
+    assertSuccess(byProtocol);
+    expect(
+      byProtocol.value.results.some((r) => r.type === "workbook" && r.title === "Plain notebook A"),
+    ).toBe(true);
+
+    const byMacro = await useCase.execute(userId, "wibblonian", 20);
+    assertSuccess(byMacro);
+    expect(
+      byMacro.value.results.some((r) => r.type === "workbook" && r.title === "Plain notebook B"),
+    ).toBe(true);
   });
 
   it("excludes private experiments the requesting user cannot access", async () => {
