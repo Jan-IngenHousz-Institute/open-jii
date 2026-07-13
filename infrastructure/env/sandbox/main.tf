@@ -1,6 +1,23 @@
 module "terraform_state_s3" {
   source      = "../../modules/s3"
   bucket_name = "open-jii-terraform-state-${var.environment}"
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "iam_oidc" {
+  source     = "../../modules/iam-oidc"
+  role_name  = "GithubActionsDeployAccess"
+  repository = "Jan-IngenHousz-Institute/open-jii"
+  branch     = "main"
+  aws_region = var.aws_region
+
+  # Sandbox only manages S3, DynamoDB, VPC/EC2, IAM, KMS, and CloudWatch Logs.
+  # All other services (ECS, Lambda, RDS, ECR, etc.) are not deployed here.
+  enabled_services = ["s3", "dynamodb", "iam", "kms", "logs", "vpc", "terraform-backend", "sts"]
 }
 
 module "terraform_state_lock" {
@@ -16,10 +33,12 @@ module "vpc" {
   nat_gateway_count = 1
 
   # Disable resources not needed in sandbox
-  create_aurora_resources    = false
-  create_alb_resources       = false
-  create_ecs_resources       = false
-  create_migration_resources = false
+  create_aurora_resources            = false
+  create_alb_resources               = false
+  create_ecs_resources               = false
+  create_migration_resources         = false
+  create_macro_sandbox_resources     = false
+  create_metrics_publisher_resources = false
 }
 
 module "vpc_endpoints" {
@@ -45,8 +64,15 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
-  enable_versioning  = false
+  enable_versioning  = true
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
+
+  enable_crr = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "databricks_workspace" {
