@@ -11,7 +11,7 @@ function inlineCell(overrides: Partial<CommandCell["payload"]> = {}): CommandCel
     type: "command",
     isCollapsed: false,
     payload: { format: "string", content: "battery", ...overrides },
-  } as CommandCell;
+  };
 }
 
 describe("CommandCellComponent", () => {

@@ -10,14 +10,13 @@ const node = (type: FlowNode["type"]): FlowNode => ({
   isStart: false,
 });
 
-const commandNode = (): FlowNode =>
-  ({
-    id: "cmd",
-    type: "measurement",
-    name: "cmd",
-    content: { command: { format: "string", content: "battery" } },
-    isStart: false,
-  }) as FlowNode;
+const commandNode = (): FlowNode => ({
+  id: "cmd",
+  type: "measurement",
+  name: "cmd",
+  content: { command: { format: "string", content: "battery" } },
+  isStart: false,
+});
 
 describe("estimateFlowDuration", () => {
   it("returns 0 for an empty flow", () => {
