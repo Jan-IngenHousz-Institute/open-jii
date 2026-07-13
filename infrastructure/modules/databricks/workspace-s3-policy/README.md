@@ -64,8 +64,15 @@ module "databricks_workspace_s3_policy" {
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
   bucket_name        = "databricks-root-eu-west-1-5432"
-  enable_versioning  = false  # Databricks works best without versioning
+  enable_versioning  = true
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
+
+  enable_crr = true
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 
   tags = {
     Service     = "Databricks"
