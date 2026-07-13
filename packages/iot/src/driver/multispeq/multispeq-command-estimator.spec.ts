@@ -2,17 +2,17 @@ import { describe, it, expect } from "vitest";
 
 import {
   computeScanTimeoutMs,
-  estimateProtocolDurationMs,
+  estimateCommandDurationMs,
   resolveCommandTimeoutMs,
   resolveNumericRef,
-  resolveProtocolVariables,
-  protocolRequiresInteraction,
+  resolveCommandVariables,
+  commandRequiresInteraction,
   SCAN_TIMEOUT_DEFAULTS,
   MEASUREMENT_TIMEOUT_FLOOR_MS,
-} from "./multispeq-protocol-estimator";
+} from "./multispeq-command-estimator";
 
 /**
- * Real "light response curve" protocol (protocol_id 1547, OJD-1565). Expected
+ * Real "light response curve" command (command_id 1547, OJD-1565). Expected
  * 164_000 ms = autogain 3_000 (do_once) + ecs_dirk (600+5000)×3×7 = 117_600 +
  * ftrans (1200+5000)×1×7 = 43_400.
  */
@@ -27,8 +27,8 @@ const LIGHT_RESPONSE_CURVE = [
         nonpulsed_lights: [[2], [2], [2]],
         nonpulsed_lights_brightness: [["@s0"], [0], ["@s0"]],
         pre_illumination: [2, "@s0", "@n1:0"],
-        protocol_averages: 1,
-        protocol_repeats: 3,
+        command_averages: 1,
+        command_repeats: 3,
         pulse_distance: [1500, 1500, 1500],
         pulse_length: [["a_d1"], ["a_d1"], ["a_d1"]],
         pulsed_lights: [[1], [1], [1]],
@@ -42,8 +42,8 @@ const LIGHT_RESPONSE_CURVE = [
         nonpulsed_lights: [[2], [2], [2]],
         nonpulsed_lights_brightness: [["@s0"], [10000], ["@s0"]],
         pre_illumination: [2, "@s0", "@n1:1"],
-        protocol_averages: 1,
-        protocol_repeats: 1,
+        command_averages: 1,
+        command_repeats: 1,
         pulse_distance: [4000, 4000, 4000],
         pulse_length: [[50], [50], [50]],
         pulsed_lights: [[3], [3], [3]],
@@ -51,7 +51,7 @@ const LIGHT_RESPONSE_CURVE = [
         pulses: [100, 100, 100],
       },
     ],
-    protocol_id: 1547,
+    command_id: 1547,
     set_repeats: "#l0",
     share: 1,
     v_arrays: [
@@ -101,13 +101,13 @@ describe("resolveNumericRef", () => {
   });
 });
 
-describe("resolveProtocolVariables", () => {
+describe("resolveCommandVariables", () => {
   it("indexes numeric cells as @nN:I plus the occurrence-stepped @sN", () => {
     const vArrays = [
       [10, 20],
       [3000, 6000],
     ];
-    expect(resolveProtocolVariables(vArrays, 0)).toEqual({
+    expect(resolveCommandVariables(vArrays, 0)).toEqual({
       "@n0:0": 10,
       "@n0:1": 20,
       "@n1:0": 3000,
@@ -115,41 +115,41 @@ describe("resolveProtocolVariables", () => {
       "@s0": 10,
       "@s1": 3000,
     });
-    expect(resolveProtocolVariables(vArrays, 1)).toMatchObject({ "@s0": 20, "@s1": 6000 });
+    expect(resolveCommandVariables(vArrays, 1)).toMatchObject({ "@s0": 20, "@s1": 6000 });
   });
 
   it("leaves @sN unset when the indexed slot is a non-numeric placeholder", () => {
-    expect(resolveProtocolVariables([["p_light", 2500]], 0)).toEqual({ "@n0:1": 2500 });
-    expect(resolveProtocolVariables([["p_light", 2500]], 1)).toEqual({
+    expect(resolveCommandVariables([["p_light", 2500]], 0)).toEqual({ "@n0:1": 2500 });
+    expect(resolveCommandVariables([["p_light", 2500]], 1)).toEqual({
       "@n0:1": 2500,
       "@s0": 2500,
     });
   });
 
   it("clamps out-of-range occurrences to the last numeric value", () => {
-    expect(resolveProtocolVariables([[10, 20]], 5)).toMatchObject({ "@s0": 20 });
+    expect(resolveCommandVariables([[10, 20]], 5)).toMatchObject({ "@s0": 20 });
   });
 
   it("returns empty for missing or empty v_arrays", () => {
-    expect(resolveProtocolVariables([])).toEqual({});
-    expect(resolveProtocolVariables([[]])).toEqual({});
+    expect(resolveCommandVariables([])).toEqual({});
+    expect(resolveCommandVariables([[]])).toEqual({});
   });
 });
 
-describe("estimateProtocolDurationMs", () => {
-  it("computes the expected duration for the real light-response-curve protocol", () => {
-    expect(estimateProtocolDurationMs(LIGHT_RESPONSE_CURVE)).toBe(164_000);
+describe("estimateCommandDurationMs", () => {
+  it("computes the expected duration for the real light-response-curve command", () => {
+    expect(estimateCommandDurationMs(LIGHT_RESPONSE_CURVE)).toBe(164_000);
   });
 
   it("accounts for set_repeats", () => {
     const oneRepeat = structuredClone(LIGHT_RESPONSE_CURVE);
     oneRepeat[0].set_repeats = 1 as unknown as string;
     // per-run total (autogain + ecs_dirk + ftrans)
-    expect(estimateProtocolDurationMs(oneRepeat)).toBe(26_000);
+    expect(estimateCommandDurationMs(oneRepeat)).toBe(26_000);
   });
 
-  it("multiplies a pulse train by protocol_repeats and protocol_averages", () => {
-    const protocol = [
+  it("multiplies a pulse train by command_repeats and command_averages", () => {
+    const command = [
       {
         v_arrays: [],
         set_repeats: 1,
@@ -158,18 +158,18 @@ describe("estimateProtocolDurationMs", () => {
             // 10 pulses × 1000µs = 10ms train, no pre-illumination
             pulses: [10],
             pulse_distance: [1000],
-            protocol_repeats: 4,
-            protocol_averages: 2,
+            command_repeats: 4,
+            command_averages: 2,
           },
         ],
       },
     ];
     // 10ms × 4 × 2
-    expect(estimateProtocolDurationMs(protocol)).toBe(80);
+    expect(estimateCommandDurationMs(command)).toBe(80);
   });
 
   it("adds pre-illumination duration to each block run", () => {
-    const protocol = [
+    const command = [
       {
         v_arrays: [[], [2000]],
         set_repeats: 1,
@@ -178,36 +178,36 @@ describe("estimateProtocolDurationMs", () => {
             pulses: [1],
             pulse_distance: [1000], // 1ms train
             pre_illumination: [2, "@s0", "@n1:0"], // 2000ms
-            protocol_repeats: 1,
-            protocol_averages: 1,
+            command_repeats: 1,
+            command_averages: 1,
           },
         ],
       },
     ];
-    expect(estimateProtocolDurationMs(protocol)).toBe(2001);
+    expect(estimateCommandDurationMs(command)).toBe(2001);
   });
 
   it("counts a standalone pre_illumination block that has no pulses", () => {
     // Documented construct: a pulseless block that only pre-illuminates the
     // sample (help.photosynq.com pre-illumination example is a 10 min soak).
     expect(
-      estimateProtocolDurationMs([
+      estimateCommandDurationMs([
         { _protocol_set_: [{ label: "Pre-Illumination", pre_illumination: [2, 200, 600_000] }] },
       ]),
     ).toBe(600_000);
   });
 
-  it("multiplies a pulseless pre_illumination block by protocol_repeats", () => {
+  it("multiplies a pulseless pre_illumination block by command_repeats", () => {
     expect(
-      estimateProtocolDurationMs([
-        { _protocol_set_: [{ pre_illumination: [2, 200, 10_000], protocol_repeats: 3 }] },
+      estimateCommandDurationMs([
+        { _protocol_set_: [{ pre_illumination: [2, 200, 10_000], command_repeats: 3 }] },
       ]),
     ).toBe(30_000);
   });
 
   it("sums the multi-LED pre_illumination form", () => {
     expect(
-      estimateProtocolDurationMs([
+      estimateCommandDurationMs([
         {
           _protocol_set_: [
             {
@@ -224,39 +224,39 @@ describe("estimateProtocolDurationMs", () => {
 
   it("sums a ramped pre_illumination duration array", () => {
     expect(
-      estimateProtocolDurationMs([
+      estimateCommandDurationMs([
         { _protocol_set_: [{ pre_illumination: [2, 200, [1_000, 2_000, 3_000]] }] },
       ]),
     ).toBe(6_000);
   });
 
   it("treats repeats/averages as at least 1 when missing", () => {
-    const protocol = [
+    const command = [
       {
         v_arrays: [],
         set_repeats: 1,
         _protocol_set_: [{ pulses: [5], pulse_distance: [1000] }], // 5ms, no repeats fields
       },
     ];
-    expect(estimateProtocolDurationMs(protocol)).toBe(5);
+    expect(estimateCommandDurationMs(command)).toBe(5);
   });
 
   it("accepts a single set object (not wrapped in an array)", () => {
     const single = LIGHT_RESPONSE_CURVE[0];
-    expect(estimateProtocolDurationMs(single)).toBe(164_000);
+    expect(estimateCommandDurationMs(single)).toBe(164_000);
   });
 
-  it("counts protocols_delay on setup-only and delay-only blocks", () => {
+  it("counts commands_delay on setup-only and delay-only blocks", () => {
     // autogain block with a 2s delay: SETUP_BLOCK_MS (3000) + 2000
     expect(
-      estimateProtocolDurationMs([{ _protocol_set_: [{ autogain: [[1]], protocols_delay: 2 }] }]),
+      estimateCommandDurationMs([{ _protocol_set_: [{ autogain: [[1]], commands_delay: 2 }] }]),
     ).toBe(5000);
     // delay-only block (no pulses, no autogain): just the 2s delay
-    expect(estimateProtocolDurationMs([{ _protocol_set_: [{ protocols_delay: 2 }] }])).toBe(2000);
+    expect(estimateCommandDurationMs([{ _protocol_set_: [{ commands_delay: 2 }] }])).toBe(2000);
   });
 
   it("multiplies a pulse train by the per-phase detector channel count", () => {
-    const protocol = [
+    const command = [
       {
         v_arrays: [],
         set_repeats: 1,
@@ -264,11 +264,11 @@ describe("estimateProtocolDurationMs", () => {
         _protocol_set_: [{ pulses: [10], pulse_distance: [1000], detectors: [[3, 4]] }],
       },
     ];
-    expect(estimateProtocolDurationMs(protocol)).toBe(20);
+    expect(estimateCommandDurationMs(command)).toBe(20);
   });
 
   it("resolves @sN pulse counts per set-repeat occurrence", () => {
-    const protocol = [
+    const command = [
       {
         // pulses step 20 → 100 across the two set repeats
         v_arrays: [[20, 100]],
@@ -277,11 +277,11 @@ describe("estimateProtocolDurationMs", () => {
       },
     ];
     // occ0: 20 × 1000µs = 20ms, occ1: 100 × 1000µs = 100ms → 120ms
-    expect(estimateProtocolDurationMs(protocol)).toBe(120);
+    expect(estimateCommandDurationMs(command)).toBe(120);
   });
 
   it("clamps @sN to the last value when set_repeats runs past the step array", () => {
-    const protocol = [
+    const command = [
       {
         // 3 set repeats but only 2 step values → the 3rd clamps to the last (100)
         v_arrays: [[20, 100]],
@@ -290,23 +290,23 @@ describe("estimateProtocolDurationMs", () => {
       },
     ];
     // occ0: 20ms, occ1: 100ms, occ2 (clamped): 100ms → 220ms
-    expect(estimateProtocolDurationMs(protocol)).toBe(220);
+    expect(estimateCommandDurationMs(command)).toBe(220);
   });
 
-  it("adds protocols_delay (seconds) as a wall-clock wait", () => {
-    const protocol = [
+  it("adds commands_delay (seconds) as a wall-clock wait", () => {
+    const command = [
       {
         v_arrays: [],
         set_repeats: 1,
-        // 1ms train + 2000ms protocols_delay
-        _protocol_set_: [{ pulses: [1], pulse_distance: [1000], protocols_delay: 2 }],
+        // 1ms train + 2000ms commands_delay
+        _protocol_set_: [{ pulses: [1], pulse_distance: [1000], commands_delay: 2 }],
       },
     ];
-    expect(estimateProtocolDurationMs(protocol)).toBe(2001);
+    expect(estimateCommandDurationMs(command)).toBe(2001);
   });
 
   it("counts a do_once block only once across set_repeats", () => {
-    const protocol = [
+    const command = [
       {
         v_arrays: [],
         set_repeats: 3,
@@ -317,19 +317,19 @@ describe("estimateProtocolDurationMs", () => {
       },
     ];
     // 3000 (once) + 10 × 3 = 3030
-    expect(estimateProtocolDurationMs(protocol)).toBe(3030);
+    expect(estimateCommandDurationMs(command)).toBe(3030);
   });
 
   it("returns 0 for unusable input rather than throwing", () => {
-    expect(estimateProtocolDurationMs(undefined)).toBe(0);
-    expect(estimateProtocolDurationMs(null)).toBe(0);
-    expect(estimateProtocolDurationMs("not a protocol")).toBe(0);
-    expect(estimateProtocolDurationMs([])).toBe(0);
-    expect(estimateProtocolDurationMs([{}])).toBe(0);
-    expect(estimateProtocolDurationMs([{ _protocol_set_: "garbage" }])).toBe(0);
+    expect(estimateCommandDurationMs(undefined)).toBe(0);
+    expect(estimateCommandDurationMs(null)).toBe(0);
+    expect(estimateCommandDurationMs("not a command")).toBe(0);
+    expect(estimateCommandDurationMs([])).toBe(0);
+    expect(estimateCommandDurationMs([{}])).toBe(0);
+    expect(estimateCommandDurationMs([{ _protocol_set_: "garbage" }])).toBe(0);
   });
 
-  it("sums multiple top-level protocol sets", () => {
+  it("sums multiple top-level command sets", () => {
     const a = {
       v_arrays: [],
       set_repeats: 1,
@@ -341,7 +341,7 @@ describe("estimateProtocolDurationMs", () => {
       _protocol_set_: [{ pulses: [1], pulse_distance: [1000] }],
     };
     // 1ms + (1ms × 2)
-    expect(estimateProtocolDurationMs([a, b])).toBe(3);
+    expect(estimateCommandDurationMs([a, b])).toBe(3);
   });
 });
 
@@ -351,12 +351,12 @@ describe("computeScanTimeoutMs", () => {
     expect(computeScanTimeoutMs(LIGHT_RESPONSE_CURVE)).toBe(338_000);
   });
 
-  it("floors at minMs so short/garbage protocols still get a sane timeout", () => {
+  it("floors at minMs so short/garbage commands still get a sane timeout", () => {
     expect(computeScanTimeoutMs([{}])).toBe(SCAN_TIMEOUT_DEFAULTS.minMs);
     expect(computeScanTimeoutMs("garbage")).toBe(SCAN_TIMEOUT_DEFAULTS.minMs);
   });
 
-  it("caps at maxMs so a pathological protocol cannot hang forever", () => {
+  it("caps at maxMs so a pathological command cannot hang forever", () => {
     const huge = [
       {
         v_arrays: [],
@@ -382,18 +382,18 @@ describe("computeScanTimeoutMs", () => {
 });
 
 /**
- * Real interactive protocol (OJD-1643). The pulse train estimates to ~20s, but
+ * Real interactive command (OJD-1643). The pulse train estimates to ~20s, but
  * the device pauses on the clamp open/close gates for as long as the user
  * takes, so the 60s base would cut it off mid-measurement.
  */
-const INTERACTIVE_PROTOCOL = [
+const INTERACTIVE_COMMAND = [
   {
     _protocol_set_: [
       { label: "no_leaf_baseline", par_led_start_on_open: 2, energy_save_timeout: 300000 },
       {
         label: "DIRK_ECS",
         par_led_start_on_close: 2,
-        protocols_delay: 10,
+        commands_delay: 10,
         pulses: [100, 100, 20],
         pulse_distance: [1500, 1500, 1500],
         detectors: [[3], [3], [3]],
@@ -407,36 +407,36 @@ describe("resolveCommandTimeoutMs", () => {
     expect(resolveCommandTimeoutMs("1007+", 5_000)).toBe(5_000);
   });
 
-  it("floors a measurement protocol at the 2 min measurement floor, not the base", () => {
-    // The interactive protocol's pulse estimate is well under the floor; it must
+  it("floors a measurement command at the 2 min measurement floor, not the base", () => {
+    // The interactive command's pulse estimate is well under the floor; it must
     // still get the full 2 min so the open/close pause is not cut off.
-    expect(resolveCommandTimeoutMs(INTERACTIVE_PROTOCOL, 60_000)).toBe(
+    expect(resolveCommandTimeoutMs(INTERACTIVE_COMMAND, 60_000)).toBe(
       MEASUREMENT_TIMEOUT_FLOOR_MS,
     );
     expect(MEASUREMENT_TIMEOUT_FLOOR_MS).toBe(120_000);
   });
 
-  it("lets a long protocol grow past the floor via its estimate", () => {
+  it("lets a long command grow past the floor via its estimate", () => {
     // 164_000 × 2 + 10_000 = 338_000 > floor.
     expect(resolveCommandTimeoutMs(LIGHT_RESPONSE_CURVE, 60_000)).toBe(338_000);
   });
 });
 
-describe("protocolRequiresInteraction", () => {
-  it("detects open/close clamp gates anywhere in the protocol", () => {
-    expect(protocolRequiresInteraction(INTERACTIVE_PROTOCOL)).toBe(true);
-    expect(protocolRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_open: 2 }] }])).toBe(
+describe("commandRequiresInteraction", () => {
+  it("detects open/close clamp gates anywhere in the command", () => {
+    expect(commandRequiresInteraction(INTERACTIVE_COMMAND)).toBe(true);
+    expect(commandRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_open: 2 }] }])).toBe(
       true,
     );
-    expect(protocolRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_close: 1 }] }])).toBe(
+    expect(commandRequiresInteraction([{ _protocol_set_: [{ par_led_start_on_close: 1 }] }])).toBe(
       true,
     );
   });
 
-  it("returns false for protocols without a gate, and for non-protocols", () => {
-    expect(protocolRequiresInteraction(LIGHT_RESPONSE_CURVE)).toBe(false);
-    expect(protocolRequiresInteraction([{ _protocol_set_: [{ pulses: [10] }] }])).toBe(false);
-    expect(protocolRequiresInteraction("garbage")).toBe(false);
-    expect(protocolRequiresInteraction([])).toBe(false);
+  it("returns false for commands without a gate, and for non-commands", () => {
+    expect(commandRequiresInteraction(LIGHT_RESPONSE_CURVE)).toBe(false);
+    expect(commandRequiresInteraction([{ _protocol_set_: [{ pulses: [10] }] }])).toBe(false);
+    expect(commandRequiresInteraction("garbage")).toBe(false);
+    expect(commandRequiresInteraction([])).toBe(false);
   });
 });

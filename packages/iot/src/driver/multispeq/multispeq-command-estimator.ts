@@ -1,11 +1,11 @@
 /**
- * MultispeQ protocol duration estimation. Derives a rough upper-ish runtime from
- * the protocol JSON so callers can size a response timeout (and show an ETA)
+ * MultispeQ command duration estimation. Derives a rough upper-ish runtime from
+ * the command JSON so callers can size a response timeout (and show an ETA)
  * without the device reporting one. See OJD-1565.
  *
  * Timing model (shared with apps/web's pipeline.ts): a phase with N pulses, K
  * detector channels and D µs pulse_distance lasts N*K*D µs, plus pre_illumination
- * and protocols_delay waits. Refs: `#lN` (length), `@nN:I` (cell), `@sN`
+ * and commands_delay waits. Refs: `#lN` (length), `@nN:I` (cell), `@sN`
  * (per-occurrence step value). Unresolvable values are treated as 0.
  */
 
@@ -34,8 +34,8 @@ export const SCAN_TIMEOUT_DEFAULTS: Required<ScanTimeoutOptions> = {
 };
 
 /**
- * Floor (ms) for a measurement protocol's response timeout. The pulse estimate
- * only covers compute time, but a protocol can pause on a physical open/close
+ * Floor (ms) for a measurement command's response timeout. The pulse estimate
+ * only covers compute time, but a command can pause on a physical open/close
  * gate (`par_led_start_on_*`) where the device sits silent for as long as the
  * user takes to open/close the clamp. 2 min covers a typical hand-measured
  * DIRK/PAM workflow while still letting a truly dead device fail well before
@@ -60,7 +60,7 @@ function getSafe(lst: Json[], idx: number, fallback: Json): Json {
   return idx < lst.length ? lst[idx] : lst[lst.length - 1];
 }
 
-/** Resolve a literal / `#lN` / `@nN:I` ref; `@sN` is occurrence-dependent, see resolveProtocolVariables. */
+/** Resolve a literal / `#lN` / `@nN:I` ref; `@sN` is occurrence-dependent, see resolveCommandVariables. */
 export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefined {
   const literal = asNumber(ref);
   if (literal !== undefined) return literal;
@@ -86,7 +86,7 @@ export function resolveNumericRef(ref: Json, vArrays: VArrays): number | undefin
  * `v_arrays[N][occurrence]`, clamped to the last numeric when out of range and
  * left unset for an in-range non-numeric placeholder (e.g. "p_light").
  */
-export function resolveProtocolVariables(vArrays: VArrays, occurrence = 0): Record<string, number> {
+export function resolveCommandVariables(vArrays: VArrays, occurrence = 0): Record<string, number> {
   const lookup: Record<string, number> = {};
   vArrays.forEach((arr, i) => {
     if (!Array.isArray(arr) || arr.length === 0) return;
@@ -150,12 +150,12 @@ function preIlluminationMs(
 function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, number>): number {
   if (!isRecord(block)) return 0;
 
-  const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
-  const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
+  const repeats = Math.max(1, resolveField(block.command_repeats, vArrays, vars) ?? 1);
+  const delayMs = (resolveField(block.commands_delay, vArrays, vars) ?? 0) * 1_000;
   const preIllumMs = preIlluminationMs(block, vArrays, vars);
 
   // A block with no pulse train still waits its pre_illumination and
-  // protocols_delay. A standalone pre_illumination block (no pulses) is a
+  // commands_delay. A standalone pre_illumination block (no pulses) is a
   // documented construct, so count it rather than treating it as 0.
   const hasPulses = Array.isArray(block.pulses) && block.pulses.length > 0;
   if (!hasPulses) {
@@ -175,7 +175,7 @@ function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, num
   }
   const pulseTrainMs = pulseTrainUs / 1000;
 
-  const averages = Math.max(1, resolveField(block.protocol_averages, vArrays, vars) ?? 1);
+  const averages = Math.max(1, resolveField(block.command_averages, vArrays, vars) ?? 1);
 
   return (pulseTrainMs + preIllumMs) * repeats * averages + delayMs * repeats;
 }
@@ -189,7 +189,7 @@ function estimateSetMs(set: Json): number {
 
   let total = 0;
   for (let occurrence = 0; occurrence < setRepeats; occurrence++) {
-    const vars = resolveProtocolVariables(vArrays, occurrence);
+    const vars = resolveCommandVariables(vArrays, occurrence);
     for (const block of blocks) {
       // do_once blocks (e.g. autogain) run a single time for the whole set.
       if (occurrence > 0 && isRecord(block) && isTruthy(block.do_once)) continue;
@@ -199,9 +199,9 @@ function estimateSetMs(set: Json): number {
   return total;
 }
 
-/** Estimated runtime (ms) of a protocol (array form or a single set object); 0 if uninterpretable. */
-export function estimateProtocolDurationMs(protocol: Json): number {
-  const sets = Array.isArray(protocol) ? protocol : [protocol];
+/** Estimated runtime (ms) of a command (array form or a single set object); 0 if uninterpretable. */
+export function estimateCommandDurationMs(command: Json): number {
+  const sets = Array.isArray(command) ? command : [command];
   let total = 0;
   for (const set of sets) {
     total += estimateSetMs(set);
@@ -210,19 +210,19 @@ export function estimateProtocolDurationMs(protocol: Json): number {
 }
 
 /** Timeout budget (ms): estimate × safety + grace, clamped to [minMs, maxMs]. */
-export function computeScanTimeoutMs(protocol: Json, options: ScanTimeoutOptions = {}): number {
+export function computeScanTimeoutMs(command: Json, options: ScanTimeoutOptions = {}): number {
   const { safetyFactor, graceMs, minMs, maxMs } = { ...SCAN_TIMEOUT_DEFAULTS, ...options };
-  const estimate = estimateProtocolDurationMs(protocol);
+  const estimate = estimateCommandDurationMs(command);
   const budget = estimate * safetyFactor + graceMs;
   return Math.min(maxMs, Math.max(minMs, Math.round(budget)));
 }
 
 /**
  * Response timeout (ms) for a command. String console commands keep the base
- * timeout; JSON measurement protocols are sized to their estimated runtime but
- * floored at MEASUREMENT_TIMEOUT_FLOOR_MS, so a protocol that pauses on a
+ * timeout; JSON measurement commands are sized to their estimated runtime but
+ * floored at MEASUREMENT_TIMEOUT_FLOOR_MS, so a command that pauses on a
  * physical open/close gate (device silent while the user acts) is not cut off
- * by the pulse-only estimate. Long protocols still grow past the floor.
+ * by the pulse-only estimate. Long commands still grow past the floor.
  */
 export function resolveCommandTimeoutMs(command: Json, baseTimeoutMs: number): number {
   if (typeof command === "string") return baseTimeoutMs;
@@ -236,13 +236,13 @@ function hasInteractionGate(block: Json): boolean {
 }
 
 /**
- * True when the protocol pauses for a physical open/close of the leaf clamp
+ * True when the command pauses for a physical open/close of the leaf clamp
  * (`par_led_start_on_open` / `par_led_start_on_close`). While gated the device
  * stays silent and the run is human-paced, so callers should prompt the user to
  * open/close the clamp. See OJD-1643.
  */
-export function protocolRequiresInteraction(protocol: Json): boolean {
-  const sets = Array.isArray(protocol) ? protocol : [protocol];
+export function commandRequiresInteraction(command: Json): boolean {
+  const sets = Array.isArray(command) ? command : [command];
   return sets.some((set) => {
     if (!isRecord(set)) return false;
     if (hasInteractionGate(set)) return true;

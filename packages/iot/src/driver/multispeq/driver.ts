@@ -24,9 +24,9 @@ import type {
   MultispeqCommandResult,
   MultispeqDeviceInfo,
 } from "./interface";
-import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
+import { resolveCommandTimeoutMs } from "./multispeq-command-estimator";
 
-/** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
+/** Truncate long commands (e.g. full command JSON) so logs stay readable. */
 function summarizeCommand(commandStr: string, maxLength = 120): string {
   if (commandStr.length <= maxLength) return commandStr;
   return `${commandStr.slice(0, maxLength)}… (${commandStr.length} chars)`;
@@ -202,7 +202,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
       const timeout = setTimeout(() => {
         cleanup();
         this.log.warn("response timeout, sending cancel", { timeoutMs });
-        // On timeout the device may still be running a long protocol. Without
+        // On timeout the device may still be running a long command. Without
         // an explicit cancel it keeps the actinic light on and eventually
         // drops the connection (OJD-1565). Best-effort abort so it returns to
         // idle; we still reject this command as timed out.
@@ -236,7 +236,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
 
   /**
    * Abort the in-flight command: send `-1+` to the device immediately
-   * (bypassing the command queue so it reaches a long-running protocol) and
+   * (bypassing the command queue so it reaches a long-running command) and
    * reject the pending execute() with "Command cancelled". No-op when idle —
    * importantly, this avoids emitting a stray `-1+` whose ack could be
    * mismatched to a later command.

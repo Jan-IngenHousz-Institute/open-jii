@@ -3,7 +3,7 @@
  *
  * Sourced from PhotosynQ documentation.
  *
- * The device also accepts entity-protocol JSON (Record<string, unknown>[])
+ * The device also accepts entity-command JSON (Record<string, unknown>[])
  * for measurements — those are sent directly via execute() and not listed here.
  */
 

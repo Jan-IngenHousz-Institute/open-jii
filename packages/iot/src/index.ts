@@ -44,17 +44,17 @@ export {
 export { MultispeqDriver } from "./driver/multispeq/driver";
 export type { MultispeqTransportConfig, MultispeqTransportType } from "./driver/multispeq/config";
 export { MULTISPEQ_SERIAL_DEFAULTS, MULTISPEQ_FRAMING } from "./driver/multispeq/config";
-export type { ScanTimeoutOptions, VArrays } from "./driver/multispeq/multispeq-protocol-estimator";
+export type { ScanTimeoutOptions, VArrays } from "./driver/multispeq/multispeq-command-estimator";
 export {
-  estimateProtocolDurationMs,
+  estimateCommandDurationMs,
   computeScanTimeoutMs,
   resolveCommandTimeoutMs,
   resolveNumericRef,
-  resolveProtocolVariables,
-  protocolRequiresInteraction,
+  resolveCommandVariables,
+  commandRequiresInteraction,
   SCAN_TIMEOUT_DEFAULTS,
   MEASUREMENT_TIMEOUT_FLOOR_MS,
-} from "./driver/multispeq/multispeq-protocol-estimator";
+} from "./driver/multispeq/multispeq-command-estimator";
 
 // ── Driver: Generic ─────────────────────────────────
 export type {

@@ -46,7 +46,7 @@ export interface GenericCommandResponse<T = unknown> {
   timestamp?: number;
 }
 
-/** Configuration/Protocol to send to device */
+/** Configuration/Command to send to device */
 export interface GenericDeviceConfig {
   /** Configuration as JSON object (any structure) */
   config: Record<string, unknown>;

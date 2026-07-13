@@ -18,7 +18,7 @@ export const GENERIC_REQUIRED_COMMANDS = {
 /** Commands a device may optionally support (advertised via capabilities) */
 export const GENERIC_OPTIONAL_COMMANDS = {
   DISCOVER:   "DISCOVER",   // list commands supported by device
-  SET_CONFIG: "SET_CONFIG", // push configuration / protocol JSON
+  SET_CONFIG: "SET_CONFIG", // push configuration / command JSON
   GET_CONFIG: "GET_CONFIG", // read current configuration
   STOP:       "STOP",       // abort current measurement / action
   GET_DATA:   "GET_DATA",   // retrieve measurement results

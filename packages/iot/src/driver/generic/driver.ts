@@ -263,7 +263,7 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
     return result.data.commands;
   }
 
-  /** Set configuration/protocol JSON on device */
+  /** Set configuration/command JSON on device */
   async setConfig(config: GenericDeviceConfig): Promise<void> {
     this.requireCapability(GENERIC_COMMANDS.SET_CONFIG);
 

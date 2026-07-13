@@ -19,7 +19,7 @@ export interface CommandResult<T = unknown> {
 export interface ExecuteOptions {
   /**
    * Override the response timeout (ms) for this command. When omitted the
-   * driver picks a timeout itself (e.g. sized to a measurement protocol's
+   * driver picks a timeout itself (e.g. sized to a measurement command's
    * estimated runtime).
    */
   timeoutMs?: number;

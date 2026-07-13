@@ -6,18 +6,18 @@ import { MULTISPEQ_FRAMING } from "./config";
 import { MultispeqDriver } from "./driver";
 
 /**
- * Minimal protocol whose estimated runtime exceeds the 60 s base timeout.
- * 100 pulses × 1000 µs = 100 ms train, × 1000 protocol_repeats = 100_000 ms.
+ * Minimal command whose estimated runtime exceeds the 60 s base timeout.
+ * 100 pulses × 1000 µs = 100 ms train, × 1000 command_repeats = 100_000 ms.
  * computeScanTimeoutMs → 100_000 × 2 + 10_000 = 210_000 ms.
  */
-const LONG_PROTOCOL = [
+const LONG_COMMAND = [
   {
     v_arrays: [],
     set_repeats: 1,
-    _protocol_set_: [{ pulses: [100], pulse_distance: [1000], protocol_repeats: 1000 }],
+    _protocol_set_: [{ pulses: [100], pulse_distance: [1000], command_repeats: 1000 }],
   },
 ];
-const LONG_PROTOCOL_TIMEOUT_MS = 210_000;
+const LONG_COMMAND_TIMEOUT_MS = 210_000;
 const CANCEL_FRAME = `${MULTISPEQ_CONSOLE.CANCEL}${MULTISPEQ_FRAMING.LINE_ENDING}`;
 
 function createMockTransport(): ITransportAdapter & {
@@ -256,8 +256,8 @@ describe("MultispeqDriver", () => {
     it("aborts an in-flight command instead of letting it hang until timeout", async () => {
       driver.initialize(transport);
 
-      // Start a long protocol that never replies, so it stays in-flight.
-      const resultPromise = driver.execute(LONG_PROTOCOL);
+      // Start a long command that never replies, so it stays in-flight.
+      const resultPromise = driver.execute(LONG_COMMAND);
       // Let the queued task register its response wait.
       await Promise.resolve();
       await Promise.resolve();
@@ -290,7 +290,7 @@ describe("MultispeqDriver", () => {
     });
 
     it("should send the cancel switch (-1+) when a command times out", async () => {
-      // Long-running protocols leave the device mid-measurement; without a
+      // Long-running commands leave the device mid-measurement; without a
       // cancel it keeps the actinic light on and drops the link
       vi.useFakeTimers();
       driver.initialize(transport);
@@ -342,8 +342,8 @@ describe("MultispeqDriver", () => {
     it("aborts an in-flight command, sends -1+, and rejects as cancelled", async () => {
       driver.initialize(transport);
 
-      // Start a long protocol but never reply, so it stays in-flight.
-      const resultPromise = driver.execute(LONG_PROTOCOL);
+      // Start a long command but never reply, so it stays in-flight.
+      const resultPromise = driver.execute(LONG_COMMAND);
       // Let the queued task run far enough to register the response wait.
       await Promise.resolve();
       await Promise.resolve();
@@ -381,14 +381,14 @@ describe("MultispeqDriver", () => {
     });
   });
 
-  describe("dynamic protocol timeout", () => {
-    it("does not time out a long protocol at the 60s base timeout", async () => {
+  describe("dynamic command timeout", () => {
+    it("does not time out a long command at the 60s base timeout", async () => {
       vi.useFakeTimers();
       driver.initialize(transport);
 
-      const resultPromise = driver.execute(LONG_PROTOCOL);
+      const resultPromise = driver.execute(LONG_COMMAND);
 
-      // Past the base 60 s timeout — a long protocol must still be waiting.
+      // Past the base 60 s timeout — a long command must still be waiting.
       await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
       transport.simulateData('{"ok":1}ABCD1234\n');
 
@@ -400,14 +400,14 @@ describe("MultispeqDriver", () => {
       vi.useRealTimers();
     });
 
-    it("times out a long protocol at its computed budget and cancels", async () => {
+    it("times out a long command at its computed budget and cancels", async () => {
       vi.useFakeTimers();
       driver.initialize(transport);
 
-      const resultPromise = driver.execute(LONG_PROTOCOL);
+      const resultPromise = driver.execute(LONG_COMMAND);
 
       // Just before the computed budget: still pending.
-      await vi.advanceTimersByTimeAsync(LONG_PROTOCOL_TIMEOUT_MS - 1);
+      await vi.advanceTimersByTimeAsync(LONG_COMMAND_TIMEOUT_MS - 1);
       expect(transport.send).not.toHaveBeenCalledWith(CANCEL_FRAME);
 
       // Crossing the budget: rejects as timeout and cancels the device.
