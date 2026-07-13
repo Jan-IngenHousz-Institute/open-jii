@@ -7,8 +7,8 @@ vi.mock("./macro-picker", () => ({
   MacroPicker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("./protocol-picker", () => ({
-  ProtocolPicker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+vi.mock("./command-picker", () => ({
+  CommandPicker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 describe("AddCellButton", () => {
@@ -21,7 +21,7 @@ describe("AddCellButton", () => {
   it("renders all cell type buttons in bottom variant", () => {
     render(<AddCellButton onAdd={onAdd} variant="bottom" />);
     expect(screen.getByText("Markdown")).toBeInTheDocument();
-    expect(screen.getByText("Protocol")).toBeInTheDocument();
+    expect(screen.getByText("Command")).toBeInTheDocument();
     expect(screen.getByText("Macro")).toBeInTheDocument();
     expect(screen.getByText("Question")).toBeInTheDocument();
     expect(screen.getByText("Branch")).toBeInTheDocument();

@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { CommandResult, IDeviceDriver } from "@repo/iot";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
@@ -25,35 +25,36 @@ function parseResponseData(data: unknown): unknown {
   }
 }
 
-// Console commands fail fast; protocols run the full measurement budget.
+// Inline commands fail fast; command code runs the full measurement budget.
 const CONSOLE_COMMAND_TIMEOUT_MS = 10_000;
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useIotProtocolExecution(
+export function useIotCommandExecution(
   driver: IDeviceDriver | null,
   isConnected: boolean,
   sensorFamily: SensorFamily,
 ) {
-  const executeProtocol = useCallback(
-    async (protocolCode: Record<string, unknown>[]) => {
+  // Library command: run its full code array as a device measurement.
+  const executeCommandCode = useCallback(
+    async (commandCode: Record<string, unknown>[]) => {
       if (!driver || !isConnected) {
         throw new Error("Not connected to device");
       }
 
       if (sensorFamily === "multispeq") {
-        // MultispeQ: send the protocol JSON array directly; device runs the measurement
-        const result = await driver.execute(protocolCode);
-        return parseResponseData(unwrap(result, "Protocol execution failed"));
+        // MultispeQ: send the command JSON array directly; device runs the measurement
+        const result = await driver.execute(commandCode);
+        return parseResponseData(unwrap(result, "Command execution failed"));
       }
 
       // Generic / Ambyte: load config → run → retrieve data
       unwrap(
-        await driver.execute({ command: "SET_CONFIG", params: { protocol: protocolCode } }),
-        "Failed to load protocol on device",
+        await driver.execute({ command: "SET_CONFIG", params: { command: commandCode } }),
+        "Failed to load command on device",
       );
 
-      unwrap(await driver.execute({ command: "RUN" }), "Failed to run protocol");
+      unwrap(await driver.execute({ command: "RUN" }), "Failed to run command");
 
       const data = unwrap(
         await driver.execute({ command: "GET_DATA" }),
@@ -67,7 +68,7 @@ export function useIotProtocolExecution(
 
   // Inline command cell: a raw string (`hello`, `battery`) or a parsed JSON/YAML
   // object/array, sent straight to the device with a short timeout.
-  const executeCommand = useCallback(
+  const executeInlineCommand = useCallback(
     async (command: string | Record<string, unknown> | unknown[]) => {
       if (!driver || !isConnected) {
         throw new Error("Not connected to device");
@@ -78,5 +79,5 @@ export function useIotProtocolExecution(
     [driver, isConnected],
   );
 
-  return { executeProtocol, executeCommand };
+  return { executeCommandCode, executeInlineCommand };
 }

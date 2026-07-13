@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 
 import { BranchCellComponent } from "./cells/branch-cell";
@@ -8,7 +9,6 @@ import { CommandCellComponent } from "./cells/command-cell";
 import { MacroCellComponent } from "./cells/macro-cell";
 import { MarkdownCellComponent } from "./cells/markdown-cell";
 import { OutputCellComponent } from "./cells/output-cell";
-import { ProtocolCellComponent } from "./cells/protocol-cell";
 import { QuestionCellComponent } from "./cells/question-cell";
 
 interface CellRendererProps {
@@ -22,7 +22,7 @@ interface CellRendererProps {
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
-  // Pinned entity code/metadata. When provided, protocol/macro cells render
+  // Pinned entity code/metadata. When provided, command/macro cells render
   // from it instead of fetching the live row.
   entitySnapshots?: EntitySnapshots;
 }
@@ -52,19 +52,6 @@ export function CellRenderer({
           readOnly={readOnly}
         />
       );
-    case "protocol":
-      return (
-        <ProtocolCellComponent
-          cell={cell}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-          onRun={onRun}
-          executionStatus={executionStatus}
-          executionError={executionError}
-          readOnly={readOnly}
-          snapshot={entitySnapshots?.protocols[cell.payload.protocolId]}
-        />
-      );
     case "command":
       return (
         <CommandCellComponent
@@ -75,6 +62,11 @@ export function CellRenderer({
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}
+          snapshot={
+            isCommandReferencePayload(cell.payload)
+              ? entitySnapshots?.commands[cell.payload.commandId]
+              : undefined
+          }
         />
       );
     case "macro":

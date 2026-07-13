@@ -20,10 +20,10 @@ vi.mock("./macro-info-card", () => ({
 
 describe("MacroSettings", () => {
   beforeEach(() => {
-    // The settings page lists both "compatible" protocols for the macro and
-    // the overall protocol catalog (for the "add compatible" picker).
-    server.mount(contract.macros.listCompatibleProtocols, { body: [] });
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    // The settings page lists both "compatible" commands for the macro and
+    // the overall command catalog (for the "add compatible" picker).
+    server.mount(contract.macros.listCompatibleCommands, { body: [] });
+    server.mount(contract.commands.listCommands, { body: [] });
   });
 
   it("shows loading then resolves to cards", async () => {

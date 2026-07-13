@@ -18,7 +18,7 @@ interface CodeTesterLayoutProps {
   testerPanel: React.ReactNode;
   /** Title shown in the tester panel header */
   testerTitle: string;
-  /** Browser support flags — controls panel sizing and "not supported" fallback */
+  /** Browser support flags - controls panel sizing and "not supported" fallback */
   browserSupport: { bluetooth: boolean; serial: boolean; any: boolean };
   /** Default size of the tester panel when browser is supported (default: 45) */
   testerDefaultSize?: number;
@@ -55,10 +55,10 @@ export function CodeTesterLayout({
       <div className="text-center">
         <MonitorX className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
         <div className="text-muted-foreground text-xs">
-          {tIot("iot.protocolRunner.browserNotSupported")}
+          {tIot("iot.commandRunner.browserNotSupported")}
         </div>
         <div className="text-muted-foreground/60 text-xs">
-          {tIot("iot.protocolRunner.tryDifferentBrowser")}
+          {tIot("iot.commandRunner.tryDifferentBrowser")}
         </div>
       </div>
     </div>

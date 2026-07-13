@@ -5,7 +5,7 @@ import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command as CommandEntity } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -18,7 +18,7 @@ import {
 import { PopoverContent } from "@repo/ui/components/popover";
 import { cva } from "@repo/ui/lib/utils";
 
-const protocolItemVariants = cva(
+const commandItemVariants = cva(
   "mb-1 flex items-center justify-between gap-2 rounded border p-2.5 relative",
   {
     variants: {
@@ -33,57 +33,57 @@ const protocolItemVariants = cva(
   },
 );
 
-// Props for the ProtocolList component
-interface ProtocolListProps {
-  protocols: Protocol[];
-  onAddProtocol: (protocolId: string) => Promise<void> | void;
-  isAddingProtocol: boolean;
+// Props for the CommandResults component
+interface CommandResultsProps {
+  commands: CommandEntity[];
+  onAddCommand: (commandId: string) => Promise<void> | void;
+  isAddingCommand: boolean;
   setOpen: (open: boolean) => void;
   onSearchChange: (value: string) => void;
 }
 
-function ProtocolList({
-  protocols,
-  onAddProtocol,
-  isAddingProtocol,
+function CommandResults({
+  commands,
+  onAddCommand,
+  isAddingCommand,
   setOpen,
   onSearchChange,
-}: ProtocolListProps) {
+}: CommandResultsProps) {
   const locale = useLocale();
   const { t } = useTranslation("common");
 
-  const handleAddProtocol = useCallback(
-    async (protocolId: string) => {
-      await onAddProtocol(protocolId);
+  const handleAddCommand = useCallback(
+    async (commandId: string) => {
+      await onAddCommand(commandId);
       setOpen(false);
       onSearchChange("");
     },
-    [onAddProtocol, setOpen, onSearchChange],
+    [onAddCommand, setOpen, onSearchChange],
   );
 
   return (
     <>
-      {protocols.map((protocol) => {
-        const isPreferred = protocol.sortOrder !== null;
+      {commands.map((command) => {
+        const isPreferred = command.sortOrder !== null;
         return (
           <CommandItem
-            key={protocol.id}
-            value={protocol.id}
-            className={protocolItemVariants({ featured: isPreferred })}
-            onSelect={() => handleAddProtocol(protocol.id)}
-            disabled={isAddingProtocol}
+            key={command.id}
+            value={command.id}
+            className={commandItemVariants({ featured: isPreferred })}
+            onSelect={() => handleAddCommand(command.id)}
+            disabled={isAddingCommand}
           >
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-              {/* Protocol name */}
+              {/* Command name */}
               <div className="mb-1 flex items-center gap-1">
-                <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
+                <h4 className="text-foreground truncate text-sm font-medium">{command.name}</h4>
 
                 <Link
-                  href={`/${locale}/platform/protocols/${protocol.id}`}
+                  href={`/${locale}/platform/commands/${command.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title={t("experiments.seeProtocolDetails")}
-                  aria-label={t("experiments.seeProtocolDetails")}
+                  title={t("experiments.seeCommandDetails")}
+                  aria-label={t("experiments.seeCommandDetails")}
                   className="group p-1"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -101,14 +101,14 @@ function ProtocolList({
               {/* Family */}
               <div className="text-muted-foreground truncate text-xs">
                 <span className="opacity-75">{t("experiments.family")}</span>{" "}
-                <span className="font-medium">{protocol.family}</span>
+                <span className="font-medium">{command.family}</span>
               </div>
 
               {/* Created by */}
-              {protocol.createdByName && (
+              {command.createdByName && (
                 <div className="text-muted-foreground truncate text-xs">
                   <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
-                  <span className="font-medium">{protocol.createdByName}</span>
+                  <span className="font-medium">{command.createdByName}</span>
                 </div>
               )}
             </div>
@@ -122,41 +122,41 @@ function ProtocolList({
 // Props for the SearchStatus component
 interface SearchStatusProps {
   loading: boolean;
-  hasProtocols: boolean;
+  hasCommands: boolean;
   hasSearchQuery: boolean;
   searchValue: string;
 }
 
 // Display appropriate message based on search status
-function SearchStatus({ loading, hasProtocols, hasSearchQuery, searchValue }: SearchStatusProps) {
+function SearchStatus({ loading, hasCommands, hasSearchQuery, searchValue }: SearchStatusProps) {
   const { t } = useTranslation("common");
 
   if (loading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-        {t("experiments.searchingProtocols")}
+        {t("experiments.searchingCommands")}
       </div>
     );
   }
 
-  if (!hasProtocols && hasSearchQuery) {
+  if (!hasCommands && hasSearchQuery) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-sm">
         <SearchX className="mb-2 h-8 w-8" />
-        <span className="mb-1 font-medium">{t("experiments.noProtocolsFound")}</span>
+        <span className="mb-1 font-medium">{t("experiments.noCommandsFound")}</span>
         <span className="text-xs">
-          {t("experiments.tryDifferentSearchProtocols", { searchValue })}
+          {t("experiments.tryDifferentSearchCommands", { searchValue })}
         </span>
       </div>
     );
   }
 
-  if (!hasProtocols && !hasSearchQuery) {
+  if (!hasCommands && !hasSearchQuery) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-sm">
-        <span className="mb-1 font-medium">{t("experiments.noProtocolsAvailable")}</span>
-        <span className="text-xs">{t("experiments.createFirstProtocol")}</span>
+        <span className="mb-1 font-medium">{t("experiments.noCommandsAvailable")}</span>
+        <span className="text-xs">{t("experiments.createFirstCommand")}</span>
       </div>
     );
   }
@@ -168,18 +168,18 @@ function SearchStatus({ loading, hasProtocols, hasSearchQuery, searchValue }: Se
 interface SearchFieldProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
-  isAddingProtocol: boolean;
+  isAddingCommand: boolean;
 }
 
-function SearchField({ searchValue, onSearchChange, isAddingProtocol }: SearchFieldProps) {
+function SearchField({ searchValue, onSearchChange, isAddingCommand }: SearchFieldProps) {
   const { t } = useTranslation("common");
   return (
     <div className="relative w-full">
       <CommandInput
-        placeholder={t("experiments.searchProtocols")}
+        placeholder={t("experiments.searchCommands")}
         value={searchValue}
         onValueChange={onSearchChange}
-        disabled={isAddingProtocol}
+        disabled={isAddingCommand}
         style={{ paddingRight: 36 }}
       />
       {searchValue && (
@@ -195,26 +195,26 @@ function SearchField({ searchValue, onSearchChange, isAddingProtocol }: SearchFi
   );
 }
 
-export interface ProtocolSearchPopoverProps {
-  availableProtocols: Protocol[];
+export interface CommandSearchPopoverProps {
+  availableCommands: CommandEntity[];
   searchValue: string;
   onSearchChange: (value: string) => void;
-  onAddProtocol: (protocolId: string) => Promise<void> | void;
-  isAddingProtocol: boolean;
+  onAddCommand: (commandId: string) => Promise<void> | void;
+  isAddingCommand: boolean;
   loading: boolean;
   setOpen: (open: boolean) => void;
 }
 
-export function ProtocolSearchPopover({
-  availableProtocols,
+export function CommandSearchPopover({
+  availableCommands,
   searchValue,
   onSearchChange,
-  onAddProtocol,
-  isAddingProtocol,
+  onAddCommand,
+  isAddingCommand,
   loading,
   setOpen,
-}: ProtocolSearchPopoverProps) {
-  const hasProtocols = availableProtocols.length > 0;
+}: CommandSearchPopoverProps) {
+  const hasCommands = availableCommands.length > 0;
   const hasSearchQuery = searchValue.length > 0;
 
   return (
@@ -227,17 +227,17 @@ export function ProtocolSearchPopover({
         <SearchField
           searchValue={searchValue}
           onSearchChange={onSearchChange}
-          isAddingProtocol={isAddingProtocol}
+          isAddingCommand={isAddingCommand}
         />
 
         <CommandList>
           <CommandGroup>
-            {/* Show protocols list if there are available protocols and not loading */}
-            {!loading && hasProtocols && (
-              <ProtocolList
-                protocols={availableProtocols}
-                onAddProtocol={onAddProtocol}
-                isAddingProtocol={isAddingProtocol}
+            {/* Show commands list if there are available commands and not loading */}
+            {!loading && hasCommands && (
+              <CommandResults
+                commands={availableCommands}
+                onAddCommand={onAddCommand}
+                isAddingCommand={isAddingCommand}
                 setOpen={setOpen}
                 onSearchChange={onSearchChange}
               />
@@ -246,7 +246,7 @@ export function ProtocolSearchPopover({
             {/* Show appropriate status message */}
             <SearchStatus
               loading={loading}
-              hasProtocols={hasProtocols}
+              hasCommands={hasCommands}
               hasSearchQuery={hasSearchQuery}
               searchValue={searchValue}
             />

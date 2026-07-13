@@ -7,8 +7,8 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { zSensorFamily } from "@repo/api/schemas/command.schema";
 import { zRegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

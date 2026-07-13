@@ -2,45 +2,45 @@
 
 import { useTranslation } from "@repo/i18n";
 
-import { useProtocol } from "../../hooks/protocol/useProtocol/useProtocol";
-import { ProtocolCompatibleMacrosCard } from "./protocol-compatible-macros-card";
-import { ProtocolDetailsCard } from "./protocol-details-card";
-import { ProtocolInfoCard } from "./protocol-info-card";
+import { useCommand } from "../../hooks/command/useCommand/useCommand";
+import { CommandCompatibleMacrosCard } from "./command-compatible-macros-card";
+import { CommandDetailsCard } from "./command-details-card";
+import { CommandInfoCard } from "./command-info-card";
 
-interface ProtocolSettingsProps {
-  protocolId: string;
+interface CommandSettingsProps {
+  commandId: string;
 }
 
-export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
-  const { data, isLoading } = useProtocol(protocolId);
+export function CommandSettings({ commandId }: CommandSettingsProps) {
+  const { data, isLoading } = useCommand(commandId);
   const { t } = useTranslation();
 
   if (isLoading) {
-    return <div>{t("protocolSettings.loading")}</div>;
+    return <div>{t("commandSettings.loading")}</div>;
   }
 
   if (!data) {
-    return <div>{t("protocolSettings.notFound")}</div>;
+    return <div>{t("commandSettings.notFound")}</div>;
   }
 
-  const protocol = data.body;
+  const command = data.body;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Edit Protocol Details - Split Panel */}
-      <ProtocolDetailsCard
-        protocolId={protocolId}
-        initialName={protocol.name}
-        initialDescription={protocol.description ?? ""}
-        initialCode={protocol.code}
-        initialFamily={protocol.family}
+      {/* Edit Command Details - Split Panel */}
+      <CommandDetailsCard
+        commandId={commandId}
+        initialName={command.name}
+        initialDescription={command.description ?? ""}
+        initialCode={command.code}
+        initialFamily={command.family}
       />
 
       {/* Compatible Macros Card */}
-      <ProtocolCompatibleMacrosCard protocolId={protocolId} />
+      <CommandCompatibleMacrosCard commandId={commandId} />
 
-      {/* Protocol Info Card */}
-      <ProtocolInfoCard protocolId={protocolId} protocol={protocol} />
+      {/* Command Info Card */}
+      <CommandInfoCard commandId={commandId} command={command} />
     </div>
   );
 }

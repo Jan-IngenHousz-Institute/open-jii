@@ -1,14 +1,14 @@
 "use client";
 
-import { ProtocolRunContent } from "@/components/protocol-run/protocol-run-content";
+import { CommandRunContent } from "@/components/command-run/command-run-content";
 import { use } from "react";
 
-interface ProtocolRunPageProps {
+interface CommandRunPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function ProtocolRunPage({ params }: ProtocolRunPageProps) {
+export default function CommandRunPage({ params }: CommandRunPageProps) {
   const { id } = use(params);
 
-  return <ProtocolRunContent protocolId={id} />;
+  return <CommandRunContent commandId={id} />;
 }

@@ -4,13 +4,13 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { tsr } from "../../../lib/tsr";
 import { useDebounce } from "../../useDebounce";
 
-export type ProtocolFilter = "my" | "all";
+export type CommandFilter = "my" | "all";
 
-export const useProtocols = ({
+export const useCommands = ({
   initialFilter = "my",
   initialSearch = "",
 }: {
-  initialFilter?: ProtocolFilter;
+  initialFilter?: CommandFilter;
   initialSearch?: string;
 } = {}) => {
   const searchParams = useSearchParams();
@@ -19,7 +19,7 @@ export const useProtocols = ({
 
   const rawFilter = searchParams.get("filter");
 
-  const [filter, setFilterState] = useState<ProtocolFilter>(
+  const [filter, setFilterState] = useState<CommandFilter>(
     rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
   );
   const [search, setSearch] = useState<string>(initialSearch);
@@ -39,7 +39,7 @@ export const useProtocols = ({
   );
 
   const setFilter = useCallback(
-    (value: ProtocolFilter) => {
+    (value: CommandFilter) => {
       setFilterState(value);
       const queryString = createQueryString("filter", value === "all" ? "all" : null);
       const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
@@ -48,17 +48,17 @@ export const useProtocols = ({
     [pathname, router, createQueryString],
   );
 
-  const { data } = tsr.protocols.listProtocols.useQuery({
+  const { data } = tsr.commands.listCommands.useQuery({
     queryData: {
       query: {
         filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
     },
-    queryKey: ["protocols", filter, debouncedSearch],
+    queryKey: ["commands", filter, debouncedSearch],
   });
 
-  // Auto-switch to "all" if user has no protocols of their own on initial load
+  // Auto-switch to "all" if user has no commands of their own on initial load
   const hasAutoSwitched = useRef(false);
   useEffect(() => {
     if (
@@ -73,7 +73,7 @@ export const useProtocols = ({
   }, [filter, data?.body, setFilter, debouncedSearch]);
 
   return {
-    protocols: data?.body,
+    commands: data?.body,
     filter,
     setFilter,
     search,

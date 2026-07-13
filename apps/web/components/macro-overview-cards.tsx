@@ -1,10 +1,10 @@
-import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
+import { useMacroCompatibleCommands } from "@/hooks/macro/useMacroCompatibleCommands/useMacroCompatibleCommands";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
-import type { Macro, MacroProtocolEntry } from "@repo/api/schemas/macro.schema";
+import type { Macro, MacroCommandEntry } from "@repo/api/schemas/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -57,20 +57,20 @@ const getLanguageColor = (language: string) => {
   }
 };
 
-function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
-  const { data } = useMacroCompatibleProtocols(macroId, enabled);
-  const protocols: MacroProtocolEntry[] = useMemo(() => data?.body ?? [], [data]);
+function CompatibleCommandsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
+  const { data } = useMacroCompatibleCommands(macroId, enabled);
+  const commands: MacroCommandEntry[] = useMemo(() => data?.body ?? [], [data]);
 
-  if (protocols.length === 0) return null;
+  if (commands.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
-      {protocols.map((entry) => (
+      {commands.map((entry) => (
         <span
-          key={entry.protocol.id}
+          key={entry.command.id}
           className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
         >
-          {entry.protocol.name}
+          {entry.command.name}
         </span>
       ))}
     </div>
@@ -112,7 +112,7 @@ function MacroCard({
             <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
           </div>
         </div>
-        <CompatibleProtocolsList macroId={macro.id} enabled={hovered} />
+        <CompatibleCommandsList macroId={macro.id} enabled={hovered} />
         <p className="text-xs text-gray-400">
           {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
         </p>

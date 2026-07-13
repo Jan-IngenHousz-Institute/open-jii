@@ -2,18 +2,18 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { IotProtocolRunner } from "./iot-protocol-runner";
+import { IotCommandRunner } from "./iot-command-runner";
 
 // Mock hooks
 const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
-const mockExecuteProtocol = vi.fn();
+const mockExecuteCommandCode = vi.fn();
 
 let mockIsConnected = false;
 let mockIsConnecting = false;
 let mockError: string | null = null;
 let mockDeviceInfo: Record<string, unknown> | null = null;
-let mockProtocol: Record<string, unknown> | null = null;
+let mockCommand: Record<string, unknown> | null = null;
 let mockBrowserSupport = { bluetooth: true, serial: true, any: true };
 
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
@@ -26,15 +26,15 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
     isConnecting: mockIsConnecting,
     error: mockError,
     deviceInfo: mockDeviceInfo,
-    driver: mockProtocol,
+    driver: mockCommand,
     connect: mockConnect,
     disconnect: mockDisconnect,
   }),
 }));
 
-vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
-  useIotProtocolExecution: () => ({
-    executeProtocol: mockExecuteProtocol,
+vi.mock("~/hooks/iot/useIotCommandExecution/useIotCommandExecution", () => ({
+  useIotCommandExecution: () => ({
+    executeCommandCode: mockExecuteCommandCode,
   }),
 }));
 
@@ -92,19 +92,19 @@ vi.mock("./iot-device-status-card", () => ({
   ),
 }));
 
-vi.mock("./iot-protocol-results-display", () => ({
-  ProtocolResultsDisplay: ({ testResult }: { testResult: unknown }) => (
-    <div data-testid="protocol-results-display">
+vi.mock("./iot-command-results-display", () => ({
+  CommandResultsDisplay: ({ testResult }: { testResult: unknown }) => (
+    <div data-testid="command-results-display">
       {testResult ? <span>Result: {JSON.stringify(testResult)}</span> : <span>No result</span>}
     </div>
   ),
 }));
 
-describe("IotProtocolRunner", () => {
+describe("IotCommandRunner", () => {
   const defaultProps = {
-    protocolCode: [{ command: "test" }],
+    commandCode: [{ command: "test" }],
     sensorFamily: "multispeq" as const,
-    protocolName: "Test Protocol",
+    commandName: "Test Command",
   };
 
   beforeEach(() => {
@@ -113,60 +113,60 @@ describe("IotProtocolRunner", () => {
     mockIsConnecting = false;
     mockError = null;
     mockDeviceInfo = null;
-    mockProtocol = null;
+    mockCommand = null;
     mockBrowserSupport = { bluetooth: true, serial: true, any: true };
   });
 
   describe("rendering", () => {
     it("renders the component", () => {
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
       expect(screen.getByTestId("device-status-card")).toBeInTheDocument();
-      expect(screen.getByTestId("protocol-results-display")).toBeInTheDocument();
+      expect(screen.getByTestId("command-results-display")).toBeInTheDocument();
     });
 
     it("renders with horizontal layout by default", () => {
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
       const mainDiv = document.querySelector(".md\\:flex-row");
       expect(mainDiv).toBeInTheDocument();
     });
 
     it("renders with vertical layout when specified", () => {
-      render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
+      render(<IotCommandRunner {...defaultProps} layout="vertical" />);
       const mainDiv = document.querySelector(".md\\:flex-row");
       expect(mainDiv).not.toBeInTheDocument();
     });
 
     it("shows connection type selector when not connected", () => {
       mockIsConnected = false;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
       expect(screen.getByTestId("connection-type-selector")).toBeInTheDocument();
     });
 
     it("hides connection type selector when connected", () => {
       mockIsConnected = true;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
       expect(screen.queryByTestId("connection-type-selector")).not.toBeInTheDocument();
     });
 
-    it("shows run protocol button when connected", () => {
+    it("shows run command button when connected", () => {
       mockIsConnected = true;
-      const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
+      const { rerender } = render(<IotCommandRunner {...defaultProps} />);
 
       // Need to rerender after state change
-      rerender(<IotProtocolRunner {...defaultProps} />);
+      rerender(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       expect(runButton).toBeInTheDocument();
     });
 
-    it("hides run protocol button when not connected", () => {
+    it("hides run command button when not connected", () => {
       mockIsConnected = false;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.queryByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       expect(runButton).not.toBeInTheDocument();
     });
@@ -174,12 +174,12 @@ describe("IotProtocolRunner", () => {
 
   describe("connection type management", () => {
     it("initializes with bluetooth connection type", () => {
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
       expect(screen.getByText("Current: bluetooth")).toBeInTheDocument();
     });
 
     it("allows changing connection type", async () => {
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const user = userEvent.setup();
       const serialButton = screen.getByRole("button", { name: "Serial" });
@@ -190,7 +190,7 @@ describe("IotProtocolRunner", () => {
 
     it("passes browser support to connection type selector", () => {
       mockBrowserSupport = { bluetooth: false, serial: true, any: true };
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       expect(screen.getByText(/BT: no, Serial: yes/)).toBeInTheDocument();
     });
@@ -200,7 +200,7 @@ describe("IotProtocolRunner", () => {
     it("passes connection state to device status card", () => {
       mockIsConnected = true;
       mockIsConnecting = false;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       expect(screen.getByText("Status: connected")).toBeInTheDocument();
     });
@@ -208,28 +208,28 @@ describe("IotProtocolRunner", () => {
     it("passes connecting state to device status card", () => {
       mockIsConnected = false;
       mockIsConnecting = true;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       expect(screen.getByText("Status: connecting")).toBeInTheDocument();
     });
 
     it("passes error to device status card", () => {
       mockError = "Connection failed";
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       expect(screen.getByText("Error: Connection failed")).toBeInTheDocument();
     });
 
     it("passes device info to device status card", () => {
       mockDeviceInfo = { name: "Test Device" };
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       expect(screen.getByText(/Device:.*Test Device/)).toBeInTheDocument();
     });
 
     it("calls connect when connect button is clicked", async () => {
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const connectButton = screen.getByRole("button", { name: "Connect" });
       await user.click(connectButton);
@@ -239,7 +239,7 @@ describe("IotProtocolRunner", () => {
 
     it("calls disconnect when disconnect button is clicked", async () => {
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const disconnectButton = screen.getByRole("button", { name: "Disconnect" });
       await user.click(disconnectButton);
@@ -248,55 +248,55 @@ describe("IotProtocolRunner", () => {
     });
   });
 
-  describe("protocol execution", () => {
+  describe("command execution", () => {
     beforeEach(() => {
       mockIsConnected = true;
     });
 
-    it("executes protocol when run button is clicked", async () => {
-      mockExecuteProtocol.mockResolvedValueOnce({ temperature: 25.5 });
+    it("executes command when run button is clicked", async () => {
+      mockExecuteCommandCode.mockResolvedValueOnce({ temperature: 25.5 });
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(mockExecuteProtocol).toHaveBeenCalledWith(defaultProps.protocolCode);
+        expect(mockExecuteCommandCode).toHaveBeenCalledWith(defaultProps.commandCode);
       });
     });
 
-    it("shows running state while executing protocol", async () => {
-      mockExecuteProtocol.mockImplementation(
+    it("shows running state while executing command", async () => {
+      mockExecuteCommandCode.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 100)),
       );
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(screen.getByText("iot.protocolRunner.running")).toBeInTheDocument();
+        expect(screen.getByText("iot.commandRunner.running")).toBeInTheDocument();
       });
 
       expect(runButton).toBeDisabled();
     });
 
     it("displays success result after successful execution", async () => {
-      mockExecuteProtocol.mockResolvedValueOnce({ temperature: 25.5, humidity: 60 });
+      mockExecuteCommandCode.mockResolvedValueOnce({ temperature: 25.5, humidity: 60 });
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
@@ -310,18 +310,18 @@ describe("IotProtocolRunner", () => {
     });
 
     it("displays error result after failed execution", async () => {
-      mockExecuteProtocol.mockRejectedValueOnce(new Error("Protocol execution failed"));
+      mockExecuteCommandCode.mockRejectedValueOnce(new Error("Command execution failed"));
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Protocol execution failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/Command execution failed/i)).toBeInTheDocument();
       });
 
       await waitFor(() => {
@@ -330,26 +330,26 @@ describe("IotProtocolRunner", () => {
     });
 
     it("captures execution time", async () => {
-      mockExecuteProtocol.mockImplementation(
+      mockExecuteCommandCode.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 50)),
       );
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
 
       const startTime = Date.now();
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(mockExecuteProtocol).toHaveBeenCalled();
+        expect(mockExecuteCommandCode).toHaveBeenCalled();
       });
 
       await waitFor(() => {
-        const result = screen.getByTestId("protocol-results-display").textContent;
+        const result = screen.getByTestId("command-results-display").textContent;
         expect(result).toContain("executionTime");
         const endTime = Date.now();
         const elapsed = endTime - startTime;
@@ -359,30 +359,30 @@ describe("IotProtocolRunner", () => {
     });
 
     it("includes timestamp in result", async () => {
-      mockExecuteProtocol.mockResolvedValueOnce({ data: "test" });
+      mockExecuteCommandCode.mockResolvedValueOnce({ data: "test" });
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        const result = screen.getByTestId("protocol-results-display").textContent;
+        const result = screen.getByTestId("command-results-display").textContent;
         expect(result).toContain("timestamp");
       });
     });
 
     it("clears previous result before new execution", async () => {
-      mockExecuteProtocol.mockResolvedValue({ data: "test" });
+      mockExecuteCommandCode.mockResolvedValue({ data: "test" });
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
 
       // First execution
@@ -392,7 +392,7 @@ describe("IotProtocolRunner", () => {
       });
 
       // Second execution
-      mockExecuteProtocol.mockResolvedValueOnce({ data: "new" });
+      mockExecuteCommandCode.mockResolvedValueOnce({ data: "new" });
       await user.click(runButton);
 
       await waitFor(() => {
@@ -400,31 +400,31 @@ describe("IotProtocolRunner", () => {
       });
     });
 
-    it("does not execute protocol when not connected", () => {
+    it("does not execute command when not connected", () => {
       mockIsConnected = false;
 
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       // Run button should not be visible
       const runButton = screen.queryByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       expect(runButton).not.toBeInTheDocument();
     });
 
     it("handles non-Error objects in catch block", async () => {
-      mockExecuteProtocol.mockRejectedValueOnce("String error");
+      mockExecuteCommandCode.mockRejectedValueOnce("String error");
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Protocol execution failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/Command execution failed/i)).toBeInTheDocument();
       });
     });
   });
@@ -432,10 +432,10 @@ describe("IotProtocolRunner", () => {
   describe("sensor family changes", () => {
     it("disconnects when sensor family changes", async () => {
       mockIsConnected = true;
-      const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
+      const { rerender } = render(<IotCommandRunner {...defaultProps} />);
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambyte" />);
+      rerender(<IotCommandRunner {...defaultProps} sensorFamily="ambyte" />);
 
       await waitFor(() => {
         expect(mockDisconnect).toHaveBeenCalled();
@@ -444,14 +444,14 @@ describe("IotProtocolRunner", () => {
 
     it("clears test result when sensor family changes", async () => {
       mockIsConnected = true;
-      mockExecuteProtocol.mockResolvedValueOnce({ data: "test" });
+      mockExecuteCommandCode.mockResolvedValueOnce({ data: "test" });
 
       const user = userEvent.setup();
-      const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
+      const { rerender } = render(<IotCommandRunner {...defaultProps} />);
 
-      // Run protocol first
+      // Run command first
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
@@ -460,7 +460,7 @@ describe("IotProtocolRunner", () => {
       });
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambyte" />);
+      rerender(<IotCommandRunner {...defaultProps} sensorFamily="ambyte" />);
 
       await waitFor(() => {
         expect(screen.getByText("No result")).toBeInTheDocument();
@@ -469,13 +469,13 @@ describe("IotProtocolRunner", () => {
 
     it("does not disconnect when sensor family remains the same", () => {
       mockIsConnected = true;
-      const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
+      const { rerender } = render(<IotCommandRunner {...defaultProps} />);
 
       // Clear any calls from initial render
       vi.clearAllMocks();
 
       // Rerender with same props
-      rerender(<IotProtocolRunner {...defaultProps} />);
+      rerender(<IotCommandRunner {...defaultProps} />);
 
       expect(mockDisconnect).not.toHaveBeenCalled();
     });
@@ -483,7 +483,7 @@ describe("IotProtocolRunner", () => {
 
   describe("UI states", () => {
     it("applies correct layout classes for horizontal layout", () => {
-      render(<IotProtocolRunner {...defaultProps} layout="horizontal" />);
+      render(<IotCommandRunner {...defaultProps} layout="horizontal" />);
 
       const layoutDiv = document.querySelector(".md\\:flex-row");
       expect(layoutDiv).toBeInTheDocument();
@@ -493,7 +493,7 @@ describe("IotProtocolRunner", () => {
     });
 
     it("applies correct layout classes for vertical layout", () => {
-      render(<IotProtocolRunner {...defaultProps} layout="vertical" />);
+      render(<IotCommandRunner {...defaultProps} layout="vertical" />);
 
       const layoutDiv = document.querySelector(".md\\:flex-row");
       expect(layoutDiv).not.toBeInTheDocument();
@@ -504,36 +504,36 @@ describe("IotProtocolRunner", () => {
   });
 
   describe("edge cases", () => {
-    it("handles missing protocol name", () => {
-      const { protocolName: _, ...propsWithoutName } = defaultProps;
-      render(<IotProtocolRunner {...propsWithoutName} />);
+    it("handles missing command name", () => {
+      const { commandName: _, ...propsWithoutName } = defaultProps;
+      render(<IotCommandRunner {...propsWithoutName} />);
 
       expect(screen.getByTestId("device-status-card")).toBeInTheDocument();
     });
 
-    it("handles empty protocol code", async () => {
+    it("handles empty command code", async () => {
       mockIsConnected = true;
-      mockExecuteProtocol.mockResolvedValueOnce({});
+      mockExecuteCommandCode.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} protocolCode={[]} />);
+      render(<IotCommandRunner {...defaultProps} commandCode={[]} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
       await user.click(runButton);
 
       await waitFor(() => {
-        expect(mockExecuteProtocol).toHaveBeenCalledWith([]);
+        expect(mockExecuteCommandCode).toHaveBeenCalledWith([]);
       });
     });
 
-    it("handles rapid protocol execution clicks", async () => {
+    it("handles rapid command execution clicks", async () => {
       mockIsConnected = true;
       let resolveExecution: (value: unknown) => void = () => {
         // noop
       };
-      mockExecuteProtocol.mockImplementation(
+      mockExecuteCommandCode.mockImplementation(
         () =>
           new Promise((resolve) => {
             resolveExecution = resolve;
@@ -541,10 +541,10 @@ describe("IotProtocolRunner", () => {
       );
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
 
       // Click multiple times rapidly - execution never resolves so button stays disabled
@@ -553,7 +553,7 @@ describe("IotProtocolRunner", () => {
       await user.click(runButton);
 
       // Should only execute once due to disabled state
-      expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
+      expect(mockExecuteCommandCode).toHaveBeenCalledTimes(1);
 
       // Clean up: resolve the pending promise
       resolveExecution({ data: "test" });
@@ -564,13 +564,13 @@ describe("IotProtocolRunner", () => {
 
     it("maintains state consistency after error", async () => {
       mockIsConnected = true;
-      mockExecuteProtocol.mockRejectedValueOnce(new Error("First error"));
+      mockExecuteCommandCode.mockRejectedValueOnce(new Error("First error"));
 
       const user = userEvent.setup();
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
       const runButton = screen.getByRole("button", {
-        name: /iot\.protocolRunner\.runProtocol/i,
+        name: /iot\.commandRunner\.runCommand/i,
       });
 
       // First execution fails
@@ -583,7 +583,7 @@ describe("IotProtocolRunner", () => {
       expect(runButton).not.toBeDisabled();
 
       // Second execution succeeds
-      mockExecuteProtocol.mockResolvedValueOnce({ data: "success" });
+      mockExecuteCommandCode.mockResolvedValueOnce({ data: "success" });
       await user.click(runButton);
 
       await waitFor(() => {
@@ -591,35 +591,35 @@ describe("IotProtocolRunner", () => {
       });
     });
 
-    // Note: The early return check `if (!isConnected) return;` in handleRunProtocol
+    // Note: The early return check `if (!isConnected) return;` in handleRunCommand
     // is defensive code that's not reachable through normal UI flow since the
     // run button is only rendered when isConnected is true. This results in
     // 93.75% branch coverage, which is acceptable for this component.
   });
 
   describe("interaction prompt (clamp open/close gates)", () => {
-    const GATED_PROTOCOL = [{ _protocol_set_: [{ par_led_start_on_open: 2 }] }];
+    const GATED_COMMAND = [{ _protocol_set_: [{ par_led_start_on_open: 2 }] }];
 
-    it("shows the open/close prompt when connected to a gated protocol", () => {
+    it("shows the open/close prompt when connected to a gated command", () => {
       mockIsConnected = true;
-      render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
+      render(<IotCommandRunner {...defaultProps} commandCode={GATED_COMMAND} />);
 
-      expect(screen.getByText("iot.protocolRunner.interactionTitle")).toBeInTheDocument();
-      expect(screen.getByText("iot.protocolRunner.interactionHint")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.interactionTitle")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.interactionHint")).toBeInTheDocument();
     });
 
-    it("hides the prompt for a protocol without clamp gates", () => {
+    it("hides the prompt for a command without clamp gates", () => {
       mockIsConnected = true;
-      render(<IotProtocolRunner {...defaultProps} />);
+      render(<IotCommandRunner {...defaultProps} />);
 
-      expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+      expect(screen.queryByText("iot.commandRunner.interactionTitle")).not.toBeInTheDocument();
     });
 
     it("hides the prompt until a device is connected", () => {
       mockIsConnected = false;
-      render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
+      render(<IotCommandRunner {...defaultProps} commandCode={GATED_COMMAND} />);
 
-      expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+      expect(screen.queryByText("iot.commandRunner.interactionTitle")).not.toBeInTheDocument();
     });
   });
 });

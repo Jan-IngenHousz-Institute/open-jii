@@ -1,43 +1,43 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { useProtocol } from "./useProtocol";
+import { useCommand } from "./useCommand";
 
-describe("useProtocol", () => {
-  it("does not fetch when protocolId is empty", () => {
-    const { result } = renderHook(() => useProtocol(""));
+describe("useCommand", () => {
+  it("does not fetch when commandId is empty", () => {
+    const { result } = renderHook(() => useCommand(""));
 
     expect(result.current.data).toBeUndefined();
     expect(result.current.isLoading).toBe(false);
     expect(result.current.fetchStatus).toBe("idle");
   });
 
-  it("returns protocol data", async () => {
-    const protocol = createProtocol({ id: "protocol-123" });
-    server.mount(contract.protocols.getProtocol, { body: protocol });
+  it("returns command data", async () => {
+    const command = createCommand({ id: "command-123" });
+    server.mount(contract.commands.getCommand, { body: command });
 
-    const { result } = renderHook(() => useProtocol("protocol-123"));
+    const { result } = renderHook(() => useCommand("command-123"));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
 
     expect(result.current.data?.body).toMatchObject({
-      id: "protocol-123",
-      name: protocol.name,
+      id: "command-123",
+      name: command.name,
     });
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it("handles 404 error for non-existent protocol", async () => {
-    server.mount(contract.protocols.getProtocol, { status: 404 });
+  it("handles 404 error for non-existent command", async () => {
+    server.mount(contract.commands.getCommand, { status: 404 });
 
-    const { result } = renderHook(() => useProtocol("non-existent"));
+    const { result } = renderHook(() => useCommand("non-existent"));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -46,12 +46,12 @@ describe("useProtocol", () => {
     expect(result.current.data?.body).toBeUndefined();
   });
 
-  it("uses different query keys per protocol ID", async () => {
-    server.mount(contract.protocols.getProtocol, { body: createProtocol() });
+  it("uses different query keys per command ID", async () => {
+    server.mount(contract.commands.getCommand, { body: createCommand() });
 
-    // Render same hook with two different IDs — they should fire separate queries
-    const { result: r1 } = renderHook(() => useProtocol("p-1"));
-    const { result: r2 } = renderHook(() => useProtocol("p-2"));
+    // Render same hook with two different IDs - they should fire separate queries
+    const { result: r1 } = renderHook(() => useCommand("p-1"));
+    const { result: r2 } = renderHook(() => useCommand("p-2"));
 
     await waitFor(() => {
       expect(r1.current.data).toBeDefined();

@@ -37,7 +37,7 @@ export function DeviceStatusCard({
 
   return (
     <div className="space-y-1.5">
-      <h3 className="text-sm font-medium">{t("iot.protocolRunner.device")}</h3>
+      <h3 className="text-sm font-medium">{t("iot.commandRunner.device")}</h3>
       <div className="min-w-0 space-y-2 overflow-hidden rounded-lg border p-2.5">
         <div className="flex items-start gap-1.5">
           <div
@@ -51,26 +51,26 @@ export function DeviceStatusCard({
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">
               {isConnected ? (
-                t("iot.protocolRunner.connected")
+                t("iot.commandRunner.connected")
               ) : isConnecting ? (
                 <span className="flex items-center">
-                  {t("iot.protocolRunner.connecting")}
+                  {t("iot.commandRunner.connecting")}
                   <span className="inline-block w-6 text-left">
                     <span className="after:inline-block after:animate-[ellipsis_2s_infinite] after:content-['.']" />
                   </span>
                 </span>
               ) : (
-                t("iot.protocolRunner.notConnected")
+                t("iot.commandRunner.notConnected")
               )}
             </div>
             {isConnected && deviceInfo ? (
               <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
                 <div className="truncate">
-                  {deviceInfo.device_name ?? t("iot.protocolRunner.unknownDevice")}
+                  {deviceInfo.device_name ?? t("iot.commandRunner.unknownDevice")}
                 </div>
                 {deviceInfo.device_version && (
                   <div>
-                    {t("iot.protocolRunner.version")} {deviceInfo.device_version}
+                    {t("iot.commandRunner.version")} {deviceInfo.device_version}
                   </div>
                 )}
                 {deviceInfo.device_battery != null && (
@@ -83,10 +83,10 @@ export function DeviceStatusCard({
             ) : (
               <div className="text-muted-foreground mt-0.5 text-xs">
                 {isConnecting
-                  ? t("iot.protocolRunner.pairingWithDevice")
+                  ? t("iot.commandRunner.pairingWithDevice")
                   : connectionType === "bluetooth"
-                    ? t("iot.protocolRunner.wireless")
-                    : t("iot.protocolRunner.usb")}
+                    ? t("iot.commandRunner.wireless")
+                    : t("iot.commandRunner.usb")}
               </div>
             )}
           </div>
@@ -101,12 +101,12 @@ export function DeviceStatusCard({
             {isConnecting ? (
               <>
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                {t("iot.protocolRunner.connecting")}
+                {t("iot.commandRunner.connecting")}
               </>
             ) : isConnected ? (
-              t("iot.protocolRunner.disconnect")
+              t("iot.commandRunner.disconnect")
             ) : (
-              t("iot.protocolRunner.connect")
+              t("iot.commandRunner.connect")
             )}
           </Button>
         </div>

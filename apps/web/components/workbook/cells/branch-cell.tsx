@@ -9,6 +9,7 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -76,11 +77,7 @@ export function BranchCellComponent({
     () =>
       (allCells ?? []).filter(
         (c) =>
-          c.id !== cell.id &&
-          (c.type === "protocol" ||
-            c.type === "command" ||
-            c.type === "macro" ||
-            c.type === "question"),
+          c.id !== cell.id && (c.type === "command" || c.type === "macro" || c.type === "question"),
       ),
     [allCells, cell.id],
   );
@@ -121,10 +118,13 @@ export function BranchCellComponent({
   const getCellLabel = useCallback((c: WorkbookCell): string => {
     try {
       switch (c.type) {
-        case "protocol":
-          return `Protocol (${c.payload.name ?? c.payload.protocolId.slice(0, 8)})`;
         case "command":
-          return `Command (${c.payload.name ?? c.payload.content.slice(0, 12)})`;
+          return `Command (${
+            c.payload.name ??
+            (isCommandReferencePayload(c.payload)
+              ? c.payload.commandId.slice(0, 8)
+              : c.payload.content.slice(0, 12))
+          })`;
         case "macro":
           return `Macro (${c.payload.name ?? c.payload.macroId.slice(0, 8)})`;
         case "question":

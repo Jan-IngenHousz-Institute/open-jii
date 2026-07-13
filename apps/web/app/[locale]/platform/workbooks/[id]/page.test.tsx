@@ -24,7 +24,7 @@ beforeEach(() => {
     isPending: false,
   } as ReturnType<typeof useSession>);
   // Pickers fetch lists at mount even when their popovers stay closed.
-  server.mount(contract.protocols.listProtocols, { body: [] });
+  server.mount(contract.commands.listCommands, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
 });
 

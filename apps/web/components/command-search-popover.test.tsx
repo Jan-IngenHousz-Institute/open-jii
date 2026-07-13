@@ -1,17 +1,17 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { Popover } from "@repo/ui/components/popover";
 
-import { ProtocolSearchPopover } from "./protocol-search-popover";
+import { CommandSearchPopover } from "./command-search-popover";
 
 // Test data & helpers
-const protocols = [
-  createProtocol({ name: "Fv/FM Baseline", family: "multispeq", createdByName: "Ada Lovelace" }),
-  createProtocol({ name: "Ambient Light", family: "ambyte", createdByName: "Al Turing" }),
-  createProtocol({
+const commands = [
+  createCommand({ name: "Fv/FM Baseline", family: "multispeq", createdByName: "Ada Lovelace" }),
+  createCommand({ name: "Ambient Light", family: "ambyte", createdByName: "Al Turing" }),
+  createCommand({
     name: "PAM Fluorometry",
     family: "multispeq",
     sortOrder: 1,
@@ -19,14 +19,14 @@ const protocols = [
   }),
 ];
 
-function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchPopover>> = {}) {
+function renderPopover(over: Partial<React.ComponentProps<typeof CommandSearchPopover>> = {}) {
   const user = userEvent.setup();
-  const props: React.ComponentProps<typeof ProtocolSearchPopover> = {
-    availableProtocols: protocols,
+  const props: React.ComponentProps<typeof CommandSearchPopover> = {
+    availableCommands: commands,
     searchValue: "",
     onSearchChange: vi.fn(),
-    onAddProtocol: vi.fn(),
-    isAddingProtocol: false,
+    onAddCommand: vi.fn(),
+    isAddingCommand: false,
     loading: false,
     setOpen: vi.fn(),
     ...over,
@@ -34,7 +34,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchP
   return {
     ...render(
       <Popover open>
-        <ProtocolSearchPopover {...props} />
+        <CommandSearchPopover {...props} />
       </Popover>,
     ),
     user,
@@ -43,7 +43,7 @@ function renderPopover(over: Partial<React.ComponentProps<typeof ProtocolSearchP
 }
 
 // Tests
-describe("<ProtocolSearchPopover />", () => {
+describe("<CommandSearchPopover />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -59,10 +59,10 @@ describe("<ProtocolSearchPopover />", () => {
     renderPopover();
 
     const input = screen.getByRole("combobox");
-    expect(input).toHaveAttribute("placeholder", "experiments.searchProtocols");
+    expect(input).toHaveAttribute("placeholder", "experiments.searchCommands");
   });
 
-  it("renders all available protocols as command items", () => {
+  it("renders all available commands as command items", () => {
     renderPopover();
 
     const items = screen.getAllByRole("option");
@@ -76,7 +76,7 @@ describe("<ProtocolSearchPopover />", () => {
     expect(screen.getByText("ambyte")).toBeInTheDocument();
   });
 
-  it("displays protocol details correctly with created by info", () => {
+  it("displays command details correctly with created by info", () => {
     renderPopover();
 
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
@@ -89,92 +89,92 @@ describe("<ProtocolSearchPopover />", () => {
     expect(createdByLabels).toHaveLength(2); // Only p1 and p2 have createdByName
   });
 
-  it("renders external links for all protocols", () => {
+  it("renders external links for all commands", () => {
     renderPopover();
 
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
 
-    expect(links[0]).toHaveAttribute("href", `/en-US/platform/protocols/${protocols[0].id}`);
-    expect(links[1]).toHaveAttribute("href", `/en-US/platform/protocols/${protocols[1].id}`);
-    expect(links[2]).toHaveAttribute("href", `/en-US/platform/protocols/${protocols[2].id}`);
+    expect(links[0]).toHaveAttribute("href", `/en-US/platform/commands/${commands[0].id}`);
+    expect(links[1]).toHaveAttribute("href", `/en-US/platform/commands/${commands[1].id}`);
+    expect(links[2]).toHaveAttribute("href", `/en-US/platform/commands/${commands[2].id}`);
 
     links.forEach((link) => {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      expect(link).toHaveAttribute("title", "experiments.seeProtocolDetails");
-      expect(link).toHaveAttribute("aria-label", "experiments.seeProtocolDetails");
+      expect(link).toHaveAttribute("title", "experiments.seeCommandDetails");
+      expect(link).toHaveAttribute("aria-label", "experiments.seeCommandDetails");
     });
   });
 
-  it("calls onAddProtocol when command item is clicked", async () => {
-    const onAddProtocol = vi.fn();
+  it("calls onAddCommand when command item is clicked", async () => {
+    const onAddCommand = vi.fn();
     const setOpen = vi.fn();
     const onSearchChange = vi.fn();
-    const { user } = renderPopover({ onAddProtocol, setOpen, onSearchChange });
+    const { user } = renderPopover({ onAddCommand, setOpen, onSearchChange });
 
     const items = screen.getAllByRole("option");
     await user.click(items[0]);
 
-    expect(onAddProtocol).toHaveBeenCalledWith(protocols[0].id);
+    expect(onAddCommand).toHaveBeenCalledWith(commands[0].id);
     expect(setOpen).toHaveBeenCalledWith(false);
     expect(onSearchChange).toHaveBeenCalledWith("");
   });
 
-  it("handles async onAddProtocol correctly", async () => {
-    const onAddProtocol = vi.fn().mockResolvedValue(undefined);
+  it("handles async onAddCommand correctly", async () => {
+    const onAddCommand = vi.fn().mockResolvedValue(undefined);
     const setOpen = vi.fn();
     const onSearchChange = vi.fn();
-    const { user } = renderPopover({ onAddProtocol, setOpen, onSearchChange });
+    const { user } = renderPopover({ onAddCommand, setOpen, onSearchChange });
 
     const items = screen.getAllByRole("option");
     await user.click(items[1]);
 
     await waitFor(() => {
-      expect(onAddProtocol).toHaveBeenCalledWith(protocols[1].id);
+      expect(onAddCommand).toHaveBeenCalledWith(commands[1].id);
       expect(setOpen).toHaveBeenCalledWith(false);
       expect(onSearchChange).toHaveBeenCalledWith("");
     });
   });
 
-  it("disables command items when isAddingProtocol is true", async () => {
-    const onAddProtocol = vi.fn();
-    const { user } = renderPopover({ isAddingProtocol: true, onAddProtocol });
+  it("disables command items when isAddingCommand is true", async () => {
+    const onAddCommand = vi.fn();
+    const { user } = renderPopover({ isAddingCommand: true, onAddCommand });
 
     const items = screen.getAllByRole("option");
     expect(items).toHaveLength(3);
 
     // Clicking a disabled cmdk item does not trigger onSelect
     await user.click(items[0]);
-    expect(onAddProtocol).not.toHaveBeenCalled();
+    expect(onAddCommand).not.toHaveBeenCalled();
   });
 
   it("shows loading state", () => {
-    renderPopover({ loading: true, availableProtocols: [] });
+    renderPopover({ loading: true, availableCommands: [] });
 
-    expect(screen.getByText("experiments.searchingProtocols")).toBeInTheDocument();
+    expect(screen.getByText("experiments.searchingCommands")).toBeInTheDocument();
   });
 
-  it("shows no protocols found message when search has no results", () => {
+  it("shows no commands found message when search has no results", () => {
     renderPopover({
-      availableProtocols: [],
+      availableCommands: [],
       searchValue: "nonexistent",
       loading: false,
     });
 
-    expect(screen.getByText("experiments.noProtocolsFound")).toBeInTheDocument();
-    expect(screen.getByText("experiments.tryDifferentSearchProtocols")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noCommandsFound")).toBeInTheDocument();
+    expect(screen.getByText("experiments.tryDifferentSearchCommands")).toBeInTheDocument();
   });
 
-  it("shows no protocols available message when no search and no protocols", () => {
+  it("shows no commands available message when no search and no commands", () => {
     renderPopover({
-      availableProtocols: [],
+      availableCommands: [],
       searchValue: "",
       loading: false,
     });
 
-    expect(screen.getByText("experiments.noProtocolsAvailable")).toBeInTheDocument();
-    expect(screen.getByText("experiments.createFirstProtocol")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noCommandsAvailable")).toBeInTheDocument();
+    expect(screen.getByText("experiments.createFirstCommand")).toBeInTheDocument();
   });
 
   it("forwards search value and onSearchChange to input", async () => {
@@ -188,7 +188,7 @@ describe("<ProtocolSearchPopover />", () => {
     expect(onSearchChange).toHaveBeenCalled();
   });
 
-  it("renders preferred badge for protocols with sortOrder", () => {
+  it("renders preferred badge for commands with sortOrder", () => {
     renderPopover();
 
     const badge = screen.getByText("common.preferred");

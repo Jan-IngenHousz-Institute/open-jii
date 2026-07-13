@@ -1,6 +1,6 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useCommand } from "@/hooks/command/useCommand/useCommand";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { isMultispeqOutput } from "@/lib/multispeq/detect";
 import {
@@ -20,6 +20,7 @@ import type {
   OutputCell as OutputCellType,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
@@ -81,8 +82,8 @@ function DataTabs({
   activeTab,
   onTabChange,
   showTimeseries,
-  protocolCode,
-  protocolLoading,
+  commandCode,
+  commandLoading,
 }: {
   data: unknown;
   copy: (text: string) => Promise<void>;
@@ -91,8 +92,8 @@ function DataTabs({
   activeTab: string;
   onTabChange: (tab: string) => void;
   showTimeseries: boolean;
-  protocolCode?: unknown;
-  protocolLoading?: boolean;
+  commandCode?: unknown;
+  commandLoading?: boolean;
 }) {
   const { t } = useTranslation("workbook");
   return (
@@ -126,8 +127,8 @@ function DataTabs({
         <TabsContent value="timeseries" className="mt-2">
           <OutputCellTimeseries
             data={data}
-            protocolCode={protocolCode}
-            loading={protocolLoading}
+            commandCode={commandCode}
+            loading={commandLoading}
             emptyLabel={t("output.timeseriesEmpty")}
             errorLabel={t("output.timeseriesError")}
           />
@@ -192,15 +193,17 @@ export function OutputCellComponent({
   };
 
   const sourceCell = allCells?.find((c) => c.id === cell.producedBy);
-  const sourceProtocolId =
-    sourceCell?.type === "protocol" ? sourceCell.payload.protocolId : undefined;
-  const { data: protocolResponse, isLoading: protocolLoading } = useProtocol(
-    sourceProtocolId ?? "",
-    !!sourceProtocolId,
+  const sourceCommandId =
+    sourceCell?.type === "command" && isCommandReferencePayload(sourceCell.payload)
+      ? sourceCell.payload.commandId
+      : undefined;
+  const { data: commandResponse, isLoading: commandLoading } = useCommand(
+    sourceCommandId ?? "",
+    !!sourceCommandId,
   );
-  const protocolFamily = protocolResponse?.body.family;
-  const protocolCode = protocolResponse?.body.code;
-  const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
+  const commandFamily = commandResponse?.body.family;
+  const commandCode = commandResponse?.body.code;
+  const showTimeseries = commandFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
     <div className="group/output relative mt-1 overflow-hidden rounded-[10px] border border-[#EDF2F6] bg-white">
@@ -283,8 +286,8 @@ export function OutputCellComponent({
                   activeTab={activeTab}
                   onTabChange={handleTabChange}
                   showTimeseries={showTimeseries}
-                  protocolCode={protocolCode}
-                  protocolLoading={protocolLoading}
+                  commandCode={commandCode}
+                  commandLoading={commandLoading}
                 />
                 {pinnedChart && activeTab === "table" && (
                   // Plotly reuses its plot div across re-renders; switching columns can leave the

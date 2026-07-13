@@ -1,4 +1,4 @@
-import { createMacro, createProtocol } from "@/test/factories";
+import { createMacro, createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import type React from "react";
@@ -40,7 +40,7 @@ vi.mock("../../macro-search-with-dropdown", () => ({
   },
 }));
 
-describe("<AnalysisPanel /> protocol-macro compatibility", () => {
+describe("<AnalysisPanel /> command-macro compatibility", () => {
   const defaultOnChange = vi.fn();
 
   beforeEach(() => {
@@ -48,13 +48,13 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     lastDropdownProps = null;
 
     server.mount(contract.macros.listMacros, { body: mockMacros });
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "proto-1", name: "Upstream Protocol" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ id: "proto-1", name: "Upstream Command" }),
     });
-    // Don't mount listCompatibleMacros by default — most tests override it
+    // Don't mount listCompatibleMacros by default - most tests override it
   });
 
-  it("should render without upstreamProtocolId (no warning, no recommended badges)", async () => {
+  it("should render without upstreamCommandId (no warning, no recommended badges)", async () => {
     render(<AnalysisPanel selectedMacroId="macro-1" onChange={defaultOnChange} />);
 
     // No incompatibility warning should be present
@@ -66,11 +66,11 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should show incompatibility warning when selected macro is not compatible", async () => {
-    // Protocol has compatible macros macro-1 and macro-2, but macro-3 is selected
-    server.mount(contract.protocols.listCompatibleMacros, {
+    // Command has compatible macros macro-1 and macro-2, but macro-3 is selected
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-1",
             name: "Temperature Plot",
@@ -81,7 +81,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
           addedAt: "2024-01-01T00:00:00.000Z",
         },
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-2",
             name: "Humidity Analysis",
@@ -98,7 +98,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
       <AnalysisPanel
         selectedMacroId="macro-3"
         onChange={defaultOnChange}
-        upstreamProtocolId="proto-1"
+        upstreamCommandId="proto-1"
       />,
     );
 
@@ -108,10 +108,10 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when selected macro IS compatible", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-1",
             name: "Temperature Plot",
@@ -122,7 +122,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
           addedAt: "2024-01-01T00:00:00.000Z",
         },
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-2",
             name: "Humidity Analysis",
@@ -139,7 +139,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
       <AnalysisPanel
         selectedMacroId="macro-1"
         onChange={defaultOnChange}
-        upstreamProtocolId="proto-1"
+        upstreamCommandId="proto-1"
       />,
     );
 
@@ -147,7 +147,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     expect(screen.queryByText("experiments.macroIncompatibilityWarning")).not.toBeInTheDocument();
   });
 
-  it("should NOT show warning when no compatibility data (no upstream protocol)", async () => {
+  it("should NOT show warning when no compatibility data (no upstream command)", async () => {
     render(<AnalysisPanel selectedMacroId="macro-3" onChange={defaultOnChange} />);
 
     await waitFor(() => expect(lastDropdownProps).not.toBeNull());
@@ -155,13 +155,13 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when compatible macros list is empty", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
     render(
       <AnalysisPanel
         selectedMacroId="macro-3"
         onChange={defaultOnChange}
-        upstreamProtocolId="proto-1"
+        upstreamCommandId="proto-1"
       />,
     );
 
@@ -170,10 +170,10 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should NOT show warning when no macro is selected", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-1",
             name: "Temperature Plot",
@@ -187,7 +187,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     });
 
     render(
-      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamCommandId="proto-1" />,
     );
 
     await waitFor(() => expect(lastDropdownProps).not.toBeNull());
@@ -195,10 +195,10 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should pass recommendedMacroIds to MacroSearchWithDropdown when compatibility data exists", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-1",
             name: "Temperature Plot",
@@ -209,7 +209,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
           addedAt: "2024-01-01T00:00:00.000Z",
         },
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-2",
             name: "Humidity Analysis",
@@ -223,7 +223,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     });
 
     render(
-      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamCommandId="proto-1" />,
     );
 
     await waitFor(() => {
@@ -236,7 +236,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     expect(lastDropdownProps?.recommendedMacroIds?.has("macro-3")).toBe(false);
   });
 
-  it("should not pass recommendedMacroIds when no upstream protocol", async () => {
+  it("should not pass recommendedMacroIds when no upstream command", async () => {
     render(<AnalysisPanel selectedMacroId="" onChange={defaultOnChange} />);
 
     await waitFor(() => expect(lastDropdownProps).not.toBeNull());
@@ -244,23 +244,23 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should not pass recommendedMacroIds when compatible macros list is empty", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
     render(
-      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamCommandId="proto-1" />,
     );
 
     await waitFor(() => expect(lastDropdownProps).not.toBeNull());
     expect(lastDropdownProps?.recommendedMacroIds).toBeUndefined();
   });
 
-  it("should call useProtocolCompatibleMacros with upstreamProtocolId and enabled=true", async () => {
-    const compatSpy = server.mount(contract.protocols.listCompatibleMacros, {
+  it("should call useCommandCompatibleMacros with upstreamCommandId and enabled=true", async () => {
+    const compatSpy = server.mount(contract.commands.listCompatibleMacros, {
       body: [],
     });
 
     render(
-      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamCommandId="proto-1" />,
     );
 
     await waitFor(() => expect(compatSpy.called).toBe(true));
@@ -268,10 +268,10 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
   });
 
   it("should sort compatible macros first in the dropdown list", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "proto-1",
+          commandId: "proto-1",
           macro: {
             id: "macro-3",
             name: "Statistical Summary",
@@ -285,7 +285,7 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     });
 
     render(
-      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamProtocolId="proto-1" />,
+      <AnalysisPanel selectedMacroId="" onChange={defaultOnChange} upstreamCommandId="proto-1" />,
     );
 
     await waitFor(() => {
@@ -296,14 +296,14 @@ describe("<AnalysisPanel /> protocol-macro compatibility", () => {
     });
   });
 
-  it("should call useProtocolCompatibleMacros with empty string and enabled=false when no upstreamProtocolId", async () => {
-    const compatSpy = server.mount(contract.protocols.listCompatibleMacros, {
+  it("should call useCommandCompatibleMacros with empty string and enabled=false when no upstreamCommandId", async () => {
+    const compatSpy = server.mount(contract.commands.listCompatibleMacros, {
       body: [],
     });
 
     render(<AnalysisPanel selectedMacroId="" onChange={defaultOnChange} />);
 
-    // Without upstreamProtocolId, the hook is called with enabled=false, so no request is made
+    // Without upstreamCommandId, the hook is called with enabled=false, so no request is made
     await waitFor(() => expect(lastDropdownProps).not.toBeNull());
     expect(compatSpy.called).toBe(false);
   });

@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { ProtocolDetailsCard } from "./protocol-details-card";
+import { CommandDetailsCard } from "./command-details-card";
 
 // Hoisted mocks
 const useIotBrowserSupportMock = vi.hoisted(() => vi.fn());
@@ -16,11 +16,11 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: useIotBrowserSupportMock,
 }));
 
-// Mock IotProtocolRunner
-vi.mock("../iot/iot-protocol-runner", () => ({
-  IotProtocolRunner: (props: Record<string, unknown>) => (
-    <div data-testid="iot-protocol-runner" data-layout={props.layout}>
-      IotProtocolRunner
+// Mock IotCommandRunner
+vi.mock("../iot/iot-command-runner", () => ({
+  IotCommandRunner: (props: Record<string, unknown>) => (
+    <div data-testid="iot-command-runner" data-layout={props.layout}>
+      IotCommandRunner
     </div>
   ),
 }));
@@ -60,8 +60,8 @@ vi.mock("@repo/ui/components/resizable", async () => {
   };
 });
 
-// Mock ProtocolCodeEditor
-vi.mock("../protocol-code-editor", () => ({
+// Mock CommandCodeEditor
+vi.mock("../command-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -71,7 +71,7 @@ vi.mock("../protocol-code-editor", () => ({
     onChange: (v: Record<string, unknown>[]) => void;
     onValidationChange: (v: boolean) => void;
   }) => (
-    <div data-testid="protocol-code-editor">
+    <div data-testid="command-code-editor">
       <textarea
         data-testid="code-editor"
         value={JSON.stringify(value)}
@@ -89,10 +89,10 @@ vi.mock("../protocol-code-editor", () => ({
   ),
 }));
 
-describe("ProtocolDetailsCard", () => {
+describe("CommandDetailsCard", () => {
   const defaultProps = {
-    protocolId: "test-protocol-id",
-    initialName: "Test Protocol",
+    commandId: "test-command-id",
+    initialName: "Test Command",
     initialDescription: "Test Description",
     initialCode: [{ averages: 1, environmental: [["light_intensity", 0]] }],
     initialFamily: "multispeq" as const,
@@ -100,8 +100,8 @@ describe("ProtocolDetailsCard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(contract.protocols.updateProtocol, {
-      body: createProtocol({ id: "test-protocol-id", name: "Updated Name" }),
+    server.mount(contract.commands.updateCommand, {
+      body: createCommand({ id: "test-command-id", name: "Updated Name" }),
     });
     useIotBrowserSupportMock.mockReturnValue({
       bluetooth: false,
@@ -111,34 +111,34 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should render the form with initial values", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
-    expect(await screen.findByDisplayValue("Test Protocol")).toBeInTheDocument();
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Test Command")).toBeInTheDocument();
+    expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
   });
 
   it("should display all form fields", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     expect(await screen.findByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/family/i)).toBeInTheDocument();
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
   });
 
   it("should disable submit button when form is pristine", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const submitButton = await screen.findByRole("button", { name: /save/i });
     expect(submitButton).toBeDisabled();
   });
 
   it("should enable submit button when form is dirty and valid", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Updated Protocol Name");
+    await userEvent.type(nameInput, "Updated Command Name");
 
     await waitFor(() => {
       const submitButton = screen.getByRole("button", { name: /save/i });
@@ -146,12 +146,12 @@ describe("ProtocolDetailsCard", () => {
     });
   });
 
-  it("should call updateProtocol mutation on submit", async () => {
-    const spy = server.mount(contract.protocols.updateProtocol, {
-      body: createProtocol({ id: "test-protocol-id" }),
+  it("should call updateCommand mutation on submit", async () => {
+    const spy = server.mount(contract.commands.updateCommand, {
+      body: createCommand({ id: "test-command-id" }),
     });
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -162,7 +162,7 @@ describe("ProtocolDetailsCard", () => {
 
     await waitFor(() => {
       expect(spy.called).toBe(true);
-      expect(spy.params).toMatchObject({ id: "test-protocol-id" });
+      expect(spy.params).toMatchObject({ id: "test-command-id" });
       expect(spy.body).toMatchObject({
         name: "Updated Name",
         description: "<p>Test Description</p>", // Quill wraps content in HTML
@@ -173,7 +173,7 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should show toast notification on successful update", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -184,13 +184,13 @@ describe("ProtocolDetailsCard", () => {
 
     await waitFor(() => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        description: "protocols.protocolUpdated",
+        description: "commands.commandUpdated",
       });
     });
   });
 
   it("should disable submit button when code is invalid", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -207,12 +207,12 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should show loading state during update", async () => {
-    server.mount(contract.protocols.updateProtocol, {
-      body: createProtocol(),
+    server.mount(contract.commands.updateCommand, {
+      body: createCommand(),
       delay: 999_999,
     });
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -229,7 +229,7 @@ describe("ProtocolDetailsCard", () => {
   it.skip("should update description field", async () => {
     // Skip: Description field is a Quill rich text editor, not a standard input
     // Testing Quill editor interaction requires more complex setup
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const descriptionInput = screen.getByLabelText(/description/i);
     await userEvent.clear(descriptionInput);
@@ -239,7 +239,7 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should update code field", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const codeEditor = await screen.findByTestId("code-editor");
     const newCode = JSON.stringify([{ averages: 2 }]);
@@ -253,28 +253,28 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should show family selector with correct options", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const familySelect = await screen.findByLabelText(/family/i);
     expect(familySelect).toBeInTheDocument();
   });
 
   it("should display header title and description", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
-    expect(await screen.findByText("protocolSettings.generalSettings")).toBeInTheDocument();
-    expect(screen.getByText("protocolSettings.generalDescription")).toBeInTheDocument();
+    expect(await screen.findByText("commandSettings.generalSettings")).toBeInTheDocument();
+    expect(screen.getByText("commandSettings.generalDescription")).toBeInTheDocument();
   });
 
   it("should handle empty code value", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} initialCode={[{}]} />);
+    render(<CommandDetailsCard {...defaultProps} initialCode={[{}]} />);
 
     const codeEditor = await screen.findByTestId("code-editor");
     expect(codeEditor).toHaveValue(JSON.stringify([{}]));
   });
 
   it("should validate name field", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const nameInput = screen.getByLabelText(/name/i);
     await userEvent.clear(nameInput);
@@ -288,22 +288,22 @@ describe("ProtocolDetailsCard", () => {
   });
 
   it("should render resizable panel group with horizontal direction", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     const panelGroup = await screen.findByTestId("resizable-panel-group");
     expect(panelGroup).toHaveAttribute("data-direction", "horizontal");
   });
 
   it("should render the connect & test panel title", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
-    expect(await screen.findByText("protocolSettings.testerTitle")).toBeInTheDocument();
+    expect(await screen.findByText("commandSettings.testerTitle")).toBeInTheDocument();
   });
 
   it("should render collapsible details section", async () => {
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
-    expect(await screen.findByText("protocolSettings.detailsTitle")).toBeInTheDocument();
+    expect(await screen.findByText("commandSettings.detailsTitle")).toBeInTheDocument();
   });
 
   it("should show browser unsupported message when no browser support", async () => {
@@ -313,23 +313,23 @@ describe("ProtocolDetailsCard", () => {
       any: false,
     });
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("iot-protocol-runner")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("iot-command-runner")).not.toBeInTheDocument();
     });
   });
 
-  it("should render IoT protocol runner when browser supports APIs", async () => {
+  it("should render IoT command runner when browser supports APIs", async () => {
     useIotBrowserSupportMock.mockReturnValue({
       bluetooth: true,
       serial: false,
       any: true,
     });
 
-    render(<ProtocolDetailsCard {...defaultProps} />);
+    render(<CommandDetailsCard {...defaultProps} />);
 
-    const runner = await screen.findByTestId("iot-protocol-runner");
+    const runner = await screen.findByTestId("iot-command-runner");
     expect(runner).toBeInTheDocument();
     expect(runner).toHaveAttribute("data-layout", "vertical");
   });

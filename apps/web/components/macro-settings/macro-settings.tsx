@@ -5,7 +5,7 @@ import React from "react";
 import { useTranslation } from "@repo/i18n";
 
 import { useMacro } from "../../hooks/macro/useMacro/useMacro";
-import { MacroCompatibleProtocolsCard } from "./macro-compatible-protocols-card";
+import { MacroCompatibleCommandsCard } from "./macro-compatible-commands-card";
 import { MacroDetailsCard } from "./macro-details-card";
 import { MacroInfoCard } from "./macro-info-card";
 
@@ -38,8 +38,8 @@ export function MacroSettings({ macroId }: MacroSettingsProps) {
         initialCode={macro.code}
       />
 
-      {/* Compatible Protocols Card */}
-      <MacroCompatibleProtocolsCard macroId={macroId} />
+      {/* Compatible Commands Card */}
+      <MacroCompatibleCommandsCard macroId={macroId} />
 
       {/* Macro Info Card - Last */}
       <MacroInfoCard macroId={macroId} macro={macro} />

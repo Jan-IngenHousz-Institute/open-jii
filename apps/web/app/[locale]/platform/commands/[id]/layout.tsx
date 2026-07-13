@@ -1,8 +1,8 @@
 "use client";
 
-import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-layout-content";
+import { CommandLayoutContent } from "@/components/command-overview/command-layout-content";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { useCommand } from "@/hooks/command/useCommand/useCommand";
 import { ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -12,32 +12,32 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
-interface ProtocolLayoutProps {
+interface CommandLayoutProps {
   children: React.ReactNode;
 }
 
-export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
+export default function CommandLayout({ children }: CommandLayoutProps) {
   const { id, locale } = useParams<{ id: string; locale: string }>();
   const pathname = usePathname();
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
-  const { data, isLoading, error } = useProtocol(id);
+  const { data, isLoading, error } = useCommand(id);
   const browserSupport = useIotBrowserSupport(data?.body.family);
 
-  const isOverview = pathname === `/${locale}/platform/protocols/${id}`;
-  const isRun = pathname === `/${locale}/platform/protocols/${id}/run`;
+  const isOverview = pathname === `/${locale}/platform/commands/${id}`;
+  const isRun = pathname === `/${locale}/platform/commands/${id}/run`;
 
   const connectButton = (
     <Button size="sm" disabled={!browserSupport.any} asChild={browserSupport.any}>
       {browserSupport.any ? (
-        <Link href={`/${locale}/platform/protocols/${id}/run`}>
+        <Link href={`/${locale}/platform/commands/${id}/run`}>
           <Play className="mr-2 h-4 w-4" />
-          {t("protocolSettings.testerTitle")}
+          {t("commandSettings.testerTitle")}
         </Link>
       ) : (
         <>
           <Play className="mr-2 h-4 w-4" />
-          {t("protocolSettings.testerTitle")}
+          {t("commandSettings.testerTitle")}
         </>
       )}
     </Button>
@@ -49,12 +49,12 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
     ) : (
       <Tooltip>
         <TooltipTrigger asChild>{connectButton}</TooltipTrigger>
-        <TooltipContent>{tIot("iot.protocolRunner.browserNotSupported")}</TooltipContent>
+        <TooltipContent>{tIot("iot.commandRunner.browserNotSupported")}</TooltipContent>
       </Tooltip>
     )
   ) : isRun ? (
     <Button variant="outline" size="sm" asChild>
-      <Link href={`/${locale}/platform/protocols/${id}`}>
+      <Link href={`/${locale}/platform/commands/${id}`}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         {t("experiments.back")}
       </Link>
@@ -66,13 +66,13 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       isLoading={isLoading}
       error={error}
       hasData={!!data?.body}
-      loadingMessage={t("protocols.loadingProtocols")}
-      errorDescription={t("protocols.notFoundDescription")}
+      loadingMessage={t("commands.loadingCommands")}
+      errorDescription={t("commands.notFoundDescription")}
     >
       {data?.body && (
-        <ProtocolLayoutContent id={id} protocol={data.body} actions={actions}>
+        <CommandLayoutContent id={id} command={data.body} actions={actions}>
           {children}
-        </ProtocolLayoutContent>
+        </CommandLayoutContent>
       )}
     </EntityLayoutShell>
   );

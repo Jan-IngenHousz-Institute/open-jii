@@ -10,7 +10,6 @@ import { NodeHandles } from "./node-handles";
 const TYPE_LABELS: Record<NodeType, string> = {
   INSTRUCTION: "Instruction",
   QUESTION: "Question",
-  MEASUREMENT: "Protocol",
   COMMAND: "Command",
   ANALYSIS: "Macro",
   BRANCH: "Branch",

@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ProtocolCompatibleMacrosCard } from "../protocol-compatible-macros-card";
+import { CommandCompatibleMacrosCard } from "../command-compatible-macros-card";
 
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string, _delay: number) => [value, true],
@@ -39,7 +39,7 @@ const CREATOR_ID = "00000000-0000-0000-0000-000000000099";
 
 const defaultCompatibleMacros = [
   {
-    protocolId: PROTO_ID,
+    commandId: PROTO_ID,
     macro: {
       id: MACRO_ID_1,
       name: "Temperature Plot",
@@ -50,7 +50,7 @@ const defaultCompatibleMacros = [
     addedAt: "2024-01-01T00:00:00.000Z",
   },
   {
-    protocolId: PROTO_ID,
+    commandId: PROTO_ID,
     macro: {
       id: MACRO_ID_2,
       name: "Humidity Analysis",
@@ -62,16 +62,16 @@ const defaultCompatibleMacros = [
   },
 ];
 
-describe("<ProtocolCompatibleMacrosCard />", () => {
+describe("<CommandCompatibleMacrosCard />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
 
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: defaultCompatibleMacros,
     });
-    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
-    server.mount(contract.protocols.removeCompatibleMacro, {});
+    server.mount(contract.commands.addCompatibleMacros, { body: [] });
+    server.mount(contract.commands.removeCompatibleMacro, {});
     server.mount(contract.macros.listMacros, {
       body: [
         createMacro({ id: MACRO_ID_1, name: "Temperature Plot", language: "python" }),
@@ -82,25 +82,25 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should show loading state", () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [], delay: 999_999 });
+    server.mount(contract.commands.listCompatibleMacros, { body: [], delay: 999_999 });
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     expect(screen.getByText("common.loading")).toBeInTheDocument();
   });
 
   it("should show 'no compatible macros' when list is empty", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.noCompatibleMacros")).toBeInTheDocument();
     });
   });
 
   it("should render linked macros with names and language", async () => {
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should render macro links with correct hrefs", async () => {
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
@@ -124,9 +124,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should call remove mutation when X button is clicked", async () => {
-    const removeSpy = server.mount(contract.protocols.removeCompatibleMacro, {});
+    const removeSpy = server.mount(contract.commands.removeCompatibleMacro, {});
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
@@ -142,9 +142,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should call remove mutation for specific macro when its X button is clicked", async () => {
-    const removeSpy = server.mount(contract.protocols.removeCompatibleMacro, {});
+    const removeSpy = server.mount(contract.commands.removeCompatibleMacro, {});
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
@@ -160,7 +160,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should pass correct props to MacroSearchWithDropdown (filters out already-linked macros)", async () => {
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(lastDropdownProps).not.toBeNull();
@@ -172,18 +172,18 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should render card title and description", async () => {
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.compatibleMacros")).toBeInTheDocument();
     });
-    expect(screen.getByText("protocolSettings.compatibleMacrosDescription")).toBeInTheDocument();
+    expect(screen.getByText("commandSettings.compatibleMacrosDescription")).toBeInTheDocument();
   });
 
   it("should call add mutation when a macro is added via the dropdown", async () => {
-    const addSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
+    const addSpy = server.mount(contract.commands.addCompatibleMacros, { body: [] });
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(lastDropdownProps).not.toBeNull();
@@ -201,9 +201,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should pass isAdding state to MacroSearchWithDropdown", async () => {
-    server.mount(contract.protocols.addCompatibleMacros, { body: [], delay: 999_999 });
+    server.mount(contract.commands.addCompatibleMacros, { body: [], delay: 999_999 });
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(lastDropdownProps).not.toBeNull();
@@ -218,9 +218,9 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
   });
 
   it("should disable remove buttons while removal is pending", async () => {
-    server.mount(contract.protocols.removeCompatibleMacro, { delay: 999_999 });
+    server.mount(contract.commands.removeCompatibleMacro, { delay: 999_999 });
 
-    render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} />);
+    render(<CommandCompatibleMacrosCard commandId={PROTO_ID} />);
 
     await waitFor(() => {
       expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
@@ -240,25 +240,25 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
 
   describe("embedded mode", () => {
     it("should render in embedded mode without Card wrapper", async () => {
-      render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} embedded />);
+      render(<CommandCompatibleMacrosCard commandId={PROTO_ID} embedded />);
 
       await waitFor(() => {
         expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
       });
-      expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.compatibleMacros")).toBeInTheDocument();
     });
 
     it("should render title and description in embedded mode", async () => {
-      render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} embedded />);
+      render(<CommandCompatibleMacrosCard commandId={PROTO_ID} embedded />);
 
       await waitFor(() => {
-        expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+        expect(screen.getByText("commandSettings.compatibleMacros")).toBeInTheDocument();
       });
-      expect(screen.getByText("protocolSettings.compatibleMacrosDescription")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.compatibleMacrosDescription")).toBeInTheDocument();
     });
 
     it("should render compatible macros list in embedded mode", async () => {
-      render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} embedded />);
+      render(<CommandCompatibleMacrosCard commandId={PROTO_ID} embedded />);
 
       await waitFor(() => {
         expect(screen.getByText("Temperature Plot")).toBeInTheDocument();
@@ -267,7 +267,7 @@ describe("<ProtocolCompatibleMacrosCard />", () => {
     });
 
     it("should render the macro search dropdown in embedded mode", async () => {
-      render(<ProtocolCompatibleMacrosCard protocolId={PROTO_ID} embedded />);
+      render(<CommandCompatibleMacrosCard commandId={PROTO_ID} embedded />);
 
       await waitFor(() => {
         expect(screen.getByTestId("macro-dropdown")).toBeInTheDocument();

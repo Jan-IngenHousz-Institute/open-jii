@@ -3,7 +3,7 @@ import {
   createMacroCell,
   createMarkdownCell,
   createOutputCell,
-  createProtocolCell,
+  createCommandRefCell,
   createQuestionCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
@@ -47,7 +47,7 @@ function findDeleteButtonForCellWith(text: string) {
 
 beforeEach(() => {
   // Pickers query these on mount.
-  server.mount(contract.protocols.listProtocols, { body: [] });
+  server.mount(contract.commands.listCommands, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
 });
 
@@ -59,7 +59,7 @@ describe("createDefaultCell", () => {
     expect(cell.id).toBeDefined();
   });
 
-  it("throws for question type — question cells go through the picker for naming", () => {
+  it("throws for question type - question cells go through the picker for naming", () => {
     expect(() => createDefaultCell("question")).toThrow(/question picker/i);
   });
 
@@ -85,8 +85,11 @@ describe("createDefaultCell", () => {
     expect(createDefaultCell("markdown").id).not.toBe(createDefaultCell("markdown").id);
   });
 
-  it("throws for protocol type", () => {
-    expect(() => createDefaultCell("protocol")).toThrow(/protocol picker/i);
+  it("creates an inline command cell by default for command type", () => {
+    expect(createDefaultCell("command")).toMatchObject({
+      type: "command",
+      payload: { format: "string", content: "" },
+    });
   });
 
   it("throws for macro type", () => {
@@ -94,7 +97,7 @@ describe("createDefaultCell", () => {
   });
 });
 
-describe("WorkbookEditor — empty state", () => {
+describe("WorkbookEditor - empty state", () => {
   it("shows the empty workbook prompt and add buttons when not readOnly", () => {
     renderEditor();
     expect(screen.getByText("Empty workbook")).toBeInTheDocument();
@@ -147,7 +150,7 @@ describe("WorkbookEditor — empty state", () => {
   });
 });
 
-describe("WorkbookEditor — header gating", () => {
+describe("WorkbookEditor - header gating", () => {
   it("does not render the header when onConnect/onRunAll are missing", () => {
     renderEditor({ cells: [createMarkdownCell()] });
     expect(screen.queryByRole("button", { name: /run all/i })).not.toBeInTheDocument();
@@ -165,13 +168,13 @@ describe("WorkbookEditor — header gating", () => {
   });
 });
 
-describe("WorkbookEditor — cell rendering", () => {
+describe("WorkbookEditor - cell rendering", () => {
   it("assigns sequential execution numbers to executable cells only", () => {
     const cells: WorkbookCell[] = [
       createMarkdownCell({ id: "md" }),
-      createProtocolCell({
+      createCommandRefCell({
         id: "p",
-        payload: { protocolId: "proto-1", version: 1, name: "Proto" },
+        payload: { commandId: "proto-1", version: 1, name: "Proto" },
       }),
       createQuestionCell({ id: "q" }),
       createMacroCell({
@@ -192,13 +195,13 @@ describe("WorkbookEditor — cell rendering", () => {
   });
 
   it("uses runtime executionOrder when provided", () => {
-    const protocol = createProtocolCell({
+    const command = createCommandRefCell({
       id: "p",
-      payload: { protocolId: "proto-1", version: 1, name: "Proto" },
+      payload: { commandId: "proto-1", version: 1, name: "Proto" },
     });
 
     renderEditor({
-      cells: [protocol],
+      cells: [command],
       executionStates: { p: { status: "completed", executionOrder: [7, 9] } },
     });
 
@@ -230,7 +233,7 @@ describe("WorkbookEditor — cell rendering", () => {
   });
 });
 
-describe("WorkbookEditor — sidebar minimap", () => {
+describe("WorkbookEditor - sidebar minimap", () => {
   it("renders the sidebar with an item for each cell", () => {
     const cells: WorkbookCell[] = [
       createMarkdownCell({ id: "md", content: "<p>Hi</p>" }),
@@ -244,7 +247,7 @@ describe("WorkbookEditor — sidebar minimap", () => {
 
     expect(screen.getAllByText(/Markdown/).length).toBeGreaterThanOrEqual(2);
     // The sidebar now shows the question's name (its data column) as the row
-    // title, with the type conveyed by the icon/color — so "soil_moisture"
+    // title, with the type conveyed by the icon/color - so "soil_moisture"
     // appears in both the sidebar and the cell header. "Question" still shows
     // in the add-cell picker.
     expect(screen.getAllByText(/soil_moisture/).length).toBeGreaterThanOrEqual(2);
@@ -253,7 +256,7 @@ describe("WorkbookEditor — sidebar minimap", () => {
   });
 });
 
-describe("WorkbookEditor — delete flow", () => {
+describe("WorkbookEditor - delete flow", () => {
   it("removes a cell when its CellWrapper delete button is clicked", async () => {
     const user = userEvent.setup();
     const cells: WorkbookCell[] = [
@@ -302,7 +305,7 @@ function lastCellsArg(onCellsChange: ReturnType<typeof vi.fn>): WorkbookCell[] {
   return calls[calls.length - 1][0];
 }
 
-describe("WorkbookEditor — answer auto-creates an output cell", () => {
+describe("WorkbookEditor - answer auto-creates an output cell", () => {
   it("appends an output cell after a question cell when the user submits an answer", async () => {
     const user = userEvent.setup();
     const cells: WorkbookCell[] = [

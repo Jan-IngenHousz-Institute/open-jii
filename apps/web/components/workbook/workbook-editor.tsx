@@ -21,7 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -86,9 +86,8 @@ export function createDefaultCell(
     case "markdown":
       return { ...base, type: "markdown", content: "" };
     case "command":
+      // Default is an inline command; library references come from the command picker.
       return { ...base, type: "command", payload: { format: "string", content: "" } };
-    case "protocol":
-      throw new Error("Protocol cells must be created via the protocol picker");
     case "macro":
       throw new Error("Macro cells must be created via the macro picker");
     case "question":
@@ -461,7 +460,6 @@ export function WorkbookEditor({
     let counter = 1;
     for (const cell of cells) {
       if (
-        cell.type === "protocol" ||
         cell.type === "command" ||
         cell.type === "macro" ||
         cell.type === "question" ||

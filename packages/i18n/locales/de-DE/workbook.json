@@ -55,8 +55,8 @@
       "deleteInUseConfirm_other": "„{{name}}“ ist mit {{count}} Experimenten verknüpft. Beim Löschen wird die Verknüpfung aufgehoben und diese Experimente verlieren ihren Messablauf. Dies kann nicht rückgängig gemacht werden."
     },
     "cellSummary": {
-      "protocol_one": "{{count}} Protokoll",
-      "protocol_other": "{{count}} Protokolle",
+      "command_one": "{{count}} Protokoll",
+      "command_other": "{{count}} Protokolle",
       "command_one": "{{count}} Befehl",
       "command_other": "{{count}} Befehle",
       "macro_one": "{{count}} Makro",
@@ -83,7 +83,7 @@
     "copyJson": "JSON kopieren",
     "closeChart": "Diagramm schließen",
     "expandChart": "Diagramm für {{column}} öffnen",
-    "loadingProtocol": "Protokoll wird geladen…",
+    "loadingCommand": "Protokoll wird geladen…",
     "timeseriesXAxis": "Zeit (s)",
     "timeseriesYAxis": "Normalisiertes Signal",
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
@@ -91,7 +91,7 @@
     "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
   },
   "cells": {
-    "protocolReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
+    "commandReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "macroReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "fork": "Zum Bearbeiten forken",
     "forkedFrom": "Geforkt von"

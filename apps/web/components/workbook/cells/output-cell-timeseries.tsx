@@ -1,31 +1,31 @@
 "use client";
 
 import { extractMeasurement } from "@/lib/multispeq/detect";
-import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
+import type { InputRecord, OutputRecord, CommandJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
-// Plotly's own types are a workspace dep of @repo/ui, not of apps/web —
+// Plotly's own types are a workspace dep of @repo/ui, not of apps/web -
 // re-export them through the UI charts module so we don't pull plotly.js
 // into web's package.json just to type a layout object.
 import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
 
 interface OutputCellTimeseriesProps {
   data: unknown;
-  protocolCode: unknown;
+  commandCode: unknown;
   loading?: boolean;
   emptyLabel: string;
   errorLabel: string;
 }
 
 /**
- * Picks a usable ProtocolJson out of the protocol.code field. Protocols are
+ * Picks a usable CommandJson out of the command.code field. Commands are
  * stored as an array of dicts; the first dict is what carries _protocol_set_
  * and v_arrays. Falls back to the object itself for the bundled-JSON shape.
  */
-function pickProtocolJson(code: unknown): ProtocolJson | null {
+function pickCommandJson(code: unknown): CommandJson | null {
   if (code == null) return null;
   if (Array.isArray(code)) {
     const items = code as unknown[];
@@ -35,15 +35,15 @@ function pickProtocolJson(code: unknown): ProtocolJson | null {
   if (typeof code === "object") {
     const obj = code as Record<string, unknown>;
     if (obj._protocol_set_) return obj;
-    if (obj.protocol_json && typeof obj.protocol_json === "object") {
-      return obj.protocol_json;
+    if (obj.command_json && typeof obj.command_json === "object") {
+      return obj.command_json;
     }
   }
   return null;
 }
 
 interface SeriesGroup {
-  subProtocol: string | undefined;
+  subCommand: string | undefined;
   light: number;
   records: OutputRecord[];
 }
@@ -51,10 +51,10 @@ interface SeriesGroup {
 function groupOutputs(outputs: OutputRecord[]): SeriesGroup[] {
   const groups = new Map<string, SeriesGroup>();
   for (const r of outputs) {
-    const key = `${r.sub_protocol ?? ""}::${r.light}`;
+    const key = `${r.sub_command ?? ""}::${r.light}`;
     let group = groups.get(key);
     if (!group) {
-      group = { subProtocol: r.sub_protocol, light: r.light, records: [] };
+      group = { subCommand: r.sub_command, light: r.light, records: [] };
       groups.set(key, group);
     }
     group.records.push(r);
@@ -80,8 +80,8 @@ function buildDetectorTraces(groups: SeriesGroup[]): Partial<PlotData>[] {
     }
     const ledLabel = LED_NAMES[g.light] ?? `LED ${g.light}`;
     const rangeText = `[${Math.round(min)}-${Math.round(max)}]`;
-    const name = g.subProtocol
-      ? `${g.subProtocol} · ${ledLabel} ${rangeText}`
+    const name = g.subCommand
+      ? `${g.subCommand} · ${ledLabel} ${rangeText}`
       : `${ledLabel} ${rangeText}`;
     const color = LED_COLORS[g.light] ?? "#005E5E";
     const trace = {
@@ -103,7 +103,7 @@ function buildDetectorTraces(groups: SeriesGroup[]): Partial<PlotData>[] {
 
 /**
  * Plotly's background `shapes` don't appear in the legend on their own. Add
- * lightweight ghost traces — one per unique (LED, brightness) combo — that
+ * lightweight ghost traces - one per unique (LED, brightness) combo - that
  * carry the colour swatch and the brightness value as a legend label, with
  * `[NaN]` data so nothing actually plots.
  */
@@ -176,7 +176,7 @@ function buildShapes(inputs: InputRecord[], totalDurationS: number): Partial<Sha
       layer: "below",
     });
   }
-  // Sub-protocol boundary lines on the (left) normalised axis.
+  // Sub-command boundary lines on the (left) normalised axis.
   const boundaries = new Set<number>();
   for (const r of inputs) {
     if (r.light_type === "actinic" || r.light_type === "measuring") {
@@ -217,12 +217,12 @@ function buildShapes(inputs: InputRecord[], totalDurationS: number): Partial<Sha
 function buildAnnotations(inputs: InputRecord[], totalDurationS: number) {
   const byLabel = new Map<string, { start: number; end: number }>();
   for (const r of inputs) {
-    if (!r.sub_protocol) continue;
-    const span = byLabel.get(r.sub_protocol);
+    if (!r.sub_command) continue;
+    const span = byLabel.get(r.sub_command);
     const start = r.t_start_us / 1e6;
     const end = r.t_end_us / 1e6;
     if (!span) {
-      byLabel.set(r.sub_protocol, { start, end });
+      byLabel.set(r.sub_command, { start, end });
     } else {
       span.start = Math.min(span.start, start);
       span.end = Math.max(span.end, end);
@@ -261,7 +261,7 @@ function maxBrightness(inputs: InputRecord[]): number {
 
 export function OutputCellTimeseries({
   data,
-  protocolCode,
+  commandCode,
   loading,
   emptyLabel,
   errorLabel,
@@ -270,19 +270,19 @@ export function OutputCellTimeseries({
 
   const decoded = useMemo(() => {
     const measurement = extractMeasurement(data);
-    const protocolJson = pickProtocolJson(protocolCode);
-    if (!measurement || !protocolJson) return null;
+    const commandJson = pickCommandJson(commandCode);
+    if (!measurement || !commandJson) return null;
     try {
-      return measurementToTimeseries(measurement, protocolJson);
+      return measurementToTimeseries(measurement, commandJson);
     } catch {
       return null;
     }
-  }, [data, protocolCode]);
+  }, [data, commandCode]);
 
   if (loading) {
     return (
       <div className="flex h-[960px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
-        {t("output.loadingProtocol")}
+        {t("output.loadingCommand")}
       </div>
     );
   }

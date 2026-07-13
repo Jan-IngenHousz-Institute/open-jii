@@ -1,8 +1,16 @@
 "use client";
 
-import { BookOpen, Code, FileText, GitBranch, HelpCircle, Microscope, Terminal } from "lucide-react";
+import {
+  BookOpen,
+  Code,
+  FileText,
+  GitBranch,
+  HelpCircle,
+  Microscope,
+  Terminal,
+} from "lucide-react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -13,8 +21,8 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
+import { CommandPicker } from "./command-picker";
 import { MacroPicker } from "./macro-picker";
-import { ProtocolPicker } from "./protocol-picker";
 import { QuestionPicker } from "./question-picker";
 
 type CellType = WorkbookCell["type"];
@@ -30,18 +38,38 @@ interface AddCellButtonProps {
   showEmptyState?: boolean;
 }
 
-const cellOptions: {
+interface CellOption {
+  id: string;
   type: CellType;
   label: string;
   icon: typeof FileText;
   color: string;
-}[] = [
-  { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
-  { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
-  { type: "macro", label: "Macro", icon: Code, color: "#6C5CE7" },
-  { type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
-  { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
-  { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
+  // Picker-driven options open a popover that fires onAddCell with a fully
+  // formed cell (library command reference, macro ref, named question).
+  picker?: "command" | "macro" | "question";
+}
+
+const cellOptions: CellOption[] = [
+  { id: "markdown", type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
+  { id: "command", type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
+  {
+    id: "command-library",
+    type: "command",
+    label: "Command (library)",
+    icon: Microscope,
+    color: "#2D3142",
+    picker: "command",
+  },
+  { id: "macro", type: "macro", label: "Macro", icon: Code, color: "#6C5CE7", picker: "macro" },
+  {
+    id: "question",
+    type: "question",
+    label: "Question",
+    icon: HelpCircle,
+    color: "#C58AAE",
+    picker: "question",
+  },
+  { id: "branch", type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
 ];
 
 export function AddCellButton({
@@ -56,29 +84,29 @@ export function AddCellButton({
 }: AddCellButtonProps) {
   const options = showBranch ? cellOptions : cellOptions.filter((o) => o.type !== "branch");
 
-  const handleClick = (type: CellType) => {
-    // protocol/macro/question are picker-driven; their popovers fire onAddCell.
-    if (onAddCell && (type === "protocol" || type === "macro" || type === "question")) return;
-    onAdd(type);
+  const handleClick = (opt: CellOption) => {
+    // Picker-driven options open a popover; the popover fires onAddCell.
+    if (onAddCell && opt.picker) return;
+    onAdd(opt.type);
   };
 
-  const wrapWithPicker = (type: CellType, key: string, button: React.ReactNode) => {
+  const wrapWithPicker = (opt: CellOption, key: string, button: React.ReactNode) => {
     if (!onAddCell) return button;
-    if (type === "protocol") {
+    if (opt.picker === "command") {
       return (
-        <ProtocolPicker key={key} sensorFamily={sensorFamily} onSelect={onAddCell}>
+        <CommandPicker key={key} sensorFamily={sensorFamily} onSelect={onAddCell}>
           {button}
-        </ProtocolPicker>
+        </CommandPicker>
       );
     }
-    if (type === "macro") {
+    if (opt.picker === "macro") {
       return (
         <MacroPicker key={key} onSelect={onAddCell}>
           {button}
         </MacroPicker>
       );
     }
-    if (type === "question") {
+    if (opt.picker === "question") {
       return (
         <QuestionPicker key={key} existingCells={existingCells} onSelect={onAddCell}>
           {button}
@@ -109,12 +137,12 @@ export function AddCellButton({
         <div className="flex flex-wrap items-center justify-center gap-3">
           {options.map((opt) =>
             wrapWithPicker(
-              opt.type,
-              opt.label,
+              opt,
+              opt.id,
               <button
-                key={opt.label}
+                key={opt.id}
                 className="inline-flex h-[38px] items-center justify-center gap-1 rounded-lg bg-[#EDF2F6] px-4 text-[13px] font-semibold leading-[18px] text-[#011111] transition-colors hover:bg-[#E5EBF0]"
-                onClick={() => handleClick(opt.type)}
+                onClick={() => handleClick(opt)}
               >
                 <opt.icon className="size-4" style={{ color: opt.color }} />
                 {opt.label}
@@ -145,22 +173,17 @@ export function AddCellButton({
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 rounded-full p-0 hover:bg-[#EDF2F6]"
-                      onClick={() => handleClick(opt.type)}
+                      onClick={() => handleClick(opt)}
                     >
                       <opt.icon className="h-3.5 w-3.5" style={{ color: opt.color }} />
                     </Button>
                   );
 
-                  if (
-                    onAddCell &&
-                    (opt.type === "protocol" || opt.type === "macro" || opt.type === "question")
-                  ) {
+                  if (onAddCell && opt.picker) {
                     return (
-                      <Tooltip key={opt.label}>
+                      <Tooltip key={opt.id}>
                         <TooltipTrigger asChild>
-                          <div className="inline-flex">
-                            {wrapWithPicker(opt.type, opt.label, button)}
-                          </div>
+                          <div className="inline-flex">{wrapWithPicker(opt, opt.id, button)}</div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-xs">
                           {opt.label}
@@ -170,7 +193,7 @@ export function AddCellButton({
                   }
 
                   return (
-                    <Tooltip key={opt.label}>
+                    <Tooltip key={opt.id}>
                       <TooltipTrigger asChild>{button}</TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs">
                         {opt.label}

@@ -1,53 +1,51 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { CommandCell } from "@repo/api/schemas/workbook-cells.schema";
 
-import { ProtocolPicker } from "./protocol-picker";
+import { CommandPicker } from "./command-picker";
 
-function renderPicker(onSelect = vi.fn<(cell: ProtocolCell) => void>()) {
+function renderPicker(onSelect = vi.fn<(cell: CommandCell) => void>()) {
   return {
     ...render(
-      <ProtocolPicker onSelect={onSelect}>
-        <button>Add Protocol</button>
-      </ProtocolPicker>,
+      <CommandPicker onSelect={onSelect}>
+        <button>Add Command</button>
+      </CommandPicker>,
     ),
     onSelect,
   };
 }
 
-describe("ProtocolPicker", () => {
+describe("CommandPicker", () => {
   it("opens the popover when the trigger button is clicked", async () => {
     const user = userEvent.setup();
-    const protocols = [
-      createProtocol({ id: "p1", name: "Photosynthesis v2", family: "multispeq" }),
-    ];
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    const commands = [createCommand({ id: "p1", name: "Photosynthesis v2", family: "multispeq" })];
+    server.mount(contract.commands.listCommands, { body: commands });
 
     renderPicker();
 
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.click(screen.getByRole("button", { name: /add command/i }));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/search protocols/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/search commands/i)).toBeInTheDocument();
     });
   });
 
-  it("shows a list of protocols and selects one", async () => {
+  it("shows a list of commands and selects one", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    const protocols = [
-      createProtocol({ id: "p1", name: "Leaf Absorbance" }),
-      createProtocol({ id: "p2", name: "SPAD Measurement" }),
+    const commands = [
+      createCommand({ id: "p1", name: "Leaf Absorbance" }),
+      createCommand({ id: "p2", name: "SPAD Measurement" }),
     ];
-    server.mount(contract.protocols.listProtocols, { body: protocols });
+    server.mount(contract.commands.listCommands, { body: commands });
 
     renderPicker(onSelect);
 
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.click(screen.getByRole("button", { name: /add command/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Leaf Absorbance")).toBeInTheDocument();
@@ -58,53 +56,53 @@ describe("ProtocolPicker", () => {
     expect(onSelect).toHaveBeenCalledOnce();
     expect(onSelect.mock.lastCall).toMatchObject([
       {
-        type: "protocol",
+        type: "command",
         payload: {
-          protocolId: "p1",
+          commandId: "p1",
           name: "Leaf Absorbance",
         },
       },
     ]);
   });
 
-  it("shows 'Create new protocol' button that opens create form", async () => {
+  it("shows 'Create new command' button that opens create form", async () => {
     const user = userEvent.setup();
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(contract.commands.listCommands, { body: [] });
 
     renderPicker();
 
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.click(screen.getByRole("button", { name: /add command/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/create new protocol/i)).toBeInTheDocument();
+      expect(screen.getByText(/create new command/i)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText(/create new protocol/i));
+    await user.click(screen.getByText(/create new command/i));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/protocol name/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/command name/i)).toBeInTheDocument();
     });
   });
 
-  it("creates a new protocol and calls onSelect with the result", async () => {
+  it("creates a new command and calls onSelect with the result", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    const newProtocol = createProtocol({ id: "new-p1", name: "New Protocol" });
+    const newCommand = createCommand({ id: "new-p1", name: "New Command" });
 
-    server.mount(contract.protocols.listProtocols, { body: [] });
-    server.mount(contract.protocols.createProtocol, { body: newProtocol, status: 201 });
+    server.mount(contract.commands.listCommands, { body: [] });
+    server.mount(contract.commands.createCommand, { body: newCommand, status: 201 });
 
     renderPicker(onSelect);
 
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.click(screen.getByRole("button", { name: /add command/i }));
     await waitFor(() => {
-      expect(screen.getByText(/create new protocol/i)).toBeInTheDocument();
+      expect(screen.getByText(/create new command/i)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText(/create new protocol/i));
+    await user.click(screen.getByText(/create new command/i));
 
-    const nameInput = await screen.findByPlaceholderText(/protocol name/i);
-    await user.type(nameInput, "New Protocol");
+    const nameInput = await screen.findByPlaceholderText(/command name/i);
+    await user.type(nameInput, "New Command");
 
     await user.click(screen.getByRole("button", { name: /^create$/i }));
 
@@ -115,9 +113,9 @@ describe("ProtocolPicker", () => {
     expect(onSelect).toHaveBeenCalledOnce();
     expect(onSelect.mock.lastCall).toMatchObject([
       {
-        type: "protocol",
+        type: "command",
         payload: {
-          protocolId: "new-p1",
+          commandId: "new-p1",
         },
       },
     ]);
@@ -125,16 +123,16 @@ describe("ProtocolPicker", () => {
 
   it("shows Back button to return to search from create form", async () => {
     const user = userEvent.setup();
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(contract.commands.listCommands, { body: [] });
 
     renderPicker();
 
-    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.click(screen.getByRole("button", { name: /add command/i }));
     await waitFor(() => {
-      expect(screen.getByText(/create new protocol/i)).toBeInTheDocument();
+      expect(screen.getByText(/create new command/i)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText(/create new protocol/i));
+    await user.click(screen.getByText(/create new command/i));
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
@@ -143,7 +141,7 @@ describe("ProtocolPicker", () => {
     await user.click(screen.getByRole("button", { name: /back/i }));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/search protocols/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/search commands/i)).toBeInTheDocument();
     });
   });
 });

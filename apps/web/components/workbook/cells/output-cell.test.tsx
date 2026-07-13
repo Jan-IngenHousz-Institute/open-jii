@@ -1,12 +1,12 @@
-import { createOutputCell, createProtocolCell } from "@/test/factories";
+import { createOutputCell, createCommandRefCell } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { OutputCellComponent } from "./output-cell";
 
-const useProtocolMock = vi.hoisted(() => vi.fn());
-vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
-  useProtocol: useProtocolMock,
+const useCommandMock = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/command/useCommand/useCommand", () => ({
+  useCommand: useCommandMock,
 }));
 
 // Plotly cannot run in jsdom; render stubs that expose the series for assertions.
@@ -58,7 +58,7 @@ vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
   };
 });
 
-// jsdom does not implement navigator.clipboard — provide a minimal stub so
+// jsdom does not implement navigator.clipboard - provide a minimal stub so
 // useCopyToClipboard resolves instead of throwing. Hoisted so tests can
 // assert payloads and reset between runs (otherwise call counts leak).
 const writeText = vi.fn().mockResolvedValue(undefined);
@@ -76,8 +76,8 @@ describe("OutputCellComponent", () => {
     writeText.mockClear();
     onUpdate.mockClear();
     onDelete.mockClear();
-    useProtocolMock.mockReset();
-    useProtocolMock.mockReturnValue({ data: undefined, isLoading: false });
+    useCommandMock.mockReset();
+    useCommandMock.mockReturnValue({ data: undefined, isLoading: false });
   });
 
   it("displays execution time and messages with correct severity styling", () => {
@@ -143,7 +143,7 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("500ms")).toBeInTheDocument();
   });
 
-  it("renders a key/value table for plain object data (typical protocol output)", () => {
+  it("renders a key/value table for plain object data (typical command output)", () => {
     const cell = createOutputCell({
       data: { device_id: "abc-123", firmware_version: "1.2.3", sample_count: 42 },
     });
@@ -196,7 +196,7 @@ describe("OutputCellComponent", () => {
 
   it("renders sparklines inside nested rows (MultispeQ-style set[0] payload)", () => {
     const cell = createOutputCell({
-      data: { set: [{ ENV: [1, 2, 3], SUN: [10, 20, 30] }], protocol_id: 12 },
+      data: { set: [{ ENV: [1, 2, 3], SUN: [10, 20, 30] }], command_id: 12 },
     });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
@@ -328,7 +328,7 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
     expect(screen.getByText("missing")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
   });
 
   it("renders an empty-array placeholder for empty-array cell values", () => {
@@ -412,11 +412,11 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     // Non-object rows render as em-dash placeholders in every column.
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByText("\u2014").length).toBeGreaterThanOrEqual(4);
   });
 
   describe("Timeseries tab (multispeq)", () => {
-    function multispeqProtocolCode() {
+    function multispeqCommandCode() {
       return [
         {
           v_arrays: [[3]],
@@ -443,17 +443,17 @@ describe("OutputCellComponent", () => {
       };
     }
 
-    it("does not show the Timeseries tab when there is no source protocol cell", () => {
+    it("does not show the Timeseries tab when there is no source command cell", () => {
       const cell = createOutputCell({ data: multispeqOutput() });
       render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
       expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
     });
 
-    it("does not show the Timeseries tab when the source protocol family is not multispeq", () => {
-      const proto = createProtocolCell();
+    it("does not show the Timeseries tab when the source command family is not multispeq", () => {
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      useProtocolMock.mockReturnValue({
-        data: { body: { family: "ambyte", code: multispeqProtocolCode() } },
+      useCommandMock.mockReturnValue({
+        data: { body: { family: "ambyte", code: multispeqCommandCode() } },
         isLoading: false,
       });
       render(
@@ -468,13 +468,13 @@ describe("OutputCellComponent", () => {
     });
 
     it("does not show the Timeseries tab when output data is not a multispeq payload", () => {
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({
         data: { device_id: "abc", firmware: "1.0" },
         producedBy: proto.id,
       });
-      useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+      useCommandMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqCommandCode() } },
         isLoading: false,
       });
       render(
@@ -490,10 +490,10 @@ describe("OutputCellComponent", () => {
 
     it("shows a Timeseries tab and decodes detectors into a chart for multispeq output", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+      useCommandMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqCommandCode() } },
         isLoading: false,
       });
       render(
@@ -508,7 +508,7 @@ describe("OutputCellComponent", () => {
       const tab = screen.getByRole("tab", { name: "output.tabTimeseries" });
       await user.click(tab);
 
-      // Decoded series name follows "<sub_protocol> · <led label> [vmin-vmax]";
+      // Decoded series name follows "<sub_command> · <led label> [vmin-vmax]";
       // values are normalised 0..1.
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
       expect(screen.getByTestId("series-ABS · 530 nm (green, body) [10-30]")).toHaveTextContent(
@@ -516,13 +516,13 @@ describe("OutputCellComponent", () => {
       );
     });
 
-    it("shows a loading placeholder while the source protocol is being fetched", async () => {
+    it("shows a loading placeholder while the source command is being fetched", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       // Family is multispeq so the tab shows; `isLoading: true` triggers the
       // loading branch in OutputCellTimeseries.
-      useProtocolMock.mockReturnValue({
+      useCommandMock.mockReturnValue({
         data: { body: { family: "multispeq", code: undefined } },
         isLoading: true,
       });
@@ -535,17 +535,17 @@ describe("OutputCellComponent", () => {
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
-      expect(screen.getByText("output.loadingProtocol")).toBeInTheDocument();
+      expect(screen.getByText("output.loadingCommand")).toBeInTheDocument();
     });
 
-    it("shows the decode-error placeholder when the protocol code is missing", async () => {
+    it("shows the decode-error placeholder when the command code is missing", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Family is multispeq, isLoading is false, but no protocol code is
-      // available — measurementToTimeseries can't decode. Falls into the
+      // Family is multispeq, isLoading is false, but no command code is
+      // available - measurementToTimeseries can't decode. Falls into the
       // error branch.
-      useProtocolMock.mockReturnValue({
+      useCommandMock.mockReturnValue({
         data: { body: { family: "multispeq", code: undefined } },
         isLoading: false,
       });
@@ -563,19 +563,17 @@ describe("OutputCellComponent", () => {
 
     it("shows the empty placeholder when decoding succeeds but emits no detector data", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
-      // Sample with a sub-protocol whose label has no protocol set entry, so
+      const proto = createCommandRefCell();
+      // Sample with a sub-command whose label has no command set entry, so
       // outputs come back empty after decoding.
       const cell = createOutputCell({
         data: {
-          sample_raw: JSON.stringify([
-            { set: [{ label: "UNKNOWN_PROTOCOL_LABEL", data_raw: [] }] },
-          ]),
+          sample_raw: JSON.stringify([{ set: [{ label: "UNKNOWN_COMMAND_LABEL", data_raw: [] }] }]),
         },
         producedBy: proto.id,
       });
-      useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+      useCommandMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: multispeqCommandCode() } },
         isLoading: false,
       });
       render(
@@ -590,15 +588,15 @@ describe("OutputCellComponent", () => {
       expect(screen.getByText("output.timeseriesEmpty")).toBeInTheDocument();
     });
 
-    it("decodes a protocol passed in already-unwrapped (object, not single-element array) form", async () => {
+    it("decodes a command passed in already-unwrapped (object, not single-element array) form", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Pick the inner ProtocolJson object directly — pickProtocolJson should
+      // Pick the inner CommandJson object directly - pickCommandJson should
       // accept it as-is (the code field can be either a 1-element array or
-      // the inner dict, depending on how the protocol was saved).
-      const inner = multispeqProtocolCode()[0];
-      useProtocolMock.mockReturnValue({
+      // the inner dict, depending on how the command was saved).
+      const inner = multispeqCommandCode()[0];
+      useCommandMock.mockReturnValue({
         data: { body: { family: "multispeq", code: inner } },
         isLoading: false,
       });
@@ -616,8 +614,8 @@ describe("OutputCellComponent", () => {
 
     it("collapses repeated actinic brightness across phases into a min-max range entry", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
-      // Protocol with two phases at different actinic brightnesses for the same LED.
+      const proto = createCommandRefCell();
+      // Command with two phases at different actinic brightnesses for the same LED.
       const code = [
         {
           v_arrays: [[3, 3]],
@@ -642,7 +640,7 @@ describe("OutputCellComponent", () => {
         },
         producedBy: proto.id,
       });
-      useProtocolMock.mockReturnValue({
+      useCommandMock.mockReturnValue({
         data: { body: { family: "multispeq", code } },
         isLoading: false,
       });
@@ -662,15 +660,15 @@ describe("OutputCellComponent", () => {
       expect(seriesAttr).toMatch(/100-500 µmol/);
     });
 
-    it("decodes a protocol passed wrapped under a `protocol_json` field", async () => {
+    it("decodes a command passed wrapped under a `command_json` field", async () => {
       const user = userEvent.setup();
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // The bundled-protocol shape has the inner dict under .protocol_json;
+      // The bundled-command shape has the inner dict under .command_json;
       // the picker should unwrap it.
-      const inner = multispeqProtocolCode()[0];
-      useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: { protocol_json: inner } } },
+      const inner = multispeqCommandCode()[0];
+      useCommandMock.mockReturnValue({
+        data: { body: { family: "multispeq", code: { command_json: inner } } },
         isLoading: false,
       });
       render(

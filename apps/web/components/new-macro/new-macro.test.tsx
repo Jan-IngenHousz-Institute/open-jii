@@ -36,11 +36,11 @@ vi.mocked(useSession).mockReturnValue({
 
 describe("NewMacroForm", () => {
   beforeEach(() => {
-    // The form reads the current user and lists protocols to populate
-    // the "compatible protocols" picker; mount default empty responses so
+    // The form reads the current user and lists commands to populate
+    // the "compatible commands" picker; mount default empty responses so
     // every test doesn't have to do it.
     server.mount(contract.users.getUserProfile, { body: createUserProfile() });
-    server.mount(contract.protocols.listProtocols, { body: [] });
+    server.mount(contract.commands.listCommands, { body: [] });
   });
 
   it("renders form structure", async () => {

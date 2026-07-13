@@ -101,16 +101,16 @@ describe("Flow Conversion", () => {
   });
 
   describe("Measurement Node Conversion", () => {
-    it("should convert a valid measurement node with protocol", () => {
-      const protocolId = "550e8400-e29b-41d4-a716-446655440000";
+    it("should convert a valid measurement node with command", () => {
+      const commandId = "550e8400-e29b-41d4-a716-446655440000";
       const nodes: Node[] = [
         {
           id: "measurement-1",
-          type: "MEASUREMENT",
+          type: "COMMAND",
           position: { x: 0, y: 0 },
           data: {
             title: "CO2 Measurement",
-            protocolId: protocolId,
+            commandId: commandId,
             isStartNode: true,
           },
         },
@@ -124,7 +124,7 @@ describe("Flow Conversion", () => {
         type: "measurement",
         name: "CO2 Measurement",
         content: {
-          protocolId: protocolId,
+          commandId: commandId,
           params: {},
         },
         isStart: true,
@@ -135,11 +135,11 @@ describe("Flow Conversion", () => {
       expect(() => zUpsertFlowBody.parse(result)).not.toThrow();
     });
 
-    it("should throw error when measurement node has no protocol", () => {
+    it("should throw error when measurement node has no command", () => {
       const nodes: Node[] = [
         {
           id: "measurement-2",
-          type: "MEASUREMENT",
+          type: "COMMAND",
           position: { x: 0, y: 0 },
           data: {
             title: "Invalid Measurement",
@@ -150,14 +150,14 @@ describe("Flow Conversion", () => {
       const edges: Edge[] = [];
 
       expect(() => FlowMapper.toApiGraph(nodes, edges)).toThrow(
-        "A valid protocol must be selected for measurement nodes",
+        "A valid command must be selected for measurement nodes",
       );
     });
   });
 
   describe("Complete Flow Validation", () => {
     it("should convert and validate a complete flow", () => {
-      const protocolId = "550e8400-e29b-41d4-a716-446655440000";
+      const commandId = "550e8400-e29b-41d4-a716-446655440000";
       const nodes: Node[] = [
         {
           id: "start-question",
@@ -180,11 +180,11 @@ describe("Flow Conversion", () => {
         },
         {
           id: "measurement-1",
-          type: "MEASUREMENT",
+          type: "COMMAND",
           position: { x: 400, y: 0 },
           data: {
             title: "Data Collection",
-            protocolId: protocolId,
+            commandId: commandId,
           },
         },
       ];

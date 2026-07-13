@@ -34,7 +34,7 @@ describe("CommandPalette", () => {
       ["Home", "/en-US/platform"],
       ["Experiments", "/en-US/platform/experiments"],
       ["Workbooks", "/en-US/platform/workbooks"],
-      ["Protocols", "/en-US/platform/protocols"],
+      ["Commands", "/en-US/platform/commands"],
       ["Macros", "/en-US/platform/macros"],
       ["Transfer requests", "/en-US/platform/transfer-request"],
       ["Settings", "/en-US/platform/account"],

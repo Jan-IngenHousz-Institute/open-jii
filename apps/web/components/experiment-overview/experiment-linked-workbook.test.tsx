@@ -1,7 +1,7 @@
 import {
   createMacroCell,
   createOutputCell,
-  createProtocolCell,
+  createCommandRefCell,
   createWorkbook,
   createWorkbookVersionSummary,
 } from "@/test/factories";
@@ -29,14 +29,14 @@ describe("ExperimentLinkedWorkbook", () => {
   });
 
   it("renders workbook name and view link", async () => {
-    const workbook = createWorkbook({ id: workbookId, name: "Field Protocol v2" });
+    const workbook = createWorkbook({ id: workbookId, name: "Field Command v2" });
     server.mount(contract.workbooks.getWorkbook, { body: workbook });
     server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
 
     render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
 
     await waitFor(() => {
-      expect(screen.getByText("Field Protocol v2")).toBeInTheDocument();
+      expect(screen.getByText("Field Command v2")).toBeInTheDocument();
     });
     expect(screen.getByText("workbooks.viewWorkbook")).toBeInTheDocument();
   });
@@ -58,7 +58,7 @@ describe("ExperimentLinkedWorkbook", () => {
 
   it("renders cell summary pills", async () => {
     const cells = [
-      createProtocolCell({ id: "c1" }),
+      createCommandRefCell({ id: "c1" }),
       createMacroCell({ id: "c2" }),
       createMacroCell({ id: "c3" }),
       createOutputCell({ id: "c4", producedBy: "c1" }),
@@ -71,7 +71,7 @@ describe("ExperimentLinkedWorkbook", () => {
 
     // t() returns the key in tests; the count drives i18next plural selection at runtime.
     await waitFor(() => {
-      expect(screen.getByText("workbooks.cellSummary.protocol")).toBeInTheDocument();
+      expect(screen.getByText("workbooks.cellSummary.command")).toBeInTheDocument();
     });
     expect(screen.getByText("workbooks.cellSummary.macro")).toBeInTheDocument();
   });

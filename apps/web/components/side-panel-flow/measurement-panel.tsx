@@ -2,39 +2,39 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useState } from "react";
-import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
+import { useCommandSearch } from "~/hooks/command/useCommandSearch/useCommandSearch";
 
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
+import { CommandSearchWithDropdown } from "../command-search-with-dropdown";
 
 interface MeasurementPanelProps {
-  selectedProtocolId?: string;
-  onChange: (protocolId: string) => void;
+  selectedCommandId?: string;
+  onChange: (commandId: string) => void;
   disabled?: boolean;
 }
 
 export function MeasurementPanel({
-  selectedProtocolId = "",
+  selectedCommandId = "",
   onChange,
   disabled = false,
 }: MeasurementPanelProps) {
   const { t } = useTranslation("common");
 
-  // Protocol search state
-  const [protocolSearch, setProtocolSearch] = useState("");
-  const [debouncedProtocolSearch, isDebounced] = useDebounce(protocolSearch, 300);
-  const { protocols: protocolList, isLoading: isFetchingProtocols } =
-    useProtocolSearch(debouncedProtocolSearch);
+  // Command search state
+  const [commandSearch, setCommandSearch] = useState("");
+  const [debouncedCommandSearch, isDebounced] = useDebounce(commandSearch, 300);
+  const { commands: commandList, isLoading: isFetchingCommands } =
+    useCommandSearch(debouncedCommandSearch);
 
-  const availableProtocols: Protocol[] = protocolList ?? [];
+  const availableCommands: Command[] = commandList ?? [];
 
-  const handleAddProtocol = (protocolId: string) => {
+  const handleAddCommand = (commandId: string) => {
     if (disabled) return;
-    onChange(protocolId);
-    setProtocolSearch("");
+    onChange(commandId);
+    setCommandSearch("");
   };
 
   return (
@@ -45,15 +45,15 @@ export function MeasurementPanel({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ProtocolSearchWithDropdown
-          availableProtocols={availableProtocols}
-          value={selectedProtocolId}
-          placeholder={t("experiments.searchProtocols")}
-          loading={!isDebounced || isFetchingProtocols}
-          searchValue={protocolSearch}
-          onSearchChange={setProtocolSearch}
-          onAddProtocol={handleAddProtocol}
-          isAddingProtocol={false}
+        <CommandSearchWithDropdown
+          availableCommands={availableCommands}
+          value={selectedCommandId}
+          placeholder={t("experiments.searchCommands")}
+          loading={!isDebounced || isFetchingCommands}
+          searchValue={commandSearch}
+          onSearchChange={setCommandSearch}
+          onAddCommand={handleAddCommand}
+          isAddingCommand={false}
           disabled={disabled}
         />
       </CardContent>

@@ -3,20 +3,20 @@
 import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
 import type { ComponentType } from "react";
 
-import type { CreateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
-import { zCreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { CreateCommandRequestBody, SensorFamily } from "@repo/api/schemas/command.schema";
+import { zCreateCommandRequestBody } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { FormField } from "@repo/ui/components/form";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
-// Validation schema for step 2 — code only
-export const codeSchema = zCreateProtocolRequestBody.pick({ code: true });
+// Validation schema for step 2 - code only
+export const codeSchema = zCreateCommandRequestBody.pick({ code: true });
 
-interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
+interface CodeTestStepProps extends WizardStepProps<CreateCommandRequestBody> {
   browserSupport: { bluetooth: boolean; serial: boolean; any: boolean };
   setIsCodeValid: (v: boolean) => void;
-  ProtocolCodeEditor: ComponentType<{
+  CommandCodeEditor: ComponentType<{
     value: Record<string, unknown>[];
     onChange: (v: Record<string, unknown>[] | string | undefined) => void;
     onValidationChange: (v: boolean) => void;
@@ -26,8 +26,8 @@ interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
     height: string;
     borderless: boolean;
   }>;
-  IotProtocolRunner: ComponentType<{
-    protocolCode: Record<string, unknown>[];
+  IotCommandRunner: ComponentType<{
+    commandCode: Record<string, unknown>[];
     sensorFamily: SensorFamily;
     layout: "horizontal" | "vertical";
   }>;
@@ -42,8 +42,8 @@ export function CodeTestStep({
   isSubmitting = false,
   browserSupport,
   setIsCodeValid,
-  ProtocolCodeEditor,
-  IotProtocolRunner,
+  CommandCodeEditor,
+  IotCommandRunner,
 }: CodeTestStepProps) {
   const { t } = useTranslation();
 
@@ -52,16 +52,16 @@ export function CodeTestStep({
       control={form.control}
       name="code"
       render={({ field }) => (
-        <ProtocolCodeEditor
+        <CommandCodeEditor
           value={field.value}
           onChange={(val) => {
-            // Don't let undefined propagate — keep last valid value.
+            // Don't let undefined propagate - keep last valid value.
             // The editor handles its own validation display in the header.
             if (val !== undefined) field.onChange(val);
           }}
           onValidationChange={setIsCodeValid}
           label=""
-          placeholder={t("newProtocol.codePlaceholder")}
+          placeholder={t("newCommand.codePlaceholder")}
           height="100%"
           borderless
         />
@@ -74,13 +74,13 @@ export function CodeTestStep({
       <CodeTesterLayout
         codePanel={codeEditorContent}
         testerPanel={
-          <IotProtocolRunner
-            protocolCode={form.watch("code")}
+          <IotCommandRunner
+            commandCode={form.watch("code")}
             sensorFamily={form.watch("family")}
             layout="vertical"
           />
         }
-        testerTitle={t("newProtocol.testerTitle")}
+        testerTitle={t("newCommand.testerTitle")}
         browserSupport={browserSupport}
         testerDefaultSize={30}
       />

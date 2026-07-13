@@ -1,9 +1,9 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
+import { CommandResultsDisplay } from "./iot-command-results-display";
 
-describe("ProtocolResultsDisplay", () => {
+describe("CommandResultsDisplay", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -15,10 +15,10 @@ describe("ProtocolResultsDisplay", () => {
 
   describe("empty state", () => {
     it("displays empty state when no result", () => {
-      render(<ProtocolResultsDisplay testResult={null} />);
+      render(<CommandResultsDisplay testResult={null} />);
 
-      expect(screen.getByText("iot.protocolRunner.noResultsYet")).toBeInTheDocument();
-      expect(screen.getByText("iot.protocolRunner.runProtocolToSeeResults")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.noResultsYet")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.runCommandToSeeResults")).toBeInTheDocument();
     });
   });
 
@@ -31,27 +31,27 @@ describe("ProtocolResultsDisplay", () => {
     };
 
     it("displays success badge", () => {
-      render(<ProtocolResultsDisplay testResult={successResult} />);
-      expect(screen.getByText("iot.protocolRunner.success")).toBeInTheDocument();
+      render(<CommandResultsDisplay testResult={successResult} />);
+      expect(screen.getByText("iot.commandRunner.success")).toBeInTheDocument();
     });
 
     it("displays execution time", () => {
-      render(<ProtocolResultsDisplay testResult={successResult} />);
+      render(<CommandResultsDisplay testResult={successResult} />);
       expect(screen.getByText(/2340\s*ms/)).toBeInTheDocument();
     });
 
     it("displays success alert", () => {
-      render(<ProtocolResultsDisplay testResult={successResult} />);
-      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
+      render(<CommandResultsDisplay testResult={successResult} />);
+      expect(screen.getByText("iot.commandRunner.passed")).toBeInTheDocument();
     });
 
     it("displays response data in JSON format", () => {
-      render(<ProtocolResultsDisplay testResult={successResult} />);
+      render(<CommandResultsDisplay testResult={successResult} />);
       expect(screen.getByText(/"temperature": 25.5/)).toBeInTheDocument();
     });
 
     it("shows copy button", () => {
-      render(<ProtocolResultsDisplay testResult={successResult} />);
+      render(<CommandResultsDisplay testResult={successResult} />);
       expect(screen.getByRole("button", { name: /copy/i })).toBeInTheDocument();
     });
   });
@@ -65,27 +65,27 @@ describe("ProtocolResultsDisplay", () => {
     };
 
     it("displays error badge", () => {
-      render(<ProtocolResultsDisplay testResult={errorResult} />);
-      expect(screen.getByText("iot.protocolRunner.error")).toBeInTheDocument();
+      render(<CommandResultsDisplay testResult={errorResult} />);
+      expect(screen.getByText("iot.commandRunner.error")).toBeInTheDocument();
     });
 
     it("displays execution time", () => {
-      render(<ProtocolResultsDisplay testResult={errorResult} />);
+      render(<CommandResultsDisplay testResult={errorResult} />);
       expect(screen.getByText(/5000\s*ms/)).toBeInTheDocument();
     });
 
     it("displays error alert", () => {
-      render(<ProtocolResultsDisplay testResult={errorResult} />);
+      render(<CommandResultsDisplay testResult={errorResult} />);
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
 
     it("displays error message", () => {
-      render(<ProtocolResultsDisplay testResult={errorResult} />);
+      render(<CommandResultsDisplay testResult={errorResult} />);
       expect(screen.getByText("Device timeout - no response from sensor")).toBeInTheDocument();
     });
 
     it("does not show copy button for error", () => {
-      render(<ProtocolResultsDisplay testResult={errorResult} />);
+      render(<CommandResultsDisplay testResult={errorResult} />);
       expect(screen.queryByRole("button", { name: /copy/i })).not.toBeInTheDocument();
     });
   });
@@ -101,10 +101,10 @@ describe("ProtocolResultsDisplay", () => {
     it("copies data to clipboard when copy button is clicked", async () => {
       vi.useRealTimers(); // Use real timers for this test
       const user = userEvent.setup();
-      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      // Spy AFTER userEvent.setup() - it replaces navigator.clipboard
       const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText");
 
-      render(<ProtocolResultsDisplay testResult={successResult} />);
+      render(<CommandResultsDisplay testResult={successResult} />);
 
       const copyButton = screen.getByRole("button", { name: /copy/i });
       await user.click(copyButton);
@@ -122,12 +122,12 @@ describe("ProtocolResultsDisplay", () => {
         // noop
       });
       const user = userEvent.setup();
-      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      // Spy AFTER userEvent.setup() - it replaces navigator.clipboard
       vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(
         new Error("Clipboard error"),
       );
 
-      render(<ProtocolResultsDisplay testResult={successResult} />);
+      render(<CommandResultsDisplay testResult={successResult} />);
 
       const copyButton = screen.getByRole("button", { name: /copy/i });
       await user.click(copyButton);
@@ -156,7 +156,7 @@ describe("ProtocolResultsDisplay", () => {
         timestamp: new Date(),
       };
 
-      render(<ProtocolResultsDisplay testResult={complexResult} />);
+      render(<CommandResultsDisplay testResult={complexResult} />);
 
       expect(screen.getByText(/"measurements":/)).toBeInTheDocument();
       expect(screen.getByText(/"metadata":/)).toBeInTheDocument();
@@ -170,8 +170,8 @@ describe("ProtocolResultsDisplay", () => {
         timestamp: new Date(),
       };
 
-      render(<ProtocolResultsDisplay testResult={nullDataResult} />);
-      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
+      render(<CommandResultsDisplay testResult={nullDataResult} />);
+      expect(screen.getByText("iot.commandRunner.passed")).toBeInTheDocument();
     });
 
     it("handles undefined data", () => {
@@ -182,8 +182,8 @@ describe("ProtocolResultsDisplay", () => {
         timestamp: new Date(),
       };
 
-      render(<ProtocolResultsDisplay testResult={undefinedDataResult} />);
-      expect(screen.getByText("iot.protocolRunner.passed")).toBeInTheDocument();
+      render(<CommandResultsDisplay testResult={undefinedDataResult} />);
+      expect(screen.getByText("iot.commandRunner.passed")).toBeInTheDocument();
     });
   });
 });

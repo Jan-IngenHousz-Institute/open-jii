@@ -8,6 +8,9 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { DashboardFiltersProvider } from "../dashboard-filters-context";
+// Warm the Plotly-heavy dynamic chunk so next/dynamic resolves within the
+// findByText timeout regardless of suite order (cold transform exceeds 1s).
+import "./visualization/visualization-widget";
 import { WidgetRenderer } from "./widget-renderer";
 
 describe("WidgetRenderer", () => {

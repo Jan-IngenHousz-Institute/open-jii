@@ -1,6 +1,6 @@
 "use client";
 
-import { editProtocolFormSchema } from "@/util/schema";
+import { editCommandFormSchema } from "@/util/schema";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, MonitorX } from "lucide-react";
@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { UpdateCommandRequestBody, SensorFamily } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -41,35 +41,35 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
-import { useProtocolUpdate } from "../../hooks/protocol/useProtocolUpdate/useProtocolUpdate";
-import { IotProtocolRunner } from "../iot/iot-protocol-runner";
-import ProtocolCodeEditor from "../protocol-code-editor";
+import { useCommandUpdate } from "../../hooks/command/useCommandUpdate/useCommandUpdate";
+import CommandCodeEditor from "../command-code-editor";
+import { IotCommandRunner } from "../iot/iot-command-runner";
 
-interface ProtocolDetailsCardProps {
-  protocolId: string;
+interface CommandDetailsCardProps {
+  commandId: string;
   initialName: string;
   initialDescription: string;
   initialCode: Record<string, unknown>[];
   initialFamily: SensorFamily;
 }
 
-export function ProtocolDetailsCard({
-  protocolId,
+export function CommandDetailsCard({
+  commandId,
   initialName,
   initialDescription,
   initialCode,
   initialFamily,
-}: ProtocolDetailsCardProps) {
-  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
+}: CommandDetailsCardProps) {
+  const { mutateAsync: updateCommand, isPending: isUpdating } = useCommandUpdate(commandId);
   const { t } = useTranslation();
   const { t: tIot } = useTranslation("iot");
   const [isCodeValid, setIsCodeValid] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const browserSupport = useIotBrowserSupport();
 
-  const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
+  const form = useForm<UpdateCommandRequestBody & { name: string; family: SensorFamily }>({
     resolver: zodResolver(
-      editProtocolFormSchema.pick({ name: true, description: true, code: true, family: true }),
+      editCommandFormSchema.pick({ name: true, description: true, code: true, family: true }),
     ),
     defaultValues: {
       name: initialName,
@@ -79,14 +79,12 @@ export function ProtocolDetailsCard({
     },
   });
 
-  async function onSubmit(
-    data: UpdateProtocolRequestBody & { name: string; family: SensorFamily },
-  ) {
-    await updateProtocol({
-      params: { id: protocolId },
+  async function onSubmit(data: UpdateCommandRequestBody & { name: string; family: SensorFamily }) {
+    await updateCommand({
+      params: { id: commandId },
       body: data,
     });
-    toast({ description: t("protocols.protocolUpdated") });
+    toast({ description: t("commands.commandUpdated") });
   }
 
   return (
@@ -98,11 +96,9 @@ export function ProtocolDetailsCard({
         {/* Header */}
         <div className="flex flex-col gap-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h3 className="truncate text-lg font-medium">
-              {t("protocolSettings.generalSettings")}
-            </h3>
+            <h3 className="truncate text-lg font-medium">{t("commandSettings.generalSettings")}</h3>
             <p className="text-muted-foreground truncate text-sm">
-              {t("protocolSettings.generalDescription")}
+              {t("commandSettings.generalDescription")}
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -113,23 +109,21 @@ export function ProtocolDetailsCard({
                 isUpdating || !form.formState.isDirty || !form.formState.isValid || !isCodeValid
               }
             >
-              {t("protocolSettings.save")}
+              {t("commandSettings.save")}
             </Button>
           </div>
         </div>
 
         {/* Split Panel Layout */}
         <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-lg border">
-          {/* Left Panel - Protocol Details + Code Editor */}
+          {/* Left Panel - Command Details + Code Editor */}
           <ResizablePanel defaultSize={browserSupport.any ? 55 : 85} minSize={30}>
             <div className="h-full overflow-y-auto">
               <div className="flex h-full flex-col">
                 {/* Collapsible Details Section */}
                 <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
                   <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between border-b px-4 py-2.5 transition-colors">
-                    <span className="text-sm font-medium">
-                      {t("protocolSettings.detailsTitle")}
-                    </span>
+                    <span className="text-sm font-medium">{t("commandSettings.detailsTitle")}</span>
                     <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -140,9 +134,9 @@ export function ProtocolDetailsCard({
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("protocolSettings.name")}</FormLabel>
+                              <FormLabel>{t("commandSettings.name")}</FormLabel>
                               <FormControl>
-                                <Input {...field} trim placeholder={t("protocolSettings.name")} />
+                                <Input {...field} trim placeholder={t("commandSettings.name")} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -153,7 +147,7 @@ export function ProtocolDetailsCard({
                           name="family"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("protocolSettings.family")}</FormLabel>
+                              <FormLabel>{t("commandSettings.family")}</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -183,12 +177,12 @@ export function ProtocolDetailsCard({
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t("protocolSettings.description")}</FormLabel>
+                            <FormLabel>{t("commandSettings.description")}</FormLabel>
                             <FormControl>
                               <RichTextarea
                                 value={field.value ?? ""}
                                 onChange={field.onChange}
-                                placeholder={t("protocolSettings.description")}
+                                placeholder={t("commandSettings.description")}
                               />
                             </FormControl>
                             <FormMessage />
@@ -205,12 +199,12 @@ export function ProtocolDetailsCard({
                     control={form.control}
                     name="code"
                     render={({ field }) => (
-                      <ProtocolCodeEditor
+                      <CommandCodeEditor
                         value={field.value ?? [{}]}
                         onChange={field.onChange}
                         onValidationChange={setIsCodeValid}
                         label=""
-                        placeholder={t("protocolSettings.codePlaceholder")}
+                        placeholder={t("commandSettings.codePlaceholder")}
                         error={form.formState.errors.code?.message?.toString()}
                         height="100%"
                         borderless
@@ -237,12 +231,12 @@ export function ProtocolDetailsCard({
             >
               {/* Title bar */}
               <div className="flex w-full items-center border-b px-2.5 py-2.5 sm:px-4">
-                <span className="text-sm font-medium">{t("protocolSettings.testerTitle")}</span>
+                <span className="text-sm font-medium">{t("commandSettings.testerTitle")}</span>
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto p-2.5 sm:p-4">
                 {browserSupport.any ? (
-                  <IotProtocolRunner
-                    protocolCode={form.watch("code") ?? [{}]}
+                  <IotCommandRunner
+                    commandCode={form.watch("code") ?? [{}]}
                     sensorFamily={form.watch("family")}
                     layout="vertical"
                   />
@@ -251,10 +245,10 @@ export function ProtocolDetailsCard({
                     <div className="text-center">
                       <MonitorX className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
                       <div className="text-muted-foreground text-xs">
-                        {tIot("iot.protocolRunner.browserNotSupported")}
+                        {tIot("iot.commandRunner.browserNotSupported")}
                       </div>
                       <div className="text-muted-foreground/60 text-xs">
-                        {tIot("iot.protocolRunner.tryDifferentBrowser")}
+                        {tIot("iot.commandRunner.tryDifferentBrowser")}
                       </div>
                     </div>
                   </div>

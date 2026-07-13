@@ -26,14 +26,14 @@ describe("PlatformNotFound", () => {
     );
   });
 
-  it("should show protocols navigation when pathname includes /protocols", () => {
-    vi.mocked(usePathname).mockReturnValue("/en-US/platform/protocols/invalid-id");
+  it("should show commands navigation when pathname includes /commands", () => {
+    vi.mocked(usePathname).mockReturnValue("/en-US/platform/commands/invalid-id");
 
     render(<PlatformNotFound />);
 
-    expect(screen.getByRole("link", { name: /sidebar.protocols/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /sidebar.commands/ })).toHaveAttribute(
       "href",
-      "/platform/protocols",
+      "/platform/commands",
     );
   });
 

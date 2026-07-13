@@ -4,10 +4,10 @@ import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { CreateCommandRequestBody } from "@repo/api/schemas/command.schema";
 import { Form } from "@repo/ui/components/form";
 
-import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import { NewCommandDetailsCard } from "./new-command-details-card";
 
 // Mock MacroSearchWithDropdown
 vi.mock("../macro-search-with-dropdown", () => ({
@@ -43,8 +43,8 @@ vi.mock("@repo/ui/components/rich-textarea", async (importOriginal) => {
   };
 });
 
-const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocolRequestBody> }) => {
-  const form = useForm<CreateProtocolRequestBody>({
+const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateCommandRequestBody> }) => {
+  const form = useForm<CreateCommandRequestBody>({
     defaultValues: {
       name: "",
       description: "",
@@ -56,7 +56,7 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
 
   return (
     <Form {...form}>
-      <NewProtocolDetailsCard
+      <NewCommandDetailsCard
         form={form}
         selectedMacros={[]}
         onAddMacro={vi.fn()}
@@ -66,7 +66,7 @@ const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocol
   );
 };
 
-describe("NewProtocolDetailsCard", () => {
+describe("NewCommandDetailsCard", () => {
   beforeEach(() => {
     server.mount(contract.macros.listMacros, { body: [] });
   });
@@ -74,27 +74,27 @@ describe("NewProtocolDetailsCard", () => {
   it("should render name input with label", () => {
     render(<TestWrapper />);
 
-    expect(screen.getByLabelText("newProtocol.name")).toBeInTheDocument();
+    expect(screen.getByLabelText("newCommand.name")).toBeInTheDocument();
   });
 
   it("should render description field with placeholder", () => {
     render(<TestWrapper />);
 
     expect(screen.getByTestId("rich-textarea")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("newProtocol.description_field")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("newCommand.description_field")).toBeInTheDocument();
   });
 
   it("should display initial name value", () => {
-    render(<TestWrapper defaultValues={{ name: "My Protocol" }} />);
+    render(<TestWrapper defaultValues={{ name: "My Command" }} />);
 
-    expect(screen.getByDisplayValue("My Protocol")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("My Command")).toBeInTheDocument();
   });
 
   it("should render both form fields", () => {
     render(<TestWrapper />);
 
     // Name input
-    const nameInput = screen.getByLabelText("newProtocol.name");
+    const nameInput = screen.getByLabelText("newCommand.name");
     expect(nameInput).toBeInTheDocument();
     expect(nameInput.tagName).toBe("INPUT");
 

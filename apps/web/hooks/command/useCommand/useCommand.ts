@@ -3,15 +3,15 @@ import { shouldRetryQuery } from "@/util/query-retry";
 import { tsr } from "../../../lib/tsr";
 
 /**
- * Hook to fetch a single protocol by ID
- * @param protocolId The ID of the protocol to fetch
- * @returns Query result containing the protocol details
+ * Hook to fetch a single command by ID
+ * @param commandId The ID of the command to fetch
+ * @returns Query result containing the command details
  */
-export const useProtocol = (protocolId: string, enabled = true) => {
-  return tsr.protocols.getProtocol.useQuery({
-    queryData: { params: { id: protocolId } },
-    queryKey: ["protocol", protocolId],
+export const useCommand = (commandId: string, enabled = true) => {
+  return tsr.commands.getCommand.useQuery({
+    queryData: { params: { id: commandId } },
+    queryKey: ["command", commandId],
     retry: shouldRetryQuery,
-    enabled: enabled && !!protocolId,
+    enabled: enabled && !!commandId,
   });
 };

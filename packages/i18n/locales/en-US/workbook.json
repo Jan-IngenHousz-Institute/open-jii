@@ -55,8 +55,8 @@
       "deleteInUseConfirm_other": "“{{name}}” is attached to {{count}} experiments. Deleting it will unlink those experiments, which will lose their measurement flow. This cannot be undone."
     },
     "cellSummary": {
-      "protocol_one": "{{count}} Protocol",
-      "protocol_other": "{{count}} Protocols",
+      "command_one": "{{count}} Command",
+      "command_other": "{{count}} Commands",
       "command_one": "{{count}} Command",
       "command_other": "{{count}} Commands",
       "macro_one": "{{count}} Macro",
@@ -75,7 +75,7 @@
     "expand": "Expand output",
     "collapse": "Collapse output",
     "clear": "Clear output",
-    "empty": "No measurement data available - run a protocol or command cell first",
+    "empty": "No measurement data available - run a command or command cell first",
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
@@ -83,15 +83,15 @@
     "copyJson": "Copy JSON",
     "closeChart": "Close chart",
     "expandChart": "Expand chart for {{column}}",
-    "loadingProtocol": "Loading protocol…",
+    "loadingCommand": "Loading command…",
     "timeseriesXAxis": "Time (s)",
     "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
-    "timeseriesError": "Cannot decode this output against the source protocol"
+    "timeseriesError": "Cannot decode this output against the source command"
   },
   "cells": {
-    "protocolReadOnly": "Read-only. Fork it to edit.",
+    "commandReadOnly": "Read-only. Fork it to edit.",
     "macroReadOnly": "Read-only. Fork it to edit.",
     "fork": "Fork to edit",
     "forkedFrom": "Forked from"

@@ -10,7 +10,6 @@ import { nodeTypeColorMap } from "./node-config";
 // Object map for default step specifications by node type
 const DEFAULT_STEP_SPECIFICATIONS = {
   QUESTION: { kind: "open_ended", text: "" },
-  MEASUREMENT: { protocolId: undefined },
   COMMAND: { command: { format: "string", content: "" } },
   ANALYSIS: { macroId: undefined },
 } as const;

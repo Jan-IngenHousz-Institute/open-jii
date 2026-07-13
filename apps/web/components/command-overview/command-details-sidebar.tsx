@@ -1,6 +1,6 @@
 "use client";
 
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useCommandUpdate } from "@/hooks/command/useCommandUpdate/useCommandUpdate";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol, SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { Command, SensorFamily } from "@repo/api/schemas/command.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -33,42 +33,42 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
-import { ProtocolCompatibleMacrosCard } from "../protocol-settings/protocol-compatible-macros-card";
+import { useCommandCompatibleMacros } from "../../hooks/command/useCommandCompatibleMacros/useCommandCompatibleMacros";
+import { useCommandDelete } from "../../hooks/command/useCommandDelete/useCommandDelete";
+import { CommandCompatibleMacrosCard } from "../command-settings/command-compatible-macros-card";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 
-interface ProtocolDetailsSidebarProps {
-  protocolId: string;
-  protocol: Protocol;
+interface CommandDetailsSidebarProps {
+  commandId: string;
+  command: Command;
 }
 
-export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetailsSidebarProps) {
+export function CommandDetailsSidebar({ commandId, command }: CommandDetailsSidebarProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
   const locale = useLocale();
   const router = useRouter();
 
-  const isCreator = session?.user.id === protocol.createdBy;
-  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
+  const isCreator = session?.user.id === command.createdBy;
+  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.COMMAND_DELETION);
 
-  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
-  const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
-  const { data: compatibleMacrosData } = useProtocolCompatibleMacros(protocolId);
+  const { mutateAsync: updateCommand, isPending: isUpdating } = useCommandUpdate(commandId);
+  const { mutateAsync: deleteCommand, isPending: isDeleting } = useCommandDelete(commandId);
+  const { data: compatibleMacrosData } = useCommandCompatibleMacros(commandId);
   const compatibleMacrosCount = compatibleMacrosData?.body.length ?? 0;
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleFamilyChange = async (newFamily: string) => {
-    await updateProtocol(
+    await updateCommand(
       {
-        params: { id: protocolId },
+        params: { id: commandId },
         body: { family: newFamily as SensorFamily },
       },
       {
         onSuccess: () => {
-          toast({ description: t("protocols.protocolUpdated") });
+          toast({ description: t("commands.commandUpdated") });
         },
         onError: (err) => {
           toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -78,25 +78,25 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   };
 
   const handleDelete = async () => {
-    await deleteProtocol({ params: { id: protocolId } });
+    await deleteCommand({ params: { id: commandId } });
     setIsDeleteDialogOpen(false);
-    router.push(`/${locale}/platform/protocols`);
+    router.push(`/${locale}/platform/commands`);
   };
 
   return (
     <DetailsSidebarCard
-      title={t("protocols.detailsTitle")}
-      collapsedSummary={`${tCommon("common.updated")} ${formatDate(protocol.updatedAt)}, ${t("protocols.protocolId")} ${protocol.id.slice(0, 8)}...`}
+      title={t("commands.detailsTitle")}
+      collapsedSummary={`${tCommon("common.updated")} ${formatDate(command.updatedAt)}, ${t("commands.commandId")} ${command.id.slice(0, 8)}...`}
     >
       <div className="space-y-1">
-        <h4 className="text-sm font-medium">{t("protocols.protocolId")}</h4>
-        <p className="text-muted-foreground font-mono text-sm">{protocol.id}</p>
+        <h4 className="text-sm font-medium">{t("commands.commandId")}</h4>
+        <p className="text-muted-foreground font-mono text-sm">{command.id}</p>
       </div>
 
       <div className="space-y-1">
-        <h4 className="text-sm font-medium">{t("protocols.family")}</h4>
+        <h4 className="text-sm font-medium">{t("commands.family")}</h4>
         {isCreator ? (
-          <Select value={protocol.family} onValueChange={handleFamilyChange} disabled={isUpdating}>
+          <Select value={command.family} onValueChange={handleFamilyChange} disabled={isUpdating}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -110,31 +110,31 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
           </Select>
         ) : (
           <p className="text-muted-foreground text-sm capitalize">
-            {getSensorFamilyLabel(protocol.family)}
+            {getSensorFamilyLabel(command.family)}
           </p>
         )}
       </div>
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
-        <p className="text-muted-foreground text-sm">{formatDate(protocol.updatedAt)}</p>
+        <p className="text-muted-foreground text-sm">{formatDate(command.updatedAt)}</p>
       </div>
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.created")}</h4>
-        <p className="text-muted-foreground text-sm">{formatDate(protocol.createdAt)}</p>
+        <p className="text-muted-foreground text-sm">{formatDate(command.createdAt)}</p>
       </div>
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{t("experiments.createdBy")}</h4>
-        <p className="text-muted-foreground text-sm">{protocol.createdByName ?? "-"}</p>
+        <p className="text-muted-foreground text-sm">{command.createdByName ?? "-"}</p>
       </div>
 
-      {protocol.forkedFrom ? (
+      {command.forkedFrom ? (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
-            href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
+            href={`/${locale}/platform/commands/${command.forkedFrom}`}
             className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
           >
             {tCommon("common.viewOriginal")}
@@ -150,14 +150,14 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {isCreator ? (
-        <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
+        <CommandCompatibleMacrosCard commandId={commandId} embedded />
       ) : (
         <div className="space-y-1">
-          <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>
+          <h4 className="text-sm font-medium">{t("commandSettings.compatibleMacros")}</h4>
           <p className="text-muted-foreground text-sm">
             {compatibleMacrosCount > 0
               ? `${compatibleMacrosCount} ${compatibleMacrosCount === 1 ? "macro" : "macros"}`
-              : t("protocolSettings.noCompatibleMacros")}
+              : t("commandSettings.noCompatibleMacros")}
           </p>
         </div>
       )}
@@ -172,30 +172,30 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
           />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
-              {t("protocolSettings.dangerZone")}
+              {t("commandSettings.dangerZone")}
             </h5>
             <p className="text-muted-foreground mb-4 text-sm">
-              {t("protocolSettings.deleteWarning")}
+              {t("commandSettings.deleteWarning")}
             </p>
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="destructive">{t("protocolSettings.deleteProtocol")}</Button>
+                <Button variant="destructive">{t("commandSettings.deleteCommand")}</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-destructive">
-                    {t("protocolSettings.deleteProtocol")}
+                    {t("commandSettings.deleteCommand")}
                   </DialogTitle>
                   <DialogDescription>
-                    {tCommon("common.confirmDelete", { name: protocol.name })}
+                    {tCommon("common.confirmDelete", { name: command.name })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">
                   <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                    {t("protocolSettings.cancel")}
+                    {t("commandSettings.cancel")}
                   </Button>
                   <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                    {isDeleting ? t("protocolSettings.deleting") : t("protocolSettings.delete")}
+                    {isDeleting ? t("commandSettings.deleting") : t("commandSettings.delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

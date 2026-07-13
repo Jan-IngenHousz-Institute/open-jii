@@ -1,42 +1,42 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useCommandUpdate } from "@/hooks/command/useCommandUpdate/useCommandUpdate";
 import { FileSliders } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command } from "@repo/api/schemas/command.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-interface ProtocolLayoutContentProps {
+interface CommandLayoutContentProps {
   id: string;
-  protocol: Protocol;
+  command: Command;
   children: React.ReactNode;
   actions?: React.ReactNode;
 }
 
-export function ProtocolLayoutContent({
+export function CommandLayoutContent({
   id,
-  protocol,
+  command,
   children,
   actions,
-}: ProtocolLayoutContentProps) {
+}: CommandLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
-  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
+  const { mutateAsync: updateCommand, isPending: isUpdating } = useCommandUpdate(id);
 
-  const isCreator = session?.user.id === protocol.createdBy;
+  const isCreator = session?.user.id === command.createdBy;
 
   const handleTitleSave = async (newName: string) => {
-    await updateProtocol(
+    await updateCommand(
       { params: { id }, body: { name: newName } },
       {
         onSuccess: () => {
-          toast({ description: t("protocols.protocolUpdated") });
+          toast({ description: t("commands.commandUpdated") });
         },
         onError: (err) => {
           toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -48,13 +48,13 @@ export function ProtocolLayoutContent({
   return (
     <div className="space-y-6">
       <InlineEditableTitle
-        name={protocol.name}
+        name={command.name}
         hasAccess={isCreator}
         onSave={handleTitleSave}
         isPending={isUpdating}
         icon={<FileSliders className="h-6 w-6" />}
         badges={
-          protocol.sortOrder !== null ? (
+          command.sortOrder !== null ? (
             <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>
           ) : undefined
         }

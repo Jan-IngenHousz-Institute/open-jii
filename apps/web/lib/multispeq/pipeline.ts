@@ -1,15 +1,15 @@
 /**
- * Port of jii-data-platform's protocol_pipeline/pipeline.py.
- * Decodes a PhotosynQ/MultispeQ measurement (sample_raw + protocol JSON) into
+ * Port of jii-data-platform's command_pipeline/pipeline.py.
+ * Decodes a PhotosynQ/MultispeQ measurement (sample_raw + command JSON) into
  * input (LED) and output (detector) timeseries records.
  *
  * Timing model: a phase fires one pulse per detector channel, each spaced by
  * pulse_distance, so a phase with N pulses, K detector channels and D µs
  * pulse_distance lasts N*K*D µs. Variable resolution (`@nX:Y` / `@sX`) lives in
- * `@repo/iot` (`resolveProtocolVariables`), a single origin shared with the
- * mobile protocol estimator.
+ * `@repo/iot` (`resolveCommandVariables`), a single origin shared with the
+ * mobile command estimator.
  */
-import { resolveProtocolVariables } from "@repo/iot";
+import { resolveCommandVariables } from "@repo/iot";
 
 export const LED_NAMES: Record<number, string> = {
   1: "530 nm (green, body)",
@@ -38,7 +38,7 @@ export const LED_COLORS: Record<number, string> = {
   10: "#4e342e",
 };
 
-export interface ProtocolSetEntry {
+export interface CommandSetEntry {
   label?: string;
   pulses?: unknown[];
   pulse_distance?: unknown[];
@@ -48,20 +48,20 @@ export interface ProtocolSetEntry {
   nonpulsed_lights?: unknown[];
   nonpulsed_lights_brightness?: unknown[];
   pre_illumination?: unknown[];
-  protocols_delay?: number;
+  commands_delay?: number;
   e_time?: unknown;
 }
 
-export interface ProtocolJson {
-  _protocol_set_?: ProtocolSetEntry[];
+export interface CommandJson {
+  _protocol_set_?: CommandSetEntry[];
   v_arrays?: unknown[][];
 }
 
-export interface SubProtocolRecord {
+export interface SubCommandRecord {
   measurement_id: string | null;
   project_id: string | null;
-  protocol_id: number | null;
-  sub_protocol_index: number;
+  command_id: number | null;
+  sub_command_index: number;
   label: string;
   data_raw: number[];
   data_raw_len: number;
@@ -72,7 +72,7 @@ export interface SubProtocolRecord {
 }
 
 export interface InputRecord {
-  sub_protocol?: string;
+  sub_command?: string;
   phase_index: number;
   t_start_us: number;
   t_end_us: number;
@@ -82,7 +82,7 @@ export interface InputRecord {
 }
 
 export interface OutputRecord {
-  sub_protocol?: string;
+  sub_command?: string;
   phase_index: number;
   pulse_index: number;
   detector: number;
@@ -119,12 +119,12 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 /**
- * Build the `@nX:Y` / `@sX` lookup table for a sub-protocol occurrence.
+ * Build the `@nX:Y` / `@sX` lookup table for a sub-command occurrence.
  *
  * `@nX:Y` is constant across occurrences (a fixed cell of `v_arrays`).
  *
  * `@sX` is the "set parameter" used in scalar contexts (e.g. `pulses`).
- * When a protocol declares `set_repeats: N`, the device picks a different value
+ * When a command declares `set_repeats: N`, the device picks a different value
  * per repeat by indexing `v_arrays[X]` with the occurrence number. We mirror
  * that, `f_transient` with `pulses: ["@s8"]` and `v_arrays[8] = [20, 100]`
  * runs 20 pulses on repeat 0 and 100 on repeat 1.
@@ -133,17 +133,14 @@ function isFiniteNumber(v: unknown): v is number {
  * placeholder in `["p_light", 2500]`), we leave `@sX` unset so the caller can
  * fall back to the runtime `pi` brightness, that placeholder means "use the
  * measured ambient PAR", which is only known from the device's recorded `pi`
- * field, not from the protocol JSON.
+ * field, not from the command JSON.
  *
  * If the indexed slot is *out-of-range* (iteration past the array length), we
  * clamp to the last numeric value, this is the @s8 / `[20, 100]` style
  * pattern where the caller is asking for a value beyond the declared repeats.
  */
-export function resolveVariables(
-  protocolJson: ProtocolJson,
-  occurrence = 0,
-): Record<string, number> {
-  return resolveProtocolVariables(protocolJson.v_arrays ?? [], occurrence);
+export function resolveVariables(commandJson: CommandJson, occurrence = 0): Record<string, number> {
+  return resolveCommandVariables(commandJson.v_arrays ?? [], occurrence);
 }
 
 function resolveInt(val: unknown, variables: Record<string, number>): number | null {
@@ -164,8 +161,8 @@ function resolveNested(lst: unknown[], variables: Record<string, number>): (numb
   });
 }
 
-export function resolveProtocolSetEntry(
-  entry: ProtocolSetEntry,
+export function resolveCommandSetEntry(
+  entry: CommandSetEntry,
   variables: Record<string, number> = {},
 ): ResolvedEntry {
   return {
@@ -181,10 +178,10 @@ export function resolveProtocolSetEntry(
 }
 
 export function predictDataRawLength(
-  entry: ProtocolSetEntry,
+  entry: CommandSetEntry,
   variables: Record<string, number> = {},
 ): number {
-  const r = resolveProtocolSetEntry(entry, variables);
+  const r = resolveCommandSetEntry(entry, variables);
   let total = 0;
   for (let i = 0; i < r.pulses.length; i++) {
     const dets = getSafe(r.detectors, i, []);
@@ -196,10 +193,10 @@ export function predictDataRawLength(
 
 export function outputRecords(
   dataRaw: number[],
-  entry: ProtocolSetEntry,
+  entry: CommandSetEntry,
   variables: Record<string, number> = {},
 ): OutputRecord[] {
-  const r = resolveProtocolSetEntry(entry, variables);
+  const r = resolveCommandSetEntry(entry, variables);
   if (r.pulses.length === 0 || dataRaw.length === 0) return [];
 
   const out: OutputRecord[] = [];
@@ -254,12 +251,12 @@ function resolveArrayRef(ref: unknown, vArrays: unknown[][]): unknown[] {
 
 function resolvePreIllumination(
   preIllumination: unknown[],
-  protocolJson: ProtocolJson,
+  commandJson: CommandJson,
 ): { led: number; brightness: number | null; duration_ms: number }[] {
   if (preIllumination.length < 3) return [];
   const ledId = preIllumination[0];
   if (typeof ledId !== "number") return [];
-  const vArrays = protocolJson.v_arrays ?? [];
+  const vArrays = commandJson.v_arrays ?? [];
   const brightnesses = resolveArrayRef(preIllumination[1], vArrays);
   const durations = resolveArrayRef(preIllumination[2], vArrays);
   const steps: { led: number; brightness: number | null; duration_ms: number }[] = [];
@@ -287,12 +284,12 @@ function resolvePreIllumination(
 }
 
 export function inputRecords(
-  entry: ProtocolSetEntry,
+  entry: CommandSetEntry,
   variables: Record<string, number> = {},
-  protocolJson: ProtocolJson | null = null,
+  commandJson: CommandJson | null = null,
   pi: unknown[] | null = null,
 ): InputRecord[] {
-  const r = resolveProtocolSetEntry(entry, variables);
+  const r = resolveCommandSetEntry(entry, variables);
   const records: InputRecord[] = [];
   let tUs = 0;
 
@@ -313,8 +310,8 @@ export function inputRecords(
       });
     }
     tUs += durUs;
-  } else if (entry.pre_illumination && protocolJson) {
-    for (const step of resolvePreIllumination(entry.pre_illumination, protocolJson)) {
+  } else if (entry.pre_illumination && commandJson) {
+    for (const step of resolvePreIllumination(entry.pre_illumination, commandJson)) {
       const durUs = step.duration_ms > 0 ? step.duration_ms * 1000 : 0;
       if (step.led !== 0 && durUs > 0) {
         records.push({
@@ -397,14 +394,14 @@ function explodeV1Item(
   measurementId: string | null,
   projectId: string | null,
   index: number,
-): SubProtocolRecord {
-  const { data_raw, protocol_id, time, time_offset, ...rest } = item;
+): SubCommandRecord {
+  const { data_raw, command_id, time, time_offset, ...rest } = item;
   const dataRaw = Array.isArray(data_raw) ? data_raw.filter(isFiniteNumber).map(Math.trunc) : [];
   return {
     measurement_id: measurementId,
     project_id: projectId,
-    protocol_id: isFiniteNumber(protocol_id) ? Math.trunc(protocol_id) : null,
-    sub_protocol_index: index,
+    command_id: isFiniteNumber(command_id) ? Math.trunc(command_id) : null,
+    sub_command_index: index,
     label: "",
     data_raw: dataRaw,
     data_raw_len: dataRaw.length,
@@ -420,8 +417,8 @@ function explodeV2Item(
   measurementId: string | null,
   projectId: string | null,
   indexOffset = 0,
-): SubProtocolRecord[] {
-  const protocolId = item.protocol_id;
+): SubCommandRecord[] {
+  const commandId = item.command_id;
   const time = item.time;
   const sets = Array.isArray(item.set) ? item.set : [];
   return sets.flatMap((s, idx) => {
@@ -433,8 +430,8 @@ function explodeV2Item(
       {
         measurement_id: measurementId,
         project_id: projectId,
-        protocol_id: isFiniteNumber(protocolId) ? Math.trunc(protocolId) : null,
-        sub_protocol_index: idx + indexOffset,
+        command_id: isFiniteNumber(commandId) ? Math.trunc(commandId) : null,
+        sub_command_index: idx + indexOffset,
         label: typeof label === "string" ? label : "",
         data_raw: dataRaw,
         data_raw_len: dataRaw.length,
@@ -451,7 +448,7 @@ function isV2Item(item: unknown): item is Record<string, unknown> {
   return item != null && typeof item === "object" && !Array.isArray(item) && "set" in item;
 }
 
-export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord[] {
+export function explodeRecords(measurement: MeasurementInput): SubCommandRecord[] {
   const raw = measurement.sample_raw;
   if (raw == null) return [];
   let parsed: unknown;
@@ -468,8 +465,8 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
 
   // Walk items independently so a v2 envelope's nested `set` data isn't lost
   // just because one stray non-v2 item snuck in. Track per-branch indices so
-  // the sub_protocol_index stays globally unique.
-  const out: SubProtocolRecord[] = [];
+  // the sub_command_index stays globally unique.
+  const out: SubCommandRecord[] = [];
   let v2Offset = 0;
   let v1Index = 0;
   for (const item of items) {
@@ -489,8 +486,8 @@ export function explodeRecords(measurement: MeasurementInput): SubProtocolRecord
 export interface MeasurementTimeseries {
   inputs: InputRecord[];
   outputs: OutputRecord[];
-  /** Total duration in microseconds, sum of declared sub-protocol durations
-   * plus any `protocols_delay` waits. The device's e_time wall-clock markers
+  /** Total duration in microseconds, sum of declared sub-command durations
+   * plus any `commands_delay` waits. The device's e_time wall-clock markers
    * are intentionally ignored (they vary with device-internal autogain/env
    * work that doesn't map to user-meaningful chart time). */
   totalDurationUs: number;
@@ -498,10 +495,10 @@ export interface MeasurementTimeseries {
 
 export function measurementToTimeseries(
   measurement: MeasurementInput,
-  protocolJson: ProtocolJson,
+  commandJson: CommandJson,
 ): MeasurementTimeseries {
-  const pset = protocolJson._protocol_set_ ?? [];
-  const setByLabel = new Map<string, ProtocolSetEntry>();
+  const pset = commandJson._protocol_set_ ?? [];
+  const setByLabel = new Map<string, CommandSetEntry>();
   for (const ps of pset) if (ps.label) setByLabel.set(ps.label, ps);
 
   const allRecords = explodeRecords(measurement);
@@ -526,7 +523,7 @@ export function measurementToTimeseries(
     const psDef = setByLabel.get(row.label);
 
     if (psDef) {
-      const delayS = psDef.protocols_delay;
+      const delayS = psDef.commands_delay;
       if (isFiniteNumber(delayS) && delayS > 0) tOffset += Math.trunc(delayS * 1_000_000);
     }
 
@@ -538,7 +535,7 @@ export function measurementToTimeseries(
 
     // `@sX` resolves to v_arrays[X][occurrence], so each set repeat picks its
     // own value (e.g. f_transient runs 20 pulses on repeat 0, 100 on repeat 1).
-    const variables = resolveVariables(protocolJson, occurrence);
+    const variables = resolveVariables(commandJson, occurrence);
 
     let pi: unknown[] | null = null;
     if (row.pi_json) {
@@ -555,19 +552,19 @@ export function measurementToTimeseries(
     const outputs = outputRecords(row.data_raw, psDef, variables);
     if (outputs.length === 0) continue;
 
-    const inputs = inputRecords(psDef, variables, protocolJson, effectivePi);
+    const inputs = inputRecords(psDef, variables, commandJson, effectivePi);
     const subDur = inputs.reduce((m, r) => Math.max(m, r.t_end_us), 0);
     const preIllumDur = inputs
       .filter((r) => r.light_type === "pre_illumination")
       .reduce((m, r) => Math.max(m, r.t_end_us), 0);
 
     for (const r of inputs) {
-      r.sub_protocol = label;
+      r.sub_command = label;
       r.t_start_us += tOffset;
       r.t_end_us += tOffset;
     }
     for (const r of outputs) {
-      r.sub_protocol = label;
+      r.sub_command = label;
       r.timestamp_us += preIllumDur + tOffset;
     }
 
@@ -579,19 +576,19 @@ export function measurementToTimeseries(
   // The device holds actinic LEDs at their last nonpulsed brightness through
   // wall-clock gaps (autogain, env sensors, etc.), there is no break in the
   // actinic light, only in data acquisition. Extend the last-phase actinic
-  // records of each sub-protocol to the start of the next so the input chart
+  // records of each sub-command to the start of the next so the input chart
   // is continuous. Measuring/pulsed lights are NOT extended; those really are
-  // off between sub-protocols.
+  // off between sub-commands.
   const subStart = new Map<string, number>();
   const subOrder: string[] = [];
   for (const r of allInputs) {
-    if (r.sub_protocol == null) continue;
-    const prev = subStart.get(r.sub_protocol);
+    if (r.sub_command == null) continue;
+    const prev = subStart.get(r.sub_command);
     if (prev == null) {
-      subStart.set(r.sub_protocol, r.t_start_us);
-      subOrder.push(r.sub_protocol);
+      subStart.set(r.sub_command, r.t_start_us);
+      subOrder.push(r.sub_command);
     } else if (r.t_start_us < prev) {
-      subStart.set(r.sub_protocol, r.t_start_us);
+      subStart.set(r.sub_command, r.t_start_us);
     }
   }
   subOrder.sort((a, b) => (subStart.get(a) ?? 0) - (subStart.get(b) ?? 0));
@@ -601,14 +598,14 @@ export function measurementToTimeseries(
       i + 1 < subOrder.length ? (subStart.get(subOrder[i + 1]) ?? tOffset) : tOffset;
     let maxPhase = -1;
     for (const r of allInputs) {
-      if (r.sub_protocol === cur && r.light_type === "actinic" && r.phase_index > maxPhase) {
+      if (r.sub_command === cur && r.light_type === "actinic" && r.phase_index > maxPhase) {
         maxPhase = r.phase_index;
       }
     }
     if (maxPhase < 0) continue;
     for (const r of allInputs) {
       if (
-        r.sub_protocol === cur &&
+        r.sub_command === cur &&
         r.light_type === "actinic" &&
         r.phase_index === maxPhase &&
         r.t_end_us < nextStart
@@ -621,7 +618,7 @@ export function measurementToTimeseries(
   // Anchor the time axis to the first record so charts always start at t=0,
   // not at "however long the user took to click Run after start_time fired".
   // Wall-clock markers determine the true device idle time *between* sub-
-  // protocols; the slack *before* the first sub-protocol is just user delay
+  // commands; the slack *before* the first sub-command is just user delay
   // and shouldn't show up as empty space on the left of the chart.
   let zeroOffset = Infinity;
   for (const r of allInputs) if (r.t_start_us < zeroOffset) zeroOffset = r.t_start_us;

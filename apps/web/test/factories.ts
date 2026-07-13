@@ -9,6 +9,7 @@
  * const exp = createExperiment({ name: "My test", status: "archived" });
  * ```
  */
+import type { Command } from "@repo/api/schemas/command.schema";
 import type {
   DashboardLayout,
   DashboardWidget,
@@ -32,15 +33,14 @@ import type {
 } from "@repo/api/schemas/experiment.schema";
 import type { IotDevice } from "@repo/api/schemas/iot.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
 import type {
   BranchCell,
   CommandCell,
+  CommandReferencePayload,
   MacroCell,
   MarkdownCell,
   OutputCell,
-  ProtocolCell,
   QuestionCell,
 } from "@repo/api/schemas/workbook-cells.schema";
 import type { WorkbookVersionSummary } from "@repo/api/schemas/workbook-version.schema";
@@ -168,16 +168,16 @@ export function createMacro(overrides: Partial<Macro> = {}): Macro {
   };
 }
 
-// ── Protocol ────────────────────────────────────────────────────
+// ── Command ────────────────────────────────────────────────────
 
-let protocolSeq = 0;
+let commandSeq = 0;
 
-export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
-  protocolSeq++;
+export function createCommand(overrides: Partial<Command> = {}): Command {
+  commandSeq++;
   return {
-    id: `protocol-${protocolSeq}-${crypto.randomUUID().slice(0, 8)}`,
-    name: `Protocol ${protocolSeq}`,
-    description: `Description for protocol ${protocolSeq}`,
+    id: `command-${commandSeq}-${crypto.randomUUID().slice(0, 8)}`,
+    name: `Command ${commandSeq}`,
+    description: `Description for command ${commandSeq}`,
     code: [{ _protocol_set_: [] }],
     family: "multispeq",
     sortOrder: null,
@@ -369,7 +369,7 @@ export function createFlowNode(
   const content =
     overrides.content ??
     (type === "measurement"
-      ? { protocolId: crypto.randomUUID() }
+      ? { commandId: crypto.randomUUID() }
       : type === "analysis"
         ? { macroId: crypto.randomUUID() }
         : { text: `Step ${flowSeq}` });
@@ -460,22 +460,36 @@ export function createMarkdownCell(overrides: Partial<MarkdownCell> = {}): Markd
   };
 }
 
-export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): ProtocolCell {
+/** A command cell referencing a versioned library command. */
+export function createCommandRefCell(
+  overrides: Partial<Omit<CommandCell, "payload">> & {
+    payload?: Partial<CommandReferencePayload>;
+  } = {},
+): CommandCell & { payload: CommandReferencePayload } {
   cellSeq++;
+  const { payload, ...rest } = overrides;
   return {
-    id: `cell-proto-${cellSeq}`,
-    type: "protocol",
-    payload: { protocolId: crypto.randomUUID(), version: 1 },
+    id: `cell-ref-${cellSeq}`,
+    type: "command",
     isCollapsed: false,
-    ...overrides,
+    ...rest,
+    payload: {
+      commandId: payload?.commandId ?? crypto.randomUUID(),
+      version: payload?.version ?? 1,
+      ...(payload?.name !== undefined ? { name: payload.name } : {}),
+    },
   };
 }
+
+/** An inline command cell. */
 
 export function createCommandCell(
   overrides: Partial<Omit<CommandCell, "payload">> & {
     payload?: Partial<{ format: "string" | "json" | "yaml"; content: string; name: string }>;
   } = {},
-): CommandCell {
+): CommandCell & {
+  payload: { format: "string" | "json" | "yaml"; content: string; name?: string };
+} {
   cellSeq++;
   const { payload, ...rest } = overrides;
   return {
@@ -731,7 +745,7 @@ export function resetFactories() {
   experimentSeq = 0;
   transferSeq = 0;
   macroSeq = 0;
-  protocolSeq = 0;
+  commandSeq = 0;
   workbookSeq = 0;
   vizSeq = 0;
   tableSeq = 0;

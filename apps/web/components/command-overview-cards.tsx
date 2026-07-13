@@ -1,10 +1,10 @@
-import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useCommandCompatibleMacros } from "@/hooks/command/useCommandCompatibleMacros/useCommandCompatibleMacros";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
-import type { Protocol, ProtocolMacroEntry } from "@repo/api/schemas/protocol.schema";
+import type { Command, CommandMacroEntry } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -37,9 +37,9 @@ const cardVariants = cva(
   },
 );
 
-function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
-  const { data } = useProtocolCompatibleMacros(protocolId, enabled);
-  const macros: ProtocolMacroEntry[] = useMemo(() => data?.body ?? [], [data]);
+function CompatibleMacrosList({ commandId, enabled }: { commandId: string; enabled: boolean }) {
+  const { data } = useCommandCompatibleMacros(commandId, enabled);
+  const macros: CommandMacroEntry[] = useMemo(() => data?.body ?? [], [data]);
 
   if (macros.length === 0) return null;
 
@@ -57,44 +57,42 @@ function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; ena
   );
 }
 
-function ProtocolCard({
-  protocol,
+function CommandCard({
+  command,
   locale,
   t,
 }: {
-  protocol: Protocol;
+  command: Command;
   locale: string;
   t: (key: string) => string;
 }) {
   const [hovered, setHovered] = useState(false);
-  const isPreferred = protocol.sortOrder !== null;
+  const isPreferred = command.sortOrder !== null;
 
   return (
     <Link
-      href={`/${locale}/platform/protocols/${protocol.id}`}
+      href={`/${locale}/platform/commands/${command.id}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <div className={cardVariants({ featured: isPreferred })}>
         <div className="inline-flex gap-1">
-          <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
-            {protocol.family}
-          </Badge>
+          <Badge className={`${getFamilyColor(command.family)} capitalize`}>{command.family}</Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}
         </div>
         <div className="mb-auto">
           <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-            {protocol.name}
+            {command.name}
           </h3>
           <div className="overflow-hidden text-sm text-gray-500">
-            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+            <RichTextRenderer content={command.description ?? " "} truncate maxLines={2} />
           </div>
         </div>
-        <CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />
+        <CompatibleMacrosList commandId={command.id} enabled={hovered} />
         <p className="text-xs text-gray-400">
-          {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
+          {t("commands.lastUpdate")}: {new Date(command.updatedAt).toLocaleDateString()}
         </p>
         <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
       </div>
@@ -102,11 +100,11 @@ function ProtocolCard({
   );
 }
 
-export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
+export function CommandOverviewCards({ commands }: { commands: Command[] | undefined }) {
   const { t } = useTranslation("common");
   const locale = useLocale();
 
-  if (!protocols) {
+  if (!commands) {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
@@ -116,18 +114,18 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
     );
   }
 
-  if (protocols.length === 0) {
+  if (commands.length === 0) {
     return (
       <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
-        {t("protocols.noProtocols")}
+        {t("commands.noCommands")}
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {protocols.map((protocol) => (
-        <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
+      {commands.map((command) => (
+        <CommandCard key={command.id} command={command} locale={locale} t={t} />
       ))}
     </div>
   );

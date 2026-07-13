@@ -31,10 +31,10 @@ const questionCell: WorkbookCell = {
   isAnswered: false,
 };
 
-const protocolCell: WorkbookCell = {
+const commandCell: WorkbookCell = {
   id: "proto-1",
-  type: "protocol",
-  payload: { protocolId: "p1", version: 1, name: "Light sensor" },
+  type: "command",
+  payload: { commandId: "p1", version: 1, name: "Light sensor" },
   isCollapsed: false,
 };
 
@@ -50,7 +50,7 @@ function renderBranch(
       cell={cell}
       onUpdate={onUpdate}
       onDelete={onDelete}
-      allCells={[cell, questionCell, protocolCell]}
+      allCells={[cell, questionCell, commandCell]}
       {...props}
     />,
   );

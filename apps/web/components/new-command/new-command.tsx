@@ -1,15 +1,15 @@
 "use client";
 
-import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
-import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
+import { useAddCompatibleMacro } from "@/hooks/command/useAddCompatibleMacro/useAddCompatibleMacro";
+import { useCommandCreate } from "@/hooks/command/useCommandCreate/useCommandCreate";
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
+import type { CreateCommandRequestBody } from "@repo/api/schemas/command.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -23,14 +23,14 @@ import {
 import { WizardForm } from "@repo/ui/components/wizard-form";
 import type { WizardStep, WizardStepProps } from "@repo/ui/components/wizard-form";
 
-import { IotProtocolRunner } from "../iot/iot-protocol-runner";
-import ProtocolCodeEditor from "../protocol-code-editor";
-import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import CommandCodeEditor from "../command-code-editor";
+import { IotCommandRunner } from "../iot/iot-command-runner";
+import { NewCommandDetailsCard } from "./new-command-details-card";
 import { CodeTestStep, codeSchema } from "./steps/code-test-step";
 import { DetailsStep, detailsSchema } from "./steps/details-step";
 import { ReviewStep, reviewSchema } from "./steps/review-step";
 
-export function NewProtocolForm() {
+export function NewCommandForm() {
   const router = useRouter();
   const { t } = useTranslation();
   const locale = useLocale();
@@ -42,18 +42,18 @@ export function NewProtocolForm() {
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
-  // Selected macros (local state before protocol creation)
+  // Selected macros (local state before command creation)
   const [selectedMacros, setSelectedMacros] = useState<Macro[]>([]);
 
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
-  const { mutate: createProtocol, isPending } = useProtocolCreate({
+  const { mutate: createCommand, isPending } = useCommandCreate({
     onSettled: () => {
       setIsSubmitting(false);
     },
     onSuccess: (data) => {
       const id = data.body.id;
-      // Link selected macros after protocol creation, then redirect
+      // Link selected macros after command creation, then redirect
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
@@ -61,14 +61,14 @@ export function NewProtocolForm() {
             body: { macroIds: selectedMacros.map((m) => m.id) },
           })
           .catch(() => {
-            // Protocol created successfully, macro linking failed - still redirect
+            // Command created successfully, macro linking failed - still redirect
           })
           .finally(() => {
-            router.push(`/${locale}/platform/protocols/${id}`);
+            router.push(`/${locale}/platform/commands/${id}`);
           });
         return;
       }
-      router.push(`/${locale}/platform/protocols/${id}`);
+      router.push(`/${locale}/platform/commands/${id}`);
     },
   });
 
@@ -82,12 +82,8 @@ export function NewProtocolForm() {
 
   // Helper to create DetailsStep with the details card
   const createDetailsStep = () => {
-    const DetailsCardWithMacros = ({
-      form,
-    }: {
-      form: UseFormReturn<CreateProtocolRequestBody>;
-    }) => (
-      <NewProtocolDetailsCard
+    const DetailsCardWithMacros = ({ form }: { form: UseFormReturn<CreateCommandRequestBody> }) => (
+      <NewCommandDetailsCard
         form={form}
         selectedMacros={selectedMacros}
         onAddMacro={(macro: Macro) => {
@@ -101,7 +97,7 @@ export function NewProtocolForm() {
       />
     );
 
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
+    const Component = (props: WizardStepProps<CreateCommandRequestBody>) => {
       return <DetailsStep {...props} cards={[DetailsCardWithMacros]} />;
     };
     return Component;
@@ -109,15 +105,15 @@ export function NewProtocolForm() {
 
   // Helper to create CodeTestStep with IoT props
   const createCodeTestStep = () => {
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+    const Component = (props: WizardStepProps<CreateCommandRequestBody>) => (
       <CodeTestStep
         {...props}
         browserSupport={browserSupport}
         setIsCodeValid={(v: boolean) => {
           isCodeValidRef.current = v;
         }}
-        ProtocolCodeEditor={ProtocolCodeEditor}
-        IotProtocolRunner={IotProtocolRunner}
+        CommandCodeEditor={CommandCodeEditor}
+        IotCommandRunner={IotCommandRunner}
       />
     );
     return Component;
@@ -125,29 +121,29 @@ export function NewProtocolForm() {
 
   // Helper to create ReviewStep with macros
   const createReviewStep = () => {
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+    const Component = (props: WizardStepProps<CreateCommandRequestBody>) => (
       <ReviewStep {...props} selectedMacros={selectedMacros} />
     );
     return Component;
   };
 
-  const steps: WizardStep<CreateProtocolRequestBody>[] = useMemo(
+  const steps: WizardStep<CreateCommandRequestBody>[] = useMemo(
     () => [
       {
-        title: t("newProtocol.detailsStepTitle"),
-        description: t("newProtocol.detailsStepDescription"),
+        title: t("newCommand.detailsStepTitle"),
+        description: t("newCommand.detailsStepDescription"),
         validationSchema: detailsSchema,
         component: createDetailsStep(),
       },
       {
-        title: t("newProtocol.codeStepTitle"),
-        description: t("newProtocol.codeStepDescription"),
+        title: t("newCommand.codeStepTitle"),
+        description: t("newCommand.codeStepDescription"),
         validationSchema: codeSchema,
         component: createCodeTestStep(),
       },
       {
-        title: t("newProtocol.reviewStepTitle"),
-        description: t("newProtocol.reviewStepDescription"),
+        title: t("newCommand.reviewStepTitle"),
+        description: t("newCommand.reviewStepDescription"),
         validationSchema: reviewSchema,
         component: createReviewStep(),
       },
@@ -156,9 +152,9 @@ export function NewProtocolForm() {
     [t, browserSupport, selectedMacros],
   );
 
-  function onSubmit(data: CreateProtocolRequestBody) {
+  function onSubmit(data: CreateCommandRequestBody) {
     setIsSubmitting(true);
-    createProtocol({
+    createCommand({
       body: {
         name: data.name,
         description: data.description,
@@ -222,7 +218,7 @@ export function NewProtocolForm() {
   return (
     <>
       <div onChange={handleFormChange} onInput={handleFormChange}>
-        <WizardForm<CreateProtocolRequestBody>
+        <WizardForm<CreateCommandRequestBody>
           steps={steps}
           defaultValues={{
             name: "",
@@ -240,15 +236,15 @@ export function NewProtocolForm() {
       <Dialog open={showDialog} onOpenChange={handleCancelNavigation}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("newProtocol.unsavedChangesTitle")}</DialogTitle>
-            <DialogDescription>{t("newProtocol.unsavedChangesMessage")}</DialogDescription>
+            <DialogTitle>{t("newCommand.unsavedChangesTitle")}</DialogTitle>
+            <DialogDescription>{t("newCommand.unsavedChangesMessage")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleCancelNavigation}>
-              {t("newProtocol.unsavedStay")}
+              {t("newCommand.unsavedStay")}
             </Button>
             <Button variant="destructive" onClick={handleConfirmNavigation}>
-              {t("newProtocol.unsavedLeave")}
+              {t("newCommand.unsavedLeave")}
             </Button>
           </DialogFooter>
         </DialogContent>

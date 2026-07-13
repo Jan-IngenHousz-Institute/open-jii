@@ -1,8 +1,8 @@
 import z from "zod";
 
+import { zUpdateCommandRequestBody } from "@repo/api/schemas/command.schema";
 import { zUpdateExperimentBody } from "@repo/api/schemas/experiment.schema";
 import { zUpdateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import { zUpdateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 
 export const editExperimentFormSchema = zUpdateExperimentBody
   .required({
@@ -14,7 +14,7 @@ export const editExperimentFormSchema = zUpdateExperimentBody
 
 export type EditExperimentForm = z.infer<typeof editExperimentFormSchema>;
 
-export const editProtocolFormSchema = zUpdateProtocolRequestBody
+export const editCommandFormSchema = zUpdateCommandRequestBody
   .required({
     name: true,
     family: true,
@@ -23,7 +23,7 @@ export const editProtocolFormSchema = zUpdateProtocolRequestBody
     id: z.string().uuid(),
   });
 
-export type EditProtocolForm = z.infer<typeof editProtocolFormSchema>;
+export type EditCommandForm = z.infer<typeof editCommandFormSchema>;
 
 export const editMacroFormSchema = zUpdateMacroRequestBody
   .required({

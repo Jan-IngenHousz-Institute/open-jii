@@ -1,16 +1,16 @@
 import { tsr } from "../../../lib/tsr";
 
 /**
- * Hook to remove a compatible protocol from a macro
+ * Hook to remove a compatible command from a macro
  * @param macroId The macro ID (used for cache invalidation)
  */
-export const useRemoveCompatibleProtocol = (macroId: string) => {
+export const useRemoveCompatibleCommand = (macroId: string) => {
   const queryClient = tsr.useQueryClient();
 
-  return tsr.macros.removeCompatibleProtocol.useMutation({
+  return tsr.macros.removeCompatibleCommand.useMutation({
     onSettled: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["macro-compatible-protocols", macroId],
+        queryKey: ["macro-compatible-commands", macroId],
       });
     },
   });

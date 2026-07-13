@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { use } from "react";
@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import ProtocolOverviewPage from "../page";
+import CommandOverviewPage from "../page";
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
@@ -48,7 +48,7 @@ vi.mock("@/components/json-code-viewer", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-code-editor", () => ({
+vi.mock("@/components/command-code-editor", () => ({
   default: ({
     value,
     title,
@@ -63,7 +63,7 @@ vi.mock("@/components/protocol-code-editor", () => ({
     title?: React.ReactNode;
     headerActions?: React.ReactNode;
   }) => (
-    <div data-testid="protocol-code-editor">
+    <div data-testid="command-code-editor">
       {title && <span data-testid="editor-title">{title}</span>}
       {headerActions && <span data-testid="editor-actions">{headerActions}</span>}
       <button data-testid="editor-change-btn" onClick={() => onChange([{ averages: 2 }])}>
@@ -80,17 +80,17 @@ vi.mock("@/components/protocol-code-editor", () => ({
   ),
 }));
 
-vi.mock("@/components/protocol-overview/protocol-details-sidebar", () => ({
-  ProtocolDetailsSidebar: ({
-    protocolId,
-    protocol,
+vi.mock("@/components/command-overview/command-details-sidebar", () => ({
+  CommandDetailsSidebar: ({
+    commandId,
+    command,
   }: {
-    protocolId: string;
-    protocol: Record<string, unknown>;
+    commandId: string;
+    command: Record<string, unknown>;
   }) => (
-    <div data-testid="protocol-details-sidebar">
-      <span data-testid="sidebar-protocol-id">{protocolId}</span>
-      <span data-testid="sidebar-protocol-name">{String(protocol.name)}</span>
+    <div data-testid="command-details-sidebar">
+      <span data-testid="sidebar-command-id">{commandId}</span>
+      <span data-testid="sidebar-command-name">{String(command.name)}</span>
     </div>
   ),
 }));
@@ -129,9 +129,9 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
-const mockProtocol = createProtocol({
+const mockCommand = createCommand({
   id: "proto-1",
-  name: "Water Quality Protocol",
+  name: "Water Quality Command",
   description: "Measures water quality parameters",
   family: "multispeq",
   code: [{ averages: 1 }],
@@ -141,7 +141,7 @@ const mockProtocol = createProtocol({
   createdBy: "other-user",
 });
 
-describe("ProtocolOverviewPage", () => {
+describe("CommandOverviewPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -152,61 +152,61 @@ describe("ProtocolOverviewPage", () => {
     } as ReturnType<typeof useSession>);
 
     // Mount both endpoints by default so auto-save doesn't fail
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
-    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.commands.getCommand, { body: mockCommand });
+    server.mount(contract.commands.updateCommand, { body: mockCommand });
   });
 
   it("should render loading state", () => {
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol, delay: 999_999 });
+    server.mount(contract.commands.getCommand, { body: mockCommand, delay: 999_999 });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     expect(screen.getByText("common.loading")).toBeInTheDocument();
   });
 
   it("should render error state", async () => {
-    server.mount(contract.protocols.getProtocol, { status: 500 });
+    server.mount(contract.commands.getCommand, { status: 500 });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("error-display")).toBeInTheDocument();
     });
-    expect(screen.getByText("errors.failedToLoadProtocol")).toBeInTheDocument();
+    expect(screen.getByText("errors.failedToLoadCommand")).toBeInTheDocument();
   });
 
   it("should render the sidebar and main content area on success", async () => {
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.commands.getCommand, { body: mockCommand });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("protocol-details-sidebar")).toBeInTheDocument();
+      expect(screen.getByTestId("command-details-sidebar")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("sidebar-protocol-id")).toHaveTextContent("proto-1");
-    expect(screen.getByTestId("sidebar-protocol-name")).toHaveTextContent("Water Quality Protocol");
+    expect(screen.getByTestId("sidebar-command-id")).toHaveTextContent("proto-1");
+    expect(screen.getByTestId("sidebar-command-name")).toHaveTextContent("Water Quality Command");
   });
 
   it("should render the inline editable description with correct props", async () => {
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.commands.getCommand, { body: mockCommand });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("inline-editable-description")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("description-title")).toHaveTextContent("protocols.descriptionTitle");
+    expect(screen.getByTestId("description-title")).toHaveTextContent("commands.descriptionTitle");
     expect(screen.getByTestId("description-content")).toHaveTextContent(
       "Measures water quality parameters",
     );
   });
 
   it("should pass hasAccess=false to description when user is not the creator", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "other-user" }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("description-has-access")).toHaveTextContent("false");
@@ -214,11 +214,11 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should pass hasAccess=true to description when user is the creator", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "user-123" }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("description-has-access")).toHaveTextContent("true");
@@ -226,32 +226,32 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should render the code viewer with title", async () => {
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+    server.mount(contract.commands.getCommand, { body: mockCommand });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("viewer-title")).toHaveTextContent("protocols.codeTitle");
+      expect(screen.getByTestId("viewer-title")).toHaveTextContent("commands.codeTitle");
     });
   });
 
-  it("should render JsonCodeViewer with protocol code when not editing", async () => {
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
+  it("should render JsonCodeViewer with command code when not editing", async () => {
+    server.mount(contract.commands.getCommand, { body: mockCommand });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
     });
-    expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("command-code-editor")).not.toBeInTheDocument();
   });
 
   it("should show the edit button for the creator when not editing", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "user-123" }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /common\.edit/i })).toBeInTheDocument();
@@ -260,11 +260,11 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should not show the edit button for non-creators", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "other-user" }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
@@ -274,11 +274,11 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should handle null description gracefully", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, description: null }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, description: null }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("description-content")).toHaveTextContent("");
@@ -286,12 +286,12 @@ describe("ProtocolOverviewPage", () => {
   });
 
   it("should call toast with success message when description save succeeds", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "user-123" }),
     });
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    const updateSpy = server.mount(contract.commands.updateCommand, { body: mockCommand });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("description-save-btn")).toBeInTheDocument();
@@ -305,16 +305,16 @@ describe("ProtocolOverviewPage", () => {
     });
     expect(updateSpy.body).toMatchObject({ description: "updated description" });
     expect(updateSpy.params).toMatchObject({ id: "proto-1" });
-    expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+    expect(toast).toHaveBeenCalledWith({ description: "commands.commandUpdated" });
   });
 
   it("should call toast with destructive variant when description save fails", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "user-123" }),
     });
-    server.mount(contract.protocols.updateProtocol, { status: 400 });
+    server.mount(contract.commands.updateCommand, { status: 400 });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("description-save-btn")).toBeInTheDocument();
@@ -328,22 +328,22 @@ describe("ProtocolOverviewPage", () => {
     });
   });
 
-  it("should switch to ProtocolCodeEditor when creator clicks edit button", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+  it("should switch to CommandCodeEditor when creator clicks edit button", async () => {
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ ...mockCommand, createdBy: "user-123" }),
     });
 
-    render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
+    render(<CommandOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
     });
-    expect(screen.queryByTestId("protocol-code-editor")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("command-code-editor")).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /common\.edit/i }));
 
-    expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
     expect(screen.queryByTestId("json-viewer")).not.toBeInTheDocument();
   });
 });

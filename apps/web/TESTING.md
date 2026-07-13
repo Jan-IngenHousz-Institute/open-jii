@@ -132,7 +132,7 @@ createSession({ user: { registered: false } });
 createVisualization({ experimentId: "exp-1" });
 ```
 
-Available: `createExperiment`, `createTransferRequest`, `createExperimentAccess`, `createSession`, `createMacro`, `createProtocol`, `createUserProfile`, `createVisualization`, `createExperimentTable`, `createExperimentDataTable`, `createPlace`, `createLocation`, `createFlow`, `createFlowNode`.
+Available: `createExperiment`, `createTransferRequest`, `createExperimentAccess`, `createSession`, `createMacro`, `createCommand`, `createUserProfile`, `createVisualization`, `createExperimentTable`, `createExperimentDataTable`, `createPlace`, `createLocation`, `createFlow`, `createFlowNode`.
 
 **Extend `test/factories.ts`** whenever a test needs a new entity type or shape. Add a new factory function following the existing pattern (sequential ID, sensible defaults, `Partial<T>` overrides). This keeps hand-crafted test data and `as any` casts out of individual test files.
 

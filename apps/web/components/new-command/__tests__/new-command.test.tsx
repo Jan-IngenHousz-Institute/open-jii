@@ -1,11 +1,11 @@
-import { createMacro, createProtocol } from "@/test/factories";
+import { createMacro, createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, fireEvent, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { NewProtocolForm } from "../new-protocol";
+import { NewCommandForm } from "../new-command";
 
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, true],
@@ -40,8 +40,8 @@ vi.mock("@repo/ui/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
-// Mock ProtocolCodeEditor
-vi.mock("../../protocol-code-editor", () => ({
+// Mock CommandCodeEditor
+vi.mock("../../command-code-editor", () => ({
   default: ({
     value,
     onChange,
@@ -53,7 +53,7 @@ vi.mock("../../protocol-code-editor", () => ({
     onValidationChange: (v: boolean) => void;
     title?: string;
   }) => (
-    <div data-testid="protocol-code-editor">
+    <div data-testid="command-code-editor">
       {title && <span>{title}</span>}
       <textarea
         data-testid="code-editor"
@@ -72,9 +72,9 @@ vi.mock("../../protocol-code-editor", () => ({
   ),
 }));
 
-// Mock IotProtocolRunner
-vi.mock("../../iot/iot-protocol-runner", () => ({
-  IotProtocolRunner: () => <div data-testid="iot-protocol-runner">Protocol Runner</div>,
+// Mock IotCommandRunner
+vi.mock("../../iot/iot-command-runner", () => ({
+  IotCommandRunner: () => <div data-testid="iot-command-runner">Command Runner</div>,
 }));
 
 // Mock useIotBrowserSupport
@@ -88,7 +88,7 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   }),
 }));
 
-describe("NewProtocolForm", () => {
+describe("NewCommandForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastDropdownProps = null;
@@ -99,15 +99,15 @@ describe("NewProtocolForm", () => {
         createMacro({ id: "macro-2", name: "Fluorescence Macro", language: "python" }),
       ],
     });
-    server.mount(contract.protocols.createProtocol, {
-      body: createProtocol({ id: "new-protocol-id", name: "Test Protocol" }),
+    server.mount(contract.commands.createCommand, {
+      body: createCommand({ id: "new-command-id", name: "Test Command" }),
     });
-    server.mount(contract.protocols.addCompatibleMacros, { body: [] });
+    server.mount(contract.commands.addCompatibleMacros, { body: [] });
   });
 
   describe("Step 1 - Details", () => {
     it("should render the wizard with step indicators", () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       // Step indicator should be visible (3 steps: Details, Code & Test, Review)
       expect(screen.getByText("1")).toBeInTheDocument();
@@ -116,37 +116,37 @@ describe("NewProtocolForm", () => {
     });
 
     it("should render the details card on step 1", () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
-      expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.name")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.family")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.description_field")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.detailsTitle")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.name")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.family")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.description_field")).toBeInTheDocument();
     });
 
     it("should render compatible macros section on step 1", () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
-      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.compatibleMacros")).toBeInTheDocument();
       expect(screen.getByTestId("macro-search-dropdown")).toBeInTheDocument();
     });
 
     it("should show next and back buttons on step 1", () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
     });
 
     it("should have back button disabled on step 1", () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       const backButton = screen.getByRole("button", { name: /back/i });
       expect(backButton).toBeDisabled();
     });
 
     it("should pass available macros to the dropdown", async () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       await waitFor(() => {
         expect(lastDropdownProps).not.toBeNull();
@@ -157,7 +157,7 @@ describe("NewProtocolForm", () => {
     });
 
     it("should add a macro when onAddMacro is called", async () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       await waitFor(() => {
         expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
@@ -173,7 +173,7 @@ describe("NewProtocolForm", () => {
     });
 
     it("should filter out already-selected macros from available list", async () => {
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       await waitFor(() => {
         expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
@@ -193,12 +193,12 @@ describe("NewProtocolForm", () => {
   describe("Step 2 - Code & Test", () => {
     const goToStep2 = async () => {
       const user = userEvent.setup();
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       // Fill in required name field
-      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      const nameInput = screen.getByRole("textbox", { name: /newCommand\.name/i });
       // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
-      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
+      fireEvent.change(nameInput, { target: { value: "Test Command" } });
 
       // Click next to go to step 2
       const nextButton = screen.getByRole("button", { name: /next/i });
@@ -206,7 +206,7 @@ describe("NewProtocolForm", () => {
 
       // Wait for step 2 to render
       await waitFor(() => {
-        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+        expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
       });
       return user;
     };
@@ -214,8 +214,8 @@ describe("NewProtocolForm", () => {
     it("should show code editor and IoT tester on step 2", async () => {
       await goToStep2();
 
-      expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
-      expect(screen.getByTestId("iot-protocol-runner")).toBeInTheDocument();
+      expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
+      expect(screen.getByTestId("iot-command-runner")).toBeInTheDocument();
     });
 
     it("should initialize code editor with default values", async () => {
@@ -253,7 +253,7 @@ describe("NewProtocolForm", () => {
       await user.click(backButton);
 
       await waitFor(() => {
-        expect(screen.getByText("newProtocol.detailsTitle")).toBeInTheDocument();
+        expect(screen.getByText("newCommand.detailsTitle")).toBeInTheDocument();
       });
     });
   });
@@ -261,19 +261,19 @@ describe("NewProtocolForm", () => {
   describe("Step 3 - Review", () => {
     const goToStep3 = async () => {
       const user = userEvent.setup();
-      render(<NewProtocolForm />);
+      render(<NewCommandForm />);
 
       // Fill in required name field
-      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
+      const nameInput = screen.getByRole("textbox", { name: /newCommand\.name/i });
       // fireEvent: controlled component (react-hook-form FormField) - userEvent.type fires per-character
-      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
+      fireEvent.change(nameInput, { target: { value: "Test Command" } });
 
       // Step 1 → Step 2
       const nextButton1 = screen.getByRole("button", { name: /next/i });
       await user.click(nextButton1);
 
       await waitFor(() => {
-        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+        expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
       });
 
       // Step 2 → Step 3
@@ -281,7 +281,7 @@ describe("NewProtocolForm", () => {
       await user.click(nextButton2);
 
       await waitFor(() => {
-        expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+        expect(screen.getByText("newCommand.reviewYourCommand")).toBeInTheDocument();
       });
       return user;
     };
@@ -289,22 +289,22 @@ describe("NewProtocolForm", () => {
     it("should show review content on step 3", async () => {
       await goToStep3();
 
-      expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.protocolName")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.protocolCode")).toBeInTheDocument();
-      expect(screen.getByText("newProtocol.compatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.reviewYourCommand")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.commandName")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.commandCode")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.compatibleMacros")).toBeInTheDocument();
     });
 
-    it("should show the protocol name in review", async () => {
+    it("should show the command name in review", async () => {
       await goToStep3();
 
-      expect(screen.getByText("Test Protocol")).toBeInTheDocument();
+      expect(screen.getByText("Test Command")).toBeInTheDocument();
     });
 
     it("should show no macros message when none selected", async () => {
       await goToStep3();
 
-      expect(screen.getByText("newProtocol.noMacrosAdded")).toBeInTheDocument();
+      expect(screen.getByText("newCommand.noMacrosAdded")).toBeInTheDocument();
     });
 
     it("should show submit and back buttons on step 3", async () => {
@@ -321,14 +321,14 @@ describe("NewProtocolForm", () => {
       await user.click(backButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+        expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
       });
     });
 
     it("should link compatible macros after create then navigate", async () => {
-      const addMacrosSpy = server.mount(contract.protocols.addCompatibleMacros, { body: [] });
+      const addMacrosSpy = server.mount(contract.commands.addCompatibleMacros, { body: [] });
       const user = userEvent.setup();
-      const { router } = render(<NewProtocolForm />);
+      const { router } = render(<NewCommandForm />);
 
       await waitFor(() => {
         expect(lastDropdownProps?.availableMacros.map((m) => m.id)).toContain("macro-1");
@@ -338,19 +338,19 @@ describe("NewProtocolForm", () => {
         lastDropdownProps?.onAddMacro("macro-1");
       });
 
-      const nameInput = screen.getByRole("textbox", { name: /newProtocol\.name/i });
-      fireEvent.change(nameInput, { target: { value: "Test Protocol" } });
+      const nameInput = screen.getByRole("textbox", { name: /newCommand\.name/i });
+      fireEvent.change(nameInput, { target: { value: "Test Command" } });
 
       await user.click(screen.getByRole("button", { name: /next/i }));
 
       await waitFor(() => {
-        expect(screen.getByTestId("protocol-code-editor")).toBeInTheDocument();
+        expect(screen.getByTestId("command-code-editor")).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole("button", { name: /next/i }));
 
       await waitFor(() => {
-        expect(screen.getByText("newProtocol.reviewYourProtocol")).toBeInTheDocument();
+        expect(screen.getByText("newCommand.reviewYourCommand")).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole("button", { name: /finalizeSetup/i }));
@@ -360,7 +360,7 @@ describe("NewProtocolForm", () => {
       });
 
       await waitFor(() => {
-        expect(router.push).toHaveBeenCalledWith("/en-US/platform/protocols/new-protocol-id");
+        expect(router.push).toHaveBeenCalledWith("/en-US/platform/commands/new-command-id");
       });
     });
   });

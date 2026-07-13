@@ -1,6 +1,6 @@
 "use client";
 
-import { useAddCompatibleProtocol } from "@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
+import { useAddCompatibleCommand } from "@/hooks/macro/useAddCompatibleCommand/useAddCompatibleCommand";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
@@ -12,9 +12,9 @@ import React, { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
+import type { Command } from "@repo/api/schemas/command.schema";
 import type { CreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
 import { zCreateMacroRequestBody } from "@repo/api/schemas/macro.schema";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -28,9 +28,9 @@ import {
 } from "@repo/ui/components/select";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
+import { useCommandSearch } from "../../hooks/command/useCommandSearch/useCommandSearch";
+import { CommandSearchWithDropdown } from "../command-search-with-dropdown";
 import MacroCodeEditor from "../macro-code-editor";
-import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 export function NewMacroForm() {
@@ -42,28 +42,28 @@ export function NewMacroForm() {
     session?.user.id ?? "",
   );
 
-  // Selected protocols (local state before macro creation)
-  const [selectedProtocols, setSelectedProtocols] = useState<Protocol[]>([]);
+  // Selected commands (local state before macro creation)
+  const [selectedCommands, setSelectedCommands] = useState<Command[]>([]);
 
-  // Protocol search
-  const [protocolSearch, setProtocolSearch] = useState("");
-  const [debouncedProtocolSearch, isDebounced] = useDebounce(protocolSearch, 300);
-  const { protocols: protocolList } = useProtocolSearch(debouncedProtocolSearch || undefined);
+  // Command search
+  const [commandSearch, setCommandSearch] = useState("");
+  const [debouncedCommandSearch, isDebounced] = useDebounce(commandSearch, 300);
+  const { commands: commandList } = useCommandSearch(debouncedCommandSearch || undefined);
 
-  const addProtocolsMutationRef = useRef<ReturnType<typeof useAddCompatibleProtocol>>(null);
+  const addCommandsMutationRef = useRef<ReturnType<typeof useAddCompatibleCommand>>(null);
 
   const { mutate: createMacro, isPending } = useMacroCreate({
     onSuccess: (data) => {
       const id = data.body.id;
-      // Link selected protocols after macro creation, then redirect
-      if (selectedProtocols.length > 0 && addProtocolsMutationRef.current) {
-        addProtocolsMutationRef.current
+      // Link selected commands after macro creation, then redirect
+      if (selectedCommands.length > 0 && addCommandsMutationRef.current) {
+        addCommandsMutationRef.current
           .mutateAsync({
             params: { id },
-            body: { protocolIds: selectedProtocols.map((p) => p.id) },
+            body: { commandIds: selectedCommands.map((p) => p.id) },
           })
           .catch(() => {
-            // Macro was created successfully, protocol linking failed - still redirect
+            // Macro was created successfully, command linking failed - still redirect
           })
           .finally(() => {
             router.push(`/${locale}/platform/macros/${id}`);
@@ -75,8 +75,8 @@ export function NewMacroForm() {
   });
 
   // Placeholder macroId for the hook - actual call uses real ID via mutateAsync
-  const addProtocolsMutation = useAddCompatibleProtocol("");
-  addProtocolsMutationRef.current = addProtocolsMutation;
+  const addCommandsMutation = useAddCompatibleCommand("");
+  addCommandsMutationRef.current = addCommandsMutation;
 
   const form = useForm<CreateMacroRequestBody>({
     resolver: zodResolver(zCreateMacroRequestBody),
@@ -106,34 +106,34 @@ export function NewMacroForm() {
     });
   }
 
-  const selectedProtocolIds = useMemo(
-    () => new Set(selectedProtocols.map((p) => p.id)),
-    [selectedProtocols],
+  const selectedCommandIds = useMemo(
+    () => new Set(selectedCommands.map((p) => p.id)),
+    [selectedCommands],
   );
 
-  const availableProtocols: Protocol[] = useMemo(
-    () => (protocolList ?? []).filter((p) => !selectedProtocolIds.has(p.id)),
-    [protocolList, selectedProtocolIds],
+  const availableCommands: Command[] = useMemo(
+    () => (commandList ?? []).filter((p) => !selectedCommandIds.has(p.id)),
+    [commandList, selectedCommandIds],
   );
 
-  const handleAddProtocol = (protocolId: string) => {
-    const protocol = protocolList?.find((p) => p.id === protocolId);
-    if (protocol) {
-      setSelectedProtocols((prev) =>
-        [...prev, protocol].sort((a, b) => a.name.localeCompare(b.name)),
+  const handleAddCommand = (commandId: string) => {
+    const command = commandList?.find((p) => p.id === commandId);
+    if (command) {
+      setSelectedCommands((prev) =>
+        [...prev, command].sort((a, b) => a.name.localeCompare(b.name)),
       );
-      setProtocolSearch("");
+      setCommandSearch("");
     }
   };
 
-  const handleRemoveProtocol = (protocolId: string) => {
-    setSelectedProtocols((prev) => prev.filter((p) => p.id !== protocolId));
+  const handleRemoveCommand = (commandId: string) => {
+    setSelectedCommands((prev) => prev.filter((p) => p.id !== commandId));
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Details row: name/description + language + compatible protocols */}
+        {/* Details row: name/description + language + compatible commands */}
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
           <div className="flex-1">
             <NewMacroDetailsCard form={form} />
@@ -163,36 +163,36 @@ export function NewMacroForm() {
               )}
             />
 
-            {/* Compatible Protocols */}
+            {/* Compatible Commands */}
             <div className="space-y-2">
-              <ProtocolSearchWithDropdown
-                availableProtocols={availableProtocols}
+              <CommandSearchWithDropdown
+                availableCommands={availableCommands}
                 value=""
-                placeholder={t("newMacro.compatibleProtocols")}
+                placeholder={t("newMacro.compatibleCommands")}
                 loading={!isDebounced}
-                searchValue={protocolSearch}
-                onSearchChange={setProtocolSearch}
-                onAddProtocol={handleAddProtocol}
-                isAddingProtocol={false}
+                searchValue={commandSearch}
+                onSearchChange={setCommandSearch}
+                onAddCommand={handleAddCommand}
+                isAddingCommand={false}
               />
 
-              {selectedProtocols.length > 0 && (
+              {selectedCommands.length > 0 && (
                 <div className="space-y-2">
-                  {selectedProtocols.map((protocol) => (
+                  {selectedCommands.map((command) => (
                     <div
-                      key={protocol.id}
+                      key={command.id}
                       className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm font-medium">{protocol.name}</span>
-                        <span className="text-muted-foreground text-xs">{protocol.family}</span>
+                        <span className="truncate text-sm font-medium">{command.name}</span>
+                        <span className="text-muted-foreground text-xs">{command.family}</span>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 shrink-0"
-                        onClick={() => handleRemoveProtocol(protocol.id)}
+                        onClick={() => handleRemoveCommand(command.id)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -204,7 +204,7 @@ export function NewMacroForm() {
           </div>
         </div>
 
-        {/* Code Editor — full width */}
+        {/* Code Editor - full width */}
         {isLoadingUserProfile ? (
           <div className="space-y-2">
             <Skeleton className="h-5 w-40" />

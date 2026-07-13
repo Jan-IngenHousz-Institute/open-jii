@@ -2,7 +2,7 @@
   "form": {
     "name": "Experiment naam",
     "description": "Beschrijving",
-    "protocol": "Protocol",
+    "command": "Command",
     "device": "Apparaat",
     "location": "Locatie",
     "researcher": "Onderzoeker",
@@ -46,7 +46,7 @@
   },
   "flow": {
     "title": "Werkboek",
-    "description": "De dataverzamelingsflow van dit experiment: protocollen, vragen, macro's en vertakkingen.",
+    "description": "De dataverzamelingsflow van dit experiment: commandlen, vragen, macro's en vertakkingen.",
     "staticDescription": "Alleen-lezen weergave van het werkboek",
     "tabLabel": "Design",
     "viewList": "Lijst",
@@ -150,7 +150,7 @@
     "nameRequired": "Experimentnaam is verplicht",
     "nameMinLength": "Naam moet minimaal 3 tekens bevatten",
     "descriptionRequired": "Beschrijving is verplicht",
-    "protocolRequired": "Selecteer een protocol",
+    "commandRequired": "Selecteer een command",
     "deviceRequired": "Selecteer een apparaat",
     "invalidDateRange": "Einddatum moet na startdatum liggen"
   },

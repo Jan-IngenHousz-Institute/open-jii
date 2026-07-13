@@ -32,12 +32,12 @@ const navigationData = {
   navLibrary: [
     {
       title: "Library",
-      url: "/en/platform/protocols",
+      url: "/en/platform/commands",
       icon: "Library",
       navigable: false,
       items: [],
       children: [
-        { title: "Protocols", url: "/en/platform/protocols", icon: "FileSliders", items: [] },
+        { title: "Commands", url: "/en/platform/commands", icon: "FileSliders", items: [] },
         { title: "Macros", url: "/en/platform/macros", icon: "Code", items: [] },
       ],
     },
@@ -64,7 +64,7 @@ function renderSidebar() {
 describe("AppSidebar", () => {
   it("renders navigation items", () => {
     renderSidebar();
-    for (const text of ["Dashboard", "Experiments", "Workbooks", "Protocols", "Macros"]) {
+    for (const text of ["Dashboard", "Experiments", "Workbooks", "Commands", "Macros"]) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
   });
@@ -80,7 +80,7 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Experiments")).toBeInTheDocument();
     expect(screen.getByText("Workbooks")).toBeInTheDocument();
     expect(screen.getByText("Library")).toBeInTheDocument();
-    expect(screen.getByText("Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Commands")).toBeInTheDocument();
     expect(screen.getByText("Macros")).toBeInTheDocument();
   });
 

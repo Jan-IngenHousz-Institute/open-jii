@@ -1,45 +1,45 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ListProtocols } from "./list-protocols";
+import { ListCommands } from "./list-commands";
 
-vi.mock("~/components/protocol-overview-cards", () => ({
-  ProtocolOverviewCards: (props: { protocols?: unknown[]; isLoading: boolean }) => (
-    <div data-testid="protocol-overview-cards" data-loading={props.isLoading}>
-      {props.protocols === undefined ? "Loading..." : `${props.protocols.length} protocols`}
+vi.mock("~/components/command-overview-cards", () => ({
+  CommandOverviewCards: (props: { commands?: unknown[]; isLoading: boolean }) => (
+    <div data-testid="command-overview-cards" data-loading={props.isLoading}>
+      {props.commands === undefined ? "Loading..." : `${props.commands.length} commands`}
     </div>
   ),
 }));
 
-describe("ListProtocols", () => {
+describe("ListCommands", () => {
   it("renders search input and filter", () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
-    render(<ListProtocols />);
+    server.mount(contract.commands.listCommands, { body: [] });
+    render(<ListCommands />);
 
-    expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("commands.searchCommands")).toBeInTheDocument();
   });
 
-  it("passes data to ProtocolOverviewCards", async () => {
-    server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "1", name: "P1" })],
+  it("passes data to CommandOverviewCards", async () => {
+    server.mount(contract.commands.listCommands, {
+      body: [createCommand({ id: "1", name: "P1" })],
     });
-    render(<ListProtocols />);
+    render(<ListCommands />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("protocol-overview-cards")).toHaveTextContent("1 protocols");
+      expect(screen.getByTestId("command-overview-cards")).toHaveTextContent("1 commands");
     });
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
+    const spy = server.mount(contract.commands.listCommands, { body: [] });
     const user = userEvent.setup();
-    render(<ListProtocols />);
+    render(<ListCommands />);
 
-    await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "test");
+    await user.type(screen.getByPlaceholderText("commands.searchCommands"), "test");
 
     await waitFor(() => {
       const lastCall = spy.calls[spy.calls.length - 1];

@@ -5,21 +5,21 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { useProtocolCompatibleMacros } from "./useProtocolCompatibleMacros";
+import { useCommandCompatibleMacros } from "./useCommandCompatibleMacros";
 
-describe("useProtocolCompatibleMacros", () => {
-  it("returns compatible macros for a protocol", async () => {
-    server.mount(contract.protocols.listCompatibleMacros, {
+describe("useCommandCompatibleMacros", () => {
+  it("returns compatible macros for a command", async () => {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "protocol-1",
+          commandId: "command-1",
           macro: createMacro({ filename: "macro_a.py" }),
           addedAt: "2025-01-01T00:00:00.000Z",
         },
       ],
     });
 
-    const { result } = renderHook(() => useProtocolCompatibleMacros("protocol-1"));
+    const { result } = renderHook(() => useCommandCompatibleMacros("command-1"));
 
     await waitFor(() => {
       expect(result.current.data?.body).toHaveLength(1);
@@ -28,18 +28,18 @@ describe("useProtocolCompatibleMacros", () => {
     expect(result.current.data?.body[0]?.macro.filename).toBe("macro_a.py");
   });
 
-  it("does not fetch when protocolId is empty", () => {
-    const spy = server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+  it("does not fetch when commandId is empty", () => {
+    const spy = server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
-    renderHook(() => useProtocolCompatibleMacros(""));
+    renderHook(() => useCommandCompatibleMacros(""));
 
     expect(spy.calls).toHaveLength(0);
   });
 
   it("does not fetch when explicitly disabled", () => {
-    const spy = server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    const spy = server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
-    renderHook(() => useProtocolCompatibleMacros("protocol-1", false));
+    renderHook(() => useCommandCompatibleMacros("command-1", false));
 
     expect(spy.calls).toHaveLength(0);
   });

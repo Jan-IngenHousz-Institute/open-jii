@@ -1,7 +1,7 @@
 "use client";
 
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
+import { useCommand } from "@/hooks/command/useCommand/useCommand";
+import { useCommandCompatibleMacros } from "@/hooks/command/useCommandCompatibleMacros/useCommandCompatibleMacros";
 import { useDebounce } from "@/hooks/useDebounce";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -17,14 +17,14 @@ interface AnalysisPanelProps {
   selectedMacroId?: string;
   onChange: (macroId: string) => void;
   disabled?: boolean;
-  upstreamProtocolId?: string;
+  upstreamCommandId?: string;
 }
 
 export function AnalysisPanel({
   selectedMacroId = "",
   onChange,
   disabled = false,
-  upstreamProtocolId,
+  upstreamCommandId,
 }: AnalysisPanelProps) {
   const { t } = useTranslation("common");
 
@@ -39,20 +39,20 @@ export function AnalysisPanel({
   });
   const macroList = macroData?.body;
 
-  // Fetch the upstream protocol name for recommendation context
-  const { data: upstreamProtocol } = useProtocol(upstreamProtocolId ?? "", !!upstreamProtocolId);
+  // Fetch the upstream command name for recommendation context
+  const { data: upstreamCommand } = useCommand(upstreamCommandId ?? "", !!upstreamCommandId);
 
-  // Fetch compatible macros for the upstream protocol
-  const { data: compatibleData } = useProtocolCompatibleMacros(
-    upstreamProtocolId ?? "",
-    !!upstreamProtocolId,
+  // Fetch compatible macros for the upstream command
+  const { data: compatibleData } = useCommandCompatibleMacros(
+    upstreamCommandId ?? "",
+    !!upstreamCommandId,
   );
 
   const compatibleMacroIds = useMemo(
     () => new Set((compatibleData?.body ?? []).map((entry) => entry.macro.id)),
     [compatibleData],
   );
-  const hasCompatibilityData = !!upstreamProtocolId && !!compatibleData;
+  const hasCompatibilityData = !!upstreamCommandId && !!compatibleData;
 
   // Sort compatible macros first when we have compatibility data
   const availableMacros: Macro[] = useMemo(() => {
@@ -65,10 +65,10 @@ export function AnalysisPanel({
     });
   }, [macroList, hasCompatibilityData, compatibleMacroIds]);
 
-  const upstreamProtocolName = upstreamProtocol?.body.name;
+  const upstreamCommandName = upstreamCommand?.body.name;
   const recommendedReason =
-    hasCompatibilityData && compatibleMacroIds.size > 0 && upstreamProtocolName
-      ? t("common.compatibleWithProtocol", { protocolName: upstreamProtocolName })
+    hasCompatibilityData && compatibleMacroIds.size > 0 && upstreamCommandName
+      ? t("common.compatibleWithCommand", { commandName: upstreamCommandName })
       : undefined;
 
   const showIncompatibilityWarning =

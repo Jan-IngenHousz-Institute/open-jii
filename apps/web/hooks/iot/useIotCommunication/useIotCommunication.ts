@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { IDeviceDriver, ITransportAdapter } from "@repo/iot";
 import {
   GenericDeviceDriver,
@@ -49,7 +49,7 @@ async function createAdapter(
     });
   }
 
-  // Serial — use device-specific defaults
+  // Serial - use device-specific defaults
   const serialDefaults =
     sensorFamily === "multispeq" ? MULTISPEQ_SERIAL_DEFAULTS : GENERIC_SERIAL_DEFAULTS;
   return WebSerialAdapter.requestAndConnect(serialDefaults);

@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
+import { CommandDetailsSidebar } from "../command-details-sidebar";
 
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
@@ -17,7 +17,7 @@ vi.mock("@/util/date", () => ({
 
 vi.mock("@repo/analytics", () => ({
   FEATURE_FLAGS: {
-    PROTOCOL_DELETION: "protocol-deletion",
+    COMMAND_DELETION: "command-deletion",
   },
 }));
 
@@ -139,16 +139,16 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
   };
 });
 
-vi.mock("../../protocol-settings/protocol-compatible-macros-card", () => ({
-  ProtocolCompatibleMacrosCard: ({
-    protocolId,
+vi.mock("../../command-settings/command-compatible-macros-card", () => ({
+  CommandCompatibleMacrosCard: ({
+    commandId,
     embedded,
   }: {
-    protocolId: string;
+    commandId: string;
     embedded?: boolean;
   }) => (
-    <div data-testid="protocol-compatible-macros-card" data-embedded={embedded}>
-      {protocolId}
+    <div data-testid="command-compatible-macros-card" data-embedded={embedded}>
+      {commandId}
     </div>
   ),
 }));
@@ -170,10 +170,10 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-const mockProtocol = createProtocol({
+const mockCommand = createCommand({
   id: "550e8400-e29b-41d4-a716-446655440000",
-  name: "Test Protocol",
-  description: "A test protocol description",
+  name: "Test Command",
+  description: "A test command description",
   code: [{ averages: 1 }],
   family: "multispeq",
   sortOrder: null,
@@ -183,28 +183,28 @@ const mockProtocol = createProtocol({
   updatedAt: "2024-06-15T12:00:00.000Z",
 });
 
-function renderComponent(props: Partial<React.ComponentProps<typeof ProtocolDetailsSidebar>> = {}) {
-  const defaultProps: React.ComponentProps<typeof ProtocolDetailsSidebar> = {
-    protocolId: "550e8400-e29b-41d4-a716-446655440000",
-    protocol: mockProtocol,
+function renderComponent(props: Partial<React.ComponentProps<typeof CommandDetailsSidebar>> = {}) {
+  const defaultProps: React.ComponentProps<typeof CommandDetailsSidebar> = {
+    commandId: "550e8400-e29b-41d4-a716-446655440000",
+    command: mockCommand,
     ...props,
   };
 
-  return render(<ProtocolDetailsSidebar {...defaultProps} />);
+  return render(<CommandDetailsSidebar {...defaultProps} />);
 }
 
-describe("ProtocolDetailsSidebar", () => {
+describe("CommandDetailsSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: user is the creator, feature flag enabled
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-123" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
-    server.mount(contract.protocols.deleteProtocol, {});
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.updateCommand, { body: mockCommand });
+    server.mount(contract.commands.deleteCommand, {});
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "550e8400-e29b-41d4-a716-446655440000",
+          commandId: "550e8400-e29b-41d4-a716-446655440000",
           macro: {
             id: "00000000-0000-0000-0000-000000000001",
             name: "Macro 1",
@@ -215,7 +215,7 @@ describe("ProtocolDetailsSidebar", () => {
           addedAt: "2024-01-01T00:00:00.000Z",
         },
         {
-          protocolId: "550e8400-e29b-41d4-a716-446655440000",
+          commandId: "550e8400-e29b-41d4-a716-446655440000",
           macro: {
             id: "00000000-0000-0000-0000-000000000003",
             name: "Macro 2",
@@ -231,16 +231,16 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders the sidebar with the details title", () => {
     renderComponent();
-    expect(screen.getByText("protocols.detailsTitle")).toBeInTheDocument();
+    expect(screen.getByText("commands.detailsTitle")).toBeInTheDocument();
   });
 
-  it("renders protocol ID", () => {
+  it("renders command ID", () => {
     renderComponent();
-    expect(screen.getByText("protocols.protocolId")).toBeInTheDocument();
-    // The ID appears both in the protocol ID section and in the compatible macros card mock
+    expect(screen.getByText("commands.commandId")).toBeInTheDocument();
+    // The ID appears both in the command ID section and in the compatible macros card mock
     const idElements = screen.getAllByText("550e8400-e29b-41d4-a716-446655440000");
     expect(idElements.length).toBeGreaterThanOrEqual(1);
-    // The first match is the protocol ID display (in a <p> with font-mono class)
+    // The first match is the command ID display (in a <p> with font-mono class)
     expect(idElements[0]).toHaveClass("font-mono");
   });
 
@@ -263,19 +263,19 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders dash when creator name is not available", () => {
-    const protocolNoCreator = { ...mockProtocol, createdByName: undefined };
-    renderComponent({ protocol: protocolNoCreator });
+    const commandNoCreator = { ...mockCommand, createdByName: undefined };
+    renderComponent({ command: commandNoCreator });
     expect(screen.getByText("-")).toBeInTheDocument();
   });
 
-  it("renders a 'view original' link when the protocol is a fork", () => {
-    renderComponent({ protocol: { ...mockProtocol, forkedFrom: "p-src" } });
+  it("renders a 'view original' link when the command is a fork", () => {
+    renderComponent({ command: { ...mockCommand, forkedFrom: "p-src" } });
     expect(screen.getByText("common.forkedFrom")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "common.viewOriginal" });
-    expect(link.getAttribute("href")).toContain("/platform/protocols/p-src");
+    expect(link.getAttribute("href")).toContain("/platform/commands/p-src");
   });
 
-  it("does not render the fork link for a non-fork protocol", () => {
+  it("does not render the fork link for a non-fork command", () => {
     renderComponent();
     expect(screen.queryByText("common.forkedFrom")).not.toBeInTheDocument();
   });
@@ -285,7 +285,7 @@ describe("ProtocolDetailsSidebar", () => {
     const sidebarCard = screen.getByTestId("details-sidebar-card");
     expect(sidebarCard.dataset.collapsedSummary).toContain("common.updated");
     expect(sidebarCard.dataset.collapsedSummary).toContain("formatted-2024-06-15T12:00:00.000Z");
-    expect(sidebarCard.dataset.collapsedSummary).toContain("protocols.protocolId");
+    expect(sidebarCard.dataset.collapsedSummary).toContain("commands.commandId");
     expect(sidebarCard.dataset.collapsedSummary).toContain("550e8400...");
   });
 
@@ -305,13 +305,13 @@ describe("ProtocolDetailsSidebar", () => {
   it("renders Ambyte text when family is ambyte and user is not the creator", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent({
-      protocol: { ...mockProtocol, family: "ambyte" },
+      command: { ...mockCommand, family: "ambyte" },
     });
     expect(screen.getByText("Ambyte")).toBeInTheDocument();
   });
 
-  it("calls updateProtocol when family is changed", async () => {
-    const spy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+  it("calls updateCommand when family is changed", async () => {
+    const spy = server.mount(contract.commands.updateCommand, { body: mockCommand });
     renderComponent();
 
     const selectNative = screen.getByTestId("select-native");
@@ -326,7 +326,7 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("shows toast on successful family update", async () => {
-    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.commands.updateCommand, { body: mockCommand });
     const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
@@ -337,13 +337,13 @@ describe("ProtocolDetailsSidebar", () => {
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
-        description: "protocols.protocolUpdated",
+        description: "commands.commandUpdated",
       });
     });
   });
 
   it("shows destructive toast on family update error", async () => {
-    server.mount(contract.protocols.updateProtocol, { status: 400 });
+    server.mount(contract.commands.updateCommand, { status: 400 });
     const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderComponent();
@@ -363,9 +363,9 @@ describe("ProtocolDetailsSidebar", () => {
     );
   });
 
-  it("renders ProtocolCompatibleMacrosCard when user is the creator", () => {
+  it("renders CommandCompatibleMacrosCard when user is the creator", () => {
     renderComponent();
-    const card = screen.getByTestId("protocol-compatible-macros-card");
+    const card = screen.getByTestId("command-compatible-macros-card");
     expect(card).toBeInTheDocument();
     expect(card).toHaveTextContent("550e8400-e29b-41d4-a716-446655440000");
     expect(card.dataset.embedded).toBe("true");
@@ -374,8 +374,8 @@ describe("ProtocolDetailsSidebar", () => {
   it("renders compatible macros count text when user is not the creator", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
-    expect(screen.queryByTestId("protocol-compatible-macros-card")).not.toBeInTheDocument();
-    expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
+    expect(screen.queryByTestId("command-compatible-macros-card")).not.toBeInTheDocument();
+    expect(screen.getByText("commandSettings.compatibleMacros")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("2 macros")).toBeInTheDocument();
     });
@@ -383,10 +383,10 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders singular 'macro' for single compatible macro", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(contract.protocols.listCompatibleMacros, {
+    server.mount(contract.commands.listCompatibleMacros, {
       body: [
         {
-          protocolId: "550e8400-e29b-41d4-a716-446655440000",
+          commandId: "550e8400-e29b-41d4-a716-446655440000",
           macro: {
             id: "00000000-0000-0000-0000-000000000001",
             name: "Macro 1",
@@ -407,52 +407,52 @@ describe("ProtocolDetailsSidebar", () => {
 
   it("renders 'no compatible macros' text when count is zero and user is not creator", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
     renderComponent();
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.noCompatibleMacros")).toBeInTheDocument();
     });
   });
 
   it("renders 'no compatible macros' when data is undefined and user is not creator", async () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    server.mount(contract.protocols.listCompatibleMacros, { body: [] });
+    server.mount(contract.commands.listCompatibleMacros, { body: [] });
 
     renderComponent();
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.noCompatibleMacros")).toBeInTheDocument();
     });
   });
 
   it("renders danger zone when user is creator and feature flag is enabled", () => {
     renderComponent();
-    expect(screen.getByText("protocolSettings.dangerZone")).toBeInTheDocument();
-    expect(screen.getByText("protocolSettings.deleteWarning")).toBeInTheDocument();
-    // The trigger button shows "protocolSettings.deleteProtocol"
+    expect(screen.getByText("commandSettings.dangerZone")).toBeInTheDocument();
+    expect(screen.getByText("commandSettings.deleteWarning")).toBeInTheDocument();
+    // The trigger button shows "commandSettings.deleteCommand"
     // DialogContent is hidden (dialog starts closed), so only one instance appears
-    expect(screen.getByText("protocolSettings.deleteProtocol")).toBeInTheDocument();
+    expect(screen.getByText("commandSettings.deleteCommand")).toBeInTheDocument();
   });
 
   it("does not render danger zone when user is not the creator", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
-    expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
-    expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.deleteCommand")).not.toBeInTheDocument();
   });
 
   it("does not render danger zone when feature flag is disabled", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
     renderComponent();
-    expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
-    expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.deleteCommand")).not.toBeInTheDocument();
   });
 
   it("does not render danger zone when both non-creator and flag disabled", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
     renderComponent();
-    expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.dangerZone")).not.toBeInTheDocument();
   });
 
   it("opens delete dialog when delete trigger is clicked", async () => {
@@ -487,7 +487,7 @@ describe("ProtocolDetailsSidebar", () => {
     expect(dialog.dataset.open).toBe("true");
 
     // Click cancel
-    const cancelButton = screen.getByText("protocolSettings.cancel");
+    const cancelButton = screen.getByText("commandSettings.cancel");
     await user.click(cancelButton);
 
     // Dialog should be closed
@@ -495,8 +495,8 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.queryByTestId("dialog-content")).not.toBeInTheDocument();
   });
 
-  it("calls deleteProtocol and navigates on confirm delete", async () => {
-    const spy = server.mount(contract.protocols.deleteProtocol, {});
+  it("calls deleteCommand and navigates on confirm delete", async () => {
+    const spy = server.mount(contract.commands.deleteCommand, {});
     renderComponent();
 
     // Open dialog
@@ -505,7 +505,7 @@ describe("ProtocolDetailsSidebar", () => {
     await user.click(trigger);
 
     // Click confirm delete
-    const confirmButton = screen.getByText("protocolSettings.delete");
+    const confirmButton = screen.getByText("commandSettings.delete");
     await user.click(confirmButton);
 
     await waitFor(() => {
@@ -517,12 +517,12 @@ describe("ProtocolDetailsSidebar", () => {
       expect(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         vi.mocked(useRouter).mock.results[0]?.value.push as ReturnType<typeof vi.fn>,
-      ).toHaveBeenCalledWith("/en-US/platform/protocols");
+      ).toHaveBeenCalledWith("/en-US/platform/commands");
     });
   });
 
   it("shows deleting text when delete is in progress", async () => {
-    server.mount(contract.protocols.deleteProtocol, { delay: 999_999 });
+    server.mount(contract.commands.deleteCommand, { delay: 999_999 });
 
     renderComponent();
 
@@ -532,17 +532,17 @@ describe("ProtocolDetailsSidebar", () => {
     await user.click(trigger);
 
     // Click confirm delete to trigger the mutation
-    const confirmButton = screen.getByText("protocolSettings.delete");
+    const confirmButton = screen.getByText("commandSettings.delete");
     await user.click(confirmButton);
 
     // The deleting text replaces the delete button text when isPending is true
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.deleting")).toBeInTheDocument();
+      expect(screen.getByText("commandSettings.deleting")).toBeInTheDocument();
     });
   });
 
   it("disables confirm delete button when delete is in progress", async () => {
-    server.mount(contract.protocols.deleteProtocol, { delay: 999_999 });
+    server.mount(contract.commands.deleteCommand, { delay: 999_999 });
 
     renderComponent();
 
@@ -552,12 +552,12 @@ describe("ProtocolDetailsSidebar", () => {
     await user.click(trigger);
 
     // Click confirm delete to trigger the mutation
-    const confirmButton = screen.getByText("protocolSettings.delete");
+    const confirmButton = screen.getByText("commandSettings.delete");
     await user.click(confirmButton);
 
     // The confirm delete button should be disabled while pending
     await waitFor(() => {
-      expect(screen.getByText("protocolSettings.deleting")).toBeDisabled();
+      expect(screen.getByText("commandSettings.deleting")).toBeDisabled();
     });
   });
 
@@ -584,11 +584,11 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByText("MultispeQ")).toBeInTheDocument();
 
     // Should not show danger zone
-    expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("commandSettings.dangerZone")).not.toBeInTheDocument();
   });
 
   it("renders family label", () => {
     renderComponent();
-    expect(screen.getByText("protocols.family")).toBeInTheDocument();
+    expect(screen.getByText("commands.family")).toBeInTheDocument();
   });
 });

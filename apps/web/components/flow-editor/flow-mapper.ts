@@ -51,7 +51,7 @@ export interface FlowNodeDataBase extends Record<string, unknown> {
 
 export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
   stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
-  protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
+  commandId?: string; // measurement convenience field (when not yet set in stepSpecification)
   macroId?: string; // analysis convenience field (when not yet set in stepSpecification)
   command?: MeasurementCommandContent["command"]; // command convenience field (COMMAND nodes)
 }
@@ -68,8 +68,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 const REACT_FLOW_TO_API_NODE_TYPE = {
   QUESTION: "question",
   INSTRUCTION: "instruction",
-  MEASUREMENT: "measurement",
-  // Inline command rides the API measurement node type (zMeasurementCommandContent).
+  // Commands (library reference or inline) ride the API measurement node type.
   COMMAND: "measurement",
   ANALYSIS: "analysis",
   BRANCH: "branch",
@@ -115,22 +114,22 @@ export class FlowMapper {
   /** Convert API Flow object to React Flow nodes/edges */
   static toReactFlow(apiFlow: Flow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
+      // Every API "measurement" node renders as the COMMAND node type in the
+      // editor, whether it references a library command or carries an inline one.
       const reactFlowTypeMapping: Record<
         "question" | "instruction" | "measurement" | "analysis" | "branch",
         NodeType
       > = {
         question: "QUESTION",
         instruction: "INSTRUCTION",
-        measurement: "MEASUREMENT",
+        measurement: "COMMAND",
         analysis: "ANALYSIS",
         branch: "BRANCH",
       };
 
-      // A measurement node carrying an inline command renders as the COMMAND
-      // node type in the editor; the wire type stays "measurement".
-      const carriesCommand =
+      const carriesInlineCommand =
         apiNode.type === "measurement" && isObject(apiNode.content) && "command" in apiNode.content;
-      const nodeType = carriesCommand ? "COMMAND" : reactFlowTypeMapping[apiNode.type];
+      const nodeType = reactFlowTypeMapping[apiNode.type];
 
       const config = nodeTypeColorMap[nodeType];
 
@@ -148,16 +147,15 @@ export class FlowMapper {
         stepSpecification: FlowMapper.convertApiContentToUISpec(apiNode.type, apiNode.content),
       };
 
-      // For measurement nodes, also set protocolId directly on the node data
-      if (apiNode.type === "measurement" && !carriesCommand && isObject(apiNode.content)) {
+      // For command nodes, set commandId (library reference) or the inline
+      // command directly on the node data
+      if (apiNode.type === "measurement" && !carriesInlineCommand && isObject(apiNode.content)) {
         const measurementContent = apiNode.content as MeasurementContent;
-        if (measurementContent.protocolId) {
-          nodeData.protocolId = measurementContent.protocolId;
+        if (measurementContent.commandId) {
+          nodeData.commandId = measurementContent.commandId;
         }
       }
-
-      // For command nodes, set the inline command directly on the node data
-      if (carriesCommand) {
+      if (carriesInlineCommand) {
         nodeData.command = (apiNode.content as MeasurementCommandContent).command;
       }
 
@@ -251,37 +249,37 @@ export class FlowMapper {
           content = parsed.data;
         }
       } else if (node.type === "COMMAND") {
-        // Inline command node: wire type is "measurement" with command content.
-        const command =
-          data.command ??
-          (isObject(data.stepSpecification)
-            ? (data.stepSpecification as Partial<MeasurementCommandContent>).command
-            : undefined);
-        const parsed = zMeasurementCommandContent.safeParse({ command });
-        if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
-        }
-        content = parsed.data;
-      } else if (nodeType === "measurement") {
-        const protocolId =
-          data.protocolId ??
-          (isObject(data.stepSpecification)
-            ? (data.stepSpecification as { protocolId?: string }).protocolId
-            : undefined);
-        const rawParams = isObject(data.stepSpecification)
-          ? (data.stepSpecification as { params?: Record<string, unknown> }).params
+        // Command node: wire type is "measurement" carrying either a library
+        // command reference ({ commandId }) or an inline command ({ command }).
+        const spec = isObject(data.stepSpecification)
+          ? (data.stepSpecification as {
+              commandId?: string;
+              params?: Record<string, unknown>;
+              command?: MeasurementCommandContent["command"];
+            })
           : undefined;
-        const candidate: MeasurementContent = {
-          protocolId: protocolId ?? "", // Let Zod validate empty/invalid protocol
-          params: rawParams ?? {},
-        } as const;
+        const commandId = data.commandId ?? spec?.commandId;
+        const inlineCommand = data.command ?? spec?.command;
 
-        // Let Zod handle all validation including missing protocol
-        const parsed = zMeasurementContent.safeParse(candidate);
-        if (!parsed.success) {
-          throw new Error(parsed.error.errors[0].message);
+        if (!commandId && inlineCommand) {
+          const parsed = zMeasurementCommandContent.safeParse({ command: inlineCommand });
+          if (!parsed.success) {
+            throw new Error(parsed.error.errors[0].message);
+          }
+          content = parsed.data;
+        } else {
+          // Neither reference nor inline set falls through with commandId "";
+          // Zod reports "A valid command must be selected".
+          const candidate: MeasurementContent = {
+            commandId: commandId ?? "",
+            params: spec?.params ?? {},
+          } as const;
+          const parsed = zMeasurementContent.safeParse(candidate);
+          if (!parsed.success) {
+            throw new Error(parsed.error.errors[0].message);
+          }
+          content = parsed.data;
         }
-        content = parsed.data;
       } else if (nodeType === "analysis") {
         const macroId =
           data.macroId ??

@@ -49,9 +49,9 @@ function formatNodeLabelAsColumnName(title: string): string {
 }
 
 /**
- * Walk edges backward from a node to find the nearest upstream MEASUREMENT node's protocolId.
+ * Walk edges backward from a node to find the nearest upstream MEASUREMENT node's commandId.
  */
-function findUpstreamProtocolId(nodeId: string, nodes: Node[], edges: Edge[]): string | undefined {
+function findUpstreamCommandId(nodeId: string, nodes: Node[], edges: Edge[]): string | undefined {
   const visited = new Set<string>();
   const queue = [nodeId];
 
@@ -69,10 +69,10 @@ function findUpstreamProtocolId(nodeId: string, nodes: Node[], edges: Edge[]): s
 
         if (
           sourceNode.type === "MEASUREMENT" &&
-          typeof sourceNode.data.protocolId === "string" &&
-          sourceNode.data.protocolId
+          typeof sourceNode.data.commandId === "string" &&
+          sourceNode.data.commandId
         ) {
-          return sourceNode.data.protocolId;
+          return sourceNode.data.commandId;
         }
 
         queue.push(edge.source);
@@ -95,7 +95,7 @@ export interface ExperimentSidePanelProps {
   onEdgeUpdate?: (edgeId: string, updates: Partial<Edge>) => void;
   onEdgeDelete?: (edgeId: string) => void;
   nodes?: Node[]; // Add nodes to check for existing start/end nodes
-  edges?: Edge[]; // Edges for upstream protocol lookup
+  edges?: Edge[]; // Edges for upstream command lookup
   isDisabled?: boolean; // Whether the panel is read-only
 }
 
@@ -322,14 +322,14 @@ export function ExperimentSidePanel({
           {/* MeasurementPanel for measurement node */}
           {displayNodeType === "MEASUREMENT" && selectedNode && (
             <MeasurementPanel
-              selectedProtocolId={
-                typeof selectedNode.data.protocolId === "string" ? selectedNode.data.protocolId : ""
+              selectedCommandId={
+                typeof selectedNode.data.commandId === "string" ? selectedNode.data.commandId : ""
               }
-              onChange={(protocolId) => {
+              onChange={(commandId) => {
                 if (onNodeDataChange) {
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
-                    protocolId,
+                    commandId,
                   });
                 }
               }}
@@ -366,7 +366,7 @@ export function ExperimentSidePanel({
                 }
               }}
               disabled={isDisabled}
-              upstreamProtocolId={findUpstreamProtocolId(selectedNode.id, nodes, edges)}
+              upstreamCommandId={findUpstreamCommandId(selectedNode.id, nodes, edges)}
             />
           )}
         </div>

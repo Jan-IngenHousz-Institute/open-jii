@@ -26,7 +26,7 @@ function buildSections(mod: string): Section[] {
         { keys: ["G", "H"], label: "Home" },
         { keys: ["G", "E"], label: "Experiments" },
         { keys: ["G", "W"], label: "Workbooks" },
-        { keys: ["G", "P"], label: "Protocols" },
+        { keys: ["G", "P"], label: "Commands" },
         { keys: ["G", "M"], label: "Macros" },
         { keys: ["G", "T"], label: "Transfer requests" },
         { keys: ["G", "S"], label: "Settings" },

@@ -4,7 +4,7 @@ import type { MeasurementInput } from "./pipeline";
  * Recognises the shapes a MultispeQ measurement may arrive in:
  *   - Live device wrapper: { sample: [{ set: [...] } | { data_raw, ... }, ...], device_id?, ... }
  *   - PhotosynQ DB row:    { sample_raw: "[ ... v1/v2 json ... ]" } (string or array)
- *   - The v2 wrapper directly: { set: [{ data_raw, label?, ... }, ...], protocol_id?: ... }
+ *   - The v2 wrapper directly: { set: [{ data_raw, label?, ... }, ...], command_id?: ... }
  *   - A raw v1/v2 array: [{ set: [...] }] or [{ data_raw, ... }, ...]
  */
 export function isMultispeqOutput(data: unknown): boolean {

@@ -1,15 +1,15 @@
-import { NewProtocolForm } from "@/components/new-protocol/new-protocol";
+import { NewCommandForm } from "@/components/new-command/new-command";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "New Protocol",
+  title: "New Command",
 };
 
-export default function NewProtocolPage() {
+export default function NewCommandPage() {
   return (
     <PageContainer width="reading" className="space-y-6">
-      <NewProtocolForm />
+      <NewCommandForm />
     </PageContainer>
   );
 }

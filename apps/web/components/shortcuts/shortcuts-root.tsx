@@ -26,7 +26,7 @@ function blockedByFocus(event: KeyboardEvent): boolean {
   return isEditableTarget(document.activeElement) || isEditableTarget(event.target);
 }
 
-// `C` create — map the current section to its create route. Returns null where
+// `C` create - map the current section to its create route. Returns null where
 // there is nothing to create (no-op rather than a dead navigation).
 function createPathFor(pathname: string, locale: string): string | null {
   // Match the section segment exactly so e.g. `experiments-archive` (read-only)
@@ -37,12 +37,12 @@ function createPathFor(pathname: string, locale: string): string | null {
   if (!section || segments[segments.length - 1] === "new") return null;
   const base = `/${locale}/platform`;
   if (section === "experiments") return `${base}/experiments/new`;
-  if (section === "protocols") return `${base}/protocols/new`;
+  if (section === "commands") return `${base}/commands/new`;
   if (section === "macros") return `${base}/macros/new`;
   return null;
 }
 
-// `/` focus — the page's inline search box, if it has one.
+// `/` focus - the page's inline search box, if it has one.
 function focusInlineSearch(): boolean {
   const input = document.querySelector<HTMLInputElement>(
     'input[type="search"], input[placeholder*="earch"]',
@@ -89,7 +89,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       { key: "H", label: "Home", path: `/${locale}/platform` },
       { key: "E", label: "Experiments", path: `/${locale}/platform/experiments` },
       { key: "W", label: "Workbooks", path: `/${locale}/platform/workbooks` },
-      { key: "P", label: "Protocols", path: `/${locale}/platform/protocols` },
+      { key: "P", label: "Commands", path: `/${locale}/platform/commands` },
       { key: "M", label: "Macros", path: `/${locale}/platform/macros` },
       { key: "T", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
       { key: "S", label: "Settings", path: `/${locale}/platform/account` },

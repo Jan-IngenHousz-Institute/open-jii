@@ -1,4 +1,4 @@
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { DeviceType } from "@repo/iot";
 
 /**

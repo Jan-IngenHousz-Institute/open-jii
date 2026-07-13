@@ -67,8 +67,8 @@
     "detailsDescription": "Legen Sie den Namen, die Beschreibung und die Sprache für Ihr Makro fest",
     "codeTitle": "Makro-Code",
     "finalizeSetup": "Makro erstellen",
-    "compatibleProtocols": "Kompatible Protokolle",
-    "compatibleProtocolsDescription": "Optional kompatible Protokolle für dieses Makro auswählen"
+    "compatibleCommands": "Kompatible Protokolle",
+    "compatibleCommandsDescription": "Optional kompatible Protokolle für dieses Makro auswählen"
   },
   "macroSettings": {
     "loading": "Makro wird geladen...",
@@ -93,10 +93,10 @@
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "deleting": "Löschen...",
-    "compatibleProtocols": "Kompatible Protokolle",
-    "compatibleProtocolsDescription": "Protokolle, die bekanntermaßen mit diesem Makro funktionieren.",
-    "noCompatibleProtocols": "Noch keine kompatiblen Protokolle verknüpft.",
-    "addCompatibleProtocol": "Kompatibles Protokoll suchen und hinzufügen..."
+    "compatibleCommands": "Kompatible Protokolle",
+    "compatibleCommandsDescription": "Protokolle, die bekanntermaßen mit diesem Makro funktionieren.",
+    "noCompatibleCommands": "Noch keine kompatiblen Protokolle verknüpft.",
+    "addCompatibleCommand": "Kompatibles Protokoll suchen und hinzufügen..."
   },
   "errors": {
     "failedToLoadMacro": "Makro konnte nicht geladen werden"

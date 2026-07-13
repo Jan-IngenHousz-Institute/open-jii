@@ -1,43 +1,43 @@
 "use client";
 
-import { IotProtocolRunner } from "@/components/iot/iot-protocol-runner";
+import { IotCommandRunner } from "@/components/iot/iot-command-runner";
 import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
-import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
-import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { CommandCodePanel } from "@/components/shared/command-code-panel";
+import type { CommandCode } from "@/components/shared/command-code-panel";
+import { useCommand } from "@/hooks/command/useCommand/useCommand";
+import { useCommandUpdate } from "@/hooks/command/useCommandUpdate/useCommandUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCallback, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-interface ProtocolRunContentProps {
-  protocolId: string;
+interface CommandRunContentProps {
+  commandId: string;
 }
 
-export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
-  const { data: protocolData, isLoading } = useProtocol(protocolId);
+export function CommandRunContent({ commandId }: CommandRunContentProps) {
+  const { data: commandData, isLoading } = useCommand(commandId);
   const { data: session } = useSession();
   const { t } = useTranslation();
 
-  const family = (protocolData?.body as { family?: SensorFamily } | undefined)?.family;
+  const family = (commandData?.body as { family?: SensorFamily } | undefined)?.family;
   const browserSupport = useIotBrowserSupport(family);
 
-  const { mutateAsync: updateProtocol } = useProtocolUpdate(protocolId);
+  const { mutateAsync: updateCommand } = useCommandUpdate(commandId);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editedCode, setEditedCode] = useState<ProtocolCode>();
+  const [editedCode, setEditedCode] = useState<CommandCode>();
 
   const save = useCallback(
-    async (code: ProtocolCode) => {
+    async (code: CommandCode) => {
       try {
-        await updateProtocol({
-          params: { id: protocolId },
+        await updateCommand({
+          params: { id: commandId },
           body: { code: code as Record<string, unknown>[] },
         });
       } catch (err) {
@@ -45,10 +45,10 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
         throw err;
       }
     },
-    [protocolId, updateProtocol],
+    [commandId, updateCommand],
   );
 
-  const autosave = useAutosave<ProtocolCode>({
+  const autosave = useAutosave<CommandCode>({
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
     isValid: (value) => Array.isArray(value),
@@ -56,7 +56,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     enabled: isEditing,
   });
 
-  const startEditing = (initial: ProtocolCode) => {
+  const startEditing = (initial: CommandCode) => {
     setEditedCode(initial);
     setIsEditing(true);
   };
@@ -65,38 +65,38 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     setIsEditing(false);
   };
 
-  const protocol = protocolData?.body;
-  const isCreator = session?.user.id === protocol?.createdBy;
+  const command = commandData?.body;
+  const isCreator = session?.user.id === command?.createdBy;
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
   }
 
-  if (!protocol) {
+  if (!command) {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <h4 className="text-lg font-medium">{t("protocols.notFound")}</h4>
-          <p className="text-muted-foreground text-sm">{t("protocols.notFoundDescription")}</p>
+          <h4 className="text-lg font-medium">{t("commands.notFound")}</h4>
+          <p className="text-muted-foreground text-sm">{t("commands.notFoundDescription")}</p>
         </div>
       </div>
     );
   }
 
-  const rawCode = isEditing ? editedCode : protocol.code;
-  const protocolCode = Array.isArray(rawCode) ? rawCode : protocol.code;
+  const rawCode = isEditing ? editedCode : command.code;
+  const commandCode = Array.isArray(rawCode) ? rawCode : command.code;
 
   const codePanel = (
-    <ProtocolCodePanel
-      code={protocol.code}
+    <CommandCodePanel
+      code={command.code}
       isCreator={isCreator}
       isEditing={isEditing}
       editedCode={editedCode}
       handleChange={setEditedCode}
       status={autosave.status}
       closeEditing={closeEditing}
-      startEditing={() => startEditing(protocol.code)}
-      placeholder={t("newProtocol.codePlaceholder")}
+      startEditing={() => startEditing(command.code)}
+      placeholder={t("newCommand.codePlaceholder")}
       height="100%"
       borderless
     />
@@ -107,13 +107,13 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
       <CodeTesterLayout
         codePanel={codePanel}
         testerPanel={
-          <IotProtocolRunner
-            protocolCode={protocolCode}
-            sensorFamily={protocol.family}
+          <IotCommandRunner
+            commandCode={commandCode}
+            sensorFamily={command.family}
             layout="vertical"
           />
         }
-        testerTitle={t("protocolSettings.testerTitle")}
+        testerTitle={t("commandSettings.testerTitle")}
         browserSupport={browserSupport}
       />
     </div>

@@ -1,21 +1,22 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useIotCommandExecution } from "~/hooks/iot/useIotCommandExecution/useIotCommandExecution";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
-import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
-import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
+import { getLiveCommandCode } from "~/lib/command-code-registry";
 import { tsr } from "~/lib/tsr";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type {
   BranchCell,
   CommandCell,
+  CommandReferencePayload,
   MacroCell,
   OutputCell,
-  ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import { resolveInlineCommand } from "@repo/api/utils/command-payload";
 import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
 
@@ -38,16 +39,18 @@ function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
   return "multispeq";
 }
 
-async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
+async function getCommandCode(
+  payload: CommandReferencePayload,
+): Promise<Record<string, unknown>[] | null> {
   // Prefer the live editor code so the device runs exactly what is on screen,
   // with no redundant backend round-trip. Fall back to the last saved version
-  // only when no editor is mounted for this protocol (or it holds invalid code).
-  const live = getLiveProtocolCode(cell.payload.protocolId);
+  // only when no editor is mounted for this command (or it holds invalid code).
+  const live = getLiveCommandCode(payload.commandId);
   if (live && live.length > 0) return live;
 
   try {
-    const result = await tsr.protocols.getProtocol.query({
-      params: { id: cell.payload.protocolId },
+    const result = await tsr.commands.getCommand.query({
+      params: { id: payload.commandId },
     });
     if (result.status !== 200) return null;
     const code = result.body.code;
@@ -138,7 +141,7 @@ export function useWorkbookExecution({
   const { isConnected, isConnecting, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
 
-  const { executeProtocol, executeCommand } = useIotProtocolExecution(
+  const { executeCommandCode, executeInlineCommand } = useIotCommandExecution(
     driver,
     isConnected,
     sensorFamily,
@@ -147,10 +150,10 @@ export function useWorkbookExecution({
 
   const isConnectedRef = useRef(isConnected);
   isConnectedRef.current = isConnected;
-  const executeProtocolRef = useRef(executeProtocol);
-  executeProtocolRef.current = executeProtocol;
-  const executeCommandRef = useRef(executeCommand);
-  executeCommandRef.current = executeCommand;
+  const executeCommandCodeRef = useRef(executeCommandCode);
+  executeCommandCodeRef.current = executeCommandCode;
+  const executeInlineCommandRef = useRef(executeInlineCommand);
+  executeInlineCommandRef.current = executeInlineCommand;
   const executeMacroMutationRef = useRef(executeMacroMutation);
   executeMacroMutationRef.current = executeMacroMutation;
 
@@ -166,15 +169,15 @@ export function useWorkbookExecution({
 
   const execCounterRef = useRef(0);
 
-  const runProtocolCell = useCallback(
-    async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
-      const protocolCode = await getProtocolCode(cell);
-      if (!protocolCode) {
-        setCellState(cell.id, { status: "error", error: "Invalid or missing protocol code" });
+  const runLibraryCommandCell = useCallback(
+    async (cell: CommandCell, payload: CommandReferencePayload, currentCells: WorkbookCell[]) => {
+      const commandCode = await getCommandCode(payload);
+      if (!commandCode) {
+        setCellState(cell.id, { status: "error", error: "Invalid or missing command code" });
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "Invalid or missing protocol JSON"),
+          makeErrorOutputCell(cell.id, "Invalid or missing command JSON"),
         );
       }
 
@@ -188,7 +191,7 @@ export function useWorkbookExecution({
           cell.id,
           makeErrorOutputCell(
             cell.id,
-            "No device connected - connect a device to run this protocol",
+            "No device connected - connect a device to run this command",
           ),
         );
       }
@@ -197,7 +200,7 @@ export function useWorkbookExecution({
       const startTime = performance.now();
 
       try {
-        const data = await executeProtocolRef.current(protocolCode);
+        const data = await executeCommandCodeRef.current(commandCode);
         const executionTime = performance.now() - startTime;
         setCellState(cell.id, { status: "completed" });
         return insertOutputAfterCell(
@@ -227,11 +230,15 @@ export function useWorkbookExecution({
     return { response: data };
   };
 
-  const runCommandCell = useCallback(
-    async (cell: CommandCell, currentCells: WorkbookCell[]) => {
+  const runInlineCommandCell = useCallback(
+    async (
+      cell: CommandCell,
+      payload: { format: "string" | "json" | "yaml"; content: string },
+      currentCells: WorkbookCell[],
+    ) => {
       let command: string | Record<string, unknown> | unknown[];
       try {
-        command = resolveInlineCommand(cell.payload);
+        command = resolveInlineCommand(payload);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Invalid command content";
         setCellState(cell.id, { status: "error", error: message });
@@ -243,7 +250,10 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "No device connected - connect a device to run this command"),
+          makeErrorOutputCell(
+            cell.id,
+            "No device connected - connect a device to run this command",
+          ),
         );
       }
 
@@ -251,7 +261,7 @@ export function useWorkbookExecution({
       const startTime = performance.now();
 
       try {
-        const data = await executeCommandRef.current(command);
+        const data = await executeInlineCommandRef.current(command);
         const executionTime = performance.now() - startTime;
         setCellState(cell.id, { status: "completed" });
         return insertOutputAfterCell(
@@ -281,7 +291,7 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeErrorOutputCell(cell.id, "No measurement data available - run a protocol cell first"),
+          makeErrorOutputCell(cell.id, "No measurement data available - run a command cell first"),
         );
       }
 
@@ -419,10 +429,10 @@ export function useWorkbookExecution({
       });
 
       switch (cell.type) {
-        case "protocol":
-          return runProtocolCell(cell, currentCells);
         case "command":
-          return runCommandCell(cell, currentCells);
+          return isCommandReferencePayload(cell.payload)
+            ? runLibraryCommandCell(cell, cell.payload, currentCells)
+            : runInlineCommandCell(cell, cell.payload, currentCells);
         case "macro":
           return runMacroCell(cell, cellIndex, currentCells);
         case "question":
@@ -433,7 +443,7 @@ export function useWorkbookExecution({
           return currentCells;
       }
     },
-    [runProtocolCell, runCommandCell, runMacroCell, runQuestionCell, runBranchCell],
+    [runLibraryCommandCell, runInlineCommandCell, runMacroCell, runQuestionCell, runBranchCell],
   );
 
   // Returns the jump index into `currentCells`, or -1 if no jump.

@@ -104,25 +104,25 @@ export const mainNavigation = {
   library: {
     titleKey: "sidebar.library",
     namespace: "navigation",
-    url: (locale: string) => `/${locale}/platform/protocols`,
+    url: (locale: string) => `/${locale}/platform/commands`,
     icon: "Library",
     navigable: false,
     children: [
       {
-        titleKey: "sidebar.protocols",
+        titleKey: "sidebar.commands",
         namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/protocols`,
+        url: (locale: string) => `/${locale}/platform/commands`,
         icon: "FileSliders",
         items: [
           {
-            titleKey: "sidebar.newProtocol",
+            titleKey: "sidebar.newCommand",
             namespace: "navigation",
-            url: (locale: string) => `/${locale}/platform/protocols/new`,
+            url: (locale: string) => `/${locale}/platform/commands/new`,
           },
           {
             titleKey: "sidebar.overview",
             namespace: "navigation",
-            url: (locale: string) => `/${locale}/platform/protocols`,
+            url: (locale: string) => `/${locale}/platform/commands`,
           },
         ] as NavLink[],
       },

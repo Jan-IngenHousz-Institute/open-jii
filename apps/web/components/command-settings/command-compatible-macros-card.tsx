@@ -18,9 +18,9 @@ import {
   CardContent,
 } from "@repo/ui/components/card";
 
-import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
-import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
-import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
+import { useAddCompatibleMacro } from "../../hooks/command/useAddCompatibleMacro/useAddCompatibleMacro";
+import { useCommandCompatibleMacros } from "../../hooks/command/useCommandCompatibleMacros/useCommandCompatibleMacros";
+import { useRemoveCompatibleMacro } from "../../hooks/command/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
 import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
@@ -50,23 +50,23 @@ const getLanguageColor = (language: string) => {
   }
 };
 
-interface ProtocolCompatibleMacrosCardProps {
-  protocolId: string;
+interface CommandCompatibleMacrosCardProps {
+  commandId: string;
   embedded?: boolean;
 }
 
-export function ProtocolCompatibleMacrosCard({
-  protocolId,
+export function CommandCompatibleMacrosCard({
+  commandId,
   embedded,
-}: ProtocolCompatibleMacrosCardProps) {
+}: CommandCompatibleMacrosCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
 
-  const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
+  const { data: compatibleData, isLoading } = useCommandCompatibleMacros(commandId);
   const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
 
-  const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);
-  const { mutateAsync: removeMacro, isPending: isRemoving } = useRemoveCompatibleMacro(protocolId);
+  const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(commandId);
+  const { mutateAsync: removeMacro, isPending: isRemoving } = useRemoveCompatibleMacro(commandId);
 
   // Macro search for the add dropdown
   const [macroSearch, setMacroSearch] = useState("");
@@ -92,7 +92,7 @@ export function ProtocolCompatibleMacrosCard({
 
   const handleAddMacro = async (macroId: string) => {
     await addMacros({
-      params: { id: protocolId },
+      params: { id: commandId },
       body: { macroIds: [macroId] },
     });
     setMacroSearch("");
@@ -100,7 +100,7 @@ export function ProtocolCompatibleMacrosCard({
 
   const handleRemoveMacro = async (macroId: string) => {
     await removeMacro({
-      params: { id: protocolId, macroId },
+      params: { id: commandId, macroId },
     });
   };
 
@@ -110,7 +110,7 @@ export function ProtocolCompatibleMacrosCard({
       <MacroSearchWithDropdown
         availableMacros={availableMacros}
         value=""
-        placeholder={t("protocolSettings.addCompatibleMacro")}
+        placeholder={t("commandSettings.addCompatibleMacro")}
         loading={!isDebounced}
         searchValue={macroSearch}
         onSearchChange={setMacroSearch}
@@ -166,7 +166,7 @@ export function ProtocolCompatibleMacrosCard({
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-sm">{t("protocolSettings.noCompatibleMacros")}</p>
+        <p className="text-muted-foreground text-sm">{t("commandSettings.noCompatibleMacros")}</p>
       )}
     </>
   );
@@ -175,9 +175,9 @@ export function ProtocolCompatibleMacrosCard({
     return (
       <div className="space-y-4">
         <div>
-          <h4 className="text-sm font-medium">{t("protocolSettings.compatibleMacros")}</h4>
+          <h4 className="text-sm font-medium">{t("commandSettings.compatibleMacros")}</h4>
           <p className="text-muted-foreground text-sm">
-            {t("protocolSettings.compatibleMacrosDescription")}
+            {t("commandSettings.compatibleMacrosDescription")}
           </p>
         </div>
         {content}
@@ -188,8 +188,8 @@ export function ProtocolCompatibleMacrosCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
-        <CardDescription>{t("protocolSettings.compatibleMacrosDescription")}</CardDescription>
+        <CardTitle>{t("commandSettings.compatibleMacros")}</CardTitle>
+        <CardDescription>{t("commandSettings.compatibleMacrosDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">{content}</CardContent>
     </Card>

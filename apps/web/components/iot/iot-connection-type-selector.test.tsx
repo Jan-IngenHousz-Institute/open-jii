@@ -25,7 +25,7 @@ describe("ConnectionTypeSelector", () => {
         />,
       );
 
-      expect(screen.getByText("iot.protocolRunner.connectionType")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.connectionType")).toBeInTheDocument();
     });
 
     it("renders bluetooth and serial buttons", () => {
@@ -42,8 +42,8 @@ describe("ConnectionTypeSelector", () => {
         />,
       );
 
-      expect(screen.getByText("iot.protocolRunner.bluetooth")).toBeInTheDocument();
-      expect(screen.getByText("iot.protocolRunner.serial")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.bluetooth")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.serial")).toBeInTheDocument();
     });
   });
 

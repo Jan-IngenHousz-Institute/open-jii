@@ -3,8 +3,8 @@
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
+import type { CreateCommandRequestBody } from "@repo/api/schemas/command.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
@@ -21,7 +21,7 @@ export const reviewSchema = z.object({
   ...codeSchema.shape,
 });
 
-interface ReviewStepProps extends WizardStepProps<CreateProtocolRequestBody> {
+interface ReviewStepProps extends WizardStepProps<CreateCommandRequestBody> {
   selectedMacros: Macro[];
 }
 
@@ -42,19 +42,17 @@ export function ReviewStep({
     <div className="mx-auto space-y-8">
       {/* Header */}
       <div className="space-y-2">
-        <h2 className="text-lg font-medium tracking-tight">
-          {t("newProtocol.reviewYourProtocol")}
-        </h2>
-        <p className="text-muted-foreground text-sm">{t("newProtocol.reviewAllDetails")}</p>
+        <h2 className="text-lg font-medium tracking-tight">{t("newCommand.reviewYourCommand")}</h2>
+        <p className="text-muted-foreground text-sm">{t("newCommand.reviewAllDetails")}</p>
       </div>
 
       <div className="relative flex flex-col gap-6 md:flex-row">
-        {/* Left column — Details + Macros (defines the row height) */}
+        {/* Left column - Details + Macros (defines the row height) */}
         <div className="flex w-full flex-col gap-6 md:w-1/2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-semibold">
-                {t("newProtocol.detailsTitle")}
+                {t("newCommand.detailsTitle")}
               </CardTitle>
               <Button type="button" onClick={() => goToStep(0)} variant="link" size="sm">
                 {t("common.edit")}
@@ -64,13 +62,13 @@ export function ReviewStep({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                    {t("newProtocol.protocolName")}
+                    {t("newCommand.commandName")}
                   </div>
-                  <div className="mt-1 text-base font-medium">{formData.name || "—"}</div>
+                  <div className="mt-1 text-base font-medium">{formData.name || "-"}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                    {t("newProtocol.sensorFamily")}
+                    {t("newCommand.sensorFamily")}
                   </div>
                   <div className="mt-1 text-base font-medium">
                     {getSensorFamilyLabel(formData.family)}
@@ -81,7 +79,7 @@ export function ReviewStep({
               {formData.description ? (
                 <div>
                   <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
-                    {t("newProtocol.description_field")}
+                    {t("newCommand.description_field")}
                   </div>
                   <div className="rounded-md border p-3 text-sm">
                     <RichTextRenderer content={formData.description} />
@@ -90,10 +88,10 @@ export function ReviewStep({
               ) : (
                 <div>
                   <div className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wider">
-                    {t("newProtocol.description_field")}
+                    {t("newCommand.description_field")}
                   </div>
                   <div className="text-muted-foreground text-sm">
-                    {t("newProtocol.noDescription")}
+                    {t("newCommand.noDescription")}
                   </div>
                 </div>
               )}
@@ -103,7 +101,7 @@ export function ReviewStep({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-semibold">
-                {t("newProtocol.compatibleMacros")}
+                {t("newCommand.compatibleMacros")}
               </CardTitle>
               <Button type="button" onClick={() => goToStep(0)} variant="link" size="sm">
                 {t("common.edit")}
@@ -123,18 +121,18 @@ export function ReviewStep({
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-sm">{t("newProtocol.noMacrosAdded")}</p>
+                <p className="text-muted-foreground text-sm">{t("newCommand.noMacrosAdded")}</p>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right column — Code (absolutely positioned, height matches left column) */}
+        {/* Right column - Code (absolutely positioned, height matches left column) */}
         <div className="relative md:absolute md:bottom-0 md:right-0 md:top-0 md:w-[calc(50%-0.75rem)]">
           <Card className="flex h-full flex-col">
             <CardHeader className="flex shrink-0 flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-semibold">
-                {t("newProtocol.protocolCode")}
+                {t("newCommand.commandCode")}
               </CardTitle>
               <Button type="button" onClick={() => goToStep(1)} variant="link" size="sm">
                 {t("common.edit")}
@@ -158,7 +156,7 @@ export function ReviewStep({
         totalSteps={totalSteps}
         isSubmitting={isSubmitting}
         previousLabel={t("experiments.back")}
-        submitLabel={t("newProtocol.finalizeSetup")}
+        submitLabel={t("newCommand.finalizeSetup")}
       />
     </div>
   );

@@ -33,8 +33,8 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
-import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
+import { useMacroCompatibleCommands } from "../../hooks/macro/useMacroCompatibleCommands/useMacroCompatibleCommands";
+import { MacroCompatibleCommandsCard } from "../macro-settings/macro-compatible-commands-card";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 
 interface MacroDetailsSidebarProps {
@@ -54,9 +54,9 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
   const { mutateAsync: deleteMacro, isPending: isDeleting } = useMacroDelete();
-  const { data: compatibleProtocolsData } = useMacroCompatibleProtocols(macroId);
-  const compatibleProtocolsCount =
-    (compatibleProtocolsData?.body as unknown[] | undefined)?.length ?? 0;
+  const { data: compatibleCommandsData } = useMacroCompatibleCommands(macroId);
+  const compatibleCommandsCount =
+    (compatibleCommandsData?.body as unknown[] | undefined)?.length ?? 0;
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -138,7 +138,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         </div>
       ) : null}
 
-      {/* Compatible Protocols Section */}
+      {/* Compatible Commands Section */}
       <div
         role="separator"
         aria-orientation="horizontal"
@@ -146,14 +146,14 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {isCreator ? (
-        <MacroCompatibleProtocolsCard macroId={macroId} embedded />
+        <MacroCompatibleCommandsCard macroId={macroId} embedded />
       ) : (
         <div className="space-y-1">
-          <h4 className="text-sm font-medium">{t("macroSettings.compatibleProtocols")}</h4>
+          <h4 className="text-sm font-medium">{t("macroSettings.compatibleCommands")}</h4>
           <p className="text-muted-foreground text-sm">
-            {compatibleProtocolsCount > 0
-              ? `${compatibleProtocolsCount} ${compatibleProtocolsCount === 1 ? "protocol" : "protocols"}`
-              : t("macroSettings.noCompatibleProtocols")}
+            {compatibleCommandsCount > 0
+              ? `${compatibleCommandsCount} ${compatibleCommandsCount === 1 ? "command" : "commands"}`
+              : t("macroSettings.noCompatibleCommands")}
           </p>
         </div>
       )}

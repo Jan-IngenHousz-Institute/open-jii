@@ -115,7 +115,7 @@ describe("CellWrapper", () => {
     // A long name previously wrapped to 2-5 lines depending on width, ballooning
     // the header to a different height at every breakpoint. It must now truncate.
     const longLabel =
-      "Copy of [Alice] Read-only demo protocol c7732d58 with a very long trailing name";
+      "Copy of [Alice] Read-only demo command c7732d58 with a very long trailing name";
     renderWrapper({ label: longLabel });
 
     const labelEl = screen.getByText(longLabel);

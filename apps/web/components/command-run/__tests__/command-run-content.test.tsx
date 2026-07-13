@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import { ProtocolRunContent } from "../protocol-run-content";
+import { CommandRunContent } from "../command-run-content";
 
 vi.mock("@repo/ui/lib/utils", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
@@ -29,7 +29,7 @@ let mockSession: { user: { id: string } } | null = null;
 // Captured to drive the autosave path without the real CodeMirror pipeline.
 let capturedOnChange: ((value: Record<string, unknown>[] | string | undefined) => void) | null =
   null;
-vi.mock("../../protocol-code-editor", () => ({
+vi.mock("../../command-code-editor", () => ({
   __esModule: true,
   default: ({
     headerActions,
@@ -61,8 +61,8 @@ vi.mock("../../shared/code-editor-header-actions", () => ({
   CodeEditorHeaderActions: () => <div data-testid="editor-header-actions" />,
 }));
 
-vi.mock("../../iot/iot-protocol-runner", () => ({
-  IotProtocolRunner: () => <div data-testid="iot-runner" />,
+vi.mock("../../iot/iot-command-runner", () => ({
+  IotCommandRunner: () => <div data-testid="iot-runner" />,
 }));
 
 vi.mock("@repo/ui/hooks/use-mobile", async (importOriginal) => {
@@ -90,10 +90,10 @@ vi.mock("@repo/ui/components/resizable", async (importOriginal) => {
   };
 });
 
-describe("<ProtocolRunContent />", () => {
-  const mockProtocol = createProtocol({
+describe("<CommandRunContent />", () => {
+  const mockCommand = createCommand({
     id: "proto-1",
-    name: "Test Protocol",
+    name: "Test Command",
     code: [{ averages: 1 }],
     family: "multispeq",
     createdBy: "user-1",
@@ -102,8 +102,8 @@ describe("<ProtocolRunContent />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedOnChange = null;
-    server.mount(contract.protocols.getProtocol, { body: mockProtocol });
-    server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    server.mount(contract.commands.getCommand, { body: mockCommand });
+    server.mount(contract.commands.updateCommand, { body: mockCommand });
     mockBrowserSupport = {
       bluetooth: true,
       serial: true,
@@ -116,25 +116,25 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show loading state", () => {
-    server.mount(contract.protocols.getProtocol, { delay: 999_999 });
+    server.mount(contract.commands.getCommand, { delay: 999_999 });
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     expect(screen.getByText("common.loading")).toBeInTheDocument();
   });
 
   it("should show not found when no data", async () => {
-    server.mount(contract.protocols.getProtocol, { status: 404 });
+    server.mount(contract.commands.getCommand, { status: 404 });
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("protocols.notFound")).toBeInTheDocument();
+      expect(screen.getByText("commands.notFound")).toBeInTheDocument();
     });
   });
 
   it("should render read-only json viewer and IoT runner by default", async () => {
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
@@ -152,10 +152,10 @@ describe("<ProtocolRunContent />", () => {
       serialReason: null,
     };
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("iot.protocolRunner.browserNotSupported")).toBeInTheDocument();
+      expect(screen.getByText("iot.commandRunner.browserNotSupported")).toBeInTheDocument();
     });
     expect(screen.queryByTestId("iot-runner")).not.toBeInTheDocument();
   });
@@ -164,7 +164,7 @@ describe("<ProtocolRunContent />", () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("edit-trigger")).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe("<ProtocolRunContent />", () => {
     mockSession = { user: { id: "other-user" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("json-viewer")).toBeInTheDocument();
@@ -188,7 +188,7 @@ describe("<ProtocolRunContent />", () => {
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     const user = userEvent.setup();
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await user.click(await screen.findByTestId("edit-trigger"));
 
@@ -202,7 +202,7 @@ describe("<ProtocolRunContent />", () => {
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     const user = userEvent.setup();
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await user.click(await screen.findByTestId("edit-trigger"));
 
@@ -210,13 +210,13 @@ describe("<ProtocolRunContent />", () => {
     expect(screen.queryByText("common.save")).not.toBeInTheDocument();
   });
 
-  it("autosaves the edited protocol code after the debounce window", async () => {
+  it("autosaves the edited command code after the debounce window", async () => {
     mockSession = { user: { id: "user-1" } };
     vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-    const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
+    const updateSpy = server.mount(contract.commands.updateCommand, { body: mockCommand });
     const user = userEvent.setup();
 
-    render(<ProtocolRunContent protocolId="proto-1" />);
+    render(<CommandRunContent commandId="proto-1" />);
 
     await user.click(await screen.findByTestId("edit-trigger"));
     await screen.findByTestId("code-editor");

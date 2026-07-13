@@ -8,30 +8,30 @@ import { useRemoveCompatibleMacro } from "./useRemoveCompatibleMacro";
 
 describe("useRemoveCompatibleMacro", () => {
   it("sends delete request with correct params", async () => {
-    const spy = server.mount(contract.protocols.removeCompatibleMacro);
+    const spy = server.mount(contract.commands.removeCompatibleMacro);
 
-    const { result } = renderHook(() => useRemoveCompatibleMacro("protocol-1"));
+    const { result } = renderHook(() => useRemoveCompatibleMacro("command-1"));
 
     act(() => {
       result.current.mutate({
-        params: { id: "protocol-1", macroId: "m-1" },
+        params: { id: "command-1", macroId: "m-1" },
       });
     });
 
     await waitFor(() => {
-      expect(spy.params.id).toBe("protocol-1");
+      expect(spy.params.id).toBe("command-1");
       expect(spy.params.macroId).toBe("m-1");
     });
   });
 
   it("completes mutation successfully", async () => {
-    server.mount(contract.protocols.removeCompatibleMacro);
+    server.mount(contract.commands.removeCompatibleMacro);
 
-    const { result } = renderHook(() => useRemoveCompatibleMacro("protocol-1"));
+    const { result } = renderHook(() => useRemoveCompatibleMacro("command-1"));
 
     act(() => {
       result.current.mutate({
-        params: { id: "protocol-1", macroId: "m-1" },
+        params: { id: "command-1", macroId: "m-1" },
       });
     });
 

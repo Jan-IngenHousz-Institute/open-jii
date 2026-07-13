@@ -235,7 +235,7 @@ describe("FlowMapper round-trip", () => {
           id: "measurement-1",
           type: "measurement" as const,
           name: "Measurement 1",
-          content: { protocolId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
+          content: { commandId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
           isStart: false,
         },
         {
@@ -377,26 +377,26 @@ describe("FlowMapper.toApiGraph validation", () => {
     expect(() => FlowMapper.toApiGraph(nodes, [])).toThrow(/Exactly one start node/);
   });
 
-  it("errors when measurement node missing protocol", () => {
+  it("errors when measurement node missing command", () => {
     const flow = buildApiFlow({
       nodes: [
         {
           id: "m1",
           type: "measurement" as const,
           name: "M1",
-          content: { protocolId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
+          content: { commandId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
           isStart: true,
         },
       ],
     });
     const react = FlowMapper.toReactFlow(flow);
-    // Simulate user clearing protocolId (remove stepSpecification & protocolId)
-    react.nodes[0].type = "MEASUREMENT"; // ensure measurement type
+    // Simulate user clearing commandId (remove stepSpecification & commandId)
+    react.nodes[0].type = "COMMAND"; // ensure command type
     const data = react.nodes[0].data as FlowNodeDataWithSpec;
     data.stepSpecification = undefined;
-    data.protocolId = undefined;
+    data.commandId = undefined;
     expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
-      "A valid protocol must be selected for measurement nodes",
+      "A valid command must be selected for measurement nodes",
     );
   });
 
@@ -496,20 +496,23 @@ describe("FlowMapper inline command node", () => {
     );
   });
 
-  it("keeps plain protocol measurement nodes on the MEASUREMENT type", () => {
+  it("maps reference measurement nodes to the COMMAND type with commandId data", () => {
     const flow = buildApiFlow({
       nodes: [
         {
           id: "m1",
           type: "measurement" as const,
           name: "M1",
-          content: { protocolId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
+          content: { commandId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
           isStart: true,
         },
       ],
     });
     const { nodes } = FlowMapper.toReactFlow(flow);
-    expect(nodes[0].type).toBe("MEASUREMENT");
+    expect(nodes[0].type).toBe("COMMAND");
     expect((nodes[0].data as FlowNodeDataWithSpec).command).toBeUndefined();
+    expect((nodes[0].data as FlowNodeDataWithSpec).commandId).toBe(
+      "550e8400-e29b-41d4-a716-446655440000",
+    );
   });
 });

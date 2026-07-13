@@ -34,9 +34,9 @@ describe("createNewNode", () => {
     expect(node.data.stepSpecification).toMatchObject({ kind: "open_ended", text: "" });
   });
 
-  it("creates a MEASUREMENT node with protocol spec", () => {
-    const node = createNewNode("MEASUREMENT", { x: 1, y: 2 });
-    expect(node.data.stepSpecification).toHaveProperty("protocolId");
+  it("creates a COMMAND node with an inline command spec", () => {
+    const node = createNewNode("COMMAND", { x: 1, y: 2 });
+    expect(node.data.stepSpecification).toEqual({ command: { format: "string", content: "" } });
   });
 
   it("creates an ANALYSIS node with empty spec", () => {

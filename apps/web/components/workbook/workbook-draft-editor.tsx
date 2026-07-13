@@ -116,12 +116,12 @@ export function WorkbookDraftEditor({
   const isCreator = session?.user.id === createdBy;
 
   // Trigger the same `connect()` the toolbar uses when the user clicks Run on
-  // a Protocol or Command cell with no device. Done before any await so the
+  // a Command cell with no device. Done before any await so the
   // browser's Web Serial / Web Bluetooth picker still sees a live user gesture.
   const handleRunCell = useCallback(
     (cellId: string) => {
       const cell = cells.find((c) => c.id === cellId);
-      if ((cell?.type === "protocol" || cell?.type === "command") && !isConnected) {
+      if (cell?.type === "command" && !isConnected) {
         void connect();
         return;
       }

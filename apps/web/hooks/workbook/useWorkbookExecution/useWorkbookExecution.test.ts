@@ -4,25 +4,22 @@ import {
   createMacroCell,
   createMarkdownCell,
   createOutputCell,
-  createProtocol,
-  createProtocolCell,
+  createCommand,
+  createCommandRefCell,
   createQuestionCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  __resetProtocolCodeRegistry,
-  registerProtocolCodeSource,
-} from "~/lib/protocol-code-registry";
+import { __resetCommandCodeRegistry, registerCommandCodeSource } from "~/lib/command-code-registry";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { useWorkbookExecution } from "./useWorkbookExecution";
 
-const mockExecuteProtocol = vi.fn();
-const mockExecuteCommand = vi.fn();
+const mockExecuteCommandCode = vi.fn();
+const mockExecuteInlineCommand = vi.fn();
 const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
@@ -40,10 +37,10 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   }),
 }));
 
-vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
-  useIotProtocolExecution: () => ({
-    executeProtocol: mockExecuteProtocol,
-    executeCommand: mockExecuteCommand,
+vi.mock("~/hooks/iot/useIotCommandExecution/useIotCommandExecution", () => ({
+  useIotCommandExecution: () => ({
+    executeCommandCode: mockExecuteCommandCode,
+    executeInlineCommand: mockExecuteInlineCommand,
   }),
 }));
 
@@ -73,15 +70,15 @@ function findOutput(cells: WorkbookCell[], producedBy?: string) {
 describe("useWorkbookExecution", () => {
   beforeEach(() => {
     mockIsConnected = false;
-    mockExecuteProtocol.mockReset();
-    mockExecuteCommand.mockReset();
+    mockExecuteCommandCode.mockReset();
+    mockExecuteInlineCommand.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
-    __resetProtocolCodeRegistry();
+    __resetCommandCodeRegistry();
   });
 
   it("clearOutputs removes all output cells", () => {
-    const proto = createProtocolCell();
+    const proto = createCommandRefCell();
     const output = createOutputCell({ producedBy: proto.id });
     const macro = createMacroCell();
     const cells: WorkbookCell[] = [proto, output, macro];
@@ -95,14 +92,14 @@ describe("useWorkbookExecution", () => {
     expect(updated).toHaveLength(2);
   });
 
-  describe("runCell - protocol", () => {
-    it("errors when protocol has no code", async () => {
-      const proto = createProtocolCell();
-      const protocol = createProtocol({
-        id: proto.payload.protocolId,
+  describe("runCell - command", () => {
+    it("errors when command has no code", async () => {
+      const proto = createCommandRefCell();
+      const command = createCommand({
+        id: proto.payload.commandId,
         code: [],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(contract.commands.getCommand, { body: command });
 
       const { result, onCellsChange } = renderExecution([proto]);
 
@@ -111,16 +108,16 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const outputCell = findOutput(updated);
       expect(outputCell).toBeDefined();
-      expect(outputCell?.messages).toContain("Invalid or missing protocol JSON");
+      expect(outputCell?.messages).toContain("Invalid or missing command JSON");
     });
 
     it("errors when no device is connected", async () => {
-      const proto = createProtocolCell();
-      const protocol = createProtocol({
-        id: proto.payload.protocolId,
+      const proto = createCommandRefCell();
+      const command = createCommand({
+        id: proto.payload.commandId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(contract.commands.getCommand, { body: command });
       mockIsConnected = false;
 
       const { result, onCellsChange } = renderExecution([proto]);
@@ -134,15 +131,15 @@ describe("useWorkbookExecution", () => {
       );
     });
 
-    it("executes protocol and produces output cell", async () => {
-      const proto = createProtocolCell();
-      const protocol = createProtocol({
-        id: proto.payload.protocolId,
+    it("executes command and produces output cell", async () => {
+      const proto = createCommandRefCell();
+      const command = createCommand({
+        id: proto.payload.commandId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(contract.commands.getCommand, { body: command });
       mockIsConnected = true;
-      mockExecuteProtocol.mockResolvedValue({ measurement: 42 });
+      mockExecuteCommandCode.mockResolvedValue({ measurement: 42 });
 
       const { result, onCellsChange } = renderExecution([proto]);
 
@@ -155,58 +152,58 @@ describe("useWorkbookExecution", () => {
     });
 
     it("runs the live editor code directly, without re-fetching from the server", async () => {
-      // Fixes the stale-protocol bug at the source: the device runs exactly the
+      // Fixes the stale-command bug at the source: the device runs exactly the
       // code currently in the editor, with no backend round-trip, so a debounced,
       // not-yet-saved edit is never bypassed in favour of an older saved version.
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
 
       // The server holds a different (older) version that must NOT be read.
-      const getProtocolSpy = server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({
-          id: proto.payload.protocolId,
+      const getCommandSpy = server.mount(contract.commands.getCommand, {
+        body: createCommand({
+          id: proto.payload.commandId,
           code: [{ _protocol_set_: [{ label: "old" }] }],
         }),
       });
       mockIsConnected = true;
-      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+      mockExecuteCommandCode.mockResolvedValue({ measurement: 1 });
 
-      registerProtocolCodeSource(proto.payload.protocolId, () => liveCode);
+      registerCommandCodeSource(proto.payload.commandId, () => liveCode);
 
       const { result } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
 
-      expect(mockExecuteProtocol).toHaveBeenCalledWith(liveCode);
-      expect(getProtocolSpy.called).toBe(false);
+      expect(mockExecuteCommandCode).toHaveBeenCalledWith(liveCode);
+      expect(getCommandSpy.called).toBe(false);
     });
 
-    it("falls back to fetching the saved protocol when no editor is mounted", async () => {
-      const proto = createProtocolCell();
+    it("falls back to fetching the saved command when no editor is mounted", async () => {
+      const proto = createCommandRefCell();
       const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ id: proto.payload.commandId, code: savedCode }),
       });
       mockIsConnected = true;
-      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+      mockExecuteCommandCode.mockResolvedValue({ measurement: 1 });
 
       // No code source registered (e.g. the cell's editor is not mounted).
       const { result } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
 
-      expect(mockExecuteProtocol).toHaveBeenCalledWith(savedCode);
+      expect(mockExecuteCommandCode).toHaveBeenCalledWith(savedCode);
     });
 
-    it("captures protocol execution errors", async () => {
-      const proto = createProtocolCell();
-      const protocol = createProtocol({
-        id: proto.payload.protocolId,
+    it("captures command execution errors", async () => {
+      const proto = createCommandRefCell();
+      const command = createCommand({
+        id: proto.payload.commandId,
         code: [{ _protocol_set_: [] }],
       });
-      server.mount(contract.protocols.getProtocol, { body: protocol });
+      server.mount(contract.commands.getCommand, { body: command });
       mockIsConnected = true;
-      mockExecuteProtocol.mockRejectedValue(new Error("Device timed out"));
+      mockExecuteCommandCode.mockRejectedValue(new Error("Device timed out"));
 
       const { result, onCellsChange } = renderExecution([proto]);
 
@@ -222,12 +219,12 @@ describe("useWorkbookExecution", () => {
     it("sends a raw string command and wraps a scalar response", async () => {
       const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
       mockIsConnected = true;
-      mockExecuteCommand.mockResolvedValue("87%");
+      mockExecuteInlineCommand.mockResolvedValue("87%");
 
       const { result, onCellsChange } = renderExecution([cmd]);
       await act(() => result.current.runCell(cmd.id));
 
-      expect(mockExecuteCommand).toHaveBeenCalledWith("battery");
+      expect(mockExecuteInlineCommand).toHaveBeenCalledWith("battery");
       const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
       expect(outputCell?.data).toEqual({ response: "87%" });
     });
@@ -235,12 +232,12 @@ describe("useWorkbookExecution", () => {
     it("parses a JSON command before sending and passes object responses through", async () => {
       const cmd = createCommandCell({ payload: { format: "json", content: '[{"c":1}]' } });
       mockIsConnected = true;
-      mockExecuteCommand.mockResolvedValue({ ok: true });
+      mockExecuteInlineCommand.mockResolvedValue({ ok: true });
 
       const { result, onCellsChange } = renderExecution([cmd]);
       await act(() => result.current.runCell(cmd.id));
 
-      expect(mockExecuteCommand).toHaveBeenCalledWith([{ c: 1 }]);
+      expect(mockExecuteInlineCommand).toHaveBeenCalledWith([{ c: 1 }]);
       const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
       expect(outputCell?.data).toEqual({ ok: true });
     });
@@ -256,7 +253,7 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("No device connected")]),
       );
-      expect(mockExecuteCommand).not.toHaveBeenCalled();
+      expect(mockExecuteInlineCommand).not.toHaveBeenCalled();
     });
 
     it("records an error when inline content is invalid JSON", async () => {
@@ -268,7 +265,7 @@ describe("useWorkbookExecution", () => {
 
       const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
       expect(outputCell?.messages?.length).toBeGreaterThan(0);
-      expect(mockExecuteCommand).not.toHaveBeenCalled();
+      expect(mockExecuteInlineCommand).not.toHaveBeenCalled();
     });
   });
 
@@ -287,7 +284,7 @@ describe("useWorkbookExecution", () => {
     });
 
     it("executes macro with preceding output data", async () => {
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const output = createOutputCell({
         producedBy: proto.id,
         data: { chlorophyll: 35 },
@@ -312,7 +309,7 @@ describe("useWorkbookExecution", () => {
     });
 
     it("captures macro failure response", async () => {
-      const proto = createProtocolCell();
+      const proto = createCommandRefCell();
       const output = createOutputCell({
         producedBy: proto.id,
         data: { value: 1 },

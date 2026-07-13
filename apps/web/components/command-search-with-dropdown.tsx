@@ -5,49 +5,49 @@ import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
 
-import { ProtocolSearchPopover } from "./protocol-search-popover";
+import { CommandSearchPopover } from "./command-search-popover";
 
-export interface ProtocolSearchWithDropdownProps {
-  availableProtocols: Protocol[];
+export interface CommandSearchWithDropdownProps {
+  availableCommands: Command[];
   value: string;
   placeholder?: string;
   loading?: boolean;
   searchValue: string;
   onSearchChange: (value: string) => void;
-  onAddProtocol: (protocolId: string) => void | Promise<void>;
-  isAddingProtocol: boolean;
+  onAddCommand: (commandId: string) => void | Promise<void>;
+  isAddingCommand: boolean;
   disabled?: boolean;
 }
 
-export function ProtocolSearchWithDropdown({
-  availableProtocols,
+export function CommandSearchWithDropdown({
+  availableCommands,
   value,
   placeholder,
   loading = false,
   searchValue,
   onSearchChange,
-  onAddProtocol,
-  isAddingProtocol,
+  onAddCommand,
+  isAddingCommand,
   disabled = false,
-}: ProtocolSearchWithDropdownProps) {
+}: CommandSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
   const locale = useLocale();
   const { t } = useTranslation("common");
 
-  // Snapshot the selected protocol when it’s visible in the current list.
-  const selectedSnapshotRef = useRef<Protocol | undefined>(undefined);
+  // Snapshot the selected command when it’s visible in the current list.
+  const selectedSnapshotRef = useRef<Command | undefined>(undefined);
 
-  const currentMatch = value ? availableProtocols.find((p) => p.id === value) : undefined;
+  const currentMatch = value ? availableCommands.find((p) => p.id === value) : undefined;
 
-  // Keep selected protocol snapshot in sync with current value and available protocols
+  // Keep selected command snapshot in sync with current value and available commands
   useEffect(() => {
     if (!value) {
-      // Clear snapshot when no protocol is selected
+      // Clear snapshot when no command is selected
       selectedSnapshotRef.current = undefined;
     } else if (currentMatch && selectedSnapshotRef.current?.id !== currentMatch.id) {
       // Update snapshot when we have a new match that's different from current snapshot
@@ -55,9 +55,9 @@ export function ProtocolSearchWithDropdown({
     }
   }, [value, currentMatch]);
 
-  const selectedProtocol = selectedSnapshotRef.current;
+  const selectedCommand = selectedSnapshotRef.current;
 
-  const dropdownProtocols = availableProtocols.filter((protocol) => protocol.id !== value);
+  const dropdownCommands = availableCommands.filter((command) => command.id !== value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,16 +70,16 @@ export function ProtocolSearchWithDropdown({
           className="hover:bg-surface-light w-full justify-between py-6 text-left font-normal"
         >
           <div className="min-w-0 flex-1">
-            {selectedProtocol ? (
+            {selectedCommand ? (
               <div className="flex min-w-0 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
-                  <span className="truncate text-sm font-medium">{selectedProtocol.name}</span>
+                  <span className="truncate text-sm font-medium">{selectedCommand.name}</span>
                   <Link
-                    href={`/${locale}/platform/protocols/${selectedProtocol.id}`}
+                    href={`/${locale}/platform/commands/${selectedCommand.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title={t("experiments.seeProtocolDetails")}
-                    aria-label={t("experiments.seeProtocolDetails")}
+                    title={t("experiments.seeCommandDetails")}
+                    aria-label={t("experiments.seeCommandDetails")}
                     className="group shrink-0 p-1"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -87,24 +87,24 @@ export function ProtocolSearchWithDropdown({
                   </Link>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
-                  {selectedProtocol.family} • {t("common.by")} {selectedProtocol.createdByName}
+                  {selectedCommand.family} • {t("common.by")} {selectedCommand.createdByName}
                 </span>
               </div>
             ) : (
               <div className="text-muted-foreground italic">
-                {placeholder ?? t("experiments.searchProtocols")}
+                {placeholder ?? t("experiments.searchCommands")}
               </div>
             )}
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <ProtocolSearchPopover
-        availableProtocols={dropdownProtocols}
+      <CommandSearchPopover
+        availableCommands={dropdownCommands}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
-        onAddProtocol={onAddProtocol}
-        isAddingProtocol={isAddingProtocol}
+        onAddCommand={onAddCommand}
+        isAddingCommand={isAddingCommand}
         loading={loading}
         setOpen={setOpen}
       />

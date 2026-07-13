@@ -1,4 +1,4 @@
-import { createMarkdownCell, createProtocolCell, createQuestionCell } from "@/test/factories";
+import { createMarkdownCell, createCommandRefCell, createQuestionCell } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -12,9 +12,9 @@ const questionCell = createQuestionCell({
   name: "soil_moisture",
   question: { kind: "open_ended", text: "What?", required: false },
 });
-const protocolCell = createProtocolCell({
+const commandCell = createCommandRefCell({
   id: "proto-1",
-  payload: { protocolId: "p1", version: 1, name: "My Protocol" },
+  payload: { commandId: "p1", version: 1, name: "My Command" },
 });
 
 describe("WorkbookSidebar", () => {
@@ -27,7 +27,7 @@ describe("WorkbookSidebar", () => {
   it("shows the question's name as its title (icon + color signal the type, not a 'Question' label)", () => {
     render(
       <WorkbookSidebar
-        cells={[markdownCell, questionCell, protocolCell]}
+        cells={[markdownCell, questionCell, commandCell]}
         onCellClick={onCellClick}
       />,
     );
@@ -36,19 +36,19 @@ describe("WorkbookSidebar", () => {
     // type is conveyed by the per-type icon and color instead of the word.
     expect(screen.getByText("soil_moisture")).toBeInTheDocument();
     expect(screen.queryByText("Question")).not.toBeInTheDocument();
-    expect(screen.getByText("Protocol")).toBeInTheDocument();
+    expect(screen.getByText("Command")).toBeInTheDocument();
   });
 
   it("shows cell subtitles", () => {
     render(
       <WorkbookSidebar
-        cells={[markdownCell, questionCell, protocolCell]}
+        cells={[markdownCell, questionCell, commandCell]}
         onCellClick={onCellClick}
       />,
     );
     expect(screen.getByText("Hello world")).toBeInTheDocument();
     expect(screen.getByText("What?")).toBeInTheDocument();
-    expect(screen.getByText("My Protocol")).toBeInTheDocument();
+    expect(screen.getByText("My Command")).toBeInTheDocument();
   });
 
   it("calls onCellClick when a cell is clicked", async () => {
@@ -79,7 +79,7 @@ describe("WorkbookSidebar", () => {
     const onReorder = vi.fn();
     render(
       <WorkbookSidebar
-        cells={[markdownCell, protocolCell]}
+        cells={[markdownCell, commandCell]}
         onCellClick={onCellClick}
         onReorder={onReorder}
       />,
@@ -94,7 +94,7 @@ describe("WorkbookSidebar", () => {
   });
 
   it("does not make rows draggable when onReorder is omitted", () => {
-    render(<WorkbookSidebar cells={[markdownCell, protocolCell]} onCellClick={onCellClick} />);
+    render(<WorkbookSidebar cells={[markdownCell, commandCell]} onCellClick={onCellClick} />);
 
     const sortable = screen
       .getAllByRole("button")

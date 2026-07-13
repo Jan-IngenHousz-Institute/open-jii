@@ -98,7 +98,7 @@ export function MacroCellComponent({
     }
   }, [macroCode, localCode]);
 
-  // Mirror the protocol cell: persist via the shared `useAutosave` hook so a
+  // Mirror the command cell: persist via the shared `useAutosave` hook so a
   // failed save surfaces a toast and the indicator flips to "error" instead of
   // silently dropping the edit.
   const save = useCallback(

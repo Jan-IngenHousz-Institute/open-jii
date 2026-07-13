@@ -1,29 +1,29 @@
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command } from "@repo/api/schemas/command.schema";
 
 import { tsr } from "../../../lib/tsr";
 
 /**
- * Hook to fetch a list of protocols with optional search functionality
+ * Hook to fetch a list of commands with optional search functionality
  * @param search Search term (controlled externally)
- * @returns Query result containing the protocols list
+ * @returns Query result containing the commands list
  */
 
-interface useProtocolSearchResult {
-  protocols: Protocol[] | undefined;
+interface useCommandSearchResult {
+  commands: Command[] | undefined;
   isLoading: boolean;
   error: unknown;
 }
 
-export const useProtocolSearch = (search = ""): useProtocolSearchResult => {
-  const { data, isLoading, error } = tsr.protocols.listProtocols.useQuery({
+export const useCommandSearch = (search = ""): useCommandSearchResult => {
+  const { data, isLoading, error } = tsr.commands.listCommands.useQuery({
     queryData: {
       query: { search: search || undefined },
     },
-    queryKey: ["protocols", search],
+    queryKey: ["commands", search],
   });
 
   return {
-    protocols: data?.body,
+    commands: data?.body,
     isLoading: isLoading,
     error,
   };

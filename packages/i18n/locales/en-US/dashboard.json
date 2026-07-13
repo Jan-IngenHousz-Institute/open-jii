@@ -42,7 +42,7 @@
   },
   "alerts": {
     "title": "Alerts",
-    "noUrgentAlerts": "Great! There is no urgent protocols alert you need to take care on.",
+    "noUrgentAlerts": "Great! There is no urgent commands alert you need to take care on.",
     "lastAttempt": "Last attempt"
   },
   "latestActivity": "Latest measurement activity",

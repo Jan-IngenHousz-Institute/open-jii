@@ -25,21 +25,15 @@ vi.mock("@repo/analytics", () => ({
   },
 }));
 
-// Mock MacroCompatibleProtocolsCard
-vi.mock("../../macro-settings/macro-compatible-protocols-card", () => ({
-  MacroCompatibleProtocolsCard: ({
-    macroId,
-    embedded,
-  }: {
-    macroId: string;
-    embedded?: boolean;
-  }) => (
+// Mock MacroCompatibleCommandsCard
+vi.mock("../../macro-settings/macro-compatible-commands-card", () => ({
+  MacroCompatibleCommandsCard: ({ macroId, embedded }: { macroId: string; embedded?: boolean }) => (
     <div
-      data-testid="macro-compatible-protocols-card"
+      data-testid="macro-compatible-commands-card"
       data-macro-id={macroId}
       data-embedded={String(embedded)}
     >
-      MacroCompatibleProtocolsCard
+      MacroCompatibleCommandsCard
     </div>
   ),
 }));
@@ -235,13 +229,13 @@ describe("<MacroDetailsSidebar />", () => {
     vi.clearAllMocks();
     server.mount(contract.macros.updateMacro, { body: baseMacro });
     server.mount(contract.macros.deleteMacro, {});
-    server.mount(contract.macros.listCompatibleProtocols, {
+    server.mount(contract.macros.listCompatibleCommands, {
       body: [
         {
           macroId: "abc12345-6789-0abc-def0-123456789abc",
-          protocol: {
+          command: {
             id: "00000000-0000-0000-0000-000000000001",
-            name: "Protocol 1",
+            name: "Command 1",
             family: "multispeq",
             createdBy: "00000000-0000-0000-0000-000000000002",
           },
@@ -249,9 +243,9 @@ describe("<MacroDetailsSidebar />", () => {
         },
         {
           macroId: "abc12345-6789-0abc-def0-123456789abc",
-          protocol: {
+          command: {
             id: "00000000-0000-0000-0000-000000000003",
-            name: "Protocol 2",
+            name: "Command 2",
             family: "multispeq",
             createdBy: "00000000-0000-0000-0000-000000000004",
           },
@@ -358,33 +352,33 @@ describe("<MacroDetailsSidebar />", () => {
       expect(screen.getByText("python")).toBeInTheDocument();
     });
 
-    it("renders MacroCompatibleProtocolsCard with embedded prop when user is creator", () => {
+    it("renders MacroCompatibleCommandsCard with embedded prop when user is creator", () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
-      const protocolsCard = screen.getByTestId("macro-compatible-protocols-card");
-      expect(protocolsCard).toBeInTheDocument();
-      expect(protocolsCard).toHaveAttribute("data-macro-id", "abc12345");
-      expect(protocolsCard).toHaveAttribute("data-embedded", "true");
+      const commandsCard = screen.getByTestId("macro-compatible-commands-card");
+      expect(commandsCard).toBeInTheDocument();
+      expect(commandsCard).toHaveAttribute("data-macro-id", "abc12345");
+      expect(commandsCard).toHaveAttribute("data-embedded", "true");
     });
 
-    it("shows compatible protocols count as text when user is not the creator", async () => {
+    it("shows compatible commands count as text when user is not the creator", async () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
-      expect(screen.queryByTestId("macro-compatible-protocols-card")).not.toBeInTheDocument();
-      expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
+      expect(screen.queryByTestId("macro-compatible-commands-card")).not.toBeInTheDocument();
+      expect(screen.getByText("macroSettings.compatibleCommands")).toBeInTheDocument();
       await waitFor(() => {
-        expect(screen.getByText("2 protocols")).toBeInTheDocument();
+        expect(screen.getByText("2 commands")).toBeInTheDocument();
       });
     });
 
-    it("shows singular 'protocol' when count is 1", async () => {
-      server.mount(contract.macros.listCompatibleProtocols, {
+    it("shows singular 'command' when count is 1", async () => {
+      server.mount(contract.macros.listCompatibleCommands, {
         body: [
           {
             macroId: "abc12345-6789-0abc-def0-123456789abc",
-            protocol: {
+            command: {
               id: "00000000-0000-0000-0000-000000000001",
-              name: "Protocol 1",
+              name: "Command 1",
               family: "multispeq",
               createdBy: "00000000-0000-0000-0000-000000000002",
             },
@@ -396,17 +390,17 @@ describe("<MacroDetailsSidebar />", () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
       await waitFor(() => {
-        expect(screen.getByText("1 protocol")).toBeInTheDocument();
+        expect(screen.getByText("1 command")).toBeInTheDocument();
       });
     });
 
-    it("shows 'no compatible protocols' text when count is 0 for non-creator", async () => {
-      server.mount(contract.macros.listCompatibleProtocols, { body: [] });
+    it("shows 'no compatible commands' text when count is 0 for non-creator", async () => {
+      server.mount(contract.macros.listCompatibleCommands, { body: [] });
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
 
       await waitFor(() => {
-        expect(screen.getByText("macroSettings.noCompatibleProtocols")).toBeInTheDocument();
+        expect(screen.getByText("macroSettings.noCompatibleCommands")).toBeInTheDocument();
       });
     });
   });
@@ -569,7 +563,7 @@ describe("<MacroDetailsSidebar />", () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 
       const separators = screen.getAllByRole("separator");
-      // Should have at least 2 separators: one before compatible protocols, one before danger zone
+      // Should have at least 2 separators: one before compatible commands, one before danger zone
       expect(separators.length).toBeGreaterThanOrEqual(2);
     });
   });

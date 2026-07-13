@@ -1,11 +1,11 @@
 import {
   createMarkdownCell,
-  createProtocolCell,
+  createCommandRefCell,
   createMacroCell,
   createQuestionCell,
   createOutputCell,
   createBranchCell,
-  createProtocol,
+  createCommand,
   createMacro,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
@@ -17,7 +17,7 @@ import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 
 import { CellRenderer } from "./cell-renderer";
 
-// CodeMirror does not run in jsdom — mock only the editor (system boundary)
+// CodeMirror does not run in jsdom - mock only the editor (system boundary)
 vi.mock("./workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
     <pre data-testid="code-editor">{value}</pre>
@@ -33,13 +33,13 @@ describe("CellRenderer", () => {
     expect(screen.getByText("Markdown")).toBeInTheDocument();
   });
 
-  it("renders protocol cell with protocol name after loading", async () => {
-    const protocolId = "p-1";
-    const cell = createProtocolCell({
-      payload: { protocolId, version: 1, name: "Light Sensor" },
+  it("renders command cell with command name after loading", async () => {
+    const commandId = "p-1";
+    const cell = createCommandRefCell({
+      payload: { commandId, version: 1, name: "Light Sensor" },
     });
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: protocolId, name: "Light Sensor" }),
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ id: commandId, name: "Light Sensor" }),
     });
 
     render(<CellRenderer cell={cell} onUpdate={noop} onDelete={noop} />);

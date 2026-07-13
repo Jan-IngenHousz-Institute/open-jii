@@ -410,9 +410,7 @@ describe("resolveCommandTimeoutMs", () => {
   it("floors a measurement command at the 2 min measurement floor, not the base", () => {
     // The interactive command's pulse estimate is well under the floor; it must
     // still get the full 2 min so the open/close pause is not cut off.
-    expect(resolveCommandTimeoutMs(INTERACTIVE_COMMAND, 60_000)).toBe(
-      MEASUREMENT_TIMEOUT_FLOOR_MS,
-    );
+    expect(resolveCommandTimeoutMs(INTERACTIVE_COMMAND, 60_000)).toBe(MEASUREMENT_TIMEOUT_FLOOR_MS);
     expect(MEASUREMENT_TIMEOUT_FLOOR_MS).toBe(120_000);
   });
 

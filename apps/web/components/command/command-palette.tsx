@@ -77,12 +77,12 @@ export function CommandPalette({ locale }: { locale: string }) {
         run: () => navigate(`/${locale}/platform/workbooks`),
       },
       {
-        id: "page.protocols",
-        label: "Protocols",
+        id: "page.commands",
+        label: "Commands",
         group: "Pages",
         icon: iconMap.FileSliders,
         shortcut: "G P",
-        run: () => navigate(`/${locale}/platform/protocols`),
+        run: () => navigate(`/${locale}/platform/commands`),
       },
       {
         id: "page.macros",

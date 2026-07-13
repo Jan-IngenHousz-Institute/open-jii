@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
@@ -7,16 +7,16 @@ import { describe, it, expect, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { useProtocolCreate } from "./useProtocolCreate";
+import { useCommandCreate } from "./useCommandCreate";
 
-describe("useProtocolCreate", () => {
+describe("useCommandCreate", () => {
   it("sends POST request and invokes onSuccess", async () => {
-    server.mount(contract.protocols.createProtocol, {
-      body: createProtocol({ id: "proto-1" }),
+    server.mount(contract.commands.createCommand, {
+      body: createCommand({ id: "proto-1" }),
     });
 
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useProtocolCreate({ onSuccess }));
+    const { result } = renderHook(() => useCommandCreate({ onSuccess }));
 
     act(() => {
       result.current.mutate({
@@ -31,29 +31,29 @@ describe("useProtocolCreate", () => {
   });
 
   it("captures request body via spy", async () => {
-    const spy = server.mount(contract.protocols.createProtocol, {
-      body: createProtocol({ id: "proto-2" }),
+    const spy = server.mount(contract.commands.createCommand, {
+      body: createCommand({ id: "proto-2" }),
     });
 
-    const { result } = renderHook(() => useProtocolCreate());
+    const { result } = renderHook(() => useCommandCreate());
 
     act(() => {
       result.current.mutate({
-        body: { name: "My Protocol", code: [{ averages: 2 }], family: "multispeq" },
+        body: { name: "My Command", code: [{ averages: 2 }], family: "multispeq" },
       });
     });
 
     await waitFor(() => {
-      expect(spy.body).toMatchObject({ name: "My Protocol" });
+      expect(spy.body).toMatchObject({ name: "My Command" });
     });
   });
 
   it("does not toast on a successful create", async () => {
-    server.mount(contract.protocols.createProtocol, {
-      body: createProtocol({ id: "proto-1" }),
+    server.mount(contract.commands.createCommand, {
+      body: createCommand({ id: "proto-1" }),
     });
 
-    const { result } = renderHook(() => useProtocolCreate());
+    const { result } = renderHook(() => useCommandCreate());
 
     act(() => {
       result.current.mutate({
@@ -69,9 +69,9 @@ describe("useProtocolCreate", () => {
   });
 
   it("shows destructive toast on 409 conflict", async () => {
-    server.mount(contract.protocols.createProtocol, { status: 409 });
+    server.mount(contract.commands.createCommand, { status: 409 });
 
-    const { result } = renderHook(() => useProtocolCreate());
+    const { result } = renderHook(() => useCommandCreate());
 
     act(() => {
       result.current.mutate({
@@ -84,15 +84,15 @@ describe("useProtocolCreate", () => {
     });
 
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      description: "protocols.nameAlreadyExists",
+      description: "commands.nameAlreadyExists",
       variant: "destructive",
     });
   });
 
   it("shows generic error toast for non-contract errors", async () => {
-    server.mount(contract.protocols.createProtocol, { status: 400 });
+    server.mount(contract.commands.createCommand, { status: 400 });
 
-    const { result } = renderHook(() => useProtocolCreate());
+    const { result } = renderHook(() => useCommandCreate());
 
     act(() => {
       result.current.mutate({
@@ -110,10 +110,10 @@ describe("useProtocolCreate", () => {
   });
 
   it("calls onError option on failure", async () => {
-    server.mount(contract.protocols.createProtocol, { status: 409 });
+    server.mount(contract.commands.createCommand, { status: 409 });
 
     const onError = vi.fn();
-    const { result } = renderHook(() => useProtocolCreate({ onError }));
+    const { result } = renderHook(() => useCommandCreate({ onError }));
 
     act(() => {
       result.current.mutate({
@@ -127,12 +127,12 @@ describe("useProtocolCreate", () => {
   });
 
   it("calls onSettled option after success", async () => {
-    server.mount(contract.protocols.createProtocol, {
-      body: createProtocol({ id: "proto-1" }),
+    server.mount(contract.commands.createCommand, {
+      body: createCommand({ id: "proto-1" }),
     });
 
     const onSettled = vi.fn();
-    const { result } = renderHook(() => useProtocolCreate({ onSettled }));
+    const { result } = renderHook(() => useCommandCreate({ onSettled }));
 
     act(() => {
       result.current.mutate({
@@ -153,13 +153,13 @@ describe("useProtocolCreate", () => {
       },
     });
 
-    queryClient.setQueryData(["protocols"], {
-      body: [createProtocol({ id: "old" })],
+    queryClient.setQueryData(["commands"], {
+      body: [createCommand({ id: "old" })],
     });
 
-    server.mount(contract.protocols.createProtocol, { status: 400 });
+    server.mount(contract.commands.createCommand, { status: 400 });
 
-    const { result } = renderHook(() => useProtocolCreate(), { queryClient });
+    const { result } = renderHook(() => useCommandCreate(), { queryClient });
 
     act(() => {
       result.current.mutate({
@@ -171,7 +171,7 @@ describe("useProtocolCreate", () => {
       expect(result.current.isError).toBe(true);
     });
 
-    const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["protocols"]);
+    const cached = queryClient.getQueryData<{ body: { id: string }[] }>(["commands"]);
     expect(cached?.body).toHaveLength(1);
     expect(cached?.body[0].id).toBe("old");
   });

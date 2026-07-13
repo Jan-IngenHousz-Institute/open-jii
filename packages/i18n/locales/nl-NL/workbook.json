@@ -55,8 +55,8 @@
       "deleteInUseConfirm_other": "'{{name}}' is gekoppeld aan {{count}} experimenten. Bij verwijderen wordt de koppeling verbroken en verliezen die experimenten hun meetstroom. Dit kan niet ongedaan worden gemaakt."
     },
     "cellSummary": {
-      "protocol_one": "{{count}} Protocol",
-      "protocol_other": "{{count}} Protocollen",
+      "command_one": "{{count}} Command",
+      "command_other": "{{count}} Commandlen",
       "command_one": "{{count}} Opdracht",
       "command_other": "{{count}} Opdrachten",
       "macro_one": "{{count}} Macro",
@@ -75,7 +75,7 @@
     "expand": "Uitvoer uitvouwen",
     "collapse": "Uitvoer samenvouwen",
     "clear": "Uitvoer wissen",
-    "empty": "Geen meetgegevens beschikbaar - voer eerst een protocol- of opdrachtcel uit",
+    "empty": "Geen meetgegevens beschikbaar - voer eerst een command- of opdrachtcel uit",
     "noData": "Geen uitvoergegevens",
     "tabTable": "Tabel",
     "tabJson": "JSON",
@@ -83,15 +83,15 @@
     "copyJson": "JSON kopiëren",
     "closeChart": "Diagram sluiten",
     "expandChart": "Diagram voor {{column}} openen",
-    "loadingProtocol": "Protocol laden…",
+    "loadingCommand": "Command laden…",
     "timeseriesXAxis": "Tijd (s)",
     "timeseriesYAxis": "Genormaliseerd signaal",
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
-    "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
+    "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het broncommand"
   },
   "cells": {
-    "protocolReadOnly": "Alleen-lezen. Fork het om te bewerken.",
+    "commandReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "macroReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "fork": "Forken om te bewerken",
     "forkedFrom": "Geforkt van"

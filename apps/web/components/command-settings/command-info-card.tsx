@@ -7,7 +7,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { Command } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -27,82 +27,78 @@ import {
   DialogFooter,
 } from "@repo/ui/components/dialog";
 
-import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
+import { useCommandDelete } from "../../hooks/command/useCommandDelete/useCommandDelete";
 
-interface ProtocolInfoCardProps {
-  protocolId: string;
-  protocol: Protocol;
+interface CommandInfoCardProps {
+  commandId: string;
+  command: Command;
 }
 
-export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps) {
-  const { mutateAsync: deleteProtocol, isPending: isDeleting } = useProtocolDelete(protocolId);
+export function CommandInfoCard({ commandId, command }: CommandInfoCardProps) {
+  const { mutateAsync: deleteCommand, isPending: isDeleting } = useCommandDelete(commandId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
   const locale = useLocale();
-  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
+  const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.COMMAND_DELETION);
 
-  const handleDeleteProtocol = async () => {
-    await deleteProtocol({ params: { id: protocolId } });
+  const handleDeleteCommand = async () => {
+    await deleteCommand({ params: { id: commandId } });
     setIsDeleteDialogOpen(false);
-    // Navigate to protocols list
-    router.push(`/${locale}/platform/protocols`);
+    // Navigate to commands list
+    router.push(`/${locale}/platform/commands`);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("protocolSettings.protocolInfo")}</CardTitle>
-        <CardDescription>{t("protocolSettings.protocolInfoDescription")}</CardDescription>
+        <CardTitle>{t("commandSettings.commandInfo")}</CardTitle>
+        <CardDescription>{t("commandSettings.commandInfoDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2 text-sm">
           <div>
-            <span className="font-medium">{t("protocolSettings.created")}:</span>{" "}
-            {formatDate(protocol.createdAt)}
+            <span className="font-medium">{t("commandSettings.created")}:</span>{" "}
+            {formatDate(command.createdAt)}
           </div>
           <div>
-            <span className="font-medium">{t("protocolSettings.updated")}:</span>{" "}
-            {formatDate(protocol.updatedAt)}
+            <span className="font-medium">{t("commandSettings.updated")}:</span>{" "}
+            {formatDate(command.updatedAt)}
           </div>
           <div>
-            <span className="font-medium">{t("protocols.protocolId")}:</span>{" "}
-            <span className="font-mono text-xs">{protocol.id}</span>
+            <span className="font-medium">{t("commands.commandId")}:</span>{" "}
+            <span className="font-mono text-xs">{command.id}</span>
           </div>
         </div>
 
         {isDeletionEnabled && (
           <div className="border-t pt-4">
             <h5 className="text-destructive mb-2 text-base font-medium">
-              {t("protocolSettings.dangerZone")}
+              {t("commandSettings.dangerZone")}
             </h5>
             <p className="text-muted-foreground mb-4 text-sm">
-              {t("protocolSettings.deleteWarning")}
+              {t("commandSettings.deleteWarning")}
             </p>
 
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="destructive">{t("protocolSettings.deleteProtocol")}</Button>
+                <Button variant="destructive">{t("commandSettings.deleteCommand")}</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-destructive">
-                    {t("protocolSettings.deleteProtocol")}
+                    {t("commandSettings.deleteCommand")}
                   </DialogTitle>
                   <DialogDescription>
-                    {t("common.confirmDelete", { name: protocol.name })}
+                    {t("common.confirmDelete", { name: command.name })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">
                   <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                    {t("protocolSettings.cancel")}
+                    {t("commandSettings.cancel")}
                   </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteProtocol}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? t("protocolSettings.deleting") : t("protocolSettings.delete")}
+                  <Button variant="destructive" onClick={handleDeleteCommand} disabled={isDeleting}>
+                    {isDeleting ? t("commandSettings.deleting") : t("commandSettings.delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

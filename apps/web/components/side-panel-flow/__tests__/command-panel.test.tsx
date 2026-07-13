@@ -1,7 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { InlineCommandValue } from "../command-panel";
+import type { CommandPanelValue } from "../command-panel";
 import { CommandPanel } from "../command-panel";
 
 describe("CommandPanel", () => {
@@ -16,8 +16,8 @@ describe("CommandPanel", () => {
     render(<CommandPanel command={{ format: "string", content: "" }} onChange={onChange} />);
     await user.type(screen.getByRole("textbox"), "h");
     expect(onChange).toHaveBeenCalled();
-    const updated = onChange.mock.lastCall?.[0] as InlineCommandValue;
-    expect(updated).toMatchObject({ format: "string", content: "h" });
+    const updated = onChange.mock.lastCall?.[0] as CommandPanelValue;
+    expect(updated).toMatchObject({ command: { format: "string", content: "h" } });
   });
 
   it("defaults to an empty string command when no value is set yet", () => {

@@ -1,7 +1,7 @@
 import {
   createExperiment,
   createExperimentAccess,
-  createProtocolCell,
+  createCommandRefCell,
   createWorkbook,
   createWorkbookVersionSummary,
 } from "@/test/factories";
@@ -131,7 +131,7 @@ function mountWithWorkbook(overrides?: {
       id: WB_ID,
       name: "Test Workbook",
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createCommandRefCell({ id: "c1", payload: { commandId: "p1", version: 1, name: "P1" } }),
       ],
     }),
   });
@@ -143,10 +143,10 @@ function mountWithWorkbook(overrides?: {
     body: {
       ...versionSummary,
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createCommandRefCell({ id: "c1", payload: { commandId: "p1", version: 1, name: "P1" } }),
       ],
       metadata: {},
-      entitySnapshots: { protocols: {}, macros: {} },
+      entitySnapshots: { commands: {}, macros: {} },
     },
   });
 }

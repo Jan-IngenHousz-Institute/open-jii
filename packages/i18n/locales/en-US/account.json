@@ -63,7 +63,7 @@
       "warningList": {
         "profileHidden": "Your profile will be hidden from other researchers",
         "noRequests": "You won't receive collaboration requests",
-        "contentAccessible": "Your experiments, macros, and protocols will remain accessible to collaborators",
+        "contentAccessible": "Your experiments, macros, and commands will remain accessible to collaborators",
         "loggedOut": "You will be logged out of your account",
         "canReactivate": "You can reactivate your account by logging in again"
       },
@@ -89,7 +89,7 @@
       },
       "warningPreserveTitle": "Your content will be preserved:",
       "warningPreserveList": {
-        "content": "Experiments, macros, and protocols will remain intact"
+        "content": "Experiments, macros, and commands will remain intact"
       },
       "confirmPrompt": "Type",
       "confirmWord": "delete",

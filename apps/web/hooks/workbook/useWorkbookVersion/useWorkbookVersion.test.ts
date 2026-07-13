@@ -14,7 +14,7 @@ const versionBody = {
   ...createWorkbookVersionSummary({ id: versionId, workbookId }),
   cells: [],
   metadata: {},
-  entitySnapshots: { protocols: {}, macros: {} },
+  entitySnapshots: { commands: {}, macros: {} },
 };
 
 describe("useWorkbookVersion", () => {

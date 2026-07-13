@@ -4,10 +4,10 @@ import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v5";
 import { env } from "~/env";
 
+import { commandContract } from "@repo/api/contracts/command.contract";
 import { experimentContract } from "@repo/api/contracts/experiment.contract";
 import { iotContract } from "@repo/api/contracts/iot.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
-import { protocolContract } from "@repo/api/contracts/protocol.contract";
 import { userContract } from "@repo/api/contracts/user.contract";
 import { workbookContract } from "@repo/api/contracts/workbook.contract";
 
@@ -21,7 +21,7 @@ export const contract = c.router({
   experiments: experimentContract,
   iot: iotContract,
   macros: macroContract,
-  protocols: protocolContract,
+  commands: commandContract,
   users: userContract,
   workbooks: workbookContract,
 });

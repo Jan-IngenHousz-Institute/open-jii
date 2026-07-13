@@ -1,18 +1,18 @@
 "use client";
 
+import CommandCodeEditor from "@/components/command-code-editor";
 import { JsonCodeViewer } from "@/components/json-code-viewer";
-import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import type { AutosaveStatus } from "@/hooks/useAutosave";
 
-export type ProtocolCode = Record<string, unknown>[] | string | undefined;
+export type CommandCode = Record<string, unknown>[] | string | undefined;
 
-interface ProtocolCodePanelProps {
+interface CommandCodePanelProps {
   code: Record<string, unknown>[];
   isCreator: boolean;
   isEditing: boolean;
-  editedCode: ProtocolCode;
-  handleChange: (value: ProtocolCode) => void;
+  editedCode: CommandCode;
+  handleChange: (value: CommandCode) => void;
   status: AutosaveStatus;
   closeEditing: () => void;
   startEditing: () => void;
@@ -22,7 +22,7 @@ interface ProtocolCodePanelProps {
   borderless?: boolean;
 }
 
-export function ProtocolCodePanel({
+export function CommandCodePanel({
   code,
   isCreator,
   isEditing,
@@ -35,10 +35,10 @@ export function ProtocolCodePanel({
   placeholder,
   height = "700px",
   borderless = false,
-}: ProtocolCodePanelProps) {
+}: CommandCodePanelProps) {
   if (isEditing) {
     return (
-      <ProtocolCodeEditor
+      <CommandCodeEditor
         value={editedCode ?? []}
         onChange={handleChange}
         label=""

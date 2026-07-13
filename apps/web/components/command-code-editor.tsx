@@ -13,10 +13,10 @@ import { useDebounce } from "~/hooks/useDebounce";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {
-  findProtocolErrorLine,
+  findCommandErrorLine,
   getErrorMessage,
-  validateProtocolJson,
-} from "@repo/api/schemas/protocol-validator";
+  validateCommandJson,
+} from "@repo/api/schemas/command-validator";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
-interface ProtocolCodeEditorProps {
+interface CommandCodeEditorProps {
   value: Record<string, unknown>[] | string;
   onChange: (value: Record<string, unknown>[] | string | undefined) => void;
   onValidationChange?: (isValid: boolean) => void;
@@ -41,15 +41,15 @@ interface ProtocolCodeEditorProps {
   readOnly?: boolean;
 }
 
-function computeProtocolDiagnostics(doc: string, asWarning: boolean): Diagnostic[] {
+function computeCommandDiagnostics(doc: string, asWarning: boolean): Diagnostic[] {
   if (!doc.trim()) return [];
   const diagnostics: Diagnostic[] = [];
   try {
     const parsed = JSON.parse(doc) as unknown;
-    const result = validateProtocolJson(parsed);
+    const result = validateCommandJson(parsed);
     if (!result.success && result.error) {
       for (const issue of result.error) {
-        const { line, message } = findProtocolErrorLine(doc, issue);
+        const { line, message } = findCommandErrorLine(doc, issue);
         const docLines = doc.split("\n");
         let from = 0;
         for (let i = 0; i < Math.min(line - 1, docLines.length); i++) {
@@ -75,7 +75,7 @@ function computeProtocolDiagnostics(doc: string, asWarning: boolean): Diagnostic
   return diagnostics;
 }
 
-const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
+const CommandCodeEditor: FC<CommandCodeEditorProps> = ({
   value,
   onChange,
   onValidationChange,
@@ -102,8 +102,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   onValidationChangeRef.current = onValidationChange;
 
   const validationAsWarning =
-    useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ??
-    FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING];
+    useFeatureFlagEnabled(FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING) ??
+    FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.COMMAND_VALIDATION_AS_WARNING];
 
   // Convert array to JSON string for editor if needed
   const initialEditorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -147,8 +147,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       const parsedValue = JSON.parse(debouncedEditorCode) as unknown;
       setIsValidJson(true);
 
-      // Validate protocol schema
-      const result = validateProtocolJson(parsedValue);
+      // Validate command schema
+      const result = validateCommandJson(parsedValue);
 
       if (!result.success && result.error) {
         setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
@@ -189,8 +189,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const validationAsWarningRef = useRef(validationAsWarning);
   validationAsWarningRef.current = validationAsWarning;
 
-  const protocolLintSource = useCallback(
-    (doc: string): Diagnostic[] => computeProtocolDiagnostics(doc, validationAsWarningRef.current),
+  const commandLintSource = useCallback(
+    (doc: string): Diagnostic[] => computeCommandDiagnostics(doc, validationAsWarningRef.current),
     [],
   );
 
@@ -276,7 +276,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             language="json"
             height={heightStr}
             readOnly={readOnly}
-            lintSource={protocolLintSource}
+            lintSource={commandLintSource}
             lintDelay={300}
             onCreateEditor={handleCreateEditor}
           />
@@ -287,4 +287,4 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   );
 };
 
-export default ProtocolCodeEditor;
+export default CommandCodeEditor;

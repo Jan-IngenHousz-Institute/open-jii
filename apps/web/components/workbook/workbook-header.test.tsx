@@ -3,8 +3,8 @@ import {
   createMarkdownCell,
   createMacroCell,
   createOutputCell,
-  createProtocol,
-  createProtocolCell,
+  createCommand,
+  createCommandRefCell,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -26,9 +26,9 @@ vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   }),
 }));
 
-const protocolCell = createProtocolCell({
+const commandCell = createCommandRefCell({
   id: "p1",
-  payload: { protocolId: "proto-1", version: 1, name: "Test Protocol" },
+  payload: { commandId: "proto-1", version: 1, name: "Test Command" },
 });
 const macroCell = createMacroCell({
   id: "m1",
@@ -39,7 +39,7 @@ const markdownCell = createMarkdownCell({ id: "md1", content: "# Hello" });
 function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> = {}) {
   const defaultProps = {
     title: "Test Workbook",
-    cells: [markdownCell, protocolCell, macroCell],
+    cells: [markdownCell, commandCell, macroCell],
     isConnected: false,
     isConnecting: false,
     deviceInfo: null,
@@ -148,9 +148,9 @@ describe("WorkbookHeader", () => {
 
   it("calls onClearOutputs when user clicks Clear all", async () => {
     const user = userEvent.setup();
-    const outputCell = createOutputCell({ producedBy: protocolCell.id });
+    const outputCell = createOutputCell({ producedBy: commandCell.id });
     const { props } = renderHeader({
-      cells: [markdownCell, protocolCell, macroCell, outputCell],
+      cells: [markdownCell, commandCell, macroCell, outputCell],
     });
 
     const clearButton = screen.getByRole("button", { name: /clear all/i });
@@ -220,7 +220,7 @@ async function readAllDownloads(
   }));
 }
 
-describe("WorkbookHeader — export menu", () => {
+describe("WorkbookHeader - export menu", () => {
   let anchorClick: AnchorClickSpy;
 
   beforeEach(() => {
@@ -255,9 +255,9 @@ describe("WorkbookHeader — export menu", () => {
     });
   });
 
-  it("exports each protocol as its own JSON file containing the raw protocol code", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({
+  it("exports each command as its own JSON file containing the raw command code", async () => {
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({
         id: "proto-1",
         name: "Light Sensor",
         code: [{ _protocol_set_: [{ pulses: 1 }] }],
@@ -268,32 +268,32 @@ describe("WorkbookHeader — export menu", () => {
     renderHeader();
 
     await user.click(screen.getByRole("button", { name: /export/i }));
-    await user.click(screen.getByRole("menuitem", { name: /export protocol only/i }));
+    await user.click(screen.getByRole("menuitem", { name: /export command only/i }));
 
     const [download] = await readAllDownloads(anchorClick, 1);
     expect(download.filename).toBe("light-sensor.json");
-    // The file contains the raw protocol code array, not a wrapper.
+    // The file contains the raw command code array, not a wrapper.
     expect(JSON.parse(download.text)).toEqual([{ _protocol_set_: [{ pulses: 1 }] }]);
   });
 
-  it("triggers one download per protocol cell when multiple protocols are present", async () => {
-    server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "any", name: "Shared", code: [{ a: 1 }] }),
+  it("triggers one download per command cell when multiple commands are present", async () => {
+    server.mount(contract.commands.getCommand, {
+      body: createCommand({ id: "any", name: "Shared", code: [{ a: 1 }] }),
     });
 
     const user = userEvent.setup();
     renderHeader({
       cells: [
-        protocolCell,
-        createProtocolCell({
+        commandCell,
+        createCommandRefCell({
           id: "p2",
-          payload: { protocolId: "proto-2", version: 2, name: "Other" },
+          payload: { commandId: "proto-2", version: 2, name: "Other" },
         }),
       ],
     });
 
     await user.click(screen.getByRole("button", { name: /export/i }));
-    await user.click(screen.getByRole("menuitem", { name: /export protocol only/i }));
+    await user.click(screen.getByRole("menuitem", { name: /export command only/i }));
 
     const downloads = await readAllDownloads(anchorClick, 2);
     expect(downloads).toHaveLength(2);
@@ -342,12 +342,12 @@ describe("WorkbookHeader — export menu", () => {
     });
   });
 
-  it("disables 'Export Protocol Only' when the workbook has no protocol cells", async () => {
+  it("disables 'Export Command Only' when the workbook has no command cells", async () => {
     const user = userEvent.setup();
     renderHeader({ cells: [markdownCell, macroCell] });
 
     await user.click(screen.getByRole("button", { name: /export/i }));
-    expect(screen.getByRole("menuitem", { name: /export protocol only/i })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: /export command only/i })).toHaveAttribute(
       "aria-disabled",
       "true",
     );
@@ -355,7 +355,7 @@ describe("WorkbookHeader — export menu", () => {
 
   it("disables 'Export Macro Only' when the workbook has no macro cells", async () => {
     const user = userEvent.setup();
-    renderHeader({ cells: [markdownCell, protocolCell] });
+    renderHeader({ cells: [markdownCell, commandCell] });
 
     await user.click(screen.getByRole("button", { name: /export/i }));
     expect(screen.getByRole("menuitem", { name: /export macro only/i })).toHaveAttribute(

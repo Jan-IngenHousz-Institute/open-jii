@@ -33,21 +33,21 @@ export function ConnectionTypeSelector({
 
   const bluetoothTooltip =
     browserSupport.bluetoothReason === "device"
-      ? t("iot.protocolRunner.deviceNoBLE")
+      ? t("iot.commandRunner.deviceNoBLE")
       : browserSupport.bluetoothReason === "browser"
-        ? t("iot.protocolRunner.webBluetoothNotSupported")
+        ? t("iot.commandRunner.webBluetoothNotSupported")
         : undefined;
 
   const serialTooltip =
     browserSupport.serialReason === "device"
-      ? t("iot.protocolRunner.deviceNoSerial")
+      ? t("iot.commandRunner.deviceNoSerial")
       : browserSupport.serialReason === "browser"
-        ? t("iot.protocolRunner.webSerialNotSupported")
+        ? t("iot.commandRunner.webSerialNotSupported")
         : undefined;
 
   return (
     <div className="space-y-1.5">
-      <h3 className="text-sm font-medium">{t("iot.protocolRunner.connectionType")}</h3>
+      <h3 className="text-sm font-medium">{t("iot.commandRunner.connectionType")}</h3>
       <div className="bg-muted inline-flex rounded-md p-0.5">
         <TooltipProvider>
           <Tooltip>
@@ -67,7 +67,7 @@ export function ConnectionTypeSelector({
                   disabled={!browserSupport.bluetooth}
                 >
                   <Bluetooth className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{t("iot.protocolRunner.bluetooth")}</span>
+                  <span className="truncate">{t("iot.commandRunner.bluetooth")}</span>
                 </Button>
               </div>
             </TooltipTrigger>
@@ -96,7 +96,7 @@ export function ConnectionTypeSelector({
                   disabled={!browserSupport.serial}
                 >
                   <Usb className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{t("iot.protocolRunner.serial")}</span>
+                  <span className="truncate">{t("iot.commandRunner.serial")}</span>
                 </Button>
               </div>
             </TooltipTrigger>

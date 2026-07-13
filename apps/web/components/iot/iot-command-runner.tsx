@@ -3,21 +3,21 @@
 import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
+import { useIotCommandExecution } from "~/hooks/iot/useIotCommandExecution/useIotCommandExecution";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
-import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import { useTranslation } from "@repo/i18n";
-import { protocolRequiresInteraction } from "@repo/iot";
+import { commandRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
+import { CommandResultsDisplay } from "./iot-command-results-display";
 import { ConnectionTypeSelector } from "./iot-connection-type-selector";
 import { DeviceStatusCard } from "./iot-device-status-card";
-import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 
-interface IotProtocolRunnerProps {
-  protocolCode: Record<string, unknown>[];
+interface IotCommandRunnerProps {
+  commandCode: Record<string, unknown>[];
   sensorFamily: SensorFamily;
   layout?: "horizontal" | "vertical";
 }
@@ -30,11 +30,11 @@ interface TestResult {
   timestamp: Date;
 }
 
-export function IotProtocolRunner({
-  protocolCode,
+export function IotCommandRunner({
+  commandCode,
   sensorFamily,
   layout = "horizontal",
-}: IotProtocolRunnerProps) {
+}: IotCommandRunnerProps) {
   const { t } = useTranslation("iot");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -42,10 +42,10 @@ export function IotProtocolRunner({
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
 
-  // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
+  // Commands with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
   // instrument's prompts rather than assuming it hung. See OJD-1643.
-  const requiresInteraction = protocolRequiresInteraction(protocolCode);
+  const requiresInteraction = commandRequiresInteraction(commandCode);
 
   // Auto-select the first supported connection type
   useEffect(() => {
@@ -58,7 +58,7 @@ export function IotProtocolRunner({
 
   const { isConnected, isConnecting, error, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
-  const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
+  const { executeCommandCode } = useIotCommandExecution(driver, isConnected, sensorFamily);
 
   // Disconnect when sensor family changes
   useEffect(() => {
@@ -70,7 +70,7 @@ export function IotProtocolRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sensorFamily]);
 
-  const handleRunProtocol = async () => {
+  const handleRunCommand = async () => {
     if (!isConnected || isRunningRef.current) return;
 
     isRunningRef.current = true;
@@ -79,7 +79,7 @@ export function IotProtocolRunner({
     const startTime = Date.now();
 
     try {
-      const result = await executeProtocol(protocolCode);
+      const result = await executeCommandCode(commandCode);
       const executionTime = Date.now() - startTime;
 
       setTestResult({
@@ -92,7 +92,7 @@ export function IotProtocolRunner({
       const executionTime = Date.now() - startTime;
       setTestResult({
         success: false,
-        error: err instanceof Error ? err.message : "Protocol execution failed",
+        error: err instanceof Error ? err.message : "Command execution failed",
         executionTime,
         timestamp: new Date(),
       });
@@ -110,7 +110,7 @@ export function IotProtocolRunner({
           layout === "horizontal" && "md:flex-row md:gap-6",
         )}
       >
-        {/* Left Column - Device & Protocol */}
+        {/* Left Column - Device & Command */}
         <div
           className={cn(
             "w-full min-w-0 space-y-4",
@@ -137,11 +137,11 @@ export function IotProtocolRunner({
             onDisconnect={disconnect}
           />
 
-          {/* Run Protocol Button */}
+          {/* Run Command Button */}
           {isConnected && (
             <Button
               type="button"
-              onClick={handleRunProtocol}
+              onClick={handleRunCommand}
               disabled={isRunning}
               size="sm"
               className="w-full"
@@ -149,27 +149,27 @@ export function IotProtocolRunner({
               {isRunning ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-                  <span className="truncate">{t("iot.protocolRunner.running")}</span>
+                  <span className="truncate">{t("iot.commandRunner.running")}</span>
                 </>
               ) : (
                 <>
                   <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
+                  <span className="truncate">{t("iot.commandRunner.runCommand")}</span>
                 </>
               )}
             </Button>
           )}
 
-          {/* Interactive protocols pause for the user to open/close the clamp.
+          {/* Interactive commands pause for the user to open/close the clamp.
               The device gives no signal while it waits, so prompt the user to
               follow the instrument rather than assume the run stalled. */}
           {isConnected && requiresInteraction && (
             <div className="bg-muted text-foreground flex items-start gap-2 rounded-lg p-3">
               <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-medium">{t("iot.protocolRunner.interactionTitle")}</p>
+                <p className="text-sm font-medium">{t("iot.commandRunner.interactionTitle")}</p>
                 <p className="text-muted-foreground mt-0.5 text-sm">
-                  {t("iot.protocolRunner.interactionHint")}
+                  {t("iot.commandRunner.interactionHint")}
                 </p>
               </div>
             </div>
@@ -177,7 +177,7 @@ export function IotProtocolRunner({
         </div>
 
         {/* Right Column - Results */}
-        <ProtocolResultsDisplay testResult={testResult} />
+        <CommandResultsDisplay testResult={testResult} />
       </div>
     </div>
   );

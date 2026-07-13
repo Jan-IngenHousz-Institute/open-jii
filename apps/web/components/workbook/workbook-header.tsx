@@ -8,8 +8,9 @@ import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucid
 import { useCallback } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -151,13 +152,16 @@ export function WorkbookHeader({
     downloadFile(json, `${safeName}.jii.json`, "application/json");
   }, [title, cells, sensorFamily]);
 
-  const handleExportProtocol = useCallback(async () => {
-    const protocolCells = cells.filter((c) => c.type === "protocol");
-    if (protocolCells.length === 0) return;
+  const handleExportCommand = useCallback(async () => {
+    const commandCells = cells.filter(
+      (c) => c.type === "command" && isCommandReferencePayload(c.payload),
+    );
+    if (commandCells.length === 0) return;
 
-    for (const cell of protocolCells) {
-      const result = await tsr.protocols.getProtocol.query({
-        params: { id: cell.payload.protocolId },
+    for (const cell of commandCells) {
+      if (cell.type !== "command" || !isCommandReferencePayload(cell.payload)) continue;
+      const result = await tsr.commands.getCommand.query({
+        params: { id: cell.payload.commandId },
       });
       if (result.status !== 200) continue;
       const { name, code } = result.body;
@@ -206,7 +210,7 @@ export function WorkbookHeader({
     downloadFile(json, `${safeName}.jii`, "application/json");
   }, [title, cells, sensorFamily]);
 
-  const hasProtocols = cells.some((c) => c.type === "protocol");
+  const hasCommands = cells.some((c) => c.type === "command");
   const hasMacros = cells.some((c) => c.type === "macro");
   const hasOutputs = cells.some((c) => c.type === "output");
 
@@ -365,8 +369,8 @@ export function WorkbookHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void handleExportProtocol()} disabled={!hasProtocols}>
-            Export Protocol Only
+          <DropdownMenuItem onClick={() => void handleExportCommand()} disabled={!hasCommands}>
+            Export Command Only
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportMacro()} disabled={!hasMacros}>
             Export Macro Only

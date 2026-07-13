@@ -1,12 +1,12 @@
 "use client";
 
+import { CommandDetailsSidebar } from "@/components/command-overview/command-details-sidebar";
 import { ErrorDisplay } from "@/components/error-display";
-import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-details-sidebar";
+import { CommandCodePanel } from "@/components/shared/command-code-panel";
+import type { CommandCode } from "@/components/shared/command-code-panel";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
-import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
-import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { useCommand } from "@/hooks/command/useCommand/useCommand";
+import { useCommandUpdate } from "@/hooks/command/useCommandUpdate/useCommandUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -15,25 +15,25 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-interface ProtocolOverviewPageProps {
+interface CommandOverviewPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
+export default function CommandOverviewPage({ params }: CommandOverviewPageProps) {
   const { id } = use(params);
-  const { data, isLoading, error } = useProtocol(id);
+  const { data, isLoading, error } = useCommand(id);
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
+  const { mutateAsync: updateCommand, isPending: isUpdating } = useCommandUpdate(id);
 
   // `isValid` skips saves while the editor is mid-keystroke with raw text.
   const [isEditing, setIsEditing] = useState(false);
-  const [editedCode, setEditedCode] = useState<ProtocolCode>();
+  const [editedCode, setEditedCode] = useState<CommandCode>();
 
   const save = useCallback(
-    async (code: ProtocolCode) => {
+    async (code: CommandCode) => {
       try {
-        await updateProtocol({
+        await updateCommand({
           params: { id },
           body: { code: code as Record<string, unknown>[] },
         });
@@ -42,10 +42,10 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
         throw err;
       }
     },
-    [id, updateProtocol],
+    [id, updateCommand],
   );
 
-  const autosave = useAutosave<ProtocolCode>({
+  const autosave = useAutosave<CommandCode>({
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
     isValid: (value) => Array.isArray(value),
@@ -53,7 +53,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     enabled: isEditing,
   });
 
-  const startEditing = (initial: ProtocolCode) => {
+  const startEditing = (initial: CommandCode) => {
     setEditedCode(initial);
     setIsEditing(true);
   };
@@ -67,22 +67,22 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   }
 
   if (error) {
-    return <ErrorDisplay error={error} title={t("errors.failedToLoadProtocol")} />;
+    return <ErrorDisplay error={error} title={t("errors.failedToLoadCommand")} />;
   }
 
   if (!data) {
-    return <div>{t("protocols.notFound")}</div>;
+    return <div>{t("commands.notFound")}</div>;
   }
 
-  const protocol = data.body;
-  const isCreator = session?.user.id === protocol.createdBy;
+  const command = data.body;
+  const isCreator = session?.user.id === command.createdBy;
 
   const handleDescriptionSave = async (newDescription: string) => {
-    await updateProtocol(
+    await updateCommand(
       { params: { id }, body: { description: newDescription } },
       {
         onSuccess: () => {
-          toast({ description: t("protocols.protocolUpdated") });
+          toast({ description: t("commands.commandUpdated") });
         },
         onError: (err) => {
           toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -93,31 +93,31 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
 
   return (
     <div className="flex flex-col gap-6 md:flex-row">
-      <ProtocolDetailsSidebar protocolId={id} protocol={protocol} />
+      <CommandDetailsSidebar commandId={id} command={command} />
 
       <div className="flex-1 space-y-10 md:order-1">
         <InlineEditableDescription
-          description={protocol.description ?? ""}
+          description={command.description ?? ""}
           hasAccess={isCreator}
           onSave={handleDescriptionSave}
           isPending={isUpdating}
-          title={t("protocols.descriptionTitle")}
+          title={t("commands.descriptionTitle")}
           saveLabel={t("common.save")}
           cancelLabel={t("common.cancel")}
-          placeholder={t("protocols.descriptionPlaceholder")}
+          placeholder={t("commands.descriptionPlaceholder")}
         />
 
-        <ProtocolCodePanel
-          code={protocol.code}
+        <CommandCodePanel
+          code={command.code}
           isCreator={isCreator}
           isEditing={isEditing}
           editedCode={editedCode}
           handleChange={setEditedCode}
           status={autosave.status}
           closeEditing={closeEditing}
-          startEditing={() => startEditing(protocol.code)}
-          title={t("protocols.codeTitle")}
-          placeholder={t("protocols.codePlaceholder")}
+          startEditing={() => startEditing(command.code)}
+          title={t("commands.codeTitle")}
+          placeholder={t("commands.codePlaceholder")}
         />
       </div>
     </div>

@@ -67,17 +67,17 @@ vi.mock("../question-panel", () => ({
 
 vi.mock("../measurement-panel", () => ({
   MeasurementPanel: ({
-    selectedProtocolId,
+    selectedCommandId,
     onChange,
     disabled,
   }: {
-    selectedProtocolId: string;
+    selectedCommandId: string;
     onChange: (id: string) => void;
     disabled?: boolean;
   }) => (
     <div>
       <span>MeasurementPanel</span>
-      <div data-testid="mp-protocol">{selectedProtocolId}</div>
+      <div data-testid="mp-command">{selectedCommandId}</div>
       <button type="button" onClick={() => onChange("proto-2")} disabled={disabled}>
         Apply Measurement Change
       </button>
@@ -335,9 +335,9 @@ describe("<ExperimentSidePanel />", () => {
     });
   });
 
-  it("MeasurementPanel: propagates protocol change via onNodeDataChange", async () => {
+  it("MeasurementPanel: propagates command change via onNodeDataChange", async () => {
     const user = userEvent.setup();
-    const node = makeNode("nm", { protocolId: "proto-1" });
+    const node = makeNode("nm", { commandId: "proto-1" });
 
     const { props } = renderPanel({
       selectedNode: node,
@@ -345,12 +345,12 @@ describe("<ExperimentSidePanel />", () => {
     });
 
     expect(screen.queryByText("MeasurementPanel")).toBeTruthy();
-    expect(screen.getByTestId("mp-protocol").textContent).toBe("proto-1");
+    expect(screen.getByTestId("mp-command").textContent).toBe("proto-1");
 
     await user.click(screen.getByRole("button", { name: /Apply Measurement Change/i }));
     expect(props.onNodeDataChange).toHaveBeenCalledWith("nm", {
       ...node.data,
-      protocolId: "proto-2",
+      commandId: "proto-2",
     });
   });
 
@@ -432,7 +432,7 @@ describe("<ExperimentSidePanel />", () => {
     const node = makeNode("nd", {
       description: "D",
       stepSpecification: { answerType: "TEXT", required: false },
-      protocolId: "proto-x",
+      commandId: "proto-x",
       measurementOption: "agg-min",
       isStartNode: false,
       isEndNode: false,

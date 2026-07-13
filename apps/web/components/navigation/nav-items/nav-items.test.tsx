@@ -13,10 +13,10 @@ const items = [
 const groupItems = [
   {
     title: "Library",
-    url: "/en-US/platform/protocols",
+    url: "/en-US/platform/commands",
     navigable: false,
     children: [
-      { title: "Protocols", url: "/en-US/platform/protocols" },
+      { title: "Commands", url: "/en-US/platform/commands" },
       { title: "Macros", url: "/en-US/platform/macros" },
     ],
   },
@@ -71,7 +71,7 @@ describe("NavItems > NavGroup (children + navigable: false)", () => {
     vi.mocked(usePathname).mockReturnValue("/en-US/platform");
     render(<NavItems items={groupItems} />);
 
-    expect(screen.queryByText("Protocols")).not.toBeInTheDocument();
+    expect(screen.queryByText("Commands")).not.toBeInTheDocument();
     expect(screen.queryByText("Macros")).not.toBeInTheDocument();
   });
 
@@ -82,11 +82,11 @@ describe("NavItems > NavGroup (children + navigable: false)", () => {
 
     const header = screen.getByRole("button", { name: /library/i });
     await user.click(header);
-    expect(screen.getByText("Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Commands")).toBeInTheDocument();
     expect(screen.getByText("Macros")).toBeInTheDocument();
 
     await user.click(header);
-    expect(screen.queryByText("Protocols")).not.toBeInTheDocument();
+    expect(screen.queryByText("Commands")).not.toBeInTheDocument();
   });
 
   it("opens by default and marks the active child when pathname matches a child", () => {
@@ -97,7 +97,7 @@ describe("NavItems > NavGroup (children + navigable: false)", () => {
     const activeLink = screen.getByText("Macros").closest("a");
     expect(activeLink?.className).toContain("font-semibold");
 
-    const inactiveLink = screen.getByText("Protocols").closest("a");
+    const inactiveLink = screen.getByText("Commands").closest("a");
     expect(inactiveLink?.className).toContain("font-medium");
     expect(inactiveLink?.className).not.toContain("font-semibold");
   });

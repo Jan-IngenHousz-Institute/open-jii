@@ -1,16 +1,9 @@
 import { Position } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
-import { BookText, GitBranch, HelpCircle, Cpu, ChartColumn, Terminal } from "lucide-react";
+import { BookText, GitBranch, HelpCircle, ChartColumn, Terminal } from "lucide-react";
 import React from "react";
 
-export const ALL_NODE_TYPES = [
-  "INSTRUCTION",
-  "QUESTION",
-  "MEASUREMENT",
-  "COMMAND",
-  "ANALYSIS",
-  "BRANCH",
-] as const;
+export const ALL_NODE_TYPES = ["INSTRUCTION", "QUESTION", "COMMAND", "ANALYSIS", "BRANCH"] as const;
 
 // infer NodeType from the tuple:
 export type NodeType = (typeof ALL_NODE_TYPES)[number];
@@ -24,7 +17,7 @@ export interface NodeTypeConfig {
   defaultTargetPosition?: Position;
 }
 
-// Accents kept in sync with workbook cell accent colors (Protocol, Macro, Question, Markdown).
+// Accents kept in sync with workbook cell accent colors (Command, Macro, Question, Markdown).
 export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
   INSTRUCTION: {
     accent: "#6F8596",
@@ -42,16 +35,8 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
     defaultSourcePosition: Position.Right,
     defaultTargetPosition: Position.Left,
   },
-  MEASUREMENT: {
-    accent: "#2D3142",
-    icon: React.createElement(Cpu, { size: 16, strokeWidth: 2 }),
-    hasInput: true,
-    hasOutput: true,
-    defaultSourcePosition: Position.Right,
-    defaultTargetPosition: Position.Left,
-  },
-  // An inline device command; rides the API "measurement" node type so old
-  // clients degrade gracefully (see zMeasurementCommandContent).
+  // A device command (library reference or inline); rides the API "measurement"
+  // node type so old clients degrade gracefully (see zMeasurementCommandContent).
   COMMAND: {
     accent: "#119DA4",
     icon: React.createElement(Terminal, { size: 16, strokeWidth: 2 }),

@@ -103,7 +103,7 @@ describe("NavigationSidebarWrapper", () => {
     });
   });
 
-  it("prepares library navigation with protocols child", async () => {
+  it("prepares library navigation with commands child", async () => {
     const Component = await NavigationSidebarWrapper({ locale: "en" });
     render(Component);
 
@@ -130,16 +130,16 @@ describe("NavigationSidebarWrapper", () => {
       navigable: false,
     });
 
-    const protocols = navigationData.navLibrary[0].children[0];
-    expect(protocols).toMatchObject({
-      title: "sidebar.protocols",
-      url: "/en/platform/protocols",
+    const commands = navigationData.navLibrary[0].children[0];
+    expect(commands).toMatchObject({
+      title: "sidebar.commands",
+      url: "/en/platform/commands",
       icon: "FileSliders",
     });
-    expect(protocols.items).toHaveLength(2);
-    expect(protocols.items[0]).toMatchObject({
-      title: "sidebar.newProtocol",
-      url: "/en/platform/protocols/new",
+    expect(commands.items).toHaveLength(2);
+    expect(commands.items[0]).toMatchObject({
+      title: "sidebar.newCommand",
+      url: "/en/platform/commands/new",
     });
   });
 
@@ -260,7 +260,7 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    // Lines 34-35 pattern is repeated for experiments, protocols, macros
+    // Lines 34-35 pattern is repeated for experiments, commands, macros
     const experimentsItems = navigationData.navExperiments[0].items;
     expect(experimentsItems.length).toBeGreaterThan(0);
     expect(experimentsItems[0]).toHaveProperty("title");
@@ -280,9 +280,9 @@ describe("NavigationSidebarWrapper", () => {
       };
     }>;
 
-    const protocolsItems = component.props.navigationData.navLibrary[0].children[0].items;
-    expect(protocolsItems.length).toBeGreaterThan(0);
-    expect(protocolsItems[0]).toHaveProperty("title");
+    const commandsItems = component.props.navigationData.navLibrary[0].children[0].items;
+    expect(commandsItems.length).toBeGreaterThan(0);
+    expect(commandsItems[0]).toHaveProperty("title");
 
     const macrosItems = component.props.navigationData.navLibrary[0].children[1].items;
     expect(macrosItems.length).toBeGreaterThan(0);

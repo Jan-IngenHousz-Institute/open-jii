@@ -1,14 +1,14 @@
 "use client";
 
-import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { useCommandCreate } from "@/hooks/command/useCommandCreate/useCommandCreate";
+import { useCommands } from "@/hooks/command/useCommands/useCommands";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
+import type { CommandCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -24,40 +24,40 @@ import {
 const isDisabledFamily = (family: SensorFamily) =>
   SENSOR_FAMILY_OPTIONS.find((o) => o.value === family)?.disabled ?? false;
 
-interface ProtocolPickerProps {
+interface CommandPickerProps {
   sensorFamily?: SensorFamily;
-  onSelect: (cell: ProtocolCell) => void;
+  onSelect: (cell: CommandCell) => void;
   children: ReactNode;
 }
 
-export function ProtocolPicker({
+export function CommandPicker({
   sensorFamily = "multispeq",
   onSelect,
   children,
-}: ProtocolPickerProps) {
+}: CommandPickerProps) {
   const [open, setOpen] = useState(false);
   // Drive search from the hook's own state so the input actually filters the
   // query (passing it as `initialSearch` is read only once).
-  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
+  const { commands, search, setSearch } = useCommands({ initialFilter: "all" });
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  // Protocols can only be created for a locally-runnable family; an ingest-only
+  // Commands can only be created for a locally-runnable family; an ingest-only
   // (disabled) sensorFamily falls back to the default creatable one.
   const creatableFamily: SensorFamily = isDisabledFamily(sensorFamily) ? "multispeq" : sensorFamily;
   const [newFamily, setNewFamily] = useState<SensorFamily>(creatableFamily);
   const [isCreating, setIsCreating] = useState(false);
-  const createProtocol = useProtocolCreate();
+  const createCommand = useCommandCreate();
 
-  const handleSelect = (protocol: { id: string; name: string; family: string }) => {
-    const cell: ProtocolCell = {
+  const handleSelect = (command: { id: string; name: string; family: string }) => {
+    const cell: CommandCell = {
       id: crypto.randomUUID(),
-      type: "protocol",
+      type: "command",
       isCollapsed: false,
       payload: {
-        protocolId: protocol.id,
+        commandId: command.id,
         version: 1,
-        name: protocol.name,
+        name: command.name,
       },
     };
     onSelect(cell);
@@ -68,19 +68,19 @@ export function ProtocolPicker({
     if (!newName.trim() || isDisabledFamily(newFamily)) return;
     setIsCreating(true);
     try {
-      const result = await createProtocol.mutateAsync({
+      const result = await createCommand.mutateAsync({
         body: {
           name: newName.trim(),
           family: newFamily,
           code: [],
         },
       });
-      const cell: ProtocolCell = {
+      const cell: CommandCell = {
         id: crypto.randomUUID(),
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
         payload: {
-          protocolId: result.body.id,
+          commandId: result.body.id,
           version: 1,
           name: newName.trim(),
         },
@@ -115,11 +115,11 @@ export function ProtocolPicker({
         <div className="space-y-3">
           {showCreate ? (
             <>
-              <p className="text-sm font-medium">Create new protocol</p>
+              <p className="text-sm font-medium">Create new command</p>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Protocol name"
+                placeholder="Command name"
                 className="h-8 text-sm"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleCreate();
@@ -160,7 +160,7 @@ export function ProtocolPicker({
                 onClick={() => setShowCreate(true)}
               >
                 <Plus className="h-4 w-4 text-[#2D3142]" />
-                Create new protocol
+                Create new command
               </Button>
 
               <div className="relative">
@@ -168,14 +168,14 @@ export function ProtocolPicker({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search protocols..."
+                  placeholder="Search commands..."
                   className="h-8 pl-8 text-sm"
                 />
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {protocols && protocols.length > 0 ? (
-                  protocols.map((p) => (
+                {commands && commands.length > 0 ? (
+                  commands.map((p) => (
                     <button
                       type="button"
                       key={p.id}
@@ -198,7 +198,7 @@ export function ProtocolPicker({
                   ))
                 ) : (
                   <p className="text-muted-foreground py-3 text-center text-xs">
-                    {search ? "No protocols found" : "No protocols available"}
+                    {search ? "No commands found" : "No commands available"}
                   </p>
                 )}
               </div>

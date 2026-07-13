@@ -26,20 +26,20 @@ import {
   GripVertical,
   HelpCircle,
   List,
-  Microscope,
   PanelRightClose,
+  Terminal,
 } from "lucide-react";
 import { useCallback } from "react";
 import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */
 const cellColors: Record<string, string> = {
   question: "#C58AAE",
-  protocol: "#2D3142",
   command: "#119DA4",
   macro: "#6C5CE7",
   branch: "#F29D38",
@@ -50,7 +50,6 @@ const cellColors: Record<string, string> = {
 /** Active/selected background per cell type (light tint of accent). */
 const cellActiveBg: Record<string, string> = {
   question: "#F9F3F6",
-  protocol: "#EAEBEE",
   command: "#E7F6F6",
   macro: "#F1EFFD",
   branch: "#FBF3EA",
@@ -59,7 +58,6 @@ const cellActiveBg: Record<string, string> = {
 
 const cellTypeLabels: Record<string, string> = {
   question: "Question",
-  protocol: "Protocol",
   command: "Command",
   macro: "Macro",
   branch: "Branch",
@@ -70,7 +68,7 @@ const cellTypeLabels: Record<string, string> = {
 /** Type icon per cell type, matching the icons on the cell components. */
 const cellIcons: Partial<Record<string, LucideIcon>> = {
   question: HelpCircle,
-  protocol: Microscope,
+  command: Terminal,
   macro: Code,
   branch: GitBranch,
   markdown: FileText,
@@ -81,10 +79,10 @@ function getCellSubtitle(cell: WorkbookCell): string {
   switch (cell.type) {
     case "question":
       return cell.question.text || "No question yet";
-    case "protocol":
-      return cell.payload.name ?? "JSON";
     case "command":
-      return cell.payload.name ?? (cell.payload.content || cell.payload.format);
+      return isCommandReferencePayload(cell.payload)
+        ? (cell.payload.name ?? "JSON")
+        : (cell.payload.name ?? (cell.payload.content || cell.payload.format));
     case "macro":
       return cell.payload.name ?? capitalize(cell.payload.language);
     case "branch":

@@ -2,7 +2,7 @@
   "form": {
     "name": "Experimentname",
     "description": "Beschreibung",
-    "protocol": "Protokoll",
+    "command": "Protokoll",
     "device": "Gerät",
     "location": "Standort",
     "researcher": "Forscher",
@@ -156,7 +156,7 @@
     "nameRequired": "Experimentname ist erforderlich",
     "nameMinLength": "Name muss mindestens 3 Zeichen lang sein",
     "descriptionRequired": "Beschreibung ist erforderlich",
-    "protocolRequired": "Bitte wählen Sie ein Protokoll",
+    "commandRequired": "Bitte wählen Sie ein Protokoll",
     "deviceRequired": "Bitte wählen Sie ein Gerät",
     "invalidDateRange": "Enddatum muss nach dem Startdatum liegen"
   },

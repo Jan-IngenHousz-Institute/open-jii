@@ -17,11 +17,11 @@ interface TestResult {
   timestamp: Date;
 }
 
-interface ProtocolResultsDisplayProps {
+interface CommandResultsDisplayProps {
   testResult: TestResult | null;
 }
 
-export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayProps) {
+export function CommandResultsDisplay({ testResult }: CommandResultsDisplayProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const { copy: copyToClipboard, copied } = useCopyToClipboard();
@@ -35,7 +35,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-      <h3 className="shrink-0 text-sm font-medium">{t("iot.protocolRunner.results")}</h3>
+      <h3 className="shrink-0 text-sm font-medium">{t("iot.commandRunner.results")}</h3>
       {testResult ? (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden rounded-lg border p-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -48,8 +48,8 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">
                   {testResult.success
-                    ? t("iot.protocolRunner.success")
-                    : t("iot.protocolRunner.failed")}
+                    ? t("iot.commandRunner.success")
+                    : t("iot.commandRunner.failed")}
                 </div>
                 <div className="text-muted-foreground truncate text-xs">
                   {testResult.timestamp.toLocaleTimeString()} • {testResult.executionTime}ms
@@ -63,14 +63,14 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                 testResult.success ? "bg-green-600 hover:bg-green-700" : "",
               )}
             >
-              {testResult.success ? t("iot.protocolRunner.passed") : t("iot.protocolRunner.error")}
+              {testResult.success ? t("iot.commandRunner.passed") : t("iot.commandRunner.error")}
             </Badge>
           </div>
 
           {testResult.success ? (
             <div className="flex min-h-0 flex-1 flex-col gap-2">
               <div className="shrink-0 text-xs font-medium">
-                {t("iot.protocolRunner.responseData")}
+                {t("iot.commandRunner.responseData")}
               </div>
               <div className="relative flex min-h-0 flex-1 flex-col">
                 <Button
@@ -104,10 +104,10 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
           <div className="text-center">
             <Play className="text-muted-foreground/20 mx-auto mb-1.5 h-6 w-6" />
             <div className="text-muted-foreground text-xs">
-              {t("iot.protocolRunner.noResultsYet")}
+              {t("iot.commandRunner.noResultsYet")}
             </div>
             <div className="text-muted-foreground/60 text-xs">
-              {t("iot.protocolRunner.runProtocolToSeeResults")}
+              {t("iot.commandRunner.runCommandToSeeResults")}
             </div>
           </div>
         </div>

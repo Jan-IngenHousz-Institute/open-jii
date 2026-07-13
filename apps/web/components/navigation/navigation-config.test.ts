@@ -42,8 +42,8 @@ describe("navigation-config", () => {
     });
 
     it("library children generate correct URLs", () => {
-      const [protocols, macros] = mainNavigation.library.children;
-      expect(protocols.url(locale)).toBe(`/${locale}/platform/protocols`);
+      const [commands, macros] = mainNavigation.library.children;
+      expect(commands.url(locale)).toBe(`/${locale}/platform/commands`);
       expect(macros.url(locale)).toBe(`/${locale}/platform/macros`);
     });
 

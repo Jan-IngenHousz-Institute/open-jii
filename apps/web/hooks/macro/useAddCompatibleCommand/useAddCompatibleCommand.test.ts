@@ -4,36 +4,36 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { useAddCompatibleProtocol } from "./useAddCompatibleProtocol";
+import { useAddCompatibleCommand } from "./useAddCompatibleCommand";
 
-describe("useAddCompatibleProtocol", () => {
-  it("sends add request with protocol IDs", async () => {
-    const spy = server.mount(contract.macros.addCompatibleProtocols, {
+describe("useAddCompatibleCommand", () => {
+  it("sends add request with command IDs", async () => {
+    const spy = server.mount(contract.macros.addCompatibleCommands, {
       body: [],
     });
 
-    const { result } = renderHook(() => useAddCompatibleProtocol("macro-1"));
+    const { result } = renderHook(() => useAddCompatibleCommand("macro-1"));
 
     act(() => {
       result.current.mutate({
-        body: { protocolIds: ["p-1", "p-2"] },
+        body: { commandIds: ["p-1", "p-2"] },
         params: { id: "macro-1" },
       });
     });
 
     await waitFor(() => {
-      expect(spy.body).toMatchObject({ protocolIds: ["p-1", "p-2"] });
+      expect(spy.body).toMatchObject({ commandIds: ["p-1", "p-2"] });
     });
   });
 
   it("completes mutation successfully", async () => {
-    server.mount(contract.macros.addCompatibleProtocols, { body: [] });
+    server.mount(contract.macros.addCompatibleCommands, { body: [] });
 
-    const { result } = renderHook(() => useAddCompatibleProtocol("macro-1"));
+    const { result } = renderHook(() => useAddCompatibleCommand("macro-1"));
 
     act(() => {
       result.current.mutate({
-        body: { protocolIds: ["p-1"] },
+        body: { commandIds: ["p-1"] },
         params: { id: "macro-1" },
       });
     });

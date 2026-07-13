@@ -20,10 +20,10 @@ export default function PlatformNotFound() {
 
   // Determine which section the user is in based on pathname
   const getSecondaryNavigation = () => {
-    if (pathname.includes("/protocols")) {
+    if (pathname.includes("/commands")) {
       return {
-        href: "/platform/protocols",
-        label: tNav("sidebar.protocols"),
+        href: "/platform/commands",
+        label: tNav("sidebar.commands"),
         Icon: FileSliders,
       };
     }

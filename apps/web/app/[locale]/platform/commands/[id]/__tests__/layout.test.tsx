@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createCommand } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound, useParams, usePathname } from "next/navigation";
@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import ProtocolLayout from "../layout";
+import CommandLayout from "../layout";
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error }: { error: unknown }) => (
@@ -68,9 +68,9 @@ vi.mock("@/components/shared/inline-editable-title", () => ({
   ),
 }));
 
-const defaultProtocol = createProtocol({
+const defaultCommand = createCommand({
   id: "test-id",
-  name: "Test Protocol",
+  name: "Test Command",
   family: "multispeq",
   sortOrder: null,
   createdBy: "other-user",
@@ -82,24 +82,24 @@ const defaultSession = {
 };
 
 function renderLayout({
-  protocolId = "test-id",
+  commandId = "test-id",
   session = defaultSession,
   children = <div>Children Content</div>,
 }: {
-  protocolId?: string;
+  commandId?: string;
   session?:
     | { data: { user: { id: string } }; isPending: boolean }
     | { data: null; isPending: boolean };
   children?: React.ReactNode;
 } = {}) {
-  vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" });
-  vi.mocked(usePathname).mockReturnValue(`/en/platform/protocols/${protocolId}`);
+  vi.mocked(useParams).mockReturnValue({ id: commandId, locale: "en" });
+  vi.mocked(usePathname).mockReturnValue(`/en/platform/commands/${commandId}`);
   vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 
-  return render(<ProtocolLayout>{children}</ProtocolLayout>);
+  return render(<CommandLayout>{children}</CommandLayout>);
 }
 
-describe("ProtocolLayout", () => {
+describe("CommandLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBrowserSupport.bluetooth = true;
@@ -111,21 +111,21 @@ describe("ProtocolLayout", () => {
 
   describe("Loading State", () => {
     it("should display loading message when data is loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(contract.commands.getCommand, { body: createCommand(), delay: 999_999 });
       renderLayout();
 
-      expect(screen.getByText("protocols.loadingProtocols")).toBeInTheDocument();
+      expect(screen.getByText("commands.loadingCommands")).toBeInTheDocument();
     });
 
     it("should not render children when loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(contract.commands.getCommand, { body: createCommand(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByText("Children Content")).not.toBeInTheDocument();
     });
 
     it("should not render the inline editable title when loading", () => {
-      server.mount(contract.protocols.getProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(contract.commands.getCommand, { body: createCommand(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("ProtocolLayout", () => {
 
   describe("Error Handling", () => {
     it("should call notFound for 404 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 404 });
+      server.mount(contract.commands.getCommand, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -143,7 +143,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should call notFound for 404 errors (invalid UUID)", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 404 });
+      server.mount(contract.commands.getCommand, { status: 404 });
       renderLayout();
 
       await waitFor(() => {
@@ -152,7 +152,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should display error display for 500 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(contract.commands.getCommand, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -165,7 +165,7 @@ describe("ProtocolLayout", () => {
     });
 
     it("should display error heading and description for non-404/400 errors", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(contract.commands.getCommand, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -174,11 +174,11 @@ describe("ProtocolLayout", () => {
         },
         { timeout: 5000 },
       );
-      expect(screen.getByText("protocols.notFoundDescription")).toBeInTheDocument();
+      expect(screen.getByText("commands.notFoundDescription")).toBeInTheDocument();
     });
 
     it("should not render children when there is an error", async () => {
-      server.mount(contract.protocols.getProtocol, { status: 500 });
+      server.mount(contract.commands.getCommand, { status: 500 });
       renderLayout();
 
       await waitFor(
@@ -192,24 +192,24 @@ describe("ProtocolLayout", () => {
   });
 
   describe("Success State", () => {
-    it("should render InlineEditableTitle with protocol name", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, name: "My Protocol" }),
+    it("should render InlineEditableTitle with command name", async () => {
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, name: "My Command" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
         expect(screen.getByTestId("inline-editable-title")).toBeInTheDocument();
       });
-      expect(screen.getByTestId("title-name")).toHaveTextContent("My Protocol");
+      expect(screen.getByTestId("title-name")).toHaveTextContent("My Command");
     });
 
     it("should render children content", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -218,10 +218,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=true when current user is the creator", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -230,10 +230,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=false when current user is not the creator", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, createdBy: "different-user" }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, createdBy: "different-user" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -242,10 +242,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass hasAccess=false when there is no session", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout({
         session: { data: null, isPending: false },
       });
@@ -256,10 +256,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should render preferred badge when sortOrder is not null", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, sortOrder: 1 }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, sortOrder: 1 }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -269,10 +269,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should not render preferred badge when sortOrder is null", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, sortOrder: null }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, sortOrder: null }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -282,10 +282,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should render the outer container with space-y-6 class", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {
@@ -297,10 +297,10 @@ describe("ProtocolLayout", () => {
 
   describe("Title Save Handler", () => {
     it("should call toast on successful title save", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       const user = userEvent.setup();
       renderLayout();
 
@@ -311,15 +311,15 @@ describe("ProtocolLayout", () => {
       await user.click(screen.getByTestId("save-title-btn"));
 
       await waitFor(() => {
-        expect(toast).toHaveBeenCalledWith({ description: "protocols.protocolUpdated" });
+        expect(toast).toHaveBeenCalledWith({ description: "commands.commandUpdated" });
       });
     });
 
     it("should call toast with destructive variant on title save error", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol, createdBy: "user-123" }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand, createdBy: "user-123" }),
       });
-      server.mount(contract.protocols.updateProtocol, { status: 400 });
+      server.mount(contract.commands.updateCommand, { status: 400 });
       const user = userEvent.setup();
       renderLayout();
 
@@ -338,10 +338,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass isPending=true while update is in progress", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol(), delay: 999_999 });
+      server.mount(contract.commands.updateCommand, { body: createCommand(), delay: 999_999 });
       const user = userEvent.setup();
       renderLayout();
 
@@ -357,10 +357,10 @@ describe("ProtocolLayout", () => {
     });
 
     it("should pass isPending=false when not updating", async () => {
-      server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ ...defaultProtocol }),
+      server.mount(contract.commands.getCommand, {
+        body: createCommand({ ...defaultCommand }),
       });
-      server.mount(contract.protocols.updateProtocol, { body: createProtocol() });
+      server.mount(contract.commands.updateCommand, { body: createCommand() });
       renderLayout();
 
       await waitFor(() => {

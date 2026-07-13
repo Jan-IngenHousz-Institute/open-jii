@@ -1,5 +1,5 @@
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/schemas/command.schema";
+import { zSensorFamily } from "@repo/api/schemas/command.schema";
 
 export interface SensorFamilyOption {
   value: SensorFamily;
@@ -25,7 +25,7 @@ const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "minipar
 
 /**
  * Selectable sensor family options derived from the API enum.
- * Adding a new value to `zSensorFamily` automatically surfaces it here —
+ * Adding a new value to `zSensorFamily` automatically surfaces it here -
  * just add its label to `SENSOR_FAMILY_LABELS` and optionally disable it.
  */
 export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options.map((value) => ({

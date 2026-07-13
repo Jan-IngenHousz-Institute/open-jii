@@ -1,21 +1,21 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import ProtocolCodeEditor from "../protocol-code-editor";
+import CommandCodeEditor from "../command-code-editor";
 
 // Mock useDebounce to return value immediately for testing
 vi.mock("~/hooks/useDebounce", () => ({
   useDebounce: (value: string) => [value, false],
 }));
 
-describe("ProtocolCodeEditor", () => {
+describe("CommandCodeEditor", () => {
   const mockOnChange = vi.fn();
   const mockOnValidationChange = vi.fn();
   const defaultProps = {
     value: [{ averages: 1, environmental: [["light_intensity", 0]] }],
     onChange: mockOnChange,
     onValidationChange: mockOnValidationChange,
-    label: "Protocol Code",
+    label: "Command Code",
   };
 
   beforeEach(() => {
@@ -23,20 +23,20 @@ describe("ProtocolCodeEditor", () => {
   });
 
   it("should render the editor with label", () => {
-    render(<ProtocolCodeEditor {...defaultProps} />);
+    render(<CommandCodeEditor {...defaultProps} />);
 
-    expect(screen.getByText("Protocol Code")).toBeInTheDocument();
+    expect(screen.getByText("Command Code")).toBeInTheDocument();
   });
 
   it("should display JSON stats", () => {
-    render(<ProtocolCodeEditor {...defaultProps} />);
+    render(<CommandCodeEditor {...defaultProps} />);
 
     // Stats should be displayed somewhere (lines and size)
     expect(screen.getByText(/lines/i)).toBeTruthy();
   });
 
   it("should display error message when provided", () => {
-    render(<ProtocolCodeEditor {...defaultProps} error="Something went wrong" />);
+    render(<CommandCodeEditor {...defaultProps} error="Something went wrong" />);
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });

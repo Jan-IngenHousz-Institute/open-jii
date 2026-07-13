@@ -1,4 +1,4 @@
-import { ListProtocols } from "@/components/list-protocols";
+import { ListCommands } from "@/components/list-commands";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,14 +7,14 @@ import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components/button";
 
 export const metadata: Metadata = {
-  title: "Protocols",
+  title: "Commands",
 };
 
-interface ProtocolPageProps {
+interface CommandPageProps {
   params: Promise<{ locale: string }>;
 }
 
-export default async function ProtocolPage({ params }: ProtocolPageProps) {
+export default async function CommandPage({ params }: CommandPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
@@ -25,14 +25,14 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
     <PageContainer width="fluid" className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">{t("protocols.title")}</h1>
-          <p>{t("protocols.listDescription")}</p>
+          <h1 className="text-4xl font-bold text-gray-900">{t("commands.title")}</h1>
+          <p>{t("commands.listDescription")}</p>
         </div>
-        <Link href={`/platform/protocols/new`} locale={locale}>
-          <Button>{t("protocols.create")}</Button>
+        <Link href={`/platform/commands/new`} locale={locale}>
+          <Button>{t("commands.create")}</Button>
         </Link>
       </div>
-      <ListProtocols />
+      <ListCommands />
     </PageContainer>
   );
 }
