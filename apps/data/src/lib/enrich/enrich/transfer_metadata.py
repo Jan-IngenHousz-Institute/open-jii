@@ -31,7 +31,7 @@ TRANSFER_RESULT_SCHEMA = StructType([
     StructField("project_id", StringType(), True),
     StructField("creator_user_id", StringType(), True),
     StructField("experiment_id", StringType(), True),
-    StructField("protocol_id", StringType(), True),
+    StructField("protocol_id", StringType(), True),  # stored Delta column name kept; holds the command id
     StructField("macro_id", StringType(), True),
     StructField("macro_filename", StringType(), True),
     StructField("macro_name", StringType(), True),
@@ -69,10 +69,10 @@ _VALUE_TYPE_TO_KIND = {
 }
 
 
-def _build_protocol_payload(
+def _build_command_payload(
     proto_list: Optional[List[Dict]], creator_user_id: str
 ) -> Optional[Dict[str, Any]]:
-    """Build the protocol section of the webhook payload from the first protocol."""
+    """Build the command section of the webhook payload from the first source protocol."""
     if not proto_list:
         return None
     proto = proto_list[0]
@@ -146,7 +146,7 @@ def _build_questions_payload(
 
 def _build_transfer_description(
     original_description: Optional[str],
-    protocol_name: Optional[str],
+    command_name: Optional[str],
     macro_name: Optional[str],
 ) -> str:
     """Build an enriched experiment description for transferred projects.
@@ -158,8 +158,8 @@ def _build_transfer_description(
     ]
 
     details_parts: list[str] = []
-    if protocol_name:
-        details_parts.append(f'The protocol used in this experiment is "{protocol_name}".')
+    if command_name:
+        details_parts.append(f'The command used in this experiment is "{command_name}".')
     if macro_name:
         details_parts.append(f'The macro used in this experiment is "{macro_name}".')
     details_parts.append(
@@ -187,7 +187,7 @@ def _call_transfer_webhook(
     creator_user_id = row["creator_user_id"]
 
     try:
-        protocol_payload = _build_protocol_payload(
+        command_payload = _build_command_payload(
             row.get("protocols_list"), creator_user_id
         )
         macro_payload = _build_macro_payload(
@@ -195,12 +195,12 @@ def _call_transfer_webhook(
         )
         questions_payload = _build_questions_payload(row.get("questions"))
 
-        protocol_name = protocol_payload["name"] if protocol_payload else None
+        command_name = command_payload["name"] if command_payload else None
         macro_name = macro_payload["name"] if macro_payload else None
 
         description = _build_transfer_description(
             row.get("project_description"),
-            protocol_name,
+            command_name,
             macro_name,
         )
 
@@ -225,8 +225,8 @@ def _call_transfer_webhook(
                 **({"locations": locations} if locations else {}),
             },
         }
-        if protocol_payload:
-            payload["protocol"] = protocol_payload
+        if command_payload:
+            payload["command"] = command_payload
         if macro_payload:
             payload["macro"] = macro_payload
         if questions_payload:
@@ -241,7 +241,7 @@ def _call_transfer_webhook(
             "project_id": project_id,
             "creator_user_id": creator_user_id,
             "experiment_id": result.get("experimentId"),
-            "protocol_id": result.get("protocolId"),
+            "protocol_id": result.get("commandId"),
             "macro_id": result.get("macroId"),
             "macro_filename": result.get("macroFilename"),
             "macro_name": result.get("macroName"),

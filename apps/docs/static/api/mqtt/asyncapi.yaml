@@ -29,7 +29,7 @@ channels:
         <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
         <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
         <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
-        <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
+        <li><strong>protocolId:</strong> Unique identifier of the command (formerly protocol) that produced the measurement (e.g., protoA). The segment name is kept for ingest-routing compatibility.</li>
       </ul>
     parameters:
       experimentId:
