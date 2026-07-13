@@ -7,6 +7,7 @@
 
 # DBTITLE 1,Imports
 import json
+import io
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -20,7 +21,7 @@ import sys
 sys.path.append("/Workspace/Repos/open-jii/apps/data/src/lib/openjii")
 from openjii.helpers import load_experiment_table
 
-# Use print() for logging — Databricks captures stdout/stderr from the
+# Use print() for logging - Databricks captures stdout/stderr from the
 # driver on the compute cluster, but the Python logging module is often
 # swallowed (especially when running as a Databricks task/workflow).
 def log(msg: str, level: str = "INFO"):
@@ -192,7 +193,7 @@ def export_data(df, row_count):
             df.coalesce(1).write.mode("overwrite").json(OUTPUT_PATH)
         elif FORMAT == "json-array":
             # Write as a proper JSON array: [{}, {}, ...]
-            # Collects all rows to the driver — suitable for reasonably sized exports.
+            # Collects all rows to the driver - suitable for reasonably sized exports.
             # We write into a Spark-style partitioned directory so the output layout
             # (single data file + _SUCCESS marker) matches csv/ndjson/parquet, which
             # keeps get_export_file_path() and the downstream download flow consistent.
@@ -213,8 +214,17 @@ def export_data(df, row_count):
                     f"Export has {column_count} columns, which exceeds Excel's {EXCEL_MAX_COLUMNS}-column "
                     "limit per sheet. Use CSV or Parquet for tables this wide."
                 )
+            # Serverless has no Spark Excel writer; build the workbook in memory and upload it
+            # via the Files API (binary-safe, uses the volume's UC grant like csv/parquet).
+            from databricks.sdk import WorkspaceClient
+            w = WorkspaceClient()
             df = flatten_complex_columns(df)
-            df.coalesce(1).write.mode("overwrite").format("excel").option("header", True).save(OUTPUT_PATH)
+            buf = io.BytesIO()
+            df.toPandas().to_excel(buf, index=False, engine="openpyxl")
+            buf.seek(0)
+            w.files.create_directory(OUTPUT_PATH)
+            w.files.upload(f"{OUTPUT_PATH}/{TABLE_NAME}.xlsx", buf, overwrite=True)
+            w.files.upload(f"{OUTPUT_PATH}/_SUCCESS", io.BytesIO(b""), overwrite=True)
         else:
             raise ValueError(f"Unsupported format: {FORMAT}")
         
