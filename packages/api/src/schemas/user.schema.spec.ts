@@ -164,17 +164,6 @@ describe("User Schema", () => {
       expect(result).toEqual(profile);
     });
 
-    it("should validate with optional organization", () => {
-      const profile = {
-        firstName: "John",
-        lastName: "Doe",
-        organization: "ACME Corp",
-      };
-
-      const result = zCreateUserProfileBody.parse(profile);
-      expect(result).toEqual(profile);
-    });
-
     it("should validate with optional bio", () => {
       const profile = {
         firstName: "John",
@@ -191,7 +180,6 @@ describe("User Schema", () => {
         firstName: "John",
         lastName: "Doe",
         bio: "Software developer with 5 years of experience.",
-        organization: "ACME Corp",
       };
 
       const result = zCreateUserProfileBody.parse(profile);

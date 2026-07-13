@@ -17,6 +17,7 @@ const LAYER_ORDER: [string, number][] = [
   ["/services/", 2],
   ["/repositories/", 3],
   [".adapter.spec.", 3],
+  ["/organizations/", 3],
   ["/use-cases/", 4],
   ["/presentation/", 5],
   [".controller.spec.", 5],

@@ -216,7 +216,6 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     firstName: "Test",
     lastName: "User",
     bio: null,
-    organization: undefined,
     activated: true,
     email: "test@example.com",
     ...overrides,

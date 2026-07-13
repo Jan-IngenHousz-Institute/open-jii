@@ -32,7 +32,6 @@ describe("CreateUserProfileUseCase", () => {
     const dto = {
       firstName: "Alice",
       lastName: "Smith",
-      organization: "TestOrg",
     };
 
     const result = await useCase.execute(dto, testUserId);
@@ -42,7 +41,6 @@ describe("CreateUserProfileUseCase", () => {
     expect(result.value).toMatchObject({
       firstName: dto.firstName,
       lastName: dto.lastName,
-      organization: dto.organization,
     });
   });
 
@@ -51,7 +49,6 @@ describe("CreateUserProfileUseCase", () => {
     const dto = {
       firstName: "Bob",
       lastName: "Jones",
-      organization: "OtherOrg",
     };
 
     const result = await useCase.execute(dto, nonExistentId);
@@ -66,7 +63,6 @@ describe("CreateUserProfileUseCase", () => {
       firstName: "Bob",
       lastName: "Johnson",
       bio: "Experienced data scientist.",
-      organization: "DataCorp",
     };
 
     const result = await useCase.execute(dto, testUserId);
@@ -77,7 +73,6 @@ describe("CreateUserProfileUseCase", () => {
       firstName: dto.firstName,
       lastName: dto.lastName,
       bio: dto.bio,
-      organization: dto.organization,
     });
   });
 
@@ -86,7 +81,7 @@ describe("CreateUserProfileUseCase", () => {
       failure(AppError.internal("DB Error")),
     );
 
-    const dto = { firstName: "Test", lastName: "User", organization: "Org" };
+    const dto = { firstName: "Test", lastName: "User" };
     const result = await useCase.execute(dto, testUserId);
 
     assertFailure(result);
@@ -98,7 +93,7 @@ describe("CreateUserProfileUseCase", () => {
       failure(AppError.internal("DB Update Error")),
     );
 
-    const dto = { firstName: "Test", lastName: "User", organization: "Org" };
+    const dto = { firstName: "Test", lastName: "User" };
     const result = await useCase.execute(dto, testUserId);
 
     assertFailure(result);

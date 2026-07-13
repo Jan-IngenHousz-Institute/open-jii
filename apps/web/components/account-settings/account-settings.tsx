@@ -38,7 +38,6 @@ export function AccountSettings({ session }: { session: Session | null }) {
         firstName: userProfile.body.firstName,
         lastName: userProfile.body.lastName,
         bio: userProfile.body.bio ?? "",
-        organization: userProfile.body.organization ?? "",
         activated: userProfile.body.activated ?? true,
         avatarUrl: userProfile.body.avatarUrl ?? user?.image ?? null,
       }
@@ -46,7 +45,6 @@ export function AccountSettings({ session }: { session: Session | null }) {
         firstName: "",
         lastName: "",
         bio: "",
-        organization: "",
         activated: true,
         avatarUrl: user?.image ?? null,
       };
@@ -112,10 +110,6 @@ function AccountSettingsContent({
     await saveProfile({ ...profile, bio });
   };
 
-  const saveOrganization = async (organization: string) => {
-    await saveProfile({ ...profile, organization: organization.trim() });
-  };
-
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <AccountIdentityCard
@@ -125,12 +119,7 @@ function AccountSettingsContent({
         onSaveAvatarUrl={saveAvatarUrl}
         isPending={isPending}
       />
-      <ProfileInformationCard
-        profile={profile}
-        onSaveBio={saveBio}
-        onSaveOrganization={saveOrganization}
-        isPending={isPending}
-      />
+      <ProfileInformationCard profile={profile} onSaveBio={saveBio} isPending={isPending} />
       <DangerZoneCard profile={profile} userId={userId} />
     </div>
   );

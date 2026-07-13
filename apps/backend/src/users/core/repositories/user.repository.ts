@@ -8,7 +8,6 @@ import {
   and,
   count,
   inArray,
-  organizations,
   profiles,
   users,
   accounts,
@@ -16,8 +15,12 @@ import {
   // authenticators table removed - Better Auth uses accounts table
   experiments,
   experimentMembers,
+  organizations,
   sql,
   isNull,
+  syncPersonalOrganizationName,
+  personalOrgSlug,
+  personalOrgName,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -28,7 +31,6 @@ import {
   getAnonymizedBio,
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
-  getAnonymizedOrganizationName,
 } from "../../../common/utils/profile-anonymization";
 import {
   CreateUserDto,
@@ -110,7 +112,6 @@ export class UserRepository {
           avatarUrl: getAnonymizedAvatarUrl(),
           activated: profiles.activated,
           deletedAt: profiles.deletedAt,
-          organizationId: profiles.organizationId,
           updatedAt: profiles.updatedAt,
         })
         .from(profiles)
@@ -228,7 +229,6 @@ export class UserRepository {
             lastName: "User",
             bio: null,
             avatarUrl: null,
-            organizationId: null,
             deletedAt: sql`now() AT TIME ZONE 'UTC'`,
           })
           .where(eq(profiles.userId, id));
@@ -243,32 +243,16 @@ export class UserRepository {
             emailVerified: false,
           })
           .where(eq(users.id, id));
+
+        // 5. Scrub the personal org name (embeds the real name as
+        //    "<First Last>'s workspace"). Org + membership are kept: soft-delete
+        //    keeps the user row, and the org retains ownership of what it owns.
+        await tx
+          .update(organizations)
+          .set({ name: personalOrgName("Deleted User") })
+          .where(eq(organizations.slug, personalOrgSlug(id)));
       });
     });
-  }
-
-  private async createOrReturnOrganization(organization?: string): Promise<string | null> {
-    if (organization) {
-      // Check if organization already exists with this name
-      const organizationResult = await this.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, organization));
-      if (organizationResult.length > 0) {
-        // Use existing organization
-        return organizationResult[0].id;
-      } else {
-        // Create organization
-        const newOrganization = await this.database
-          .insert(organizations)
-          .values({
-            name: organization,
-          })
-          .returning();
-        return newOrganization[0].id;
-      }
-    }
-    return null;
   }
 
   async createOrUpdateUserProfile(
@@ -282,31 +266,35 @@ export class UserRepository {
         .where(eq(profiles.userId, userId))
         .limit(1);
 
-      const organizationId = await this.createOrReturnOrganization(
-        createUserProfileDto.organization,
-      );
       if (result.length > 0) {
-        // Update profile
+        // Update profile — org name is set once at registration, not synced here.
         await this.database
           .update(profiles)
           .set({
             ...createUserProfileDto,
-            organizationId,
           })
           .where(eq(profiles.userId, userId));
       } else {
-        // Create profile
-        await this.database.insert(profiles).values({
-          ...createUserProfileDto,
-          organizationId,
-          userId,
+        // First registration: create the profile and name the personal org from
+        // it (first + last) in one transaction, so a failed sync rolls the
+        // profile insert back too.
+        await this.database.transaction(async (tx) => {
+          await tx.insert(profiles).values({
+            ...createUserProfileDto,
+            userId,
+          });
+
+          await syncPersonalOrganizationName(tx, {
+            id: userId,
+            name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
+          });
         });
       }
+
       return {
         firstName: createUserProfileDto.firstName,
         lastName: createUserProfileDto.lastName,
         bio: createUserProfileDto.bio,
-        organization: createUserProfileDto.organization,
         activated: createUserProfileDto.activated,
       } as UserProfileDto;
     });
@@ -319,12 +307,10 @@ export class UserRepository {
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           bio: getAnonymizedBio(),
-          organization: getAnonymizedOrganizationName(),
           activated: profiles.activated,
           avatarUrl: getAnonymizedAvatarUrl(),
         })
         .from(profiles)
-        .leftJoin(organizations, eq(profiles.organizationId, organizations.id))
         .where(eq(profiles.userId, userId))
         .limit(1);
 
@@ -336,7 +322,6 @@ export class UserRepository {
         firstName: result[0].firstName,
         lastName: result[0].lastName,
         bio: result[0].bio,
-        organization: result[0].organization,
         activated: result[0].activated,
         avatarUrl: result[0].avatarUrl,
       } as UserProfileDto;

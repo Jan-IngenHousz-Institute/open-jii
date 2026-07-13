@@ -108,26 +108,6 @@ export function RegistrationFields({
               </FormItem>
             )}
           />
-
-          {/* Organization */}
-          <FormField
-            control={form.control}
-            name="organization"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("registration.organization")}</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    placeholder={t("registration.organizationPlaceholder")}
-                    className="h-12 rounded-xl"
-                    disabled={isPending}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </>
       )}
 
