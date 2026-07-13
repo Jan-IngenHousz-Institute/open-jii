@@ -51,7 +51,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         cell.id,
         "measurement",
         (cell.payload.name ?? cell.payload.content).slice(0, 64),
-        { command: { format: cell.payload.format, content: cell.payload.content } } as Content,
+        { command: { format: cell.payload.format, content: cell.payload.content } },
         isStart,
       );
 
