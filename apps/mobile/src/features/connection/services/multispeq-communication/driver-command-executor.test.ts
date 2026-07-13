@@ -42,7 +42,7 @@ function mockTransport() {
   };
 }
 
-const LONG_PROTOCOL = [
+const LONG_COMMAND = [
   {
     v_arrays: [],
     set_repeats: 1,
@@ -95,7 +95,7 @@ describe("createDriverCommandExecutor", () => {
     const transport = mockTransport(); // never replies on its own
     const executor = createDriverCommandExecutor(transport);
 
-    const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
+    const settled = executor.execute(LONG_COMMAND).catch((e: Error) => e);
     // Let the serialized command reach the driver and register its response
     // wait (a macrotask flush covers the executor's trace-handover hop plus the
     // queue + send microtasks) before we abort it.
@@ -173,7 +173,7 @@ describe("createDriverCommandExecutor", () => {
     });
     const executor = createDriverCommandExecutor(transport);
 
-    const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
+    const settled = executor.execute(LONG_COMMAND).catch((e: Error) => e);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     statusCb?.(false);

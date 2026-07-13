@@ -22,7 +22,7 @@ const PRECACHE_STALE_TIME = 5 * 60 * 1000;
 
 /**
  * Warms the offline cache for an experiment's flow by caching its workbook
- * version (cells + pinned protocol/macro snapshots). Throws if it can't, so the
+ * version (cells + pinned command/macro snapshots). Throws if it can't, so the
  * precache reports incomplete and retries on reconnect.
  */
 async function precacheExperimentWorkbookFn(

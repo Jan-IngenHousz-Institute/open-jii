@@ -64,9 +64,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
 
   const isLoading =
     !noWorkbook &&
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     (isExperimentsLoading ||
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       isVersionLoading ||
       (!!experimentId && experimentsData == null && !experimentsError));
   const error =

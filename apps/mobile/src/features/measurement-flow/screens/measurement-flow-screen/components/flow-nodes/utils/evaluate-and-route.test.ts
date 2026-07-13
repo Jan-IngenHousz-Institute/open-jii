@@ -5,7 +5,7 @@ import type {
   BranchCell,
   BranchCondition,
   BranchPath,
-  ProtocolCell,
+  CommandCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
@@ -70,12 +70,12 @@ const plainFlowNode = (id: string): FlowNode => ({
   content: {},
   isStart: false,
 });
-// The active protocol is derived from the flow's measurement node (flowProtocolId).
-const measurementFlowNode = (id: string, protocolId: string): FlowNode => ({
+// The active command is derived from the flow's measurement node (flowCommandId).
+const measurementFlowNode = (id: string, commandId: string): FlowNode => ({
   id,
   type: "measurement",
   name: id,
-  content: { protocolId },
+  content: { commandId },
   isStart: false,
 });
 
@@ -87,11 +87,11 @@ const qCell = (id: string): QuestionCell => ({
   question: { kind: "number", text: id, required: false },
   isAnswered: false,
 });
-const pCell = (id: string, protocolId: string): ProtocolCell => ({
+const pCell = (id: string, commandId: string): CommandCell => ({
   id,
-  type: "protocol",
+  type: "command",
   isCollapsed: false,
-  payload: { protocolId, version: 1 },
+  payload: { commandId, version: 1 },
 });
 const cond = (
   sourceCellId: string,

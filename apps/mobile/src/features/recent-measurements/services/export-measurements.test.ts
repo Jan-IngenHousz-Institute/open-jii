@@ -35,7 +35,7 @@ const mockStoredMeasurement = (
   measurementResult: { value: 42 },
   metadata: {
     experimentName: overrides?.experimentName ?? "Test Experiment",
-    protocolName: "protocol-1",
+    protocolName: "command-1",
     timestamp: overrides?.timestamp ?? "2026-03-02T10:00:00.000Z",
   },
 });
@@ -145,7 +145,7 @@ const mockMeasurement = {
   measurementResult: { value: 42 },
   metadata: {
     experimentName: "Test Experiment",
-    protocolName: "protocol-1",
+    protocolName: "command-1",
     timestamp: "2026-03-02T10:00:00.000Z",
   },
 };

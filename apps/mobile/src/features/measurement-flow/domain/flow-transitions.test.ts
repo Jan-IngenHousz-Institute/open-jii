@@ -4,7 +4,7 @@ import type { FlowNode } from "~/shared/measurements/flow-node";
 import type { FlowState } from "./flow-transitions";
 import {
   flowMode,
-  flowProtocolId,
+  flowCommandId,
   initialFlowState,
   nextStepState,
   previousStepState,
@@ -18,7 +18,7 @@ const makeQuestion = (id: string): FlowNode =>
   ({ id, type: "question", name: id, content: { kind: "text" } }) as FlowNode;
 
 const makeMeasurement = (id: string): FlowNode =>
-  ({ id, type: "measurement", name: id, content: { params: {}, protocolId: "p" } }) as FlowNode;
+  ({ id, type: "measurement", name: id, content: { params: {}, commandId: "p" } }) as FlowNode;
 
 const inFlow = (overrides: Partial<FlowState> = {}): FlowState => ({
   ...initialFlowState,
@@ -27,13 +27,13 @@ const inFlow = (overrides: Partial<FlowState> = {}): FlowState => ({
   ...overrides,
 });
 
-describe("flowProtocolId", () => {
-  it("derives the protocol from the flow's measurement node", () => {
-    expect(flowProtocolId([makeQuestion("q1"), makeMeasurement("m1")])).toBe("p");
+describe("flowCommandId", () => {
+  it("derives the command from the flow's measurement node", () => {
+    expect(flowCommandId([makeQuestion("q1"), makeMeasurement("m1")])).toBe("p");
   });
 
   it("is undefined for questions-only flows", () => {
-    expect(flowProtocolId([makeQuestion("q1"), makeQuestion("q2")])).toBeUndefined();
+    expect(flowCommandId([makeQuestion("q1"), makeQuestion("q2")])).toBeUndefined();
   });
 });
 

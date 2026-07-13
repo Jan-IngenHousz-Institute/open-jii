@@ -8,13 +8,12 @@ import { useScanner } from "~/features/connection/hooks/use-scan-manager";
 import type { ScanResult } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import type { InlineCommandContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { resolveInlineCommand } from "@repo/api/utils/command-payload";
-
-import type { InlineCommandContent } from "~/shared/measurements/flow-node";
 
 const log = createLogger("command-node");
 

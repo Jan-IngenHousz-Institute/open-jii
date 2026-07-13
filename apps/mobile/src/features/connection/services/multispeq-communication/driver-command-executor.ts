@@ -23,7 +23,7 @@ export interface ExecuteOptions {
 }
 
 /**
- * Live progress of an in-flight command. A MultispeQ runs a protocol silently
+ * Live progress of an in-flight command. A MultispeQ runs a command silently
  * and returns ONE response at the end, so `rx chunk`s are fragments of that
  * final burst, so `chunks`/`bytes` climb while the reply transfers, not during
  * the measurement itself. The measuring phase is conveyed by elapsed time
@@ -62,7 +62,7 @@ export interface IMultispeqCommandExecutor {
 const PROGRESS_THROTTLE_MS = 100;
 
 /**
- * A MultispeQ runs silently, so a long protocol emits nothing between `tx` and
+ * A MultispeQ runs silently, so a long command emits nothing between `tx` and
  * the final reply. Log a coarse heartbeat while waiting so the logs prove the
  * app is still alive. Sub-second commands (battery, hello) finish well before
  * the first tick, so this is measurement-only noise-free.
@@ -234,7 +234,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     this.cmdStartedAt = 0;
     this.lastEmitAt = 0;
 
-    // Heartbeat: a silent multi-minute protocol logs nothing between tx and the
+    // Heartbeat: a silent multi-minute command logs nothing between tx and the
     // final reply, so emit elapsed every HEARTBEAT_MS to prove liveness. Guarded
     // on `cmdStartedAt` so it stays quiet until the command is actually on the
     // wire; cleared in `finally`.

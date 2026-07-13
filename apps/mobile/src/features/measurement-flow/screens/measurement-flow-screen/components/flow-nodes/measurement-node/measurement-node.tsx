@@ -8,7 +8,7 @@ import type { MeasurementContent } from "~/shared/measurements/flow-node";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
-import { protocolRequiresInteraction } from "@repo/iot";
+import { commandRequiresInteraction } from "@repo/iot";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
@@ -26,7 +26,7 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
   const { t } = useTranslation("measurementFlow");
   const {
     device,
-    protocol,
+    resolved,
     isScanning,
     scanResult,
     scanError,
@@ -72,12 +72,12 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
         <View className="flex-1">
           <View className="flex-1 p-4">
             <ScanningState
-              protocolName={protocol?.name}
+              commandName={resolved?.name}
               progress={scanProgress}
               scanStartedAt={scanStartedAt}
               estimatedMs={estimatedMs}
               requiresInteraction={
-                protocol?.code ? protocolRequiresInteraction(protocol.code) : false
+                resolved?.code ? commandRequiresInteraction(resolved.code) : false
               }
             />
           </View>

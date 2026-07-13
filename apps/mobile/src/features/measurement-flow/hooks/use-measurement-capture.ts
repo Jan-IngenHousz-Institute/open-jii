@@ -20,7 +20,7 @@ const log = createLogger("measurement-capture");
 export function useMeasurementCapture(content: MeasurementContent, nodeId?: string) {
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
-  const protocol = content.protocol;
+  const resolved = content.resolved;
   const {
     executeScan,
     isScanning,
@@ -70,12 +70,12 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
         return;
       }
-      if (!content.protocolId) {
-        toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
+      if (!content.commandId) {
+        toast.error(t("measurementFlow:measurementNode.toast.noCommand"));
         return;
       }
-      if (!protocol) {
-        toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+      if (!resolved) {
+        toast.error(t("measurementFlow:measurementNode.toast.commandUnavailable"));
         return;
       }
 
@@ -90,7 +90,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
       resetScan();
       try {
-        const result = await executeScan(protocol);
+        const result = await executeScan(resolved);
         // executeScan types its payload as plain `object`; the device output
         // is JSON, so the structural ScanResult cast is safe at this seam.
         setScanResult(result as ScanResult | undefined, nodeId);
@@ -130,7 +130,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
   return {
     device,
-    protocol,
+    resolved,
     isScanning,
     scanResult,
     scanError,

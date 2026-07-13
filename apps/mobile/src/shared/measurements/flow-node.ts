@@ -46,7 +46,7 @@ export interface QuestionContent {
 
 // Hydrated onto the node from the workbook version (snapshot code + cell name)
 // so scan + upload read offline off the node. See hydrate-flow-nodes.
-export interface ResolvedProtocol {
+export interface ResolvedCommand {
   code: Record<string, unknown>[];
   name?: string;
   family?: unknown;
@@ -61,7 +61,7 @@ export interface ResolvedMacro {
 }
 
 // An inline device command (raw string / JSON / YAML) carried on a measurement
-// node when the workbook cell is an inline command rather than a protocol ref.
+// node when the workbook cell is an inline command rather than a command ref.
 export interface InlineCommandContent {
   format: "string" | "json" | "yaml";
   content: string;
@@ -69,9 +69,11 @@ export interface InlineCommandContent {
 
 export interface MeasurementContent {
   params?: Record<string, any>;
-  // A measurement node carries EITHER a protocol reference OR an inline command.
-  protocolId?: string;
-  protocol?: ResolvedProtocol;
+  // A measurement node carries EITHER a library command reference (commandId,
+  // hydrated into `resolved`) OR an inline command (`command`, mirroring the
+  // wire zMeasurementCommandContent.command).
+  commandId?: string;
+  resolved?: ResolvedCommand;
   command?: InlineCommandContent;
 }
 

@@ -39,7 +39,7 @@ function renderNode(currentNode: FlowNode) {
         </ScrollableNode>
       );
     case "measurement":
-      // A measurement node carries either a protocol reference or an inline
+      // A measurement node carries either a command reference or an inline
       // device command; the latter runs through the lightweight CommandNode.
       if (currentNode.content?.command) {
         return <CommandNode content={currentNode.content.command} nodeId={currentNode.id} />;

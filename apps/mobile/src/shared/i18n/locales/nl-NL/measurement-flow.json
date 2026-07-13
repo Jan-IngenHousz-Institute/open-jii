@@ -113,11 +113,11 @@
     "node": {
       "heading": "Meting voltooid",
       "defaultExperimentName": "Experiment",
-      "defaultProtocolName": "Protocol"
+      "defaultCommandName": "Opdracht"
     },
     "summary": {
       "experiment": "Experiment: ",
-      "protocol": "Protocol: ",
+      "command": "Opdracht: ",
       "answers": "Antwoorden: ",
       "date": "Datum: ",
       "noQuestionsAnswered": "Geen vragen beantwoord"
@@ -149,12 +149,12 @@
       "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}",
       "expected": "~{{estimate}} verwacht",
       "interactionTitle": "Volg het instrument",
-      "interactionHint": "Dit protocol pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen."
+      "interactionHint": "Deze opdracht pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen."
     },
     "toast": {
       "notConnected": "Geen verbinding met sensor",
-      "noProtocol": "Geen protocol geselecteerd",
-      "protocolUnavailable": "Protocol niet beschikbaar, maak verbinding met internet en probeer opnieuw",
+      "noCommand": "Geen opdracht geselecteerd",
+      "commandUnavailable": "Opdracht niet beschikbaar, maak verbinding met internet en probeer opnieuw",
       "deviceDisconnected": "Apparaat losgekoppeld, maak opnieuw verbinding en probeer het opnieuw",
       "scanError": "Scanfout"
     },

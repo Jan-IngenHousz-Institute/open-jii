@@ -116,7 +116,7 @@ describe("useScannerCommandExecutorStore", () => {
 
     it("tracks scan timing and mirrors executor progress, clearing it on settle", async () => {
       const exec = await attachExecutor();
-      const protocol = [
+      const command = [
         {
           v_arrays: [],
           set_repeats: 1,
@@ -124,7 +124,7 @@ describe("useScannerCommandExecutorStore", () => {
         },
       ];
 
-      const pending = useScannerCommandExecutorStore.getState().executeCommand(protocol);
+      const pending = useScannerCommandExecutorStore.getState().executeCommand(command);
 
       const mid = useScannerCommandExecutorStore.getState();
       expect(typeof mid.scanStartedAt).toBe("number");
@@ -158,13 +158,13 @@ describe("useScannerCommandExecutorStore", () => {
         .executeCommand("battery", { background: true });
 
       // A background command (battery poll) must not flip any measurement-facing
-      // state — otherwise it resets the elapsed timer / estimate mid-scan.
+      // state - otherwise it resets the elapsed timer / estimate mid-scan.
       const mid = useScannerCommandExecutorStore.getState();
       expect(mid.isExecuting).toBe(false);
       expect(mid.scanStartedAt).toBeUndefined();
       expect(mid.estimatedMs).toBeUndefined();
 
-      // No progress subscription either — emissions are ignored.
+      // No progress subscription either - emissions are ignored.
       exec.emitProgress({ phase: "receiving", chunks: 1, bytes: 4, elapsedMs: 1, lastEventAt: 1 });
       expect(useScannerCommandExecutorStore.getState().progress).toBeUndefined();
 
@@ -220,7 +220,7 @@ describe("useScannerCommandExecutorStore", () => {
       const exec = await attachExecutor();
 
       // Start an in-flight measurement so cancelCommand has something to abort.
-      const pendingScan = useScannerCommandExecutorStore.getState().executeCommand("protocol");
+      const pendingScan = useScannerCommandExecutorStore.getState().executeCommand("command");
 
       const cancelPromise = useScannerCommandExecutorStore.getState().cancelCommand();
 
@@ -228,10 +228,10 @@ describe("useScannerCommandExecutorStore", () => {
       expect(stateMidCancel.isCancelled).toBe(true);
       expect(stateMidCancel.isExecuting).toBe(false);
 
-      // cancel() is a dedicated method — no second execute() is issued.
+      // cancel() is a dedicated method - no second execute() is issued.
       expect(exec.cancelCalls()).toBe(1);
       expect(exec.calls).toHaveLength(1);
-      expect(exec.calls[0]?.command).toBe("protocol");
+      expect(exec.calls[0]?.command).toBe("command");
 
       await expect(cancelPromise).resolves.toBeUndefined();
 

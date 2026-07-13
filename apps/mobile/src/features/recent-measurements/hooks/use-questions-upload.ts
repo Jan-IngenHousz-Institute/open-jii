@@ -7,7 +7,7 @@ import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 import {
   getMultispeqMqttTopic,
-  QUESTIONS_PROTOCOL_ID,
+  QUESTIONS_COMMAND_ID,
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
@@ -40,7 +40,7 @@ export function useQuestionsUpload() {
       commentText?: string;
       flagType?: AnnotationFlagType | null;
     }) => {
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      const topic = getMultispeqMqttTopic({ experimentId, commandId: QUESTIONS_COMMAND_ID });
 
       const payload = {
         questions,

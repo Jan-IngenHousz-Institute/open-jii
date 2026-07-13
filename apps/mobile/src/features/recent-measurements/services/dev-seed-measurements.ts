@@ -10,7 +10,7 @@ import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
 // Valid-uuid placeholders: these flow through the real ingest path and trip
 // uuid validation downstream if malformed.
 const DEV_EXPERIMENT_ID = "00000000-0000-0000-0000-000000000def";
-const DEV_PROTOCOL_ID = "00000000-0000-0000-0000-0000000000d0";
+const DEV_COMMAND_ID = "00000000-0000-0000-0000-0000000000d0";
 const DEV_USER_ID = "00000000-0000-0000-0000-0000deadbeef";
 
 function buildFakeMeasurement(index: number): Measurement {
@@ -18,7 +18,7 @@ function buildFakeMeasurement(index: number): Measurement {
   return {
     topic: getMultispeqMqttTopic({
       experimentId: DEV_EXPERIMENT_ID,
-      protocolId: DEV_PROTOCOL_ID,
+      commandId: DEV_COMMAND_ID,
     }),
     measurementResult: {
       _dev_seed: true,
@@ -32,14 +32,14 @@ function buildFakeMeasurement(index: number): Measurement {
     },
     metadata: {
       experimentName: `[DEV] Seeded burst ${new Date().toLocaleTimeString()}`,
-      protocolName: "[DEV] Seed protocol",
+      protocolName: "[DEV] Seed command",
       timestamp,
     },
   };
 }
 
 // Save in chunks, enqueue each chunk in one shot, then yield to the event
-// loop. Two reasons: (1) keeps the JS thread responsive — without the yield
+// loop. Two reasons: (1) keeps the JS thread responsive - without the yield
 // a 1000-row burst monopolises it and the UI freezes; (2) one notify per
 // chunk instead of per row collapses N×listeners React work into one tick.
 const SEED_CHUNK_SIZE = 50;

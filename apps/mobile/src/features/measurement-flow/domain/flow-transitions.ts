@@ -32,7 +32,7 @@ export interface FlowState {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: ScanResult;
-  // Cell id of the producer (protocol or command) that yielded scanResult;
+  // Cell id of the producer (library or inline command) that yielded scanResult;
   // keys the synthetic output cell in hydrateCells for branch evaluation.
   producerCellId?: string;
   isFromOverview: boolean;
@@ -88,12 +88,12 @@ function firstMeasurementStep(flowNodes: FlowNode[]): number {
   return flowNodes.findIndex((n) => n.type === "measurement");
 }
 
-// The flow's protocol comes from its measurement node (the flow model
+// The flow's command comes from its measurement node (the flow model
 // assumes at most one). Derived from the persisted flowNodes, so it
 // survives pause/resume and can never go stale across flows.
-export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
+export function flowCommandId(flowNodes: FlowNode[]): string | undefined {
   const node = flowNodes.find((n) => n.type === "measurement");
-  return (node?.content as { protocolId?: string } | undefined)?.protocolId;
+  return (node?.content as { commandId?: string } | undefined)?.commandId;
 }
 
 export function nextStepState(state: FlowState): Partial<FlowState> {

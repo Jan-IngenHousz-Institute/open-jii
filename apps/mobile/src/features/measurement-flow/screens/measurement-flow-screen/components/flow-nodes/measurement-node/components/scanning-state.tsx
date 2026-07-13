@@ -6,14 +6,14 @@ import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface ScanningStateProps {
-  protocolName?: string;
+  commandName?: string;
   /** Live transfer progress of the in-flight command, if any. */
   progress?: CommandProgress;
   /** Epoch ms the scan started, drives the elapsed-time readout. */
   scanStartedAt?: number;
-  /** Estimated protocol runtime (ms), if known, sizes the progress bar. */
+  /** Estimated command runtime (ms), if known, sizes the progress bar. */
   estimatedMs?: number;
-  /** Protocol pauses for a physical open/close of the clamp (par_led gates). */
+  /** Command pauses for a physical open/close of the clamp (par_led gates). */
   requiresInteraction?: boolean;
 }
 
@@ -30,21 +30,21 @@ function formatDuration(ms: number): string {
 /**
  * Feedback shown while a measurement runs.
  *
- * A MultispeQ executes its protocol SILENTLY and only returns a result at the
+ * A MultispeQ executes its command SILENTLY and only returns a result at the
  * very end, there is genuinely no mid-measurement device signal to surface.
- * This is confirmed two ways: the PhotosynQ protocol docs describe a single
- * round-trip (protocol in → silent run → one result burst), and our BLE
+ * This is confirmed two ways: the PhotosynQ command docs describe a single
+ * round-trip (command in → silent run → one result burst), and our BLE
  * transport only delivers one assembled message (it buffers every notification
  * until `__EOM__`). So a "last signal Xs ago" readout would just be elapsed
  * time wearing a costume, there is nothing real to count.
  *
  * The honest progress signal is therefore time: a big, always-ticking elapsed
- * clock shown against the protocol's estimate. The activity line states plainly
+ * clock shown against the command's estimate. The activity line states plainly
  * that the device is working silently, and flips to "Receiving results…" the
  * moment the final reply burst lands.
  */
 export function ScanningState({
-  protocolName,
+  commandName,
   progress,
   scanStartedAt,
   estimatedMs,
@@ -74,7 +74,7 @@ export function ScanningState({
     ? t("measurementFlow:measurementNode.scanning.takingLonger")
     : t("measurementFlow:measurementNode.scanning.title");
 
-  // The MultispeQ stays silent until the protocol finishes, so until the final
+  // The MultispeQ stays silent until the command finishes, so until the final
   // reply lands the only honest status is "measuring"; it flips to "receiving"
   // the instant the result burst arrives.
   const activityLabel = isReceiving
@@ -84,8 +84,8 @@ export function ScanningState({
   return (
     <View className="flex-1 items-center justify-center gap-3">
       <Text className={clsx("text-center text-xl font-bold", classes.text)}>{title}</Text>
-      {protocolName && (
-        <Text className={clsx("text-center text-base", classes.textMuted)}>{protocolName}</Text>
+      {commandName && (
+        <Text className={clsx("text-center text-base", classes.textMuted)}>{commandName}</Text>
       )}
 
       <ActivityIndicator size="large" color={colors.brand} />
@@ -118,7 +118,7 @@ export function ScanningState({
       {/* Secondary: plainly states the device is silent, flips to "receiving". */}
       <Text className={clsx("text-center text-xs", classes.textMuted)}>{activityLabel}</Text>
 
-      {/* Interactive protocols pause for the user to open/close the clamp. The
+      {/* Interactive commands pause for the user to open/close the clamp. The
           device gives no app-visible signal when it is waiting, so tell the user
           up front to follow the instrument's own prompts. */}
       {requiresInteraction && (

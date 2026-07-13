@@ -10,9 +10,9 @@ import { hydrateFlowNodes } from "./hydrate-flow-nodes";
 const cells: WorkbookCell[] = [
   {
     id: "c1",
-    type: "protocol",
+    type: "command",
     isCollapsed: false,
-    payload: { protocolId: "p1", version: 1, name: "My Protocol" },
+    payload: { commandId: "p1", version: 1, name: "My Command" },
   },
   {
     id: "c2",
@@ -23,7 +23,7 @@ const cells: WorkbookCell[] = [
 ];
 
 const snapshots: EntitySnapshots = {
-  protocols: { p1: { code: [{ x: 1 }], family: "multispeq" } },
+  commands: { p1: { code: [{ x: 1 }], family: "multispeq" } },
   macros: { m1: { code: "print(1)" } },
 };
 
@@ -33,7 +33,7 @@ const nodes: FlowNode[] = [
     name: "n1",
     type: "measurement",
     isStart: false,
-    content: { params: {}, protocolId: "p1" },
+    content: { params: {}, commandId: "p1" },
   },
   {
     id: "n2",
@@ -46,12 +46,12 @@ const nodes: FlowNode[] = [
 ];
 
 describe("hydrateFlowNodes", () => {
-  it("attaches protocol code (snapshot) + name (cell) to measurement nodes", () => {
+  it("attaches command code (snapshot) + name (cell) to measurement nodes", () => {
     const [measurement] = hydrateFlowNodes(nodes, cells, snapshots);
-    expect(measurement.content.protocol).toEqual({
+    expect(measurement.content.resolved).toEqual({
       code: [{ x: 1 }],
       family: "multispeq",
-      name: "My Protocol",
+      name: "My Command",
     });
   });
 
@@ -78,7 +78,7 @@ describe("hydrateFlowNodes", () => {
         name: "n1",
         type: "measurement",
         isStart: false,
-        content: { params: {}, protocolId: "px" },
+        content: { params: {}, commandId: "px" },
       },
       {
         id: "n2",
@@ -88,8 +88,8 @@ describe("hydrateFlowNodes", () => {
         content: { params: {}, macroId: "mx" },
       },
     ];
-    const [m, a] = hydrateFlowNodes(bareNodes, [], { protocols: {}, macros: {} });
-    expect(m.content.protocol).toEqual({ code: [], family: undefined, name: undefined });
+    const [m, a] = hydrateFlowNodes(bareNodes, [], { commands: {}, macros: {} });
+    expect(m.content.resolved).toEqual({ code: [], family: undefined, name: undefined });
     expect(a.content.macro).toEqual({
       id: "mx",
       name: deriveMacroFilename("mx"),

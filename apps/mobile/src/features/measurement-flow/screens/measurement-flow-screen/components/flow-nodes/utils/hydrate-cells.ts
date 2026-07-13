@@ -4,7 +4,7 @@ export interface HydrationContext {
   iterationCount: number;
   getAnswer: (cycle: number, cellId: string) => string | undefined;
   scanResult?: unknown;
-  /** Cell id of the producer (protocol or command) whose output `scanResult` holds. */
+  /** Cell id of the producer (library or inline command) whose output `scanResult` holds. */
   producerCellId?: string;
 }
 
@@ -24,7 +24,7 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
   if (scanResult == null || !producerCellId) return hydrated;
 
   // The scan belongs to the cell that produced it (store.producerCellId, a
-  // protocol or command); find it so the synthetic output is keyed to the producer.
+  // library or inline command); find it so the synthetic output is keyed to the producer.
   const producer = hydrated.find((c) => c.id === producerCellId);
   if (!producer) return hydrated;
 

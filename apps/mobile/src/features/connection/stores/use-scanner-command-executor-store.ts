@@ -8,7 +8,7 @@ import { createMultispeqCommandExecutor } from "~/features/connection/services/s
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
-import { estimateProtocolDurationMs } from "@repo/iot";
+import { estimateCommandDurationMs } from "@repo/iot";
 
 const log = createLogger("scanner-executor");
 
@@ -22,9 +22,9 @@ interface ScannerCommandExecutorStore {
 
   /** Live progress of the in-flight command (final-response transfer). */
   progress: CommandProgress | undefined;
-  /** Epoch ms when the current scan started — drives the elapsed-time UI. */
+  /** Epoch ms when the current scan started - drives the elapsed-time UI. */
   scanStartedAt: number | undefined;
-  /** Estimated protocol runtime (ms) for the in-flight command, if known. */
+  /** Estimated command runtime (ms) for the in-flight command, if known. */
   estimatedMs: number | undefined;
 
   // Set the device and create/update the executor
@@ -126,7 +126,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
 
     // Estimated runtime sizes the elapsed-time progress bar. Console commands
     // (plain strings) estimate to 0 → treated as indeterminate (no bar).
-    const estimatedMs = estimateProtocolDurationMs(command) || undefined;
+    const estimatedMs = estimateCommandDurationMs(command) || undefined;
     set({
       isExecuting: true,
       isCancelled: false,
@@ -148,7 +148,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       return result;
     } catch (err) {
       // If cancelCommand preempted this execute() the underlying executor
-      // rejects with a "superseded" error — surface the user-facing reason
+      // rejects with a "superseded" error - surface the user-facing reason
       // instead so callers see a coherent cancellation message.
       const error = get().isCancelled
         ? new Error("Measurement cancelled")
@@ -174,7 +174,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
     }
     try {
       // Preemptively abort the in-flight command on the driver. This sends the
-      // `-1+` cancel switch to the device and rejects the running execute() —
+      // `-1+` cancel switch to the device and rejects the running execute() -
       // the in-flight executeCommand() then surfaces "Measurement cancelled".
       await commandExecutor.cancel();
     } catch (err) {

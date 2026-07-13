@@ -3,9 +3,9 @@ import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-cor
 
 /**
  * Measurement lifecycle:
- *   pending     — saved locally, not yet acknowledged by the broker.
- *   failed      — Outbox exhausted retries; requires user action.
- *   successful  — broker acked (QoS 1 PUBACK).
+ *   pending     - saved locally, not yet acknowledged by the broker.
+ *   failed      - Outbox exhausted retries; requires user action.
+ *   successful  - broker acked (QoS 1 PUBACK).
  *
  * In-flight state lives in the Outbox (Pacer AsyncQueuer), not the DB.
  * `getOutbox().isProcessing(id)` answers the "is this in flight now"
@@ -21,6 +21,7 @@ export const measurements = sqliteTable(
     topic: text("topic").notNull(),
     measurementResult: text("measurement_result").notNull(),
     experimentName: text("experiment_name").notNull(),
+    // Holds the command (formerly protocol) name; column kept to avoid a local migration.
     protocolName: text("protocol_name").notNull(),
     timestamp: text("timestamp").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })

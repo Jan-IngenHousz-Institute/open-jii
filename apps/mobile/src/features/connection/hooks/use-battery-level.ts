@@ -4,7 +4,7 @@ import { useScannerCommandExecutor } from "~/features/connection/hooks/use-scann
 import { connectionKeys } from "~/features/connection/services/connection-keys";
 
 // `battery` is a trivial console command; a healthy device answers in well
-// under a second. Cap its wait far below the 60s protocol base timeout so an
+// under a second. Cap its wait far below the 60s command base timeout so an
 // unresponsive device can't hog the (serialized) command queue and block a
 // measurement queued behind it.
 const BATTERY_TIMEOUT_MS = 5_000;

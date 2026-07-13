@@ -57,7 +57,7 @@ export function useMeasurementUpload() {
       timezone,
       experimentName,
       experimentId,
-      protocolId,
+      commandId,
       protocolName,
       userId,
       macro,
@@ -69,7 +69,7 @@ export function useMeasurementUpload() {
       timezone: string;
       experimentName: string;
       experimentId: string;
-      protocolId: string;
+      commandId: string;
       protocolName: string;
       userId: string;
       macro: { id: string; name: string; filename: string } | null;
@@ -96,7 +96,7 @@ export function useMeasurementUpload() {
         commentText,
       });
 
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId });
+      const topic = getMultispeqMqttTopic({ experimentId, commandId });
       const measurement = {
         topic,
         measurementResult: measurementData,

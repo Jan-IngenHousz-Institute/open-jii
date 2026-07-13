@@ -113,11 +113,11 @@
     "node": {
       "heading": "Measurement complete",
       "defaultExperimentName": "Experiment",
-      "defaultProtocolName": "Protocol"
+      "defaultCommandName": "Command"
     },
     "summary": {
       "experiment": "Experiment: ",
-      "protocol": "Protocol: ",
+      "command": "Command: ",
       "answers": "Answers: ",
       "date": "Date: ",
       "noQuestionsAnswered": "No questions answered"
@@ -149,12 +149,12 @@
       "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}",
       "expected": "~{{estimate}} expected",
       "interactionTitle": "Follow the instrument",
-      "interactionHint": "This protocol pauses for you to open and close the clamp. Watch the device and act when its lights prompt you."
+      "interactionHint": "This command pauses for you to open and close the clamp. Watch the device and act when its lights prompt you."
     },
     "toast": {
       "notConnected": "Not connected to sensor",
-      "noProtocol": "No protocol selected",
-      "protocolUnavailable": "Protocol unavailable, connect to the internet and try again",
+      "noCommand": "No command selected",
+      "commandUnavailable": "Command unavailable, connect to the internet and try again",
       "deviceDisconnected": "Device disconnected, reconnect and try again",
       "scanError": "Scan error"
     },

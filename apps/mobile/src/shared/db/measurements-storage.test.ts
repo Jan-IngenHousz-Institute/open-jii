@@ -58,7 +58,7 @@ const mockMeasurement = {
   measurementResult: { value: 42 },
   metadata: {
     experimentName: "Test Experiment",
-    protocolName: "protocol-1",
+    protocolName: "command-1",
     timestamp: "2026-03-02T10:00:00.000Z",
   },
 };
@@ -79,7 +79,7 @@ function insertRow(
       overrides.topic ?? "test/topic",
       compressForStorage({ value: 42 }),
       "Test Experiment",
-      "protocol-1",
+      "command-1",
       overrides.timestamp ?? "2026-03-02T10:00:00.000Z",
       overrides.createdAt ?? Date.now(),
     );
@@ -145,7 +145,7 @@ describe("measurements-storage", () => {
   // saveMeasurement: derived columns
   // ---------------------------------------------------------------------------
 
-  describe("saveMeasurement — derived columns", () => {
+  describe("saveMeasurement - derived columns", () => {
     it("populates questions_text from the measurement payload at save time", async () => {
       const mod = await import("~/shared/db/measurements-storage");
       const payload = {
@@ -213,10 +213,10 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // updateMeasurement — derived columns (parity with saveMeasurement)
+  // updateMeasurement - derived columns (parity with saveMeasurement)
   // ---------------------------------------------------------------------------
 
-  describe("updateMeasurement — derived columns", () => {
+  describe("updateMeasurement - derived columns", () => {
     it("refreshes questions_text from the updated measurement payload", async () => {
       insertRow("u1", "failed");
       const mod = await import("~/shared/db/measurements-storage");
@@ -304,7 +304,7 @@ describe("measurements-storage", () => {
           "test/topic",
           compressForStorage({ value: 42 }),
           "Test Experiment",
-          "protocol-1",
+          "command-1",
           timestamp,
           Date.now(),
           questionsText,
@@ -644,7 +644,7 @@ describe("measurements-storage", () => {
       sqlite
         .prepare(
           `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
-           VALUES (?, 'successful', 'test/topic', ?, ?, 'protocol-1', ?, ?, NULL, 0, NULL)`,
+           VALUES (?, 'successful', 'test/topic', ?, ?, 'command-1', ?, ?, NULL, 0, NULL)`,
         )
         .run(id, compressForStorage({ value: 42 }), experimentName, timestamp, Date.now());
     }
@@ -1039,7 +1039,7 @@ describe("measurements-storage", () => {
 // Migration upgrade path: seed a v0 DB, run 0001, verify data + CHECK constraint
 // =============================================================================
 
-describe("0001_add_pending_status migration — upgrade path", () => {
+describe("0001_add_pending_status migration - upgrade path", () => {
   const m0000Sql = readFileSync(
     resolve(__dirname, "../../../drizzle/0000_outgoing_firebird.sql"),
     "utf-8",
@@ -1151,7 +1151,7 @@ describe("0001_add_pending_status migration — upgrade path", () => {
   it("is safely re-runnable: data + constraint survive a second apply", () => {
     // Drizzle's mobile migrator tracks applied migrations and won't normally
     // re-run a tagged migration, but we still want the SQL itself to be
-    // re-runnable without corrupting data — the recreate-then-rename pattern
+    // re-runnable without corrupting data - the recreate-then-rename pattern
     // is naturally idempotent because each apply rebuilds the table fresh
     // from the current rows.
     const target = new Database(":memory:");

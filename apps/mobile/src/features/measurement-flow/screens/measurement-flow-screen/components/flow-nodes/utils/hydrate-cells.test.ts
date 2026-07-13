@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   CommandCell,
   OutputCell,
-  ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
@@ -20,11 +19,11 @@ const qCell = (id: string): QuestionCell => ({
   question: { kind: "number", text: id, required: false },
   isAnswered: false,
 });
-const pCell = (id: string, protocolId: string): ProtocolCell => ({
+const pCell = (id: string, commandId: string): CommandCell => ({
   id,
-  type: "protocol",
+  type: "command",
   isCollapsed: false,
-  payload: { protocolId, version: 1 },
+  payload: { commandId, version: 1 },
 });
 const cCell = (id: string): CommandCell => ({
   id,

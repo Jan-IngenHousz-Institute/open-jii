@@ -45,7 +45,7 @@ interface MeasurementFlowStore extends FlowState {
   startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
-  // producerCellId records which cell (protocol or command) yielded the result;
+  // producerCellId records which cell (library or inline command) yielded the result;
   // omitting it clears any stale attribution.
   setScanResult: (result: ScanResult | undefined, producerCellId?: string) => void;
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
@@ -130,15 +130,14 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
-      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
-      // plot or a stale "Experiment" name; the upgrade starts them clean.
-      version: 1,
+      // v2 wire format, pinned by flow-store-persistence.test.ts. v2 discards
+      // older payloads: v0 could hold a mis-seeded plot or stale name, and v1
+      // flowNodes carry pre-rename protocolId content the app no longer reads.
+      version: 2,
       migrate: (persisted, version) =>
-        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
-      // protocolId was dropped from the persisted slice (now derived from
-      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
-      // as an ignored extra key.
+        (version < 2 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // The top-level command id is not persisted (derived from flowNodes via
+      // flowCommandId).
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,

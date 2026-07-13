@@ -4,13 +4,13 @@
  * Runs as part of the default `pnpm test` (CI-sized: N_ROWS = 100, COUNTS_N
  * = 500, payload ~18 KB raw / ~4 KB gzipped). For a fuller diagnostic on
  * local hardware, bump N_ROWS to 1000, payload sample-count to 250, and
- * COUNTS_N/SCAN_N to 5000 — see comments near each constant.
+ * COUNTS_N/SCAN_N to 5000 - see comments near each constant.
  *
  * Three uses:
- *   1. Diagnostic — run on `main` to see WHERE the time actually goes.
- *   2. During implementation — re-run after each optimisation; the SUMMARY
+ *   1. Diagnostic - run on `main` to see WHERE the time actually goes.
+ *   2. During implementation - re-run after each optimisation; the SUMMARY
  *      headline number drops as the production read path is improved.
- *   3. Regression — `expect()` guards in SUMMARY trip if decompression / Zod
+ *   3. Regression - `expect()` guards in SUMMARY trip if decompression / Zod
  *      / full `SELECT *` ever sneak back into the list hot path.
  *
  * Each scenario seeds an in-memory better-sqlite3 DB with a MultispeQ-shaped
@@ -24,7 +24,7 @@
  * production-path reproduction, pagination, concurrency, plain-text questions).
  * SUMMARY pulls the headline numbers into one table + guard expects.
  *
- * IMPORTANT FRAMING: gzip-on-save is NOT the fix to remove — we'd just have
+ * IMPORTANT FRAMING: gzip-on-save is NOT the fix to remove - we'd just have
  * to gzip again at MQTT send. The killer is decompressing the blob on every
  * list render. Scenario A is informational; the real win is in B/G/O.
  */
@@ -89,7 +89,7 @@ const EXPERIMENTS = [
   "Control group A",
   "Tomato field B",
 ];
-const PROTOCOLS = ["multispeq-v2.0", "leaf-temp", "full-protocol", "photosynthesis-v3"];
+const COMMANDS = ["multispeq-v2.0", "leaf-temp", "full-command", "photosynthesis-v3"];
 
 // "uploading" was dropped in migration 0003; the seed must only use statuses
 // the current CHECK constraint allows.
@@ -181,7 +181,7 @@ function makeMeasurementResult(seed: number) {
         question_answer: String(Math.round(rng() * 100)),
       },
     ],
-    protocol_version: "2.0.3",
+    command_version: "2.0.3",
     device_id: `MSPx-${String(seed % 100).padStart(4, "0")}`,
     firmware: "3.1.2",
     timestamp: new Date(Date.now() - seed * 60_000).toISOString(),
@@ -308,7 +308,7 @@ function seedCompressed(db: ReturnType<typeof Database>, n: number) {
     `topic/exp/${i % 4}`,
     blobs[i],
     EXPERIMENTS[i % EXPERIMENTS.length],
-    PROTOCOLS[i % PROTOCOLS.length],
+    COMMANDS[i % COMMANDS.length],
     new Date(Date.now() - i * 60_000).toISOString(),
     Date.now() - i * 60_000,
   ]);
@@ -331,7 +331,7 @@ function seedPlain(db: ReturnType<typeof Database>, n: number) {
     `topic/exp/${i % 4}`,
     blobs[i],
     EXPERIMENTS[i % EXPERIMENTS.length],
-    PROTOCOLS[i % PROTOCOLS.length],
+    COMMANDS[i % COMMANDS.length],
     new Date(Date.now() - i * 60_000).toISOString(),
     Date.now() - i * 60_000,
   ]);
@@ -356,7 +356,7 @@ function seedCompressedWithQuestionsText(db: ReturnType<typeof Database>, n: num
     `topic/exp/${i % 4}`,
     blobs[i],
     EXPERIMENTS[i % EXPERIMENTS.length],
-    PROTOCOLS[i % PROTOCOLS.length],
+    COMMANDS[i % COMMANDS.length],
     new Date(Date.now() - i * 60_000).toISOString(),
     Date.now() - i * 60_000,
     JSON.stringify(parsed[i].questions),
@@ -392,7 +392,7 @@ function report(rows: { scenario: string; ms: number; note: string }[]) {
 }
 
 // ---------------------------------------------------------------------------
-// Summary collector — every scenario calls record() with its key numbers.
+// Summary collector - every scenario calls record() with its key numbers.
 // SUMMARY at the bottom reads these.
 // ---------------------------------------------------------------------------
 
@@ -410,14 +410,14 @@ function getSummary(key: string): number | undefined {
 }
 
 // ===========================================================================
-// Scenario A — SAVE: compressed vs plain JSON (informational only)
+// Scenario A - SAVE: compressed vs plain JSON (informational only)
 //
 // We won't drop gzip on save because we'd have to re-add it at MQTT send time
 // (payload exceeds the 128 KB broker limit). This scenario quantifies the
 // gzip cost; the answer drives the "compress on send instead of save" debate.
 // ===========================================================================
 
-describe(`Scenario A — SAVE ${N_ROWS} rows (informational)`, () => {
+describe(`Scenario A - SAVE ${N_ROWS} rows (informational)`, () => {
   it("compressed vs plain-JSON insert", () => {
     const dbC = createDb();
     const dbP = createDb();
@@ -434,12 +434,12 @@ describe(`Scenario A — SAVE ${N_ROWS} rows (informational)`, () => {
 
     report([
       {
-        scenario: `INSERT ${N_ROWS} — compressForStorage (gzip+b64)`,
+        scenario: `INSERT ${N_ROWS} - compressForStorage (gzip+b64)`,
         ms: msC,
         note: `~${(sizeC / 1024 / 1024).toFixed(2)} MB on disk`,
       },
       {
-        scenario: `INSERT ${N_ROWS} — JSON.stringify (plain)`,
+        scenario: `INSERT ${N_ROWS} - JSON.stringify (plain)`,
         ms: msP,
         note: `~${(sizeP / 1024 / 1024).toFixed(2)} MB on disk`,
       },
@@ -457,10 +457,10 @@ describe(`Scenario A — SAVE ${N_ROWS} rows (informational)`, () => {
 });
 
 // ===========================================================================
-// Scenario B — READ: full SELECT + decompress vs lean metadata-only SELECT
+// Scenario B - READ: full SELECT + decompress vs lean metadata-only SELECT
 // ===========================================================================
 
-describe(`Scenario B — READ ${N_ROWS} rows`, () => {
+describe(`Scenario B - READ ${N_ROWS} rows`, () => {
   let dbC: ReturnType<typeof Database>;
   let dbP: ReturnType<typeof Database>;
 
@@ -510,7 +510,7 @@ describe(`Scenario B — READ ${N_ROWS} rows`, () => {
       {
         scenario: "SELECT * + JSON.parse (plain storage)",
         ms: msFullP,
-        note: "no gzip — plain JSON.parse per row",
+        note: "no gzip - plain JSON.parse per row",
       },
     ]);
 
@@ -531,10 +531,10 @@ describe(`Scenario B — READ ${N_ROWS} rows`, () => {
 });
 
 // ===========================================================================
-// Scenario C — DECOMPRESS alone: isolate gzip cost per row
+// Scenario C - DECOMPRESS alone: isolate gzip cost per row
 // ===========================================================================
 
-describe("Scenario C — DECOMPRESS: gzip vs JSON.parse per row", () => {
+describe("Scenario C - DECOMPRESS: gzip vs JSON.parse per row", () => {
   it(`decompresses ${N_ROWS} pre-fetched payloads`, () => {
     const compressedPayloads = getCompressedPayloads(N_ROWS);
     const plainPayloads = getPlainPayloads(N_ROWS);
@@ -573,10 +573,10 @@ describe("Scenario C — DECOMPRESS: gzip vs JSON.parse per row", () => {
 });
 
 // ===========================================================================
-// Scenario D — parseQuestions: Zod safeParse vs direct property access
+// Scenario D - parseQuestions: Zod safeParse vs direct property access
 // ===========================================================================
 
-describe("Scenario D — parseQuestions: Zod vs direct access", () => {
+describe("Scenario D - parseQuestions: Zod vs direct access", () => {
   it(`runs parseQuestions on ${N_ROWS} objects`, () => {
     const parsedObjects = getParsedObjects(N_ROWS);
 
@@ -592,12 +592,12 @@ describe("Scenario D — parseQuestions: Zod vs direct access", () => {
 
     report([
       {
-        scenario: "parseQuestions — Zod safeParse (current)",
+        scenario: "parseQuestions - Zod safeParse (current)",
         ms: msZod,
         note: `~${(msZod / N_ROWS).toFixed(3)} ms/call`,
       },
       {
-        scenario: "parseQuestions — direct access (proposed)",
+        scenario: "parseQuestions - direct access (proposed)",
         ms: msDirect,
         note: `~${(msDirect / N_ROWS).toFixed(3)} ms/call`,
       },
@@ -615,13 +615,13 @@ describe("Scenario D — parseQuestions: Zod vs direct access", () => {
   });
 });
 
-// (Scenario E — SQL sort vs JS sort — dropped; covered by Scenario G's pipeline.)
+// (Scenario E - SQL sort vs JS sort - dropped; covered by Scenario G's pipeline.)
 
 // ===========================================================================
-// Scenario F — INDEXES: status filter with vs without index
+// Scenario F - INDEXES: status filter with vs without index
 // ===========================================================================
 
-describe("Scenario F — INDEXES: status filter performance", () => {
+describe("Scenario F - INDEXES: status filter performance", () => {
   let dbNoIndex: ReturnType<typeof Database>;
   let dbIndex: ReturnType<typeof Database>;
 
@@ -691,10 +691,10 @@ describe("Scenario F — INDEXES: status filter performance", () => {
 });
 
 // ===========================================================================
-// Scenario G — FULL PIPELINE: current vs proposed (per render)
+// Scenario G - FULL PIPELINE: current vs proposed (per render)
 // ===========================================================================
 
-describe("Scenario G — FULL PIPELINE: current vs proposed", () => {
+describe("Scenario G - FULL PIPELINE: current vs proposed", () => {
   let db: ReturnType<typeof Database>;
   let dbIdx: ReturnType<typeof Database>;
 
@@ -779,10 +779,10 @@ describe("Scenario G — FULL PIPELINE: current vs proposed", () => {
 });
 
 // ===========================================================================
-// Scenario H — SCALE: full pipeline at 100 / 500 / 1k / 2k rows
+// Scenario H - SCALE: full pipeline at 100 / 500 / 1k / 2k rows
 // ===========================================================================
 
-describe("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
+describe("Scenario H - SCALE: full pipeline @ multiple row counts", () => {
   const sizes = [25, 50, 100, 200];
   const dbs: {
     size: number;
@@ -868,17 +868,17 @@ describe("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
 });
 
 // ===========================================================================
-// Scenario I — countMeasurementsByStatus (second screen-mount query)
+// Scenario I - countMeasurementsByStatus (second screen-mount query)
 // ===========================================================================
 
 // Scenario I constants live at module scope so SUMMARY can reference them.
-// Each query at COUNTS_N rows runs in well under a millisecond — way below
+// Each query at COUNTS_N rows runs in well under a millisecond - way below
 // CI's scheduler noise floor. Running ITERATIONS in a tight loop makes the
 // measured total gap clear the floor so Gate 3's ratio is stable.
 const COUNTS_N = 500;
 const COUNTS_ITERATIONS = 200;
 
-describe("Scenario I — countMeasurementsByStatus", () => {
+describe("Scenario I - countMeasurementsByStatus", () => {
   let dbNoIdx: ReturnType<typeof Database>;
   let dbIdx: ReturnType<typeof Database>;
 
@@ -898,7 +898,7 @@ describe("Scenario I — countMeasurementsByStatus", () => {
     const stmtIdx = dbIdx.prepare(
       "SELECT status, COUNT(*) AS total FROM measurements GROUP BY status",
     );
-    // Warm up — first call pays statement-prepare + page-cache costs we don't
+    // Warm up - first call pays statement-prepare + page-cache costs we don't
     // want polluting the measurement.
     stmtNoIdx.all();
     stmtIdx.all();
@@ -931,10 +931,10 @@ describe("Scenario I — countMeasurementsByStatus", () => {
 });
 
 // ===========================================================================
-// Scenario J — Single-row save+read latency
+// Scenario J - Single-row save+read latency
 // ===========================================================================
 
-describe("Scenario J — Single-row save+read", () => {
+describe("Scenario J - Single-row save+read", () => {
   it("single insert + single read, compressed vs plain", () => {
     const payload = makeMeasurementResult(424242);
     const compressed = compressForStorage(payload);
@@ -1022,7 +1022,7 @@ describe("Scenario J — Single-row save+read", () => {
       `  Save round-trip:  compressed=${(msInsertC + msReadC).toFixed(2)} ms  vs  plain=${(msInsertP + msReadP).toFixed(2)} ms`,
     );
     console.log(
-      `  Gzip-on-send cost: ${msGzipOneRow.toFixed(2)} ms — paid once per measurement, not per render\n`,
+      `  Gzip-on-send cost: ${msGzipOneRow.toFixed(2)} ms - paid once per measurement, not per render\n`,
     );
 
     record("J.save.compressed", "1-row save+read compressed", msInsertC + msReadC);
@@ -1034,14 +1034,14 @@ describe("Scenario J — Single-row save+read", () => {
   });
 });
 
-// (Scenario K — batch markAsUploading — dropped; Scenario F already covers
+// (Scenario K - batch markAsUploading - dropped; Scenario F already covers
 //  the index gap on status filters.)
 
 // ===========================================================================
-// Scenario L — Production-path reproduction (real getMeasurements)
+// Scenario L - Production-path reproduction (real getMeasurements)
 // ===========================================================================
 
-describe("Scenario L — Production path (real getMeasurementsList)", () => {
+describe("Scenario L - Production path (real getMeasurementsList)", () => {
   beforeAll(async () => {
     productionSqlite = new Database(":memory:");
     productionSqlite.pragma("journal_mode = WAL");
@@ -1063,7 +1063,7 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
   it("calls the production getMeasurementsList + count pipeline (post-optimisation)", async () => {
     const mod = await import("~/shared/db/measurements-storage");
 
-    // L1: the production list query — lean SELECT, SQL ORDER BY, paginated.
+    // L1: the production list query - lean SELECT, SQL ORDER BY, paginated.
     // This number should drop dramatically vs the pre-optimisation baseline.
     const { ms: msProdList } = await timeAsync(async () =>
       mod.getMeasurementsList(["pending", "failed", "successful"], {
@@ -1118,10 +1118,10 @@ describe("Scenario L — Production path (real getMeasurementsList)", () => {
 });
 
 // ===========================================================================
-// Scenario M — Pagination LIMIT/OFFSET at deep offsets
+// Scenario M - Pagination LIMIT/OFFSET at deep offsets
 // ===========================================================================
 
-describe("Scenario M — Pagination LIMIT/OFFSET cost", () => {
+describe("Scenario M - Pagination LIMIT/OFFSET cost", () => {
   let db: ReturnType<typeof Database>;
   const PAGE = 50;
   const SCAN_N = 500;
@@ -1174,7 +1174,7 @@ describe("Scenario M — Pagination LIMIT/OFFSET cost", () => {
 
     const lastRow = rows[rows.length - 1];
     const offsetGrowth = lastRow.ms / Math.max(rows[0].ms, 0.01);
-    console.log(`  Offset cost growth (5k vs 0): ${offsetGrowth.toFixed(1)}× — keyset stays flat`);
+    console.log(`  Offset cost growth (5k vs 0): ${offsetGrowth.toFixed(1)}× - keyset stays flat`);
     console.log(
       `  Keyset vs deep OFFSET: ${(lastRow.ms / Math.max(msKeyset, 0.01)).toFixed(1)}× faster\n`,
     );
@@ -1185,14 +1185,14 @@ describe("Scenario M — Pagination LIMIT/OFFSET cost", () => {
   });
 });
 
-// (Scenario N — concurrent list+counts — dropped; Scenario L already measures
+// (Scenario N - concurrent list+counts - dropped; Scenario L already measures
 //  the real Promise.all path on the production code.)
 
 // ===========================================================================
-// Scenario O — Plain-text `questions_text` column (the KEY optimisation)
+// Scenario O - Plain-text `questions_text` column (the KEY optimisation)
 // ===========================================================================
 
-describe("Scenario O — Plain-text `questions_text` column", () => {
+describe("Scenario O - Plain-text `questions_text` column", () => {
   let db: ReturnType<typeof Database>;
 
   beforeAll(() => {
@@ -1265,10 +1265,10 @@ describe("Scenario O — Plain-text `questions_text` column", () => {
 });
 
 // ===========================================================================
-// SUMMARY — one-glance table + regression gates
+// SUMMARY - one-glance table + regression gates
 // ===========================================================================
 
-describe("SUMMARY — production vs hand-rolled baseline", () => {
+describe("SUMMARY - production vs hand-rolled baseline", () => {
   it("prints the headline table and enforces regression gates", () => {
     const fmt = (label: string, ms?: number) =>
       `  ${label.padEnd(48)}${(ms ?? 0).toFixed(2).padStart(8)} ms`;
@@ -1280,7 +1280,7 @@ describe("SUMMARY — production vs hand-rolled baseline", () => {
       Math.max(getSummary("G.pipeline.proposed.50") ?? 1, 0.01);
 
     console.log("\n" + "═".repeat(80));
-    console.log("  SUMMARY — diagnostic + regression run");
+    console.log("  SUMMARY - diagnostic + regression run");
     console.log(`  (${N_ROWS} rows, CI-sized payload, in-memory better-sqlite3, single thread)`);
     console.log("═".repeat(80));
     console.log("");
@@ -1350,7 +1350,7 @@ describe("SUMMARY — production vs hand-rolled baseline", () => {
     // Gate 2: plain-text questions_text crushes decompress + parseQuestions.
     expect(O_fromCol * 5).toBeLessThan(O_fromBlob);
 
-    // Gate 3: index helps counts query — only assert when timings are large
+    // Gate 3: index helps counts query - only assert when timings are large
     // enough to be meaningful (in-memory SQLite on fast CI runners rounds to 0ms).
     if (I_no > 1) {
       expect(I_with * 2).toBeLessThan(I_no);

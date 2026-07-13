@@ -18,7 +18,7 @@ export function estimateFlowDuration(nodes: FlowNode[]): number {
   if (nodes.length === 0) return 0;
   const sum = nodes.reduce((acc, n) => {
     // An inline command rides the measurement node but runs in seconds, not the
-    // ~1.5 min a protocol scan takes.
+    // ~1.5 min a command scan takes.
     if (n.type === "measurement" && n.content?.command) return acc;
     return acc + (NODE_MINUTES[n.type] ?? 0);
   }, 0);

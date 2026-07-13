@@ -10,12 +10,12 @@ export function useScanner() {
 
   const mutation = useMutation({
     networkMode: "always",
-    mutationFn: async (protocol: { code: Record<string, unknown>[] }) => {
-      const protocolCode = protocol.code;
-      if (!protocolCode) {
+    mutationFn: async (command: { code: Record<string, unknown>[] }) => {
+      const commandCode = command.code;
+      if (!commandCode) {
         return;
       }
-      const result = await executeCommand(protocolCode);
+      const result = await executeCommand(commandCode);
       if (typeof result !== "object") {
         throw new Error("Invalid result");
       }

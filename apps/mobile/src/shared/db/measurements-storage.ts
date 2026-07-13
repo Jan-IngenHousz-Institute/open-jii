@@ -36,6 +36,8 @@ export function isUnsynced(status: MeasurementStatus): boolean {
 export interface Measurement {
   topic: string;
   measurementResult: object;
+  // protocolName holds the command (formerly protocol) name; the field name is
+  // persisted (legacy AsyncStorage JSON + protocol_name column) so it stays.
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }
 
@@ -148,12 +150,10 @@ function deriveListColumns(
   };
 }
 
-// Local calendar date "YYYY-MM-DD" for `timestamp`, resolved in the device's
-// timezone, so the Recent list buckets by day without parsing the timestamp
-// per row at render time. Defaults to today when the timestamp is unparseable.
-// Uses the device tz (Intl) rather than the synced tz so the DB layer stays
-// free of the time-sync service's native deps; for day-bucketing the two are
-// equivalent in practice. See OJD-1470.
+// Local calendar date "YYYY-MM-DD" for `timestamp` in the device (Intl) tz,
+// so the Recent list buckets by day without parsing per row; defaults to
+// today when unparseable. Device tz keeps the DB layer free of the time-sync
+// service's native deps (equivalent for day-bucketing). See OJD-1470.
 export function computeDayKey(timestamp: string): string {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
@@ -166,10 +166,9 @@ export function computeDayKey(timestamp: string): string {
 }
 
 // `questions_text` is plain JSON written by `deriveListColumns`. A malformed
-// row (legacy data, manual edit, partial migration) shouldn't break the whole
-// list — fall back to an empty array for just that row. We also reject
-// non-array shapes so a stray `null`, `{}`, or string can't masquerade as
-// `AnswerData[]` and crash downstream.
+// row shouldn't break the whole list; fall back to an empty array for just
+// that row. Non-array shapes are rejected so a stray `null`, `{}`, or string
+// can't masquerade as `AnswerData[]` and crash downstream.
 function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
   if (!text) return [];
   try {
@@ -241,7 +240,7 @@ export async function countRecentMeasurementsByExperiment(
 }
 
 /**
- * Row shape returned by `getMeasurementsList` — exactly what the list UI
+ * Row shape returned by `getMeasurementsList`: exactly what the list UI
  * needs to render a row, with no compressed blob. `questions` is already
  * parsed from the `questions_text` plain-text column populated at save time.
  * `hasComment` powers the row badge without touching `measurement_result`.

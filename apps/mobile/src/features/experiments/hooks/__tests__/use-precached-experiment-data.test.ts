@@ -48,7 +48,7 @@ describe("usePrecachedExperimentData", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.workbookVersionId).toBe("wv-1");
     expect(queryClient.getQueryData(["workbook-version", "wb-1", "wv-1"])).toBeDefined();
-    // No separate protocol/macro fetches: the workbook version carries them.
+    // No separate command/macro fetches: the workbook version carries them.
     expect(mockListExperiments).not.toHaveBeenCalled();
   });
 

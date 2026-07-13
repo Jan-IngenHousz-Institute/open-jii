@@ -5,7 +5,7 @@ import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
+import { flowCommandId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
@@ -44,14 +44,14 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     iterationCount,
     flowNodes,
   } = useMeasurementFlowStore();
-  const protocolId = flowProtocolId(flowNodes);
+  const commandId = flowCommandId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
 
-  // Name of the active measurement's protocol, read off its hydrated flow node.
-  const activeProtocolName = flowNodes.find(
-    (n) => n.type === "measurement" && n.content?.protocolId === protocolId,
-  )?.content?.protocol?.name as string | undefined;
+  // Name of the active measurement's command, read off its hydrated flow node.
+  const activeCommandName = flowNodes.find(
+    (n) => n.type === "measurement" && n.content?.commandId === commandId,
+  )?.content?.resolved?.name as string | undefined;
 
   const experimentName = resolveExperimentName({
     experimentLabel,
@@ -87,12 +87,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         measurementResult: { ...(scanResult ?? {}), questions },
         metadata: {
           experimentName,
-          protocolName: activeProtocolName ?? "",
+          protocolName: activeCommandName ?? "",
           timestamp: displayTimestamp,
         },
       },
     }),
-    [displayTimestamp, experimentName, questions, activeProtocolName, scanResult],
+    [displayTimestamp, experimentName, questions, activeCommandName, scanResult],
   );
 
   const handleUploadMeasurement = async () => {
@@ -104,8 +104,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing experiment id");
     }
 
-    if (!protocolId) {
-      throw new Error("Missing protocol id");
+    if (!commandId) {
+      throw new Error("Missing command id");
     }
 
     if (!session?.data?.user?.id) {
@@ -127,7 +127,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       timezone,
       experimentName,
       experimentId,
-      protocolId,
+      commandId,
       userId: session?.data?.user?.id,
       macro: {
         id: macro.id,
@@ -136,7 +136,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       },
       questions,
       commentText: measurementComment.trim() || undefined,
-      protocolName: activeProtocolName ?? protocolId,
+      protocolName: activeCommandName ?? commandId,
     });
     nextStep();
   };
@@ -164,9 +164,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
         <AnalysisSummaryCard
           experimentName={experimentName}
-          protocolName={
-            activeProtocolName ?? t("measurementFlow:analysis.node.defaultProtocolName")
-          }
+          commandName={activeCommandName ?? t("measurementFlow:analysis.node.defaultCommandName")}
           questions={questions}
           displayTimestamp={displayTimestamp}
           onPress={() => setQuestionsModalVisible(true)}

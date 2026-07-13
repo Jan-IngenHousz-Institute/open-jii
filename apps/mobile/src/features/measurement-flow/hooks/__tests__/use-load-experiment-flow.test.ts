@@ -41,9 +41,9 @@ describe("useLoadExperimentFlow", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: "proto-1", version: 1 },
+        payload: { commandId: "proto-1", version: 1 },
       },
       {
         id: "q1",
@@ -58,7 +58,7 @@ describe("useLoadExperimentFlow", () => {
       data: { body: [{ id: "e1", workbookId: "w1", workbookVersionId: "v1" }] },
       isLoading: false,
     });
-    const entitySnapshots = { protocols: {}, macros: {} };
+    const entitySnapshots = { commands: {}, macros: {} };
     versionUseQuery.mockReturnValue({
       data: { body: { cells, entitySnapshots } },
       isLoading: false,
@@ -73,10 +73,10 @@ describe("useLoadExperimentFlow", () => {
       unknown,
       unknown,
     ];
-    // Graph derived from the version's cells, with the protocol node hydrated
+    // Graph derived from the version's cells, with the command node hydrated
     // (assert the outcome directly, not via the helper under test).
     const measurement = nodesArg.find((n) => n.type === "measurement");
-    expect(measurement?.content?.protocol).toBeDefined();
+    expect(measurement?.content?.resolved).toBeDefined();
     expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
     expect(cellsArg).toBe(cells);
     expect(setFlowNodes).not.toHaveBeenCalled();

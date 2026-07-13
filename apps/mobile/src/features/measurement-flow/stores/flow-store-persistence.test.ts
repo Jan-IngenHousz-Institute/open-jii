@@ -5,25 +5,26 @@ import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 1). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. v1 deliberately discards pre-fix v0
-// payloads; update fixtures ONLY with a deliberate change or a version bump.
+// stores (measurement store pinned at v2, answers store at v1). A silent shape
+// change wipes a field researcher's paused flow on rehydrate. Older versions
+// are deliberately discarded; update fixtures ONLY with a version bump.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
 
-// A pre-fix v0 envelope for each store: rehydrating it must reset to defaults.
+// Stale envelopes: rehydrating any of them must reset to defaults.
 const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
+// v1 flowNodes carry pre-rename protocolId content the app no longer reads.
+const MEASUREMENT_V1 = `{ "state": { "experimentId": "old-exp", "flowNodes": [{ "id": "node-m1", "name": "spad", "type": "measurement", "content": { "protocolId": "proto-7" }, "isStart": true }] }, "version": 1 }`;
 const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
-// v0 envelope for a paused mid-flow session, parked on the measurement node.
+// v2 envelope for a paused mid-flow session, parked on the measurement node.
 // Every value differs from the store default so a key dropped from partialize
 // fails its per-field assert instead of silently matching the default.
 const MEASUREMENT_FIXTURE = `{
   "state": {
     "experimentId": "exp-42",
     "experimentLabel": "Greenhouse Trial B",
-    "protocolId": "proto-7",
     "currentStep": 1,
     "flowNodes": [
       {
@@ -46,7 +47,7 @@ const MEASUREMENT_FIXTURE = `{
         "id": "node-m1",
         "name": "spad_reading",
         "type": "measurement",
-        "content": { "params": { "averages": 3 }, "protocolId": "proto-7" },
+        "content": { "params": { "averages": 3 }, "commandId": "proto-7" },
         "isStart": false,
         "position": { "x": 0, "y": 240 }
       },
@@ -72,7 +73,7 @@ const MEASUREMENT_FIXTURE = `{
     "branchVisitCounts": { "node-b1": 2 },
     "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
-  "version": 1
+  "version": 2
 }`;
 
 // v0 envelope after two completed answer iterations with per-question
@@ -92,13 +93,7 @@ const ANSWERS_FIXTURE = `{
 const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> })
   .state;
 
-// Dropped from the persisted slice (protocolId is now derived from flowNodes
-// via flowProtocolId). The fixture keeps it so we prove legacy payloads
-// still rehydrate; the app neither reads nor re-writes it.
-const LEGACY_ONLY_KEYS = ["protocolId"];
-const EXPECTED_WRITTEN_STATE = Object.fromEntries(
-  Object.entries(MEASUREMENT_STATE).filter(([key]) => !LEGACY_ONLY_KEYS.includes(key)),
-);
+const EXPECTED_WRITTEN_STATE = MEASUREMENT_STATE;
 const ANSWERS_STATE = (JSON.parse(ANSWERS_FIXTURE) as { state: Record<string, unknown> }).state;
 
 async function readEnvelope(key: string): Promise<Record<string, unknown>> {
@@ -111,7 +106,7 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v1 wire format", () => {
+describe("measurement-flow-storage v2 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -122,19 +117,12 @@ describe("measurement-flow-storage v1 wire format", () => {
     expect(state[key]).toEqual(MEASUREMENT_STATE[key]);
   });
 
-  it("tolerates legacy payloads carrying the removed protocolId key", () => {
-    // Rehydration of the fixture above (which includes protocolId) must not
-    // throw or disturb the managed fields; the key is simply ignored.
-    const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
-    expect(state.experimentId).toBe("exp-42");
-  });
-
   it("round-trips the envelope unchanged through partialize", async () => {
     await AsyncStorage.removeItem(MEASUREMENT_KEY);
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(1);
+    expect(envelope.version).toBe(2);
     expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
@@ -197,16 +185,24 @@ describe("flow-answers-storage v1 wire format", () => {
   });
 });
 
-// The v0 -> v1 bump deliberately discards flows persisted by pre-fix builds
-// (they can hold a mis-seeded plot or a stale "Experiment" name). These run
-// last: rehydrating a v0 payload resets the singleton stores to defaults.
-describe("flow stores discard pre-fix v0 payloads on upgrade", () => {
-  it("resets the measurement flow store to initial state", async () => {
+// The bump to v2 deliberately discards stale flows: v0 could hold a mis-seeded
+// plot or stale name, v1 flowNodes carry pre-rename protocolId content. These
+// run last: rehydrating a stale payload resets the singleton stores to defaults.
+describe("flow stores discard stale payloads on upgrade", () => {
+  it("resets the measurement flow store to initial state on v0", async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V0);
     await useMeasurementFlowStore.persist.rehydrate();
     const state = useMeasurementFlowStore.getState();
     expect(state.experimentId).toBeUndefined();
     expect(state.iterationCount).toBe(0);
+    expect(state.flowNodes).toEqual([]);
+  });
+
+  it("resets the measurement flow store to initial state on v1", async () => {
+    await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V1);
+    await useMeasurementFlowStore.persist.rehydrate();
+    const state = useMeasurementFlowStore.getState();
+    expect(state.experimentId).toBeUndefined();
     expect(state.flowNodes).toEqual([]);
   });
 

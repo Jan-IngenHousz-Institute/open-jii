@@ -37,7 +37,7 @@ const measurement = (id: string): FlowNode => ({
   name: id,
   type: "measurement",
   isStart: false,
-  content: { params: {}, protocolId: "p-1" },
+  content: { params: {}, commandId: "p-1" },
 });
 
 function renderSync(nodes: FlowNode[]) {

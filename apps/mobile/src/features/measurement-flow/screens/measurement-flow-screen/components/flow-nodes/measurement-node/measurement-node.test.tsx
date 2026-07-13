@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MeasurementNode } from "./measurement-node";
 
 // Only the network/native boundaries and deep state children are mocked; the
-// start-scan guards run unmocked, and the protocol is passed via content.
+// start-scan guards run unmocked, and the command is passed via content.
 const {
   executeScan,
   resetScan,
@@ -14,7 +14,7 @@ const {
   refetchConnectedDevice,
   nextStep,
   setScanResult,
-  setProtocolId,
+  setCommandId,
   navigateToQuestionFromOverview,
   openDeviceSheet,
   toastError,
@@ -28,7 +28,7 @@ const {
   refetchConnectedDevice: vi.fn(),
   nextStep: vi.fn(),
   setScanResult: vi.fn(),
-  setProtocolId: vi.fn(),
+  setCommandId: vi.fn(),
   navigateToQuestionFromOverview: vi.fn(),
   openDeviceSheet: vi.fn(),
   toastError: vi.fn(),
@@ -60,7 +60,7 @@ vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => (
   useMeasurementFlowStore: () => ({
     nextStep,
     setScanResult,
-    setProtocolId,
+    setCommandId,
     navigateToQuestionFromOverview,
   }),
 }));
@@ -92,14 +92,14 @@ vi.mock("./components/error-state", () => ({ ErrorState: () => null }));
 vi.mock("./components/scanning-state", () => ({ ScanningState: () => null }));
 vi.mock("./components/no-device-state", () => ({ NoDeviceState: () => null }));
 
-const PROTOCOL = { name: "Photosynthesis", code: [{ foo: 1 }] };
+const COMMAND = { name: "Photosynthesis", code: [{ foo: 1 }] };
 const START_KEY = "measurementFlow:measurementNode.startMeasurement";
 const CANCEL_KEY = "measurementFlow:measurementNode.cancelMeasurement";
-const PROTOCOL_UNAVAILABLE_KEY = "measurementFlow:measurementNode.toast.protocolUnavailable";
+const COMMAND_UNAVAILABLE_KEY = "measurementFlow:measurementNode.toast.commandUnavailable";
 const DEVICE_DISCONNECTED_KEY = "measurementFlow:measurementNode.toast.deviceDisconnected";
 const SCAN_ERROR_KEY = "measurementFlow:measurementNode.toast.scanError";
 
-const content = { params: {}, protocolId: "proto-1", protocol: PROTOCOL };
+const content = { params: {}, commandId: "proto-1", resolved: COMMAND };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -109,19 +109,19 @@ beforeEach(() => {
 });
 
 describe("MeasurementNode start-scan guards", () => {
-  it("shows the protocol-unavailable toast (not scan error) when the node has no protocol", () => {
-    render(<MeasurementNode content={{ ...content, protocol: undefined }} nodeId="m1" />);
+  it("shows the command-unavailable toast (not scan error) when the node has no command", () => {
+    render(<MeasurementNode content={{ ...content, resolved: undefined }} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
-    expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
+    expect(toastError).toHaveBeenCalledWith(COMMAND_UNAVAILABLE_KEY);
     expect(executeScan).not.toHaveBeenCalled();
   });
 
-  it("shows the no-protocol toast when the node has no protocolId", () => {
-    render(<MeasurementNode content={{ ...content, protocolId: "" }} nodeId="m1" />);
+  it("shows the no-command toast when the node has no commandId", () => {
+    render(<MeasurementNode content={{ ...content, commandId: "" }} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
-    expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol");
+    expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noCommand");
     expect(executeScan).not.toHaveBeenCalled();
   });
 
@@ -135,13 +135,13 @@ describe("MeasurementNode start-scan guards", () => {
     expect(executeScan).not.toHaveBeenCalled();
   });
 
-  it("runs the scan and advances when the protocol and connection are available", async () => {
+  it("runs the scan and advances when the command and connection are available", async () => {
     executeScan.mockResolvedValue({ result: 42 });
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
-    await waitFor(() => expect(executeScan).toHaveBeenCalledWith(PROTOCOL));
+    await waitFor(() => expect(executeScan).toHaveBeenCalledWith(COMMAND));
     expect(setScanResult).toHaveBeenCalledWith({ result: 42 }, "m1");
     expect(nextStep).toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();

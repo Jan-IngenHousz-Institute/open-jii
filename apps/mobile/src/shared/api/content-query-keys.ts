@@ -6,7 +6,7 @@ export const contentKeys = {
   // Id-keyed keys are also built while their query is disabled (id not yet
   // known), hence the undefined-tolerant params.
   experimentFlow: (experimentId: string | undefined) => ["experiment-flow", experimentId] as const,
-  protocol: (protocolId: string | undefined) => ["protocol", protocolId] as const,
+  command: (commandId: string | undefined) => ["command", commandId] as const,
   macro: (macroId: string | undefined) => ["macro", macroId] as const,
   userProfile: (userId: string | undefined) => ["userProfile", userId] as const,
 } as const;

@@ -10,14 +10,13 @@ const node = (type: FlowNode["type"]): FlowNode => ({
   isStart: false,
 });
 
-const commandNode = (): FlowNode =>
-  ({
-    id: "cmd",
-    type: "measurement",
-    name: "cmd",
-    content: { command: { format: "string", content: "battery" } },
-    isStart: false,
-  }) as FlowNode;
+const commandNode = (): FlowNode => ({
+  id: "cmd",
+  type: "measurement",
+  name: "cmd",
+  content: { command: { format: "string", content: "battery" } },
+  isStart: false,
+});
 
 describe("estimateFlowDuration", () => {
   it("returns 0 for an empty flow", () => {
@@ -46,7 +45,7 @@ describe("estimateFlowDuration", () => {
   });
 
   it("treats an inline command as near-instant, not a 1.5 min scan", () => {
-    // protocol measurement (1.5) + command measurement (0) = 1.5 → 2
+    // command measurement (1.5) + command measurement (0) = 1.5 → 2
     expect(estimateFlowDuration([node("measurement"), commandNode()])).toBe(2);
     // a lone command still floors at 1 minute
     expect(estimateFlowDuration([commandNode()])).toBe(1);

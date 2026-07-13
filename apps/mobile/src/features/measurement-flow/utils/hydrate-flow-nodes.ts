@@ -1,15 +1,12 @@
 import { deriveMacroFilename } from "~/features/measurement-flow/utils/derive-macro-filename";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
-import type {
-  MacroCell,
-  ProtocolCell,
-  WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroCell, CommandCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 
 /**
- * Hydrates each measurement/analysis node with its protocol/macro (snapshot code
+ * Hydrates each measurement/analysis node with its command/macro (snapshot code
  * + cell name), resolved once so the scan and macro upload read off the node.
  */
 export function hydrateFlowNodes(
@@ -18,17 +15,20 @@ export function hydrateFlowNodes(
   snapshots?: EntitySnapshots,
 ): FlowNode[] {
   return nodes.map((node) => {
-    if (node.type === "measurement" && node.content?.protocolId) {
-      const id = node.content.protocolId as string;
-      const snapshot = snapshots?.protocols[id];
+    if (node.type === "measurement" && node.content?.commandId) {
+      const id = node.content.commandId as string;
+      const snapshot = snapshots?.commands[id];
       const cell = cells.find(
-        (c): c is ProtocolCell => c.type === "protocol" && c.payload.protocolId === id,
+        (c): c is CommandCell =>
+          c.type === "command" &&
+          isCommandReferencePayload(c.payload) &&
+          c.payload.commandId === id,
       );
       return {
         ...node,
         content: {
           ...node.content,
-          protocol: {
+          resolved: {
             code: (snapshot?.code ?? []) as Record<string, unknown>[],
             family: snapshot?.family,
             name: cell?.payload.name,
