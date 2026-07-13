@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { primaryKey, check, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   pgTable,
@@ -368,6 +369,11 @@ export const protocols = pgTable("protocols", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Source protocol this was forked from (a copy made by a non-creator so they
+  // can edit it); null for originals.
+  forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
@@ -386,6 +392,10 @@ export const macros = pgTable("macros", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Source macro this was forked from; null for originals.
+  forkedFrom: uuid("forked_from").references((): AnyPgColumn => macros.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
@@ -500,6 +510,10 @@ export const workbooks = pgTable(
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
+    // Source workbook this was duplicated from; null for originals.
+    forkedFrom: uuid("forked_from").references((): AnyPgColumn => workbooks.id, {
+      onDelete: "set null",
+    }),
     ...timestamps,
   },
   (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
@@ -551,4 +565,31 @@ export const experimentDashboards = pgTable(
     ...timestamps,
   },
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
+);
+
+export const deviceStatusEnum = pgEnum("device_status", [
+  "pending",
+  "active",
+  "rotating",
+  "revoked",
+]);
+
+export const iotDevices = pgTable(
+  "iot_devices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    thingName: text("thing_name").notNull().unique(),
+    thingArn: text("thing_arn").notNull(),
+    serialNumber: text("serial_number").notNull().unique(),
+    name: varchar("name", { length: 255 }),
+    deviceType: text("device_type").notNull(),
+    status: deviceStatusEnum("status").default("pending").notNull(),
+    certificateId: text("certificate_id"),
+    certificateArn: text("certificate_arn"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [index("iot_devices_created_by_idx").on(t.createdBy)],
 );

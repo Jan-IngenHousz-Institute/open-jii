@@ -43,6 +43,11 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       await queryClient.invalidateQueries({
         queryKey: ["protocols"],
       });
+      // Editing shared protocol code changes workbook drift; refetch so an
+      // attached experiment's upgrade prompt reacts immediately.
+      await queryClient.invalidateQueries({
+        queryKey: ["workbook"],
+      });
     },
     onSuccess: (data) => {
       // Call the provided onSuccess callback if it exists

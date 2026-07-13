@@ -699,7 +699,7 @@ locals {
       resource = "*"
     }
 
-    # ── IoT Core: topic rules + policies + logging (Terraform) ──
+    # ── IoT Core: topic rules + policies + device registry + logging (Terraform) ──
     iot = {
       actions = [
         # Topic rules
@@ -714,6 +714,15 @@ locals {
         "iot:ListPolicyVersions",
         "iot:DeletePolicyVersion",
         "iot:CreatePolicyVersion",
+        # Device registry (thing type + group)
+        "iot:CreateThingType",
+        "iot:DescribeThingType",
+        "iot:DeprecateThingType",
+        "iot:DeleteThingType",
+        "iot:CreateThingGroup",
+        "iot:DescribeThingGroup",
+        "iot:UpdateThingGroup",
+        "iot:DeleteThingGroup",
         # Logging
         "iot:SetLoggingOptions",
         "iot:GetLoggingOptions",

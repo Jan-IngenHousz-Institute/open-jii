@@ -11,7 +11,6 @@ import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWor
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import {
   ArrowUpCircle,
-  BookOpen,
   Check,
   ExternalLink,
   LinkIcon,
@@ -186,12 +185,9 @@ export function LinkedWorkbookCard({
   }, [experimentId, upgradeVersion, t]);
 
   return (
-    <div className="rounded-lg border shadow-none">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-            <BookOpen className="text-muted-foreground h-4 w-4" />
-          </div>
+    <div>
+      <div className="flex items-center justify-between gap-3 py-1">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               {isRenaming ? (
@@ -266,7 +262,6 @@ export function LinkedWorkbookCard({
                 </>
               )}
             </div>
-            <p className="text-muted-foreground text-xs">{t("flow.description")}</p>
           </div>
         </div>
         {hasAccess && (

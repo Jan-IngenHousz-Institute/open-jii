@@ -147,23 +147,29 @@ export function CellWrapper({
           )}
 
           <div
-            className="flex items-center gap-2 rounded px-1 py-0.5"
+            className="flex min-w-0 items-center gap-2 rounded px-1 py-0.5"
             style={{
               backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${accentColor} 25%, transparent)`,
             }}
           >
-            <span style={{ color: accentColor }}>{icon}</span>
+            <span className="shrink-0" style={{ color: accentColor }}>
+              {icon}
+            </span>
             {label && (
-              <span className="font-bold" style={{ color: accentColor, fontSize: "15px" }}>
+              <span
+                className="min-w-0 truncate font-bold"
+                style={{ color: accentColor, fontSize: "15px" }}
+                title={typeof label === "string" ? label : labelText}
+              >
                 {label}
               </span>
             )}
           </div>
 
-          {headerBadges}
+          {headerBadges && <div className="flex shrink-0 items-center">{headerBadges}</div>}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <div
               className={
                 forceActionsVisible

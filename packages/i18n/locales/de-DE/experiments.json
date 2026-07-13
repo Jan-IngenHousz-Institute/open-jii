@@ -80,7 +80,11 @@
       "description": "Diese Bezeichnung wird zu einer Spalte in Ihrer Datenanalyse:",
       "defaultColumnName": "frage_name"
     },
-    "untitledNode": "(Ohne Titel)"
+    "untitledNode": "(Ohne Titel)",
+    "editingTitle": "Arbeitsbuch dieses Experiments bearbeiten",
+    "editAutoApplyNotice": "Jede Änderung, die du hier speicherst, wird automatisch auf dieses Experiment angewendet.",
+    "editIsolatedHint": "Wenn du Änderungen ausprobieren möchtest, ohne dieses Experiment zu beeinflussen, bearbeite über die Arbeitsbuch-Seite; diese Änderungen bleiben getrennt, bis du die Version aktualisierst.",
+    "editOpenWorkbookLink": "Arbeitsbuch-Seite öffnen"
   },
   "overview": "Übersicht",
   "data": "Daten",
