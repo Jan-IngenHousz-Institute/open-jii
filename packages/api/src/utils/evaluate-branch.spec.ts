@@ -60,9 +60,9 @@ describe("resolveConditionValue", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
       },
       makeOutputCell("o1", "p1", { temperature: 25.5, status: "ok" }),
     ];
@@ -74,9 +74,9 @@ describe("resolveConditionValue", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
       },
       makeOutputCell("o1", "p1", [
         { phi2: 0.75, spad: 30 },
@@ -91,9 +91,9 @@ describe("resolveConditionValue", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
       },
       makeOutputCell("o1", "p1", undefined),
     ];
@@ -105,9 +105,9 @@ describe("evaluatePathConditions", () => {
   const baseCells: WorkbookCell[] = [
     {
       id: "p1",
-      type: "protocol",
+      type: "command",
       isCollapsed: false,
-      payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+      payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
     },
     makeOutputCell("o1", "p1", { value: 42, status: "pass" }),
   ];
@@ -257,9 +257,9 @@ describe("evaluateBranch", () => {
   const cells: WorkbookCell[] = [
     {
       id: "p1",
-      type: "protocol",
+      type: "command",
       isCollapsed: false,
-      payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+      payload: { commandId: "11111111-1111-1111-1111-111111111111", version: 1 },
     },
     makeOutputCell("o1", "p1", { value: 42 }),
   ];

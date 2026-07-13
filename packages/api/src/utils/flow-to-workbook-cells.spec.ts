@@ -85,23 +85,23 @@ describe("flowNodesToWorkbookCells", () => {
     expect(flowNodesToWorkbookCells([], [])).toEqual([]);
   });
 
-  it("converts measurement node to protocol cell", () => {
+  it("converts measurement node to command cell", () => {
     const nodes = [
       makeNode({
         id: "m1",
         type: "measurement",
         name: "Phi2",
         isStart: true,
-        content: { protocolId: uuidA },
+        content: { commandId: uuidA },
       }),
     ];
     const cells = flowNodesToWorkbookCells(nodes, []);
     expect(cells).toHaveLength(1);
     expect(cells[0]).toMatchObject({
       id: "m1",
-      type: "protocol",
+      type: "command",
       isCollapsed: false,
-      payload: { protocolId: uuidA, version: 1, name: "Phi2" },
+      payload: { commandId: uuidA, version: 1, name: "Phi2" },
     });
   });
 
@@ -173,12 +173,12 @@ describe("flowNodesToWorkbookCells", () => {
   it("preserves edge-based ordering across multiple nodes", () => {
     const nodes = [
       makeNode({ id: "i1", type: "instruction", content: { text: "Go" }, isStart: true }),
-      makeNode({ id: "m1", type: "measurement", name: "Phi2", content: { protocolId: uuidA } }),
+      makeNode({ id: "m1", type: "measurement", name: "Phi2", content: { commandId: uuidA } }),
       makeNode({ id: "a1", type: "analysis", name: "Calc", content: { macroId: uuidB } }),
     ];
     const edges = [makeEdge("i1", "m1"), makeEdge("m1", "a1")];
     const cells = flowNodesToWorkbookCells(nodes, edges);
-    expect(cells.map((c) => c.type)).toEqual(["markdown", "protocol", "macro"]);
+    expect(cells.map((c) => c.type)).toEqual(["markdown", "command", "macro"]);
   });
 
   it("handles empty instruction text gracefully", () => {

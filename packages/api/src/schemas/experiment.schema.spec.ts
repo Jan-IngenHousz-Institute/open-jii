@@ -288,7 +288,7 @@ describe("Experiment Schema", () => {
 
     it("Instruction and Measurement content valid", () => {
       expect(zInstructionContent.parse({ text: "Do X" })).toEqual({ text: "Do X" });
-      const m = { protocolId: uuidA, params: { exposure: 1, comment: "ok" } };
+      const m = { commandId: uuidA, params: { exposure: 1, comment: "ok" } };
       expect(zMeasurementContent.parse(m)).toEqual(m);
     });
 
@@ -1248,8 +1248,8 @@ describe("Experiment Schema", () => {
         name: "Test Experiment",
         createdBy: "123e4567-e89b-12d3-a456-426614174000",
       },
-      protocol: {
-        name: "Test Protocol",
+      command: {
+        name: "Test Command",
         code: [{ step: "measure" }],
         createdBy: "123e4567-e89b-12d3-a456-426614174000",
       },
@@ -1263,7 +1263,7 @@ describe("Experiment Schema", () => {
     it("should validate a minimal valid payload", () => {
       const result = zProjectTransferWebhookPayload.parse(validPayload);
       expect(result.experiment.name).toBe("Test Experiment");
-      expect(result.protocol?.family).toBe("multispeq"); // default
+      expect(result.command?.family).toBe("multispeq"); // default
       expect(result.macro?.language).toBe("javascript"); // default
     });
 
@@ -1274,9 +1274,9 @@ describe("Experiment Schema", () => {
           description: "A test experiment",
           locations: [{ name: "Loc1", latitude: 0, longitude: 0 }],
         },
-        protocol: {
-          ...validPayload.protocol,
-          description: "A test protocol",
+        command: {
+          ...validPayload.command,
+          description: "A test command",
           family: "ambyte",
         },
         macro: {
@@ -1289,17 +1289,17 @@ describe("Experiment Schema", () => {
 
       const result = zProjectTransferWebhookPayload.parse(fullPayload);
       expect(result.experiment.locations).toHaveLength(1);
-      expect(result.protocol?.family).toBe("ambyte");
+      expect(result.command?.family).toBe("ambyte");
       expect(result.macro?.language).toBe("python");
       expect(result.questions).toHaveLength(1);
     });
 
-    it("should validate a payload with only experiment (no protocol or macro)", () => {
+    it("should validate a payload with only experiment (no command or macro)", () => {
       const result = zProjectTransferWebhookPayload.parse({
         experiment: validPayload.experiment,
       });
       expect(result.experiment.name).toBe("Test Experiment");
-      expect(result.protocol).toBeUndefined();
+      expect(result.command).toBeUndefined();
       expect(result.macro).toBeUndefined();
     });
 
@@ -1327,10 +1327,10 @@ describe("Experiment Schema", () => {
       expect(() => zProjectTransferWebhookPayload.parse(payload)).toThrow();
     });
 
-    it("should reject empty protocol code array", () => {
+    it("should reject empty command code array", () => {
       const payload = {
         ...validPayload,
-        protocol: { ...validPayload.protocol, code: [] },
+        command: { ...validPayload.command, code: [] },
       };
       // z.record(z.unknown()).array() allows empty arrays by default,
       // so this should still parse (no .min(1) on the array)
@@ -1339,10 +1339,10 @@ describe("Experiment Schema", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should reject invalid protocol family", () => {
+    it("should reject invalid command family", () => {
       const payload = {
         ...validPayload,
-        protocol: { ...validPayload.protocol, family: "unknown" },
+        command: { ...validPayload.command, family: "unknown" },
       };
       expect(() => zProjectTransferWebhookPayload.parse(payload)).toThrow();
     });
@@ -1360,7 +1360,7 @@ describe("Experiment Schema", () => {
     const validResponse = {
       success: true,
       experimentId: "123e4567-e89b-12d3-a456-426614174000",
-      protocolId: "223e4567-e89b-12d3-a456-426614174000",
+      commandId: "223e4567-e89b-12d3-a456-426614174000",
       macroId: "323e4567-e89b-12d3-a456-426614174000",
       macroFilename: "macro_abc123def456",
       macroName: "Test Macro (PhotosynQ)",
@@ -1377,16 +1377,16 @@ describe("Experiment Schema", () => {
       expect(result.flowId).toBeNull();
     });
 
-    it("should allow null protocolId and macroId", () => {
+    it("should allow null commandId and macroId", () => {
       const result = zProjectTransferWebhookResponse.parse({
         ...validResponse,
-        protocolId: null,
+        commandId: null,
         macroId: null,
         macroFilename: null,
         macroName: null,
         flowId: null,
       });
-      expect(result.protocolId).toBeNull();
+      expect(result.commandId).toBeNull();
       expect(result.macroId).toBeNull();
       expect(result.macroFilename).toBeNull();
       expect(result.macroName).toBeNull();

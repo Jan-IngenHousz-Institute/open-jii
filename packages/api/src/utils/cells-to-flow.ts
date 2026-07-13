@@ -2,6 +2,7 @@ import type { z } from "zod";
 
 import type { zFlowEdge, zFlowNode } from "../schemas/experiment.schema";
 import type { WorkbookCell } from "../schemas/workbook-cells.schema";
+import { isCommandReferencePayload } from "../schemas/workbook-cells.schema";
 
 type FlowNode = z.infer<typeof zFlowNode>;
 type FlowEdge = z.infer<typeof zFlowEdge>;
@@ -35,18 +36,18 @@ function makeNode(
 
 function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
   switch (cell.type) {
-    case "protocol":
-      return makeNode(
-        cell.id,
-        "measurement",
-        cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
-        { protocolId: cell.payload.protocolId },
-        isStart,
-      );
-
     case "command":
-      // Inline command rides the existing measurement node so old apps drop it
-      // cleanly (unknown content) rather than choking on a new node type.
+      // Both payload variants ride the measurement node: a library reference
+      // carries commandId, an inline payload carries {format, content}.
+      if (isCommandReferencePayload(cell.payload)) {
+        return makeNode(
+          cell.id,
+          "measurement",
+          cell.payload.name ?? `Command ${cell.payload.commandId.slice(0, 8)}`,
+          { commandId: cell.payload.commandId },
+          isStart,
+        );
+      }
       return makeNode(
         cell.id,
         "measurement",

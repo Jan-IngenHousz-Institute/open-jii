@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zSensorFamily } from "./protocol.schema";
+import { zSensorFamily } from "./command.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({

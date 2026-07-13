@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic"]);
 
-// Define Zod schemas for protocol models
-export const zProtocol = z.object({
+// Define Zod schemas for command models
+export const zCommand = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
@@ -16,21 +16,21 @@ export const zProtocol = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
-export const zProtocolList = z.array(zProtocol);
+export const zCommandList = z.array(zCommand);
 
 // Query parameters
-export const zProtocolFilterQuery = z.object({
+export const zCommandFilterQuery = z.object({
   search: z.string().optional(),
   filter: z.enum(["my"]).optional(),
 });
 
 // Path parameters
-export const zProtocolIdPathParam = z.object({
+export const zCommandIdPathParam = z.object({
   id: z.string().uuid(),
 });
 
 // Request body schemas
-export const zCreateProtocolRequestBody = z.object({
+export const zCreateCommandRequestBody = z.object({
   name: z
     .string()
     .trim()
@@ -39,11 +39,11 @@ export const zCreateProtocolRequestBody = z.object({
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
-  // Set when this protocol is a fork (copy) of another, to record its lineage.
+  // Set when this command is a fork (copy) of another, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
 });
 
-export const zUpdateProtocolRequestBody = z.object({
+export const zUpdateCommandRequestBody = z.object({
   name: z
     .string()
     .trim()
@@ -56,12 +56,12 @@ export const zUpdateProtocolRequestBody = z.object({
 });
 
 // Error response
-export const zProtocolErrorResponse = z.object({
+export const zCommandErrorResponse = z.object({
   message: z.string(),
   statusCode: z.number(),
 });
 
-// Protocol-Macro compatibility schemas
+// Command-Macro compatibility schemas
 export const zCompatibleMacroSummary = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -70,34 +70,34 @@ export const zCompatibleMacroSummary = z.object({
   createdBy: z.string().uuid(),
 });
 
-export const zProtocolMacroEntry = z.object({
-  protocolId: z.string().uuid(),
+export const zCommandMacroEntry = z.object({
+  commandId: z.string().uuid(),
   macro: zCompatibleMacroSummary,
   addedAt: z.string().datetime(),
 });
 
-export const zProtocolMacroList = z.array(zProtocolMacroEntry);
+export const zCommandMacroList = z.array(zCommandMacroEntry);
 
 export const zAddCompatibleMacrosBody = z.object({
   macroIds: z.array(z.string().uuid()).min(1),
 });
 
-export const zProtocolMacroPathParams = z.object({
+export const zCommandMacroPathParams = z.object({
   id: z.string().uuid(),
   macroId: z.string().uuid(),
 });
 
 // Infer types from Zod schemas
 export type SensorFamily = z.infer<typeof zSensorFamily>;
-export type Protocol = z.infer<typeof zProtocol>;
-export type ProtocolList = z.infer<typeof zProtocolList>;
-export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
-export type ProtocolFilter = ProtocolFilterQuery["search"];
-export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;
-export type CreateProtocolRequestBody = z.infer<typeof zCreateProtocolRequestBody>;
-export type UpdateProtocolRequestBody = z.infer<typeof zUpdateProtocolRequestBody>;
-export type ProtocolErrorResponse = z.infer<typeof zProtocolErrorResponse>;
+export type Command = z.infer<typeof zCommand>;
+export type CommandList = z.infer<typeof zCommandList>;
+export type CommandFilterQuery = z.infer<typeof zCommandFilterQuery>;
+export type CommandFilter = CommandFilterQuery["search"];
+export type CommandIdPathParam = z.infer<typeof zCommandIdPathParam>;
+export type CreateCommandRequestBody = z.infer<typeof zCreateCommandRequestBody>;
+export type UpdateCommandRequestBody = z.infer<typeof zUpdateCommandRequestBody>;
+export type CommandErrorResponse = z.infer<typeof zCommandErrorResponse>;
 export type CompatibleMacroSummary = z.infer<typeof zCompatibleMacroSummary>;
-export type ProtocolMacroEntry = z.infer<typeof zProtocolMacroEntry>;
-export type ProtocolMacroList = z.infer<typeof zProtocolMacroList>;
+export type CommandMacroEntry = z.infer<typeof zCommandMacroEntry>;
+export type CommandMacroList = z.infer<typeof zCommandMacroList>;
 export type AddCompatibleMacrosBody = z.infer<typeof zAddCompatibleMacrosBody>;

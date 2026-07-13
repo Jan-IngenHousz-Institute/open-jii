@@ -861,7 +861,7 @@ export const experimentContract = c.router({
     },
     summary: "Execute project transfer from Databricks",
     description:
-      "Creates experiment, protocol, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
+      "Creates experiment, command, macro, and optionally flow in a single atomic operation as part of a project transfer from an external platform",
   },
   // --- Experiment Metadata Endpoints ---
   listExperimentMetadata: {

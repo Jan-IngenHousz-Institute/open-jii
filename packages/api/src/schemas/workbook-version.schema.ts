@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { zSensorFamily } from "./protocol.schema";
+import { zSensorFamily } from "./command.schema";
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
 // `family` is captured at publish so the pinned snapshot renders fully without
-// re-fetching the live protocol row. Optional for versions published before it
+// re-fetching the live command row. Optional for versions published before it
 // was snapshotted.
 export const zEntitySnapshots = z.object({
-  protocols: z.record(
+  commands: z.record(
     z.string(),
     z.object({ code: z.unknown(), family: zSensorFamily.optional() }),
   ),

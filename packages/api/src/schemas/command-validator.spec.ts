@@ -1,59 +1,59 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  validateProtocolJson,
-  isMultiProtocolSet,
-  extractProtocolSets,
+  validateCommandJson,
+  isMultiCommandSet,
+  extractCommandSets,
   getEnvironmentalSensors,
   getLightPins,
   getDetectorPins,
-  findProtocolErrorLine,
-} from "./protocol-validator";
-import type { ProtocolSet } from "./protocol-validator";
+  findCommandErrorLine,
+} from "./command-validator";
+import type { CommandSet } from "./command-validator";
 
-describe("Comprehensive Protocol JSON Validator", () => {
-  describe("Basic Protocol Validation", () => {
-    it("should validate minimal protocol with only label", () => {
-      const minimal = [{ label: "test_protocol" }];
-      const result = validateProtocolJson(minimal);
+describe("Comprehensive Command JSON Validator", () => {
+  describe("Basic Command Validation", () => {
+    it("should validate minimal command with only label", () => {
+      const minimal = [{ label: "test_command" }];
+      const result = validateCommandJson(minimal);
 
       expect(result.success).toBe(true);
-      expect(result.data?.[0]).toHaveProperty("label", "test_protocol");
+      expect(result.data?.[0]).toHaveProperty("label", "test_command");
     });
 
-    it("should accept protocols without label (single protocols)", () => {
+    it("should accept commands without label (single commands)", () => {
       const missingLabel = [{ averages: 1 }];
-      const result = validateProtocolJson(missingLabel);
+      const result = validateCommandJson(missingLabel);
 
-      expect(result.success).toBe(true); // Single protocols don't require labels
+      expect(result.success).toBe(true); // Single commands don't require labels
     });
 
     it("should validate all basic control fields", () => {
-      const basicProtocol = [
+      const basicCommand = [
         {
           label: "comprehensive_test",
           averages: 5,
           averages_delay: 100,
           averages_delay_ms: 250,
-          protocols: 2,
-          protocols_delay: 10,
+          commands: 2,
+          commands_delay: 10,
           measurements: 60,
           measurements_delay: 5,
         },
       ];
 
-      const result = validateProtocolJson(basicProtocol);
+      const result = validateCommandJson(basicCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.averages).toBe(5);
-      expect(protocol.measurements).toBe(60);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.averages).toBe(5);
+      expect(command.measurements).toBe(60);
     });
   });
 
   describe("Light Configuration Validation", () => {
     it("should validate pulse configuration", () => {
-      const pulseProtocol = [
+      const pulseCommand = [
         {
           label: "pulse_test",
           pulses: [150, 20, 50, 100],
@@ -64,16 +64,16 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(pulseProtocol);
+      const result = validateCommandJson(pulseCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.pulses).toEqual([150, 20, 50, 100]);
-      expect(protocol.pulse_length).toHaveLength(3);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.pulses).toEqual([150, 20, 50, 100]);
+      expect(command.pulse_length).toHaveLength(3);
     });
 
     it("should validate light source hardware pins", () => {
-      const lightProtocol = [
+      const lightCommand = [
         {
           label: "light_test",
           act_background_light: 20,
@@ -85,12 +85,12 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(lightProtocol);
+      const result = validateCommandJson(lightCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.act_background_light).toBe(20);
-      expect(protocol.pulsed_lights?.[2]).toEqual([3, 8]);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.act_background_light).toBe(20);
+      expect(command.pulsed_lights?.[2]).toEqual([3, 8]);
     });
 
     it("should reject invalid pin numbers", () => {
@@ -101,14 +101,14 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(invalidPin);
+      const result = validateCommandJson(invalidPin);
 
       expect(result.success).toBe(false);
       expect(result.error?.[0].message).toContain("Invalid pin number");
     });
 
     it("should validate light intensities including ambient (-1)", () => {
-      const intensityProtocol = [
+      const intensityCommand = [
         {
           label: "intensity_test",
           act_intensities: [-1, 0, 125, 750, 4095],
@@ -119,12 +119,12 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(intensityProtocol);
+      const result = validateCommandJson(intensityCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.act_intensities).toContain(-1); // Ambient light
-      expect(protocol.act_intensities).toContain(4095); // Max intensity
+      const command = result.data?.[0] as CommandSet;
+      expect(command.act_intensities).toContain(-1); // Ambient light
+      expect(command.act_intensities).toContain(4095); // Max intensity
     });
 
     it("should reject out-of-range light intensities", () => {
@@ -135,7 +135,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ]);
 
-      const result = validateProtocolJson(invalidIntensity);
+      const result = validateCommandJson(invalidIntensity);
 
       expect(result.success).toBe(false);
     });
@@ -143,7 +143,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
   describe("Environmental Sensor Validation", () => {
     it("should validate all environmental sensor types", () => {
-      const envProtocol = [
+      const envCommand = [
         {
           label: "environmental_test",
           environmental: [
@@ -164,18 +164,18 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(envProtocol);
+      const result = validateCommandJson(envCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.environmental).toHaveLength(13);
-      expect(protocol.environmental?.[10]).toEqual(["analog_read", 5, 40]);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.environmental).toHaveLength(13);
+      expect(command.environmental?.[10]).toEqual(["analog_read", 5, 40]);
     });
   });
 
   describe("Advanced Configuration Validation", () => {
     it("should validate autogain configuration", () => {
-      const autogainProtocol = [
+      const autogainCommand = [
         {
           label: "autogain_test",
           autogain: [
@@ -186,31 +186,31 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(autogainProtocol);
+      const result = validateCommandJson(autogainCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.autogain).toHaveLength(3);
-      expect(protocol.autogain?.[0]).toEqual([2, 1, 3, 12, 50000]);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.autogain).toHaveLength(3);
+      expect(command.autogain?.[0]).toEqual([2, 1, 3, 12, 50000]);
     });
 
     it("should validate pre-illumination settings", () => {
-      const preIllumProtocol = [
+      const preIllumCommand = [
         {
           label: "pre_illum_test",
           pre_illumination: [2, "@s2", 300],
         },
       ];
 
-      const result = validateProtocolJson(preIllumProtocol);
+      const result = validateCommandJson(preIllumCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.pre_illumination).toEqual([2, "@s2", 300]);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.pre_illumination).toEqual([2, "@s2", 300]);
     });
 
     it("should validate device control fields", () => {
-      const deviceProtocol = [
+      const deviceCommand = [
         {
           label: "device_test",
           tcs_to_act: 85,
@@ -223,12 +223,12 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(deviceProtocol);
+      const result = validateCommandJson(deviceCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.tcs_to_act).toBe(85);
-      expect(protocol.do_once).toBe(-1);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.tcs_to_act).toBe(85);
+      expect(command.do_once).toBe(-1);
     });
 
     it("should reject invalid tcs_to_act percentage", () => {
@@ -239,7 +239,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(invalidTcs);
+      const result = validateCommandJson(invalidTcs);
 
       expect(result.success).toBe(false);
     });
@@ -247,7 +247,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
   describe("Special Measurements Validation", () => {
     it("should validate SPAD measurements", () => {
-      const spadProtocol = [
+      const spadCommand = [
         {
           label: "spad_test",
           spad: [1],
@@ -255,15 +255,15 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(spadProtocol);
+      const result = validateCommandJson(spadCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.spad).toEqual([1]);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.spad).toEqual([1]);
     });
 
     it("should validate calibration measurements", () => {
-      const calProtocol = [
+      const calCommand = [
         {
           label: "calibration_test",
           get_blank_cal: [12, 20],
@@ -272,18 +272,18 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(calProtocol);
+      const result = validateCommandJson(calCommand);
 
       expect(result.success).toBe(true);
-      const protocol = result.data?.[0] as ProtocolSet;
-      expect(protocol.get_blank_cal).toEqual([12, 20]);
-      expect(protocol.get_offset).toBe(1);
+      const command = result.data?.[0] as CommandSet;
+      expect(command.get_blank_cal).toEqual([12, 20]);
+      expect(command.get_offset).toBe(1);
     });
   });
 
-  describe("Multi-Protocol Set Validation", () => {
-    it("should validate complex multi-protocol configuration", () => {
-      const multiProtocol = [
+  describe("Multi-Command Set Validation", () => {
+    it("should validate complex multi-command configuration", () => {
+      const multiCommand = [
         {
           _protocol_set_: [
             {
@@ -325,29 +325,29 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(multiProtocol);
+      const result = validateCommandJson(multiCommand);
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
       expect(result.data?.length).toBeGreaterThan(0);
       if (result.data?.[0]) {
-        expect(isMultiProtocolSet(result.data[0])).toBe(true);
+        expect(isMultiCommandSet(result.data[0])).toBe(true);
 
-        if (isMultiProtocolSet(result.data[0]) && result.data[0]._protocol_set_) {
-          const protocolSet: ProtocolSet[] = result.data[0]._protocol_set_;
-          expect(protocolSet).toHaveLength(4);
-          expect(protocolSet[0].label).toBe("no_leaf_baseline");
-          expect(protocolSet[1].label).toBe("DIRK_ECS");
-          expect(protocolSet[2].label).toBe("PAM");
-          expect(protocolSet[3].label).toBe("SPAD");
-          expect(protocolSet[3].spad).toEqual([1]);
+        if (isMultiCommandSet(result.data[0]) && result.data[0]._protocol_set_) {
+          const commandSet: CommandSet[] = result.data[0]._protocol_set_;
+          expect(commandSet).toHaveLength(4);
+          expect(commandSet[0].label).toBe("no_leaf_baseline");
+          expect(commandSet[1].label).toBe("DIRK_ECS");
+          expect(commandSet[2].label).toBe("PAM");
+          expect(commandSet[3].label).toBe("SPAD");
+          expect(commandSet[3].spad).toEqual([1]);
         }
       }
     });
 
-    it("should validate mixed single and multi-protocol array", () => {
-      const mixedProtocol = [
-        { label: "single_protocol", environmental: [["light_intensity"]] },
+    it("should validate mixed single and multi-command array", () => {
+      const mixedCommand = [
+        { label: "single_command", environmental: [["light_intensity"]] },
         {
           _protocol_set_: [
             { label: "multi_1", averages: 1 },
@@ -356,17 +356,17 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(mixedProtocol);
+      const result = validateCommandJson(mixedCommand);
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(2);
       if (result.data?.length === 2) {
-        expect(isMultiProtocolSet(result.data[1])).toBe(true);
+        expect(isMultiCommandSet(result.data[1])).toBe(true);
       }
     });
 
-    it("should fail to validate complex multi-protocol configuration with errors", () => {
-      const multiProtocol = [
+    it("should fail to validate complex multi-command configuration with errors", () => {
+      const multiCommand = [
         {
           _protocol_set_: [
             {
@@ -407,15 +407,15 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(multiProtocol);
+      const result = validateCommandJson(multiCommand);
 
       expect(result.success).toBe(false);
     });
   });
 
   describe("Utility Functions", () => {
-    const testProtocolSet: ProtocolSet = {
-      label: "test_protocol",
+    const testCommandSet: CommandSet = {
+      label: "test_command",
       environmental: [["light_intensity"], ["temperature", 0], ["compass_and_angle"]],
       act1_lights: [20, 20, 0],
       pulsed_lights: [[1, 2], [3]],
@@ -423,30 +423,30 @@ describe("Comprehensive Protocol JSON Validator", () => {
     };
 
     it("should extract environmental sensors", () => {
-      const sensors = getEnvironmentalSensors(testProtocolSet);
+      const sensors = getEnvironmentalSensors(testCommandSet);
 
       expect(sensors).toEqual(["light_intensity", "temperature", "compass_and_angle"]);
     });
 
     it("should extract light pins", () => {
-      const lightPins = getLightPins(testProtocolSet);
+      const lightPins = getLightPins(testCommandSet);
 
       expect([...lightPins].sort((a, b) => a - b)).toEqual([1, 2, 3, 20]);
     });
 
     it("should extract detector pins", () => {
-      const detectorPins = getDetectorPins(testProtocolSet);
+      const detectorPins = getDetectorPins(testCommandSet);
 
       expect(detectorPins).toEqual([1, 34, 35]);
     });
 
-    it("should extract protocol sets from complex JSON", () => {
+    it("should extract command sets from complex JSON", () => {
       const complexJson = [
         { label: "single" },
         { _protocol_set_: [{ label: "multi_1" }, { label: "multi_2" }] },
       ];
 
-      const sets = extractProtocolSets(complexJson);
+      const sets = extractCommandSets(complexJson);
 
       expect(sets).toHaveLength(3);
       expect(sets.map((s) => s.label)).toEqual(["single", "multi_1", "multi_2"]);
@@ -455,7 +455,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
   describe("Error Handling", () => {
     it("should provide detailed validation errors", () => {
-      const invalidProtocol = [
+      const invalidCommand = [
         {
           label: "error_test",
           averages: -1, // Should be positive
@@ -464,7 +464,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(invalidProtocol);
+      const result = validateCommandJson(invalidCommand);
 
       expect(result.success).toBe(false);
       expect(result.error?.length).toBeGreaterThan(0); // Has errors
@@ -474,9 +474,9 @@ describe("Comprehensive Protocol JSON Validator", () => {
     });
   });
 
-  describe("Real-World Protocol Examples", () => {
-    it("should validate Photosynthesis RIDES protocol", () => {
-      const ridesProtocol = [
+  describe("Real-World Command Examples", () => {
+    it("should validate Photosynthesis RIDES command", () => {
+      const ridesCommand = [
         {
           _protocol_set_: [
             {
@@ -495,7 +495,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
             {
               label: "DIRK_ECS",
               par_led_start_on_close: 2,
-              protocols_delay: 10,
+              commands_delay: 10,
               autogain: [
                 [2, 1, 3, 12, 50000],
                 [3, 8, 1, 80, 50000],
@@ -516,33 +516,33 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(ridesProtocol);
+      const result = validateCommandJson(ridesCommand);
 
       expect(result.success).toBe(true);
 
       if (result.data?.[0]._protocol_set_) {
-        const protocols = result.data[0]._protocol_set_;
-        expect(protocols[0].energy_save_timeout).toBe(300000);
-        expect(protocols[1].autogain).toHaveLength(2);
-        expect(protocols[1].pulse_distance).toHaveLength(5);
+        const commands = result.data[0]._protocol_set_;
+        expect(commands[0].energy_save_timeout).toBe(300000);
+        expect(commands[1].autogain).toHaveLength(2);
+        expect(commands[1].pulse_distance).toHaveLength(5);
       }
     });
 
-    it("should validate simple environmental protocol", () => {
-      const envProtocol = [
+    it("should validate simple environmental command", () => {
+      const envCommand = [
         {
           averages: 1,
           environmental: [["light_intensity", 0]],
         },
       ];
 
-      const result = validateProtocolJson(envProtocol);
+      const result = validateCommandJson(envCommand);
 
-      expect(result.success).toBe(true); // Single protocols don't require labels
+      expect(result.success).toBe(true); // Single commands don't require labels
     });
 
-    it("should validate corrected environmental protocol", () => {
-      const envProtocol = [
+    it("should validate corrected environmental command", () => {
+      const envCommand = [
         {
           label: "environmental_only",
           averages: 1,
@@ -550,15 +550,15 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(envProtocol);
+      const result = validateCommandJson(envCommand);
 
       expect(result.success).toBe(true);
     });
 
-    it("should validate corrected UNZA PIRK DIRK LightPotential14 protocol", () => {
-      const protocol = [
+    it("should validate corrected UNZA PIRK DIRK LightPotential14 command", () => {
+      const command = [
         {
-          // "Share":1 this tells the old PhotosynQ platform to let people share the protocol. This was a workaround to deal with the problem that the platform downloaded the entire set of thousands of of protocols to the App.
+          // "Share":1 this tells the old PhotosynQ platform to let people share the command. This was a workaround to deal with the problem that the platform downloaded the entire set of thousands of of commands to the App.
 
           share: 1,
 
@@ -584,19 +584,19 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
           set_repeats: "#l3",
 
-          // The protocol contains a set of sub-protocols.
+          // The command contains a set of sub-commands.
           // set_repeats sets the number of repeats for tthe entire set
 
           //  "#l3" tells the find the length of the 3rd array in v_arrays
-          //  and set the number of repeats of the entire set of sub-protocols
+          //  and set the number of repeats of the entire set of sub-commands
 
-          // A list containing the set of sub-protocols
+          // A list containing the set of sub-commands
 
           _protocol_set_:
             // In general, it is a good idea to have a label for each
-            // sub-protocol so that the macro can find the results using
-            // the GetProtocolByLabel command.
-            // Note that if the subprotocol is repeated, the GetProtocolByLabel
+            // sub-command so that the macro can find the results using
+            // the GetCommandByLabel command.
+            // Note that if the subcommand is repeated, the GetCommandByLabel
             // command will return a list with all repeats.
             [
               { label: "start_time", e_time: 0 },
@@ -604,13 +604,13 @@ describe("Comprehensive Protocol JSON Validator", () => {
               // start time sets reports the innitial time
               // e_time reports the elapsed time.
               // label is important because it allows the macro to find the data from each
-              // sub-protocols
+              // sub-commands
 
               { label: "capture_PAR", par_led_start_on_open: 2, averages: 1, do_once: 1 },
 
               // "par_led_start_on_open": 2 tells instrument to wait until the clamp is opened. While waiting, continuously meaured PAR and reproduce the same value in the clamp using LED #2
 
-              // "do_once":1 tells to perform this sub_protocol only on the first repeat of the set_repeats. (Note this is not zero indexed)
+              // "do_once":1 tells to perform this sub_command only on the first repeat of the set_repeats. (Note this is not zero indexed)
 
               // "averages": 1, repeat and average only one time (this is the defaul value for "averages" so it is not required.
 
@@ -652,13 +652,13 @@ describe("Comprehensive Protocol JSON Validator", () => {
                 do_once: 1,
               },
 
-              // This sub-protocol performs three autogain settings
+              // This sub-command performs three autogain settings
               //
               // "autogain" accepts a list of lists, each sub-list setting up an autogain
               // process:
               // [auto_gain_index, led#, detector#, pulse duraction, target ADC value]
 
-              // auto_gain_index is used to insert autogain values infor use in a sub-protocol
+              // auto_gain_index is used to insert autogain values infor use in a sub-command
 
               // led#: which measuring led to use
               // detector# to use
@@ -673,19 +673,19 @@ describe("Comprehensive Protocol JSON Validator", () => {
               // detector #1 (top IR)
               //
 
-              // In the following protocol are defined 3 different sub-protocol: PIRKS, PAM-ABS and PAM-ABS-FR
-              // A sub-protocol is composed of:
+              // In the following command are defined 3 different sub-command: PIRKS, PAM-ABS and PAM-ABS-FR
+              // A sub-command is composed of:
               // 							- a measuring ligh, a pulsed light that will probe the photosynthetic state of the leaf.
               //							- an actinic light (or background light), a light that will be set to a fix intensity and induce photosynthesis.
-              // A sub-protocol is organized as a serie of measuring pulses with usually a constant intensity and duration,
+              // A sub-command is organized as a serie of measuring pulses with usually a constant intensity and duration,
               // but often with a variable distance between them (defining the sampling speed) and changes in the background light intensity.
               // // The pulses can be detected either by:
               // 								- a detector with a long-pass filter that detect in the infrared,
               // 								- or a dector detecting in the visible range.
 
-              // We are going to take for example the PIRK sub-protocol that is defined here below with label "PIRK"
-              // The sub-protocol start with a period of pre-illumination, which is a period in which a background light is applied and where NO pulses for measurments are applied,
-              // In this example the PIRK sub-protocol is composed of 5 pulses "block".
+              // We are going to take for example the PIRK sub-command that is defined here below with label "PIRK"
+              // The sub-command start with a period of pre-illumination, which is a period in which a background light is applied and where NO pulses for measurments are applied,
+              // In this example the PIRK sub-command is composed of 5 pulses "block".
               // Each pulse block tells the instrument:
               // - which LED to use for the pulsed light ,
               // - how many pulses are in the block
@@ -699,9 +699,9 @@ describe("Comprehensive Protocol JSON Validator", () => {
               // You might notice that the v_array is sometimes called as "@n" or "@s" or "@p", these decorators indicate which indexing to use.
               // taking an example with v_array = [ [0,1,2,3], [4,5,6] ]
               // In the case of @n, the indexing is "rigid" and do not change. For example "@n1:0" will refer to the v_array[1][0] which will return: 4.
-              // In the case of @p, the indexing change according the protocol repeat index.
-              // For example "@p0" will refer to the v_array[0][#protocol_repeat] and at the first time the protocol is repeated it will call v_array[0][0] and return 0
-              // In the case @s, the indexing refers to the "set_repeat" which refers to how many time we have looped through the set (main protocol).
+              // In the case of @p, the indexing change according the command repeat index.
+              // For example "@p0" will refer to the v_array[0][#command_repeat] and at the first time the command is repeated it will call v_array[0][0] and return 0
+              // In the case @s, the indexing refers to the "set_repeat" which refers to how many time we have looped through the set (main command).
 
               // Another type of indexing is "a_bX", which refers to the intensity values stored in the autogain number X to achieve the desirable brightness
               // and "a_bX", which refers to the duration of stored in the autogain number X.
@@ -741,10 +741,10 @@ describe("Comprehensive Protocol JSON Validator", () => {
                 // Number of signal averages per block
                 averages: 1,
                 // How many times to repeat the entire PIRK series
-                protocol_repeats: 1,
+                command_repeats: 1,
               },
 
-              // This sub-protocol is a bit more complex, it will measure two spectroscopic signal almost simultaneously.
+              // This sub-command is a bit more complex, it will measure two spectroscopic signal almost simultaneously.
               // To do this we define two measuring lights and two detectors.
               // The instrument will pulse first with one light and detect with one detector, and after the "pulse_distance" time
               // pulse with the other light and detect with the other (or same) dector.
@@ -805,7 +805,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
                   [3, 10],
                 ],
                 averages: 1,
-                protocol_repeats: 1,
+                command_repeats: 1,
               },
               {
                 label: "PAM-ABS-FR",
@@ -900,7 +900,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
                   [3, 10],
                 ],
                 averages: 1,
-                protocol_repeats: 1,
+                command_repeats: 1,
                 do_once: -1,
               },
               // Measure SPAD
@@ -915,7 +915,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
         },
       ];
 
-      const result = validateProtocolJson(protocol);
+      const result = validateCommandJson(command);
 
       expect(result.success).toBe(true);
     });
@@ -923,7 +923,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
 });
 
 describe("Code to determine error line numbers", () => {
-  it("should return correct line numbers for protocol set", () => {
+  it("should return correct line numbers for command set", () => {
     const code =
       "[\n" + // line 1
       "  {\n" +
@@ -981,17 +981,17 @@ describe("Code to determine error line numbers", () => {
       "  }\n" +
       "]"; // line 45
 
-    const protocol: unknown = JSON.parse(code);
-    const result = validateProtocolJson(protocol);
+    const command: unknown = JSON.parse(code);
+    const result = validateCommandJson(command);
     expect(result.success).toBe(false);
     expect(result.error?.length).toBe(2);
     if (result.error !== undefined) {
-      const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
+      const errorInfo1 = findCommandErrorLine(code, result.error[0]);
       expect(errorInfo1).toStrictEqual({
         line: 24,
         message: "Item 'averages': Number must be greater than 0",
       });
-      const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
+      const errorInfo2 = findCommandErrorLine(code, result.error[1]);
       expect(errorInfo2).toStrictEqual({
         line: 30,
         message: "Item 'averages': Number must be greater than 0",
@@ -999,7 +999,7 @@ describe("Code to determine error line numbers", () => {
     }
   });
 
-  it("should return correct line numbers for simple protocol", () => {
+  it("should return correct line numbers for simple command", () => {
     const code =
       "[\n" + // Line 1
       "  {\n" +
@@ -1029,7 +1029,7 @@ describe("Code to determine error line numbers", () => {
       "      50,\n" +
       "      20\n" +
       "    ],\n" +
-      '    "protocols_delay": 4,\n' +
+      '    "commands_delay": 4,\n' +
       '    "tcs_to_act": 100,\n' + // Line 30
       '    "act1_lights": [\n' +
       "      20,\n" +
@@ -1098,17 +1098,17 @@ describe("Code to determine error line numbers", () => {
       "  }\n" +
       "]"; // Line 96
 
-    const protocol: unknown = JSON.parse(code);
-    const result = validateProtocolJson(protocol);
+    const command: unknown = JSON.parse(code);
+    const result = validateCommandJson(command);
     expect(result.success).toBe(false);
     expect(result.error?.length).toBe(2);
     if (result.error !== undefined) {
-      const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
+      const errorInfo1 = findCommandErrorLine(code, result.error[0]);
       expect(errorInfo1).toStrictEqual({
         line: 60,
         message: "Item 'pulsesize': Number must be greater than 0",
       });
-      const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
+      const errorInfo2 = findCommandErrorLine(code, result.error[1]);
       expect(errorInfo2).toStrictEqual({
         line: 18,
         message: "Item 'get_ir_baseline': Invalid pin number",
@@ -1116,15 +1116,15 @@ describe("Code to determine error line numbers", () => {
     }
   });
 
-  it("should validate protocol with inc_ri", () => {
-    const envProtocol = [
+  it("should validate command with inc_ri", () => {
+    const envCommand = [
       {
         inc_ri: 1,
         environmental: [["light_intensity", 0]],
       },
     ];
 
-    const result = validateProtocolJson(envProtocol);
+    const result = validateCommandJson(envCommand);
 
     expect(result.success).toBe(true);
   });

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { zMacroLanguage } from "./macro.schema";
-import { zSensorFamily } from "./protocol.schema";
+import { zSensorFamily } from "./command.schema";
 
 // --- Table Name Types ---
 /**
@@ -356,7 +356,7 @@ export const zInstructionContent = z.object({
 });
 
 export const zMeasurementContent = z.object({
-  protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
+  commandId: z.string().uuid("A valid command must be selected for measurement nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -367,8 +367,7 @@ export const zCommandFormat = z.enum(["string", "json", "yaml"]);
 export type CommandFormat = z.infer<typeof zCommandFormat>;
 
 // A measurement node may instead carry an inline device command (raw string,
-// JSON, or YAML) from a command cell. Old apps' cells->flow drops this node
-// (unknown content shape), degrading gracefully; protocol nodes are unaffected.
+// JSON, or YAML) from a command cell rather than a library reference.
 export const zMeasurementCommandContent = z.object({
   command: z.object({
     format: zCommandFormat,
@@ -506,16 +505,9 @@ export const zFlowGraph = z
       });
     }
 
-    // Reject duplicate question-node labels. Only question nodes need this:
-    // their labels become column keys in `questions_data`, so duplicates collide
-    // and lose answers downstream. Other node types' labels are display-only.
-    // Compare on the canonicalized form so labels that only differ by
-    // punctuation/whitespace (and would collapse to the same column key)
-    // are also caught.
-    //
-    // Also reject question labels whose canonical form lands on a reserved
-    // experiment-data column name. Those would shadow a system column once
-    // `questions_data` is flattened to top-level on read or export.
+    // Question labels become `questions_data` column keys: reject duplicates
+    // (compared canonicalized, so punctuation-only variants collide too) and
+    // labels landing on reserved experiment-data column names.
     const seen = new Map<string, number>();
     graph.nodes.forEach((node, index) => {
       if (node.type !== "question") return;
@@ -626,12 +618,8 @@ export const zSeriesTraceType = z.enum(["line", "bar", "scatter", "area"]);
 // (Plotly's `yaxis2`) overlaying the primary x-axis on the right side.
 export const zSeriesAxis = z.enum(["primary", "secondary"]);
 
-// `cumsum` is a window function (`SUM(...) OVER (...)`), distinct from
-// the row-aggregating peers in this enum. The SQL builder branches on it
-// so callers don't have to model the OVER clause separately.
-//
-// Declared above `zDataSourceConfig` because the data source's per-series
-// `aggregate` field references it; `zAggregationItem` also uses this enum.
+// `cumsum` is a window function (`SUM(...) OVER (...)`), unlike its
+// row-aggregating peers; the SQL builder branches on it.
 export const zAggregationFunction = z.enum([
   "sum",
   "avg",
@@ -678,11 +666,8 @@ export const zDataSourceConfig = z.object({
   // Per-series axis assignment. Unset = primary. Only meaningful on Y-role
   // entries; X/color/size/etc. ignore it.
   axis: zSeriesAxis.optional(),
-  // Per-series aggregate function. The wire format keeps
-  // `dataConfig.aggregation.functions[]` as the SQL-builder input, but the
-  // form treats this field as the source of truth: at save time `functions[]`
-  // is rebuilt from the per-source values with unique aliases, so two series
-  // on the same column can carry different aggregates.
+  // Per-series aggregate; source of truth for `aggregation.functions[]`,
+  // rebuilt at save time with unique aliases (two series, same column, ok).
   aggregate: zAggregationFunction.optional(),
   // Per-series error-bar column. When set, the renderer reads this column's
   // value alongside `columnName` and emits error bars on each point. Only
@@ -1312,11 +1297,8 @@ export const zExperimentDataQuery = z.object({
     ),
   orderBy: z.string().optional().describe("Column name to order results by"),
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
-  // Filters and aggregation are JSON-encoded so the endpoint stays a real
-  // HTTP GET (cache-friendly under TanStack Query) while still supporting
-  // the structured `zDataFilter` / `zDataAggregation` shapes. Same primitives
-  // drive the persisted visualization `dataConfig`, so a saved viz can pass
-  // its config straight through.
+  // Filters/aggregation are JSON-encoded so this stays a cacheable GET; the
+  // same primitives drive persisted viz `dataConfig`.
   filters: jsonQuerySchema(z.array(zDataFilter))
     .optional()
     .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
@@ -1338,10 +1320,8 @@ export const zExperimentDataQuery = z.object({
 });
 
 // --- Distinct values for filter dropdowns ---
-// Powers the searchable categorical filter UI: GET this endpoint with a
-// table + column and you get back the distinct (non-null) values, capped
-// at `limit`. Used by the data-filters Combobox so users pick from the
-// real values in their data instead of typing free-form strings.
+// GET table+column -> distinct non-null values (capped at `limit`); feeds the
+// data-filters Combobox.
 
 export const DISTINCT_VALUES_DEFAULT_LIMIT = 200;
 export const DISTINCT_VALUES_MAX_LIMIT = 1_000;
@@ -1484,12 +1464,9 @@ export const zUploadSourceKind = z
   .enum(["ambyte", "csv", "tsv", "parquet", "json", "ndjson"])
   .describe("Source format for the upload");
 
-// Per-kind constants consumed by the backend (volume path, busboy limits, etc.)
-// and the frontend (upload wizard limits, file-picker `accept` attribute).
-// Kept in one place so adding a new kind is a single-entry change. All
-// user-table-bound kinds share volumeSourceType="uploads" so they land in the
-// same raw_uploaded_data table; the Python task dispatches by source_kind to
-// pick the right parser.
+// Per-kind constants for backend (volume path, busboy limits) and frontend
+// (wizard limits, `accept`). User-table kinds share volumeSourceType="uploads";
+// the Python task dispatches by source_kind.
 export const UPLOAD_KIND_CONSTANTS = {
   ambyte: {
     volumeSourceType: "uploads",
@@ -1940,13 +1917,13 @@ export const zProjectTransferWebhookPayload = z.object({
     createdBy: z.string().uuid().describe("User ID of experiment creator/admin"),
     locations: z.array(zLocationInput).optional(),
   }),
-  protocol: z
+  command: z
     .object({
       name: z.string().min(1).max(255),
       description: z.string().optional(),
       code: z.record(z.unknown()).array(),
       family: zSensorFamily.default("multispeq"),
-      createdBy: z.string().uuid().describe("User ID of protocol creator"),
+      createdBy: z.string().uuid().describe("User ID of command creator"),
     })
     .optional(),
   macro: z
@@ -1964,7 +1941,7 @@ export const zProjectTransferWebhookPayload = z.object({
 export const zProjectTransferWebhookResponse = z.object({
   success: z.boolean(),
   experimentId: z.string().uuid(),
-  protocolId: z.string().uuid().nullable(),
+  commandId: z.string().uuid().nullable(),
   macroId: z.string().uuid().nullable(),
   macroFilename: z.string().nullable(),
   macroName: z.string().nullable(),

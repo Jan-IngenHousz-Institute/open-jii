@@ -17,22 +17,22 @@ describe("cellsToFlowGraph", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: uuidA, version: 1 },
+        payload: { commandId: uuidA, version: 1 },
       },
     ];
     const { nodes } = cellsToFlowGraph(cells);
     expect(nodes[0].position).toEqual({ x: 0, y: 240 });
   });
 
-  it("converts a single protocol ref cell to a measurement node", () => {
+  it("converts a single command ref cell to a measurement node", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: uuidA, version: 1 },
+        payload: { commandId: uuidA, version: 1 },
       },
     ];
     const { nodes, edges } = cellsToFlowGraph(cells);
@@ -112,9 +112,9 @@ describe("cellsToFlowGraph", () => {
       { id: "md1", type: "markdown", isCollapsed: false, content: "Intro" },
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: uuidA, version: 1 },
+        payload: { commandId: uuidA, version: 1 },
       },
       {
         id: "m1",
@@ -155,9 +155,9 @@ describe("cellsToFlowGraph", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: uuidA, version: 1 },
+        payload: { commandId: uuidA, version: 1 },
       },
       {
         id: "b1",
@@ -222,9 +222,9 @@ describe("cellsToFlowGraph", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
-        payload: { protocolId: uuidA, version: 1 },
+        payload: { commandId: uuidA, version: 1 },
       },
       { id: "o1", type: "output", isCollapsed: false, producedBy: "p1" },
       { id: "md1", type: "markdown", isCollapsed: false, content: "Analysis" },

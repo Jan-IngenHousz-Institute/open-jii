@@ -14,8 +14,8 @@ describe("Experiment Contract Schemas", () => {
           name: "Transferred Experiment",
           createdBy: "123e4567-e89b-12d3-a456-426614174000",
         },
-        protocol: {
-          name: "Transferred Protocol",
+        command: {
+          name: "Transferred Command",
           code: [{ measure: true }],
           createdBy: "123e4567-e89b-12d3-a456-426614174000",
         },
@@ -32,7 +32,7 @@ describe("Experiment Contract Schemas", () => {
 
     it("should reject body missing experiment", () => {
       const body = {
-        protocol: {
+        command: {
           name: "P",
           code: [{}],
           createdBy: "123e4567-e89b-12d3-a456-426614174000",
@@ -48,7 +48,7 @@ describe("Experiment Contract Schemas", () => {
       expect(result.success).toBe(false);
     });
 
-    it("should accept body without protocol", () => {
+    it("should accept body without command", () => {
       const body = {
         experiment: {
           name: "E",
@@ -71,7 +71,7 @@ describe("Experiment Contract Schemas", () => {
           name: "E",
           createdBy: "123e4567-e89b-12d3-a456-426614174000",
         },
-        protocol: {
+        command: {
           name: "P",
           code: [{}],
           createdBy: "123e4567-e89b-12d3-a456-426614174000",
@@ -100,7 +100,7 @@ describe("Experiment Contract Schemas", () => {
       const response = {
         success: true,
         experimentId: "123e4567-e89b-12d3-a456-426614174000",
-        protocolId: "223e4567-e89b-12d3-a456-426614174000",
+        commandId: "223e4567-e89b-12d3-a456-426614174000",
         macroId: "323e4567-e89b-12d3-a456-426614174000",
         macroFilename: "macro_abc123def456",
         macroName: "My Macro",
@@ -111,11 +111,11 @@ describe("Experiment Contract Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should validate a response with null protocolId and macroId", () => {
+    it("should validate a response with null commandId and macroId", () => {
       const response = {
         success: true,
         experimentId: "123e4567-e89b-12d3-a456-426614174000",
-        protocolId: null,
+        commandId: null,
         macroId: null,
         macroFilename: null,
         macroName: null,

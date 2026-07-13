@@ -2,14 +2,14 @@ import { describe, it, expect } from "vitest";
 
 import {
   zSensorFamily,
-  zProtocol,
-  zProtocolList,
-  zProtocolFilterQuery,
-  zProtocolIdPathParam,
-  zCreateProtocolRequestBody,
-  zUpdateProtocolRequestBody,
-  zProtocolErrorResponse,
-} from "./protocol.schema";
+  zCommand,
+  zCommandList,
+  zCommandFilterQuery,
+  zCommandIdPathParam,
+  zCreateCommandRequestBody,
+  zUpdateCommandRequestBody,
+  zCommandErrorResponse,
+} from "./command.schema";
 
 // Reusable fixtures
 const uuidA = "11111111-1111-1111-1111-111111111111";
@@ -17,7 +17,7 @@ const uuidB = "22222222-2222-2222-2222-222222222222";
 const iso = "2024-01-15T10:00:00Z";
 const iso2 = "2024-01-15T12:00:00Z";
 
-describe("Protocol Schema", () => {
+describe("Command Schema", () => {
   // --- Enum ---
   describe("zSensorFamily", () => {
     it("accepts valid enum values", () => {
@@ -31,11 +31,11 @@ describe("Protocol Schema", () => {
     });
   });
 
-  // --- Protocol object & list ---
-  describe("zProtocol & zProtocolList", () => {
+  // --- Command object & list ---
+  describe("zCommand & zCommandList", () => {
     const validCodeArray = [{ step: 1 }, { nested: { x: 42 } }];
 
-    it("valid protocol parses", () => {
+    it("valid command parses", () => {
       const p = {
         id: uuidA,
         name: "Fv/FM Baseline",
@@ -48,7 +48,7 @@ describe("Protocol Schema", () => {
         createdAt: iso,
         updatedAt: iso2,
       };
-      expect(zProtocol.parse(p)).toEqual(p);
+      expect(zCommand.parse(p)).toEqual(p);
     });
 
     it("createdByName is optional", () => {
@@ -63,7 +63,7 @@ describe("Protocol Schema", () => {
         createdAt: iso,
         updatedAt: iso2,
       };
-      expect(zProtocol.parse(p)).toEqual(p);
+      expect(zCommand.parse(p)).toEqual(p);
     });
 
     it("rejects invalid datetime", () => {
@@ -77,7 +77,7 @@ describe("Protocol Schema", () => {
         createdAt: "not-a-date",
         updatedAt: iso2,
       } as unknown;
-      expect(() => zProtocol.parse(bad)).toThrow();
+      expect(() => zCommand.parse(bad)).toThrow();
     });
 
     it("rejects non-array code", () => {
@@ -91,7 +91,7 @@ describe("Protocol Schema", () => {
         createdAt: iso,
         updatedAt: iso2,
       } as unknown;
-      expect(() => zProtocol.parse(bad)).toThrow();
+      expect(() => zCommand.parse(bad)).toThrow();
     });
 
     it("rejects array with non-record element in code", () => {
@@ -105,10 +105,10 @@ describe("Protocol Schema", () => {
         createdAt: iso,
         updatedAt: iso2,
       } as unknown;
-      expect(() => zProtocol.parse(bad)).toThrow();
+      expect(() => zCommand.parse(bad)).toThrow();
     });
 
-    it("zProtocolList accepts array of valid protocols", () => {
+    it("zCommandList accepts array of valid commands", () => {
       const p1 = {
         id: uuidA,
         name: "P1",
@@ -127,49 +127,49 @@ describe("Protocol Schema", () => {
         sortOrder: 2,
         family: "multispeq" as const,
       };
-      expect(zProtocolList.parse([p1, p2])).toEqual([p1, p2]);
+      expect(zCommandList.parse([p1, p2])).toEqual([p1, p2]);
     });
   });
 
   // --- Filter query ---
-  describe("zProtocolFilterQuery", () => {
+  describe("zCommandFilterQuery", () => {
     it("parses empty object", () => {
-      expect(zProtocolFilterQuery.parse({})).toEqual({});
+      expect(zCommandFilterQuery.parse({})).toEqual({});
     });
 
     it("accepts search string", () => {
       const q = { search: "fvfm" };
-      expect(zProtocolFilterQuery.parse(q)).toEqual(q);
+      expect(zCommandFilterQuery.parse(q)).toEqual(q);
     });
 
     it("rejects non-string search", () => {
-      expect(() => zProtocolFilterQuery.parse({ search: 123 })).toThrow();
+      expect(() => zCommandFilterQuery.parse({ search: 123 })).toThrow();
     });
   });
 
   // --- Path params ---
-  describe("zProtocolIdPathParam", () => {
+  describe("zCommandIdPathParam", () => {
     it("valid id", () => {
       const p = { id: uuidA };
-      expect(zProtocolIdPathParam.parse(p)).toEqual(p);
+      expect(zCommandIdPathParam.parse(p)).toEqual(p);
     });
 
     it("rejects invalid uuid", () => {
-      expect(() => zProtocolIdPathParam.parse({ id: "not-uuid" })).toThrow();
+      expect(() => zCommandIdPathParam.parse({ id: "not-uuid" })).toThrow();
     });
   });
 
   // --- Create body ---
-  describe("zCreateProtocolRequestBody", () => {
+  describe("zCreateCommandRequestBody", () => {
     const codeArr = [{ step: "init" }];
 
     it("minimal valid body", () => {
       const b = {
-        name: "My Protocol",
+        name: "My Command",
         code: codeArr,
         family: "multispeq",
       };
-      expect(zCreateProtocolRequestBody.parse(b)).toEqual({
+      expect(zCreateCommandRequestBody.parse(b)).toEqual({
         ...b,
         // description is optional (omitted)
       });
@@ -177,14 +177,14 @@ describe("Protocol Schema", () => {
 
     it("full valid body", () => {
       const b = {
-        name: "  Ambient Protocol  ",
+        name: "  Ambient Command  ",
         description: "Trimmed name allowed; not auto-trimmed in output",
         code: [{ a: 1 }, { b: 2 }],
         family: "multispeq",
       };
-      const parsed = zCreateProtocolRequestBody.parse(b);
+      const parsed = zCreateCommandRequestBody.parse(b);
       // `trim()` in zod is applied for validation; output preserves the trimmed version
-      expect(parsed.name).toBe("Ambient Protocol");
+      expect(parsed.name).toBe("Ambient Command");
       expect(parsed.description).toBe("Trimmed name allowed; not auto-trimmed in output");
       expect(parsed.family).toBe("multispeq");
       expect(parsed.code.length).toBe(2);
@@ -192,36 +192,36 @@ describe("Protocol Schema", () => {
 
     it("rejects empty/whitespace name", () => {
       expect(() =>
-        zCreateProtocolRequestBody.parse({ name: "   ", code: [], family: "multispeq" }),
+        zCreateCommandRequestBody.parse({ name: "   ", code: [], family: "multispeq" }),
       ).toThrow();
     });
 
     it("rejects code not array", () => {
       const bad = { name: "X", code: { step: 1 }, family: "multispeq" };
-      expect(() => zCreateProtocolRequestBody.parse(bad)).toThrow();
+      expect(() => zCreateCommandRequestBody.parse(bad)).toThrow();
     });
 
     it("rejects invalid family", () => {
       const bad = { name: "X", code: [], family: "weird" };
-      expect(() => zCreateProtocolRequestBody.parse(bad)).toThrow();
+      expect(() => zCreateCommandRequestBody.parse(bad)).toThrow();
     });
   });
 
   // --- Update body ---
-  describe("zUpdateProtocolRequestBody", () => {
+  describe("zUpdateCommandRequestBody", () => {
     it("allows partial updates", () => {
       const b = { description: "New desc" };
-      expect(zUpdateProtocolRequestBody.parse(b)).toEqual(b);
+      expect(zUpdateCommandRequestBody.parse(b)).toEqual(b);
     });
 
     it("trims name when provided", () => {
       const b = { name: "  New Name  " };
-      const parsed = zUpdateProtocolRequestBody.parse(b);
+      const parsed = zUpdateCommandRequestBody.parse(b);
       expect(parsed.name).toBe("New Name");
     });
 
     it("rejects empty trimmed name", () => {
-      expect(() => zUpdateProtocolRequestBody.parse({ name: "   " })).toThrow();
+      expect(() => zUpdateCommandRequestBody.parse({ name: "   " })).toThrow();
     });
 
     it("accepts code array & family together", () => {
@@ -229,28 +229,28 @@ describe("Protocol Schema", () => {
         code: [{ step: 1 }, { step: 2 }],
         family: "multispeq" as const,
       };
-      expect(zUpdateProtocolRequestBody.parse(b)).toEqual(b);
+      expect(zUpdateCommandRequestBody.parse(b)).toEqual(b);
     });
 
     it("rejects non-array code", () => {
-      expect(() => zUpdateProtocolRequestBody.parse({ code: {} })).toThrow();
+      expect(() => zUpdateCommandRequestBody.parse({ code: {} })).toThrow();
     });
 
     it("rejects invalid family", () => {
-      expect(() => zUpdateProtocolRequestBody.parse({ family: "nope" })).toThrow();
+      expect(() => zUpdateCommandRequestBody.parse({ family: "nope" })).toThrow();
     });
   });
 
   // --- Error response ---
-  describe("zProtocolErrorResponse", () => {
+  describe("zCommandErrorResponse", () => {
     it("valid error response", () => {
       const err = { message: "Bad Request", statusCode: 400 };
-      expect(zProtocolErrorResponse.parse(err)).toEqual(err);
+      expect(zCommandErrorResponse.parse(err)).toEqual(err);
     });
 
     it("rejects missing fields", () => {
-      expect(() => zProtocolErrorResponse.parse({ message: "x" })).toThrow();
-      expect(() => zProtocolErrorResponse.parse({ statusCode: 500 })).toThrow();
+      expect(() => zCommandErrorResponse.parse({ message: "x" })).toThrow();
+      expect(() => zCommandErrorResponse.parse({ statusCode: 500 })).toThrow();
     });
   });
 });

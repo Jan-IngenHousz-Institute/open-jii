@@ -9,9 +9,9 @@ import {
   zMacroIdPathParam,
   zCreateMacroRequestBody,
   zUpdateMacroRequestBody,
-  zMacroProtocolList,
-  zAddCompatibleProtocolsBody,
-  zMacroProtocolPathParams,
+  zMacroCommandList,
+  zAddCompatibleCommandsBody,
+  zMacroCommandPathParams,
   zMacroExecutionRequestBody,
   zMacroExecutionResponse,
   zMacroBatchExecutionRequestBody,
@@ -88,45 +88,45 @@ export const macroContract = c.router({
     description: "Deletes a macro by its ID",
   },
 
-  listCompatibleProtocols: {
+  listCompatibleCommands: {
     method: "GET",
-    path: "/api/v1/macros/:id/protocols",
+    path: "/api/v1/macros/:id/commands",
     pathParams: zMacroIdPathParam,
     responses: {
-      200: zMacroProtocolList,
+      200: zMacroCommandList,
       404: zMacroErrorResponse,
     },
-    summary: "List compatible protocols for a macro",
-    description: "Returns protocols that are marked as compatible with this macro",
+    summary: "List compatible commands for a macro",
+    description: "Returns commands that are marked as compatible with this macro",
   },
 
-  addCompatibleProtocols: {
+  addCompatibleCommands: {
     method: "POST",
-    path: "/api/v1/macros/:id/protocols",
+    path: "/api/v1/macros/:id/commands",
     pathParams: zMacroIdPathParam,
-    body: zAddCompatibleProtocolsBody,
+    body: zAddCompatibleCommandsBody,
     responses: {
-      201: zMacroProtocolList,
+      201: zMacroCommandList,
       403: zMacroErrorResponse,
       404: zMacroErrorResponse,
       500: zMacroErrorResponse,
     },
-    summary: "Add compatible protocols to a macro",
-    description: "Links protocols as compatible with this macro (creator only)",
+    summary: "Add compatible commands to a macro",
+    description: "Links commands as compatible with this macro (creator only)",
   },
 
-  removeCompatibleProtocol: {
+  removeCompatibleCommand: {
     method: "DELETE",
-    path: "/api/v1/macros/:id/protocols/:protocolId",
-    pathParams: zMacroProtocolPathParams,
+    path: "/api/v1/macros/:id/commands/:commandId",
+    pathParams: zMacroCommandPathParams,
     body: null,
     responses: {
       204: null,
       403: zMacroErrorResponse,
       404: zMacroErrorResponse,
     },
-    summary: "Remove a compatible protocol from a macro",
-    description: "Unlinks a protocol from this macro's compatibility list (creator only)",
+    summary: "Remove a compatible command from a macro",
+    description: "Unlinks a command from this macro's compatibility list (creator only)",
   },
   executeMacro: {
     method: "POST",

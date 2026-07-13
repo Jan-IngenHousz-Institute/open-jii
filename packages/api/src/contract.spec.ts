@@ -6,7 +6,7 @@ describe("API Contract", () => {
   it("should export main contract with all routes", () => {
     expect(contract).toBeDefined();
     expect(contract.experiments).toBeDefined();
-    expect(contract.protocols).toBeDefined();
+    expect(contract.commands).toBeDefined();
     expect(contract.macros).toBeDefined();
     expect(contract.iot).toBeDefined();
   });

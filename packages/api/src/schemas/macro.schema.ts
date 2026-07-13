@@ -80,29 +80,29 @@ export const zMacroErrorResponse = z.object({
   statusCode: z.number(),
 });
 
-// Macro-Protocol compatibility schemas
-export const zCompatibleProtocolSummary = z.object({
+// Macro-Command compatibility schemas
+export const zCompatibleCommandSummary = z.object({
   id: z.string().uuid(),
   name: z.string(),
   family: z.string(),
   createdBy: z.string().uuid(),
 });
 
-export const zMacroProtocolEntry = z.object({
+export const zMacroCommandEntry = z.object({
   macroId: z.string().uuid(),
-  protocol: zCompatibleProtocolSummary,
+  command: zCompatibleCommandSummary,
   addedAt: z.string().datetime(),
 });
 
-export const zMacroProtocolList = z.array(zMacroProtocolEntry);
+export const zMacroCommandList = z.array(zMacroCommandEntry);
 
-export const zAddCompatibleProtocolsBody = z.object({
-  protocolIds: z.array(z.string().uuid()).min(1),
+export const zAddCompatibleCommandsBody = z.object({
+  commandIds: z.array(z.string().uuid()).min(1),
 });
 
-export const zMacroProtocolPathParams = z.object({
+export const zMacroCommandPathParams = z.object({
   id: z.string().uuid(),
-  protocolId: z.string().uuid(),
+  commandId: z.string().uuid(),
 });
 
 // ── Single Macro Execution ───────────────────────────────────────────
@@ -162,10 +162,10 @@ export type MacroIdPathParam = z.infer<typeof zMacroIdPathParam>;
 export type CreateMacroRequestBody = z.infer<typeof zCreateMacroRequestBody>;
 export type UpdateMacroRequestBody = z.infer<typeof zUpdateMacroRequestBody>;
 export type MacroErrorResponse = z.infer<typeof zMacroErrorResponse>;
-export type CompatibleProtocolSummary = z.infer<typeof zCompatibleProtocolSummary>;
-export type MacroProtocolEntry = z.infer<typeof zMacroProtocolEntry>;
-export type MacroProtocolList = z.infer<typeof zMacroProtocolList>;
-export type AddCompatibleProtocolsBody = z.infer<typeof zAddCompatibleProtocolsBody>;
+export type CompatibleCommandSummary = z.infer<typeof zCompatibleCommandSummary>;
+export type MacroCommandEntry = z.infer<typeof zMacroCommandEntry>;
+export type MacroCommandList = z.infer<typeof zMacroCommandList>;
+export type AddCompatibleCommandsBody = z.infer<typeof zAddCompatibleCommandsBody>;
 export type MacroBatchExecutionItem = z.infer<typeof zMacroBatchExecutionItem>;
 export type MacroBatchExecutionRequestBody = z.infer<typeof zMacroBatchExecutionRequestBody>;
 export type MacroBatchExecutionResultItem = z.infer<typeof zMacroBatchExecutionResultItem>;

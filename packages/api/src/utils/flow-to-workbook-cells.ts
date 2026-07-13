@@ -44,7 +44,7 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
 
   switch (node.type) {
     case "measurement": {
-      // A measurement node carries either a protocol reference or an inline command.
+      // A measurement node carries either a library command reference or an inline command.
       const inline = content.command as { format?: string; content?: string } | undefined;
       if (inline && typeof inline.content === "string") {
         return {
@@ -61,10 +61,10 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
       }
       return {
         id: node.id,
-        type: "protocol",
+        type: "command",
         isCollapsed: false,
         payload: {
-          protocolId: content.protocolId as string,
+          commandId: content.commandId as string,
           version: 1,
           name: node.name,
         },

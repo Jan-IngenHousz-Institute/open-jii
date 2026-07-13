@@ -18,7 +18,7 @@ const PinNumberSchema = z
     message: "Invalid pin number",
   });
 
-// Variable references used in protocols (expanded based on real data)
+// Variable references used in commands (expanded based on real data)
 const VariableReferenceSchema = z
   .string()
   .regex(
@@ -56,18 +56,18 @@ const EnvironmentalSensorSchema = z
   )
   .min(1); // At least sensor name, optional parameters
 
-// Core protocol schema with all possible fields
-export const ProtocolSetSchema = z
+// Core command schema with all possible fields
+export const CommandSetSchema = z
   .object({
-    // Label field (required only for multi-protocol sets, optional for single protocols)
+    // Label field (required only for multi-command sets, optional for single commands)
     label: z.string().optional(),
 
     // Basic control fields
     averages: z.number().int().positive().optional(),
     averages_delay: z.number().int().nonnegative().optional(),
     averages_delay_ms: z.number().int().nonnegative().optional(),
-    protocols: z.number().int().positive().optional(),
-    protocols_delay: z.number().int().nonnegative().optional(),
+    commands: z.number().int().positive().optional(),
+    commands_delay: z.number().int().nonnegative().optional(),
     measurements: z.number().int().positive().optional(),
     measurements_delay: z.number().int().nonnegative().optional(),
 
@@ -146,18 +146,18 @@ export const ProtocolSetSchema = z
     dw: z.array(z.union([z.number().int(), z.string()])).optional(), // Can contain strings like "@i4"
 
     // Additional fields discovered from CSV data
-    protocol_repeats: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@n0:0"
+    command_repeats: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@n0:0"
     recall: z.array(z.string()).optional(), // Array of calibration strings
     indicator: z.array(z.number().int()).optional(), // LED indicator values
     gs_air: z.number().int().optional(), // Gas sensor air
     v_arrays: z.array(z.array(z.union([z.number(), z.string()]))).optional(), // Complex mixed arrays
-    protocols_pre_delay: z.string().optional(), // String references like "@n5:1"
+    commands_pre_delay: z.string().optional(), // String references like "@n5:1"
     set_light_intensity: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@s2"
     pulses_delay: z.array(z.number().int()).optional(), // Delay between pulses
     set_air_flow: z.number().int().optional(), // Air flow control
     bleed_correction: z.number().int().optional(), // Correction factor
     set_repeats: z.union([z.number().int(), z.string()]).optional(), // Repeat count, can be string like "#l2"
-    protocol_averages: z.number().int().optional(), // Protocol-level averages
+    command_averages: z.number().int().optional(), // Command-level averages
     check_battery: z.number().int().optional(), // Battery check flag
     led_persist: z.number().int().optional(), // LED persistence
     open_close_start: z.number().int().optional(), // Open/close start position
@@ -173,15 +173,15 @@ export const ProtocolSetSchema = z
   })
   .strict();
 
-// Single and multi-protocol set schema
-export const ProtocolJsonSchema = z.array(
-  ProtocolSetSchema.extend({
-    _protocol_set_: z.array(ProtocolSetSchema).min(1).optional(),
+// Single and multi-command set schema
+export const CommandJsonSchema = z.array(
+  CommandSetSchema.extend({
+    _protocol_set_: z.array(CommandSetSchema).min(1).optional(),
   }).strict(),
 );
 
-export type ProtocolSet = z.infer<typeof ProtocolSetSchema>;
-export type ProtocolJson = z.infer<typeof ProtocolJsonSchema>;
+export type CommandSet = z.infer<typeof CommandSetSchema>;
+export type CommandJson = z.infer<typeof CommandJsonSchema>;
 
 export interface ValidationResult<T> {
   success: boolean;
@@ -189,9 +189,9 @@ export interface ValidationResult<T> {
   error?: z.ZodIssue[];
 }
 
-export function validateProtocolJson(json: unknown): ValidationResult<ProtocolJson> {
+export function validateCommandJson(json: unknown): ValidationResult<CommandJson> {
   try {
-    const validated = ProtocolJsonSchema.parse(json);
+    const validated = CommandJsonSchema.parse(json);
     return {
       success: true,
       data: validated,
@@ -219,55 +219,55 @@ export function validateProtocolJson(json: unknown): ValidationResult<ProtocolJs
   }
 }
 
-// Utility functions for protocol analysis
-export function isMultiProtocolSet(protocol: ProtocolJson[0]) {
-  return "_protocol_set_" in protocol;
+// Utility functions for command analysis
+export function isMultiCommandSet(command: CommandJson[0]) {
+  return "_protocol_set_" in command;
 }
 
-export function extractProtocolSets(protocolJson: ProtocolJson): ProtocolSet[] {
-  const sets: ProtocolSet[] = [];
+export function extractCommandSets(commandJson: CommandJson): CommandSet[] {
+  const sets: CommandSet[] = [];
 
-  for (const protocol of protocolJson) {
-    if ("_protocol_set_" in protocol && protocol._protocol_set_) {
-      sets.push(...protocol._protocol_set_);
+  for (const command of commandJson) {
+    if ("_protocol_set_" in command && command._protocol_set_) {
+      sets.push(...command._protocol_set_);
     } else {
-      sets.push(protocol);
+      sets.push(command);
     }
   }
 
   return sets;
 }
 
-export function getEnvironmentalSensors(protocolSet: ProtocolSet) {
-  if (!protocolSet.environmental) return [];
+export function getEnvironmentalSensors(commandSet: CommandSet) {
+  if (!commandSet.environmental) return [];
 
-  return protocolSet.environmental.map((sensor) => sensor[0]);
+  return commandSet.environmental.map((sensor) => sensor[0]);
 }
 
-export function getLightPins(protocolSet: ProtocolSet): number[] {
+export function getLightPins(commandSet: CommandSet): number[] {
   const pins = new Set<number>();
 
   // Collect all light-related pins
-  if (protocolSet.act_background_light !== undefined) {
-    pins.add(protocolSet.act_background_light);
+  if (commandSet.act_background_light !== undefined) {
+    pins.add(commandSet.act_background_light);
   }
 
-  protocolSet.act1_lights?.forEach((pin) => pins.add(pin));
-  protocolSet.act2_lights?.forEach((pin) => pins.add(pin));
-  protocolSet.pulsed_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
-  protocolSet.nonpulsed_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
-  protocolSet.meas_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
+  commandSet.act1_lights?.forEach((pin) => pins.add(pin));
+  commandSet.act2_lights?.forEach((pin) => pins.add(pin));
+  commandSet.pulsed_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
+  commandSet.nonpulsed_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
+  commandSet.meas_lights?.forEach((lightArray) => lightArray.forEach((pin) => pins.add(pin)));
 
   return Array.from(pins)
     .filter((pin) => pin > 0)
     .sort();
 }
 
-export function getDetectorPins(protocolSet: ProtocolSet): number[] {
-  if (!protocolSet.detectors) return [];
+export function getDetectorPins(commandSet: CommandSet): number[] {
+  if (!commandSet.detectors) return [];
 
   const pins = new Set<number>();
-  protocolSet.detectors.forEach((detectorArray) => detectorArray.forEach((pin) => pins.add(pin)));
+  commandSet.detectors.forEach((detectorArray) => detectorArray.forEach((pin) => pins.add(pin)));
 
   return Array.from(pins).sort();
 }
@@ -310,25 +310,25 @@ export function getErrorMessage(e: ZodIssue) {
   }
 }
 
-export function findProtocolErrorLine(text: string, e: ZodIssue) {
+export function findCommandErrorLine(text: string, e: ZodIssue) {
   // Try to find the line number of the error path in the JSON
   // This is a best-effort guess, as Zod does not provide line numbers
   const message = getErrorMessage(e);
   let line = 1;
   if (e.path.length == 0) return { line, message };
   const codeLines = text.split("\n");
-  const containsProtocolSet = e.path.includes("_protocol_set_");
+  const containsCommandSet = e.path.includes("_protocol_set_");
   const missingItem = e.message === "Required";
 
-  if (containsProtocolSet) {
+  if (containsCommandSet) {
     let pathItem = getPathItem(e.path);
-    let protocolSetArrayFound = false;
+    let commandSetArrayFound = false;
     for (const codeLine of codeLines) {
       if (codeLine.includes(`"_protocol_set_"`)) {
-        protocolSetArrayFound = true;
+        commandSetArrayFound = true;
         pathItem = getPathItem(e.path);
       }
-      if (protocolSetArrayFound) {
+      if (commandSetArrayFound) {
         if (codeLine.endsWith("}") || codeLine.endsWith("},")) {
           if (pathItem?.arrayIndex == 0 && missingItem) {
             return { line, message };

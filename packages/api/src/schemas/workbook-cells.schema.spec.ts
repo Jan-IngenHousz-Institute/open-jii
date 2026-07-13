@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  zProtocolCell,
+  zCommandCell,
   zCommandCell,
   zMacroCell,
   zQuestionCell,
@@ -16,60 +16,60 @@ const uuidA = "11111111-1111-1111-1111-111111111111";
 const _uuidB = "22222222-2222-2222-2222-222222222222";
 
 describe("Workbook Cells Schema", () => {
-  describe("zProtocolCell", () => {
+  describe("zCommandCell", () => {
     it("accepts ref payload", () => {
       const cell = {
         id: "p1",
-        type: "protocol",
-        payload: { protocolId: uuidA, version: 1 },
+        type: "command",
+        payload: { commandId: uuidA, version: 1 },
       };
-      const parsed = zProtocolCell.parse(cell);
+      const parsed = zCommandCell.parse(cell);
       expect(parsed).toEqual({ ...cell, isCollapsed: false });
     });
 
     it("accepts optional name", () => {
       const cell = {
         id: "p2",
-        type: "protocol",
-        payload: { protocolId: uuidA, version: 1, name: "My protocol" },
+        type: "command",
+        payload: { commandId: uuidA, version: 1, name: "My command" },
       };
-      expect(zProtocolCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
     });
 
-    it("rejects invalid protocolId", () => {
+    it("rejects invalid commandId", () => {
       const cell = {
         id: "p4",
-        type: "protocol",
-        payload: { protocolId: "not-uuid", version: 1 },
+        type: "command",
+        payload: { commandId: "not-uuid", version: 1 },
       };
-      expect(() => zProtocolCell.parse(cell)).toThrow();
+      expect(() => zCommandCell.parse(cell)).toThrow();
     });
 
     it("rejects payload with extra keys (strict)", () => {
       const cell = {
         id: "p5",
-        type: "protocol",
-        payload: { protocolId: uuidA, version: 1, extra: true },
+        type: "command",
+        payload: { commandId: uuidA, version: 1, extra: true },
       };
-      expect(() => zProtocolCell.parse(cell)).toThrow();
+      expect(() => zCommandCell.parse(cell)).toThrow();
     });
 
     it("rejects empty id", () => {
       const cell = {
         id: "",
-        type: "protocol",
-        payload: { protocolId: uuidA, version: 1 },
+        type: "command",
+        payload: { commandId: uuidA, version: 1 },
       };
-      expect(() => zProtocolCell.parse(cell)).toThrow();
+      expect(() => zCommandCell.parse(cell)).toThrow();
     });
 
     it("rejects non-positive version", () => {
       const cell = {
         id: "p7",
-        type: "protocol",
-        payload: { protocolId: uuidA, version: 0 },
+        type: "command",
+        payload: { commandId: uuidA, version: 0 },
       };
-      expect(() => zProtocolCell.parse(cell)).toThrow();
+      expect(() => zCommandCell.parse(cell)).toThrow();
     });
   });
 
@@ -373,8 +373,8 @@ describe("Workbook Cells Schema", () => {
       const cells = [
         {
           id: "p1",
-          type: "protocol",
-          payload: { protocolId: uuidA, version: 1 },
+          type: "command",
+          payload: { commandId: uuidA, version: 1 },
         },
         {
           id: "m1",

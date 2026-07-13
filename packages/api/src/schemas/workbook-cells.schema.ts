@@ -8,24 +8,18 @@ const zBaseCell = z.object({
   isCollapsed: z.boolean().optional().default(false),
 });
 
-const zProtocolPayload = z
+// A command cell either references a versioned library command (the entity
+// formerly called a protocol) or carries an inline payload (a raw string such
+// as `hello` or `battery`, JSON, or YAML) sent verbatim to the instrument.
+const zCommandReferencePayload = z
   .object({
-    protocolId: z.string().uuid(),
+    commandId: z.string().uuid(),
     version: z.number().int().positive(),
     name: z.string().optional(),
   })
   .strict();
 
-export const zProtocolCell = zBaseCell.extend({
-  type: z.literal("protocol"),
-  payload: zProtocolPayload,
-});
-
-// An inline command cell sends a raw string (e.g. `hello`, `battery`), JSON, or
-// YAML straight to the instrument. Kept as a separate cell type (not folded into
-// the protocol cell) so old mobile apps, whose bundled cells->flow only knows
-// "protocol", keep rendering protocol cells and simply skip command cells.
-const zCommandPayload = z
+const zCommandInlinePayload = z
   .object({
     format: zCommandFormat,
     content: z.string().min(1, "Command content is required"),
@@ -35,8 +29,17 @@ const zCommandPayload = z
 
 export const zCommandCell = zBaseCell.extend({
   type: z.literal("command"),
-  payload: zCommandPayload,
+  payload: z.union([zCommandReferencePayload, zCommandInlinePayload]),
 });
+
+export type CommandReferencePayload = z.infer<typeof zCommandReferencePayload>;
+export type CommandInlinePayload = z.infer<typeof zCommandInlinePayload>;
+
+export function isCommandReferencePayload(
+  payload: CommandReferencePayload | CommandInlinePayload,
+): payload is CommandReferencePayload {
+  return "commandId" in payload;
+}
 
 // Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
 const zMacroPayload = z
@@ -103,7 +106,6 @@ export const zMarkdownCell = zBaseCell.extend({
 });
 
 export const zWorkbookCell = z.union([
-  zProtocolCell,
   zCommandCell,
   zMacroCell,
   zQuestionCell,
@@ -130,7 +132,6 @@ export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx
   });
 });
 
-export type ProtocolCell = z.infer<typeof zProtocolCell>;
 export type CommandCell = z.infer<typeof zCommandCell>;
 export type MacroCell = z.infer<typeof zMacroCell>;
 export type QuestionCell = z.infer<typeof zQuestionCell>;
@@ -141,7 +142,6 @@ export type OutputCell = z.infer<typeof zOutputCell>;
 export type MarkdownCell = z.infer<typeof zMarkdownCell>;
 
 export type WorkbookCell =
-  | ProtocolCell
   | CommandCell
   | MacroCell
   | QuestionCell
