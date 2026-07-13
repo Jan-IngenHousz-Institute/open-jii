@@ -4,18 +4,21 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
-import type { AnalysisContent } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
+import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import { CommentModal } from "~/features/recent-measurements/components/comment-modal";
-import { MeasurementQuestionsModal } from "~/features/recent-measurements/components/measurement-questions-modal";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
+import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import type { AnalysisContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { CommentModal } from "~/shared/ui/measurement/comment-modal";
+import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
@@ -37,10 +40,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     previousStep,
     nextStep,
     experimentId,
-    protocolId,
+    experimentLabel,
     iterationCount,
     flowNodes,
   } = useMeasurementFlowStore();
+  const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
 
@@ -49,9 +53,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     (n) => n.type === "measurement" && n.content?.protocolId === protocolId,
   )?.content?.protocol?.name as string | undefined;
 
-  const experimentName =
-    experiments.find((experiment) => experiment.value === experimentId)?.label ??
-    t("measurementFlow:analysis.node.defaultExperimentName");
+  const experimentName = resolveExperimentName({
+    experimentLabel,
+    experiments,
+    experimentId,
+    fallback: t("measurementFlow:analysis.node.defaultExperimentName"),
+  });
 
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
@@ -59,6 +66,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
+  const { updateMeasurementComment } = useMeasurements();
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -68,7 +76,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
   const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
 
-  // Synthetic StoredMeasurement for the live scan preview — not saved yet.
+  // Synthetic StoredMeasurement for the live scan preview, not saved yet.
   // status "successful" hides the comment button in the modal.
   const currentMeasurement = useMemo<StoredMeasurement>(
     () => ({
@@ -189,6 +197,9 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         visible={questionsModalVisible}
         measurement={currentMeasurement}
         onClose={() => setQuestionsModalVisible(false)}
+        onSaveComment={(text) =>
+          updateMeasurementComment(currentMeasurement.id, currentMeasurement.data, text)
+        }
       />
 
       <CommentModal

@@ -2,6 +2,7 @@ import {
   CHEATSHEET_OPEN_EVENT,
   COMMAND_PALETTE_OPEN_EVENT,
 } from "@/components/shortcuts/shortcuts-root";
+import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { render, screen, userEvent, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -59,8 +60,8 @@ describe("CommandPalette", () => {
     expect(await screen.findByPlaceholderText("commandPalette.placeholder")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.entries.home")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.entries.createExperiment")).toBeInTheDocument();
+    expect(screen.getByText("commandPalette.entries.openWhatsNew")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.entries.openDocumentation")).toBeInTheDocument();
-    expect(screen.queryByText(/Open What's new/i)).not.toBeInTheDocument();
   });
 
   it("navigates to each page / create action it lists", async () => {
@@ -92,6 +93,17 @@ describe("CommandPalette", () => {
     await user.click(await screen.findByText("commandPalette.entries.showKeyboardShortcuts"));
     expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(CHEATSHEET_OPEN_EVENT, handler);
+  });
+
+  it("dispatches the whats-new event from the palette action", async () => {
+    const handler = vi.fn();
+    window.addEventListener(WHATS_NEW_OPEN_EVENT, handler);
+    const user = userEvent.setup();
+    render(<CommandPalette locale="en-US" />);
+    openPalette();
+    await user.click(await screen.findByText("commandPalette.entries.openWhatsNew"));
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener(WHATS_NEW_OPEN_EVENT, handler);
   });
 
   it("opens external docs without navigating", async () => {

@@ -6,7 +6,6 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { NewMacroForm } from "./new-macro";
 
@@ -23,9 +22,9 @@ vi.mock("./new-macro-details-card", () => ({
 }));
 
 vi.mock("../macro-code-editor", () => ({
-  default: (props: Record<string, unknown>) => (
-    <div data-testid="code-editor" data-language={String(props.language)}>
-      {props.title != null && <div>{String(props.title as string)}</div>}
+  default: (props: { language?: string; title?: string }) => (
+    <div data-testid="code-editor" data-language={props.language}>
+      {props.title != null && <div>{props.title}</div>}
     </div>
   ),
 }));
@@ -68,7 +67,7 @@ describe("NewMacroForm", () => {
     expect(router.back).toHaveBeenCalled();
   });
 
-  it("submits form — POST /api/v1/macros", async () => {
+  it("submits form (POST /api/v1/macros)", async () => {
     const spy = server.mount(contract.macros.createMacro, {
       body: createMacro({ id: "macro-42", name: "New Macro", code: "" }),
     });
@@ -81,7 +80,6 @@ describe("NewMacroForm", () => {
       expect(spy.called).toBe(true);
     });
     expect(vi.mocked(base64Utils.encodeBase64)).toHaveBeenCalled();
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({ description: "macros.macroCreated" });
 
     // onSuccess navigates to the new macro
     await waitFor(() => {

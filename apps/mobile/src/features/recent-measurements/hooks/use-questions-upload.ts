@@ -1,11 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { getMultispeqMqttTopic } from "~/features/connection/utils/get-multispeq-mqtt-topic";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
+import {
+  getMultispeqMqttTopic,
+  QUESTIONS_PROTOCOL_ID,
+} from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
 import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
@@ -37,7 +40,7 @@ export function useQuestionsUpload() {
       commentText?: string;
       flagType?: AnnotationFlagType | null;
     }) => {
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId: "questions" });
+      const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
 
       const payload = {
         questions,

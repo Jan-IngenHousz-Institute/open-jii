@@ -1,0 +1,92 @@
+fragment ComponentReleaseNoteFields on ComponentReleaseNote {
+  __typename
+  sys {
+    id
+  }
+  slug
+  title
+  summary
+  body {
+    json
+  }
+  media {
+    ...ImageFields
+  }
+  category
+  surfaces
+  publishedAt
+  cta {
+    ...ButtonFields
+  }
+  seoFields {
+    ...SeoFields
+  }
+  active
+}
+
+# Full note including embedded rich-text media (inline images/videos). Used only for the
+# single-note detail page: expanding body links per item exceeds Contentful's query-complexity
+# limit across a whole collection, so the list/feed queries deliberately omit it.
+fragment ComponentReleaseNoteDetailFields on ComponentReleaseNote {
+  ...ComponentReleaseNoteFields
+  body {
+    links {
+      entries {
+        block {
+          ...RichImageFields
+        }
+      }
+    }
+  }
+}
+
+# Active release notes for the caller's surface, newest first. `surfaces` is a single-select
+# (web / mobile / both); callers pass e.g. ["web", "both"] so the "both" entries always show.
+# This mirrors the alert banner's `audience` filtering (componentAlerts.graphql).
+query activeReleaseNotes(
+  $preview: Boolean
+  $now: DateTime!
+  $locale: String
+  $surfaces: [String]
+) {
+  componentReleaseNoteCollection(
+    preview: $preview
+    locale: $locale
+    order: [publishedAt_DESC]
+    where: { active: true, surfaces_in: $surfaces, publishedAt_lte: $now }
+  ) {
+    items {
+      ...ComponentReleaseNoteFields
+    }
+  }
+}
+
+# All active release notes (no surface filter) for the public openjii.org/releases changelog
+# page (OJD-1394). The public page shows everything, regardless of in-app `surfaces`, while
+# still honoring the `active` kill switch and the scheduled `publishedAt` reveal.
+query allReleaseNotes($preview: Boolean, $now: DateTime!, $locale: String) {
+  componentReleaseNoteCollection(
+    preview: $preview
+    locale: $locale
+    order: [publishedAt_DESC]
+    where: { active: true, publishedAt_lte: $now }
+  ) {
+    items {
+      ...ComponentReleaseNoteFields
+    }
+  }
+}
+
+# A single release note by its slug, for the public /releases/[slug] detail page (OJD-1394).
+query releaseNoteBySlug($slug: String!, $locale: String, $preview: Boolean) {
+  componentReleaseNoteCollection(
+    limit: 1
+    preview: $preview
+    locale: $locale
+    where: { slug: $slug, active: true }
+  ) {
+    items {
+      ...ComponentReleaseNoteDetailFields
+    }
+  }
+}

@@ -18,14 +18,14 @@ describe("auth", () => {
 
   it("returns session data on success", async () => {
     const session = { session: { id: "s1" }, user: { id: "u1" } };
-    vi.mocked(headers).mockResolvedValue(new Headers({ cookie: "session=abc" }) as never);
-    mockGetSession.mockResolvedValue({ data: session } as never);
+    vi.mocked(headers).mockResolvedValue(new Headers({ cookie: "session=abc" }));
+    mockGetSession.mockResolvedValue({ data: session });
 
     expect(await auth()).toEqual(session);
   });
 
   it("returns null and logs error on failure", async () => {
-    vi.mocked(headers).mockResolvedValue(new Headers() as never);
+    vi.mocked(headers).mockResolvedValue(new Headers());
     mockGetSession.mockRejectedValue(new Error("Network error"));
 
     expect(await auth()).toBeNull();
@@ -33,8 +33,8 @@ describe("auth", () => {
   });
 
   it("returns null when session is null", async () => {
-    vi.mocked(headers).mockResolvedValue(new Headers() as never);
-    mockGetSession.mockResolvedValue({ data: null } as never);
+    vi.mocked(headers).mockResolvedValue(new Headers());
+    mockGetSession.mockResolvedValue({ data: null });
 
     expect(await auth()).toBeNull();
   });

@@ -24,7 +24,7 @@ describe("framing utilities", () => {
     });
 
     it("should stringify arrays", () => {
-      expect(stringifyIfObject([1, 2, 3] as unknown as object)).toBe("[1,2,3]");
+      expect(stringifyIfObject([1, 2, 3])).toBe("[1,2,3]");
     });
   });
 

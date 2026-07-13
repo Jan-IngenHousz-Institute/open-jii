@@ -2,12 +2,13 @@ import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
+import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
 import { ProtocolCellComponent } from "./protocol-cell";
 
 vi.mock("../workbook-code-editor", () => ({
@@ -74,6 +75,12 @@ describe("ProtocolCellComponent", () => {
       typeof useSession
     >);
     server.mount(contract.protocols.getProtocol, { body: protocol });
+  });
+
+  // Guarantee fake timers never leak into a later test if an assertion throws
+  // before a test's own vi.useRealTimers() runs.
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("shows the protocol name and its code once loaded", async () => {
@@ -226,6 +233,35 @@ describe("ProtocolCellComponent", () => {
     vi.useRealTimers();
   });
 
+  it("notifies the host after a successful save so the experiment can re-pin", async () => {
+    // Protocol/macro code saves bypass the workbook cells autosave, so they must
+    // signal via WorkbookEntitySavedProvider for the design page to auto-upgrade.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    server.mount(contract.protocols.updateProtocol, { body: createProtocol({ id: "p1" }) });
+    const onEntitySaved = vi.fn();
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <WorkbookEntitySavedProvider onEntitySaved={onEntitySaved}>
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />
+      </WorkbookEntitySavedProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    await vi.advanceTimersByTimeAsync(1100);
+    await waitFor(() => expect(onEntitySaved).toHaveBeenCalled());
+    vi.useRealTimers();
+  });
+
   it("does not persist when the owner types unparseable JSON", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
@@ -306,8 +342,8 @@ describe("ProtocolCellComponent", () => {
 
   it("exposes the latest edited code to the run flow immediately, before the debounce", async () => {
     // The run flow reads the live editor code rather than re-fetching from the
-    // server, so an edit is runnable straight away — no waiting out the 1000ms
-    // autosave debounce, and never a stale saved version.
+    // server, so an edit is runnable straight away (no waiting out the 1000ms
+    // autosave debounce), and never a stale saved version.
     server.mount(contract.protocols.getProtocol, {
       body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
     });
@@ -468,5 +504,103 @@ describe("ProtocolCellComponent", () => {
       );
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
+
+    it("stays read-only for a non-owner even when the parent passes readOnly={false}", async () => {
+      // A workbook owner editing their workbook passes readOnly={false} down to
+      // every cell; a protocol they did not create must still be non-editable.
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+
+      render(
+        <ProtocolCellComponent
+          cell={makeProtocolCell()}
+          onUpdate={vi.fn()}
+          onDelete={vi.fn()}
+          readOnly={false}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
+      );
+    });
+
+    it("forks a non-owned protocol and points the cell at the editable copy", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          name: "Alice Proto",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+        }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const createSpy = server.mount(contract.protocols.createProtocol, {
+        status: 201,
+        body: createProtocol({ id: "p1-fork", createdBy: "viewer", forkedFrom: "p1" }),
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      const forkButton = await screen.findByRole("button", { name: /cells\.fork/ });
+      await user.click(forkButton);
+
+      await waitFor(() => expect(createSpy.called).toBe(true));
+      expect(createSpy.body).toMatchObject({ forkedFrom: "p1" });
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const forkedCell = onUpdate.mock.calls.at(-1)?.[0] as ProtocolCell | undefined;
+      expect(forkedCell?.payload.protocolId).toBe("p1-fork");
+    });
+
+    it("leaves the cell unchanged when forking a non-owned protocol fails", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const createSpy = server.mount(contract.protocols.createProtocol, {
+        status: 500,
+        body: undefined,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      const forkButton = await screen.findByRole("button", { name: /cells\.fork/ });
+      await user.click(forkButton);
+
+      await waitFor(() => expect(createSpy.called).toBe(true));
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("renders a link to the original when the protocol is itself a fork", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", forkedFrom: "p-src" }),
+    });
+
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    const link = await screen.findByRole("link", { name: "cells.forkedFrom" });
+    expect(link).toHaveAttribute("href", "/platform/protocols/p-src");
   });
 });

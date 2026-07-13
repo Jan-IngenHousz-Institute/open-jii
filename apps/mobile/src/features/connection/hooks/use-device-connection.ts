@@ -1,7 +1,8 @@
-import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
+import { connectionKeys } from "~/features/connection/services/connection-keys";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
@@ -19,43 +20,13 @@ import {
 } from "../services/device-connection-manager/device-utils";
 import { listSerialPortDevices } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 
-const CONNECTED_DEVICE_KEY = ["connected-device"] as const;
-
-/**
- * Binds two app-wide listeners that clear the scanner executor when the device
- * goes null: the native onDeviceDisconnected, and a QueryCache subscriber that
- * also catches the polled-disconnect case Android gives instead of an event.
- */
-let listenersBound = false;
-function initConnectedDeviceListeners(client: QueryClient) {
-  if (listenersBound) return;
-  listenersBound = true;
-
-  RNBluetoothClassic.onDeviceDisconnected(() => {
-    void client.invalidateQueries({ queryKey: CONNECTED_DEVICE_KEY });
-  });
-
-  let prev: Device | null | undefined = client.getQueryData(CONNECTED_DEVICE_KEY);
-  client.getQueryCache().subscribe((event) => {
-    if (event.type !== "updated") return;
-    if (event.query.queryKey[0] !== CONNECTED_DEVICE_KEY[0]) return;
-    const next = event.query.state.data as Device | null | undefined;
-    if (prev && !next) {
-      void useScannerCommandExecutorStore.getState().setDevice(undefined);
-    }
-    prev = next;
-  });
-}
-
 export function useConnectedDevice() {
-  const client = useQueryClient();
-  initConnectedDeviceListeners(client);
-
   return useQuery({
-    queryKey: CONNECTED_DEVICE_KEY,
+    queryKey: connectionKeys.connectedDevice,
     queryFn: getConnectedDevice,
     networkMode: "always",
-    // Poll to catch disconnects the native event misses (common on Android).
+    // Poll to catch disconnects the native event misses (common on Android when
+    // powered off); mountConnectionLifecycle turns the transition into cleanup.
     refetchInterval: 3000,
   });
 }
@@ -76,9 +47,7 @@ export function useConnectToDevice() {
         // Remember this device so the measurement flow can offer an inline
         // reconnect button if the connection is lost during a session.
         setLastConnectedDevice(device);
-        await client.invalidateQueries({
-          queryKey: ["connected-device"],
-        });
+        await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
       } finally {
         setConnectingDeviceId(undefined);
       }
@@ -86,16 +55,12 @@ export function useConnectToDevice() {
     async disconnectFromDevice(device: Device) {
       await disconnectFromDevice(device);
       await setDevice(undefined);
-      await client.invalidateQueries({
-        queryKey: ["connected-device"],
-      });
+      await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
     },
     async unpairDevice(device: Device) {
       await unpairDevice(device);
 
-      await client.invalidateQueries({
-        queryKey: ["connected-device"],
-      });
+      await client.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
 
       // Update scanner command executor store based on current connected device state
       // (in case the unpaired device was the connected one)
@@ -143,11 +108,13 @@ export function useAllDevices() {
     if (!mountedRef.current) return;
     const seed = [
       ...(serial.status === "fulfilled" ? serial.value.map(serialDeviceToDevice) : []),
+      // bluetoothDeviceToDevice is address-guarded and returns null for entries
+      // without a usable address, so drop those rather than seeding bad rows.
       ...(bonded.status === "fulfilled"
-        ? bonded.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        ? bonded.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
       ...(connected.status === "fulfilled"
-        ? connected.value.filter(Boolean).map(bluetoothDeviceToDevice)
+        ? connected.value.map(bluetoothDeviceToDevice).filter((d): d is Device => d !== null)
         : []),
     ].reduce<Device[]>(mergeDevice, []);
     setData(seed);

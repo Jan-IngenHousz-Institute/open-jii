@@ -805,7 +805,7 @@ module "data_downloads_volume" {
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
   volume_name  = "data-exports"
-  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet)"
+  comment      = "Managed volume for experiment data exports (CSV, NDJSON, JSON Array, Parquet, Excel)"
 
   grants = {
     node_service_principal = {
@@ -1061,7 +1061,7 @@ module "data_export_job" {
   source = "../../modules/databricks/job"
 
   name        = "Data-Export-Job-DEV"
-  description = "Exports experiment table data in multiple formats (CSV, JSON, Parquet) to Unity Catalog volumes"
+  description = "Exports experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel) to Unity Catalog volumes"
 
   max_concurrent_runs           = 5
   use_serverless                = true
@@ -1084,7 +1084,9 @@ module "data_export_job" {
       spec = {
         environment_version = "4"
         dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+          # openpyxl backs the pandas Excel writer used for xlsx exports
+          "openpyxl==3.1.5"
         ]
       }
     }
@@ -1838,6 +1840,14 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_POLICY_NAMES"
       value = join(",", module.iot_core.iot_policy_names)
+    },
+    {
+      name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"
+      value = module.iot_core.device_thing_type_name
+    },
+    {
+      name  = "AWS_IOT_DEVICE_THING_GROUP_NAME"
+      value = module.iot_core.device_thing_group_name
     },
     {
       name  = "EMAIL_BASE_URL"

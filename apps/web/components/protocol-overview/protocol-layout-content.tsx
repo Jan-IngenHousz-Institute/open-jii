@@ -2,6 +2,7 @@
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
+import { FileSliders } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
@@ -51,6 +52,7 @@ export function ProtocolLayoutContent({
         hasAccess={isCreator}
         onSave={handleTitleSave}
         isPending={isUpdating}
+        icon={<FileSliders className="h-6 w-6" />}
         badges={
           protocol.sortOrder !== null ? (
             <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>

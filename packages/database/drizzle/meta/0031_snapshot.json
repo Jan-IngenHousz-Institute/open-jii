@@ -1,5 +1,5 @@
 {
-  "id": "62b52977-6546-4f5f-9acd-94e729984c9a",
+  "id": "25cc6d66-6a35-4951-864c-675cb7bd574e",
   "prevId": "226948eb-85d8-421d-b363-f4569ecaa212",
   "version": "7",
   "dialect": "postgresql",
@@ -808,16 +808,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "search_vector": {
-          "name": "search_vector",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "setweight(to_tsvector('english', coalesce(\"experiments\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"experiments\".\"description\", '')), 'B')",
-            "type": "stored"
-          }
         }
       },
       "indexes": {},
@@ -1104,16 +1094,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "search_vector": {
-          "name": "search_vector",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "setweight(to_tsvector('english', coalesce(\"macros\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"macros\".\"description\", '')), 'B')",
-            "type": "stored"
-          }
         }
       },
       "indexes": {},
@@ -1262,6 +1242,12 @@
         },
         "deleted_at": {
           "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "whats_new_last_seen_at": {
+          "name": "whats_new_last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -1464,16 +1450,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "search_vector": {
-          "name": "search_vector",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "setweight(to_tsvector('english', coalesce(\"protocols\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"protocols\".\"description\", '')), 'B')",
-            "type": "stored"
-          }
         }
       },
       "indexes": {},

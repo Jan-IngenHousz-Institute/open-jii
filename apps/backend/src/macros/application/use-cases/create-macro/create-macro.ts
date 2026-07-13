@@ -25,6 +25,7 @@ export class CreateMacroUseCase {
         description: data.description,
         language: data.language,
         code: data.code,
+        forkedFrom: data.forkedFrom,
       },
       userId,
     );

@@ -36,7 +36,7 @@
     "@contentful/rich-text-react-renderer": "16.0.2",
     "@contentful/rich-text-types": "17.0.1",
     "@expo/vector-icons": "^15.1.1",
-    "@gorhom/bottom-sheet": "^5.2.8",
+    "@gorhom/bottom-sheet": "5.2.10",
     "@photostructure/tz-lookup": "^10.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.9",
@@ -121,6 +121,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/plugin-transform-class-static-block": "^7.28.6",
+    "@open-jii/release-tools": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",

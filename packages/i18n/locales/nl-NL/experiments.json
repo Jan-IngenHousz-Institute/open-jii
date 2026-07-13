@@ -77,7 +77,11 @@
       "title": "Gegevenskolomnaam",
       "description": "Dit label wordt een kolom in uw gegevensanalyse:",
       "defaultColumnName": "vraag_naam"
-    }
+    },
+    "editingTitle": "Het werkboek van dit experiment bewerken",
+    "editAutoApplyNotice": "Elke wijziging die je hier opslaat, wordt automatisch toegepast op dit experiment.",
+    "editIsolatedHint": "Wil je wijzigingen uitproberen zonder dit experiment te beïnvloeden, bewerk dan via de werkboekpagina; die wijzigingen blijven gescheiden totdat je de versie bijwerkt.",
+    "editOpenWorkbookLink": "Open de werkboekpagina"
   },
   "overview": "Overzicht",
   "data": "Gegevens",

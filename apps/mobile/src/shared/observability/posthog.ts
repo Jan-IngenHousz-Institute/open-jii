@@ -57,3 +57,8 @@ export function getPostHogClient(): PostHog {
 
   return client;
 }
+
+// Same convention as aws-iot-auth's _reset*ForTests.
+export function _resetPostHogClientForTests(): void {
+  client = null;
+}

@@ -14,6 +14,8 @@ import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/g
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
+import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
+import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
 import { UpdateInvitationRoleUseCase } from "./application/use-cases/update-invitation-role/update-invitation-role";
@@ -26,10 +28,11 @@ import { InvitationController } from "./presentation/user-invitation.controller"
 import { UserWebhookController } from "./presentation/user-webhook.controller";
 // Controllers
 import { UserController } from "./presentation/user.controller";
+import { WhatsNewController } from "./presentation/whats-new.controller";
 
 @Module({
   imports: [DatabricksModule, EmailModule, forwardRef(() => ExperimentModule)],
-  controllers: [UserController, UserWebhookController, InvitationController],
+  controllers: [UserController, UserWebhookController, InvitationController, WhatsNewController],
   providers: [
     // Repositories
     UserRepository,
@@ -53,6 +56,8 @@ import { UserController } from "./presentation/user.controller";
     CreateUserProfileUseCase,
     GetUserProfileUseCase,
     GetUsersMetadataUseCase,
+    GetWhatsNewSeenUseCase,
+    MarkWhatsNewSeenUseCase,
     AcceptPendingInvitationsUseCase,
     CreateInvitationUseCase,
     GetInvitationsUseCase,

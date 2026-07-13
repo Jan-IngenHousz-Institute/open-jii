@@ -65,6 +65,7 @@
       "transferRequests": "Transferanfragen",
       "settings": "Einstellungen",
       "createExperiment": "Experiment erstellen",
+      "openWhatsNew": "Neuigkeiten öffnen",
       "showKeyboardShortcuts": "Tastenkürzel anzeigen",
       "openDocumentation": "Dokumentation öffnen"
     },
@@ -80,5 +81,44 @@
       "noResultsTitle": "Keine Ergebnisse gefunden",
       "noResultsDescription": "Nichts passte zu \"{{query}}\". Versuchen Sie einen anderen oder kürzeren Suchbegriff."
     }
+  },
+  "whatsNew": {
+    "navLabel": "Neuigkeiten",
+    "title": "Neuigkeiten im Web",
+    "description": "Neueste Releases und Funktionsankündigungen",
+    "fullChangelog": "Vollständiges Änderungsprotokoll",
+    "showMore": "Mehr lesen",
+    "showLess": "Weniger anzeigen",
+    "readMore": "Mehr lesen",
+    "empty": "Noch keine Neuigkeiten.",
+    "emptyTitle": "Noch nichts Neues",
+    "emptyDescription": "Updates, Korrekturen und Ankündigungen erscheinen hier, sobald sie veröffentlicht sind.",
+    "unreadBadge": "{{count}} ungelesen",
+    "category": {
+      "new_feature": "Neue Funktion",
+      "improvement": "Verbesserung",
+      "bug_fix": "Fehlerbehebung",
+      "announcement": "Ankündigung"
+    },
+    "surface": {
+      "web": "Web",
+      "mobile": "Mobil"
+    }
+  },
+  "releases": {
+    "metaTitle": "Releases - openJII",
+    "metaDescription": "Die neuesten Funktionen, Verbesserungen und Fehlerbehebungen auf der openJII-Plattform.",
+    "heading": "Releases",
+    "subheading": "Die neuesten Funktionen, Verbesserungen und Fehlerbehebungen auf der openJII-Plattform.",
+    "backToReleases": "Alle Releases",
+    "eyebrow": "Changelog",
+    "filterAll": "Alle",
+    "emptyTitle": "Noch keine Releases veröffentlicht",
+    "emptyDescription": "Dieses Änderungsprotokoll ist bereit für das erste Update. Zukünftige Funktionen, Verbesserungen und Fehlerbehebungen erscheinen hier.",
+    "readUpdate": "Update lesen",
+    "previous": "Vorherige",
+    "next": "Nächste",
+    "notFoundTitle": "Release-Notiz nicht gefunden",
+    "notFoundDescription": "Diese Release-Notiz existiert nicht oder ist nicht mehr verfügbar."
   }
 }

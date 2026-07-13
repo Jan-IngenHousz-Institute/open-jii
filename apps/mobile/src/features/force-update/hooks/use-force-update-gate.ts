@@ -1,8 +1,8 @@
 import { useIsRestoring, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Application from "expo-application";
 import { useEffect, useMemo, useState } from "react";
+import { isUpdateRequired } from "~/features/force-update/domain/gate-decision";
 import { fetchForceUpdate } from "~/features/force-update/services/fetch-force-update";
-import { isVersionBelow } from "~/features/force-update/utils/compare-version";
 import { onAppForeground } from "~/shared/device/app-lifecycle";
 import { useEnvironmentStore } from "~/shared/stores/environment-store";
 
@@ -67,10 +67,7 @@ export function useForceUpdateGate(locale = "en-US"): ForceUpdateGateResult {
 
   const gate = data ?? null;
   const running = Application.nativeApplicationVersion ?? "";
-  const active = gate?.active === true;
-  const effective = !gate?.effectiveAt || new Date(gate.effectiveAt) <= new Date();
-  const below = gate?.minVersion ? isVersionBelow(running, gate.minVersion) : false;
-  const gated = Boolean(active && effective && below);
+  const gated = isUpdateRequired(gate, running, new Date());
   // Never gate local dev builds (they report the unsynced placeholder app.json version).
   const isDev = typeof __DEV__ !== "undefined" && __DEV__;
   const status: ForceUpdateGateStatus = isDev

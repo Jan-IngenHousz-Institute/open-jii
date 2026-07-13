@@ -2,13 +2,13 @@ import React from "react";
 import { Keyboard, View } from "react-native";
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-actions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 
 import { BackButton } from "./back-button";
-import { advanceWithAnswer } from "./flow-nodes/utils/advance-with-answer";
 import { NextButton } from "./next-button";
 
 export function NavigationButtons() {

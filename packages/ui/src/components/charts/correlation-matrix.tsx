@@ -3,9 +3,17 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
-import { createBaseLayout, createPlotlyConfig, getPlotType, getRenderer } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getPlotType,
+  getRenderer,
+  truncateCategoryTicks,
+} from "./utils";
 
 export interface CorrelationMatrixProps extends BaseChartProps {
   correlationMatrix: number[][];
@@ -32,6 +40,7 @@ export function CorrelationMatrix({
   showColorbar = true,
   ...props
 }: CorrelationMatrixProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(props.config?.useWebGL);
   const plotType = getPlotType("heatmap", renderer);
 
@@ -67,7 +76,7 @@ export function CorrelationMatrix({
     },
   ] as unknown as PlotData[];
 
-  const layout = createBaseLayout(props.config || {});
+  const layout = createBaseLayout(props.config || {}, sizing);
 
   const enhancedLayout = {
     ...layout,
@@ -75,35 +84,44 @@ export function CorrelationMatrix({
       ...layout.title,
       text: props.config?.title || name,
     },
-    xaxis: {
-      ...layout.xaxis,
-      side: "bottom" as const,
-      tickangle: 45,
-      showgrid: false,
-      zeroline: false,
-      showline: false,
-      ticks: "" as const,
-      showticklabels: true,
-      type: "category" as const,
-    },
-    yaxis: {
-      ...layout.yaxis,
-      showgrid: false,
-      zeroline: false,
-      showline: false,
-      ticks: "" as const,
-      showticklabels: true,
-      autorange: "reversed" as const,
-      type: "category" as const,
-    },
+    // Truncate long column-name ticks so automargin cannot eat the plot area.
+    xaxis: truncateCategoryTicks(
+      {
+        ...layout.xaxis,
+        side: "bottom" as const,
+        tickangle: 45,
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        ticks: "" as const,
+        showticklabels: true,
+        type: "category" as const,
+      },
+      labels,
+      sizing,
+    ),
+    yaxis: truncateCategoryTicks(
+      {
+        ...layout.yaxis,
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        ticks: "" as const,
+        showticklabels: true,
+        autorange: "reversed" as const,
+        type: "category" as const,
+      },
+      labels,
+      sizing,
+    ),
     plot_bgcolor: "white",
     paper_bgcolor: "white",
   };
 
-  const plotConfig = createPlotlyConfig(props.config || {});
+  const plotConfig = createPlotlyConfig(props.config || {}, sizing);
 
   return (
-    <div className={props.className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", props.className)}>
       <PlotlyChart
         data={plotData}
         layout={enhancedLayout}

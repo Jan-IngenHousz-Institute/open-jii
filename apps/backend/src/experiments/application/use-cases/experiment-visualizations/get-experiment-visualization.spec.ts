@@ -2,7 +2,6 @@ import { faker } from "@faker-js/faker";
 
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { GetExperimentVisualizationUseCase } from "./get-experiment-visualization";
@@ -66,7 +65,7 @@ describe("GetExperimentVisualizationUseCase", () => {
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
-        } as ExperimentVisualizationDto),
+        }),
       );
 
       // Act
@@ -196,7 +195,7 @@ describe("GetExperimentVisualizationUseCase", () => {
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
-        } as ExperimentVisualizationDto),
+        }),
       );
 
       // Act

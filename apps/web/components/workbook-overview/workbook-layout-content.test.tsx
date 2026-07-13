@@ -78,6 +78,18 @@ describe("WorkbookLayoutContent", () => {
     expect(screen.getByText("-")).toBeInTheDocument();
   });
 
+  it("shows a link to the source workbook when it is a fork", () => {
+    renderContent({ forkedFrom: "wb-src" });
+    expect(screen.getByText("workbooks.forkedFrom")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "common.viewOriginal" });
+    expect(link).toHaveAttribute("href", "/platform/workbooks/wb-src");
+  });
+
+  it("does not show the fork link for a non-fork workbook", () => {
+    renderContent();
+    expect(screen.queryByText("workbooks.forkedFrom")).not.toBeInTheDocument();
+  });
+
   it("shows the latest published version number", async () => {
     server.mount(contract.workbooks.listWorkbookVersions, {
       body: [

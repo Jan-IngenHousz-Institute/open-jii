@@ -17,6 +17,7 @@ import {
   experimentLocations,
   experiments,
   invitations,
+  iotDevices,
   users,
   sessions,
   auditLogs,
@@ -192,6 +193,8 @@ export class TestHarness {
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
+    // IoT devices reference users, delete before users
+    await this.database.delete(iotDevices).execute();
     // Sessions reference users, delete before users
     await this.database.delete(sessions).execute();
     await this.database.delete(users).execute();
@@ -439,6 +442,38 @@ export class TestHarness {
       })
       .returning();
     return protocol;
+  }
+
+  /**
+   * Helper to create an IoT device for testing
+   */
+  public async createIotDevice(data: {
+    createdBy: string;
+    serialNumber?: string;
+    thingName?: string;
+    name?: string;
+    deviceType?: string;
+    status?: "pending" | "active" | "rotating" | "revoked";
+    certificateId?: string;
+    certificateArn?: string;
+  }) {
+    const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
+    const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
+    const [device] = await this.database
+      .insert(iotDevices)
+      .values({
+        thingName,
+        thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
+        serialNumber,
+        name: data.name ?? "Test device",
+        deviceType: data.deviceType ?? "generic",
+        status: data.status ?? "pending",
+        certificateId: data.certificateId ?? null,
+        certificateArn: data.certificateArn ?? null,
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return device;
   }
 
   /**

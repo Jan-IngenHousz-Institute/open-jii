@@ -15,6 +15,7 @@
   "offline": "You are offline. Please connect to the internet to log in.",
   "errorGeneric": "Something went wrong",
   "errorTitle": "Error",
+  "timeSyncUnavailable": "Time sync unavailable. Please check your connection and try again.",
   "notFoundTitle": "This screen doesn't exist.",
   "notFoundCta": "Go to home screen!",
   "modalTitle": "Modal",

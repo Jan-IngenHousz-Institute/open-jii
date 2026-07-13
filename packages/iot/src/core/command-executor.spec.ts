@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { IDeviceDriver, CommandResult } from "../driver/driver-base";
+import type { IDeviceDriver } from "../driver/driver-base";
 import type { ITransportAdapter } from "../transport/interface";
 import { CommandExecutor } from "./command-executor";
 
@@ -77,7 +77,7 @@ describe("CommandExecutor", () => {
     it("should throw generic error when execution fails without error object", async () => {
       vi.mocked(driver.execute).mockResolvedValue({
         success: false,
-      } as CommandResult);
+      });
 
       const executor = new CommandExecutor(driver, transport);
       await expect(executor.execute("fail")).rejects.toThrow("Command execution failed");

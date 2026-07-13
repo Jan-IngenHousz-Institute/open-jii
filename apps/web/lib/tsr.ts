@@ -5,6 +5,7 @@ import type { InferClientArgs, UseMutationOptions } from "@ts-rest/react-query/v
 import { env } from "~/env";
 
 import { experimentContract } from "@repo/api/contracts/experiment.contract";
+import { iotContract } from "@repo/api/contracts/iot.contract";
 import { macroContract } from "@repo/api/contracts/macro.contract";
 import { protocolContract } from "@repo/api/contracts/protocol.contract";
 import { searchContract } from "@repo/api/contracts/search.contract";
@@ -19,6 +20,7 @@ const c = initContract();
 // Export the main API contract
 export const contract = c.router({
   experiments: experimentContract,
+  iot: iotContract,
   macros: macroContract,
   protocols: protocolContract,
   search: searchContract,
@@ -59,7 +61,7 @@ export function getContractError<T>(
 ): ContractError<TsrRoute<T>> | undefined {
   if (error instanceof Error) return undefined;
   if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
-  if (typeof (error as { status: unknown }).status !== "number") return undefined;
+  if (typeof error.status !== "number") return undefined;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
   return error as any;
 }

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 import { describe, expect, it, vi } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { MultipleChoiceQuestion } from "./multiple-choice-question";
 

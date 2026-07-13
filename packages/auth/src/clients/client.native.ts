@@ -1,5 +1,5 @@
 import { expoClient } from "@better-auth/expo/client";
-import { emailOTPClient, genericOAuthClient } from "better-auth/client/plugins";
+import { emailOTPClient, genericOAuthClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 const SCHEME = "openjii";
@@ -15,6 +15,7 @@ export function createOpenJiiAuthClient(backendUrl: string, storage: SecureStora
     plugins: [
       emailOTPClient(),
       genericOAuthClient(),
+      organizationClient({ teams: { enabled: true } }),
       expoClient({
         scheme: SCHEME,
         storagePrefix: STORAGE_PREFIX,

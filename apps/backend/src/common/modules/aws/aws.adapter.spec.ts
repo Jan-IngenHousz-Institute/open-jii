@@ -4,6 +4,7 @@ import { AppError, assertFailure, assertSuccess, failure, success } from "../../
 import { AwsAdapter } from "./aws.adapter";
 import { CognitoService } from "./services/cognito/cognito.service";
 import { AwsConfigService } from "./services/config/config.service";
+import { AwsIotService } from "./services/iot/iot.service";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import { AwsLocationService } from "./services/location/location.service";
 import { AwsS3Service } from "./services/s3/s3.service";
@@ -17,6 +18,7 @@ describe("AwsAdapter", () => {
   let awsLambdaService: AwsLambdaService;
   let awsConfigService: AwsConfigService;
   let awsS3Service: AwsS3Service;
+  let awsIotService: AwsIotService;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -30,6 +32,7 @@ describe("AwsAdapter", () => {
     awsLambdaService = testApp.module.get(AwsLambdaService);
     awsConfigService = testApp.module.get(AwsConfigService);
     awsS3Service = testApp.module.get(AwsS3Service);
+    awsIotService = testApp.module.get(AwsIotService);
   });
 
   afterEach(() => {
@@ -279,6 +282,163 @@ describe("AwsAdapter", () => {
       assertFailure(result);
       expect(result.error.message).toBe("S3 presign failed");
       expect(result.error.code).toBe(ErrorCodes.AWS_S3_PRESIGN_FAILED);
+    });
+  });
+
+  describe("createThing", () => {
+    const input = {
+      thingName: "AMBYTE_E8:F6:0A:B1:1D:D4",
+      attributes: { serialNumber: "E8:F6:0A:B1:1D:D4", deviceType: "ambyte" },
+    };
+
+    it("delegates to AwsIotService and returns the created thing on success", async () => {
+      const created = { thingName: input.thingName, thingArn: "arn:aws:iot:thing/x" };
+      vi.spyOn(awsIotService, "createThing").mockResolvedValue(success(created));
+
+      const result = await awsAdapter.createThing(input);
+
+      assertSuccess(result);
+      expect(result.value).toEqual(created);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsIotService.createThing).toHaveBeenCalledWith(input);
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("create failed", ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
+      vi.spyOn(awsIotService, "createThing").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.createThing(input);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
+    });
+  });
+
+  describe("deleteThing", () => {
+    it("delegates to AwsIotService and returns success", async () => {
+      vi.spyOn(awsIotService, "deleteThing").mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.deleteThing("AMBYTE_E8:F6:0A:B1:1D:D4");
+
+      assertSuccess(result);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsIotService.deleteThing).toHaveBeenCalledWith("AMBYTE_E8:F6:0A:B1:1D:D4");
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("delete failed", ErrorCodes.AWS_IOT_DELETE_THING_FAILED);
+      vi.spyOn(awsIotService, "deleteThing").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.deleteThing("missing");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DELETE_THING_FAILED);
+    });
+  });
+
+  describe("createDeviceCertificate", () => {
+    it("delegates to AwsIotService.createKeysAndCertificate", async () => {
+      const cert = {
+        certificateId: "c1",
+        certificateArn: "arn:c1",
+        certificatePem: "PEM",
+        privateKey: "KEY",
+      };
+      vi.spyOn(awsIotService, "createKeysAndCertificate").mockResolvedValue(success(cert));
+
+      const result = await awsAdapter.createDeviceCertificate();
+
+      assertSuccess(result);
+      expect(result.value).toEqual(cert);
+    });
+  });
+
+  describe("attachThingPrincipal", () => {
+    it("delegates to AwsIotService and returns success", async () => {
+      const spy = vi
+        .spyOn(awsIotService, "attachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.attachThingPrincipal("thing-1", "arn:cert");
+
+      assertSuccess(result);
+      expect(spy).toHaveBeenCalledWith("thing-1", "arn:cert");
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("attach failed", ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+      vi.spyOn(awsIotService, "attachThingPrincipal").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.attachThingPrincipal("thing-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
+  });
+
+  describe("detachThingPrincipal", () => {
+    it("delegates to AwsIotService and returns success", async () => {
+      const spy = vi
+        .spyOn(awsIotService, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.detachThingPrincipal("thing-1", "arn:cert");
+
+      assertSuccess(result);
+      expect(spy).toHaveBeenCalledWith("thing-1", "arn:cert");
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("detach failed", ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+      vi.spyOn(awsIotService, "detachThingPrincipal").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.detachThingPrincipal("thing-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
+  });
+
+  describe("attachDevicePolicies", () => {
+    it("attaches every configured policy to the certificate", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
+      for (const policyName of awsConfigService.iotPolicyNames) {
+        expect(attachSpy).toHaveBeenCalledWith(policyName, "arn:cert");
+      }
+    });
+
+    it("stops and propagates the first policy attachment failure", async () => {
+      const error = AppError.internal(
+        "attach failed",
+        ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED,
+      );
+      const attachSpy = vi.spyOn(awsIotService, "attachPolicy").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED);
+      expect(attachSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("setCertificateStatus", () => {
+    it("delegates to AwsIotService.updateCertificateStatus", async () => {
+      const spy = vi
+        .spyOn(awsIotService, "updateCertificateStatus")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.setCertificateStatus("cert-1", "REVOKED");
+
+      assertSuccess(result);
+      expect(spy).toHaveBeenCalledWith("cert-1", "REVOKED");
     });
   });
 

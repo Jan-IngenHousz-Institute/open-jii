@@ -15,6 +15,7 @@ import {
   extendLayoutForFacets,
   getRenderer,
   getPlotType,
+  truncateCategoryTicks,
 } from "./utils";
 
 export interface BoxSeriesData extends BaseSeries {
@@ -147,6 +148,32 @@ export function BoxPlot({
   );
 
   const layout = createBaseLayout(config, sizing);
+  layout.boxmode = boxmode;
+
+  // Truncate category ticks before faceting so extendLayoutForFacets copies
+  // the truncated template into every cell (xaxisN/yaxisN).
+  const hasStringX = data.some(
+    (series) => series.x && series.x.some((val) => typeof val === "string"),
+  );
+  const hasStringY = data.some(
+    (series) => series.y && series.y.some((val) => typeof val === "string"),
+  );
+
+  if (hasStringX && orientation === "v") {
+    layout.xaxis = truncateCategoryTicks(
+      { ...layout.xaxis, type: "category" },
+      data.flatMap((series) => series.x ?? []),
+      sizing,
+    );
+  }
+
+  if (hasStringY && orientation === "h") {
+    layout.yaxis = truncateCategoryTicks(
+      { ...layout.yaxis, type: "category" },
+      data.flatMap((series) => series.y ?? []),
+      sizing,
+    );
+  }
 
   // Faceted layout: same shape used by cartesian / histogram.
   if (subplots) {
@@ -163,38 +190,14 @@ export function BoxPlot({
       sharedYTitle: effectiveSharedYTitle,
       roworder: subplots.roworder,
       titleFontSize: cellTitleFontSize,
+      ultraCompactCells: sizing.cellUltraCompact,
     });
     Object.assign(layout, faceted);
   }
 
-  // Add box plot specific layout properties
-  layout.boxmode = boxmode;
-
-  // Handle categorical axes - if we have string values on x or y axis
-  const hasStringX = data.some(
-    (series) => series.x && series.x.some((val) => typeof val === "string"),
-  );
-  const hasStringY = data.some(
-    (series) => series.y && series.y.some((val) => typeof val === "string"),
-  );
-
-  if (hasStringX && orientation === "v") {
-    layout.xaxis = {
-      ...layout.xaxis,
-      type: "category",
-    };
-  }
-
-  if (hasStringY && orientation === "h") {
-    layout.yaxis = {
-      ...layout.yaxis,
-      type: "category",
-    };
-  }
-
   applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

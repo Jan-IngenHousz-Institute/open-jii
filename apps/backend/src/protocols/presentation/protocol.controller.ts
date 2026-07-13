@@ -207,6 +207,7 @@ export class ProtocolController {
         description: body.description,
         code: JSON.stringify(body.code),
         family: body.family,
+        forkedFrom: body.forkedFrom,
       };
 
       const result = await this.createProtocolUseCase.execute(createDto, session.user.id);

@@ -244,10 +244,7 @@ describe("WebBluetoothAdapter", () => {
 
       // Simulate notification with no value
       const event = { target: { value: undefined } } as unknown as Event;
-      const listeners = notifyChar.addEventListener.mock.calls[0] as unknown as [
-        string,
-        EventListener,
-      ];
+      const listeners = notifyChar.addEventListener.mock.calls[0];
       listeners[1](event);
 
       expect(dataCb).not.toHaveBeenCalled();
@@ -285,10 +282,7 @@ describe("WebBluetoothAdapter", () => {
       };
 
       const event = { target: { value: badDataView } } as unknown as Event;
-      const listeners = notifyChar.addEventListener.mock.calls[0] as unknown as [
-        string,
-        EventListener,
-      ];
+      const listeners = notifyChar.addEventListener.mock.calls[0];
       listeners[1](event);
 
       TextDecoder.prototype.decode = origDecode;

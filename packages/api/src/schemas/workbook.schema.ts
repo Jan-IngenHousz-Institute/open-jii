@@ -10,6 +10,7 @@ export const zWorkbook = z.object({
   metadata: z.record(z.string(), z.unknown()),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
+  forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   isUpgradable: z.boolean().optional(),
@@ -36,6 +37,8 @@ export const zCreateWorkbookRequestBody = z.object({
   description: z.string().optional(),
   cells: zWorkbookCellArray.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  // Set when duplicating an existing workbook, to record its lineage.
+  forkedFrom: z.string().uuid().optional(),
 });
 
 export const zUpdateWorkbookRequestBody = z.object({

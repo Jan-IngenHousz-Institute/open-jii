@@ -2,11 +2,13 @@
 
 import { CommandKHint } from "@/components/command/kbd";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
+import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
+import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
 
 import { NavItems } from "../nav-items/nav-items";
@@ -33,6 +35,7 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
+  navDevices: NavigationItem[];
   navWorkbooks: NavigationItem[];
   navLibrary: NavigationItem[];
 }
@@ -50,11 +53,13 @@ export function AppSidebar({
   locale,
   navigationData,
   translations,
+  releaseNotes = [],
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   locale: string;
   navigationData: NavigationData;
   translations: Translations;
+  releaseNotes?: ReleaseNoteFields[];
 }) {
   // const { toggleSidebar, state } = useSidebar();
   // const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -83,6 +88,7 @@ export function AppSidebar({
 
   const processedNavDashboard = navigationData.navDashboard.map(mapItem);
   const processedNavExperiments = navigationData.navExperiments.map(mapItem);
+  const processedNavDevices = navigationData.navDevices.map(mapItem);
   const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
   const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
@@ -122,8 +128,13 @@ export function AppSidebar({
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
+          <NavItems items={processedNavDevices} />
           <NavItems items={processedNavWorkbooks} />
           <NavItems items={processedNavLibrary} />
+        </div>
+
+        <div className="border-t border-white/10 px-4 py-2">
+          <WhatsNewFooterItem entries={releaseNotes} />
         </div>
       </div>
       <SidebarRail resizable />

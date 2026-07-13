@@ -3,9 +3,17 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  tierAxisFontSizes,
+} from "./utils";
 
 export interface ParallelCoordinatesSeriesData extends BaseSeries {
   dimensions: Array<{
@@ -82,6 +90,8 @@ export function ParallelCoordinates({
   loading,
   error,
 }: ParallelCoordinatesProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("parcoords", renderer);
 
@@ -124,15 +134,16 @@ export function ParallelCoordinates({
               width: 1,
             },
 
-        // Label configuration
+        // Label configuration; defaults shrink with the container tier.
         labelangle: series.labelangle || 0,
         labelside: series.labelside || "top",
+        labelfont: { size: fontSizes.axisTitle },
         rangefont: series.rangefont || {
-          size: 12,
+          size: Math.min(12, fontSizes.tick),
           color: "#444",
         },
         tickfont: series.tickfont || {
-          size: 10,
+          size: Math.min(10, fontSizes.tick),
           color: "#444",
         },
 
@@ -145,11 +156,11 @@ export function ParallelCoordinates({
       }) as any as PlotData,
   );
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}
@@ -213,6 +224,8 @@ export function ParallelCategories({
   loading,
   error,
 }: ParallelCategoriesProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("parcats", renderer);
 
@@ -253,11 +266,11 @@ export function ParallelCategories({
         bundlecolors: series.bundlecolors !== false,
         sortpaths: series.sortpaths || "forward",
         labelfont: series.labelfont || {
-          size: 14,
+          size: fontSizes.axisTitle,
           color: "#444",
         },
         tickfont: series.tickfont || {
-          size: 12,
+          size: fontSizes.tick,
           color: "#444",
         },
 
@@ -270,11 +283,11 @@ export function ParallelCategories({
       }) as any as PlotData,
   );
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}
@@ -321,6 +334,7 @@ export interface AlluvialProps extends BaseChartProps {
 }
 
 export function Alluvial({ data, config = {}, className, loading, error }: AlluvialProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("sankey", renderer);
 
@@ -368,11 +382,11 @@ export function Alluvial({ data, config = {}, className, loading, error }: Alluv
       }) as any as PlotData,
   );
 
-  const layout = createBaseLayout(config);
-  const plotConfig = createPlotlyConfig(config);
+  const layout = createBaseLayout(config, sizing);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

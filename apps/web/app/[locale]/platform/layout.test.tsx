@@ -6,16 +6,16 @@ import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
 
-vi.mock("@/components/navigation/navigation-breadcrumbs/navigation-breadcrumbs", () => ({
-  Breadcrumbs: () => <nav aria-label="breadcrumbs">Breadcrumbs</nav>,
-}));
-
 vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
   NavigationSidebarWrapper: () => <aside aria-label="sidebar">Sidebar</aside>,
 }));
 
 vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
   NavigationTopbar: () => <header aria-label="topbar">Topbar</header>,
+}));
+
+vi.mock("@/components/whats-new/whats-new-sheet", () => ({
+  WhatsNewSheet: () => null,
 }));
 
 describe("AppLayout", () => {
@@ -37,7 +37,6 @@ describe("AppLayout", () => {
     expect(screen.getByText("Page content")).toBeInTheDocument();
     expect(screen.getByText("Sidebar")).toBeInTheDocument();
     expect(screen.getByText("Topbar")).toBeInTheDocument();
-    expect(screen.getByText("Breadcrumbs")).toBeInTheDocument();
   });
 
   it("redirects to login when there is no session", async () => {

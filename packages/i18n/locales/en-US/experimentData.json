@@ -60,7 +60,7 @@
     },
     "uploadDataModal": {
       "title": "Upload data",
-      "description": "Review past uploads or start a new one.",
+      "description": "Review past uploads or start a new one. Uploaded data appears in the experiment's data tables after the next processing run, not immediately.",
       "createDescription": "Choose where the data lands, then add your files. Schema is inferred from the file.",
       "targetKind": {
         "new": "Create new table",
@@ -94,8 +94,8 @@
         "noTarget": "Pick or name a target table",
         "invalidName": "Name must start with a letter; use letters, digits, or underscores (max 63)",
         "noFiles": "Select at least one data file",
-        "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, Excel, JSON, NDJSON)",
-        "mixedFormats": "All files in a single upload must be the same format",
+        "unsupportedFormat": "'{{fileName}}' is not a supported file format (CSV, TSV, parquet, JSON, NDJSON)",
+        "wrongFormat": "'{{fileName}}' is not a {{format}} file",
         "oversizedFiles_one": "{{count}} file exceeds the maximum allowed size",
         "oversizedFiles_other": "{{count}} files exceed the maximum allowed size",
         "tooManyFiles": "Too many files: select at most {{max}}",
@@ -146,7 +146,6 @@
           "csv": "CSV",
           "tsv": "TSV",
           "parquet": "Parquet",
-          "xlsx": "Excel",
           "json": "JSON",
           "ndjson": "NDJSON"
         },

@@ -61,6 +61,7 @@
       "transferRequests": "Transferverzoeken",
       "settings": "Instellingen",
       "createExperiment": "Experiment aanmaken",
+      "openWhatsNew": "Wat is er nieuw openen",
       "showKeyboardShortcuts": "Sneltoetsen tonen",
       "openDocumentation": "Documentatie openen"
     },
@@ -76,5 +77,40 @@
       "noResultsTitle": "Geen resultaten gevonden",
       "noResultsDescription": "Niets kwam overeen met \"{{query}}\". Probeer een andere of kortere zoekterm."
     }
+  },
+  "whatsNew": {
+    "navLabel": "Wat is er nieuw",
+    "title": "Wat is er nieuw",
+    "description": "Nieuwste releases en functieaankondigingen",
+    "fullChangelog": "Volledig wijzigingslogboek",
+    "showMore": "Meer lezen",
+    "showLess": "Minder tonen",
+    "readMore": "Meer lezen",
+    "empty": "Nog geen release-notities.",
+    "emptyTitle": "Nog niets nieuws",
+    "emptyDescription": "Updates, fixes en aankondigingen verschijnen hier zodra ze gepubliceerd zijn.",
+    "unreadBadge": "{{count}} ongelezen",
+    "category": {
+      "new_feature": "Nieuwe functie",
+      "improvement": "Verbetering",
+      "bug_fix": "Bugfix",
+      "announcement": "Aankondiging"
+    }
+  },
+  "releases": {
+    "metaTitle": "Releases - openJII",
+    "metaDescription": "De nieuwste functies, verbeteringen en bugfixes op het openJII-platform.",
+    "heading": "Releases",
+    "subheading": "De nieuwste functies, verbeteringen en bugfixes op het openJII-platform.",
+    "backToReleases": "Alle releases",
+    "eyebrow": "Changelog",
+    "filterAll": "Alles",
+    "emptyTitle": "Nog geen releases gepubliceerd",
+    "emptyDescription": "Dit wijzigingslogboek staat klaar voor de eerste update. Toekomstige functies, verbeteringen en bugfixes verschijnen hier.",
+    "readUpdate": "Lees de update",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "notFoundTitle": "Release-notitie niet gevonden",
+    "notFoundDescription": "Deze release-notitie bestaat niet of is niet meer beschikbaar."
   }
 }

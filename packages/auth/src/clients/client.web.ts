@@ -2,6 +2,7 @@ import {
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
+  organizationClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
@@ -15,6 +16,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
+    organizationClient({ teams: { enabled: true } }),
   ],
 });
 

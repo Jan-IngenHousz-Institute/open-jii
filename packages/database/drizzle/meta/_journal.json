@@ -222,8 +222,43 @@
     {
       "idx": 31,
       "version": "7",
-      "when": 1781774808170,
-      "tag": "0031_living_miracleman",
+      "when": 1782737363482,
+      "tag": "0031_hot_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783680202553,
+      "tag": "0032_premium_sprite",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783691941595,
+      "tag": "0033_lame_shard",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783699287753,
+      "tag": "0034_romantic_george_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783929797334,
+      "tag": "0035_wild_moondragon",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783937254089,
+      "tag": "0036_slippery_cannonball",
       "breakpoints": true
     }
   ]

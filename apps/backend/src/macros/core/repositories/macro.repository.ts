@@ -62,7 +62,7 @@ export class MacroRepository {
           createdBy: userId,
         })
         .returning(macroColumns);
-      return results as MacroDto[];
+      return results;
     });
   }
 
@@ -223,7 +223,7 @@ export class MacroRepository {
         // noop
       });
 
-      return results as unknown as MacroDto[];
+      return results;
     });
   }
 
@@ -239,7 +239,7 @@ export class MacroRepository {
         // noop — best-effort
       });
 
-      return results as unknown as MacroDto[];
+      return results;
     });
   }
 

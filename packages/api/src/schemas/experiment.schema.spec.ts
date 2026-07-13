@@ -85,7 +85,6 @@ import {
   zCsvFilename,
   zTsvFilename,
   zParquetFilename,
-  zXlsxFilename,
   zJsonFilename,
   zNdjsonFilename,
   zAmbyteFilename,
@@ -867,7 +866,7 @@ describe("Experiment Schema", () => {
     });
 
     it("zInitiateExportBody accepts all valid formats", () => {
-      for (const format of ["csv", "ndjson", "json-array", "parquet"] as const) {
+      for (const format of ["csv", "ndjson", "json-array", "parquet", "xlsx"] as const) {
         expect(zInitiateExportBody.parse({ tableName: "t1", format })).toEqual({
           tableName: "t1",
           format,
@@ -1587,7 +1586,6 @@ describe("Experiment Schema", () => {
         expect(zUploadSourceKind.safeParse("csv").success).toBe(true);
         expect(zUploadSourceKind.safeParse("tsv").success).toBe(true);
         expect(zUploadSourceKind.safeParse("parquet").success).toBe(true);
-        expect(zUploadSourceKind.safeParse("xlsx").success).toBe(true);
         expect(zUploadSourceKind.safeParse("json").success).toBe(true);
         expect(zUploadSourceKind.safeParse("ndjson").success).toBe(true);
       });
@@ -1699,17 +1697,6 @@ describe("Experiment Schema", () => {
       });
     });
 
-    describe("zXlsxFilename", () => {
-      it("accepts .xlsx and .xls", () => {
-        expect(zXlsxFilename.safeParse("data.xlsx").success).toBe(true);
-        expect(zXlsxFilename.safeParse("data.xls").success).toBe(true);
-      });
-
-      it("rejects non-Excel extensions", () => {
-        expect(zXlsxFilename.safeParse("data.csv").success).toBe(false);
-      });
-    });
-
     describe("zJsonFilename", () => {
       it("accepts a bare JSON filename", () => {
         expect(zJsonFilename.safeParse("data.json").success).toBe(true);
@@ -1739,8 +1726,6 @@ describe("Experiment Schema", () => {
         ["a.CSV", "csv"],
         ["a.tsv", "tsv"],
         ["a.parquet", "parquet"],
-        ["a.xlsx", "xlsx"],
-        ["a.xls", "xlsx"],
         ["a.json", "json"],
         ["a.ndjson", "ndjson"],
         ["a.jsonl", "ndjson"],
@@ -1798,7 +1783,7 @@ describe("Experiment Schema", () => {
     });
 
     describe("UPLOAD_KIND_CONSTANTS + UPLOAD_FILENAME_SCHEMAS", () => {
-      const expectedKinds = ["ambyte", "csv", "json", "ndjson", "parquet", "tsv", "xlsx"];
+      const expectedKinds = ["ambyte", "csv", "json", "ndjson", "parquet", "tsv"];
 
       it("has matching keys for every supported kind", () => {
         expect(Object.keys(UPLOAD_KIND_CONSTANTS).sort()).toEqual(expectedKinds);

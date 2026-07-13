@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import type { FlowNode } from "~/features/measurement-flow/screens/measurement-flow-screen/types";
 import {
   convertCycleAnswersToArray,
   parseQuestions,
 } from "~/shared/measurements/convert-cycle-answers-to-array";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 const makeQuestion = (id: string, name: string, text = "question text"): FlowNode =>
   ({ id, type: "question", name, content: { kind: "text", text } }) as FlowNode;

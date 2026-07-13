@@ -79,14 +79,23 @@ runs:
           # Run semantic-release for this app
           cd "$APP_PATH"
           
+          # set +e + PIPESTATUS so we read semantic-release's exit code, not tee's.
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE - Preview only"
-            ../../tooling/release/node_modules/.bin/semantic-release --dry-run 2>&1 | tee release-output.txt
-            RELEASE_EXIT_CODE=$?
+            # Preview as a push to main so a PR shows what merging would release
+            # (env-ci reads these from the process env; the YAML env: key can't set them).
+            export GITHUB_REF="refs/heads/main"
+            export GITHUB_EVENT_NAME="push"
+            set +e
+            ../../tooling/release/node_modules/.bin/semantic-release --dry-run --no-ci 2>&1 | tee release-output.txt
+            RELEASE_EXIT_CODE=${PIPESTATUS[0]}
+            set -e
           else
             echo "🚀 Creating release..."
+            set +e
             ../../tooling/release/node_modules/.bin/semantic-release 2>&1 | tee release-output.txt
-            RELEASE_EXIT_CODE=$?
+            RELEASE_EXIT_CODE=${PIPESTATUS[0]}
+            set -e
           fi
           
           # Check if semantic-release failed

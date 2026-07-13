@@ -3,9 +3,17 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import { useChartSizing } from "./use-is-compact";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  truncateCategoryTicks,
+} from "./utils";
 
 export interface HeatmapSeriesData extends BaseSeries {
   x?: (string | number | Date)[];
@@ -72,6 +80,7 @@ export function Heatmap({
   error,
   aspectRatio = "auto",
 }: HeatmapProps) {
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("heatmap", renderer);
 
@@ -119,7 +128,7 @@ export function Heatmap({
     } as any as PlotData;
   });
 
-  const layout = createBaseLayout(config);
+  const layout = createBaseLayout(config, sizing);
 
   // Determine axis types based on data
   const firstSeries = data[0];
@@ -140,15 +149,18 @@ export function Heatmap({
         : "linear"
       : "linear";
 
-  layout.xaxis = {
-    ...layout.xaxis,
-    type: xAxisType,
-  };
+  // Bound long category labels so automargin can't eat the plot area.
+  layout.xaxis = truncateCategoryTicks(
+    { ...layout.xaxis, type: xAxisType },
+    firstSeries?.x ?? [],
+    sizing,
+  );
 
-  layout.yaxis = {
-    ...layout.yaxis,
-    type: yAxisType,
-  };
+  layout.yaxis = truncateCategoryTicks(
+    { ...layout.yaxis, type: yAxisType },
+    firstSeries?.y ?? [],
+    sizing,
+  );
 
   // Set aspect ratio if specified
   if (aspectRatio === "equal") {
@@ -159,10 +171,10 @@ export function Heatmap({
     };
   }
 
-  const plotConfig = createPlotlyConfig(config);
+  const plotConfig = createPlotlyConfig(config, sizing);
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

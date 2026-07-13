@@ -7,6 +7,7 @@ import {
   getMeasurements,
   markAsFailed,
   markAsSuccessful,
+  UNSYNCED_STATUSES,
 } from "~/shared/db/measurements-storage";
 import { onAppForeground } from "~/shared/device/app-lifecycle";
 import { createLogger } from "~/shared/observability/logger";
@@ -402,7 +403,7 @@ class OutboxImpl implements Outbox {
     this.rehydrating = true;
     this.lastRehydrateAt = Date.now();
     try {
-      const rows = await getMeasurements(["pending", "failed"]);
+      const rows = await getMeasurements([...UNSYNCED_STATUSES]);
       log.info("rehydrate", { found: rows.length });
       this.enqueueMany(rows.map((row) => row.id));
     } catch (err) {

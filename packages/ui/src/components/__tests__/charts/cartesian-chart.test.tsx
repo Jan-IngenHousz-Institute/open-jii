@@ -41,6 +41,7 @@ vi.mock("../../charts/utils", () => ({
   refineAxisType: vi.fn((axis) => axis ?? {}),
   extendLayoutForFacets: vi.fn((layout) => layout),
   applyReferenceLines: vi.fn(),
+  truncateCategoryTicks: vi.fn((axis) => axis),
 }));
 
 vi.mock("../../charts/use-is-compact", () => ({

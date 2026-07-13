@@ -35,6 +35,144 @@
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
       "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+    },
+    "devices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Register and manage your hardware devices. Certificates are issued in a later step.",
+      "register": "Register device",
+      "searchPlaceholder": "Search by name or serial number",
+      "loadError": "Failed to load devices.",
+      "columns": {
+        "name": "Name",
+        "serial": "Serial number",
+        "type": "Type",
+        "status": "Status",
+        "created": "Registered"
+      },
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "rotating": "Rotating",
+        "revoked": "Revoked"
+      },
+      "tabs": {
+        "all": "All"
+      },
+      "sections": {
+        "overview": "Overview",
+        "devices": "Devices",
+        "groups": "Groups",
+        "onboarding": "Onboarding",
+        "monitoring": "Monitoring"
+      },
+      "detailTabs": {
+        "overview": "Overview",
+        "credentials": "Credentials",
+        "onboarding": "Onboarding",
+        "members": "Members",
+        "lineage": "Lineage",
+        "monitoring": "Monitoring"
+      },
+      "overview": {
+        "total": "Total devices"
+      },
+      "comingSoon": {
+        "title": "Coming soon",
+        "groups": "Organize devices into groups you can manage, provision, and onboard together.",
+        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure.",
+        "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
+        "members": "Share device management with collaborators, the way experiments share access.",
+        "lineage": "Trace this device's identity through to its ingested measurements."
+      },
+      "pageOf": "Page {{page}} of {{total}}",
+      "actions": {
+        "more": "Device actions",
+        "view": "View details",
+        "delete": "Delete"
+      },
+      "empty": {
+        "title": "No devices yet",
+        "description": "Register a device to create its record. A certificate is issued in a later step to activate it.",
+        "cta": "Register device"
+      },
+      "zeroResults": {
+        "title": "No devices match your filters",
+        "description": "Try a different search term or status filter.",
+        "clear": "Clear filters"
+      },
+      "dialog": {
+        "title": "Register device",
+        "description": "Register a hardware device. No certificate is issued at this stage.",
+        "serialLabel": "Serial number",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Device type",
+        "typePlaceholder": "ambyte",
+        "nameLabel": "Name (optional)",
+        "namePlaceholder": "Greenhouse sensor 1",
+        "submit": "Register",
+        "createSuccess": "Device registered",
+        "createSuccessDetail": "A certificate will be issued to activate it.",
+        "createError": "Failed to register device"
+      },
+      "remove": {
+        "title": "Delete device",
+        "confirm": "This permanently deletes {{name}} and its device record.",
+        "success": "Device deleted"
+      },
+      "detail": {
+        "back": "Back to devices",
+        "notFound": "Device not found.",
+        "meta": {
+          "serial": "Serial number",
+          "type": "Type",
+          "status": "Status",
+          "registered": "Registered",
+          "thingName": "Device identifier"
+        },
+        "credentials": {
+          "title": "Credentials"
+        },
+        "dangerZone": {
+          "title": "Danger zone",
+          "deleteLabel": "Delete this device",
+          "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
+        }
+      },
+      "credentials": {
+        "pendingDescription": "This device has no certificate yet. Issue one to activate it and let it connect to AWS IoT.",
+        "issue": "Issue certificate",
+        "reissue": "Re-issue certificate",
+        "issueError": "Failed to issue certificate",
+        "activeLabel": "Certificate active",
+        "rotate": "Rotate certificate",
+        "rotatingDescription": "A certificate rotation is in progress.",
+        "revokedDescription": "The certificate was revoked, so this device can no longer connect. Issue a new certificate to bring it back online.",
+        "revoke": "Revoke certificate",
+        "revokeTitle": "Revoke certificate",
+        "revokeConfirm": "This revokes the device certificate immediately. The device will no longer be able to connect. You can issue a new certificate later.",
+        "revokeSuccess": "Certificate revoked",
+        "revokeError": "Failed to revoke certificate",
+        "dialogTitle": "Device certificate issued",
+        "dialogDescription": "Download and install the certificate and key files on the device so it can connect to AWS IoT. They can't be retrieved after you close this.",
+        "showOnceWarning": "This is the only time you can download these files. Store them somewhere safe before closing.",
+        "sectionCertificate": "Device certificate",
+        "certificate": "Device certificate",
+        "sectionKeys": "Key files",
+        "keysDescription": "The key files are unique to this certificate and can't be downloaded again after you close this.",
+        "publicKey": "Public key file",
+        "privateKey": "Private key file",
+        "sectionRootCa": "Root CA certificates",
+        "rootCaDescription": "Download the root CA that matches your endpoint and cipher suite. You can also download these later.",
+        "rootCaLearnMore": "Learn about CA certificates",
+        "rootCa1": "Amazon Root CA 1",
+        "rootCa1Sub": "RSA 2048 bit key",
+        "rootCa3": "Amazon Root CA 3",
+        "rootCa3Sub": "ECC 256 bit key",
+        "copy": "Copy",
+        "download": "Download",
+        "downloadAll": "Download all"
+      }
     }
   }
 }

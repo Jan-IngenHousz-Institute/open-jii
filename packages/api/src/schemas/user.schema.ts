@@ -41,7 +41,6 @@ export const zCreateUserProfileBody = z.object({
   firstName: z.string().min(2).describe("First name"),
   lastName: z.string().min(2).describe("Last name"),
   bio: z.string().optional().describe("Bio"),
-  organization: z.string().trim().optional().describe("Organization"),
   activated: z.boolean().optional().describe("Whether the profile is active or deactivated"),
   avatarUrl: z.string().nullable().optional().describe("Avatar URL seeded from OAuth provider"),
 });
@@ -53,7 +52,6 @@ export const zUserProfile = z.object({
   firstName: z.string(),
   lastName: z.string(),
   bio: z.string().nullable(),
-  organization: z.string().optional(),
   activated: z.boolean().nullable(),
   email: z.string().email().nullable(),
   avatarUrl: z.string().nullable().optional(),
@@ -76,7 +74,7 @@ export const zWebhookAuthHeader = z.object({
 export const zUserMetadataWebhookPayload = z.object({
   // Accept any string so one malformed id can't 400 the whole batch; the
   // backend filters to valid uuids and omits the rest.
-  userIds: z.array(z.string()).min(1).max(100),
+  userIds: z.array(z.string()).min(1).max(500),
 });
 
 export const zUserMetadata = z.object({
@@ -176,6 +174,16 @@ export const zListInvitationsQuery = z.object({
   resourceId: z.string().uuid(),
 });
 
+export const zWhatsNewSeenResponse = z.object({
+  lastSeenAt: z
+    .string()
+    .datetime()
+    .nullable()
+    .describe("ISO timestamp the user last opened the What's new panel; null = never seen"),
+});
+
+export const zMarkWhatsNewSeenBody = z.object({});
+
 // Invitation types
 export type InvitationStatus = z.infer<typeof zInvitationStatus>;
 export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
@@ -184,3 +192,5 @@ export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
 export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
 export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
 export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;
+export type WhatsNewSeenResponse = z.infer<typeof zWhatsNewSeenResponse>;
+export type MarkWhatsNewSeenBody = z.infer<typeof zMarkWhatsNewSeenBody>;

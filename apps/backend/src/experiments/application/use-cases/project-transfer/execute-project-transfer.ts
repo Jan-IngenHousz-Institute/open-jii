@@ -193,7 +193,7 @@ export class ExecuteProjectTransferUseCase {
           text: q.text,
           required: q.required,
           ...(q.kind === "multi_choice" && { options: q.options ?? [] }),
-        } as FlowGraph["nodes"][number]["content"],
+        },
         isStart: i === 0,
       }));
 
@@ -237,7 +237,7 @@ export class ExecuteProjectTransferUseCase {
       const flowResult = await this.createFlowUseCase.execute(
         experiment.id,
         data.experiment.createdBy,
-        { nodes: allNodes, edges } as FlowGraph,
+        { nodes: allNodes, edges },
       );
 
       if (flowResult.isSuccess()) {

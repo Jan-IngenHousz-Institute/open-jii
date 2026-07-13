@@ -2,11 +2,15 @@ import { faker } from "@faker-js/faker";
 
 import {
   users,
-  organizations,
   profiles,
   accounts,
   sessions,
   experimentMembers,
+  organizations,
+  organizationMembers,
+  personalOrgSlug,
+  personalOrgName,
+  ensurePersonalOrganization,
   eq,
 } from "@repo/database";
 
@@ -521,7 +525,6 @@ describe("UserRepository", () => {
       expect(profile.lastName).toBe("User");
       expect(profile.bio).toBeNull();
       expect(profile.avatarUrl).toBeNull();
-      expect(profile.organizationId).toBeNull();
       expect(profile.deletedAt).not.toBeNull();
 
       // Experiment memberships for this user should be deleted
@@ -531,40 +534,85 @@ describe("UserRepository", () => {
         .where(eq(experimentMembers.userId, userToDeleteId));
       expect(memberships.length).toBe(0);
     });
+
+    it("anonymizes the personal organization name so it no longer embeds PII", async () => {
+      // Arrange: a user whose personal org name embeds their real name.
+      const userToDeleteId = await testApp.createTestUser({
+        name: "Jane Secret",
+        email: "jane.secret@example.com",
+      });
+      const orgId = await ensurePersonalOrganization(testApp.database, {
+        id: userToDeleteId,
+        name: "Jane Secret",
+      });
+      const [before] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(before.name).toBe("Jane Secret's workspace");
+
+      // Act
+      const result = await repository.delete(userToDeleteId);
+      expect(result.isSuccess()).toBe(true);
+
+      // Assert: name scrubbed of PII; org (and ownership) intentionally kept.
+      const [after] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(after.name).toBe(personalOrgName("Deleted User"));
+      expect(after.name).not.toContain("Jane");
+      expect(after.name).not.toContain("Secret");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, orgId));
+      expect(members).toHaveLength(1);
+      expect(members[0].userId).toBe(userToDeleteId);
+    });
   });
 
   describe("createOrUpdateUserProfile", () => {
-    it("should create a new user profile with a new organization", async () => {
+    it("should create a new user profile", async () => {
+      // A user with no profile yet, so this exercises the create branch.
+      const newUserId = await testApp.createTestUser({ createProfile: false });
       const dto = {
         firstName: "Alice",
         lastName: "Smith",
-        organization: "NewOrg",
       };
 
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+      const result = await repository.createOrUpdateUserProfile(newUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: dto.organization,
       });
-
-      // Check organization was created
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, dto.organization));
-      expect(orgs.length).toBe(1);
 
       // Check profile was created
       const profs = await testApp.database
         .select()
         .from(profiles)
-        .where(eq(profiles.userId, testUserId));
+        .where(eq(profiles.userId, newUserId));
       expect(profs.length).toBe(1);
       expect(profs[0].firstName).toBe(dto.firstName);
+
+      // Creating the profile names the user's personal org from first + last
+      // and makes them its owner.
+      const [org] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, personalOrgSlug(newUserId)));
+      expect(org.name).toBe("Alice Smith's workspace");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, org.id));
+      expect(members).toHaveLength(1);
+      expect(members[0].role).toBe("owner");
     });
 
     it("should update an existing user profile", async () => {
@@ -572,7 +620,6 @@ describe("UserRepository", () => {
       const initialDto = {
         firstName: "Bob",
         lastName: "Jones",
-        organization: "Org1",
       };
       await repository.createOrUpdateUserProfile(testUserId, initialDto);
 
@@ -580,7 +627,6 @@ describe("UserRepository", () => {
       const updateDto = {
         firstName: "Robert",
         lastName: "Jones",
-        organization: "Org1",
       };
       const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
 
@@ -599,7 +645,7 @@ describe("UserRepository", () => {
       // Cleanup
     });
 
-    it("should create a user profile without an organization", async () => {
+    it("should create a user profile without optional fields", async () => {
       const dto = {
         firstName: "Charlie",
         lastName: "Brown",
@@ -612,7 +658,6 @@ describe("UserRepository", () => {
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: undefined,
       });
 
       // Check profile was created
@@ -624,37 +669,11 @@ describe("UserRepository", () => {
       expect(profs[0].firstName).toBe(dto.firstName);
     });
 
-    it("should use existing organization if it already exists", async () => {
-      // Pre-create organization
-      const orgName = "ExistingOrg";
-      await testApp.database.insert(organizations).values({ name: orgName }).returning();
-
-      const dto = {
-        firstName: "Dana",
-        lastName: "White",
-        organization: orgName,
-      };
-
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.organization).toBe(orgName);
-
-      // Should not create a duplicate organization
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, orgName));
-      expect(orgs.length).toBe(1);
-    });
-
     it("should create a user profile with bio", async () => {
       const dto = {
         firstName: "John",
         lastName: "Smith",
         bio: "Software engineer with 10 years of experience.",
-        organization: "TechCorp",
       };
 
       const result = await repository.createOrUpdateUserProfile(testUserId, dto);
@@ -665,7 +684,6 @@ describe("UserRepository", () => {
         firstName: dto.firstName,
         lastName: dto.lastName,
         bio: dto.bio,
-        organization: dto.organization,
       });
 
       // Check profile was created with bio
@@ -843,6 +861,105 @@ describe("UserRepository", () => {
       const userIds = result.value.map((u) => u.userId);
       expect(userIds.filter((id) => id === testUser1Id)).toHaveLength(1);
       expect(userIds.filter((id) => id === testUser2Id)).toHaveLength(1);
+    });
+  });
+
+  describe("findWhatsNewLastSeen", () => {
+    it("should return null when the user has never opened the What's new panel", async () => {
+      // Act
+      const result = await repository.findWhatsNewLastSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("should return the stored timestamp when the user has opened the panel before", async () => {
+      // Arrange: stamp a last-seen timestamp directly in the database
+      const lastSeenAt = new Date("2026-01-15T10:30:00.000Z");
+      await testApp.database
+        .update(profiles)
+        .set({ whatsNewLastSeenAt: lastSeenAt })
+        .where(eq(profiles.userId, testUserId));
+
+      // Act
+      const result = await repository.findWhatsNewLastSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+      expect(result.value?.getTime()).toBe(lastSeenAt.getTime());
+    });
+
+    it("should return null when the user has no profile row", async () => {
+      // Arrange
+      const userWithoutProfileId = await testApp.createTestUser({
+        createProfile: false,
+      });
+
+      // Act
+      const result = await repository.findWhatsNewLastSeen(userWithoutProfileId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
+  describe("markWhatsNewSeen", () => {
+    it("should stamp the last-seen timestamp and return it", async () => {
+      // Act
+      const result = await repository.markWhatsNewSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+
+      // Verify the timestamp was persisted in the database
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].whatsNewLastSeenAt).not.toBeNull();
+      expect(profs[0].whatsNewLastSeenAt?.getTime()).toBe(result.value?.getTime());
+    });
+
+    it("should overwrite an existing last-seen timestamp with a newer one", async () => {
+      // Arrange: stamp an old last-seen timestamp directly in the database
+      const previousSeenAt = new Date("2020-01-01T00:00:00.000Z");
+      await testApp.database
+        .update(profiles)
+        .set({ whatsNewLastSeenAt: previousSeenAt })
+        .where(eq(profiles.userId, testUserId));
+
+      // Act
+      const result = await repository.markWhatsNewSeen(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeInstanceOf(Date);
+      expect(result.value?.getTime()).toBeGreaterThan(previousSeenAt.getTime());
+    });
+
+    it("should return null when the user has no profile row", async () => {
+      // Arrange
+      const userWithoutProfileId = await testApp.createTestUser({
+        createProfile: false,
+      });
+
+      // Act
+      const result = await repository.markWhatsNewSeen(userWithoutProfileId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
     });
   });
 });

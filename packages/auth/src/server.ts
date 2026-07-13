@@ -2,9 +2,9 @@ import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth } from "better-auth/plugins";
+import { emailOTP, genericOAuth, organization } from "better-auth/plugins";
 
-import { db, and, eq, profiles } from "@repo/database";
+import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { sendOtpEmail } from "./email/otpEmail";
@@ -16,7 +16,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 const cookieDomain = process.env.COOKIE_DOMAIN;
 
 // Configure custom OAuth providers (ORCID via genericOAuth plugin)
-const customOAuthProviders = [];
+const customOAuthProviders: ReturnType<typeof orcidProvider>[] = [];
 
 if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
   customOAuthProviders.push(
@@ -41,6 +41,11 @@ export const auth = betterAuth({
       account: schema.accounts,
       verification: schema.verifications,
       rateLimit: schema.rateLimits,
+      organization: schema.organizations,
+      member: schema.organizationMembers,
+      invitation: schema.organizationInvitations,
+      team: schema.teams,
+      teamMember: schema.teamMembers,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -145,6 +150,24 @@ export const auth = betterAuth({
         }
       },
     }),
+    // Organization tier: per-org membership + roles (owner/admin/member).
+    // Resources are org-owned; org membership grants baseline access.
+    organization({
+      allowUserToCreateOrganization: true,
+      creatorRole: "owner",
+      teams: { enabled: true },
+      // openJII org profile fields, persisted in one organization.create call.
+      schema: {
+        organization: {
+          additionalFields: {
+            type: { type: "string", required: false, input: true },
+            description: { type: "string", required: false, input: true },
+            website: { type: "string", required: false, input: true },
+            location: { type: "string", required: false, input: true },
+          },
+        },
+      },
+    }),
     // Add custom OAuth providers using the generic OAuth plugin
     ...(customOAuthProviders.length > 0
       ? [
@@ -164,6 +187,50 @@ export const auth = betterAuth({
           },
         }
       : {}),
+  },
+  // Database lifecycle hooks: provision a personal organization for every user
+  // and set it as the active organization atomically when a session is created
+  // (avoids the cookie-cache lag of a post-hoc update).
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            await ensurePersonalOrganization(db, { id: user.id, name: user.name });
+          } catch (err) {
+            console.warn("Failed to provision personal organization for user:", err);
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          try {
+            // Derive the org name from the user's profile (first + last) so a
+            // user who lacks an org gets a properly-named one on login rather
+            // than the generic fallback. ensurePersonalOrganization only names
+            // on creation, so this never renames an existing org.
+            const profileRows = await db
+              .select({ firstName: profiles.firstName, lastName: profiles.lastName })
+              .from(profiles)
+              .where(eq(profiles.userId, session.userId))
+              .limit(1);
+            const name = profileRows.length
+              ? `${profileRows[0].firstName} ${profileRows[0].lastName}`
+              : undefined;
+            const organizationId = await ensurePersonalOrganization(db, {
+              id: session.userId,
+              name,
+            });
+            return { data: { ...session, activeOrganizationId: organizationId } };
+          } catch (err) {
+            console.warn("Failed to set active organization on session:", err);
+            return;
+          }
+        },
+      },
+    },
   },
   // Lifecycle hooks
   hooks: {

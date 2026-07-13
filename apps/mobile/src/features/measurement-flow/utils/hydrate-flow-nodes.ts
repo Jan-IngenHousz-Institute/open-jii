@@ -1,4 +1,5 @@
 import { deriveMacroFilename } from "~/features/measurement-flow/utils/derive-macro-filename";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type {
   MacroCell,
@@ -6,8 +7,6 @@ import type {
   WorkbookCell,
 } from "@repo/api/schemas/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
-
-import type { FlowNode } from "../screens/measurement-flow-screen/types";
 
 /**
  * Hydrates each measurement/analysis node with its protocol/macro (snapshot code

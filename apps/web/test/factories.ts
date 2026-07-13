@@ -30,6 +30,7 @@ import type {
   UploadMetadata,
   VisualizationWidget,
 } from "@repo/api/schemas/experiment.schema";
+import type { IotDevice } from "@repo/api/schemas/iot.schema";
 import type { Macro } from "@repo/api/schemas/macro.schema";
 import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
@@ -159,6 +160,7 @@ export function createMacro(overrides: Partial<Macro> = {}): Macro {
     sortOrder: null,
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -180,6 +182,7 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
     sortOrder: null,
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -198,6 +201,7 @@ export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
     metadata: {},
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -212,7 +216,6 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     firstName: "Test",
     lastName: "User",
     bio: null,
-    organization: undefined,
     activated: true,
     email: "test@example.com",
     ...overrides,
@@ -675,9 +678,33 @@ export function createUpload(overrides: Partial<UploadMetadata> = {}): UploadMet
   };
 }
 
+// ── IoT Device ──────────────────────────────────────────────────
+
+let iotDeviceSeq = 0;
+
+export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
+  iotDeviceSeq++;
+  const thingName = `ambyte_${iotDeviceSeq}`;
+  return {
+    id: crypto.randomUUID(),
+    thingName,
+    thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
+    serialNumber: `SN-${iotDeviceSeq}`,
+    name: `Device ${iotDeviceSeq}`,
+    deviceType: "ambyte",
+    status: "pending",
+    certificateId: null,
+    certificateArn: null,
+    createdBy: crypto.randomUUID(),
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
-/** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
+/** Reset sequence counters, useful in beforeEach if deterministic IDs matter */
 export function resetFactories() {
   experimentSeq = 0;
   transferSeq = 0;
@@ -695,6 +722,7 @@ export function resetFactories() {
   cellSeq = 0;
   versionSeq = 0;
   uploadSeq = 0;
+  iotDeviceSeq = 0;
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
 }

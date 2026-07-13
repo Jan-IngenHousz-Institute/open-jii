@@ -30,6 +30,7 @@ export const zMacro = z.object({
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
+  forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -57,6 +58,8 @@ export const zCreateMacroRequestBody = z.object({
   description: z.string().optional(),
   language: zMacroLanguage,
   code: z.string().min(1, "Code file content is required"), // Base64 encoded file content
+  // Set when this macro is a fork (copy) of another, to record its lineage.
+  forkedFrom: z.string().uuid().optional(),
 });
 
 export const zUpdateMacroRequestBody = z.object({
@@ -171,7 +174,7 @@ export type MacroBatchWebhookErrorResponse = z.infer<typeof zMacroBatchWebhookEr
 export type MacroExecutionRequestBody = z.infer<typeof zMacroExecutionRequestBody>;
 export type MacroExecutionResponse = z.infer<typeof zMacroExecutionResponse>;
 
-// Wire-format types — what Databricks actually sends before Zod preprocessing.
+// Wire-format types: what Databricks actually sends before Zod preprocessing.
 // Fields wrapped with jsonStringOrValue may arrive as JSON strings.
 export interface MacroBatchExecutionWireBody {
   items: MacroBatchExecutionRequestBody["items"] | string;

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { initReactI18next } from "react-i18next";
 
 import authEn from "./locales/en-US/auth.json";
-import calibrationEn from "./locales/en-US/calibration.json";
 import commonEn from "./locales/en-US/common.json";
 import connectionEn from "./locales/en-US/connection.json";
 import experimentsEn from "./locales/en-US/experiments.json";
@@ -13,8 +12,8 @@ import homeEn from "./locales/en-US/home.json";
 import measurementFlowEn from "./locales/en-US/measurement-flow.json";
 import profileEn from "./locales/en-US/profile.json";
 import recentMeasurementsEn from "./locales/en-US/recent-measurements.json";
+import whatsNewEn from "./locales/en-US/whats-new.json";
 import authNl from "./locales/nl-NL/auth.json";
-import calibrationNl from "./locales/nl-NL/calibration.json";
 import commonNl from "./locales/nl-NL/common.json";
 import connectionNl from "./locales/nl-NL/connection.json";
 import experimentsNl from "./locales/nl-NL/experiments.json";
@@ -23,6 +22,7 @@ import homeNl from "./locales/nl-NL/home.json";
 import measurementFlowNl from "./locales/nl-NL/measurement-flow.json";
 import profileNl from "./locales/nl-NL/profile.json";
 import recentMeasurementsNl from "./locales/nl-NL/recent-measurements.json";
+import whatsNewNl from "./locales/nl-NL/whats-new.json";
 
 export const SUPPORTED_LOCALES = ["en-US", "nl-NL"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -37,11 +37,11 @@ const bundledResources = {
     profile: profileEn,
     measurementFlow: measurementFlowEn,
     experiments: experimentsEn,
-    calibration: calibrationEn,
     connection: connectionEn,
     recentMeasurements: recentMeasurementsEn,
     home: homeEn,
     forceUpdate: forceUpdateEn,
+    whatsNew: whatsNewEn,
   },
   "nl-NL": {
     common: commonNl,
@@ -49,11 +49,11 @@ const bundledResources = {
     profile: profileNl,
     measurementFlow: measurementFlowNl,
     experiments: experimentsNl,
-    calibration: calibrationNl,
     connection: connectionNl,
     recentMeasurements: recentMeasurementsNl,
     home: homeNl,
     forceUpdate: forceUpdateNl,
+    whatsNew: whatsNewNl,
   },
 } as const;
 
@@ -89,11 +89,11 @@ export function initI18n(): Promise<typeof i18next> {
         "profile",
         "measurementFlow",
         "experiments",
-        "calibration",
         "connection",
         "recentMeasurements",
         "home",
         "forceUpdate",
+        "whatsNew",
       ],
       defaultNS: "common",
       resources: bundledResources,

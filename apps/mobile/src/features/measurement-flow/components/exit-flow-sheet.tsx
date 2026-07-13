@@ -1,17 +1,16 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import { ChevronRight, Pause, Trash2 } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef } from "react";
-import { Keyboard, Pressable, Text, View } from "react-native";
+import React from "react";
+import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
+import { teardownFlow } from "~/features/measurement-flow/services/flow-actions";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
-import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
+import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 export function ExitFlowSheet() {
@@ -27,24 +26,11 @@ export function ExitFlowSheet() {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
   const { t } = useTranslation("measurementFlow");
-  const sheetRef = useRef<BottomSheetModal>(null);
+  const { sheetRef, renderBackdrop } = useBottomSheetController({
+    visible: isOpen,
+    dismissKeyboardOnPresent: true,
+  });
   const { currentStep, totalSteps } = useFlowStepInfo();
-
-  useEffect(() => {
-    if (isOpen) {
-      Keyboard.dismiss();
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [isOpen]);
-
-  const renderBackdrop = useCallback(
-    (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    ),
-    [],
-  );
 
   // Pause just leaves the screen. The flow + answers stores are persisted,
   // so the next launch (or tap on the home Resume card) rehydrates exactly
@@ -55,9 +41,7 @@ export function ExitFlowSheet() {
   };
 
   const handleDiscard = () => {
-    useMeasurementFlowStore.getState().resetFlow();
-    useFlowAnswersStore.getState().clearHistory();
-    useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
+    teardownFlow();
     close();
     dismissFlow();
   };

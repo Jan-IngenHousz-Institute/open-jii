@@ -4,6 +4,8 @@ import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sid
 import { PageContainer } from "@/components/page-container";
 import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
+import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -18,7 +20,6 @@ import {
 } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
-import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
 const getCallbackUrl = async () => {
@@ -53,17 +54,18 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
+  const releaseNotes = await fetchWebReleaseNotes(locale);
+
   return (
     <SidebarProvider>
       <ActivityProvider>
-        <NavigationSidebarWrapper locale={locale} />
+        <NavigationSidebarWrapper locale={locale} releaseNotes={releaseNotes} />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
-          <NavigationTopbar locale={locale} user={session.user} />
+          <NavigationTopbar locale={locale} user={session.user} releaseNotes={releaseNotes} />
           <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
             <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-              <Breadcrumbs locale={locale} />
               <Suspense>{children}</Suspense>
             </PageContainer>
           </div>
@@ -72,6 +74,7 @@ export default async function AppLayout({
         <CommandPalette locale={locale} />
         <Toaster />
         <ShortcutHint />
+        <WhatsNewSheet entries={releaseNotes} />
       </ActivityProvider>
     </SidebarProvider>
   );
