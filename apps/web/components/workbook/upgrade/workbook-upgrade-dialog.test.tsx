@@ -143,6 +143,25 @@ describe("WorkbookUpgradeDialog", () => {
     );
   });
 
+  it("shows a load error (not a false missing block) when an entity lookup fails transiently", async () => {
+    mountPinned([{ a: 1 }]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [protocolCell] }),
+    });
+    // A 500 is transient, not a genuine deletion: the dialog must not conclude
+    // the protocol is missing.
+    server.mount(contract.protocols.getProtocol, {
+      status: 500,
+      body: { message: "boom", statusCode: 500 },
+    });
+
+    renderDialog();
+
+    expect(await screen.findByText("flow.upgradeDiff.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("flow.upgradeDiff.verdict.errors")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeDisabled();
+  });
+
   it("lists a missing macro and dangling branch references as blocking errors", async () => {
     const macroCell = createMacroCell({
       id: "cell-m",

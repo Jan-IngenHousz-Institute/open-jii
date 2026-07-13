@@ -96,7 +96,8 @@
       "restoreConfirmMessage": "Dies setzt das Experiment wieder auf v{{version}} und ändert das Messprotokoll für künftige Messungen. Vorhandene Daten bleiben erhalten.",
       "restored": "Auf v{{version}} zurückgesetzt",
       "restoreFailed": "Version konnte nicht wiederhergestellt werden",
-      "empty": "Noch keine veröffentlichten Versionen."
+      "empty": "Noch keine veröffentlichten Versionen.",
+      "loadError": "Versionsverlauf konnte nicht geladen werden. Bitte erneut versuchen."
     },
     "upgradeDiff": {
       "title": "Änderungen vor dem Aktualisieren prüfen",

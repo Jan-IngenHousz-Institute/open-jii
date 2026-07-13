@@ -9,7 +9,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
@@ -170,11 +170,13 @@ export function MacroCellComponent({
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
-  // Track the latest cell so the async rename merges its result into current
-  // state rather than a stale snapshot captured when the save began (e.g. a
-  // concurrent language change or collapse toggle would otherwise be clobbered).
+  // Track the latest cell so the async rename merges into current state, not a
+  // stale snapshot from when the save began. Sync in a layout effect (not during
+  // render) so a speculative render never leaks into the ref.
   const cellRef = useRef(cell);
-  cellRef.current = cell;
+  useLayoutEffect(() => {
+    cellRef.current = cell;
+  }, [cell]);
 
   // Rename the shared macro row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.

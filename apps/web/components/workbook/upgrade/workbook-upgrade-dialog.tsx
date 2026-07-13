@@ -124,10 +124,15 @@ export function WorkbookUpgradeDialog({
     return validateWorkbook(liveCells, ctx);
   }, [pinned, live, resolved, totalRefs, liveCells]);
 
+  // A referenced entity that failed to load (non-404) means we cannot trust the
+  // verdict: validateWorkbook would see it as missing and emit a false blocking
+  // error. Surface it as a load failure instead.
+  const entityLoadFailed = Object.values(resolved).some((r) => r.loadFailed);
   const errors = verdict?.issues.filter((i) => i.level === "error") ?? [];
   const warnings = verdict?.issues.filter((i) => i.level === "warning") ?? [];
   const ready = !!pinned && !!live;
-  const loading = !loadError && !ready && (pinnedLoading || liveLoading);
+  const failed = !!loadError || entityLoadFailed;
+  const loading = !failed && !ready && (pinnedLoading || liveLoading);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,7 +144,7 @@ export function WorkbookUpgradeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loadError ? (
+        {failed ? (
           <div className="text-destructive flex items-center gap-2 py-8 text-sm">
             <XCircle className="h-4 w-4 shrink-0" />
             {t("flow.upgradeDiff.loadError")}
@@ -256,7 +261,7 @@ export function WorkbookUpgradeDialog({
           </Button>
           <Button
             onClick={onConfirm}
-            disabled={isUpgrading || !ready || verdict == null || errors.length > 0}
+            disabled={isUpgrading || !ready || failed || verdict == null || errors.length > 0}
           >
             {isUpgrading ? (
               <>

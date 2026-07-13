@@ -10,7 +10,7 @@ import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, GitFork, Hand, Loader2, Microscope } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
@@ -193,11 +193,13 @@ export function ProtocolCellComponent({
     }
   }, [protocolData, forkProtocol, onUpdate, cell]);
 
-  // Track the latest cell so the async rename merges its result into current
-  // state rather than a stale snapshot captured when the save began (e.g. a
-  // concurrent collapse toggle would otherwise be clobbered).
+  // Track the latest cell so the async rename merges into current state, not a
+  // stale snapshot from when the save began. Sync in a layout effect (not during
+  // render) so a speculative render never leaks into the ref.
   const cellRef = useRef(cell);
-  cellRef.current = cell;
+  useLayoutEffect(() => {
+    cellRef.current = cell;
+  }, [cell]);
 
   // Rename the shared protocol row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.

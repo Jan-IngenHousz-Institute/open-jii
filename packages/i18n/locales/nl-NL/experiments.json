@@ -93,7 +93,8 @@
       "restoreConfirmMessage": "Dit koppelt het experiment terug aan v{{version}} en wijzigt het meetprotocol voor toekomstige metingen. Bestaande gegevens blijven behouden.",
       "restored": "Hersteld naar v{{version}}",
       "restoreFailed": "Herstellen van versie mislukt",
-      "empty": "Nog geen gepubliceerde versies."
+      "empty": "Nog geen gepubliceerde versies.",
+      "loadError": "Kan versiegeschiedenis niet laden. Probeer het opnieuw."
     },
     "upgradeDiff": {
       "title": "Bekijk wijzigingen voor het upgraden",

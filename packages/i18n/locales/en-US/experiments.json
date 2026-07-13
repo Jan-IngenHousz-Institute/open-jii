@@ -122,7 +122,8 @@
       "restoreConfirmMessage": "This re-pins the experiment to v{{version}}, changing its measurement protocol for future measurements. Existing data is preserved.",
       "restored": "Restored to v{{version}}",
       "restoreFailed": "Failed to restore version",
-      "empty": "No published versions yet."
+      "empty": "No published versions yet.",
+      "loadError": "Could not load version history. Try again."
     },
     "upgradeDiff": {
       "title": "Review changes before upgrading",

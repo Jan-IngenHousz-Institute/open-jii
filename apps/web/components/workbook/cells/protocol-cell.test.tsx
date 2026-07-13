@@ -1,7 +1,9 @@
 import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol-code-registry";
 import { createProtocol } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -733,6 +735,47 @@ describe("ProtocolCellComponent", () => {
       await waitFor(() => expect(updateSpy.called).toBe(true));
       expect(onUpdate).not.toHaveBeenCalled();
       expect(screen.getByLabelText("cells.renameSave")).toBeInTheDocument();
+    });
+
+    it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      // The update contract has no typed 409; the backend signals a name clash
+      // via a REPOSITORY_DUPLICATE code on a 400 body.
+      server.use(
+        http.patch(`${API_URL}/api/v1/protocols/:id`, () =>
+          HttpResponse.json(
+            { code: "REPOSITORY_DUPLICATE", message: "duplicate", statusCode: 400 },
+            { status: 400 },
+          ),
+        ),
+      );
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      await user.clear(screen.getByLabelText("cells.rename"));
+      await user.type(screen.getByLabelText("cells.rename"), "Taken Name");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "cells.renameConflict",
+          variant: "destructive",
+        }),
+      );
+      expect(screen.getByLabelText("cells.renameSave")).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
     });
   });
 });

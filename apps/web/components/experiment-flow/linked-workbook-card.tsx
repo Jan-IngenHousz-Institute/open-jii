@@ -86,7 +86,13 @@ export function LinkedWorkbookCard({
   const upgradingWorkbook = useIsMutating({
     mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
   });
-  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook > 0;
+  // History restore/roll-forward repins the version too; freeze the banner while
+  // it is in flight so `isUpgradable` does not flicker mid-mutation.
+  const settingVersion = useIsMutating({
+    mutationKey: ["experiment", experimentId, "setWorkbookVersion"],
+  });
+  const isSyncing =
+    fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook + settingVersion > 0;
 
   const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
   const settledHasUpgradeRef = useRef(liveHasUpgrade);

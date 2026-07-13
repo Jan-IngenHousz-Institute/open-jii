@@ -2,6 +2,7 @@
 
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
+import { contract, getContractError } from "@/lib/tsr";
 import { decodeBase64 } from "@/util/base64";
 import { formatDate } from "@/util/date";
 import { useEffect, useRef } from "react";
@@ -17,6 +18,8 @@ export interface ResolvedEntity {
   kind: "protocol" | "macro";
   exists: boolean;
   family?: SensorFamily;
+  /** The lookup failed for a non-404 reason (network/server); status is unknown, not "removed". */
+  loadFailed?: boolean;
 }
 
 type EntityStatus = "added" | "changed" | "unchanged" | "removed";
@@ -93,16 +96,20 @@ export function ProtocolDiffRow({ id, oldCode, fallbackName, onResolved }: RowPr
   const body = query.data?.body;
   const settled = !query.isLoading;
   const exists = !!body;
+  // A 404 means the protocol was genuinely deleted (removed); any other error
+  // (5xx, network) is transient and must not be reported as "removed".
+  const notFound = getContractError(contract.protocols.getProtocol, query.error)?.status === 404;
+  const loadFailed = !!query.error && !notFound;
 
   const reported = useRef(false);
   useEffect(() => {
     if (settled && !reported.current) {
       reported.current = true;
-      onResolved({ id, kind: "protocol", exists, family: body?.family });
+      onResolved({ id, kind: "protocol", exists, family: body?.family, loadFailed });
     }
-  }, [settled, exists, body?.family, id, onResolved]);
+  }, [settled, exists, body?.family, loadFailed, id, onResolved]);
 
-  if (!settled) return null;
+  if (!settled || loadFailed) return null;
 
   const oldText = oldCode != null ? JSON.stringify(oldCode, null, 2) : "";
   const newText = body?.code != null ? JSON.stringify(body.code, null, 2) : "";
@@ -130,19 +137,23 @@ export function ProtocolDiffRow({ id, oldCode, fallbackName, onResolved }: RowPr
 }
 
 export function MacroDiffRow({ id, oldCode, fallbackName, onResolved }: RowProps) {
-  const { data: body, isLoading } = useMacro(id);
+  const { data: body, isLoading, error } = useMacro(id);
   const settled = !isLoading;
   const exists = !!body;
+  // A 404 means the macro was genuinely deleted (removed); any other error
+  // (5xx, network) is transient and must not be reported as "removed".
+  const notFound = getContractError(contract.macros.getMacro, error)?.status === 404;
+  const loadFailed = !!error && !notFound;
 
   const reported = useRef(false);
   useEffect(() => {
     if (settled && !reported.current) {
       reported.current = true;
-      onResolved({ id, kind: "macro", exists });
+      onResolved({ id, kind: "macro", exists, loadFailed });
     }
-  }, [settled, exists, id, onResolved]);
+  }, [settled, exists, loadFailed, id, onResolved]);
 
-  if (!settled) return null;
+  if (!settled || loadFailed) return null;
 
   const oldText = typeof oldCode === "string" ? decodeBase64(oldCode) : "";
   const newText = body?.code ? decodeBase64(body.code) : "";

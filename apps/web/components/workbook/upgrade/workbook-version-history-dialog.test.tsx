@@ -33,6 +33,17 @@ describe("WorkbookVersionHistoryDialog", () => {
     expect(screen.getByText("flow.versionHistory.current")).toBeInTheDocument();
   });
 
+  it("shows a load error instead of the empty state when the fetch fails", async () => {
+    server.mount(contract.workbooks.listWorkbookVersions, {
+      status: 500,
+      body: { message: "boom", statusCode: 500 },
+    });
+    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+
+    expect(await screen.findByText("flow.versionHistory.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("flow.versionHistory.empty")).not.toBeInTheDocument();
+  });
+
   it("restores an earlier version after confirmation", async () => {
     const spy = server.mount(contract.experiments.setWorkbookVersion, {
       status: 200,

@@ -3,7 +3,7 @@
 import { useSetWorkbookVersion } from "@/hooks/experiment/useSetWorkbookVersion/useSetWorkbookVersion";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
-import { History, Loader2, RotateCcw } from "lucide-react";
+import { History, Loader2, RotateCcw, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -54,7 +54,7 @@ export function WorkbookVersionHistoryDialog({
   canManage,
 }: WorkbookVersionHistoryDialogProps) {
   const { t } = useTranslation("experiments");
-  const { data, isLoading } = useWorkbookVersions(workbookId, { enabled: open });
+  const { data, isLoading, error } = useWorkbookVersions(workbookId, { enabled: open });
   const versions = (data?.body ?? []) as VersionSummary[];
 
   const setVersion = useSetWorkbookVersion(experimentId);
@@ -97,6 +97,11 @@ export function WorkbookVersionHistoryDialog({
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="text-destructive flex items-center gap-2 py-6 text-sm">
+              <XCircle className="h-4 w-4 shrink-0" />
+              {t("flow.versionHistory.loadError")}
             </div>
           ) : versions.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-sm">
