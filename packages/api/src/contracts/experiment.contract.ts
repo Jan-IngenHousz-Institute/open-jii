@@ -85,7 +85,11 @@ import {
   zUpdateExperimentDashboardResponse,
 } from "../schemas/experiment.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
-import { zAttachWorkbookBody, zAttachWorkbookResponse } from "../schemas/workbook-version.schema";
+import {
+  zAttachWorkbookBody,
+  zAttachWorkbookResponse,
+  zSetWorkbookVersionBody,
+} from "../schemas/workbook-version.schema";
 
 const c = initContract();
 
@@ -459,6 +463,22 @@ export const experimentContract = c.router({
     summary: "Upgrade the experiment to the latest workbook version",
     description:
       "Publishes the latest workbook cells as a new version (or reuses the latest if unchanged) and updates the experiment to reference it.",
+  },
+
+  setWorkbookVersion: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/workbook/version",
+    pathParams: zIdPathParam,
+    body: zSetWorkbookVersionBody,
+    responses: {
+      200: zAttachWorkbookResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Pin the experiment to a specific workbook version",
+    description:
+      "Repins the experiment to an existing published version (rollback or roll-forward) without publishing a new one.",
   },
 
   uploadData: {

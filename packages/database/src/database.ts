@@ -59,3 +59,9 @@ export const getClient = (secrets?: Record<string, unknown>) =>
 export const db = drizzle({ client: getClient(), schema });
 
 export type DatabaseInstance = typeof db;
+
+/** The transaction handle passed to `db.transaction(async (tx) => …)`. */
+export type Transaction = Parameters<Parameters<DatabaseInstance["transaction"]>[0]>[0];
+
+/** Root database or transaction handle accepted by shared helpers. */
+export type DbOrTx = DatabaseInstance | Transaction;

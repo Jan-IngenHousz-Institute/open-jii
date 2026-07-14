@@ -18,11 +18,12 @@ After signing in you will be asked to provide some basic information:
 
 - First name
 - Last name
-- Organisation
 
 Click **Save** to finish creating your account.
 
 ![Screenshot of the profile completion form with the First name, Last name, and Organisation fields filled in.](image-3.png)
+
+> **Note:** This screenshot is outdated and still shows the Organisation field. The current registration form only asks for First name and Last name.
 
 ## Next steps
 

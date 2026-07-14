@@ -123,6 +123,17 @@
       "noQuestionsAnswered": "Geen vragen beantwoord"
     }
   },
+  "commandNode": {
+    "heading": "Apparaatopdracht",
+    "responseLabel": "Antwoord",
+    "run": "Opdracht uitvoeren",
+    "running": "Bezig…",
+    "continue": "Doorgaan",
+    "toast": {
+      "notConnected": "Geen verbinding met sensor",
+      "error": "Opdracht mislukt"
+    }
+  },
   "measurementNode": {
     "errorState": {
       "title": "Meting mislukt",

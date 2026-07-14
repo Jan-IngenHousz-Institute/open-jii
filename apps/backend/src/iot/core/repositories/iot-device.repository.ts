@@ -4,7 +4,7 @@ import { and, desc, eq, iotDevices } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { CreateIotDeviceDto, IotDeviceDto } from "../models/iot-device.model";
+import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
 export class IotDeviceRepository {
@@ -55,6 +55,21 @@ export class IotDeviceRepository {
         .from(iotDevices)
         .where(eq(iotDevices.serialNumber, serialNumber))
         .limit(1);
+      return results.length === 0 ? null : results[0];
+    });
+  }
+
+  async update(
+    deviceId: string,
+    userId: string,
+    patch: UpdateIotDeviceDto,
+  ): Promise<Result<IotDeviceDto | null>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .update(iotDevices)
+        .set(patch)
+        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, userId)))
+        .returning();
       return results.length === 0 ? null : results[0];
     });
   }

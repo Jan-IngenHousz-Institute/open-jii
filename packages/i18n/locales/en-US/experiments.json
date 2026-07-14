@@ -98,7 +98,8 @@
       "INSTRUCTION": "Instruction",
       "QUESTION": "Question",
       "MEASUREMENT": "Measurement",
-      "ANALYSIS": "Analysis"
+      "ANALYSIS": "Analysis",
+      "COMMAND": "Command"
     },
     "questionTooltip": {
       "title": "Data Column Name",
@@ -110,7 +111,55 @@
     "editingTitle": "Editing this experiment's workbook",
     "editAutoApplyNotice": "Every change you save here is applied to this experiment automatically.",
     "editIsolatedHint": "To try changes without affecting this experiment, edit from the workbook page instead; edits there stay separate until you upgrade the version.",
-    "editOpenWorkbookLink": "Open the workbook page"
+    "editOpenWorkbookLink": "Open the workbook page",
+    "reviewAndUpgrade": "Review & upgrade",
+    "versionHistory": {
+      "open": "Version history",
+      "title": "Version history",
+      "subtitle": "Every version published when this workbook was attached or upgraded.",
+      "current": "Current",
+      "restore": "Restore",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmMessage": "This re-pins the experiment to v{{version}}, changing its measurement protocol for future measurements. Existing data is preserved.",
+      "restored": "Restored to v{{version}}",
+      "restoreFailed": "Failed to restore version",
+      "empty": "No published versions yet.",
+      "loadError": "Could not load version history. Try again."
+    },
+    "upgradeDiff": {
+      "title": "Review changes before upgrading",
+      "subtitle": "Moving this experiment from v{{from}} to {{to}}.",
+      "checking": "Checking compatibility...",
+      "loadError": "Couldn't load the changes. Close and try again.",
+      "upgrading": "Upgrading...",
+      "cellChanges": "Flow changes",
+      "noCellChanges": "No changes to the flow structure.",
+      "codeChanges": "Protocol & macro changes",
+      "viewDiff": "View diff",
+      "macroCaveat": "Structural checks only. Macro logic is not verified, so test the flow after upgrading.",
+      "lastChanged": "updated {{when}}",
+      "kind": { "protocol": "Protocol", "macro": "Macro" },
+      "status": {
+        "added": "Added",
+        "changed": "Changed",
+        "unchanged": "Unchanged",
+        "removed": "Removed"
+      },
+      "change": { "added": "Added", "removed": "Removed", "changed": "Edited", "moved": "Moved" },
+      "verdict": {
+        "ok": "No structural issues found",
+        "warnings": "Upgrade is possible, with warnings",
+        "errors": "Upgrading may break this workbook"
+      },
+      "issue": {
+        "missingProtocol": "Protocol \"{{label}}\" no longer exists",
+        "missingMacro": "Macro \"{{label}}\" no longer exists",
+        "danglingSource": "A branch condition points at a cell that no longer exists ({{ref}})",
+        "danglingGoto": "A branch jumps to a cell that no longer exists ({{ref}})",
+        "macroWithoutInput": "Macro \"{{label}}\" has no measurement before it to run on",
+        "mixedFamilies": "This workbook mixes sensor families ({{detail}}); one run targets a single device"
+      }
+    }
   },
   "overview": "Overview",
   "data": "Data",

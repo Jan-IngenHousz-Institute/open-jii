@@ -12,6 +12,8 @@ import {
 } from "@repo/ui/components/tooltip";
 
 import { AnalysisPanel } from "./analysis-panel";
+import type { InlineCommandValue } from "./command-panel";
+import { CommandPanel } from "./command-panel";
 import { EdgeSidePanel } from "./edge-panel";
 import { InstructionPanel } from "./instruction-panel";
 import { MeasurementPanel } from "./measurement-panel";
@@ -328,6 +330,21 @@ export function ExperimentSidePanel({
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
                     protocolId,
+                  });
+                }
+              }}
+              disabled={isDisabled}
+            />
+          )}
+          {/* CommandPanel for inline-command node */}
+          {displayNodeType === "COMMAND" && selectedNode && (
+            <CommandPanel
+              command={selectedNode.data.command as InlineCommandValue | undefined}
+              onChange={(command) => {
+                if (onNodeDataChange) {
+                  onNodeDataChange(selectedNode.id, {
+                    ...selectedNode.data,
+                    command,
                   });
                 }
               }}

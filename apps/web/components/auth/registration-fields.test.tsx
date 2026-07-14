@@ -25,7 +25,6 @@ function Wrapper({
     defaultValues: {
       firstName: "",
       lastName: "",
-      organization: "",
       email: "",
       acceptedTerms: false,
       otp: "",
@@ -48,12 +47,11 @@ function Wrapper({
 }
 
 describe("RegistrationFields", () => {
-  it("renders first name, last name, and organization fields", () => {
+  it("renders first name and last name fields", () => {
     render(<Wrapper />);
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
-    expect(screen.getByLabelText("registration.organization")).toBeInTheDocument();
   });
 
   it("does not render email field when needsEmailVerification is false", () => {
@@ -100,7 +98,6 @@ describe("RegistrationFields", () => {
 
     expect(screen.getByLabelText("registration.firstName")).toBeDisabled();
     expect(screen.getByLabelText("registration.lastName")).toBeDisabled();
-    expect(screen.getByLabelText("registration.organization")).toBeDisabled();
     expect(screen.getByRole("checkbox")).toBeDisabled();
   });
 

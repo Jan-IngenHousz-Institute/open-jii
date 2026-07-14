@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LinkedWorkbookCard } from "./linked-workbook-card";
 
 const { syncState } = vi.hoisted(() => ({
-  syncState: { workbook: 0, versions: 0, mutating: 0, upgrading: 0 },
+  syncState: { workbook: 0, versions: 0, mutating: 0, upgrading: 0, setting: 0 },
 }));
 
 vi.mock("@tanstack/react-query", async (importActual) => {
@@ -35,6 +35,7 @@ vi.mock("@tanstack/react-query", async (importActual) => {
       const key = filters?.mutationKey;
       if (key?.[0] === "workbook" && key[2] === "update") return syncState.mutating;
       if (key?.[0] === "experiment" && key[2] === "upgradeWorkbook") return syncState.upgrading;
+      if (key?.[0] === "experiment" && key[2] === "setWorkbookVersion") return syncState.setting;
       return 0;
     },
   };
@@ -85,7 +86,7 @@ function setUpgradable(isUpgradable: boolean) {
 }
 
 const card = () => <LinkedWorkbookCard {...props} />;
-const upgradeButton = () => screen.queryByRole("button", { name: /flow\.upgradeToLatest/i });
+const upgradeButton = () => screen.queryByRole("button", { name: /flow\.reviewAndUpgrade/i });
 
 describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
   beforeEach(() => {
@@ -93,6 +94,7 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
     syncState.versions = 0;
     syncState.mutating = 0;
     syncState.upgrading = 0;
+    syncState.setting = 0;
     mockUseWorkbookVersions.mockReturnValue({ data: { body: [pinnedVersion] } });
   });
 
@@ -139,6 +141,26 @@ describe("LinkedWorkbookCard upgrade banner (anti-flicker)", () => {
 
     // Upgrade settles and re-pins; isUpgradable is false again. Never flashed.
     syncState.upgrading = 0;
+    setUpgradable(false);
+    rerender(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+  });
+
+  it("does not flash the banner while a history restore/roll-forward is in flight", () => {
+    // Settled, not upgradable (just re-pinned): no banner.
+    setUpgradable(false);
+    const { rerender } = render(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+
+    // A version restore re-pins the experiment; its refetch transiently reads
+    // isUpgradable=true before settling. Stay frozen (hidden).
+    syncState.setting = 1;
+    setUpgradable(true);
+    rerender(card());
+    expect(upgradeButton()).not.toBeInTheDocument();
+
+    // Restore settles; isUpgradable is false again. Never flashed.
+    syncState.setting = 0;
     setUpgradable(false);
     rerender(card());
     expect(upgradeButton()).not.toBeInTheDocument();

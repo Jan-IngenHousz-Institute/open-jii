@@ -56,7 +56,6 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
       firstName: profile?.firstName ?? "User",
       lastName: profile?.lastName ?? "User",
       bio: profile?.bio,
-      organization: profile?.organization,
       activated: false,
       avatarUrl: profile?.avatarUrl,
     };

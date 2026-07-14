@@ -8,6 +8,7 @@ export const createProtocolSchema = createInsertSchema(protocols).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
 export const updateProtocolSchema = createInsertSchema(protocols).partial().omit({
@@ -15,11 +16,14 @@ export const updateProtocolSchema = createInsertSchema(protocols).partial().omit
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
-export const selectProtocolSchema = createSelectSchema(protocols).extend({
-  createdByName: z.string().optional(),
-});
+export const selectProtocolSchema = createSelectSchema(protocols)
+  .omit({ searchVector: true })
+  .extend({
+    createdByName: z.string().optional(),
+  });
 
 export type CreateProtocolDto = z.infer<typeof createProtocolSchema>;
 export type UpdateProtocolDto = z.infer<typeof updateProtocolSchema>;

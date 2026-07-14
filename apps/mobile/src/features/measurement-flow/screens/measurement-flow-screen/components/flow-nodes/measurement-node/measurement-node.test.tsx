@@ -110,7 +110,7 @@ beforeEach(() => {
 
 describe("MeasurementNode start-scan guards", () => {
   it("shows the protocol-unavailable toast (not scan error) when the node has no protocol", () => {
-    render(<MeasurementNode content={{ ...content, protocol: undefined }} />);
+    render(<MeasurementNode content={{ ...content, protocol: undefined }} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith(PROTOCOL_UNAVAILABLE_KEY);
@@ -118,7 +118,7 @@ describe("MeasurementNode start-scan guards", () => {
   });
 
   it("shows the no-protocol toast when the node has no protocolId", () => {
-    render(<MeasurementNode content={{ ...content, protocolId: "" }} />);
+    render(<MeasurementNode content={{ ...content, protocolId: "" }} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     expect(toastError).toHaveBeenCalledWith("measurementFlow:measurementNode.toast.noProtocol");
@@ -128,7 +128,7 @@ describe("MeasurementNode start-scan guards", () => {
   it("blocks the scan and shows device-disconnected when the liveness probe finds no device", async () => {
     refetchConnectedDevice.mockResolvedValue({ data: null });
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(DEVICE_DISCONNECTED_KEY));
@@ -138,11 +138,11 @@ describe("MeasurementNode start-scan guards", () => {
   it("runs the scan and advances when the protocol and connection are available", async () => {
     executeScan.mockResolvedValue({ result: 42 });
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(executeScan).toHaveBeenCalledWith(PROTOCOL));
-    expect(setScanResult).toHaveBeenCalledWith({ result: 42 });
+    expect(setScanResult).toHaveBeenCalledWith({ result: 42 }, "m1");
     expect(nextStep).toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();
   });
@@ -150,7 +150,7 @@ describe("MeasurementNode start-scan guards", () => {
   it("maps a transport failure to the device-disconnected toast", async () => {
     executeScan.mockRejectedValue(new Error("Failed to write to device"));
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(DEVICE_DISCONNECTED_KEY));
@@ -161,7 +161,7 @@ describe("MeasurementNode start-scan guards", () => {
   it("shows the generic scan-error toast when the scan itself fails", async () => {
     executeScan.mockRejectedValue(new Error("Invalid result"));
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(SCAN_ERROR_KEY));
@@ -171,7 +171,7 @@ describe("MeasurementNode start-scan guards", () => {
   it("stays silent when the measurement was cancelled", async () => {
     executeScan.mockRejectedValue(new Error("Measurement cancelled"));
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(START_KEY));
 
     await waitFor(() => expect(executeScan).toHaveBeenCalled());
@@ -182,7 +182,7 @@ describe("MeasurementNode start-scan guards", () => {
   it("hides the Start button entirely when no device is connected", () => {
     useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
 
     expect(screen.queryByText(START_KEY)).toBeNull();
   });
@@ -195,7 +195,7 @@ describe("MeasurementNode start-scan guards", () => {
       }),
     );
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     const button = screen.getByText(START_KEY);
     fireEvent.press(button);
     fireEvent.press(button);
@@ -210,7 +210,7 @@ describe("MeasurementNode in-scan controls", () => {
     scanState.isScanning = true;
     cancelCommand.mockResolvedValue(undefined);
 
-    render(<MeasurementNode content={content} />);
+    render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(CANCEL_KEY));
 
     await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
@@ -221,11 +221,11 @@ describe("MeasurementNode in-scan controls", () => {
     scanState.isScanning = true;
     cancelCommand.mockResolvedValue(undefined);
 
-    const { rerender } = render(<MeasurementNode content={content} />);
+    const { rerender } = render(<MeasurementNode content={content} nodeId="m1" />);
     expect(cancelCommand).not.toHaveBeenCalled();
 
     useConnectedDevice.mockReturnValue({ data: undefined, refetch: refetchConnectedDevice });
-    rerender(<MeasurementNode content={content} />);
+    rerender(<MeasurementNode content={content} nodeId="m1" />);
 
     await waitFor(() => expect(cancelCommand).toHaveBeenCalled());
     expect(resetScan).toHaveBeenCalled();

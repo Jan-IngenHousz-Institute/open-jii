@@ -5,6 +5,7 @@ import {
   createQuestionCell,
   createOutputCell,
   createBranchCell,
+  createCommandCell,
   createProtocol,
   createMacro,
 } from "@/test/factories";
@@ -57,6 +58,12 @@ describe("CellRenderer", () => {
     render(<CellRenderer cell={cell} onUpdate={noop} onDelete={noop} />);
 
     await waitFor(() => expect(screen.getByText("Chlorophyll Calc")).toBeInTheDocument());
+  });
+
+  it("renders command cell with its content", () => {
+    const cell = createCommandCell({ payload: { format: "string", content: "battery" } });
+    render(<CellRenderer cell={cell} onUpdate={noop} onDelete={noop} />);
+    expect(screen.getByTestId("code-editor")).toHaveTextContent("battery");
   });
 
   it("renders question cell with question text", () => {

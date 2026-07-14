@@ -44,6 +44,24 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         isStart,
       );
 
+    case "command": {
+      // Inline command rides the existing measurement node so old apps drop it
+      // cleanly (unknown content) rather than choking on a new node type.
+      const source = cell.payload.name?.trim() ? cell.payload.name : cell.payload.content;
+      const label = source
+        .replace(/[\r\n]+/g, " ")
+        .trim()
+        .slice(0, 64);
+      return makeNode(
+        cell.id,
+        "measurement",
+        // Never empty: zFlowNode.name requires a min length of 1.
+        label.length > 0 ? label : "Command",
+        { command: { format: cell.payload.format, content: cell.payload.content } },
+        isStart,
+      );
+    }
+
     case "macro":
       return makeNode(
         cell.id,

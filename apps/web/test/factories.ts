@@ -36,6 +36,7 @@ import type { Protocol } from "@repo/api/schemas/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
 import type {
   BranchCell,
+  CommandCell,
   MacroCell,
   MarkdownCell,
   OutputCell,
@@ -216,7 +217,6 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     firstName: "Test",
     lastName: "User",
     bio: null,
-    organization: undefined,
     activated: true,
     email: "test@example.com",
     ...overrides,
@@ -470,6 +470,26 @@ export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): Proto
   };
 }
 
+export function createCommandCell(
+  overrides: Partial<Omit<CommandCell, "payload">> & {
+    payload?: Partial<{ format: "string" | "json" | "yaml"; content: string; name: string }>;
+  } = {},
+): CommandCell {
+  cellSeq++;
+  const { payload, ...rest } = overrides;
+  return {
+    id: `cell-cmd-${cellSeq}`,
+    type: "command",
+    isCollapsed: false,
+    ...rest,
+    payload: {
+      format: payload?.format ?? "string",
+      content: payload?.content ?? "battery",
+      ...(payload?.name !== undefined ? { name: payload.name } : {}),
+    },
+  };
+}
+
 export function createMacroCell(overrides: Partial<MacroCell> = {}): MacroCell {
   cellSeq++;
   return {
@@ -694,6 +714,8 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
     name: `Device ${iotDeviceSeq}`,
     deviceType: "ambyte",
     status: "pending",
+    certificateId: null,
+    certificateArn: null,
     createdBy: crypto.randomUUID(),
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",

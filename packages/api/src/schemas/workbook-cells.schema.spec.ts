@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   zProtocolCell,
+  zCommandCell,
   zMacroCell,
   zQuestionCell,
   zBranchCell,
@@ -69,6 +70,52 @@ describe("Workbook Cells Schema", () => {
         payload: { protocolId: uuidA, version: 0 },
       };
       expect(() => zProtocolCell.parse(cell)).toThrow();
+    });
+  });
+
+  describe("zCommandCell (inline)", () => {
+    it("accepts a raw string command", () => {
+      const cell = {
+        id: "c1",
+        type: "command",
+        payload: { format: "string", content: "battery" },
+      };
+      expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+    });
+
+    it("accepts json and yaml formats with an optional name", () => {
+      for (const format of ["json", "yaml"] as const) {
+        const cell = {
+          id: `c-${format}`,
+          type: "command",
+          payload: { format, content: "[]", name: "Custom" },
+        };
+        expect(zCommandCell.parse(cell)).toEqual({ ...cell, isCollapsed: false });
+      }
+    });
+
+    it("rejects empty content", () => {
+      const cell = { id: "c2", type: "command", payload: { format: "string", content: "" } };
+      expect(() => zCommandCell.parse(cell)).toThrow();
+    });
+
+    it("rejects an unknown format", () => {
+      const cell = { id: "c3", type: "command", payload: { format: "xml", content: "x" } };
+      expect(() => zCommandCell.parse(cell)).toThrow();
+    });
+
+    it("rejects payload with extra keys (strict)", () => {
+      const cell = {
+        id: "c4",
+        type: "command",
+        payload: { format: "string", content: "hello", extra: true },
+      };
+      expect(() => zCommandCell.parse(cell)).toThrow();
+    });
+
+    it("is accepted through the workbook cell union", () => {
+      const cell = { id: "c5", type: "command", payload: { format: "string", content: "hello" } };
+      expect(zWorkbookCell.parse(cell)).toMatchObject({ type: "command" });
     });
   });
 

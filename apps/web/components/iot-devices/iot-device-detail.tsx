@@ -23,9 +23,12 @@ import {
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
+import { ComingSoonPanel } from "./coming-soon-panel";
+import { IotDeviceCredentialsCard } from "./iot-device-credentials-card";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
 export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
@@ -83,60 +86,84 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
           <h1 className="text-2xl font-semibold text-[#011111]">{displayName}</h1>
           <IotDeviceStatusBadge status={device.status} />
         </div>
-
-        <div className="flex flex-wrap items-start gap-10 border-b border-[#EDF2F6] pb-8">
-          <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
-          <MetaField label={t("iot.devices.detail.meta.type")} value={device.deviceType} />
-          <MetaField
-            label={t("iot.devices.detail.meta.status")}
-            value={t(`iot.devices.status.${device.status}`)}
-          />
-          <MetaField
-            label={t("iot.devices.detail.meta.registered")}
-            value={formatDate(device.createdAt)}
-          />
-          <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
-        </div>
       </div>
 
-      <div className="mt-8 max-w-3xl space-y-6">
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.devices.detail.credentials.title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-sm">
-              {t("iot.devices.detail.credentials.none")}
-            </p>
-          </CardContent>
-        </Card>
+      <NavTabs defaultValue="overview" className="mt-8">
+        <NavTabsList>
+          <NavTabsTrigger value="overview">{t("iot.devices.detailTabs.overview")}</NavTabsTrigger>
+          <NavTabsTrigger value="credentials">
+            {t("iot.devices.detailTabs.credentials")}
+          </NavTabsTrigger>
+          <NavTabsTrigger value="onboarding">
+            {t("iot.devices.detailTabs.onboarding")}
+          </NavTabsTrigger>
+          <NavTabsTrigger value="members">{t("iot.devices.detailTabs.members")}</NavTabsTrigger>
+          <NavTabsTrigger value="lineage">{t("iot.devices.detailTabs.lineage")}</NavTabsTrigger>
+          <NavTabsTrigger value="monitoring">
+            {t("iot.devices.detailTabs.monitoring")}
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        <Card className="border-destructive/30 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-destructive text-base">
-              {t("iot.devices.detail.dangerZone.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {t("iot.devices.detail.dangerZone.deleteLabel")}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t("iot.devices.detail.dangerZone.deleteDescription")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("iot.devices.actions.delete")}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+        <NavTabsContent value="overview" className="space-y-8">
+          <div className="flex flex-wrap items-start gap-10">
+            <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
+            <MetaField label={t("iot.devices.detail.meta.type")} value={device.deviceType} />
+            <MetaField
+              label={t("iot.devices.detail.meta.status")}
+              value={t(`iot.devices.status.${device.status}`)}
+            />
+            <MetaField
+              label={t("iot.devices.detail.meta.registered")}
+              value={formatDate(device.createdAt)}
+            />
+            <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
+          </div>
+
+          <Card className="border-destructive/30 max-w-3xl shadow-none">
+            <CardHeader>
+              <CardTitle className="text-destructive text-base">
+                {t("iot.devices.detail.dangerZone.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  {t("iot.devices.detail.dangerZone.deleteLabel")}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {t("iot.devices.detail.dangerZone.deleteDescription")}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("iot.devices.actions.delete")}
+              </Button>
+            </CardContent>
+          </Card>
+        </NavTabsContent>
+
+        <NavTabsContent value="credentials" className="max-w-3xl">
+          <IotDeviceCredentialsCard device={device} />
+        </NavTabsContent>
+
+        <NavTabsContent value="onboarding">
+          <ComingSoonPanel description={t("iot.devices.comingSoon.onboarding")} />
+        </NavTabsContent>
+
+        <NavTabsContent value="members">
+          <ComingSoonPanel description={t("iot.devices.comingSoon.members")} />
+        </NavTabsContent>
+        <NavTabsContent value="lineage">
+          <ComingSoonPanel description={t("iot.devices.comingSoon.lineage")} />
+        </NavTabsContent>
+        <NavTabsContent value="monitoring">
+          <ComingSoonPanel description={t("iot.devices.comingSoon.monitoring")} />
+        </NavTabsContent>
+      </NavTabs>
 
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>

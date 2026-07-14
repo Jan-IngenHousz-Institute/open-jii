@@ -9,6 +9,7 @@ import {
   zQuestionContent,
   zInstructionContent,
   zMeasurementContent,
+  zMeasurementCommandContent,
   zAnalysisContent,
   zBranchContent,
 } from "@repo/api/schemas/experiment.schema";
@@ -21,6 +22,7 @@ import { nodeTypeColorMap } from "../react-flow/node-config";
 type QuestionContent = z.infer<typeof zQuestionContent>;
 type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
+type MeasurementCommandContent = z.infer<typeof zMeasurementCommandContent>;
 type AnalysisContent = z.infer<typeof zAnalysisContent>;
 type BranchContent = z.infer<typeof zBranchContent>;
 type QuestionKind = z.infer<typeof zQuestionKind>;
@@ -37,6 +39,7 @@ type StepSpecification =
   | QuestionContent
   | InstructionContent
   | MeasurementContent
+  | MeasurementCommandContent
   | AnalysisContent
   | BranchContent;
 
@@ -50,6 +53,7 @@ export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
   stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
   protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
   macroId?: string; // analysis convenience field (when not yet set in stepSpecification)
+  command?: MeasurementCommandContent["command"]; // command convenience field (COMMAND nodes)
 }
 
 export interface FlowEdgeData extends Record<string, unknown> {
@@ -65,6 +69,8 @@ const REACT_FLOW_TO_API_NODE_TYPE = {
   QUESTION: "question",
   INSTRUCTION: "instruction",
   MEASUREMENT: "measurement",
+  // Inline command rides the API measurement node type (zMeasurementCommandContent).
+  COMMAND: "measurement",
   ANALYSIS: "analysis",
   BRANCH: "branch",
 } as const;
@@ -120,7 +126,11 @@ export class FlowMapper {
         branch: "BRANCH",
       };
 
-      const nodeType = reactFlowTypeMapping[apiNode.type];
+      // A measurement node carrying an inline command renders as the COMMAND
+      // node type in the editor; the wire type stays "measurement".
+      const carriesCommand =
+        apiNode.type === "measurement" && isObject(apiNode.content) && "command" in apiNode.content;
+      const nodeType = carriesCommand ? "COMMAND" : reactFlowTypeMapping[apiNode.type];
 
       const config = nodeTypeColorMap[nodeType];
 
@@ -139,11 +149,16 @@ export class FlowMapper {
       };
 
       // For measurement nodes, also set protocolId directly on the node data
-      if (apiNode.type === "measurement" && isObject(apiNode.content)) {
+      if (apiNode.type === "measurement" && !carriesCommand && isObject(apiNode.content)) {
         const measurementContent = apiNode.content as MeasurementContent;
         if (measurementContent.protocolId) {
           nodeData.protocolId = measurementContent.protocolId;
         }
+      }
+
+      // For command nodes, set the inline command directly on the node data
+      if (carriesCommand) {
+        nodeData.command = (apiNode.content as MeasurementCommandContent).command;
       }
 
       // For analysis nodes, also set macroId directly on the node data
@@ -235,6 +250,18 @@ export class FlowMapper {
           }
           content = parsed.data;
         }
+      } else if (node.type === "COMMAND") {
+        // Inline command node: wire type is "measurement" with command content.
+        const command =
+          data.command ??
+          (isObject(data.stepSpecification)
+            ? (data.stepSpecification as Partial<MeasurementCommandContent>).command
+            : undefined);
+        const parsed = zMeasurementCommandContent.safeParse({ command });
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
       } else if (nodeType === "measurement") {
         const protocolId =
           data.protocolId ??

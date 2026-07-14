@@ -239,6 +239,27 @@
       "when": 1783691941595,
       "tag": "0033_lame_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783699287753,
+      "tag": "0034_romantic_george_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783929797334,
+      "tag": "0035_wild_moondragon",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783940279830,
+      "tag": "0036_burly_cargill",
+      "breakpoints": true
     }
   ]
 }

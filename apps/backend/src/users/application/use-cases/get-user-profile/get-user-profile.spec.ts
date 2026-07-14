@@ -36,7 +36,6 @@ describe("GetUserProfileUseCase", () => {
     const dto = {
       firstName: "Alice",
       lastName: "Smith",
-      organization: "TestOrg",
       bio: "Test bio",
     };
     const createRes = await createProfileUseCase.execute(dto, testUserId);
@@ -53,7 +52,6 @@ describe("GetUserProfileUseCase", () => {
     expect(profile).toMatchObject({
       firstName: dto.firstName,
       lastName: dto.lastName,
-      organization: dto.organization,
       bio: dto.bio,
     });
   });

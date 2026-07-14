@@ -72,8 +72,7 @@ export const userContract = c.router({
       404: zErrorResponse,
     },
     summary: "Get user profile",
-    description:
-      "Returns the user's profile information including firstName, lastName, bio, and organization",
+    description: "Returns the user's profile information including firstName, lastName, and bio",
   },
 
   deleteUser: {

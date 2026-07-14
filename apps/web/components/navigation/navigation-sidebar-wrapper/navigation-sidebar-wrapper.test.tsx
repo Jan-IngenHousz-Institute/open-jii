@@ -6,6 +6,10 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
 
+vi.mock("~/lib/posthog-server", () => ({
+  isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
+}));
+
 // Mock AppSidebar component
 vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
   AppSidebar: ({
@@ -101,6 +105,21 @@ describe("NavigationSidebarWrapper", () => {
       icon: "RadioReceiver",
       isActive: true,
     });
+  });
+
+  it("omits devices navigation when the iot-devices flag is disabled", async () => {
+    const { isFeatureFlagEnabled } = await import("~/lib/posthog-server");
+    vi.mocked(isFeatureFlagEnabled).mockResolvedValueOnce(false);
+
+    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    render(Component);
+
+    const navigationDataElement = screen.getByTestId("sidebar-navigationData");
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
+      navDevices: unknown[];
+    };
+
+    expect(navigationData.navDevices).toHaveLength(0);
   });
 
   it("prepares library navigation with protocols child", async () => {

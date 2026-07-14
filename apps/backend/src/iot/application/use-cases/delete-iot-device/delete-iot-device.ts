@@ -27,11 +27,30 @@ export class DeleteIotDeviceUseCase {
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
-    if (!deviceResult.value) {
+    const device = deviceResult.value;
+    if (!device) {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
-    const deleteThingResult = await this.awsPort.deleteThing(deviceResult.value.thingName);
+    // A Thing cannot be deleted while a certificate is still attached, so revoke
+    // and detach the cert first. Revoke is required (a live cert must not survive
+    // a deleted device); detach is required for DeleteThing to succeed.
+    if (device.certificateId && device.certificateArn) {
+      const revokeResult = await this.awsPort.setCertificateStatus(device.certificateId, "REVOKED");
+      if (revokeResult.isFailure()) {
+        return failure(revokeResult.error);
+      }
+
+      const detachResult = await this.awsPort.detachThingPrincipal(
+        device.thingName,
+        device.certificateArn,
+      );
+      if (detachResult.isFailure()) {
+        return failure(detachResult.error);
+      }
+    }
+
+    const deleteThingResult = await this.awsPort.deleteThing(device.thingName);
     if (deleteThingResult.isFailure()) {
       return failure(deleteThingResult.error);
     }

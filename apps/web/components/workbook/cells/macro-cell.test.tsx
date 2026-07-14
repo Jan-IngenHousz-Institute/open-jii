@@ -1,6 +1,8 @@
 import { createMacro, createMacroCell } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -372,5 +374,169 @@ describe("MacroCellComponent", () => {
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession
     >);
+  });
+
+  describe("inline rename", () => {
+    it("renames the macro and repoints the cell label for the owner", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const updateSpy = server.mount(contract.macros.updateMacro, {
+        body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
+      });
+      const onUpdate = vi.fn();
+      renderMacroCell({ onUpdate });
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Renamed Macro");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      expect(updateSpy.body).toEqual({ name: "Renamed Macro" });
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
+      expect(updated.payload.name).toBe("Renamed Macro");
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
+    it("merges a concurrent language change into the resolved rename", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.macros.getMacro, { body: baseMacro });
+      server.mount(contract.macros.updateMacro, {
+        body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
+        delay: 100,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <MacroCellComponent cell={cell} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Renamed Macro");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      // A language switch lands while the rename save is still in flight.
+      rerender(
+        <MacroCellComponent
+          cell={{ ...cell, payload: { ...cell.payload, language: "r" } }}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
+      // The rename must preserve the concurrent language switch, not revert it.
+      expect(updated.payload.language).toBe("r");
+      expect(updated.payload.name).toBe("Renamed Macro");
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
+    it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      // The update contract has no typed 409; the backend signals a name clash
+      // via a REPOSITORY_DUPLICATE code on a 400 body.
+      server.use(
+        http.put(`${API_URL}/api/v1/macros/:id`, () =>
+          HttpResponse.json(
+            { code: "REPOSITORY_DUPLICATE", message: "duplicate", statusCode: 400 },
+            { status: 400 },
+          ),
+        ),
+      );
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+      const onUpdate = vi.fn();
+      renderMacroCell({ onUpdate });
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Taken Name");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "cells.renameConflict",
+          variant: "destructive",
+        }),
+      );
+      // Editor stays open so the user can pick another name, and the cell label
+      // is never repointed to the rejected name.
+      expect(screen.getByLabelText("cells.renameSave")).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
+    it("shows a generic failure toast when rename fails without a conflict code", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.macros.updateMacro, {
+        status: 400,
+        body: { message: "boom", statusCode: 400 },
+      });
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+      const onUpdate = vi.fn();
+      renderMacroCell({ onUpdate });
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Another Name");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "boom",
+          variant: "destructive",
+        }),
+      );
+      expect(onUpdate).not.toHaveBeenCalled();
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
+
+    it("does not offer rename to non-owners", async () => {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      renderMacroCell({}, { createdBy: "other-user" });
+
+      await screen.findByText("My Macro");
+      expect(screen.queryByLabelText("cells.rename")).not.toBeInTheDocument();
+
+      vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+        typeof useSession
+      >);
+    });
   });
 });

@@ -74,6 +74,7 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
+import { SetWorkbookVersionUseCase } from "./application/use-cases/set-workbook-version/set-workbook-version";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -249,6 +250,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AttachWorkbookUseCase,
     DetachWorkbookUseCase,
     UpgradeWorkbookVersionUseCase,
+    SetWorkbookVersionUseCase,
 
     // Experiment data annotation use cases
     AddAnnotationsUseCase,

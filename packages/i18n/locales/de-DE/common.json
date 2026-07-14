@@ -127,6 +127,8 @@
     "needAdminAccessArchived": "Zugriff auf Einstellungen für archivierte Experimente verweigert",
     "needMemberAccess": "Sie müssen Mitglied sein, um auf die Experiment-Einstellungen zuzugreifen",
     "measurementPanelTitle": "Messprotokoll",
+    "commandPanelTitle": "Gerätebefehl",
+    "commandPanelPlaceholder": "Befehl eingeben, z. B. battery",
     "detailsTitle": "Details",
     "detailsDescription": "Geben Sie die grundlegenden Informationen zu Ihrem Experiment ein",
     "membersVisibilityTitle": "Mitglieder & Sichtbarkeit",
