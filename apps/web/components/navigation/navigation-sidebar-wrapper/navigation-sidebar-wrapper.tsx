@@ -1,15 +1,19 @@
 import { mainNavigation } from "@/components/navigation/navigation-config";
 import * as React from "react";
+import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import initTranslations from "@repo/i18n/server";
 
 import { AppSidebar } from "../navigation-sidebar/navigation-sidebar";
 
 export async function NavigationSidebarWrapper({
   locale,
+  userEmail,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: string;
+  userEmail?: string;
 }) {
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({
@@ -26,6 +30,8 @@ export async function NavigationSidebarWrapper({
     locale,
     namespaces: ["iot"],
   });
+
+  const devicesEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES, userEmail);
 
   // Prepare navigation data server-side using config
   const navigationData = {
@@ -53,18 +59,20 @@ export async function NavigationSidebarWrapper({
         })),
       },
     ],
-    navDevices: [
-      {
-        title: tIot(mainNavigation.devices.titleKey),
-        url: mainNavigation.devices.url(locale),
-        icon: mainNavigation.devices.icon,
-        isActive: true,
-        items: mainNavigation.devices.items.map((item) => ({
-          title: tIot(item.titleKey, { ns: item.namespace }),
-          url: item.url(locale),
-        })),
-      },
-    ],
+    navDevices: devicesEnabled
+      ? [
+          {
+            title: tIot(mainNavigation.devices.titleKey),
+            url: mainNavigation.devices.url(locale),
+            icon: mainNavigation.devices.icon,
+            isActive: true,
+            items: mainNavigation.devices.items.map((item) => ({
+              title: tIot(item.titleKey, { ns: item.namespace }),
+              url: item.url(locale),
+            })),
+          },
+        ]
+      : [],
     navWorkbooks: [
       {
         title: tNavigation(mainNavigation.workbooks.titleKey),
