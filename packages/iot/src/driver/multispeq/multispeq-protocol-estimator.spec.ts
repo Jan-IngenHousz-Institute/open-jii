@@ -168,6 +168,64 @@ describe("estimateProtocolDurationMs", () => {
     expect(estimateProtocolDurationMs(protocol)).toBe(80);
   });
 
+  it("counts averages and averages_delay (the real keys, not just protocol_averages)", () => {
+    const protocol = [
+      {
+        v_arrays: [],
+        set_repeats: 1,
+        _protocol_set_: [
+          {
+            pulses: [10],
+            pulse_distance: [1000], // 10ms train
+            pre_illumination: [2, 800, 30_000], // 30s, re-run each average
+            averages: 10,
+            averages_delay: 5000, // ms, not seconds
+          },
+        ],
+      },
+    ];
+    // (10ms train + 30_000 pre-illum + 5_000 delay) × 10 averages
+    expect(estimateProtocolDurationMs(protocol)).toBe(350_100);
+  });
+
+  it("sizes a DIRK/ECS averaging protocol above its real ~8 min runtime (OJD-1643)", () => {
+    // Protocol with a 10-average DIRKecs block; each average re-runs a 30s
+    // pre-illumination, so the block alone is ~6 min. Before honoring the
+    // `averages` key the estimate was ~2.6 min and the run was cut off.
+    const protocol = [
+      {
+        share: 1,
+        set_repeats: 1,
+        _protocol_set_: [
+          { label: "Autogain", autogain: [[0, 1, 1, 10, 1000]], do_once: 1 },
+          {
+            label: "Fluorescence",
+            pre_illumination: [2, 800, 120_000],
+            pulses: [20, 400, 100, 100, 50, 50],
+            pulse_distance: [1000, 1000, 1000, 1000, 1000, 1000],
+            detectors: [[1], [1], [1], [1], [1], [1]],
+            averages: 1,
+            protocol_repeats: 1,
+          },
+          {
+            label: "DIRKecs",
+            pre_illumination: [2, 800, 30_000],
+            pulses: [300, 300, 300],
+            pulse_distance: [1000, 1000, 1000],
+            detectors: [[3], [3], [3]],
+            averages: 10,
+            averages_delay: 5000,
+            protocol_repeats: 1,
+          },
+        ],
+      },
+    ];
+    // autogain 3_000 + fluor (720+120_000) + dirk (900+30_000+5_000)×10
+    expect(estimateProtocolDurationMs(protocol)).toBe(482_720);
+    // Response budget must exceed the real ~8 min run (was ~5.3 min, timed out).
+    expect(resolveCommandTimeoutMs(protocol, 60_000)).toBeGreaterThan(8 * 60_000);
+  });
+
   it("adds pre-illumination duration to each block run", () => {
     const protocol = [
       {
