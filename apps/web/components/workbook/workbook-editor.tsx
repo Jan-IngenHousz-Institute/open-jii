@@ -84,6 +84,8 @@ export function createDefaultCell(
   switch (type) {
     case "markdown":
       return { ...base, type: "markdown", content: "" };
+    case "command":
+      return { ...base, type: "command", payload: { format: "string", content: "" } };
     case "protocol":
       throw new Error("Protocol cells must be created via the protocol picker");
     case "macro":
@@ -459,6 +461,7 @@ export function WorkbookEditor({
     for (const cell of cells) {
       if (
         cell.type === "protocol" ||
+        cell.type === "command" ||
         cell.type === "macro" ||
         cell.type === "question" ||
         cell.type === "branch"

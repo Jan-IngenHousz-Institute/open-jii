@@ -189,4 +189,23 @@ describe("flowNodesToWorkbookCells", () => {
     expect(cells).toHaveLength(1);
     expect((cells[0] as { content: string }).content).toBe("");
   });
+
+  it("converts an inline-command measurement node to a command cell", () => {
+    const nodes = [
+      makeNode({
+        id: "m2",
+        type: "measurement",
+        name: "battery",
+        isStart: true,
+        content: { command: { format: "string", content: "battery" } },
+      }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toMatchObject({
+      id: "m2",
+      type: "command",
+      payload: { format: "string", content: "battery" },
+    });
+  });
 });

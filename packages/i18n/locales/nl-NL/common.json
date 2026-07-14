@@ -66,6 +66,8 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "commandPanelTitle": "Apparaatopdracht",
+    "commandPanelPlaceholder": "Typ een opdracht, bijv. battery",
     "title": "Experimenten",
     "newExperiment": "Nieuw experiment",
     "overview": "Overzicht",

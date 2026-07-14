@@ -32,6 +32,9 @@ export interface FlowState {
   isFlowFinished: boolean;
   isQuestionsSubmitPending: boolean;
   scanResult?: ScanResult;
+  // Cell id of the producer (protocol or command) that yielded scanResult;
+  // keys the synthetic output cell in hydrateCells for branch evaluation.
+  producerCellId?: string;
   isFromOverview: boolean;
   // Workbook-derived data for on-device branch evaluation; empty for legacy
   // flow-only experiments. Persisted so a resumed branching flow keeps routing.
@@ -52,6 +55,7 @@ export const initialFlowState: FlowState = {
   isFlowFinished: false,
   isQuestionsSubmitPending: false,
   scanResult: undefined,
+  producerCellId: undefined,
   isFromOverview: false,
   cells: [],
   edges: [],
@@ -88,7 +92,13 @@ function firstMeasurementStep(flowNodes: FlowNode[]): number {
 // assumes at most one). Derived from the persisted flowNodes, so it
 // survives pause/resume and can never go stale across flows.
 export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
-  const node = flowNodes.find((n) => n.type === "measurement");
+  // A command cell also rides a "measurement" node but carries no protocolId, so
+  // match the first node that actually has one; otherwise a leading command node
+  // would shadow the real protocol and the upload would fail with "Missing protocol id".
+  const node = flowNodes.find(
+    (n) =>
+      n.type === "measurement" && (n.content as { protocolId?: string } | undefined)?.protocolId,
+  );
   return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 
@@ -147,6 +157,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       isFlowFinished: false,
       isQuestionsSubmitPending: false,
       scanResult: undefined,
+      producerCellId: undefined,
       cells: [],
       edges: [],
       ...clearedBranchIteration,
@@ -165,6 +176,7 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     iterationCount: state.iterationCount + 1,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -175,6 +187,7 @@ export function retryIterationState(): Partial<FlowState> {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
     scanResult: undefined,
+    producerCellId: undefined,
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -195,6 +208,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
     scanResult: undefined,
+    producerCellId: undefined,
     ...clearedBranchIteration,
   };
 }

@@ -1,4 +1,3 @@
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { FlowNode } from "~/shared/measurements/flow-node";
@@ -50,7 +49,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     iterationCount: flow.iterationCount,
     getAnswer,
     scanResult: flow.scanResult,
-    protocolId: flowProtocolId(flow.flowNodes),
+    producerCellId: flow.producerCellId,
   });
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");

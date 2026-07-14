@@ -5,6 +5,7 @@ import type {
   BranchCell,
   BranchCondition,
   BranchPath,
+  CommandCell,
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
@@ -24,6 +25,7 @@ interface MockFlowState {
   currentFlowStep: number;
   iterationCount: number;
   scanResult?: unknown;
+  producerCellId?: string;
   cells: WorkbookCell[];
   branchVisitCounts: Record<string, number>;
   setCurrentFlowStep: typeof mockSetCurrentFlowStep;
@@ -38,6 +40,7 @@ const flowState: MockFlowState = {
   currentFlowStep: 0,
   iterationCount: 0,
   scanResult: undefined,
+  producerCellId: undefined,
   cells: [],
   branchVisitCounts: {},
   setCurrentFlowStep: mockSetCurrentFlowStep,
@@ -91,6 +94,12 @@ const pCell = (id: string, protocolId: string): ProtocolCell => ({
   isCollapsed: false,
   payload: { protocolId, version: 1 },
 });
+const cCell = (id: string): CommandCell => ({
+  id,
+  type: "command",
+  isCollapsed: false,
+  payload: { format: "string", content: "battery" },
+});
 const cond = (
   sourceCellId: string,
   operator: BranchCondition["operator"],
@@ -125,6 +134,7 @@ beforeEach(() => {
   flowState.currentFlowStep = 0;
   flowState.iterationCount = 0;
   flowState.scanResult = undefined;
+  flowState.producerCellId = undefined;
   flowState.cells = [];
   flowState.branchVisitCounts = {};
 });
@@ -214,6 +224,7 @@ describe("evaluateAndRoute", () => {
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
+    flowState.producerCellId = "p1";
     flowState.scanResult = { sample: [{ phi2: 0.8 }] };
     flowState.cells = [
       qCell("q1"),
@@ -240,8 +251,33 @@ describe("evaluateAndRoute", () => {
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
   });
 
+  it("resolves a command's scalar response so a Command→Branch takes the matching path", () => {
+    // Regression (Vlad, on device): mobile stored the raw command result, so the
+    // branch's `response` field was undefined and it fell to the default path
+    // while web (which wraps a scalar as { response }) matched. hydrateCells now
+    // mirrors web for command producers.
+    flowState.producerCellId = "cmd1";
+    flowState.scanResult = "OK";
+    flowState.cells = [
+      cCell("cmd1"),
+      branch(
+        "b1",
+        [path("pass", [cond("cmd1", "eq", "OK", "response")], "tgt"), path("pdef", [])],
+        "pdef",
+      ),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("y"), plainFlowNode("tgt")];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "PASS", color: "#abcdef" });
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2); // "tgt" (pass), not the default fall-through
+  });
+
   it("does not match a path when one AND condition fails", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
+    flowState.producerCellId = "p1";
     flowState.scanResult = { sample: [{ phi2: 0.3 }] }; // fails the > 0.5 check
     flowState.cells = [
       qCell("q1"),

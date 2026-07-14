@@ -73,7 +73,8 @@
       "INSTRUCTION": "Anleitung",
       "QUESTION": "Frage",
       "MEASUREMENT": "Messung",
-      "ANALYSIS": "Analyse"
+      "ANALYSIS": "Analyse",
+      "COMMAND": "Befehl"
     },
     "questionTooltip": {
       "title": "Datenspaltenname",

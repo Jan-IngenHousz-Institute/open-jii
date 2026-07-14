@@ -60,10 +60,19 @@ export interface ResolvedMacro {
   code: string;
 }
 
+// An inline device command (raw string / JSON / YAML) carried on a measurement
+// node when the workbook cell is an inline command rather than a protocol ref.
+export interface InlineCommandContent {
+  format: "string" | "json" | "yaml";
+  content: string;
+}
+
 export interface MeasurementContent {
-  params: Record<string, any>;
-  protocolId: string;
+  params?: Record<string, any>;
+  // A measurement node carries EITHER a protocol reference OR an inline command.
+  protocolId?: string;
   protocol?: ResolvedProtocol;
+  command?: InlineCommandContent;
 }
 
 export interface AnalysisContent {

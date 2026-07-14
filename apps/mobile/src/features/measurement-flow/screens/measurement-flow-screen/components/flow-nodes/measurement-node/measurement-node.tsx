@@ -17,9 +17,11 @@ import { ScanningState } from "./components/scanning-state";
 
 interface MeasurementNodeProps {
   content: MeasurementContent;
+  /** Flow node id (== cell id); keys the result so a downstream branch can read it. */
+  nodeId: string;
 }
 
-export function MeasurementNode({ content }: MeasurementNodeProps) {
+export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const {
@@ -35,7 +37,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     scanProgress,
     scanStartedAt,
     estimatedMs,
-  } = useMeasurementCapture(content);
+  } = useMeasurementCapture(content, nodeId);
 
   const renderState = () => {
     if (!device) {

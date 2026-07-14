@@ -85,6 +85,30 @@ vi.mock("../measurement-panel", () => ({
   ),
 }));
 
+vi.mock("../command-panel", () => ({
+  CommandPanel: ({
+    command,
+    onChange,
+    disabled,
+  }: {
+    command?: { format: string; content: string };
+    onChange: (c: { format: string; content: string }) => void;
+    disabled?: boolean;
+  }) => (
+    <div>
+      <span>CommandPanel</span>
+      <div data-testid="cp-command">{JSON.stringify(command)}</div>
+      <button
+        type="button"
+        onClick={() => onChange({ format: "json", content: '{"cmd":"battery"}' })}
+        disabled={disabled}
+      >
+        Apply Command Change
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("../analysis-panel", () => ({
   AnalysisPanel: ({
     selectedMacroId,
@@ -370,6 +394,27 @@ describe("<ExperimentSidePanel />", () => {
     expect(props.onNodeDataChange).toHaveBeenCalledWith("na", {
       ...node.data,
       macroId: "macro-updated",
+    });
+  });
+
+  it("CommandPanel: passes the command and propagates onChange via onNodeDataChange", async () => {
+    const user = userEvent.setup();
+    const node = makeNode("nc", { command: { format: "string", content: "battery" } });
+
+    const { props } = renderPanel({
+      selectedNode: node,
+      nodeType: "COMMAND",
+    });
+
+    expect(screen.queryByText("CommandPanel")).toBeTruthy();
+    expect(screen.getByTestId("cp-command").textContent).toBe(
+      JSON.stringify({ format: "string", content: "battery" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: /Apply Command Change/i }));
+    expect(props.onNodeDataChange).toHaveBeenCalledWith("nc", {
+      ...node.data,
+      command: { format: "json", content: '{"cmd":"battery"}' },
     });
   });
 
