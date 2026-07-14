@@ -81,7 +81,60 @@
     "editingTitle": "Het werkboek van dit experiment bewerken",
     "editAutoApplyNotice": "Elke wijziging die je hier opslaat, wordt automatisch toegepast op dit experiment.",
     "editIsolatedHint": "Wil je wijzigingen uitproberen zonder dit experiment te beïnvloeden, bewerk dan via de werkboekpagina; die wijzigingen blijven gescheiden totdat je de versie bijwerkt.",
-    "editOpenWorkbookLink": "Open de werkboekpagina"
+    "editOpenWorkbookLink": "Open de werkboekpagina",
+    "reviewAndUpgrade": "Controleren & upgraden",
+    "versionHistory": {
+      "open": "Versiegeschiedenis",
+      "title": "Versiegeschiedenis",
+      "subtitle": "Elke versie die is gepubliceerd bij het koppelen of upgraden van dit werkboek.",
+      "current": "Huidig",
+      "restore": "Herstellen",
+      "restoreConfirmTitle": "Deze versie herstellen?",
+      "restoreConfirmMessage": "Dit koppelt het experiment terug aan v{{version}} en wijzigt het meetprotocol voor toekomstige metingen. Bestaande gegevens blijven behouden.",
+      "restored": "Hersteld naar v{{version}}",
+      "restoreFailed": "Herstellen van versie mislukt",
+      "empty": "Nog geen gepubliceerde versies.",
+      "loadError": "Kan versiegeschiedenis niet laden. Probeer het opnieuw."
+    },
+    "upgradeDiff": {
+      "title": "Bekijk wijzigingen voor het upgraden",
+      "subtitle": "Dit experiment gaat van v{{from}} naar {{to}}.",
+      "checking": "Compatibiliteit controleren...",
+      "loadError": "Kon de wijzigingen niet laden. Sluit en probeer opnieuw.",
+      "upgrading": "Bezig met upgraden...",
+      "cellChanges": "Flow-wijzigingen",
+      "noCellChanges": "Geen wijzigingen in de flow-structuur.",
+      "codeChanges": "Protocol- & macrowijzigingen",
+      "viewDiff": "Verschillen tonen",
+      "macroCaveat": "Alleen structurele controles. Macrologica wordt niet geverifieerd; test de flow na het upgraden.",
+      "lastChanged": "gewijzigd {{when}}",
+      "kind": { "protocol": "Protocol", "macro": "Macro" },
+      "status": {
+        "added": "Toegevoegd",
+        "changed": "Gewijzigd",
+        "unchanged": "Ongewijzigd",
+        "removed": "Verwijderd"
+      },
+      "change": {
+        "added": "Toegevoegd",
+        "removed": "Verwijderd",
+        "changed": "Bewerkt",
+        "moved": "Verplaatst"
+      },
+      "verdict": {
+        "ok": "Geen structurele problemen gevonden",
+        "warnings": "Upgraden is mogelijk, met waarschuwingen",
+        "errors": "Upgraden kan dit werkboek breken"
+      },
+      "issue": {
+        "missingProtocol": "Protocol \"{{label}}\" bestaat niet meer",
+        "missingMacro": "Macro \"{{label}}\" bestaat niet meer",
+        "danglingSource": "Een branchvoorwaarde verwijst naar een cel die niet meer bestaat ({{ref}})",
+        "danglingGoto": "Een branch springt naar een cel die niet meer bestaat ({{ref}})",
+        "macroWithoutInput": "Macro \"{{label}}\" heeft geen voorafgaande meting om op te draaien",
+        "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat"
+      }
+    }
   },
   "overview": "Overzicht",
   "data": "Gegevens",

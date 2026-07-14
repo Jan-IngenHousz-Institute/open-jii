@@ -38,6 +38,47 @@
     "otherDevices": "Andere apparaten",
     "otherDevice1": "Ander apparaat 1"
   },
+  "breadcrumbs": {
+    "home": "Home",
+    "experiments": "Experimenten",
+    "new": "Nieuw",
+    "edit": "Bewerken",
+    "view": "Bekijken"
+  },
+  "commandPalette": {
+    "title": "Commandopalet",
+    "placeholder": "Pagina's en acties zoeken...",
+    "groups": {
+      "pages": "Pagina's",
+      "actions": "Acties"
+    },
+    "entries": {
+      "home": "Home",
+      "experiments": "Experimenten",
+      "workbooks": "Werkboeken",
+      "protocols": "Protocollen",
+      "macros": "Macro's",
+      "transferRequests": "Transferverzoeken",
+      "settings": "Instellingen",
+      "createExperiment": "Experiment aanmaken",
+      "openWhatsNew": "Wat is er nieuw openen",
+      "showKeyboardShortcuts": "Sneltoetsen tonen",
+      "openDocumentation": "Documentatie openen"
+    },
+    "results": {
+      "experiments": "Experimenten",
+      "protocols": "Protocollen",
+      "macros": "Macro's",
+      "workbooks": "Werkboeken"
+    },
+    "status": {
+      "searching": "Zoeken...",
+      "errorTitle": "Er is iets misgegaan",
+      "errorDescription": "We konden je zoekopdracht niet voltooien. Probeer het opnieuw.",
+      "noResultsTitle": "Geen resultaten gevonden",
+      "noResultsDescription": "Niets kwam overeen met \"{{query}}\". Probeer een andere of kortere zoekterm."
+    }
+  },
   "whatsNew": {
     "navLabel": "Wat is er nieuw",
     "title": "Wat is er nieuw",

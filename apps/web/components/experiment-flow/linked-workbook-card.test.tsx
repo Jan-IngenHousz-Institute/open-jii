@@ -25,6 +25,19 @@ function mountDefaults() {
   server.mount(contract.workbooks.getWorkbook, { body: workbook });
   server.mount(contract.workbooks.listWorkbookVersions, { body: [v2, v1] });
   server.mount(contract.workbooks.listWorkbooks, { body: [workbook, otherWorkbook] });
+  // The upgrade review dialog fetches the pinned version to diff against live.
+  server.mount(contract.workbooks.getWorkbookVersion, {
+    body: {
+      id: "ver-1",
+      workbookId: "wb-1",
+      version: 1,
+      cells: [],
+      metadata: {},
+      entitySnapshots: { protocols: {}, macros: {} },
+      createdAt: "2025-01-01T00:00:00.000Z",
+      createdBy: "user-1",
+    },
+  });
 }
 
 describe("LinkedWorkbookCard", () => {
@@ -49,6 +62,17 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
+  });
+
+  it("opens the version history dialog from the history button", async () => {
+    mountDefaults();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "flow.versionHistory.open" }));
+
+    expect(await screen.findByText("flow.versionHistory.title")).toBeInTheDocument();
   });
 
   it("shows upgrade banner when a newer version is available", async () => {
@@ -163,13 +187,12 @@ describe("LinkedWorkbookCard", () => {
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: /flow\.upgradeToLatest/ }));
+    await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
 
-    const confirmBtn = screen
-      .getAllByText("flow.confirmUpgrade")
-      .find((el) => el.closest("[role='alertdialog']"));
-    expect(confirmBtn).toBeDefined();
-    if (confirmBtn) await user.click(confirmBtn);
+    // The review dialog opens; confirm once it has loaded the diff.
+    const confirmBtn = await screen.findByRole("button", { name: /flow\.confirmUpgrade/ });
+    await waitFor(() => expect(confirmBtn).not.toBeDisabled());
+    await user.click(confirmBtn);
 
     await waitFor(() => expect(spy.called).toBe(true));
     // The "upgraded" toast was intentionally removed; no success toast fires.
@@ -183,12 +206,11 @@ describe("LinkedWorkbookCard", () => {
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: /flow\.upgradeToLatest/ }));
+    await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
 
-    const confirmBtn = screen
-      .getAllByText("flow.confirmUpgrade")
-      .find((el) => el.closest("[role='alertdialog']"));
-    if (confirmBtn) await user.click(confirmBtn);
+    const confirmBtn = await screen.findByRole("button", { name: /flow\.confirmUpgrade/ });
+    await waitFor(() => expect(confirmBtn).not.toBeDisabled());
+    await user.click(confirmBtn);
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({

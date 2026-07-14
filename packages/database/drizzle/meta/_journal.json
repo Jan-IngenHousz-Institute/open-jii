@@ -253,6 +253,13 @@
       "when": 1783929797334,
       "tag": "0035_wild_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783940279830,
+      "tag": "0036_burly_cargill",
+      "breakpoints": true
     }
   ]
 }

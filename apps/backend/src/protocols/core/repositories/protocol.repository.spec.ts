@@ -340,6 +340,122 @@ describe("ProtocolRepository", () => {
     });
   });
 
+  describe("findAll search coverage", () => {
+    const searchProtocolNames = async (query: string) => {
+      const result = await repository.findAll(query, undefined, undefined, 20);
+      assertSuccess(result);
+      return result.value.map((protocol) => protocol.name);
+    };
+
+    it("should search the description", async () => {
+      await testApp.createProtocol({
+        name: "Wibble routine",
+        description: "for canopy reflectance scans",
+        createdBy: testUserId,
+      });
+
+      expect(await searchProtocolNames("reflectance")).toContain("Wibble routine");
+    });
+
+    it("should search the creator's name", async () => {
+      const creator = await testApp.createTestUser({ name: "Carl Linnaeus" });
+      await testApp.createProtocol({ name: "Gloop measurement", createdBy: creator });
+
+      expect(await searchProtocolNames("linnaeus")).toContain("Gloop measurement");
+    });
+
+    it("should rank a name match above a creator-only match", async () => {
+      const creator = await testApp.createTestUser({ name: "Photosynthesis Researcher" });
+      await testApp.createProtocol({
+        name: "Photosynthesis protocol",
+        createdBy: testUserId,
+      });
+      await testApp.createProtocol({ name: "Maize field protocol", createdBy: creator });
+
+      const names = await searchProtocolNames("photosynthesis");
+
+      expect(names).toContain("Photosynthesis protocol");
+      expect(names).toContain("Maize field protocol");
+      expect(names.indexOf("Photosynthesis protocol")).toBeLessThan(
+        names.indexOf("Maize field protocol"),
+      );
+    });
+
+    it("should search the family enum", async () => {
+      await testApp.createProtocol({
+        name: "Vorple leaf scan",
+        family: "multispeq",
+        createdBy: testUserId,
+      });
+      await testApp.createProtocol({
+        name: "Quux probe",
+        family: "ambit",
+        createdBy: testUserId,
+      });
+
+      expect(await searchProtocolNames("multispeq")).toContain("Vorple leaf scan");
+      expect(await searchProtocolNames("ambit")).toContain("Quux probe");
+    });
+
+    it("should do prefix matching", async () => {
+      await testApp.createProtocol({ name: "Spectral assay protocol", createdBy: testUserId });
+
+      expect(await searchProtocolNames("spectr")).toContain("Spectral assay protocol");
+    });
+
+    it("should do stemming", async () => {
+      await testApp.createProtocol({ name: "Running calibration", createdBy: testUserId });
+
+      expect(await searchProtocolNames("run")).toContain("Running calibration");
+    });
+
+    it("should tolerate a typo via trigram matching", async () => {
+      await testApp.createProtocol({ name: "Bioluminescence", createdBy: testUserId });
+
+      expect(await searchProtocolNames("bioluminecence")).toContain("Bioluminescence");
+    });
+
+    it("should match names containing punctuation", async () => {
+      await testApp.createProtocol({
+        name: "Ridge-01 canopy protocol",
+        createdBy: testUserId,
+      });
+
+      expect(await searchProtocolNames("ridge-01")).toContain("Ridge-01 canopy protocol");
+    });
+
+    it("should exclude a deactivated creator from name matching", async () => {
+      const ghost = await testApp.createTestUser({ name: "Spectral Ghoul", activated: false });
+      await testApp.createProtocol({ name: "Bland notes", createdBy: ghost });
+
+      expect(await searchProtocolNames("ghoul")).not.toContain("Bland notes");
+    });
+
+    it("should exclude a soft-deleted creator from name matching", async () => {
+      const deletedCreator = await testApp.createTestUser({
+        name: "Removed Botanist",
+        deletedAt: new Date(),
+      });
+      await testApp.createProtocol({ name: "Ordinary measurement", createdBy: deletedCreator });
+
+      expect(await searchProtocolNames("botanist")).not.toContain("Ordinary measurement");
+    });
+
+    it("should respect the requested search result limit", async () => {
+      for (const suffix of ["Alpha", "Bravo", "Charlie"]) {
+        await testApp.createProtocol({
+          name: `Limitprobe ${suffix}`,
+          createdBy: testUserId,
+        });
+      }
+
+      const result = await repository.findAll("limitprobe", undefined, undefined, 2);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+    });
+  });
+
   describe("findOne", () => {
     it("should find a protocol by id", async () => {
       // Arrange

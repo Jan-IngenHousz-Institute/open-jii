@@ -6,6 +6,7 @@ import { healthContract } from "./contracts/health.contract";
 import { iotContract } from "./contracts/iot.contract";
 import { macroContract } from "./contracts/macro.contract";
 import { protocolContract } from "./contracts/protocol.contract";
+import { searchContract } from "./contracts/search.contract";
 import { userContract } from "./contracts/user.contract";
 import { workbookContract } from "./contracts/workbook.contract";
 
@@ -20,6 +21,7 @@ export const contract = c.router({
   iot: iotContract,
   macros: macroContract,
   protocols: protocolContract,
+  search: searchContract,
   users: userContract,
   workbooks: workbookContract,
 });

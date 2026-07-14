@@ -13,6 +13,7 @@ import {
   ArrowUpCircle,
   Check,
   ExternalLink,
+  History,
   LinkIcon,
   Loader2,
   Pencil,
@@ -40,6 +41,8 @@ import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
+import { WorkbookUpgradeDialog } from "../workbook/upgrade/workbook-upgrade-dialog";
+import { WorkbookVersionHistoryDialog } from "../workbook/upgrade/workbook-version-history-dialog";
 import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface LinkedWorkbookCardProps {
@@ -83,7 +86,13 @@ export function LinkedWorkbookCard({
   const upgradingWorkbook = useIsMutating({
     mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
   });
-  const isSyncing = fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook > 0;
+  // History restore/roll-forward repins the version too; freeze the banner while
+  // it is in flight so `isUpgradable` does not flicker mid-mutation.
+  const settingVersion = useIsMutating({
+    mutationKey: ["experiment", experimentId, "setWorkbookVersion"],
+  });
+  const isSyncing =
+    fetchingWorkbook + fetchingVersions + savingWorkbook + upgradingWorkbook + settingVersion > 0;
 
   const liveHasUpgrade = hasNewerPublished || workbook?.isUpgradable === true;
   const settledHasUpgradeRef = useRef(liveHasUpgrade);
@@ -160,6 +169,8 @@ export function LinkedWorkbookCard({
 
   const upgradeVersion = useUpgradeWorkbookVersion(experimentId);
   const [upgradeState, setUpgradeState] = useState<"idle" | "upgrading" | "success">("idle");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (upgradeState === "success") {
@@ -174,6 +185,7 @@ export function LinkedWorkbookCard({
       { params: { id: experimentId } },
       {
         onSuccess: () => {
+          setReviewOpen(false);
           setUpgradeState("success");
         },
         onError: () => {
@@ -248,6 +260,17 @@ export function LinkedWorkbookCard({
                         showUpgrade={false}
                       />
                     </span>
+                  )}
+                  {pinnedVersion && (
+                    <button
+                      type="button"
+                      onClick={() => setHistoryOpen(true)}
+                      aria-label={t("flow.versionHistory.open")}
+                      title={t("flow.versionHistory.open")}
+                      className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                    </button>
                   )}
                   {canRename && (
                     <button
@@ -330,42 +353,25 @@ export function LinkedWorkbookCard({
               )}
             </p>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-                disabled={upgradeState === "upgrading"}
-              >
-                {upgradeState === "upgrading" ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Upgrading…
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpCircle className="h-3 w-3" />
-                    {hasNewerPublished
-                      ? t("flow.upgradeToLatest", { version: latestVersion.version })
-                      : t("flow.upgradeToLatest", { version: pinnedVersion.version + 1 })}
-                  </>
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("flow.confirmUpgradeTitle")}</AlertDialogTitle>
-                <AlertDialogDescription>{t("flow.confirmUpgradeMessage")}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleUpgrade}>
-                  {t("flow.confirmUpgrade")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+            disabled={upgradeState === "upgrading"}
+            onClick={() => setReviewOpen(true)}
+          >
+            {upgradeState === "upgrading" ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t("flow.upgradeDiff.upgrading")}
+              </>
+            ) : (
+              <>
+                <ArrowUpCircle className="h-3 w-3" />
+                {t("flow.reviewAndUpgrade")}
+              </>
+            )}
+          </Button>
         </div>
       )}
 
@@ -416,6 +422,28 @@ export function LinkedWorkbookCard({
           </Button>
         </div>
       )}
+
+      {pinnedVersion && (
+        <WorkbookUpgradeDialog
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          workbookId={workbookId}
+          pinnedVersionId={workbookVersionId}
+          currentVersion={pinnedVersion.version}
+          targetVersionLabel={`v${hasNewerPublished ? latestVersion.version : pinnedVersion.version + 1}`}
+          onConfirm={handleUpgrade}
+          isUpgrading={upgradeState === "upgrading"}
+        />
+      )}
+
+      <WorkbookVersionHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        experimentId={experimentId}
+        workbookId={workbookId}
+        currentVersionId={workbookVersionId}
+        canManage={hasAccess}
+      />
     </div>
   );
 }

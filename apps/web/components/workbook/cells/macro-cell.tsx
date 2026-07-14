@@ -9,7 +9,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
@@ -32,6 +32,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CellTitle } from "../cell-title";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
@@ -169,12 +170,60 @@ export function MacroCellComponent({
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
+  // Track the latest cell so the async rename merges into current state, not a
+  // stale snapshot from when the save began. Sync in a layout effect (not during
+  // render) so a speculative render never leaks into the ref.
+  const cellRef = useRef(cell);
+  useLayoutEffect(() => {
+    cellRef.current = cell;
+  }, [cell]);
+
+  // Rename the shared macro row and repoint the cell label at the new name.
+  // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
+  const [isRenaming, setIsRenaming] = useState(false);
+  const handleRename = useCallback(
+    async (next: string) => {
+      setIsRenaming(true);
+      try {
+        const res = await saveMacro({ params: { id: macroId }, body: { name: next } });
+        const latest = cellRef.current;
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.body.name } });
+      } catch (err) {
+        const parsed = parseApiError(err);
+        toast({
+          description:
+            parsed?.code === "REPOSITORY_DUPLICATE"
+              ? t("cells.renameConflict")
+              : (parsed?.message ?? t("cells.renameFailed")),
+          variant: "destructive",
+        });
+        throw err;
+      } finally {
+        setIsRenaming(false);
+      }
+    },
+    [macroId, saveMacro, onUpdate, t],
+  );
+
   const displayName = cell.payload.name ?? macroName ?? "Macro";
 
   return (
     <CellWrapper
       icon={<Code className="h-3.5 w-3.5" />}
-      label={displayName}
+      label={
+        <CellTitle
+          name={displayName}
+          canRename={isEditable}
+          onRename={handleRename}
+          isPending={isRenaming}
+          labels={{
+            rename: t("cells.rename"),
+            save: t("cells.renameSave"),
+            cancel: t("cells.renameCancel"),
+          }}
+        />
+      }
+      labelText={displayName}
       accentColor="#6C5CE7"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}

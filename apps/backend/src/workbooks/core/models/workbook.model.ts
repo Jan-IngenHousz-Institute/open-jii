@@ -9,6 +9,7 @@ export const createWorkbookSchema = createInsertSchema(workbooks).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
 export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit({
@@ -16,15 +17,18 @@ export const updateWorkbookSchema = createInsertSchema(workbooks).partial().omit
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+  searchVector: true,
 });
 
-export const selectWorkbookSchema = createSelectSchema(workbooks).extend({
-  cells: zWorkbookCellArray,
-  metadata: z.record(z.string(), z.unknown()),
-  createdByName: z.string().optional(),
-  isUpgradable: z.boolean().optional(),
-  experimentCount: z.number().int().nonnegative().optional(),
-});
+export const selectWorkbookSchema = createSelectSchema(workbooks)
+  .omit({ searchVector: true })
+  .extend({
+    cells: zWorkbookCellArray,
+    metadata: z.record(z.string(), z.unknown()),
+    createdByName: z.string().optional(),
+    isUpgradable: z.boolean().optional(),
+    experimentCount: z.number().int().nonnegative().optional(),
+  });
 
 export type CreateWorkbookDto = z.infer<typeof createWorkbookSchema>;
 export type UpdateWorkbookDto = z.infer<typeof updateWorkbookSchema>;
