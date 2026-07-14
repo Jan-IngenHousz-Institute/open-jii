@@ -307,6 +307,7 @@ export class TestHarness {
     activated = true,
     createProfile = true,
     registered = true,
+    deletedAt = null,
   }: {
     email?: string;
     name?: string;
@@ -315,6 +316,7 @@ export class TestHarness {
     activated?: boolean;
     createProfile?: boolean;
     registered?: boolean;
+    deletedAt?: Date | null;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
@@ -336,6 +338,7 @@ export class TestHarness {
         firstName,
         lastName,
         activated,
+        deletedAt,
       });
     }
 
@@ -388,6 +391,34 @@ export class TestHarness {
       .returning();
 
     return membership;
+  }
+
+  /**
+   * Helper to attach a location to an experiment for testing
+   */
+  public async addExperimentLocation(data: {
+    experimentId: string;
+    name: string;
+    country?: string;
+    region?: string;
+    municipality?: string;
+    addressLabel?: string;
+  }) {
+    const [location] = await this.database
+      .insert(experimentLocations)
+      .values({
+        experimentId: data.experimentId,
+        name: data.name,
+        latitude: "0",
+        longitude: "0",
+        country: data.country,
+        region: data.region,
+        municipality: data.municipality,
+        addressLabel: data.addressLabel,
+      })
+      .returning();
+
+    return location;
   }
 
   /**

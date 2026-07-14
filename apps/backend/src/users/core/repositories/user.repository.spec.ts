@@ -288,6 +288,75 @@ describe("UserRepository", () => {
       assertSuccess(result);
       expect(result.value).toEqual([]);
     });
+
+    it("should search users by last name", async () => {
+      await testApp.createTestUser({
+        name: "Barnaby Figglesworth",
+        email: "barnaby@example.com",
+      });
+
+      const result = await repository.search({ query: "figglesworth", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.lastName === "Figglesworth")).toBe(true);
+    });
+
+    it("should search users by an email substring", async () => {
+      const userId = await testApp.createTestUser({
+        name: "Zelda Quux",
+        email: "zorptastic@example.com",
+      });
+
+      const result = await repository.search({ query: "zorptastic", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.userId === userId)).toBe(true);
+    });
+
+    it("should tolerate a typo via trigram matching", async () => {
+      await testApp.createTestUser({
+        name: "Maxwell Thornberry",
+        email: "maxwell@example.com",
+      });
+
+      const result = await repository.search({ query: "thornbery", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.lastName === "Thornberry")).toBe(true);
+    });
+
+    it("should match a name prefix via substring search", async () => {
+      await testApp.createTestUser({
+        name: "Barnaby Figglesworth",
+        email: "prefixcase@example.com",
+      });
+
+      const result = await repository.search({ query: "barn", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.firstName === "Barnaby")).toBe(true);
+    });
+
+    it("should exclude deactivated and soft-deleted users", async () => {
+      await testApp.createTestUser({
+        name: "Ghosty Inactive",
+        email: "inactive@example.com",
+        activated: false,
+      });
+      await testApp.createTestUser({
+        name: "Removed Person",
+        email: "removed@example.com",
+        deletedAt: new Date(),
+      });
+
+      const inactiveResult = await repository.search({ query: "ghosty", limit: 20 });
+      const deletedResult = await repository.search({ query: "removed", limit: 20 });
+
+      assertSuccess(inactiveResult);
+      assertSuccess(deletedResult);
+      expect(inactiveResult.value.some((user) => user.firstName === "Ghosty")).toBe(false);
+      expect(deletedResult.value.some((user) => user.firstName === "Removed")).toBe(false);
+    });
   });
 
   describe("update", () => {

@@ -13,6 +13,7 @@ export const createExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
+    searchVector: true,
   })
   .extend({
     members: z
@@ -41,6 +42,7 @@ export const updateExperimentSchema = createInsertSchema(experiments)
     createdAt: true,
     updatedAt: true,
     createdBy: true,
+    searchVector: true,
   })
   .extend({
     locations: z
@@ -53,10 +55,12 @@ export const updateExperimentSchema = createInsertSchema(experiments)
       )
       .optional(),
   });
-export const selectExperimentSchema = createSelectSchema(experiments).extend({
-  ownerFirstName: z.string().nullable().optional(),
-  ownerLastName: z.string().nullable().optional(),
-});
+export const selectExperimentSchema = createSelectSchema(experiments)
+  .omit({ searchVector: true })
+  .extend({
+    ownerFirstName: z.string().nullable().optional(),
+    ownerLastName: z.string().nullable().optional(),
+  });
 
 // Define the types
 export type CreateExperimentDto = typeof createExperimentSchema._type;

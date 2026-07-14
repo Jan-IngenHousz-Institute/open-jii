@@ -1,9 +1,22 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, asc, eq, ilike, inArray, macros, profiles } from "@repo/database";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  inArray,
+  macros,
+  profiles,
+  sql,
+  getTableColumns,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
+import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -23,6 +36,9 @@ export interface MacroFilter {
   filter?: "my";
   userId?: string;
 }
+
+// All macro columns except the internal full-text `search_vector` (never returned to clients).
+const { searchVector: _macroSearchVector, ...macroColumns } = getTableColumns(macros);
 
 @Injectable()
 export class MacroRepository {
@@ -45,29 +61,38 @@ export class MacroRepository {
           filename: generateHashedFilename(macroId),
           createdBy: userId,
         })
-        .returning();
+        .returning(macroColumns);
       return results;
     });
   }
 
-  async findAll(filter?: MacroFilter): Promise<Result<MacroDto[]>> {
+  async findAll(filter?: MacroFilter, limit?: number): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       let query = this.database
         .select({
-          macros,
+          macros: macroColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
-        .orderBy(asc(macros.sortOrder), asc(macros.name));
+        .$dynamic();
 
       // Build array of conditions for filters
       const conditions: (SQL | undefined)[] = [];
 
-      // Apply filters if provided
-      if (filter?.search) {
-        conditions.push(ilike(macros.name, `%${filter.search}%`));
+      const search = filter?.search;
+      // Creator name + language enum matched at query time (alongside the name/description vector).
+      // Deactivated/deleted creators are excluded from name matching.
+      const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const creatorMatch = (term: string) =>
+        sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
+      const languageText = sql<string>`${macros.language}::text`;
+
+      if (search) {
+        conditions.push(
+          sql`(${ftsMatch(macros.searchVector, macros.name, search)} OR ${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)})`,
+        );
       }
 
       if (filter?.language) {
@@ -80,8 +105,18 @@ export class MacroRepository {
 
       // Apply all conditions with AND logic if there are any
       if (conditions.length > 0) {
-        // Type assertion is needed for query builder compatibility
-        query = query.where(and(...conditions)) as typeof query;
+        query = query.where(and(...conditions));
+      }
+
+      if (search) {
+        const rank = sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)}) THEN 1 ELSE 0 END))`;
+        query = query.orderBy(desc(rank), asc(macros.name));
+      } else {
+        query = query.orderBy(asc(macros.sortOrder), asc(macros.name));
+      }
+
+      if (limit !== undefined) {
+        query = query.limit(limit);
       }
 
       const results = await query;
@@ -100,7 +135,7 @@ export class MacroRepository {
     return tryCatch(async () => {
       const result = await this.database
         .select({
-          macros,
+          macros: macroColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -126,7 +161,7 @@ export class MacroRepository {
     return tryCatch(async () => {
       const result = await this.database
         .select({
-          macros,
+          macros: macroColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -181,7 +216,7 @@ export class MacroRepository {
           updatedAt: new Date(),
         })
         .where(eq(macros.id, id))
-        .returning();
+        .returning(macroColumns);
 
       // Best-effort cache invalidation — must not mask a successful write
       void this.cachePort.invalidate(id).catch(() => {
@@ -194,7 +229,10 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database.delete(macros).where(eq(macros.id, id)).returning();
+      const results = await this.database
+        .delete(macros)
+        .where(eq(macros.id, id))
+        .returning(macroColumns);
 
       // Best-effort cache invalidation — must not mask a successful write
       void this.cachePort.invalidate(id).catch(() => {
