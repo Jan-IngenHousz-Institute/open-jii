@@ -59,10 +59,15 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
   });
 
-  it("attaches a command's result as an output cell keyed to the command cell", () => {
+  it("wraps a scalar command result under `response` (mirrors web) so a branch resolves it", () => {
+    const hydrated = hydrateCells([cCell("c1")], ctx({ scanResult: "87", producerCellId: "c1" }));
+    expect(resolveConditionValue(hydrated, "c1", "response")).toBe("87");
+  });
+
+  it("passes an object command result through so its fields resolve directly", () => {
     const hydrated = hydrateCells(
       [cCell("c1")],
-      ctx({ scanResult: { sample: [{ voltage: 3.9 }] }, producerCellId: "c1" }),
+      ctx({ scanResult: { voltage: 3.9 }, producerCellId: "c1" }),
     );
     expect(resolveConditionValue(hydrated, "c1", "voltage")).toBe(3.9);
   });

@@ -92,7 +92,13 @@ function firstMeasurementStep(flowNodes: FlowNode[]): number {
 // assumes at most one). Derived from the persisted flowNodes, so it
 // survives pause/resume and can never go stale across flows.
 export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
-  const node = flowNodes.find((n) => n.type === "measurement");
+  // A command cell also rides a "measurement" node but carries no protocolId, so
+  // match the first node that actually has one; otherwise a leading command node
+  // would shadow the real protocol and the upload would fail with "Missing protocol id".
+  const node = flowNodes.find(
+    (n) =>
+      n.type === "measurement" && (n.content as { protocolId?: string } | undefined)?.protocolId,
+  );
   return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 

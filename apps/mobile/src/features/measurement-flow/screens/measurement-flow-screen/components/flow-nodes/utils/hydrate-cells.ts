@@ -28,8 +28,18 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
   const producer = hydrated.find((c) => c.id === producerCellId);
   if (!producer) return hydrated;
 
-  const sample = (scanResult as { sample?: unknown }).sample;
-  const data = sample != null ? (Array.isArray(sample) ? sample : [sample]) : scanResult;
+  let data: unknown;
+  if (producer.type === "command") {
+    // Mirror web's toOutputData so a branch reads the same shape on both hosts:
+    // a plain object passes through; any scalar/array is wrapped as { response }.
+    data =
+      typeof scanResult === "object" && !Array.isArray(scanResult)
+        ? scanResult
+        : { response: scanResult };
+  } else {
+    const sample = (scanResult as { sample?: unknown }).sample;
+    data = sample != null ? (Array.isArray(sample) ? sample : [sample]) : scanResult;
+  }
 
   const outputCell: OutputCell = {
     id: `synthetic-output-${producer.id}`,
