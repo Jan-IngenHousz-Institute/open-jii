@@ -4,9 +4,11 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type { DeviceRegistryWebhookResponse } from "@repo/api/schemas/iot.schema";
 
+import { AppError, failure } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetDeviceRegistryUseCase } from "../application/use-cases/get-device-registry/get-device-registry";
 
 describe("DeviceRegistryWebhookController", () => {
   const testApp = TestHarness.App;
@@ -30,6 +32,7 @@ describe("DeviceRegistryWebhookController", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
@@ -71,6 +74,23 @@ describe("DeviceRegistryWebhookController", () => {
           createdBy: userId,
         },
       ]);
+    });
+
+    it("returns 500 when the registry lookup fails", async () => {
+      vi.spyOn(testApp.module.get(GetDeviceRegistryUseCase), "execute").mockResolvedValue(
+        failure(AppError.internal("db unavailable")),
+      );
+
+      const body = { thingNames: ["ambyte_AA11"] };
+      const { timestamp, signature } = sign(body);
+
+      await testApp
+        .post(contract.iot.getDeviceRegistry.path)
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
+        .send(body)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
     it("rejects an unsigned request", async () => {

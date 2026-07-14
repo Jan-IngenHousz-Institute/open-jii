@@ -13,6 +13,12 @@ const contributorColumn: DataColumn = {
   type_text: WellKnownColumnTypes.CONTRIBUTOR,
 };
 
+const deviceColumn: DataColumn = {
+  name: "device",
+  type_name: "STRUCT",
+  type_text: WellKnownColumnTypes.DEVICE,
+};
+
 describe("filterColumnPathFor", () => {
   it("returns the bare column name for scalar columns", () => {
     expect(filterColumnPathFor(stringColumn)).toBe("label");
@@ -20,6 +26,10 @@ describe("filterColumnPathFor", () => {
 
   it("routes CONTRIBUTOR structs through their identity sub-field", () => {
     expect(filterColumnPathFor(contributorColumn)).toBe("owner.id");
+  });
+
+  it("routes DEVICE structs through their serial-number sub-field", () => {
+    expect(filterColumnPathFor(deviceColumn)).toBe("device.serial_number");
   });
 });
 

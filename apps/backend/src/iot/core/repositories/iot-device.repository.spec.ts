@@ -100,6 +100,28 @@ describe("IotDeviceRepository", () => {
     expect(result.value?.serialNumber).toBe(dto.serialNumber);
   });
 
+  it("resolves thing names to registry rows across owners", async () => {
+    const otherUser = await testApp.createTestUser({ name: "Other Owner" });
+    const mine = buildDto();
+    const theirs = buildDto();
+    await repository.create(mine, userId);
+    await repository.create(theirs, otherUser);
+
+    const result = await repository.findByThingNames([mine.thingName, theirs.thingName, "missing"]);
+
+    assertSuccess(result);
+    expect(result.value.map((d) => d.thingName).sort()).toEqual(
+      [mine.thingName, theirs.thingName].sort(),
+    );
+  });
+
+  it("returns an empty list without querying for an empty batch", async () => {
+    const result = await repository.findByThingNames([]);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([]);
+  });
+
   it("deletes a device", async () => {
     const created = await repository.create(buildDto(), userId);
     assertSuccess(created);

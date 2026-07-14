@@ -109,6 +109,13 @@ describe("formatValue", () => {
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
 
+  it("renders device cell for DEVICE type", () => {
+    const deviceData = JSON.stringify({ id: "d-1", serial_number: "AA:11", status: "active" });
+    const result = formatValue(deviceData, WellKnownColumnTypes.DEVICE, "row-1", "col");
+    render(<div>{result}</div>);
+    expect(screen.getByText("AA:11")).toBeInTheDocument();
+  });
+
   it("renders map cell for MAP types", () => {
     const result = formatValue('{"a":"1","b":"2"}', "MAP<STRING,STRING>", "row-1", "col");
     render(<div>{result}</div>);
