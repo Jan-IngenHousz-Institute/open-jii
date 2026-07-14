@@ -59,7 +59,11 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <ActivityProvider>
-        <NavigationSidebarWrapper locale={locale} releaseNotes={releaseNotes} />
+        <NavigationSidebarWrapper
+          locale={locale}
+          distinctId={session.user.email || session.user.id}
+          releaseNotes={releaseNotes}
+        />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>

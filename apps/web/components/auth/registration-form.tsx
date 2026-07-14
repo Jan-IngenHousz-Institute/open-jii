@@ -23,7 +23,6 @@ import { RegistrationOtpVerification } from "./registration-otp-verification";
 export interface Registration {
   firstName?: string;
   lastName?: string;
-  organization?: string;
   email?: string;
   acceptedTerms?: boolean;
   otp?: string;
@@ -58,7 +57,6 @@ export function RegistrationForm({
     .object({
       firstName: z.string().optional(),
       lastName: z.string().optional(),
-      organization: z.string().optional(),
       email: z.string().optional(),
       acceptedTerms: z.boolean().optional(),
       otp: z.string().optional(),
@@ -92,7 +90,6 @@ export function RegistrationForm({
     defaultValues: {
       firstName: "",
       lastName: "",
-      organization: "",
       email: "",
       acceptedTerms: false,
       otp: "",
@@ -174,7 +171,6 @@ export function RegistrationForm({
         body: {
           firstName: data.firstName ?? "",
           lastName: data.lastName ?? "",
-          organization: data.organization,
           avatarUrl: session?.user.image ?? null,
         },
       });

@@ -244,9 +244,9 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
 resource "aws_iot_topic_rule" "iot_rules" {
   for_each = local.ingest_channels
 
-  name        = local.iot_rule_names[each.key]
-  enabled     = true
-  sql         = "SELECT topic() as topic, * FROM '${local.iot_topic_filters[each.key]}'"
+  name    = local.iot_rule_names[each.key]
+  enabled = true
+  sql         = "SELECT topic() as topic, clientid() as client_id, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
   kinesis {

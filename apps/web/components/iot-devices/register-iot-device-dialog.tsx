@@ -1,12 +1,14 @@
 "use client";
 
 import { useRegisterIotDevice } from "@/hooks/iot/useRegisterIotDevice/useRegisterIotDevice";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { zRegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
+import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -26,6 +28,13 @@ import {
   FormMessage,
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 // Name stays optional without the contract's min(1) so an empty field is valid in the form;
@@ -47,7 +56,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
 
   const form = useForm<RegisterIotDeviceFormValues>({
     resolver: zodResolver(registerIotDeviceFormSchema),
-    defaultValues: { serialNumber: "", deviceType: "", name: "" },
+    defaultValues: { serialNumber: "", deviceType: undefined, name: "" },
   });
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
@@ -115,9 +124,20 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("iot.devices.dialog.typeLabel")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t("iot.devices.dialog.typePlaceholder")} {...field} trim />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("iot.devices.dialog.typePlaceholder")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {zSensorFamily.options.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {getSensorFamilyLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

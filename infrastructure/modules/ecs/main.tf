@@ -129,7 +129,11 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "iot:DeleteThing",
           "iot:DescribeThing",
           "iot:AddThingToThingGroup",
-          "iot:RemoveThingFromThingGroup"
+          "iot:RemoveThingFromThingGroup",
+          "iot:CreateKeysAndCertificate",
+          "iot:AttachThingPrincipal",
+          "iot:DetachThingPrincipal",
+          "iot:UpdateCertificate"
         ]
         Resource = "*"
       }

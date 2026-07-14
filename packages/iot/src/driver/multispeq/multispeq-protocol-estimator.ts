@@ -150,17 +150,33 @@ function preIlluminationMs(
 function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, number>): number {
   if (!isRecord(block)) return 0;
 
-  const repeats = Math.max(1, resolveField(block.protocol_repeats, vArrays, vars) ?? 1);
+  // `averages` repeats the whole block (pre_illumination included) per the
+  // PhotosynQ spec; missing it undercounted long DIRK/ECS blocks. `protocols` /
+  // `protocol_repeats` and `averages` / `protocol_averages` are aliases. OJD-1643.
+  const repeats = Math.max(
+    1,
+    resolveField(block.protocols, vArrays, vars) ??
+      resolveField(block.protocol_repeats, vArrays, vars) ??
+      1,
+  );
+  const averages = Math.max(
+    1,
+    resolveField(block.averages, vArrays, vars) ??
+      resolveField(block.protocol_averages, vArrays, vars) ??
+      1,
+  );
+  // protocols_delay is counted as seconds here (see OJD-1565); averages_delay is ms.
   const delayMs = (resolveField(block.protocols_delay, vArrays, vars) ?? 0) * 1_000;
+  const averagesDelayMs = resolveField(block.averages_delay, vArrays, vars) ?? 0;
   const preIllumMs = preIlluminationMs(block, vArrays, vars);
 
-  // A block with no pulse train still waits its pre_illumination and
+  // A block with no pulse train still waits its pre_illumination, averages and
   // protocols_delay. A standalone pre_illumination block (no pulses) is a
   // documented construct, so count it rather than treating it as 0.
   const hasPulses = Array.isArray(block.pulses) && block.pulses.length > 0;
   if (!hasPulses) {
     const setupMs = "autogain" in block ? SETUP_BLOCK_MS : 0;
-    return setupMs + (preIllumMs + delayMs) * repeats;
+    return setupMs + (preIllumMs + averagesDelayMs) * averages * repeats + delayMs * repeats;
   }
 
   const pulses = block.pulses as Json[];
@@ -175,9 +191,7 @@ function estimateBlockMs(block: Json, vArrays: VArrays, vars: Record<string, num
   }
   const pulseTrainMs = pulseTrainUs / 1000;
 
-  const averages = Math.max(1, resolveField(block.protocol_averages, vArrays, vars) ?? 1);
-
-  return (pulseTrainMs + preIllumMs) * repeats * averages + delayMs * repeats;
+  return (pulseTrainMs + preIllumMs + averagesDelayMs) * averages * repeats + delayMs * repeats;
 }
 
 function estimateSetMs(set: Json): number {

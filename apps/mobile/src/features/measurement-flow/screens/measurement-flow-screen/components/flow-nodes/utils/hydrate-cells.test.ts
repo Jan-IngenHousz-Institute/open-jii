@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type {
+  CommandCell,
   OutputCell,
   ProtocolCell,
   QuestionCell,
@@ -25,6 +26,12 @@ const pCell = (id: string, protocolId: string): ProtocolCell => ({
   isCollapsed: false,
   payload: { protocolId, version: 1 },
 });
+const cCell = (id: string): CommandCell => ({
+  id,
+  type: "command",
+  isCollapsed: false,
+  payload: { format: "string", content: "battery" },
+});
 
 const ctx = (over: Partial<HydrationContext> = {}): HydrationContext => ({
   iterationCount: 0,
@@ -44,32 +51,45 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "q1", "answer")).toBeUndefined();
   });
 
-  it("attaches the latest measurement as an output cell keyed to its protocol", () => {
+  it("attaches the latest measurement as an output cell keyed to its producer", () => {
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, protocolId: "proto-1" }),
+      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, producerCellId: "p1" }),
     );
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
+  });
+
+  it("wraps a scalar command result under `response` (mirrors web) so a branch resolves it", () => {
+    const hydrated = hydrateCells([cCell("c1")], ctx({ scanResult: "87", producerCellId: "c1" }));
+    expect(resolveConditionValue(hydrated, "c1", "response")).toBe("87");
+  });
+
+  it("passes an object command result through so its fields resolve directly", () => {
+    const hydrated = hydrateCells(
+      [cCell("c1")],
+      ctx({ scanResult: { voltage: 3.9 }, producerCellId: "c1" }),
+    );
+    expect(resolveConditionValue(hydrated, "c1", "voltage")).toBe(3.9);
   });
 
   it("wraps a non-array sample", () => {
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: { phi2: 0.5 } }, protocolId: "proto-1" }),
+      ctx({ scanResult: { sample: { phi2: 0.5 } }, producerCellId: "p1" }),
     );
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.5);
   });
 
   it("synthesizes no output when there is no scan result", () => {
-    const hydrated = hydrateCells([pCell("p1", "proto-1")], ctx({ protocolId: "proto-1" }));
+    const hydrated = hydrateCells([pCell("p1", "proto-1")], ctx({ producerCellId: "p1" }));
     expect(hydrated.some((c) => c.type === "output")).toBe(false);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBeUndefined();
   });
 
-  it("synthesizes no output when no protocol cell matches the scanned protocol", () => {
+  it("synthesizes no output when no cell matches the producer id", () => {
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, protocolId: "proto-OTHER" }),
+      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, producerCellId: "p-OTHER" }),
     );
     expect(hydrated.some((c) => c.type === "output")).toBe(false);
   });
@@ -85,7 +105,7 @@ describe("hydrateCells", () => {
     const cells: WorkbookCell[] = [pCell("p1", "proto-1"), stale];
     const hydrated = hydrateCells(
       cells,
-      ctx({ scanResult: { sample: [{ phi2: 0.9 }] }, protocolId: "proto-1" }),
+      ctx({ scanResult: { sample: [{ phi2: 0.9 }] }, producerCellId: "p1" }),
     );
     expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);

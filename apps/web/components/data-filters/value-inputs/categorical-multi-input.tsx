@@ -37,7 +37,7 @@ export function CategoricalMultiInput({
 }: CategoricalMultiInputProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const { values, isLoading, isSuccess, truncated, isContributor, contributorMap } =
+  const { values, isLoading, isSuccess, truncated, isContributor, isDevice, contributorMap } =
     useDistinctOptions(column, experimentId, tableName);
 
   const selected = useMemo<string[]>(
@@ -47,7 +47,7 @@ export function CategoricalMultiInput({
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   const toggle = (raw: string | number) => {
-    const chipValue = chipValueForOption(raw, isContributor);
+    const chipValue = chipValueForOption(raw, isContributor, isDevice);
     const key = String(chipValue);
 
     if (selectedSet.has(key)) {
@@ -66,7 +66,8 @@ export function CategoricalMultiInput({
       ? t("dataFilters.pickValues")
       : t("dataFilters.selectedCount", { count: selected.length });
 
-  const getChipKey = (raw: string | number) => String(chipValueForOption(raw, isContributor));
+  const getChipKey = (raw: string | number) =>
+    String(chipValueForOption(raw, isContributor, isDevice));
 
   // DISTINCT keys on the whole contributor struct, so one person can return
   // several snapshots (name/avatar drift) that all collapse to the same id.
@@ -74,14 +75,14 @@ export function CategoricalMultiInput({
   const uniqueValues = useMemo(() => {
     const seen = new Set<string>();
     return values.filter((v) => {
-      const key = String(chipValueForOption(v, isContributor));
+      const key = String(chipValueForOption(v, isContributor, isDevice));
       if (seen.has(key)) {
         return false;
       }
       seen.add(key);
       return true;
     });
-  }, [values, isContributor]);
+  }, [values, isContributor, isDevice]);
 
   // Toggling anonymization re-pseudonymises contributor ids, so a selection
   // from the other mode no longer resolves and would show a raw id. Prune only
@@ -134,6 +135,7 @@ export function CategoricalMultiInput({
                     optionValue={String(v)}
                     isSelected={selectedSet.has(getChipKey(v))}
                     isContributor={isContributor}
+                    isDevice={isDevice}
                     onSelect={() => toggle(v)}
                   />
                 ))}

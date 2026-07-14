@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, RefreshCw, XCircle } from "lucide-react";
 
 import type { IotDeviceStatus } from "@repo/api/schemas/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -15,6 +15,11 @@ const STATUS_CONFIG: Record<IotDeviceStatus, { icon: typeof Clock; className: st
     icon: CheckCircle2,
     className:
       "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
+  },
+  rotating: {
+    icon: RefreshCw,
+    className:
+      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
   },
   revoked: {
     icon: XCircle,

@@ -533,6 +533,119 @@ describe("MacroRepository", () => {
     });
   });
 
+  describe("findAll search coverage", () => {
+    const searchMacroNames = async (query: string) => {
+      const result = await repository.findAll({ search: query }, 20);
+      assertSuccess(result);
+      return result.value.map((macro) => macro.name);
+    };
+
+    it("should search the description", async () => {
+      await testApp.createMacro({
+        name: "Snarf tool",
+        description: "computes transpiration index",
+        createdBy: testUserId,
+      });
+
+      expect(await searchMacroNames("transpiration")).toContain("Snarf tool");
+    });
+
+    it("should search the creator's name", async () => {
+      const creator = await testApp.createTestUser({ name: "Rosalind Franklin" });
+      await testApp.createMacro({ name: "Blorp utility", createdBy: creator });
+
+      expect(await searchMacroNames("franklin")).toContain("Blorp utility");
+    });
+
+    it("should rank a name match above a creator-only match", async () => {
+      const creator = await testApp.createTestUser({ name: "Photosynthesis Researcher" });
+      await testApp.createMacro({
+        name: "Photosynthesis macro",
+        createdBy: testUserId,
+      });
+      await testApp.createMacro({ name: "Maize field macro", createdBy: creator });
+
+      const names = await searchMacroNames("photosynthesis");
+
+      expect(names).toContain("Photosynthesis macro");
+      expect(names).toContain("Maize field macro");
+      expect(names.indexOf("Photosynthesis macro")).toBeLessThan(
+        names.indexOf("Maize field macro"),
+      );
+    });
+
+    it("should search the language enum", async () => {
+      await testApp.createMacro({
+        name: "Frobnicate utility",
+        language: "python",
+        createdBy: testUserId,
+      });
+      await testApp.createMacro({
+        name: "Glorp widget",
+        language: "javascript",
+        createdBy: testUserId,
+      });
+
+      expect(await searchMacroNames("python")).toContain("Frobnicate utility");
+      expect(await searchMacroNames("javascript")).toContain("Glorp widget");
+    });
+
+    it("should do prefix matching", async () => {
+      await testApp.createMacro({ name: "Spectral analysis macro", createdBy: testUserId });
+
+      expect(await searchMacroNames("spectr")).toContain("Spectral analysis macro");
+    });
+
+    it("should do stemming", async () => {
+      await testApp.createMacro({ name: "Running average macro", createdBy: testUserId });
+
+      expect(await searchMacroNames("run")).toContain("Running average macro");
+    });
+
+    it("should tolerate a typo via trigram matching", async () => {
+      await testApp.createMacro({ name: "Bioluminescence", createdBy: testUserId });
+
+      expect(await searchMacroNames("bioluminecence")).toContain("Bioluminescence");
+    });
+
+    it("should match names containing punctuation", async () => {
+      await testApp.createMacro({ name: "Ridge-01 canopy macro", createdBy: testUserId });
+
+      expect(await searchMacroNames("ridge-01")).toContain("Ridge-01 canopy macro");
+    });
+
+    it("should exclude a deactivated creator from name matching", async () => {
+      const ghost = await testApp.createTestUser({ name: "Calib Wraith", activated: false });
+      await testApp.createMacro({ name: "Hidden gizmo", createdBy: ghost });
+
+      expect(await searchMacroNames("wraith")).not.toContain("Hidden gizmo");
+    });
+
+    it("should exclude a soft-deleted creator from name matching", async () => {
+      const deletedCreator = await testApp.createTestUser({
+        name: "Removed Analyst",
+        deletedAt: new Date(),
+      });
+      await testApp.createMacro({ name: "Ordinary utility", createdBy: deletedCreator });
+
+      expect(await searchMacroNames("analyst")).not.toContain("Ordinary utility");
+    });
+
+    it("should respect the requested search result limit", async () => {
+      for (const suffix of ["Alpha", "Bravo", "Charlie"]) {
+        await testApp.createMacro({
+          name: `Limitprobe ${suffix}`,
+          createdBy: testUserId,
+        });
+      }
+
+      const result = await repository.findAll({ search: "limitprobe" }, 2);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+    });
+  });
+
   describe("findById", () => {
     it("should return macro by id with creator name", async () => {
       // Arrange

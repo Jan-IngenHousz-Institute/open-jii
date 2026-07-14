@@ -1,5 +1,5 @@
 import type { SQL } from "@repo/database";
-import { sql, profiles, users, organizations } from "@repo/database";
+import { sql, profiles, users } from "@repo/database";
 
 /**
  * Creates SQL CASE expressions to anonymize profile fields when activated = false
@@ -19,6 +19,3 @@ export const getAnonymizedAvatarUrl = (): SQL<string | null> =>
 
 export const getAnonymizedEmail = (): SQL<string | null> =>
   sql`CASE WHEN ${profiles.activated} = true THEN ${users.email} ELSE NULL END`;
-
-export const getAnonymizedOrganizationName = (): SQL<string | null> =>
-  sql`CASE WHEN ${profiles.activated} = true THEN ${organizations.name} ELSE NULL END`;

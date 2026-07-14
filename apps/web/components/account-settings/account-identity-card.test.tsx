@@ -5,11 +5,16 @@ import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
 
 import { AccountIdentityCard } from "./account-identity-card";
 
+vi.mock("@repo/auth/client", () => ({
+  authClient: {
+    useActiveOrganization: () => ({ data: { name: "Analytical Engines Inc." } }),
+  },
+}));
+
 const profile: CreateUserProfileBody = {
   firstName: "Ada",
   lastName: "Lovelace",
   bio: "",
-  organization: "Analytical Engines Inc.",
   activated: true,
   avatarUrl: "https://example.com/old.png",
 };

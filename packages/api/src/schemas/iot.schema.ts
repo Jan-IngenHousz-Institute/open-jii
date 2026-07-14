@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zSensorFamily } from "./protocol.schema";
+
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
   accessKeyId: z.string().describe("AWS Access Key ID for temporary credentials"),
@@ -20,7 +22,10 @@ export const zIotUploadUrl = z.object({
 });
 
 // --- IoT IotDevices ---
-export const zIotDeviceStatus = z.enum(["pending", "active", "revoked"]);
+export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoked"]);
+
+// A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
+export const zDeviceType = zSensorFamily;
 
 export const zIotDevice = z.object({
   id: z.string().uuid(),
@@ -28,8 +33,10 @@ export const zIotDevice = z.object({
   thingArn: z.string(),
   serialNumber: z.string(),
   name: z.string().nullable(),
-  deviceType: z.string(),
+  deviceType: zDeviceType,
   status: zIotDeviceStatus,
+  certificateId: z.string().nullable(),
+  certificateArn: z.string().nullable(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -40,17 +47,45 @@ export const zIotDeviceList = z.array(zIotDevice);
 export const zRegisterIotDeviceBody = z.object({
   serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
-  deviceType: z
-    .string()
-    .min(1)
-    .max(255)
-    .describe("IotDevice class, maps to the ingest topic sensorType"),
+  deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;
 
+// --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
+export const zDeviceRegistryWebhookPayload = z.object({
+  thingNames: z.array(z.string()).min(1).max(500),
+});
+
+export const zDeviceRegistryEntry = z.object({
+  thingName: z.string(),
+  id: z.string().uuid(),
+  serialNumber: z.string(),
+  deviceType: zDeviceType,
+  status: zIotDeviceStatus,
+  createdBy: z.string().uuid(),
+});
+
+export const zDeviceRegistryWebhookResponse = z.object({
+  devices: z.array(zDeviceRegistryEntry),
+  success: z.boolean(),
+});
+
+export type DeviceRegistryEntry = z.infer<typeof zDeviceRegistryEntry>;
+export type DeviceRegistryWebhookResponse = z.infer<typeof zDeviceRegistryWebhookResponse>;
+
 export const zIotDevicePathParam = z.object({
   deviceId: z.string().uuid().describe("ID of the device"),
+});
+
+// Show-once certificate bundle. Returned only at issuance/rotation and never
+// persisted or retrievable again.
+export const zIssueIotCredentialsResponse = z.object({
+  certificateId: z.string(),
+  certificateArn: z.string(),
+  certificatePem: z.string(),
+  publicKey: z.string(),
+  privateKey: z.string(),
 });
 
 // --- Inferred types ---
@@ -62,3 +97,4 @@ export type IotDevice = z.infer<typeof zIotDevice>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
+export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

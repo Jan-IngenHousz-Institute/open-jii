@@ -8,19 +8,25 @@ import { contract } from "@repo/api/contract";
 import { IotDeviceDetail } from "./iot-device-detail";
 
 describe("IotDeviceDetail", () => {
-  it("renders the device identity and the credentials placeholder", async () => {
+  it("renders the device identity on overview and the credentials card under its tab", async () => {
     const device = createIotDevice({
       name: "Field Sensor",
       serialNumber: "SN-42",
       deviceType: "ambyte",
+      status: "pending",
     });
     server.mount(contract.iot.getIotDevice, { body: device });
+    const user = userEvent.setup();
 
     render(<IotDeviceDetail deviceId={device.id} />);
 
     expect(await screen.findByRole("heading", { name: "Field Sensor" })).toBeInTheDocument();
     expect(screen.getByText("SN-42")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.detail.credentials.none")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "iot.devices.detailTabs.credentials" }));
+    expect(
+      await screen.findByRole("button", { name: "iot.devices.credentials.issue" }),
+    ).toBeInTheDocument();
   });
 
   it("deletes from the danger zone and navigates back to the list", async () => {

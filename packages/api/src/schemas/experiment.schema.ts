@@ -360,6 +360,22 @@ export const zMeasurementContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+// Inline command formats a command cell can carry. Defined here (rather than in
+// workbook-cells.schema) so workbook-cells can import it without an import cycle,
+// since workbook-cells already depends on this module.
+export const zCommandFormat = z.enum(["string", "json", "yaml"]);
+export type CommandFormat = z.infer<typeof zCommandFormat>;
+
+// A measurement node may instead carry an inline device command (raw string,
+// JSON, or YAML) from a command cell. Old apps' cells->flow drops this node
+// (unknown content shape), degrading gracefully; protocol nodes are unaffected.
+export const zMeasurementCommandContent = z.object({
+  command: z.object({
+    format: zCommandFormat,
+    content: z.string().min(1, "Command content is required"),
+  }),
+});
+
 export const zAnalysisContent = z.object({
   macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
@@ -387,6 +403,7 @@ export const zFlowNode = z.object({
     zQuestionContent,
     zInstructionContent,
     zMeasurementContent,
+    zMeasurementCommandContent,
     zAnalysisContent,
     zBranchContent,
   ]),
@@ -1426,12 +1443,18 @@ export const zAnnotationsColumnType = z.literal(
 
 export const zContributorColumnType = z.literal("STRUCT<id: STRING, name: STRING, avatar: STRING>");
 
+export const zDeviceColumnType = z.literal(
+  "STRUCT<id: STRING, serial_number: STRING, owner: STRING, status: STRING, device_type: STRING>",
+);
+
 export type AnnotationsColumnType = z.infer<typeof zAnnotationsColumnType>;
 export type ContributorColumnType = z.infer<typeof zContributorColumnType>;
+export type DeviceColumnType = z.infer<typeof zDeviceColumnType>;
 
 export const WellKnownColumnTypes = {
   ANNOTATIONS: zAnnotationsColumnType.value,
   CONTRIBUTOR: zContributorColumnType.value,
+  DEVICE: zDeviceColumnType.value,
 } as const;
 
 export const zColumnInfo = z.object({
@@ -1595,7 +1618,7 @@ export type UploadFormFields = z.infer<typeof zUploadFormFields>;
 
 // --- Per-kind filename validation (validates + transforms to the safe upload-path) ---
 
-// Bare-basename filename schema for kinds where the file is "just the file" —
+// Bare-basename filename schema for kinds where the file is "just the file":
 // strip any leading path the client may have sent, enforce extension + length.
 function bareBasenameSchema(label: string, extensions: readonly string[]) {
   return z

@@ -10,7 +10,7 @@ import { ProtocolSearchPopover } from "./protocol-search-popover";
 // Test data & helpers
 const protocols = [
   createProtocol({ name: "Fv/FM Baseline", family: "multispeq", createdByName: "Ada Lovelace" }),
-  createProtocol({ name: "Ambient Light", family: "ambit", createdByName: "Al Turing" }),
+  createProtocol({ name: "Ambient Light", family: "ambyte", createdByName: "Al Turing" }),
   createProtocol({
     name: "PAM Fluorometry",
     family: "multispeq",
@@ -73,7 +73,7 @@ describe("<ProtocolSearchPopover />", () => {
     expect(screen.getByText("PAM Fluorometry")).toBeInTheDocument();
 
     expect(screen.getAllByText("multispeq")).toHaveLength(2);
-    expect(screen.getByText("ambit")).toBeInTheDocument();
+    expect(screen.getByText("ambyte")).toBeInTheDocument();
   });
 
   it("displays protocol details correctly with created by info", () => {

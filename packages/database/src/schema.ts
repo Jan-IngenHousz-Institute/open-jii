@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { primaryKey, check, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import {
@@ -13,6 +14,7 @@ import {
   integer,
   bigint,
   decimal,
+  customType,
 } from "drizzle-orm/pg-core";
 
 // UTC timestamps helper
@@ -25,6 +27,18 @@ const timestamps = {
     .$onUpdate(() => new Date())
     .notNull(),
 };
+
+// Postgres tsvector column for full-text search. The actual GENERATED ALWAYS expression and the
+// GIN / pg_trgm indexes are defined in the migration SQL (see drizzle/00xx_*_search*.sql) — they
+// reference helper functions and operator classes that drizzle-kit cannot serialise reliably.
+// This column is excluded from API responses (stripped in repositories + omitted from DTO schemas).
+// The 'english' config below must match FTS_CONFIG in apps/backend/src/common/utils/fts.ts, which
+// builds the matching tsquery at search time.
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -45,6 +59,14 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
+  // Better Auth organization plugin: the user's currently active organization.
+  activeOrganizationId: uuid("active_organization_id").references(() => organizations.id, {
+    onDelete: "set null",
+  }),
+  // Better Auth organization plugin (teams): the session's active team.
+  activeTeamId: uuid("active_team_id").references(() => teams.id, {
+    onDelete: "set null",
+  }),
   ...timestamps,
 });
 
@@ -91,7 +113,12 @@ export const organizationTypeEnum = pgEnum("organization_type", [
 ]);
 
 // Sensor Family Enum
-export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit", "generic"]);
+export const sensorFamilyEnum = pgEnum("sensor_family", [
+  "multispeq",
+  "ambyte",
+  "minipar",
+  "generic",
+]);
 
 // Profiles Table
 export const profiles = pgTable("profiles", {
@@ -107,14 +134,19 @@ export const profiles = pgTable("profiles", {
     .references(() => users.id)
     .unique()
     .notNull(),
-  organizationId: uuid("organization_id").references(() => organizations.id),
   ...timestamps,
 });
 
-// Organizations Table
+// Organizations Table.
+// Backs the Better Auth organization plugin (model "organization"): the plugin
+// owns slug/logo/metadata; type/description/website/location are openJII
+// additionalFields kept from the original organizations table.
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).unique(),
+  logo: text("logo"),
+  metadata: text("metadata"),
   type: organizationTypeEnum("type"),
   description: text("description"),
   website: varchar("website", { length: 255 }),
@@ -122,16 +154,86 @@ export const organizations = pgTable("organizations", {
   ...timestamps,
 });
 
-// Sensors Table
-export const sensors = pgTable("sensors", {
+// Organization Members (Better Auth organization plugin, model "member").
+// Per-org role string (owner/admin/member + future custom roles). Distinct from
+// experimentMembers, which becomes the per-resource grant layer in a later phase.
+export const organizationMembers = pgTable(
+  "organization_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").default("member").notNull(),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("organization_members_org_user_uniq").on(t.organizationId, t.userId),
+    index("organization_members_user_idx").on(t.userId),
+  ],
+);
+
+// Organization Invitations (Better Auth organization plugin, model "invitation").
+// Separate from the legacy `invitations` table (platform/experiment), which is kept
+// during the transition and deprecated later.
+export const organizationInvitations = pgTable("organization_invitations", {
   id: uuid("id").primaryKey().defaultRandom(),
-  serialNumber: varchar("serial_number", { length: 100 }).unique().notNull(),
-  name: text("name").notNull(),
-  family: sensorFamilyEnum("family").notNull(),
-  location: text("location"),
-  isActive: boolean("is_active").default(true).notNull(),
-  ...timestamps,
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role"),
+  status: text("status").default("pending").notNull(),
+  inviterId: uuid("inviter_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Better Auth teams: optional team the invite is for.
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at")
+    .default(sql`(now() AT TIME ZONE 'UTC')`)
+    .notNull(),
 });
+
+// Teams (Better Auth organization plugin, model "team"): a sub-group within an org.
+export const teams = pgTable(
+  "teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (t) => [index("teams_organization_idx").on(t.organizationId)],
+);
+
+// Team Members (Better Auth organization plugin, model "teamMember").
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("team_members_team_user_uniq").on(t.teamId, t.userId),
+    index("team_members_user_idx").on(t.userId),
+  ],
+);
 
 // Experiments Table
 // Experiment Status Enum
@@ -164,6 +266,12 @@ export const experiments = pgTable("experiments", {
     .references(() => users.id)
     .notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). See migration for the
+  // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${experiments.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${experiments.description}, '')), 'B')`,
+  ),
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
@@ -281,6 +389,12 @@ export const protocols = pgTable("protocols", {
     onDelete: "set null",
   }),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). The `family` enum is matched at
+  // query time (enum->text casts are not immutable, so they can't live in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${protocols.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${protocols.description}, '')), 'B')`,
+  ),
 });
 
 // Macro Language Enum
@@ -303,6 +417,12 @@ export const macros = pgTable("macros", {
     onDelete: "set null",
   }),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B). The `language` enum is matched at
+  // query time (enum->text casts are not immutable, so they can't live in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${macros.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${macros.description}, '')), 'B')`,
+  ),
 });
 
 // Protocol-Macro Compatibility (many-to-many)
@@ -421,6 +541,12 @@ export const workbooks = pgTable(
       onDelete: "set null",
     }),
     ...timestamps,
+    // Weighted full-text search vector: name (A) + description (B). See migration for the
+    // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B')`,
+    ),
   },
   (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
 );
@@ -473,7 +599,12 @@ export const experimentDashboards = pgTable(
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
 
-export const deviceStatusEnum = pgEnum("device_status", ["pending", "active", "revoked"]);
+export const deviceStatusEnum = pgEnum("device_status", [
+  "pending",
+  "active",
+  "rotating",
+  "revoked",
+]);
 
 export const iotDevices = pgTable(
   "iot_devices",
@@ -483,8 +614,10 @@ export const iotDevices = pgTable(
     thingArn: text("thing_arn").notNull(),
     serialNumber: text("serial_number").notNull().unique(),
     name: varchar("name", { length: 255 }),
-    deviceType: text("device_type").notNull(),
+    deviceType: sensorFamilyEnum("device_type").notNull(),
     status: deviceStatusEnum("status").default("pending").notNull(),
+    certificateId: text("certificate_id"),
+    certificateArn: text("certificate_arn"),
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),

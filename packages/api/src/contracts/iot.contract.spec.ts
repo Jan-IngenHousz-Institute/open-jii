@@ -43,4 +43,26 @@ describe("Iot Contract", () => {
       expect(iotContract.deleteIotDevice.responses[204]).toBeNull();
     });
   });
+
+  describe("credential endpoints", () => {
+    it("defines issueIotCredentials as POST /api/v1/devices/:deviceId/credentials", () => {
+      expect(iotContract.issueIotCredentials.method).toBe("POST");
+      expect(iotContract.issueIotCredentials.path).toBe("/api/v1/devices/:deviceId/credentials");
+      expect(iotContract.issueIotCredentials.responses[201]).toBeDefined();
+    });
+
+    it("defines rotateIotCredentials as POST /api/v1/devices/:deviceId/credentials/rotate", () => {
+      expect(iotContract.rotateIotCredentials.method).toBe("POST");
+      expect(iotContract.rotateIotCredentials.path).toBe(
+        "/api/v1/devices/:deviceId/credentials/rotate",
+      );
+      expect(iotContract.rotateIotCredentials.responses[201]).toBeDefined();
+    });
+
+    it("defines revokeIotCredentials as DELETE /api/v1/devices/:deviceId/credentials", () => {
+      expect(iotContract.revokeIotCredentials.method).toBe("DELETE");
+      expect(iotContract.revokeIotCredentials.path).toBe("/api/v1/devices/:deviceId/credentials");
+      expect(iotContract.revokeIotCredentials.responses[200]).toBeDefined();
+    });
+  });
 });

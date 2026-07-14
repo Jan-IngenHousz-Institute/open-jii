@@ -1079,7 +1079,9 @@ module "data_export_job" {
       spec = {
         environment_version = "4"
         dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+          # openpyxl backs the pandas Excel writer used for xlsx exports
+          "openpyxl==3.1.5"
         ]
       }
     }

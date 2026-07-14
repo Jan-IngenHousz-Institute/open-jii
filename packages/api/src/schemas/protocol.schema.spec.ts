@@ -22,7 +22,7 @@ describe("Protocol Schema", () => {
   describe("zSensorFamily", () => {
     it("accepts valid enum values", () => {
       expect(zSensorFamily.parse("multispeq")).toBe("multispeq");
-      expect(zSensorFamily.parse("ambit")).toBe("ambit");
+      expect(zSensorFamily.parse("ambyte")).toBe("ambyte");
       expect(zSensorFamily.parse("generic")).toBe("generic");
     });
 

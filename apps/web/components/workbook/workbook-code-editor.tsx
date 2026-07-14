@@ -5,6 +5,7 @@ import type { Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
 import type { CodeLanguage, LintSource } from "~/components/shared/code-editor";
 
@@ -21,6 +22,8 @@ interface WorkbookCodeEditorProps {
   className?: string;
   lintSource?: LintSource;
   syntaxLinting?: boolean;
+  extraExtensions?: Extension[];
+  basicSetup?: ComponentProps<typeof CodeEditor>["basicSetup"];
 }
 
 const compactTheme = EditorView.theme({
@@ -38,6 +41,8 @@ export function WorkbookCodeEditor({
   className = "",
   lintSource,
   syntaxLinting = false,
+  extraExtensions: callerExtensions,
+  basicSetup,
 }: WorkbookCodeEditorProps) {
   const [isDark, setIsDark] = useState(false);
 
@@ -54,8 +59,9 @@ export function WorkbookCodeEditor({
   const extraExtensions = useMemo(() => {
     const exts: Extension[] = [compactTheme];
     if (isDark) exts.push(oneDark);
+    if (callerExtensions) exts.push(...callerExtensions);
     return exts;
-  }, [isDark]);
+  }, [isDark, callerExtensions]);
 
   return (
     <div
@@ -75,6 +81,7 @@ export function WorkbookCodeEditor({
         lintSource={lintSource}
         syntaxLinting={syntaxLinting}
         extraExtensions={extraExtensions}
+        basicSetup={basicSetup}
       />
     </div>
   );

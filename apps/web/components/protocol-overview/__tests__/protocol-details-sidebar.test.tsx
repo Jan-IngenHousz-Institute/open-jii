@@ -119,7 +119,7 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
           }}
         >
           <option value="multispeq">MultispeQ</option>
-          <option value="ambit">Ambit</option>
+          <option value="ambyte">Ambyte</option>
         </select>
         {children}
       </div>
@@ -302,12 +302,12 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByText("MultispeQ")).toBeInTheDocument();
   });
 
-  it("renders Ambit text when family is ambit and user is not the creator", () => {
+  it("renders Ambyte text when family is ambyte and user is not the creator", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent({
-      protocol: { ...mockProtocol, family: "ambit" },
+      protocol: { ...mockProtocol, family: "ambyte" },
     });
-    expect(screen.getByText("Ambit")).toBeInTheDocument();
+    expect(screen.getByText("Ambyte")).toBeInTheDocument();
   });
 
   it("calls updateProtocol when family is changed", async () => {
@@ -316,12 +316,12 @@ describe("ProtocolDetailsSidebar", () => {
 
     const selectNative = screen.getByTestId("select-native");
     const user = userEvent.setup();
-    await user.selectOptions(selectNative, "ambit");
+    await user.selectOptions(selectNative, "ambyte");
 
     await waitFor(() => {
       expect(spy.called).toBe(true);
     });
-    expect(spy.body).toEqual({ family: "ambit" });
+    expect(spy.body).toEqual({ family: "ambyte" });
     expect(spy.params).toEqual({ id: "550e8400-e29b-41d4-a716-446655440000" });
   });
 
@@ -333,7 +333,7 @@ describe("ProtocolDetailsSidebar", () => {
 
     const selectNative = screen.getByTestId("select-native");
     const user = userEvent.setup();
-    await user.selectOptions(selectNative, "ambit");
+    await user.selectOptions(selectNative, "ambyte");
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith({
@@ -350,7 +350,7 @@ describe("ProtocolDetailsSidebar", () => {
 
     const selectNative = screen.getByTestId("select-native");
     const user = userEvent.setup();
-    await user.selectOptions(selectNative, "ambit");
+    await user.selectOptions(selectNative, "ambyte");
 
     await waitFor(
       () => {

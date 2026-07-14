@@ -1,7 +1,9 @@
 import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol-code-registry";
 import { createProtocol } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -602,5 +604,178 @@ describe("ProtocolCellComponent", () => {
 
     const link = await screen.findByRole("link", { name: "cells.forkedFrom" });
     expect(link).toHaveAttribute("href", "/platform/protocols/p-src");
+  });
+
+  describe("inline rename", () => {
+    it("renames the protocol and repoints the cell label for the owner", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          name: "Light Sensor",
+          code: [{ measurement: "light" }],
+          createdBy: OWNER_ID,
+        }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
+        body: createProtocol({ id: "p1", name: "Fluorescence" }),
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Fluorescence");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      expect(updateSpy.body).toEqual({ name: "Fluorescence" });
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as ProtocolCell;
+      expect(updated.payload.name).toBe("Fluorescence");
+    });
+
+    it("merges a concurrent cell change into the resolved rename", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: "p1",
+          name: "Light Sensor",
+          code: [{ measurement: "light" }],
+          createdBy: OWNER_ID,
+        }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.protocols.updateProtocol, {
+        body: createProtocol({ id: "p1", name: "Fluorescence" }),
+        delay: 100,
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Fluorescence");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      // A collapse toggle lands while the rename save is still in flight.
+      rerender(
+        <ProtocolCellComponent
+          cell={makeProtocolCell({ isCollapsed: true })}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      const updated = onUpdate.mock.lastCall?.[0] as ProtocolCell;
+      // The rename must preserve the concurrent collapse, not revert it.
+      expect(updated.isCollapsed).toBe(true);
+      expect(updated.payload.name).toBe("Fluorescence");
+    });
+
+    it("does not offer rename to non-owners", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: "viewer" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("code-editor-wrapper")).toHaveAttribute("data-readonly", "true"),
+      );
+      expect(screen.queryByLabelText("cells.rename")).not.toBeInTheDocument();
+    });
+
+    it("keeps the editor open and does not repoint the cell when the rename fails", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
+        status: 500,
+        body: { message: "boom", statusCode: 500 },
+      });
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      await user.clear(screen.getByLabelText("cells.rename"));
+      await user.type(screen.getByLabelText("cells.rename"), "Taken");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+      expect(onUpdate).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("cells.renameSave")).toBeInTheDocument();
+    });
+
+    it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      });
+      mockedUseSession.mockReturnValue({
+        data: { user: { id: OWNER_ID } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      // The update contract has no typed 409; the backend signals a name clash
+      // via a REPOSITORY_DUPLICATE code on a 400 body.
+      server.use(
+        http.patch(`${API_URL}/api/v1/protocols/:id`, () =>
+          HttpResponse.json(
+            { code: "REPOSITORY_DUPLICATE", message: "duplicate", statusCode: 400 },
+            { status: 400 },
+          ),
+        ),
+      );
+      const { toast } = await import("@repo/ui/hooks/use-toast");
+      const onUpdate = vi.fn();
+
+      const user = userEvent.setup();
+      render(
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      await user.clear(screen.getByLabelText("cells.rename"));
+      await user.type(screen.getByLabelText("cells.rename"), "Taken Name");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith({
+          description: "cells.renameConflict",
+          variant: "destructive",
+        }),
+      );
+      expect(screen.getByLabelText("cells.renameSave")).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
   });
 });

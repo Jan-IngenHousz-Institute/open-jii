@@ -49,3 +49,9 @@ variable "github_environment" {
   type        = string
   default     = "dev"
 }
+
+variable "enabled_services" {
+  description = "Subset of service policy keys to enable. Null (default) enables all services. Use to restrict permissions in environments that don't need every service."
+  type        = list(string)
+  default     = null
+}

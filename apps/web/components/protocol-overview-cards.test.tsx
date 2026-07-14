@@ -26,6 +26,16 @@ describe("ProtocolOverviewCards", () => {
     expect(screen.getByText("multispeq")).toBeInTheDocument();
   });
 
+  it("uses the active badge color for the ambyte family", () => {
+    render(
+      <ProtocolOverviewCards
+        protocols={[createProtocol({ name: "Ambyte Protocol", family: "ambyte" })]}
+      />,
+    );
+
+    expect(screen.getByText("ambyte")).toHaveClass("bg-badge-active");
+  });
+
   it("shows preferred badge for sorted protocols", () => {
     render(<ProtocolOverviewCards protocols={[createProtocol({ sortOrder: 1 })]} />);
     expect(screen.getByText("common.preferred")).toBeInTheDocument();

@@ -1277,7 +1277,7 @@ describe("Experiment Schema", () => {
         protocol: {
           ...validPayload.protocol,
           description: "A test protocol",
-          family: "ambit",
+          family: "ambyte",
         },
         macro: {
           ...validPayload.macro,
@@ -1289,7 +1289,7 @@ describe("Experiment Schema", () => {
 
       const result = zProjectTransferWebhookPayload.parse(fullPayload);
       expect(result.experiment.locations).toHaveLength(1);
-      expect(result.protocol?.family).toBe("ambit");
+      expect(result.protocol?.family).toBe("ambyte");
       expect(result.macro?.language).toBe("python");
       expect(result.questions).toHaveLength(1);
     });

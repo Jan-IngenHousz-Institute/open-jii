@@ -1,9 +1,9 @@
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import type { AnalysisContent } from "~/shared/measurements/flow-node";
+import type { AnalysisContent, FlowNode } from "~/shared/measurements/flow-node";
 
 import { AnalysisNode } from "./analysis-node";
 
@@ -12,6 +12,7 @@ import { AnalysisNode } from "./analysis-node";
 // summaryProps captures the name the node hands to the summary card.
 const {
   summaryProps,
+  actionBarProps,
   useExperiments,
   useSession,
   useMeasurementUpload,
@@ -21,6 +22,7 @@ const {
   getTimeSyncState,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
+  actionBarProps: vi.fn(),
   useExperiments: vi.fn(),
   useSession: vi.fn(),
   useMeasurementUpload: vi.fn(),
@@ -60,7 +62,10 @@ vi.mock("./analysis-summary-card", () => ({
 }));
 vi.mock("./analysis-macro-result", () => ({ AnalysisMacroResult: () => null }));
 vi.mock("./analysis-action-bar", () => ({
-  AnalysisActionBar: () => null,
+  AnalysisActionBar: (props: { onUpload: () => void }) => {
+    actionBarProps(props);
+    return null;
+  },
   useScrollToTop: () => ({
     scrollViewRef: { current: null },
     hasScrolled: false,
@@ -92,6 +97,7 @@ beforeEach(() => {
     rememberAnswerSettings: {},
   });
   summaryProps.mockClear();
+  actionBarProps.mockClear();
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
   useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement: vi.fn() });
@@ -132,5 +138,65 @@ describe("AnalysisNode experiment name", () => {
     useMeasurementFlowStore.setState({ experimentId: "exp-missing", experimentLabel: undefined });
     render(<AnalysisNode content={CONTENT} />);
     expect(resolvedName()).toBe("Experiment");
+  });
+});
+
+describe("AnalysisNode upload with a command in the flow", () => {
+  const withMacro = {
+    params: {},
+    macroId: "macro-1",
+    macro: { id: "macro-1", name: "Chlorophyll", filename: "chloro.py" },
+  } as AnalysisContent;
+
+  // Command → Protocol → Macro: the command rides a "measurement" node with no
+  // protocolId. Regression (Vlad, on device): flowProtocolId picked the command
+  // node, so the upload threw "Missing protocol id" (swallowed by .catch) and no
+  // local measurement was created. It must now resolve the real protocol.
+  const commandProtocolMacroNodes = [
+    {
+      id: "cmd1",
+      type: "measurement",
+      name: "battery",
+      isStart: true,
+      content: { command: { format: "string", content: "battery" } },
+    },
+    {
+      id: "p1",
+      type: "measurement",
+      name: "Proto",
+      isStart: false,
+      content: { protocolId: "proto-1", protocol: { name: "Proto" } },
+    },
+    {
+      id: "m1",
+      type: "analysis",
+      name: "Macro",
+      isStart: false,
+      content: { macroId: "macro-1" },
+    },
+  ] as unknown as FlowNode[];
+
+  it("uploads the measurement even when a command node precedes the protocol", async () => {
+    const uploadMeasurement = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={withMacro} />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurement).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurement.mock.calls[0][0]).toMatchObject({ protocolId: "proto-1" });
   });
 });

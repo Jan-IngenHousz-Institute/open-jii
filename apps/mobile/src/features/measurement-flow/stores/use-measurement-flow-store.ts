@@ -45,7 +45,9 @@ interface MeasurementFlowStore extends FlowState {
   startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
-  setScanResult: (result: ScanResult | undefined) => void;
+  // producerCellId records which cell (protocol or command) yielded the result;
+  // omitting it clears any stale attribution.
+  setScanResult: (result: ScanResult | undefined, producerCellId?: string) => void;
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
@@ -115,7 +117,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       finishFlow: () => set(finishFlowState),
 
-      setScanResult: (result) => set({ scanResult: result }),
+      setScanResult: (result, producerCellId) => set({ scanResult: result, producerCellId }),
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
       dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
@@ -147,6 +149,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
+        producerCellId: state.producerCellId,
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,

@@ -3,6 +3,11 @@ import {
   CreateThingCommand,
   DeleteThingCommand,
   AddThingToThingGroupCommand,
+  CreateKeysAndCertificateCommand,
+  AttachThingPrincipalCommand,
+  DetachThingPrincipalCommand,
+  AttachPolicyCommand,
+  UpdateCertificateCommand,
 } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
@@ -114,6 +119,134 @@ describe("AwsIotService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DELETE_THING_FAILED);
       expect(result.error.message).toContain("not found");
+    });
+  });
+
+  describe("createKeysAndCertificate", () => {
+    it("returns the id, arn, pem, and private key", async () => {
+      iotMock.on(CreateKeysAndCertificateCommand).resolves({
+        certificateId: "cert-1",
+        certificateArn: "arn:aws:iot:eu-central-1:123456789012:cert/cert-1",
+        certificatePem: "PEM",
+        keyPair: { PrivateKey: "KEY", PublicKey: "PUB" },
+      });
+
+      const result = await service.createKeysAndCertificate();
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        certificateId: "cert-1",
+        certificateArn: "arn:aws:iot:eu-central-1:123456789012:cert/cert-1",
+        certificatePem: "PEM",
+        publicKey: "PUB",
+        privateKey: "KEY",
+      });
+      expect(iotMock.commandCalls(CreateKeysAndCertificateCommand)[0].args[0].input).toEqual({
+        setAsActive: true,
+      });
+    });
+
+    it("fails when the certificate response is incomplete", async () => {
+      iotMock.on(CreateKeysAndCertificateCommand).resolves({
+        certificateId: "cert-1",
+        certificateArn: "arn:cert",
+        certificatePem: "PEM",
+      });
+
+      const result = await service.createKeysAndCertificate();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_CERT_FAILED);
+    });
+  });
+
+  describe("attachThingPrincipal / detachThingPrincipal", () => {
+    it("attaches the certificate principal to the thing", async () => {
+      iotMock.on(AttachThingPrincipalCommand).resolves({});
+
+      const result = await service.attachThingPrincipal("thing-1", "arn:cert");
+
+      assertSuccess(result);
+      expect(iotMock.commandCalls(AttachThingPrincipalCommand)[0].args[0].input).toEqual({
+        thingName: "thing-1",
+        principal: "arn:cert",
+      });
+    });
+
+    it("detaches the certificate principal from the thing", async () => {
+      iotMock.on(DetachThingPrincipalCommand).resolves({});
+
+      const result = await service.detachThingPrincipal("thing-1", "arn:cert");
+
+      assertSuccess(result);
+      expect(iotMock.commandCalls(DetachThingPrincipalCommand)[0].args[0].input).toEqual({
+        thingName: "thing-1",
+        principal: "arn:cert",
+      });
+    });
+
+    it("maps an SDK error to an attach-principal failure", async () => {
+      iotMock.on(AttachThingPrincipalCommand).rejects(new Error("nope"));
+
+      const result = await service.attachThingPrincipal("thing-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
+
+    it("maps an SDK error to a detach-principal failure", async () => {
+      iotMock.on(DetachThingPrincipalCommand).rejects(new Error("nope"));
+
+      const result = await service.detachThingPrincipal("thing-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
+  });
+
+  describe("attachPolicy", () => {
+    it("attaches a policy to the certificate", async () => {
+      iotMock.on(AttachPolicyCommand).resolves({});
+
+      const result = await service.attachPolicy("policy-1", "arn:cert");
+
+      assertSuccess(result);
+      expect(iotMock.commandCalls(AttachPolicyCommand)[0].args[0].input).toEqual({
+        policyName: "policy-1",
+        target: "arn:cert",
+      });
+    });
+
+    it("maps an SDK error to an attach-cert-policy failure", async () => {
+      iotMock.on(AttachPolicyCommand).rejects(new Error("nope"));
+
+      const result = await service.attachPolicy("policy-1", "arn:cert");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED);
+    });
+  });
+
+  describe("updateCertificateStatus", () => {
+    it("sets the certificate status", async () => {
+      iotMock.on(UpdateCertificateCommand).resolves({});
+
+      const result = await service.updateCertificateStatus("cert-1", "REVOKED");
+
+      assertSuccess(result);
+      expect(iotMock.commandCalls(UpdateCertificateCommand)[0].args[0].input).toEqual({
+        certificateId: "cert-1",
+        newStatus: "REVOKED",
+      });
+    });
+
+    it("maps an SDK error to an update-cert failure", async () => {
+      iotMock.on(UpdateCertificateCommand).rejects(new Error("nope"));
+
+      const result = await service.updateCertificateStatus("cert-1", "INACTIVE");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_UPDATE_CERT_FAILED);
     });
   });
 });

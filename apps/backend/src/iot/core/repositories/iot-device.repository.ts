@@ -1,10 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, iotDevices } from "@repo/database";
+import { and, desc, eq, inArray, iotDevices } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { CreateIotDeviceDto, IotDeviceDto } from "../models/iot-device.model";
+import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
 export class IotDeviceRepository {
@@ -55,6 +55,36 @@ export class IotDeviceRepository {
         .from(iotDevices)
         .where(eq(iotDevices.serialNumber, serialNumber))
         .limit(1);
+      return results.length === 0 ? null : results[0];
+    });
+  }
+
+  // Cross-owner lookup for the Databricks lineage webhook: the pipeline resolves
+  // broker-authenticated thing names to registry rows, so this is not owner-scoped.
+  async findByThingNames(thingNames: string[]): Promise<Result<IotDeviceDto[]>> {
+    return tryCatch(async () => {
+      if (thingNames.length === 0) {
+        return [];
+      }
+      const results = await this.database
+        .select()
+        .from(iotDevices)
+        .where(inArray(iotDevices.thingName, thingNames));
+      return results;
+    });
+  }
+
+  async update(
+    deviceId: string,
+    userId: string,
+    patch: UpdateIotDeviceDto,
+  ): Promise<Result<IotDeviceDto | null>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .update(iotDevices)
+        .set(patch)
+        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, userId)))
+        .returning();
       return results.length === 0 ? null : results[0];
     });
   }

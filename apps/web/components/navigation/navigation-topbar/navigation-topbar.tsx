@@ -42,6 +42,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
+  const isDevicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { state } = useSidebar();
   const signOut = useSignOut();
 
@@ -62,20 +63,23 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
     : allLocales.filter((l) => l.code === "en");
 
   // Build navigation items from config for mobile
-  const allNavItems = Object.values(mainNavigation).flatMap((nav) => {
-    if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {
-      return nav.children.map((child) => ({
-        title: t(child.titleKey, { ns: child.namespace }),
-        url: child.url(locale),
-        icon: child.icon,
-      }));
-    }
-    return {
-      title: t(nav.titleKey, { ns: nav.namespace }),
-      url: nav.url(locale),
-      icon: nav.icon,
-    };
-  });
+  const allNavItems = Object.entries(mainNavigation)
+    .filter(([key]) => key !== "devices" || isDevicesEnabled)
+    .map(([, nav]) => nav)
+    .flatMap((nav) => {
+      if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {
+        return nav.children.map((child) => ({
+          title: t(child.titleKey, { ns: child.namespace }),
+          url: child.url(locale),
+          icon: child.icon,
+        }));
+      }
+      return {
+        title: t(nav.titleKey, { ns: nav.namespace }),
+        url: nav.url(locale),
+        icon: nav.icon,
+      };
+    });
 
   return (
     <>
@@ -98,7 +102,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
 
           {/* Desktop: Full navigation */}
           <div className="ml-auto hidden items-center gap-2 md:flex">
-            {/* Activity bell — OJD-1506 */}
+            {/* Activity bell - OJD-1506 */}
             <ActivityPopover />
 
             {/* Language Switcher */}

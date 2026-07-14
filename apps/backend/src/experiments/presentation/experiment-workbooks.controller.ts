@@ -10,6 +10,7 @@ import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/attach-workbook";
 import { DetachWorkbookUseCase } from "../application/use-cases/detach-workbook/detach-workbook";
+import { SetWorkbookVersionUseCase } from "../application/use-cases/set-workbook-version/set-workbook-version";
 import { UpgradeWorkbookVersionUseCase } from "../application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 
 @Controller()
@@ -20,6 +21,7 @@ export class ExperimentWorkbooksController {
     private readonly attachWorkbookUseCase: AttachWorkbookUseCase,
     private readonly detachWorkbookUseCase: DetachWorkbookUseCase,
     private readonly upgradeWorkbookVersionUseCase: UpgradeWorkbookVersionUseCase,
+    private readonly setWorkbookVersionUseCase: SetWorkbookVersionUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.attachWorkbook)
@@ -62,6 +64,26 @@ export class ExperimentWorkbooksController {
   upgradeWorkbookVersion(@Session() session: UserSession) {
     return tsRestHandler(contract.experiments.upgradeWorkbookVersion, async ({ params }) => {
       const result = await this.upgradeWorkbookVersionUseCase.execute(params.id, session.user.id);
+
+      if (result.isSuccess()) {
+        return {
+          status: StatusCodes.OK as const,
+          body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.setWorkbookVersion)
+  setWorkbookVersion(@Session() session: UserSession) {
+    return tsRestHandler(contract.experiments.setWorkbookVersion, async ({ params, body }) => {
+      const result = await this.setWorkbookVersionUseCase.execute(
+        params.id,
+        body.versionId,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         return {
