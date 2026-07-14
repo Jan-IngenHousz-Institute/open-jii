@@ -87,7 +87,7 @@ function isWindowOnlyAggregation(aggregation: DataAggregation): boolean {
 }
 
 // Flatten CONTRIBUTOR/DEVICE structs to their display field so the chart layer sees plain strings.
-function flattenContributorCells<
+function flattenStructCells<
   T extends {
     columns: { name: string; type_text: string }[];
     rows: Record<string, unknown>[];
@@ -252,7 +252,7 @@ export const useExperimentVisualizationData = (
         rows: remappedRows,
       };
     })();
-    return flattenContributorCells(afterAlias);
+    return flattenStructCells(afterAlias);
   }, [tableData, aggregation, aggregationActive]);
 
   return {
