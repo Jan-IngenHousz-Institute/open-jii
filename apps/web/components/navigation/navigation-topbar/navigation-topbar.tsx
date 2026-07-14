@@ -67,19 +67,19 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
     .filter(([key]) => key !== "devices" || isDevicesEnabled)
     .map(([, nav]) => nav)
     .flatMap((nav) => {
-    if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {
-      return nav.children.map((child) => ({
-        title: t(child.titleKey, { ns: child.namespace }),
-        url: child.url(locale),
-        icon: child.icon,
-      }));
-    }
-    return {
-      title: t(nav.titleKey, { ns: nav.namespace }),
-      url: nav.url(locale),
-      icon: nav.icon,
-    };
-  });
+      if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {
+        return nav.children.map((child) => ({
+          title: t(child.titleKey, { ns: child.namespace }),
+          url: child.url(locale),
+          icon: child.icon,
+        }));
+      }
+      return {
+        title: t(nav.titleKey, { ns: nav.namespace }),
+        url: nav.url(locale),
+        icon: nav.icon,
+      };
+    });
 
   return (
     <>
