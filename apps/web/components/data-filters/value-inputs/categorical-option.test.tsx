@@ -20,6 +20,7 @@ describe("CategoricalOption", () => {
         optionValue="alpha"
         isSelected={false}
         isContributor={false}
+        isDevice={false}
         onSelect={vi.fn()}
       />,
     );
@@ -33,6 +34,7 @@ describe("CategoricalOption", () => {
         optionValue="alpha"
         isSelected={false}
         isContributor={false}
+        isDevice={false}
         onSelect={onSelect}
       />,
     );
@@ -47,9 +49,30 @@ describe("CategoricalOption", () => {
         optionValue={struct}
         isSelected={false}
         isContributor
+        isDevice={false}
         onSelect={vi.fn()}
       />,
     );
     expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("renders the device serial number for DEVICE columns", () => {
+    const struct = JSON.stringify({
+      id: "d-1",
+      serial_number: "AA:11",
+      owner: "u-1",
+      status: "active",
+      device_type: "ambyte",
+    });
+    renderInCommand(
+      <CategoricalOption
+        optionValue={struct}
+        isSelected={false}
+        isContributor={false}
+        isDevice
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("AA:11")).toBeInTheDocument();
   });
 });

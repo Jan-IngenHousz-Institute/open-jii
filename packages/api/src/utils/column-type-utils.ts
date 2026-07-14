@@ -153,11 +153,11 @@ export function isWellKnownType(type?: string): boolean {
 
 /**
  * Check if a well-known type is sortable
- * Only CONTRIBUTOR type is sortable (ANNOTATIONS and QUESTIONS are arrays)
+ * CONTRIBUTOR and DEVICE structs are sortable (ANNOTATIONS and QUESTIONS are arrays)
  */
 export function isWellKnownSortableType(type?: string): boolean {
   if (!type) return false;
-  return type === WellKnownColumnTypes.CONTRIBUTOR;
+  return type === WellKnownColumnTypes.CONTRIBUTOR || type === WellKnownColumnTypes.DEVICE;
 }
 
 /**
@@ -171,6 +171,8 @@ export function getWellKnownSortField(type?: string): string | undefined {
   switch (type) {
     case WellKnownColumnTypes.CONTRIBUTOR:
       return "name";
+    case WellKnownColumnTypes.DEVICE:
+      return "serial_number";
     default:
       return undefined;
   }

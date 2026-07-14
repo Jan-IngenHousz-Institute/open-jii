@@ -52,6 +52,28 @@ export const zRegisterIotDeviceBody = z.object({
 
 export const zRegisterIotDeviceResponse = zIotDevice;
 
+// --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
+export const zDeviceRegistryWebhookPayload = z.object({
+  thingNames: z.array(z.string()).min(1).max(500),
+});
+
+export const zDeviceRegistryEntry = z.object({
+  thingName: z.string(),
+  id: z.string().uuid(),
+  serialNumber: z.string(),
+  deviceType: zDeviceType,
+  status: zIotDeviceStatus,
+  createdBy: z.string().uuid(),
+});
+
+export const zDeviceRegistryWebhookResponse = z.object({
+  devices: z.array(zDeviceRegistryEntry),
+  success: z.boolean(),
+});
+
+export type DeviceRegistryEntry = z.infer<typeof zDeviceRegistryEntry>;
+export type DeviceRegistryWebhookResponse = z.infer<typeof zDeviceRegistryWebhookResponse>;
+
 export const zIotDevicePathParam = z.object({
   deviceId: z.string().uuid().describe("ID of the device"),
 });

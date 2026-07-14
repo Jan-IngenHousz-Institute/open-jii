@@ -36,6 +36,7 @@ class BackendClient:
     
     WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
+    WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
     
     def __init__(self, base_url: str, api_key_id: str, webhook_secret: str, timeout: int = 30):
         """
@@ -212,6 +213,56 @@ class BackendClient:
             }
             
         return user_metadata
+
+    def get_device_registry(self, thing_names: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        Resolve broker-authenticated client ids to their device registry rows.
+
+        For an X.509 device the MQTT client id equals its Thing name, so the
+        pipeline passes distinct client_id values here; Cognito/mobile client ids
+        match no registry row and are simply absent from the result.
+
+        Returns:
+            Dict mapping thing_name -> {id, serialNumber, deviceType, status, createdBy}
+        """
+        if not thing_names:
+            return {}
+        if not isinstance(thing_names, list):
+            raise BackendIntegrationError("thing_names must be a list")
+        if len(thing_names) > 500:
+            raise BackendIntegrationError(f"Too many thing names in batch: {len(thing_names)} (max 500)")
+
+        valid = [t for t in thing_names if t is not None and str(t).strip()]
+        if not valid:
+            return {}
+
+        payload = {"thingNames": valid}
+
+        try:
+            result = self._make_request(self.WEBHOOK_IOT_REGISTRY_PATH, payload)
+        except BackendIntegrationError:
+            raise
+        except Exception as e:
+            raise BackendIntegrationError(f"Unexpected error fetching device registry: {str(e)}")
+
+        registry: Dict[str, Dict[str, Any]] = {}
+        devices_list = result.get('devices', [])
+
+        if not isinstance(devices_list, list):
+            raise BackendIntegrationError(f"Invalid response format: expected 'devices' to be a list, got {type(devices_list)}")
+
+        for device in devices_list:
+            if not isinstance(device, dict) or 'thingName' not in device:
+                continue
+            registry[device['thingName']] = {
+                'id': device.get('id'),
+                'serialNumber': device.get('serialNumber'),
+                'deviceType': device.get('deviceType'),
+                'status': device.get('status'),
+                'createdBy': device.get('createdBy'),
+            }
+
+        return registry
 
 
     def execute_macro_batch(

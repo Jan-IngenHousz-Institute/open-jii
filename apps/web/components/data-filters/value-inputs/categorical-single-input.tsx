@@ -37,11 +37,8 @@ export function CategoricalSingleInput({
 }: CategoricalSingleInputProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const { values, isLoading, truncated, isContributor, contributorMap } = useDistinctOptions(
-    column,
-    experimentId,
-    tableName,
-  );
+  const { values, isLoading, truncated, isContributor, isDevice, contributorMap } =
+    useDistinctOptions(column, experimentId, tableName);
   const triggerId = useId();
 
   const display = useMemo(() => {
@@ -54,11 +51,12 @@ export function CategoricalSingleInput({
     isContributor && display && contributorMap ? contributorMap.get(display) : undefined;
 
   const handleSelect = (raw: string | number) => {
-    onChange(chipValueForOption(raw, isContributor));
+    onChange(chipValueForOption(raw, isContributor, isDevice));
     setOpen(false);
   };
 
-  const getChipKey = (raw: string | number) => String(chipValueForOption(raw, isContributor));
+  const getChipKey = (raw: string | number) =>
+    String(chipValueForOption(raw, isContributor, isDevice));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -100,6 +98,7 @@ export function CategoricalSingleInput({
                   optionValue={String(v)}
                   isSelected={display === getChipKey(v)}
                   isContributor={isContributor}
+                  isDevice={isDevice}
                   onSelect={() => handleSelect(v)}
                 />
               ))}
