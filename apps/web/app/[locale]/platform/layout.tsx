@@ -61,7 +61,7 @@ export default async function AppLayout({
       <ActivityProvider>
         <NavigationSidebarWrapper
           locale={locale}
-          userEmail={session.user.email}
+          distinctId={session.user.email || session.user.id}
           releaseNotes={releaseNotes}
         />
         <SidebarEdgePeek />

@@ -9,11 +9,11 @@ import { AppSidebar } from "../navigation-sidebar/navigation-sidebar";
 
 export async function NavigationSidebarWrapper({
   locale,
-  userEmail,
+  distinctId,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: string;
-  userEmail?: string;
+  distinctId?: string;
 }) {
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({
@@ -31,7 +31,7 @@ export async function NavigationSidebarWrapper({
     namespaces: ["iot"],
   });
 
-  const devicesEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES, userEmail);
+  const devicesEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES, distinctId);
 
   // Prepare navigation data server-side using config
   const navigationData = {
