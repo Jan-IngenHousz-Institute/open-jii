@@ -4,10 +4,15 @@ import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { RegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
 
 import { useRegisterIotDevice } from "./useRegisterIotDevice";
 
-const body = { serialNumber: "E8:F6:0A:B1:1D:D4", deviceType: "ambyte", name: "Greenhouse 1" };
+const body: RegisterIotDeviceBody = {
+  serialNumber: "E8:F6:0A:B1:1D:D4",
+  deviceType: "ambyte",
+  name: "Greenhouse 1",
+};
 
 describe("useRegisterIotDevice", () => {
   it("sends the registration body", async () => {

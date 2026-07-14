@@ -439,7 +439,7 @@ export class TestHarness {
     name: string;
     description?: string;
     code?: Record<string, unknown>[];
-    family?: "multispeq" | "ambit" | "generic";
+    family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
   }) {
     const [protocol] = await this.database
@@ -463,7 +463,7 @@ export class TestHarness {
     serialNumber?: string;
     thingName?: string;
     name?: string;
-    deviceType?: string;
+    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic";
     status?: "pending" | "active" | "rotating" | "revoked";
     certificateId?: string;
     certificateArn?: string;

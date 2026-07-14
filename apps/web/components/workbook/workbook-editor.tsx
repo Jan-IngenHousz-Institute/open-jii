@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -57,8 +58,8 @@ interface WorkbookEditorProps {
   isConnected?: boolean;
   isConnecting?: boolean;
   deviceInfo?: DeviceInfo | null;
-  sensorFamily?: "multispeq" | "ambit" | "generic";
-  onSensorFamilyChange?: (family: "multispeq" | "ambit" | "generic") => void;
+  sensorFamily?: SensorFamily;
+  onSensorFamilyChange?: (family: SensorFamily) => void;
   connectionType?: "bluetooth" | "serial";
   onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
   isRunningAll?: boolean;
@@ -76,7 +77,7 @@ interface WorkbookEditorProps {
 
 export function createDefaultCell(
   type: WorkbookCell["type"],
-  _sensorFamily: "multispeq" | "ambit" | "generic" = "multispeq",
+  _sensorFamily: SensorFamily = "multispeq",
 ): WorkbookCell {
   const id = crypto.randomUUID();
   const base = { id, isCollapsed: false };
@@ -194,7 +195,7 @@ interface SortableCellGroupProps {
   cells: WorkbookCell[];
   cellNumber?: number;
   executionStates?: Record<string, CellExecutionState>;
-  sensorFamily?: "multispeq" | "ambit" | "generic";
+  sensorFamily?: SensorFamily;
   readOnly?: boolean;
   entitySnapshots?: EntitySnapshots;
   onRunCell?: (cellId: string) => void;
