@@ -72,6 +72,7 @@ export const zDeviceRegistryWebhookResponse = z.object({
 });
 
 export type DeviceRegistryEntry = z.infer<typeof zDeviceRegistryEntry>;
+export type DeviceRegistryWebhookResponse = z.infer<typeof zDeviceRegistryWebhookResponse>;
 
 export const zIotDevicePathParam = z.object({
   deviceId: z.string().uuid().describe("ID of the device"),

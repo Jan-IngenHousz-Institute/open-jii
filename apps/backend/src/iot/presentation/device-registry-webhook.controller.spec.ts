@@ -2,9 +2,11 @@ import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import type { DeviceRegistryWebhookResponse } from "@repo/api/schemas/iot.schema";
 
 import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
+import type { SuperTestResponse } from "../../test/test-harness";
 
 describe("DeviceRegistryWebhookController", () => {
   const testApp = TestHarness.App;
@@ -49,7 +51,7 @@ describe("DeviceRegistryWebhookController", () => {
       const body = { thingNames: ["ambyte_AA11", "ambyte_missing"] };
       const { timestamp, signature } = sign(body);
 
-      const response = await testApp
+      const response: SuperTestResponse<DeviceRegistryWebhookResponse> = await testApp
         .post(contract.iot.getDeviceRegistry.path)
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
