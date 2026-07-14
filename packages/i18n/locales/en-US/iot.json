@@ -107,7 +107,7 @@
         "serialLabel": "Serial number",
         "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
         "typeLabel": "Device type",
-        "typePlaceholder": "ambyte",
+        "typePlaceholder": "Select a device type",
         "nameLabel": "Name (optional)",
         "namePlaceholder": "Greenhouse sensor 1",
         "submit": "Register",

@@ -2,10 +2,12 @@
 
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -19,13 +21,8 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-type SensorFamily = "multispeq" | "ambit" | "generic";
-
-const familyLabels: Record<SensorFamily, string> = {
-  multispeq: "MultispeQ",
-  ambit: "Ambit",
-  generic: "Generic",
-};
+const isDisabledFamily = (family: SensorFamily) =>
+  SENSOR_FAMILY_OPTIONS.find((o) => o.value === family)?.disabled ?? false;
 
 interface ProtocolPickerProps {
   sensorFamily?: SensorFamily;
@@ -45,7 +42,10 @@ export function ProtocolPicker({
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newFamily, setNewFamily] = useState<SensorFamily>(sensorFamily);
+  // Protocols can only be created for a locally-runnable family; an ingest-only
+  // (disabled) sensorFamily falls back to the default creatable one.
+  const creatableFamily: SensorFamily = isDisabledFamily(sensorFamily) ? "multispeq" : sensorFamily;
+  const [newFamily, setNewFamily] = useState<SensorFamily>(creatableFamily);
   const [isCreating, setIsCreating] = useState(false);
   const createProtocol = useProtocolCreate();
 
@@ -65,7 +65,7 @@ export function ProtocolPicker({
   };
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || isDisabledFamily(newFamily)) return;
     setIsCreating(true);
     try {
       const result = await createProtocol.mutateAsync({
@@ -99,7 +99,7 @@ export function ProtocolPicker({
     setSearch("");
     setShowCreate(false);
     setNewName("");
-    setNewFamily(sensorFamily);
+    setNewFamily(creatableFamily);
   };
 
   return (
@@ -131,9 +131,9 @@ export function ProtocolPicker({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["multispeq", "ambit", "generic"] as const).map((f) => (
-                    <SelectItem key={f} value={f}>
-                      {familyLabels[f]}
+                  {SENSOR_FAMILY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

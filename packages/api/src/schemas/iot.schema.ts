@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zSensorFamily } from "./protocol.schema";
+
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
   accessKeyId: z.string().describe("AWS Access Key ID for temporary credentials"),
@@ -22,13 +24,16 @@ export const zIotUploadUrl = z.object({
 // --- IoT IotDevices ---
 export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoked"]);
 
+// A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
+export const zDeviceType = zSensorFamily;
+
 export const zIotDevice = z.object({
   id: z.string().uuid(),
   thingName: z.string(),
   thingArn: z.string(),
   serialNumber: z.string(),
   name: z.string().nullable(),
-  deviceType: z.string(),
+  deviceType: zDeviceType,
   status: zIotDeviceStatus,
   certificateId: z.string().nullable(),
   certificateArn: z.string().nullable(),
@@ -42,11 +47,7 @@ export const zIotDeviceList = z.array(zIotDevice);
 export const zRegisterIotDeviceBody = z.object({
   serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
-  deviceType: z
-    .string()
-    .min(1)
-    .max(255)
-    .describe("IotDevice class, maps to the ingest topic sensorType"),
+  deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;

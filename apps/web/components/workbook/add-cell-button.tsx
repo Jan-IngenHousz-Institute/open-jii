@@ -10,6 +10,7 @@ import {
   Terminal,
 } from "lucide-react";
 
+import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -30,7 +31,7 @@ interface AddCellButtonProps {
   onAdd: (type: CellType) => void;
   onAddCell?: (cell: WorkbookCell) => void;
   existingCells?: WorkbookCell[];
-  sensorFamily?: "multispeq" | "ambit" | "generic";
+  sensorFamily?: SensorFamily;
   variant?: "inline" | "bottom";
   showBranch?: boolean;
   accentColor?: string;

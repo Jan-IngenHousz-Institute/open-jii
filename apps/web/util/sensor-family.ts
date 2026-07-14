@@ -14,13 +14,14 @@ export interface SensorFamilyOption {
 const SENSOR_FAMILY_LABELS: Record<SensorFamily, string> = {
   generic: "Generic",
   multispeq: "MultispeQ",
-  ambit: "Ambit",
+  ambyte: "Ambyte",
+  minipar: "MiniPAR",
 };
 
 /**
- * Families that are not yet available for selection.
+ * Families that are not yet available for local connection (ingest-only).
  */
-const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambit"]);
+const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "minipar"]);
 
 /**
  * Selectable sensor family options derived from the API enum.
@@ -38,4 +39,19 @@ export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options
  */
 export function getSensorFamilyLabel(family: SensorFamily): string {
   return SENSOR_FAMILY_LABELS[family];
+}
+
+/**
+ * Badge color class for a sensor family. Unknown values fall back to the
+ * neutral badge, so this accepts the raw `family` string carried on a protocol.
+ */
+export function getSensorFamilyBadgeColor(family: string): string {
+  switch (family) {
+    case "multispeq":
+      return "bg-badge-published";
+    case "ambyte":
+      return "bg-badge-active";
+    default:
+      return "bg-badge-archived";
+  }
 }

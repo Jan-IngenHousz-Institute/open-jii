@@ -1,5 +1,6 @@
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useLocale } from "@/hooks/useLocale";
+import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
@@ -10,17 +11,6 @@ import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cva } from "@repo/ui/lib/utils";
-
-const getFamilyColor = (family: string) => {
-  switch (family) {
-    case "multispeq":
-      return "bg-badge-published";
-    case "ambit":
-      return "bg-badge-active";
-    default:
-      return "bg-badge-archived";
-  }
-};
 
 const cardVariants = cva(
   "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
@@ -77,7 +67,7 @@ function ProtocolCard({
     >
       <div className={cardVariants({ featured: isPreferred })}>
         <div className="inline-flex gap-1">
-          <Badge className={`${getFamilyColor(protocol.family)} capitalize`}>
+          <Badge className={`${getSensorFamilyBadgeColor(protocol.family)} capitalize`}>
             {protocol.family}
           </Badge>
           {isPreferred && (

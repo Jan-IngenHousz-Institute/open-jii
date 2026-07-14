@@ -47,7 +47,7 @@ export function useIotProtocolExecution(
         return parseResponseData(unwrap(result, "Protocol execution failed"));
       }
 
-      // Generic / Ambit: load config → run → retrieve data
+      // Generic / Ambyte: load config → run → retrieve data
       unwrap(
         await driver.execute({ command: "SET_CONFIG", params: { protocol: protocolCode } }),
         "Failed to load protocol on device",
