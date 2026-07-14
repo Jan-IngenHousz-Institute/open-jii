@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { ExperimentModule } from "../experiments/experiment.module";
@@ -12,13 +14,14 @@ import { ListIotDevicesUseCase } from "./application/use-cases/list-iot-devices/
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
+import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
 import { IotDeviceController } from "./presentation/iot-device.controller";
 import { IotController } from "./presentation/iot.controller";
 
 @Module({
-  imports: [AwsModule, ExperimentModule],
+  imports: [AwsModule, AnalyticsModule, ExperimentModule],
   controllers: [IotController, IotDeviceController],
   providers: [
     GetIotCredentialsUseCase,
@@ -34,6 +37,10 @@ import { IotController } from "./presentation/iot.controller";
     {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
+    },
+    {
+      provide: ANALYTICS_PORT,
+      useExisting: AnalyticsAdapter,
     },
   ],
 })
