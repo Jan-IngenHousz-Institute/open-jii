@@ -4,5 +4,5 @@ ALTER TABLE "iot_devices" ALTER COLUMN "device_type" SET DATA TYPE text;--> stat
 ALTER TABLE "protocols" ALTER COLUMN "family" SET DATA TYPE text;--> statement-breakpoint
 DROP TYPE "public"."sensor_family";--> statement-breakpoint
 CREATE TYPE "public"."sensor_family" AS ENUM('multispeq', 'ambyte', 'minipar', 'generic');--> statement-breakpoint
-ALTER TABLE "iot_devices" ALTER COLUMN "device_type" SET DATA TYPE "public"."sensor_family" USING (CASE "device_type" WHEN 'ambit' THEN 'ambyte' ELSE "device_type" END)::"public"."sensor_family";--> statement-breakpoint
+ALTER TABLE "iot_devices" ALTER COLUMN "device_type" SET DATA TYPE "public"."sensor_family" USING (CASE lower(trim("device_type")) WHEN 'ambit' THEN 'ambyte' WHEN 'ambyte' THEN 'ambyte' WHEN 'minipar' THEN 'minipar' WHEN 'multispeq' THEN 'multispeq' WHEN 'generic' THEN 'generic' ELSE 'generic' END)::"public"."sensor_family";--> statement-breakpoint
 ALTER TABLE "protocols" ALTER COLUMN "family" SET DATA TYPE "public"."sensor_family" USING (CASE "family" WHEN 'ambit' THEN 'ambyte' ELSE "family" END)::"public"."sensor_family";
