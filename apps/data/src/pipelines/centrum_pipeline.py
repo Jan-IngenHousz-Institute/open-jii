@@ -482,9 +482,14 @@ def clean_data():
             )
         )
         .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
+        # Pre-signed S3 uploads never touch the broker, so there is no
+        # clientid()-derived identity. The payload's device_id is self-reported
+        # and must not be promoted to the trusted client_id.
+        .withColumn("client_id", F.lit(None).cast("string"))
         .select(
             "id",
             "device_id",
+            "client_id",
             "device_name",
             "device_version",
             "device_battery",
