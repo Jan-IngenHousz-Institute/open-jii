@@ -256,7 +256,7 @@ describe("ExperimentDesignPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/v2 is available/)).toBeInTheDocument();
-      expect(screen.getByText(/flow\.upgradeToLatest/)).toBeInTheDocument();
+      expect(screen.getByText(/flow\.reviewAndUpgrade/)).toBeInTheDocument();
     });
   });
 

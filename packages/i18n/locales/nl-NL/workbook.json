@@ -73,7 +73,7 @@
     "expand": "Uitvoer uitvouwen",
     "collapse": "Uitvoer samenvouwen",
     "clear": "Uitvoer wissen",
-    "empty": "Geen meetgegevens beschikbaar — voer eerst een protocolcel uit",
+    "empty": "Geen meetgegevens beschikbaar - voer eerst een protocolcel uit",
     "noData": "Geen uitvoergegevens",
     "tabTable": "Tabel",
     "tabJson": "JSON",
@@ -92,6 +92,11 @@
     "protocolReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "macroReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "fork": "Forken om te bewerken",
-    "forkedFrom": "Geforkt van"
+    "forkedFrom": "Geforkt van",
+    "rename": "Naam wijzigen",
+    "renameSave": "Naam opslaan",
+    "renameCancel": "Annuleren",
+    "renameConflict": "Die naam is al in gebruik",
+    "renameFailed": "Naam wijzigen mislukt"
   }
 }
