@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import type { CommandFormat } from "@repo/api/schemas/experiment.schema";
 import type { CommandCell as CommandCellType } from "@repo/api/schemas/workbook-cells.schema";
 import { validateInlineCommand } from "@repo/api/utils/command-payload";
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Select,
@@ -53,6 +54,8 @@ export function CommandCellComponent({
   readOnly,
 }: CommandCellProps) {
   const { copy, copied } = useCopyToClipboard();
+  const { t } = useTranslation("common");
+  const { t: tWorkbook } = useTranslation("workbook");
   const { format, content } = cell.payload;
 
   const validation = useMemo(() => validateInlineCommand({ format, content }), [format, content]);
@@ -64,11 +67,11 @@ export function CommandCellComponent({
       format === "string"
         ? buildCommandExtensions({
             singleLine: true,
-            placeholder: "Type a command, e.g. battery",
+            placeholder: t("experiments.commandPanelPlaceholder"),
             readOnly,
           })
         : undefined,
-    [format, readOnly],
+    [format, readOnly, t],
   );
 
   // A single-line command reads as an input, not a code block; drop the gutter.
@@ -88,7 +91,8 @@ export function CommandCellComponent({
   const update = (patch: Partial<CommandCellType["payload"]>) =>
     onUpdate({ ...cell, payload: { ...cell.payload, ...patch } });
 
-  const displayName = cell.payload.name ?? (content || "Command");
+  const nameOrContent = cell.payload.name?.trim() ? cell.payload.name : content;
+  const displayName = nameOrContent.length > 0 ? nameOrContent : tWorkbook("cells.command");
 
   return (
     <CellWrapper

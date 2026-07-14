@@ -91,6 +91,7 @@
     "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
   },
   "cells": {
+    "command": "Befehl",
     "protocolReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "macroReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "fork": "Zum Bearbeiten forken",

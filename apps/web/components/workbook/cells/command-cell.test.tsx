@@ -47,6 +47,40 @@ describe("CommandCellComponent", () => {
     expect(screen.getByText(/.+/, { selector: "p.text-red-500" })).toBeInTheDocument();
   });
 
+  it("toggles collapse through the cell wrapper", async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    render(<CommandCellComponent cell={inlineCell()} onUpdate={onUpdate} onDelete={vi.fn()} />);
+
+    const collapseBtn = document.querySelector("svg.lucide-chevron-down")?.closest("button");
+    if (!collapseBtn) throw new Error("collapse toggle not found");
+    await user.click(collapseBtn);
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "cmd-1", isCollapsed: true }),
+    );
+  });
+
+  it("copies the command content to the clipboard", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    render(
+      <CommandCellComponent
+        cell={inlineCell({ content: "battery" })}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const copyBtn = document.querySelector("svg.lucide-copy")?.closest("button");
+    if (!copyBtn) throw new Error("copy button not found");
+    await user.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledWith("battery");
+  });
+
   it("hides the format selector in read-only mode", () => {
     const { rerender } = render(
       <CommandCellComponent cell={inlineCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,

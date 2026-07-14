@@ -21,6 +21,12 @@ describe("resolveInlineCommand", () => {
   it("throws on malformed json", () => {
     expect(() => resolveInlineCommand({ format: "json", content: "{not json" })).toThrow();
   });
+
+  it("throws on an unknown format that bypasses the type checker", () => {
+    expect(() => resolveInlineCommand({ format: "xml" as never, content: "battery" })).toThrow(
+      /Unknown command format: xml/,
+    );
+  });
 });
 
 describe("validateInlineCommand", () => {

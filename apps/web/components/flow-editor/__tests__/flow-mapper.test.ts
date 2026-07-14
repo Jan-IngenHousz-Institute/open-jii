@@ -486,6 +486,20 @@ describe("FlowMapper inline command node", () => {
     });
   });
 
+  it("falls back to stepSpecification.command when data.command is absent", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const react = FlowMapper.toReactFlow(flow);
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.command = undefined;
+    (data as { stepSpecification?: unknown }).stepSpecification = {
+      command: { format: "string", content: "battery" },
+    };
+    const api = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(api.nodes[0].content).toEqual({
+      command: { format: "string", content: "battery" },
+    });
+  });
+
   it("errors when a command node has empty content", () => {
     const flow = buildApiFlow({ nodes: [commandNode] });
     const react = FlowMapper.toReactFlow(flow);

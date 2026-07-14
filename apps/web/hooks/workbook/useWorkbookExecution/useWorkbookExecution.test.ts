@@ -270,6 +270,30 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.messages?.length).toBeGreaterThan(0);
       expect(mockExecuteCommand).not.toHaveBeenCalled();
     });
+
+    it("captures a device error when the command execution throws", async () => {
+      const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
+      mockIsConnected = true;
+      mockExecuteCommand.mockRejectedValue(new Error("Command timed out"));
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.messages).toContain("Command timed out");
+    });
+  });
+
+  describe("runCell - non-executable cell", () => {
+    it("leaves the cells unchanged when dispatching a markdown cell", async () => {
+      const md = createMarkdownCell({ id: "md-1", content: "# Notes" });
+      const { result, onCellsChange } = renderExecution([md]);
+
+      await act(() => result.current.runCell(md.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(updated).toEqual([md]);
+    });
   });
 
   describe("runCell - macro", () => {

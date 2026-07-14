@@ -30,6 +30,17 @@ describe("CommandPanel", () => {
     expect(screen.getByText(/.+/, { selector: "p.text-red-500" })).toBeInTheDocument();
   });
 
+  it("changes the command format via the selector, preserving content", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CommandPanel command={{ format: "string", content: "battery" }} onChange={onChange} />);
+
+    await user.click(screen.getByRole("combobox", { name: "Command format" }));
+    await user.click(await screen.findByRole("option", { name: "JSON" }));
+
+    expect(onChange).toHaveBeenCalledWith({ format: "json", content: "battery" });
+  });
+
   it("hides the format selector when disabled", () => {
     render(
       <CommandPanel

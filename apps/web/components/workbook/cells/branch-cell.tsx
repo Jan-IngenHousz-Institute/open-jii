@@ -123,8 +123,10 @@ export function BranchCellComponent({
       switch (c.type) {
         case "protocol":
           return `Protocol (${c.payload.name ?? c.payload.protocolId.slice(0, 8)})`;
-        case "command":
-          return `Command (${c.payload.name ?? c.payload.content.slice(0, 12)})`;
+        case "command": {
+          const source = c.payload.name?.trim() ? c.payload.name : c.payload.content.slice(0, 12);
+          return `Command (${source.length > 0 ? source : "Empty"})`;
+        }
         case "macro":
           return `Macro (${c.payload.name ?? c.payload.macroId.slice(0, 8)})`;
         case "question":

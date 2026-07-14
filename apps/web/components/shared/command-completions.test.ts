@@ -1,13 +1,33 @@
-import { describe, it, expect } from "vitest";
+import type * as Autocomplete from "@codemirror/autocomplete";
+import { completionStatus, startCompletion } from "@codemirror/autocomplete";
+import type { EditorView } from "@codemirror/view";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { KNOWN_DEVICE_COMMANDS } from "@repo/api/schemas/device-command.schema";
 
 import {
   buildCommandTooltipDom,
   commandCompletionSource,
+  commandHoverSource,
   knownCommandAt,
+  openCompletionsOnFocus,
   wordAt,
 } from "./command-completions";
+
+vi.mock("@codemirror/autocomplete", async (importOriginal) => {
+  const actual = await importOriginal<typeof Autocomplete>();
+  return {
+    ...actual,
+    completionStatus: vi.fn((): "active" | "pending" | null => null),
+    startCompletion: vi.fn(),
+  };
+});
+
+// A CodeMirror view is heavy to stand up in jsdom; these callbacks only touch
+// the doc text / focus flags, so a structural stub is enough to exercise them.
+function fakeView(doc: string, hasFocus = true): EditorView {
+  return { hasFocus, state: { doc: { toString: () => doc } } } as unknown as EditorView;
+}
 
 interface FakeContext {
   matchBefore: (re: RegExp) => { from: number; to: number; text: string } | null;
@@ -95,5 +115,65 @@ describe("buildCommandTooltipDom", () => {
     const dom = buildCommandTooltipDom({ value: "memory", label: "Memory", group: "Device info" });
     expect(dom.textContent).toBe("memory · Device info");
     expect(dom.children).toHaveLength(1);
+  });
+});
+
+describe("commandHoverSource", () => {
+  it("anchors a tooltip to a known command and builds its description DOM", () => {
+    const tip = commandHoverSource(fakeView("battery"), 2);
+    expect(tip).not.toBeNull();
+    expect(tip?.pos).toBe(0);
+    expect(tip?.end).toBe(7);
+    expect(tip?.above).toBe(true);
+    const dom = tip?.create(fakeView("battery")).dom;
+    expect(dom?.textContent).toContain("battery · Connection");
+  });
+
+  it("returns null when the cursor is not over a known command", () => {
+    expect(commandHoverSource(fakeView("set_led_delay+1"), 2)).toBeNull();
+    expect(commandHoverSource(fakeView(""), 0)).toBeNull();
+  });
+});
+
+describe("openCompletionsOnFocus", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("never opens the completion list when read-only", () => {
+    const handler = openCompletionsOnFocus(true);
+    const view = fakeView("battery");
+    expect(handler(new FocusEvent("focus"), view)).toBe(false);
+    vi.runAllTimers();
+    expect(startCompletion).not.toHaveBeenCalled();
+  });
+
+  it("opens the completion list a tick after focus when idle and still focused", () => {
+    const handler = openCompletionsOnFocus(false);
+    const view = fakeView("battery");
+    expect(handler(new FocusEvent("focus"), view)).toBe(false);
+    // Deferred: not opened synchronously.
+    expect(startCompletion).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(startCompletion).toHaveBeenCalledWith(view);
+  });
+
+  it("does not reopen when a completion is already active", () => {
+    vi.mocked(completionStatus).mockReturnValueOnce("active");
+    const handler = openCompletionsOnFocus(false);
+    handler(new FocusEvent("focus"), fakeView("battery"));
+    vi.runAllTimers();
+    expect(startCompletion).not.toHaveBeenCalled();
+  });
+
+  it("does not open when focus was lost before the tick", () => {
+    const handler = openCompletionsOnFocus(false);
+    handler(new FocusEvent("focus"), fakeView("battery", false));
+    vi.runAllTimers();
+    expect(startCompletion).not.toHaveBeenCalled();
   });
 });

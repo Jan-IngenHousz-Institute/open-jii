@@ -91,6 +91,7 @@
     "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
   },
   "cells": {
+    "command": "Opdracht",
     "protocolReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "macroReadOnly": "Alleen-lezen. Fork het om te bewerken.",
     "fork": "Forken om te bewerken",

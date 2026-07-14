@@ -91,6 +91,7 @@
     "timeseriesError": "Cannot decode this output against the source protocol"
   },
   "cells": {
+    "command": "Command",
     "protocolReadOnly": "Read-only. Fork it to edit.",
     "macroReadOnly": "Read-only. Fork it to edit.",
     "fork": "Fork to edit",

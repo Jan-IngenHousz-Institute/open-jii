@@ -23,6 +23,8 @@ export function resolveInlineCommand({ format, content }: InlineCommand): Resolv
       return JSON.parse(content) as ResolvedCommand;
     case "yaml":
       return parseYaml(content) as ResolvedCommand;
+    default:
+      throw new Error(`Unknown command format: ${String(format)}`);
   }
 }
 

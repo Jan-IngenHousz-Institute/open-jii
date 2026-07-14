@@ -263,4 +263,25 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("battery");
     expect(nodes[0].content).toEqual({ command: { format: "string", content: "battery" } });
   });
+
+  it("derives a single-line node name from multi-line command content", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { format: "yaml", content: "cmd: battery\nrepeat: 2" },
+      },
+    ];
+    // Newlines are collapsed to spaces so the flow-editor label stays on one line.
+    expect(cellsToFlowGraph(cells).nodes[0].name).toBe("cmd: battery repeat: 2");
+  });
+
+  it("falls back to a safe node name when a command has neither name nor content", () => {
+    const cells: WorkbookCell[] = [
+      { id: "c1", type: "command", isCollapsed: false, payload: { format: "string", content: "" } },
+    ];
+    // Never an empty string: zFlowNode.name requires a minimum length of 1.
+    expect(cellsToFlowGraph(cells).nodes[0].name).toBe("Command");
+  });
 });
