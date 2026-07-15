@@ -337,11 +337,14 @@ export function WorkbookHeader({
       </div>
 
       {connectedDevices.length > 1 && (
-        <div className="hidden items-center gap-1 xl:flex" data-testid="device-chips">
+        <div
+          className="hidden min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto xl:flex"
+          data-testid="device-chips"
+        >
           {connectedDevices.map((device) => (
             <span
               key={device.id}
-              className="inline-flex items-center gap-1 rounded-full border border-[#EDF2F6] bg-[#F7F8FA] px-2 py-0.5 text-[11px] text-[#011111]"
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#EDF2F6] bg-[#F7F8FA] px-2 py-0.5 text-[11px] text-[#011111]"
               data-testid="device-chip"
             >
               {device.label}

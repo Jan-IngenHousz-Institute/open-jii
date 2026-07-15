@@ -67,7 +67,6 @@ export function useMeasurementUpload() {
     networkMode: "always",
     mutationFn: async ({
       results,
-      tagWorkbookRun,
       timestamp,
       timezone,
       experimentName,
@@ -80,7 +79,6 @@ export function useMeasurementUpload() {
       commentText,
     }: SharedUploadArgs & {
       results: { rawMeasurement: any; device?: { id: string; name: string } }[];
-      tagWorkbookRun: boolean;
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
@@ -98,9 +96,10 @@ export function useMeasurementUpload() {
       }
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
-      // One workbook_run_id per multi-scan round; each row is still its own
+      // Measurements taken together ARE one run: every multi-device round is
+      // stamped with one shared workbook_run_id. Each row is still its own
       // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run).
-      const workbookRunId = tagWorkbookRun && results.length > 1 ? uuidv4() : undefined;
+      const workbookRunId = results.length > 1 ? uuidv4() : undefined;
 
       const savedIds: string[] = [];
       let lastStorageError: unknown;
@@ -158,7 +157,6 @@ export function useMeasurementUpload() {
       return mutation.mutateAsync({
         ...shared,
         results: [{ rawMeasurement }],
-        tagWorkbookRun: false,
       });
     },
   };

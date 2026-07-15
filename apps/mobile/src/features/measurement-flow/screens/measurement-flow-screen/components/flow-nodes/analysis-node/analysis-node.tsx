@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView, Switch } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
@@ -31,7 +31,7 @@ interface AnalysisNodeProps {
 }
 
 export function AnalysisNode({ content }: AnalysisNodeProps) {
-  const { classes, colors } = useTheme();
+  const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
   const macro = content.macro;
@@ -68,7 +68,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     [scanResults, scanResult],
   );
   const isMultiDevice = results.length > 1;
-  const [tagRunEnabled, setTagRunEnabled] = useState(true);
 
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
@@ -133,7 +132,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
     await uploadMeasurements({
       results: results.map(({ device, result }) => ({ rawMeasurement: result, device })),
-      tagWorkbookRun: tagRunEnabled && isMultiDevice,
       timestamp,
       timezone,
       experimentName,
@@ -211,24 +209,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           />
         )}
       </ScrollView>
-
-      {isMultiDevice ? (
-        <View className="border-divider bg-card mb-2 flex-row items-center gap-3 rounded-xl border px-3.5 py-2.5">
-          <View className="min-w-0 flex-1">
-            <Text className={clsx("text-sm font-semibold", classes.text)}>
-              {t("measurementFlow:analysis.workbookRun.toggleLabel")}
-            </Text>
-            <Text className={clsx("text-xs", classes.textMuted)}>
-              {t("measurementFlow:analysis.workbookRun.toggleHint", { count: results.length })}
-            </Text>
-          </View>
-          <Switch
-            value={tagRunEnabled}
-            onValueChange={setTagRunEnabled}
-            trackColor={{ true: colors.brand }}
-          />
-        </View>
-      ) : null}
 
       <AnalysisActionBar
         hasScrolled={hasScrolled}
