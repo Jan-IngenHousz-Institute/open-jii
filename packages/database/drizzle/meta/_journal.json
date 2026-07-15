@@ -281,6 +281,13 @@
       "when": 1784624904203,
       "tag": "0039_iam_org_scoped_access",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784810322847,
+      "tag": "0040_short_puppet_master",
+      "breakpoints": true
     }
   ]
 }
