@@ -410,6 +410,12 @@ def process_trace_files(ambyte_folder: str, files_per_byte: list[list[list]]) ->
                         if len(df.loc[df["Time"] < "2020"]):
                             df.drop(df.loc[df["Time"] < "2020"].index, inplace=True)
 
+                        # A trace whose device RTC was never set can be entirely
+                        # pre-2020; once dropped it is empty, so skip it instead of
+                        # indexing df["Time"].iloc[0] below.
+                        if df.empty:
+                            continue
+
                         if Traces_df:
                             _last_df = Traces_df[-1]
                             if _last_df["Time"].iloc[-1] > df["Time"].iloc[0]:

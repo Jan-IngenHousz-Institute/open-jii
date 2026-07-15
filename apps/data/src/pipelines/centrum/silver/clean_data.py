@@ -10,11 +10,10 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType
 
 from openjii import decompress_sample
-from openjii.centrum import question_schema
+from openjii.centrum import RAW_IMPORTED_DATA_TABLE, question_schema
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
-    RAW_IMPORTED_DATA_TABLE,
     SILVER_TABLE,
 )
 
