@@ -305,21 +305,10 @@ export function WorkbookHeader({
         </Tooltip>
       </TooltipProvider>
 
-      {isConnected && (
-        <button
-          className="inline-flex h-[34px] shrink-0 items-center justify-center px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[38px] xl:px-3 xl:text-[13px]"
-          style={{ background: "#EDF2F6", borderRadius: 8, color: "#011111" }}
-          onClick={onDisconnect}
-          data-testid="disconnect-all"
-        >
-          <span>Disconnect</span>
-        </button>
-      )}
-
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         <Circle
           className={cn(
-            "size-2",
+            "size-2 shrink-0",
             isConnected
               ? "fill-emerald-500 text-emerald-500"
               : isConnecting
@@ -327,40 +316,48 @@ export function WorkbookHeader({
                 : "fill-gray-300 text-gray-300",
           )}
         />
-        <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
-          {isConnecting
-            ? "Connecting..."
-            : connectedDevices.length > 1
-              ? `${connectedDevices.length} devices`
-              : (connectedDevices[0]?.label ?? "Disconnected")}
-        </span>
-      </div>
-
-      {connectedDevices.length > 1 && (
-        <div
-          className="hidden min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto xl:flex"
-          data-testid="device-chips"
-        >
-          {connectedDevices.map((device) => (
-            <span
-              key={device.id}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#EDF2F6] bg-[#F7F8FA] px-2 py-0.5 text-[11px] text-[#011111]"
-              data-testid="device-chip"
-            >
-              {device.label}
-              {onDisconnectDevice && (
-                <button
-                  className="text-[#68737B] hover:text-[#011111]"
-                  onClick={() => onDisconnectDevice(device.id)}
+        {isConnected ? (
+          // One compact trigger regardless of device count; the dropdown
+          // lists every connected device with per-device disconnect.
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex min-w-0 items-center gap-1 text-[12px] leading-[18px] text-[#68737B] hover:text-[#011111] xl:text-[13px] xl:leading-[21px]"
+                data-testid="device-menu-trigger"
+              >
+                <span className="truncate">
+                  {connectedDevices.length > 1
+                    ? `${connectedDevices.length} devices`
+                    : (connectedDevices[0]?.label ?? "Connected")}
+                </span>
+                <ChevronDown className="size-3 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {connectedDevices.map((device) => (
+                <DropdownMenuItem
+                  key={device.id}
+                  data-testid="device-menu-item"
                   aria-label={`Disconnect ${device.label}`}
+                  className="flex items-center justify-between gap-4"
+                  onSelect={() => onDisconnectDevice?.(device.id)}
                 >
-                  ×
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
+                  <span>{device.label}</span>
+                  <span className="text-[11px] text-[#68737B]">Disconnect</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem data-testid="disconnect-all" onSelect={onDisconnect}>
+                Disconnect all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
+            {isConnecting ? "Connecting..." : "Disconnected"}
+          </span>
+        )}
+      </div>
 
       <div className="flex-1" />
 
