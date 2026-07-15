@@ -203,7 +203,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(uploadMeasurements).toHaveBeenCalledTimes(1);
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
       protocolId: "proto-1",
-      bundle: false,
+      tagWorkbookRun: false,
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
     });
   });

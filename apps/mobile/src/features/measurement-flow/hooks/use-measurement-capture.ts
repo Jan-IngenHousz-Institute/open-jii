@@ -72,7 +72,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   }, [devices.length, isScanning]);
 
   const completeWithSuccesses = () => {
-    // Order results by connect order so device_index is stable for upload.
+    // Order results by connect order so the round reads consistently everywhere.
     const orderOf = (id: string) => {
       const i = devices.findIndex((d) => d.id === id);
       return i === -1 ? Number.MAX_SAFE_INTEGER : i;

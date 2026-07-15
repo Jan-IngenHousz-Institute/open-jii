@@ -1,9 +1,3 @@
----
-title: "Multi-device measurements"
-date: 2026-07-15
-generated_by: skills-for-architects
----
-
 # Multi-device measurements
 
 openJII can run **one protocol on several sensors of the same type at once** — for example four
@@ -11,7 +5,7 @@ devices plugged into a powered USB hub, measuring four leaves in parallel. The m
 tied to any particular instrument: it works for every sensor family the platform speaks
 (MultispeQ, Ambit, generic serial devices). Every sensor still
 produces its **own, independent measurement**: its own row in the lakehouse, its own macro output,
-its own upload. What ties them together is a small set of correlation fields stamped on each
+its own upload. What ties them together is a single correlation field stamped on each
 measurement, so the round can always be joined back together later.
 
 The same model runs on both execution hosts:
@@ -38,17 +32,14 @@ Outcomes are per-device — one failing sensor never blocks the others:
   devices** (already-successful ones are not re-scanned) or **continue with the successful ones**.
 - Unplugging one device mid-round fails only that device's scan.
 
-There is deliberately **no "bundle" entity** anywhere in the system. A multi-device round is just N
-ordinary measurements that share three extra fields in their payload:
+There is deliberately **no "run" entity** anywhere in the system. A multi-device round is just N
+ordinary measurements that share one extra field in their payload: **`workbook_run_id`**, a UUID
+minted once per round. Everything else about a round is derivable — the devices from `device_id`,
+the size from a `COUNT(*)`.
 
-| Field          | Meaning                                                          |
-| -------------- | ---------------------------------------------------------------- |
-| `bundle_id`    | One UUID minted per multi-device round.                          |
-| `bundle_size`  | How many measurements the round produced.                        |
-| `device_index` | The device's position in the round (0-based, by connect order).  |
-
-All three are **nullable end to end**: single-device measurements, imported data, and everything
-recorded before this feature simply carry `NULL`s — "not bundled" means the fields are absent.
+The field is **nullable end to end**: single-device measurements, imported data, and everything
+recorded before this feature simply carry `NULL` — an unlinked measurement has no
+`workbook_run_id`.
 
 ## Mobile app: measuring over a USB hub
 
@@ -59,8 +50,8 @@ flow shows per-device progress, and the partial-failure screen offers **Retry fa
 
 On the analysis screen each device's result is shown (and post-processed by the macro)
 **individually**. Upload sends **one MQTT message per measurement** — the ordinary envelope plus
-the bundle fields — so offline queueing, retries and the ingestion pipeline treat them exactly
-like any other measurement.
+the shared `workbook_run_id` — so offline queueing, retries and the ingestion pipeline treat them
+exactly like any other measurement.
 
 ## Workbook editor: developing against many devices
 
@@ -87,20 +78,20 @@ retry paths can be demoed and end-to-end-tested deterministically.
 
 ## Data pipeline: joining a round back together
 
-The bundle fields flow from the wire payload through the Silver layer into the per-experiment
+`workbook_run_id` flows from the wire payload through the Silver layer into the per-experiment
 gold tables and enriched views, alongside a `protocol_id` column extracted from the MQTT topic
 (which protocol produced each row). Analysis that needs "the four leaves measured together" is a
 plain group-by:
 
 ```sql
-SELECT bundle_id,
-       collect_list(struct(device_index, device_id, data)) AS round
+SELECT workbook_run_id,
+       collect_list(struct(device_id, data)) AS round
 FROM   enriched_experiment_raw_data
-WHERE  bundle_id IS NOT NULL
-GROUP  BY bundle_id;
+WHERE  workbook_run_id IS NOT NULL
+GROUP  BY workbook_run_id;
 ```
 
-Rows with `bundle_id IS NULL` are ordinary single-device measurements and need no special
+Rows with `workbook_run_id IS NULL` are ordinary single-device measurements and need no special
 handling — the columns are additive and every existing query keeps working.
 
 ## Current limits
@@ -108,5 +99,5 @@ handling — the columns are additive and every existing query keeps working.
 - All devices in a round run the **same protocol** — heterogeneous setups (a different protocol
   per sensor family) are a separate, planned step.
 - On the web, workbook outputs live in output cells; workbook runs are not uploaded as
-  measurements, so the bundle fields currently appear only on mobile uploads.
+  measurements, so `workbook_run_id` currently appears only on mobile uploads.
 - Battery display tracks the first-connected (primary) device.

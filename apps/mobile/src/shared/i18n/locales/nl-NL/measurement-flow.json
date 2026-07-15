@@ -122,9 +122,9 @@
       "date": "Datum: ",
       "noQuestionsAnswered": "Geen vragen beantwoord"
     },
-    "bundle": {
-      "toggleLabel": "Uploaden als bundel",
-      "toggleHint": "Markeer deze {{count}} metingen met een gedeeld bundel-ID",
+    "workbookRun": {
+      "toggleLabel": "Koppel als één run",
+      "toggleHint": "Markeer deze {{count}} metingen met een gedeeld workbook-run-ID",
       "deviceHeading": "Apparaat {{index}}: {{name}}"
     }
   },

@@ -24,9 +24,9 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMultispeqMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no MultispeQ sample).
 
-### Bundle
+### Workbook run
 
-N Measurements produced by one Multi-scan round, correlated only by `bundle_id` (uuid), `bundle_size`, and `device_index` fields embedded in each otherwise-ordinary wire payload. There is no bundle entity locally or server-side — "not bundled" simply means the fields are absent. Don't say "bundle upload": there is no batched publish; the Outbox still sends N independent messages.
+N Measurements produced by one Multi-scan round, correlated only by a shared `workbook_run_id` (one uuid per round) embedded in each otherwise-ordinary wire payload. There is no run entity locally or server-side — an unlinked measurement simply has no `workbook_run_id`. There is no batched publish either; the Outbox still sends N independent messages.
 
 ---
 

@@ -218,3 +218,48 @@ describe("input purity", () => {
     expect(Object.keys(rawMeasurement)).toStrictEqual(["device_id", "sample"]);
   });
 });
+
+describe("workbook run correlation", () => {
+  it("stamps workbook_run_id when given, alongside sample compression", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001", sample: [{ data_raw: [1, 2] }] },
+      workbookRunId: "run-1",
+    });
+
+    expect(payload.workbook_run_id).toBe("run-1");
+    expect(payload._sample_encoding).toBe("gzip+base64");
+    expect(typeof payload.sample).toBe("string");
+  });
+
+  it("omits workbook_run_id when not linked to a round", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+    });
+
+    expect(payload).not.toHaveProperty("workbook_run_id");
+  });
+
+  it("falls back to the local device id only when the firmware did not supply one", () => {
+    const withFirmwareId = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      fallbackDeviceId: "42",
+    });
+    expect(withFirmwareId.device_id).toBe("MSPx-0001");
+
+    const withoutFirmwareId = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceId: "42",
+    });
+    expect(withoutFirmwareId.device_id).toBe("42");
+
+    const withNeither = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+    });
+    expect(withNeither).not.toHaveProperty("device_id");
+  });
+});

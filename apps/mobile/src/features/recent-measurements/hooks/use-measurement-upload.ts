@@ -67,7 +67,7 @@ export function useMeasurementUpload() {
     networkMode: "always",
     mutationFn: async ({
       results,
-      bundle,
+      tagWorkbookRun,
       timestamp,
       timezone,
       experimentName,
@@ -80,7 +80,7 @@ export function useMeasurementUpload() {
       commentText,
     }: SharedUploadArgs & {
       results: { rawMeasurement: any; device?: { id: string; name: string } }[];
-      bundle: boolean;
+      tagWorkbookRun: boolean;
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
@@ -98,15 +98,14 @@ export function useMeasurementUpload() {
       }
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
-      // One bundle_id per multi-scan round; each row is still its own MQTT
-      // message in the ordinary envelope (see CONTEXT.md: Bundle).
-      const bundleId = bundle && results.length > 1 ? uuidv4() : undefined;
+      // One workbook_run_id per multi-scan round; each row is still its own
+      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run).
+      const workbookRunId = tagWorkbookRun && results.length > 1 ? uuidv4() : undefined;
 
       const savedIds: string[] = [];
       let lastStorageError: unknown;
 
-      for (let index = 0; index < results.length; index++) {
-        const { rawMeasurement, device } = results[index];
+      for (const { rawMeasurement, device } of results) {
         const measurementData = buildUploadPayload({
           rawMeasurement,
           userId,
@@ -115,9 +114,7 @@ export function useMeasurementUpload() {
           timezone,
           questions,
           commentText,
-          bundle: bundleId
-            ? { bundle_id: bundleId, bundle_size: results.length, device_index: index }
-            : undefined,
+          workbookRunId,
           fallbackDeviceId: device?.id,
         });
 
@@ -161,7 +158,7 @@ export function useMeasurementUpload() {
       return mutation.mutateAsync({
         ...shared,
         results: [{ rawMeasurement }],
-        bundle: false,
+        tagWorkbookRun: false,
       });
     },
   };

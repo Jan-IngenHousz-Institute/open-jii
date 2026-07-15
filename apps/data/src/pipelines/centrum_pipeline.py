@@ -67,11 +67,9 @@ sensor_schema = StructType([
     StructField("timezone", StringType(), True),
     StructField("macros", ArrayType(macro_schema), True),
     StructField("annotations", ArrayType(annotation_schema), True),
-    # Multi-sensor bundle correlation (one bundle_id per multi-scan round).
-    # Nullable: absent on single-device uploads and all pre-bundle payloads.
-    StructField("bundle_id", StringType(), True),
-    StructField("bundle_size", LongType(), True),
-    StructField("device_index", LongType(), True)
+    # One uuid per multi-device workbook run; the round's rows share it.
+    # Nullable: absent on single-device uploads and all older payloads.
+    StructField("workbook_run_id", StringType(), True)
 ])
 
 # COMMAND ----------
@@ -225,11 +223,9 @@ def clean_data():
             "protocol_id",
             F.expr(r"nullif(regexp_extract(parsed_data.topic, 'experiment/data_ingest/v1/[^/]+/([^/]+)', 1), '')")
         )
-        # Bundle correlation: null on single-device uploads; rows of one
-        # multi-scan round share a bundle_id and can be joined back on it.
-        .withColumn("bundle_id", F.col("parsed_data.bundle_id"))
-        .withColumn("bundle_size", F.col("parsed_data.bundle_size"))
-        .withColumn("device_index", F.col("parsed_data.device_index"))
+        # Null on single-device uploads; rows of one multi-device workbook
+        # run share it and can be joined back on it.
+        .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
         # Together they are the source of truth; all local-time representations are derived from these two.
         .withColumn("timezone", F.col("parsed_data.timezone"))
@@ -352,9 +348,7 @@ def clean_data():
         "timezone",
         "experiment_id",
         "protocol_id",
-        "bundle_id",
-        "bundle_size",
-        "device_index",
+        "workbook_run_id",
         "timestamp",
         "date",
         "hour",
@@ -400,11 +394,9 @@ def clean_data():
             ).otherwise(F.array())
         )
         .withColumn("annotations", F.array())
-        # Imported/legacy data has no topic or bundle concept.
+        # Imported/legacy data has no topic and no workbook-run concept.
         .withColumn("protocol_id", F.lit(None).cast("string"))
-        .withColumn("bundle_id", F.lit(None).cast("string"))
-        .withColumn("bundle_size", F.lit(None).cast("long"))
-        .withColumn("device_index", F.lit(None).cast("long"))
+        .withColumn("workbook_run_id", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
@@ -424,9 +416,7 @@ def clean_data():
             "timezone",
             "experiment_id",
             "protocol_id",
-            "bundle_id",
-            "bundle_size",
-            "device_index",
+            "workbook_run_id",
             "timestamp",
             "date",
             "hour",
@@ -632,9 +622,7 @@ def experiment_raw_data():
             "annotations",
             "user_id",
             "protocol_id",
-            "bundle_id",
-            "bundle_size",
-            "device_index",
+            "workbook_run_id",
             "data",
             "output_data",
             "date",
@@ -1145,9 +1133,7 @@ def enriched_experiment_raw_data():
             contributors.user.alias("contributor"),
             devices.device.alias("device"),
             raw_data.protocol_id,
-            raw_data.bundle_id,
-            raw_data.bundle_size,
-            raw_data.device_index,
+            raw_data.workbook_run_id,
             raw_data.data,
             raw_data.processed_timestamp
         )

@@ -83,7 +83,7 @@ listed per device and the cell can simply be rerun.
   Your browser does not support embedded video.
 </video>
 
-For the full picture — including the mobile app's USB-hub flow, the `bundle_id` correlation fields
+For the full picture — including the mobile app's USB-hub flow, the `workbook_run_id` correlation field
 in the data pipeline, and the mock devices used in the video above — see
 [Multi-device measurements](../004-multi-device-measurements.md).
 

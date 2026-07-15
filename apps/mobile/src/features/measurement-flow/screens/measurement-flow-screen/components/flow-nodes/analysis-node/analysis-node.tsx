@@ -68,7 +68,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     [scanResults, scanResult],
   );
   const isMultiDevice = results.length > 1;
-  const [bundleEnabled, setBundleEnabled] = useState(true);
+  const [tagRunEnabled, setTagRunEnabled] = useState(true);
 
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
@@ -133,7 +133,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
     await uploadMeasurements({
       results: results.map(({ device, result }) => ({ rawMeasurement: result, device })),
-      bundle: bundleEnabled && isMultiDevice,
+      tagWorkbookRun: tagRunEnabled && isMultiDevice,
       timestamp,
       timezone,
       experimentName,
@@ -187,7 +187,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           results.map(({ device, result }, index) => (
             <View key={device?.id ?? index}>
               <Text className={clsx("mt-3 text-sm font-bold", classes.text)}>
-                {t("measurementFlow:analysis.bundle.deviceHeading", {
+                {t("measurementFlow:analysis.workbookRun.deviceHeading", {
                   index: index + 1,
                   name: device?.name ?? `#${index + 1}`,
                 })}
@@ -216,15 +216,15 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         <View className="border-divider bg-card mb-2 flex-row items-center gap-3 rounded-xl border px-3.5 py-2.5">
           <View className="min-w-0 flex-1">
             <Text className={clsx("text-sm font-semibold", classes.text)}>
-              {t("measurementFlow:analysis.bundle.toggleLabel")}
+              {t("measurementFlow:analysis.workbookRun.toggleLabel")}
             </Text>
             <Text className={clsx("text-xs", classes.textMuted)}>
-              {t("measurementFlow:analysis.bundle.toggleHint", { count: results.length })}
+              {t("measurementFlow:analysis.workbookRun.toggleHint", { count: results.length })}
             </Text>
           </View>
           <Switch
-            value={bundleEnabled}
-            onValueChange={setBundleEnabled}
+            value={tagRunEnabled}
+            onValueChange={setTagRunEnabled}
             trackColor={{ true: colors.brand }}
           />
         </View>

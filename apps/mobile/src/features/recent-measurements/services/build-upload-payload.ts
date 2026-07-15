@@ -8,14 +8,6 @@ export interface MacroInfo {
   filename: string;
 }
 
-// Bundle correlation fields (see CONTEXT.md): embedded in each
-// otherwise-ordinary wire payload; no bundle entity exists anywhere.
-export interface BundleInfo {
-  bundle_id: string;
-  bundle_size: number;
-  device_index: number;
-}
-
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
   userId: string;
@@ -24,7 +16,8 @@ export interface BuildUploadPayloadArgs {
   timezone: string;
   questions: AnswerData[];
   commentText?: string;
-  bundle?: BundleInfo;
+  /** One uuid per multi-device round (see CONTEXT.md: Workbook run). */
+  workbookRunId?: string;
   fallbackDeviceId?: string;
 }
 
@@ -38,7 +31,7 @@ export function buildUploadPayload({
   timezone,
   questions,
   commentText,
-  bundle,
+  workbookRunId,
   fallbackDeviceId,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
@@ -66,7 +59,7 @@ export function buildUploadPayload({
     ...(rawMeasurement.device_id == null && fallbackDeviceId
       ? { device_id: fallbackDeviceId }
       : {}),
-    ...(bundle ?? {}),
+    ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.
