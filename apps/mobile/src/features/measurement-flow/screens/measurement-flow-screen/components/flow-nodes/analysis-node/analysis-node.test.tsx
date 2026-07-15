@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react-native";
+import { act, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -100,7 +100,11 @@ beforeEach(() => {
   actionBarProps.mockClear();
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
-  useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement: vi.fn() });
+  useMeasurementUpload.mockReturnValue({
+    isUploading: false,
+    uploadMeasurement: vi.fn(),
+    uploadMeasurements: vi.fn(),
+  });
   useMeasurements.mockReturnValue({ updateMeasurementComment: vi.fn() });
   getSyncedUtcISO.mockReturnValue("2026-04-20T10:00:00.000Z");
   getSyncedLocalISO.mockReturnValue("2026-04-20T12:00:00.000+02:00");
@@ -177,8 +181,8 @@ describe("AnalysisNode upload with a command in the flow", () => {
   ] as unknown as FlowNode[];
 
   it("uploads the measurement even when a command node precedes the protocol", async () => {
-    const uploadMeasurement = vi.fn().mockResolvedValue(undefined);
-    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurement });
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
@@ -196,7 +200,48 @@ describe("AnalysisNode upload with a command in the flow", () => {
       await props?.onUpload();
     });
 
-    expect(uploadMeasurement).toHaveBeenCalledTimes(1);
-    expect(uploadMeasurement.mock.calls[0][0]).toMatchObject({ protocolId: "proto-1" });
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      protocolId: "proto-1",
+      results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
+    });
+  });
+
+  it("renders per-device results and uploads a linked multi-device round", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+      scanResults: [
+        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
+        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+      ],
+    });
+
+    render(<AnalysisNode content={withMacro} />);
+
+    // Per-device headings only show for multi rounds.
+    expect(screen.getAllByText(/measurementFlow:analysis.workbookRun.deviceHeading/)).toHaveLength(
+      2,
+    );
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      results: [
+        { rawMeasurement: { sample: [{ phi2: 0.8 }] }, device: { id: "1" } },
+        { rawMeasurement: { sample: [{ phi2: 0.7 }] }, device: { id: "2" } },
+      ],
+    });
   });
 });

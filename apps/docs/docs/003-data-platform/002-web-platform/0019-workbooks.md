@@ -70,6 +70,23 @@ The walkthrough below adds a protocol, a macro and a multiple-choice question:
   - **Mobile** — on the [mobile app](../002-mobile-app.md) branches are evaluated automatically
     on-device, so they work offline.
 
+## Running cells on multiple devices
+
+Connect several sensors of the same type from the workbook toolbar (**Connect**, then **Add
+device**) and executable cells fan out: protocol and command cells run on **every connected device
+in parallel**, output cells show one result block per device, and macro cells post-process **each
+device's measurement individually**. One failing sensor never blocks the others — its error is
+listed per device and the cell can simply be rerun.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/multi-device-demo.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+For the full picture — including the mobile app's USB-hub flow, the `workbook_run_id` correlation field
+in the data pipeline, and the mock devices used in the video above — see
+[Multi-device measurements](../004-multi-device-measurements.md).
+
 ## Versioning & editing in place
 
 From an experiment's **Design** tab you attach a workbook (or create one). Attaching publishes the

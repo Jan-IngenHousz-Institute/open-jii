@@ -89,12 +89,23 @@ export const zBranchCell = zBaseCell.extend({
   evaluatedPathId: z.string().optional(),
 });
 
+// One device's outcome from a multi-device run; exactly one of data/error set.
+export const zOutputDeviceResult = z.object({
+  deviceId: z.string(),
+  deviceLabel: z.string().optional(),
+  data: z.unknown().optional(),
+  error: z.string().optional(),
+});
+
 export const zOutputCell = zBaseCell.extend({
   type: z.literal("output"),
   producedBy: z.string().min(1, "Producer cell ID is required"),
+  // Primary device's result; single-device runs carry only this.
   data: z.unknown().optional(),
   executionTime: z.number().nonnegative().optional(),
   messages: z.array(z.string()).optional(),
+  // Per-device results when the run fanned out to several connected devices.
+  deviceResults: z.array(zOutputDeviceResult).optional(),
 });
 
 export const zMarkdownCell = zBaseCell.extend({
@@ -138,6 +149,7 @@ export type BranchCell = z.infer<typeof zBranchCell>;
 export type BranchCondition = z.infer<typeof zBranchCondition>;
 export type BranchPath = z.infer<typeof zBranchPath>;
 export type OutputCell = z.infer<typeof zOutputCell>;
+export type OutputDeviceResult = z.infer<typeof zOutputDeviceResult>;
 export type MarkdownCell = z.infer<typeof zMarkdownCell>;
 
 export type WorkbookCell =

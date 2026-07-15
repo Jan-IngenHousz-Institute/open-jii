@@ -66,7 +66,10 @@ sensor_schema = StructType([
     StructField("user_id", StringType(), True),
     StructField("timezone", StringType(), True),
     StructField("macros", ArrayType(macro_schema), True),
-    StructField("annotations", ArrayType(annotation_schema), True)
+    StructField("annotations", ArrayType(annotation_schema), True),
+    # One uuid per multi-device workbook run; the round's rows share it.
+    # Nullable: absent on single-device uploads and all older payloads.
+    StructField("workbook_run_id", StringType(), True)
 ])
 
 # COMMAND ----------
@@ -215,8 +218,16 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
+        # Which protocol produced the row; topic = experiment/data_ingest/v1/<experiment>/<protocol>/...
+        .withColumn(
+            "protocol_id",
+            F.expr(r"nullif(regexp_extract(parsed_data.topic, 'experiment/data_ingest/v1/[^/]+/([^/]+)', 1), '')")
+        )
+        # Null on single-device uploads; rows of one multi-device workbook
+        # run share it and can be joined back on it.
+        .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
-        # Together they are the source of truth — all local-time representations are derived from these two.
+        # Together they are the source of truth; all local-time representations are derived from these two.
         .withColumn("timezone", F.col("parsed_data.timezone"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
@@ -336,6 +347,8 @@ def clean_data():
         "user_id",
         "timezone",
         "experiment_id",
+        "protocol_id",
+        "workbook_run_id",
         "timestamp",
         "date",
         "hour",
@@ -381,6 +394,9 @@ def clean_data():
             ).otherwise(F.array())
         )
         .withColumn("annotations", F.array())
+        # Imported/legacy data has no topic and no workbook-run concept.
+        .withColumn("protocol_id", F.lit(None).cast("string"))
+        .withColumn("workbook_run_id", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
@@ -399,6 +415,8 @@ def clean_data():
             "user_id",
             "timezone",
             "experiment_id",
+            "protocol_id",
+            "workbook_run_id",
             "timestamp",
             "date",
             "hour",
@@ -603,6 +621,8 @@ def experiment_raw_data():
             "questions_data",
             "annotations",
             "user_id",
+            "protocol_id",
+            "workbook_run_id",
             "data",
             "output_data",
             "date",
@@ -750,7 +770,7 @@ def experiment_macro_data():
         base_df
         .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
         # NULL.rlike(...) returns NULL (treated as false in F.when), so the
-        # explicit isNotNull() guard is required — otherwise null macro_ids
+        # explicit isNotNull() guard is required, otherwise null macro_ids
         # would silently land with no output and no error.
         .withColumn(
             "sandbox_result",
@@ -837,7 +857,7 @@ def experiment_table_metadata():
     """Metadata for all experiment tables."""
 
     # Pre-compute custom_metadata_schema per experiment from the metadata source.
-    # Each experiment's metadata blob has $.rows — an array of VARIANT objects
+    # Each experiment's metadata blob has $.rows, an array of VARIANT objects
     # whose keys are already human-readable (remapped at upload time).
     # We drop internal keys (_id, identifier column) from each row before schema
     # inference so the backend doesn't expand them into duplicate query columns.
@@ -928,7 +948,7 @@ def experiment_table_metadata():
         .groupBy("experiment_id", "upload_table_id")
         .agg(
             F.count("*").alias("row_count"),
-            # Latest user-chosen label for this logical upload table — picked by
+            # Latest user-chosen label for this logical upload table, picked by
             # the most recent uploaded_at so renames take effect deterministically.
             F.max(F.struct(F.col("uploaded_at"), F.col("upload_table_name"))).getField("upload_table_name").alias("display_name"),
             F.expr("nullif(schema_of_variant_agg(uploaded_data), 'VOID')").alias("upload_schema")
@@ -1112,6 +1132,8 @@ def enriched_experiment_raw_data():
             raw_data.annotations,
             contributors.user.alias("contributor"),
             devices.device.alias("device"),
+            raw_data.protocol_id,
+            raw_data.workbook_run_id,
             raw_data.data,
             raw_data.processed_timestamp
         )
