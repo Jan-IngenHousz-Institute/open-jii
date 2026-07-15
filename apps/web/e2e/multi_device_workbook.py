@@ -8,6 +8,7 @@ Requires the local stack (see README.md) and `?mockDevices=1` support
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -45,8 +46,39 @@ def seed_protocol() -> tuple[str, str]:
     return protocol_id, name
 
 
-def create_workbook(page, protocol_id: str, protocol_name: str) -> str:
-    """Create a workbook with one protocol cell via the API, using the session cookies."""
+MACRO_NAME = "[E2E] Phi2 per device"
+# Sandbox contract (wrapper.py): measurement arrives as `json`, results go
+# into the `output` dict. Imports are blocked; plain arithmetic only.
+MACRO_CODE = """fm_prime = json['Fm_prime']
+fs = json['Fs']
+output['Phi2'] = round((fm_prime - fs) / fm_prime, 3)
+output['device'] = json.get('device_id')
+"""
+
+
+def create_macro(page) -> str:
+    """Create (or reuse) the e2e macro via the API, using the session cookies."""
+    existing = _psql(f"SELECT id FROM macros WHERE name = '{MACRO_NAME}' LIMIT 1;")
+    if existing:
+        return existing
+    resp = page.request.post(
+        f"{API_URL}/api/v1/macros",
+        data=json.dumps(
+            {
+                "name": MACRO_NAME,
+                "description": "Per-device Phi2 for the multi-device e2e",
+                "language": "python",
+                "code": base64.b64encode(MACRO_CODE.encode()).decode(),
+            }
+        ),
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status == 201, f"createMacro -> {resp.status}: {resp.text()}"
+    return resp.json()["id"]
+
+
+def create_workbook(page, protocol_id: str, protocol_name: str, macro_id: str, macro_name: str) -> str:
+    """Create a protocol + macro + command workbook via the API, using the session cookies."""
     body = {
         "name": "[E2E] Multi-device",
         "cells": [
@@ -55,7 +87,19 @@ def create_workbook(page, protocol_id: str, protocol_name: str) -> str:
                 "type": "protocol",
                 "isCollapsed": False,
                 "payload": {"protocolId": protocol_id, "version": 1, "name": protocol_name},
-            }
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "type": "macro",
+                "isCollapsed": False,
+                "payload": {"macroId": macro_id, "language": "python", "name": macro_name},
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "type": "command",
+                "isCollapsed": False,
+                "payload": {"format": "string", "content": "hello", "name": "Hello command"},
+            },
         ],
     }
     resp = page.request.post(
@@ -104,7 +148,9 @@ def main() -> int:
         print("Logging in...")
         login(page)
 
-        workbook_id = create_workbook(page, protocol_id, protocol_name)
+        macro_id = create_macro(page)
+        print(f"Macro created: {macro_id}")
+        workbook_id = create_workbook(page, protocol_id, protocol_name, macro_id, MACRO_NAME)
         print(f"Workbook created: {workbook_id}")
 
         page.goto(f"{BASE_URL}/{LOCALE}/platform/workbooks/{workbook_id}?mockDevices=1")
@@ -121,23 +167,29 @@ def main() -> int:
         chips = page.get_by_test_id("device-chip")
         check("4 device chips", chips.count() == DEVICE_COUNT, f"got {chips.count()}")
 
+        run_protocol = page.get_by_role("button", name=re.compile(r"^Run .*Chlorophyll")).first
+        run_macro = page.get_by_role("button", name=re.compile(r"^Run .*Phi2")).first
+        run_command = page.get_by_role("button", name=re.compile(r"^Run Hello command")).first
+
+        def device_results(status: str | None = None):
+            sel = '[data-testid="device-result"]'
+            if status:
+                sel += f'[data-status="{status}"]'
+            return page.locator(sel)
+
         print("Round 1: run the protocol cell (mock device 3 fails once)...")
-        run_button = page.get_by_role("button", name=re.compile(r"^Run (?!all)")).first
-        run_button.click()
-        results = page.get_by_test_id("device-result")
-        expect(results).to_have_count(DEVICE_COUNT, timeout=30_000)
+        run_protocol.click()
+        expect(device_results()).to_have_count(DEVICE_COUNT, timeout=30_000)
         pause(page, 1200)
-        results.nth(2).scroll_into_view_if_needed()
-        pause(page, 2000)
+        device_results().nth(2).scroll_into_view_if_needed()
+        pause(page, 2500)
         page.screenshot(path=f"{OUT}/03-round1-partial.png", full_page=True)
 
-        ok = page.locator('[data-testid="device-result"][data-status="ok"]')
-        failed = page.locator('[data-testid="device-result"][data-status="error"]')
-        check("round 1: 3 devices ok", ok.count() == 3, f"got {ok.count()}")
-        check("round 1: 1 device failed", failed.count() == 1, f"got {failed.count()}")
+        check("round 1: 3 devices ok", device_results("ok").count() == 3)
+        check("round 1: 1 device failed", device_results("error").count() == 1)
         check(
             "round 1: failing device is Mock MultispeQ 3",
-            failed.first.inner_text().find("Mock MultispeQ 3") != -1,
+            device_results("error").first.inner_text().find("Mock MultispeQ 3") != -1,
         )
         check(
             "round 1: failure message shown",
@@ -147,21 +199,13 @@ def main() -> int:
         print("Round 2: rerun; the flaky device succeeds...")
         page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
         pause(page, 800)
-        run_button.click()
-        expect(page.locator('[data-testid="device-result"][data-status="ok"]')).to_have_count(
-            DEVICE_COUNT, timeout=30_000
-        )
+        run_protocol.click()
+        expect(device_results("ok")).to_have_count(DEVICE_COUNT, timeout=30_000)
         pause(page, 1000)
-        page.locator('[data-testid="device-result"]').nth(2).scroll_into_view_if_needed()
-        pause(page, 2000)
-        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
-        pause(page, 800)
+        device_results().nth(2).scroll_into_view_if_needed()
+        pause(page, 2500)
         page.screenshot(path=f"{OUT}/04-round2-all-ok.png", full_page=True)
-        check(
-            "round 2: all 4 devices ok",
-            page.locator('[data-testid="device-result"][data-status="ok"]').count()
-            == DEVICE_COUNT,
-        )
+        check("round 2: all 4 devices ok", device_results("ok").count() == DEVICE_COUNT)
 
         # Every device's payload is visible with its own device_id.
         for i in range(1, DEVICE_COUNT + 1):
@@ -170,12 +214,44 @@ def main() -> int:
                 page.get_by_text(f"Mock MultispeQ {i}").first.is_visible(),
             )
 
+        print("Macro: applies to every device's measurement individually...")
+        run_macro.scroll_into_view_if_needed()
+        pause(page, 800)
+        run_macro.click()
+        # 4 protocol blocks + 4 macro blocks once the macro round lands.
+        expect(device_results("ok")).to_have_count(2 * DEVICE_COUNT, timeout=60_000)
+        pause(page, 1000)
+        macro_results = device_results("ok")
+        macro_results.nth(2 * DEVICE_COUNT - 2).scroll_into_view_if_needed()
+        pause(page, 2500)
+        page.screenshot(path=f"{OUT}/05-macro-per-device.png", full_page=True)
+        check("macro: 4 per-device outputs", device_results("ok").count() == 2 * DEVICE_COUNT)
+        phi2_blocks = page.get_by_text("Phi2", exact=False)
+        check("macro: Phi2 values rendered", phi2_blocks.count() >= DEVICE_COUNT)
+
+        print("Command: hello fans out to every device...")
+        run_command.scroll_into_view_if_needed()
+        pause(page, 800)
+        run_command.click()
+        expect(device_results("ok")).to_have_count(3 * DEVICE_COUNT, timeout=30_000)
+        pause(page, 1000)
+        device_results("ok").nth(3 * DEVICE_COUNT - 2).scroll_into_view_if_needed()
+        pause(page, 2500)
+        page.screenshot(path=f"{OUT}/06-command-per-device.png", full_page=True)
+        check("command: 4 per-device outputs", device_results("ok").count() == 3 * DEVICE_COUNT)
+        check(
+            "command: device reply rendered",
+            page.get_by_text("MultispeQ Ready").first.is_visible(),
+        )
+
         print("Disconnect one device via its chip...")
+        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
+        pause(page, 800)
         page.get_by_role("button", name="Disconnect Mock MultispeQ 4").click()
         expect(page.get_by_text("3 devices")).to_be_visible(timeout=5_000)
         check("chip disconnect drops to 3 devices", page.get_by_text("3 devices").is_visible())
         pause(page, 1500)
-        page.screenshot(path=f"{OUT}/05-after-disconnect.png", full_page=True)
+        page.screenshot(path=f"{OUT}/07-after-disconnect.png", full_page=True)
 
         hard_errors = [
             e
