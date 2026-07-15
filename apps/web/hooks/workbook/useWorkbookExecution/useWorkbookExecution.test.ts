@@ -8,8 +8,10 @@ import {
   createProtocolCell,
   createQuestionCell,
 } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   __resetProtocolCodeRegistry,
@@ -426,6 +428,71 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const macroOutput = findOutput(updated, macro.id);
       expect(macroOutput?.data).toEqual({ result: 99 });
+    });
+
+    it("applies the macro to every device's measurement individually", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({
+        producedBy: proto.id,
+        data: { device_id: "mock-1" },
+        deviceResults: [
+          { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1" } },
+          { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", data: { device_id: "mock-2" } },
+          {
+            deviceId: "dev-3",
+            deviceLabel: "Mock MultispeQ 3",
+            error: "Mock device failure (simulated)",
+          },
+          { deviceId: "dev-4", deviceLabel: "Mock MultispeQ 4", data: { device_id: "mock-4" } },
+        ],
+      });
+      const macro = createMacroCell();
+
+      // Echo the device_id back so per-device outputs are distinguishable.
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          const body = (await request.json()) as { data: { device_id: string } };
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { phi2: 0.5, from: body.data.device_id },
+          });
+        }),
+      );
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const macroOutput = findOutput(updated, macro.id);
+      // Primary mirrors the first successful device's macro output.
+      expect(macroOutput?.data).toEqual({ phi2: 0.5, from: "mock-1" });
+      expect(macroOutput?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "Mock MultispeQ 1",
+          data: { phi2: 0.5, from: "mock-1" },
+        },
+        {
+          deviceId: "dev-2",
+          deviceLabel: "Mock MultispeQ 2",
+          data: { phi2: 0.5, from: "mock-2" },
+        },
+        {
+          deviceId: "dev-3",
+          deviceLabel: "Mock MultispeQ 3",
+          error: "No measurement data from this device",
+        },
+        {
+          deviceId: "dev-4",
+          deviceLabel: "Mock MultispeQ 4",
+          data: { phi2: 0.5, from: "mock-4" },
+        },
+      ]);
+      expect(macroOutput?.messages).toEqual([
+        "Mock MultispeQ 3: No measurement data from this device",
+      ]);
     });
 
     it("captures macro failure response", async () => {

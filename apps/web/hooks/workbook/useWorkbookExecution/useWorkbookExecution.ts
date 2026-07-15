@@ -67,14 +67,11 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
   }
 }
 
-function findPrecedingOutputData(
-  cells: WorkbookCell[],
-  beforeIndex: number,
-): Record<string, unknown> | null {
+function findPrecedingOutput(cells: WorkbookCell[], beforeIndex: number): OutputCell | null {
   for (let i = beforeIndex - 1; i >= 0; i--) {
     const c = cells[i];
-    if (c.type === "output" && c.data) {
-      return c.data as Record<string, unknown>;
+    if (c.type === "output" && (c.data != null || (c.deviceResults?.length ?? 0) > 0)) {
+      return c;
     }
   }
   return null;
@@ -323,10 +320,22 @@ export function useWorkbookExecution({
     [setCellState, finishDeviceFanOut],
   );
 
+  // Runs the macro once against one device's measurement; throws on failure.
+  const executeMacroOn = useCallback(async (macroId: string, data: Record<string, unknown>) => {
+    const result = await executeMacroMutationRef.current.mutateAsync({
+      params: { id: macroId },
+      body: { data },
+    });
+    if (!result.body.success) {
+      throw new Error(result.body.error ?? "Macro execution failed");
+    }
+    return result.body.output;
+  }, []);
+
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
-      const inputData = findPrecedingOutputData(currentCells, cellIndex);
-      if (!inputData) {
+      const input = findPrecedingOutput(currentCells, cellIndex);
+      if (!input) {
         setCellState(cell.id, { status: "error", error: "No input data available" });
         return insertOutputAfterCell(
           currentCells,
@@ -338,29 +347,80 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      try {
-        const result = await executeMacroMutationRef.current.mutateAsync({
-          params: { id: cell.payload.macroId },
-          body: { data: inputData },
-        });
-
+      // Multi-device input: apply the macro to EVERY device's measurement
+      // individually, so each sensor gets its own derived output. Runs are
+      // serialized: each is its own sandbox invocation, and a handful of
+      // sequential calls beats hammering the executor concurrently. Devices
+      // whose measurement already failed carry their error through.
+      const inputResults = input.deviceResults;
+      if (inputResults && inputResults.length > 1) {
+        const settled: PromiseSettledResult<unknown>[] = [];
+        for (const r of inputResults) {
+          try {
+            if (r.data == null) {
+              throw new Error("No measurement data from this device");
+            }
+            settled.push({
+              status: "fulfilled",
+              value: await executeMacroOn(cell.payload.macroId, r.data as Record<string, unknown>),
+            });
+          } catch (err) {
+            settled.push({ status: "rejected", reason: err });
+          }
+        }
         const executionTime = performance.now() - startTime;
 
-        if (!result.body.success) {
-          const error = result.body.error ?? "Macro execution failed";
-          setCellState(cell.id, { status: "error", error });
-          return insertOutputAfterCell(
-            currentCells,
-            cell.id,
-            makeErrorOutputCell(cell.id, error, executionTime),
-          );
+        const results = inputResults.map((r, i) => {
+          const outcome = settled[i];
+          return outcome.status === "fulfilled"
+            ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, data: outcome.value }
+            : {
+                deviceId: r.deviceId,
+                deviceLabel: r.deviceLabel,
+                error:
+                  outcome.reason instanceof Error
+                    ? outcome.reason.message
+                    : "Macro execution failed",
+              };
+        });
+        const successes = results.filter((r) => r.error === undefined);
+        const failures = results.filter((r) => r.error !== undefined);
+        const messages = failures.map((f) => `${f.deviceLabel ?? f.deviceId}: ${f.error}`);
+
+        if (successes.length === 0) {
+          setCellState(cell.id, {
+            status: "error",
+            error: failures[0]?.error ?? "Macro execution failed",
+          });
+          return insertOutputAfterCell(currentCells, cell.id, {
+            ...makeOutputCell(cell.id, undefined, executionTime, messages),
+            deviceResults: results,
+          });
         }
 
+        setCellState(cell.id, { status: "completed" });
+        return insertOutputAfterCell(currentCells, cell.id, {
+          ...makeOutputCell(
+            cell.id,
+            successes[0].data as Record<string, unknown>,
+            executionTime,
+            messages,
+          ),
+          deviceResults: results,
+        });
+      }
+
+      try {
+        const output = await executeMacroOn(
+          cell.payload.macroId,
+          input.data as Record<string, unknown>,
+        );
+        const executionTime = performance.now() - startTime;
         setCellState(cell.id, { status: "completed" });
         return insertOutputAfterCell(
           currentCells,
           cell.id,
-          makeOutputCell(cell.id, result.body.output, executionTime, []),
+          makeOutputCell(cell.id, output, executionTime, []),
         );
       } catch (err) {
         const executionTime = performance.now() - startTime;
@@ -373,7 +433,7 @@ export function useWorkbookExecution({
         );
       }
     },
-    [setCellState],
+    [setCellState, executeMacroOn],
   );
 
   const runQuestionCell = useCallback(
