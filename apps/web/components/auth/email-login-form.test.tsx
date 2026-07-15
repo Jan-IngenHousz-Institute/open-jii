@@ -91,6 +91,25 @@ describe("EmailLoginForm", () => {
     expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
   });
 
+  it("skips conditional passkey sign-in when WebAuthn is unavailable", async () => {
+    expect(window.PublicKeyCredential).toBeUndefined();
+    render(<EmailLoginForm {...defaultProps} />);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument(),
+    );
+    expect(authClient.signIn.passkey).not.toHaveBeenCalled();
+  });
+
+  it("shows the last used badge when email was the last method", () => {
+    render(<EmailLoginForm {...defaultProps} isLastUsed />);
+    expect(screen.getByText("auth.lastUsed")).toBeInTheDocument();
+  });
+
+  it("hides the last used badge by default", () => {
+    render(<EmailLoginForm {...defaultProps} />);
+    expect(screen.queryByText("auth.lastUsed")).not.toBeInTheDocument();
+  });
+
   it("shows OTP form after successful email submission", async () => {
     render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
