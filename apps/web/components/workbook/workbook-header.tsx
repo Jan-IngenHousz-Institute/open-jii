@@ -7,6 +7,8 @@ import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
+import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
+import { mockDevicesEnabled } from "~/lib/iot/mock-devices";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -33,25 +35,19 @@ import {
 import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobile";
 import { cn } from "@repo/ui/lib/utils";
 
-interface DeviceInfo {
-  device_name?: string;
-  device_battery?: number;
-  device_version?: string;
-  device_id?: string;
-}
-
 interface WorkbookHeaderProps {
   title: string;
   cells: WorkbookCell[];
   isConnected: boolean;
   isConnecting: boolean;
-  deviceInfo: DeviceInfo | null;
+  connectedDevices: { id: string; label: string }[];
   sensorFamily: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
-  connectionType: "bluetooth" | "serial";
-  onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
+  connectionType: WorkbookConnectionType;
+  onConnectionTypeChange?: (type: WorkbookConnectionType) => void;
   onConnect: () => void;
   onDisconnect: () => void;
+  onDisconnectDevice?: (id: string) => void;
   isRunningAll: boolean;
   onRunAll: () => void;
   onStopExecution: () => void;
@@ -99,13 +95,14 @@ export function WorkbookHeader({
   cells,
   isConnected,
   isConnecting,
-  deviceInfo,
+  connectedDevices,
   sensorFamily,
   onSensorFamilyChange,
   connectionType,
   onConnectionTypeChange,
   onConnect,
   onDisconnect,
+  onDisconnectDevice,
   isRunningAll,
   onRunAll,
   onStopExecution,
@@ -121,8 +118,13 @@ export function WorkbookHeader({
   const compact = isMobile || isTablet || isLgTablet;
 
   const browserSupport = useIotBrowserSupport(sensorFamily);
+  const showMockDevices = mockDevicesEnabled();
   const transportSupported =
-    connectionType === "serial" ? browserSupport.serial : browserSupport.bluetooth;
+    connectionType === "mock"
+      ? true
+      : connectionType === "serial"
+        ? browserSupport.serial
+        : browserSupport.bluetooth;
   const transportTooltip = transportSupported
     ? null
     : connectionType === "serial"
@@ -247,8 +249,8 @@ export function WorkbookHeader({
         {onConnectionTypeChange && (
           <Select
             value={connectionType}
-            onValueChange={(v) => onConnectionTypeChange(v as "bluetooth" | "serial")}
-            disabled={isConnected || isConnecting}
+            onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
+            disabled={isConnecting}
           >
             <SelectTrigger
               className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
@@ -261,6 +263,7 @@ export function WorkbookHeader({
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
                 Bluetooth
               </SelectItem>
+              {showMockDevices && <SelectItem value="mock">Mock</SelectItem>}
             </SelectContent>
           </Select>
         )}
@@ -281,11 +284,12 @@ export function WorkbookHeader({
                   ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
                   : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
               }
-              onClick={isConnected ? onDisconnect : onConnect}
-              disabled={isConnecting || (!isConnected && !transportSupported)}
+              onClick={onConnect}
+              disabled={isConnecting || !transportSupported}
+              data-testid="connect-device"
             >
               <Usb className="size-4" />
-              <span className="hidden xl:inline">{isConnected ? "Disconnect" : "Connect"}</span>
+              <span className="hidden xl:inline">{isConnected ? "Add device" : "Connect"}</span>
             </button>
           </TooltipTrigger>
           {transportTooltip && (
@@ -295,6 +299,17 @@ export function WorkbookHeader({
           )}
         </Tooltip>
       </TooltipProvider>
+
+      {isConnected && (
+        <button
+          className="inline-flex h-[34px] shrink-0 items-center justify-center px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[38px] xl:px-3 xl:text-[13px]"
+          style={{ background: "#EDF2F6", borderRadius: 8, color: "#011111" }}
+          onClick={onDisconnect}
+          data-testid="disconnect-all"
+        >
+          <span>Disconnect</span>
+        </button>
+      )}
 
       <div className="flex items-center gap-1.5">
         <Circle
@@ -310,16 +325,33 @@ export function WorkbookHeader({
         <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
           {isConnecting
             ? "Connecting..."
-            : isConnected
-              ? (deviceInfo?.device_name ?? "Connected")
-              : "Disconnected"}
+            : connectedDevices.length > 1
+              ? `${connectedDevices.length} devices`
+              : (connectedDevices[0]?.label ?? "Disconnected")}
         </span>
       </div>
 
-      {isConnected && deviceInfo?.device_version && (
-        <span className="hidden text-[13px] leading-[21px] text-[#68737B] xl:inline">
-          FW {deviceInfo.device_version}
-        </span>
+      {connectedDevices.length > 1 && (
+        <div className="hidden items-center gap-1 xl:flex" data-testid="device-chips">
+          {connectedDevices.map((device) => (
+            <span
+              key={device.id}
+              className="inline-flex items-center gap-1 rounded-full border border-[#EDF2F6] bg-[#F7F8FA] px-2 py-0.5 text-[11px] text-[#011111]"
+              data-testid="device-chip"
+            >
+              {device.label}
+              {onDisconnectDevice && (
+                <button
+                  className="text-[#68737B] hover:text-[#011111]"
+                  onClick={() => onDisconnectDevice(device.id)}
+                  aria-label={`Disconnect ${device.label}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="flex-1" />

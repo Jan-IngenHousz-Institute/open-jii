@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
-import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
+import type {
+  IotDeviceConnection,
+  WorkbookConnectionType,
+} from "~/hooks/iot/useIotConnections/useIotConnections";
+import { useIotConnections } from "~/hooks/iot/useIotConnections/useIotConnections";
+import {
+  executeCommandWithDriver,
+  executeProtocolWithDriver,
+} from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { tsr } from "~/lib/tsr";
 
@@ -109,7 +116,13 @@ function makeErrorOutputCell(producedBy: string, error: string, executionTime = 
   return makeOutputCell(producedBy, undefined, executionTime, [error]);
 }
 
-type ConnectionType = "bluetooth" | "serial";
+// Normalises any non-object device response into the output cell's data shape.
+function toOutputData(data: unknown): Record<string, unknown> {
+  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+    return data as Record<string, unknown>;
+  }
+  return { response: data };
+}
 
 export function useWorkbookExecution({
   cells,
@@ -121,7 +134,7 @@ export function useWorkbookExecution({
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
     resolveSensorFamily(cells),
   );
-  const [connectionType, setConnectionType] = useState<ConnectionType>("serial");
+  const [connectionType, setConnectionType] = useState<WorkbookConnectionType>("serial");
   const abortRef = useRef(false);
 
   const cellsRef = useRef(cells);
@@ -135,22 +148,16 @@ export function useWorkbookExecution({
     setSensorFamilyState(family);
   }, []);
 
-  const { isConnected, isConnecting, deviceInfo, driver, connect, disconnect } =
-    useIotCommunication(sensorFamily, connectionType);
+  const { connections, isConnecting, connect, disconnectDevice, disconnectAll } =
+    useIotConnections(sensorFamily);
+  const isConnected = connections.length > 0;
 
-  const { executeProtocol, executeCommand } = useIotProtocolExecution(
-    driver,
-    isConnected,
-    sensorFamily,
-  );
   const executeMacroMutation = tsr.macros.executeMacro.useMutation();
 
-  const isConnectedRef = useRef(isConnected);
-  isConnectedRef.current = isConnected;
-  const executeProtocolRef = useRef(executeProtocol);
-  executeProtocolRef.current = executeProtocol;
-  const executeCommandRef = useRef(executeCommand);
-  executeCommandRef.current = executeCommand;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  const sensorFamilyRef = useRef(sensorFamily);
+  sensorFamilyRef.current = sensorFamily;
   const executeMacroMutationRef = useRef(executeMacroMutation);
   executeMacroMutationRef.current = executeMacroMutation;
 
@@ -166,6 +173,62 @@ export function useWorkbookExecution({
 
   const execCounterRef = useRef(0);
 
+  // Collapse per-device settled outcomes into one output cell. A single
+  // device keeps the exact legacy output shape; several devices additionally
+  // carry per-device results, with failures listed as messages.
+  const finishDeviceFanOut = useCallback(
+    (
+      cellId: string,
+      devices: IotDeviceConnection[],
+      settled: PromiseSettledResult<unknown>[],
+      executionTime: number,
+      currentCells: WorkbookCell[],
+      fallbackMessage: string,
+      normalize: (data: unknown) => Record<string, unknown>,
+    ): WorkbookCell[] => {
+      const results = devices.map((d, i) => {
+        const outcome = settled[i];
+        return outcome.status === "fulfilled"
+          ? { deviceId: d.id, deviceLabel: d.label, data: normalize(outcome.value) }
+          : {
+              deviceId: d.id,
+              deviceLabel: d.label,
+              error:
+                outcome.reason instanceof Error
+                  ? outcome.reason.message
+                  : String(outcome.reason ?? fallbackMessage),
+            };
+      });
+      const successes = results.filter((r) => r.error === undefined);
+      const failures = results.filter((r) => r.error !== undefined);
+      const isMulti = devices.length > 1;
+      const messages = isMulti ? failures.map((f) => `${f.deviceLabel}: ${f.error}`) : [];
+
+      if (successes.length === 0) {
+        const message = failures[0]?.error ?? fallbackMessage;
+        setCellState(cellId, { status: "error", error: message });
+        const errorOutput = isMulti
+          ? {
+              ...makeOutputCell(cellId, undefined, executionTime, messages),
+              deviceResults: results,
+            }
+          : makeErrorOutputCell(cellId, message, executionTime);
+        return insertOutputAfterCell(currentCells, cellId, errorOutput);
+      }
+
+      // Partial failure stays "completed": the successful devices' data is
+      // usable and the failed ones are called out in the output messages.
+      setCellState(cellId, { status: "completed" });
+      const output = makeOutputCell(cellId, successes[0].data, executionTime, messages);
+      return insertOutputAfterCell(
+        currentCells,
+        cellId,
+        isMulti ? { ...output, deviceResults: results } : output,
+      );
+    },
+    [setCellState],
+  );
+
   const runProtocolCell = useCallback(
     async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
       const protocolCode = await getProtocolCode(cell);
@@ -178,7 +241,7 @@ export function useWorkbookExecution({
         );
       }
 
-      if (!isConnectedRef.current) {
+      if (connectionsRef.current.length === 0) {
         // The page-level Run handler short-circuits to connect() before this
         // path on direct Run clicks; this branch covers Run all + scripted
         // entry points where we still need a recorded error.
@@ -196,36 +259,26 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      try {
-        const data = await executeProtocolRef.current(protocolCode);
-        const executionTime = performance.now() - startTime;
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, data as Record<string, unknown>, executionTime, []),
-        );
-      } catch (err) {
-        const executionTime = performance.now() - startTime;
-        const message = err instanceof Error ? err.message : "Execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
-      }
+      // Multi-device fan-out (see mobile Multi-scan): one protocol, every
+      // connected device in parallel, per-device outcomes.
+      const devices = connectionsRef.current;
+      const settled = await Promise.allSettled(
+        devices.map((d) =>
+          executeProtocolWithDriver(d.driver, sensorFamilyRef.current, protocolCode),
+        ),
+      );
+      return finishDeviceFanOut(
+        cell.id,
+        devices,
+        settled,
+        performance.now() - startTime,
+        currentCells,
+        "Execution failed",
+        (data) => data as Record<string, unknown>,
+      );
     },
-    [setCellState],
+    [setCellState, finishDeviceFanOut],
   );
-
-  // Normalises any non-object device response into the output cell's data shape.
-  const toOutputData = (data: unknown): Record<string, unknown> => {
-    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
-      return data as Record<string, unknown>;
-    }
-    return { response: data };
-  };
 
   const runCommandCell = useCallback(
     async (cell: CommandCell, currentCells: WorkbookCell[]) => {
@@ -238,7 +291,7 @@ export function useWorkbookExecution({
         return insertOutputAfterCell(currentCells, cell.id, makeErrorOutputCell(cell.id, message));
       }
 
-      if (!isConnectedRef.current) {
+      if (connectionsRef.current.length === 0) {
         setCellState(cell.id, { status: "error", error: "No device connected" });
         return insertOutputAfterCell(
           currentCells,
@@ -253,27 +306,21 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      try {
-        const data = await executeCommandRef.current(command);
-        const executionTime = performance.now() - startTime;
-        setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, toOutputData(data), executionTime, []),
-        );
-      } catch (err) {
-        const executionTime = performance.now() - startTime;
-        const message = err instanceof Error ? err.message : "Command execution failed";
-        setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
-      }
+      const devices = connectionsRef.current;
+      const settled = await Promise.allSettled(
+        devices.map((d) => executeCommandWithDriver(d.driver, command)),
+      );
+      return finishDeviceFanOut(
+        cell.id,
+        devices,
+        settled,
+        performance.now() - startTime,
+        currentCells,
+        "Command execution failed",
+        toOutputData,
+      );
     },
-    [setCellState],
+    [setCellState, finishDeviceFanOut],
   );
 
   const runMacroCell = useCallback(
@@ -533,16 +580,19 @@ export function useWorkbookExecution({
     setExecutionStates({});
   }, []);
 
+  const connectDevice = useCallback(() => connect(connectionType), [connect, connectionType]);
+
   return {
     isConnected,
     isConnecting,
-    deviceInfo,
+    connectedDevices: connections.map(({ id, label }) => ({ id, label })),
     sensorFamily,
     setSensorFamily,
     connectionType,
     setConnectionType,
-    connect,
-    disconnect,
+    connect: connectDevice,
+    disconnect: disconnectAll,
+    disconnectDevice,
 
     executionStates,
     isRunningAll,

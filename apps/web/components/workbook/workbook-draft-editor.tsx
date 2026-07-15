@@ -94,13 +94,14 @@ export function WorkbookDraftEditor({
   const {
     isConnected,
     isConnecting,
-    deviceInfo,
+    connectedDevices,
     sensorFamily,
     setSensorFamily,
     connectionType,
     setConnectionType,
     connect,
     disconnect,
+    disconnectDevice,
     executionStates,
     isRunningAll,
     runCell,
@@ -147,7 +148,7 @@ export function WorkbookDraftEditor({
       executionStates={executionStates}
       isConnected={isConnected}
       isConnecting={isConnecting}
-      deviceInfo={deviceInfo}
+      connectedDevices={connectedDevices}
       sensorFamily={sensorFamily}
       onSensorFamilyChange={setSensorFamily}
       connectionType={connectionType}
@@ -155,6 +156,7 @@ export function WorkbookDraftEditor({
       isRunningAll={isRunningAll}
       onConnect={connect}
       onDisconnect={disconnect}
+      onDisconnectDevice={disconnectDevice}
       onRunAll={runAll}
       onStopExecution={stopExecution}
       onClearOutputs={handleClearOutputs}

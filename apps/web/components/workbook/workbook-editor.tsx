@@ -43,13 +43,6 @@ interface CellExecutionState {
   executionOrder?: number[];
 }
 
-interface DeviceInfo {
-  device_name?: string;
-  device_battery?: number;
-  device_version?: string;
-  device_id?: string;
-}
-
 interface WorkbookEditorProps {
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
@@ -57,14 +50,15 @@ interface WorkbookEditorProps {
   executionStates?: Record<string, CellExecutionState>;
   isConnected?: boolean;
   isConnecting?: boolean;
-  deviceInfo?: DeviceInfo | null;
+  connectedDevices?: { id: string; label: string }[];
   sensorFamily?: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
-  connectionType?: "bluetooth" | "serial";
-  onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
+  connectionType?: "bluetooth" | "serial" | "mock";
+  onConnectionTypeChange?: (type: "bluetooth" | "serial" | "mock") => void;
   isRunningAll?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onDisconnectDevice?: (id: string) => void;
   onRunAll?: () => void;
   onStopExecution?: () => void;
   onClearOutputs?: () => void;
@@ -332,12 +326,13 @@ export function WorkbookEditor({
   executionStates,
   isConnected,
   isConnecting,
-  deviceInfo,
+  connectedDevices,
   sensorFamily,
   connectionType,
   isRunningAll,
   onConnect,
   onDisconnect,
+  onDisconnectDevice,
   onRunAll,
   onStopExecution,
   onSensorFamilyChange,
@@ -530,7 +525,7 @@ export function WorkbookEditor({
           cells={cells}
           isConnected={isConnected ?? false}
           isConnecting={isConnecting ?? false}
-          deviceInfo={deviceInfo ?? null}
+          connectedDevices={connectedDevices ?? []}
           sensorFamily={sensorFamily ?? "multispeq"}
           onSensorFamilyChange={onSensorFamilyChange}
           connectionType={connectionType ?? "serial"}
@@ -539,6 +534,7 @@ export function WorkbookEditor({
           onConnect={onConnect}
           isSticky={isSticky}
           onDisconnect={onDisconnect ?? noop}
+          onDisconnectDevice={onDisconnectDevice}
           onRunAll={onRunAll}
           onStopExecution={onStopExecution ?? noop}
           onClearOutputs={onClearOutputs ?? noop}

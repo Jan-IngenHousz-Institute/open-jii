@@ -26,26 +26,30 @@ const mockExecuteCommand = vi.fn();
 const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
-let mockIsConnected = false;
+// One entry per connected device; single-entry = legacy single-device runs.
+let mockConnections: { id: string; label: string; driver: unknown }[] = [];
 
-vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
-  useIotCommunication: () => ({
-    isConnected: mockIsConnected,
+vi.mock("~/hooks/iot/useIotConnections/useIotConnections", () => ({
+  useIotConnections: () => ({
+    connections: mockConnections,
     isConnecting: false,
     error: null,
-    deviceInfo: null,
-    driver: null,
     connect: mockConnect,
-    disconnect: mockDisconnect,
+    disconnectDevice: vi.fn(),
+    disconnectAll: mockDisconnect,
   }),
 }));
 
 vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
-  useIotProtocolExecution: () => ({
-    executeProtocol: mockExecuteProtocol,
-    executeCommand: mockExecuteCommand,
-  }),
+  executeProtocolWithDriver: (_driver: unknown, _family: unknown, code: unknown): unknown =>
+    mockExecuteProtocol(code) as unknown,
+  executeCommandWithDriver: (_driver: unknown, command: unknown): unknown =>
+    mockExecuteCommand(command) as unknown,
 }));
+
+function setMockConnected(connected: boolean) {
+  mockConnections = connected ? [{ id: "dev-1", label: "Device #1", driver: {} }] : [];
+}
 
 function renderExecution(
   cells: WorkbookCell[],
@@ -72,7 +76,7 @@ function findOutput(cells: WorkbookCell[], producedBy?: string) {
 
 describe("useWorkbookExecution", () => {
   beforeEach(() => {
-    mockIsConnected = false;
+    mockConnections = [];
     mockExecuteProtocol.mockReset();
     mockExecuteCommand.mockReset();
     mockConnect.mockReset();
@@ -121,7 +125,7 @@ describe("useWorkbookExecution", () => {
         code: [{ _protocol_set_: [] }],
       });
       server.mount(contract.protocols.getProtocol, { body: protocol });
-      mockIsConnected = false;
+      setMockConnected(false);
 
       const { result, onCellsChange } = renderExecution([proto]);
 
@@ -141,7 +145,7 @@ describe("useWorkbookExecution", () => {
         code: [{ _protocol_set_: [] }],
       });
       server.mount(contract.protocols.getProtocol, { body: protocol });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteProtocol.mockResolvedValue({ measurement: 42 });
 
       const { result, onCellsChange } = renderExecution([proto]);
@@ -152,6 +156,95 @@ describe("useWorkbookExecution", () => {
       const outputCell = findOutput(updated);
       expect(outputCell?.data).toEqual({ measurement: 42 });
       expect(outputCell?.producedBy).toBe(proto.id);
+    });
+
+    it("fans out to every connected device and records per-device results", async () => {
+      const proto = createProtocolCell();
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockConnections = [
+        { id: "dev-1", label: "Mock MultispeQ 1", driver: {} },
+        { id: "dev-2", label: "Mock MultispeQ 2", driver: {} },
+        { id: "dev-3", label: "Mock MultispeQ 3", driver: {} },
+        { id: "dev-4", label: "Mock MultispeQ 4", driver: {} },
+      ];
+      // Device 3 fails; the round still completes with the other three.
+      mockExecuteProtocol
+        .mockResolvedValueOnce({ device_id: "mock-1" })
+        .mockResolvedValueOnce({ device_id: "mock-2" })
+        .mockRejectedValueOnce(new Error("Mock device failure (simulated)"))
+        .mockResolvedValueOnce({ device_id: "mock-4" });
+
+      const { result, onCellsChange } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledTimes(4);
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      // Primary data mirrors the first successful device for macro cells.
+      expect(outputCell?.data).toEqual({ device_id: "mock-1" });
+      expect(outputCell?.deviceResults).toEqual([
+        { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1" } },
+        { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", data: { device_id: "mock-2" } },
+        {
+          deviceId: "dev-3",
+          deviceLabel: "Mock MultispeQ 3",
+          error: "Mock device failure (simulated)",
+        },
+        { deviceId: "dev-4", deviceLabel: "Mock MultispeQ 4", data: { device_id: "mock-4" } },
+      ]);
+      expect(outputCell?.messages).toEqual(["Mock MultispeQ 3: Mock device failure (simulated)"]);
+    });
+
+    it("keeps the classic single-device output shape when one device is connected", async () => {
+      const proto = createProtocolCell();
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      setMockConnected(true);
+      mockExecuteProtocol.mockResolvedValue({ measurement: 42 });
+
+      const { result, onCellsChange } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      expect(outputCell?.deviceResults).toBeUndefined();
+      expect(outputCell?.messages).toEqual([]);
+    });
+
+    it("errors the cell when every device fails", async () => {
+      const proto = createProtocolCell();
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockConnections = [
+        { id: "dev-1", label: "Mock MultispeQ 1", driver: {} },
+        { id: "dev-2", label: "Mock MultispeQ 2", driver: {} },
+      ];
+      mockExecuteProtocol.mockRejectedValue(new Error("device not open"));
+
+      const { result, onCellsChange } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      expect(outputCell?.data).toBeUndefined();
+      expect(outputCell?.deviceResults).toHaveLength(2);
+      expect(outputCell?.messages).toEqual([
+        "Mock MultispeQ 1: device not open",
+        "Mock MultispeQ 2: device not open",
+      ]);
     });
 
     it("runs the live editor code directly, without re-fetching from the server", async () => {
@@ -168,7 +261,7 @@ describe("useWorkbookExecution", () => {
           code: [{ _protocol_set_: [{ label: "old" }] }],
         }),
       });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
 
       registerProtocolCodeSource(proto.payload.protocolId, () => liveCode);
@@ -187,7 +280,7 @@ describe("useWorkbookExecution", () => {
       server.mount(contract.protocols.getProtocol, {
         body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
       });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
 
       // No code source registered (e.g. the cell's editor is not mounted).
@@ -205,7 +298,7 @@ describe("useWorkbookExecution", () => {
         code: [{ _protocol_set_: [] }],
       });
       server.mount(contract.protocols.getProtocol, { body: protocol });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteProtocol.mockRejectedValue(new Error("Device timed out"));
 
       const { result, onCellsChange } = renderExecution([proto]);
@@ -221,7 +314,7 @@ describe("useWorkbookExecution", () => {
   describe("runCell - inline command", () => {
     it("sends a raw string command and wraps a scalar response", async () => {
       const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteCommand.mockResolvedValue("87%");
 
       const { result, onCellsChange } = renderExecution([cmd]);
@@ -234,7 +327,7 @@ describe("useWorkbookExecution", () => {
 
     it("parses a JSON command before sending and passes object responses through", async () => {
       const cmd = createCommandCell({ payload: { format: "json", content: '[{"c":1}]' } });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteCommand.mockResolvedValue({ ok: true });
 
       const { result, onCellsChange } = renderExecution([cmd]);
@@ -247,7 +340,7 @@ describe("useWorkbookExecution", () => {
 
     it("records an error when no device is connected", async () => {
       const cmd = createCommandCell({ payload: { format: "string", content: "hello" } });
-      mockIsConnected = false;
+      setMockConnected(false);
 
       const { result, onCellsChange } = renderExecution([cmd]);
       await act(() => result.current.runCell(cmd.id));
@@ -261,7 +354,7 @@ describe("useWorkbookExecution", () => {
 
     it("records an error when inline content is invalid JSON", async () => {
       const cmd = createCommandCell({ payload: { format: "json", content: "{not json" } });
-      mockIsConnected = true;
+      setMockConnected(true);
 
       const { result, onCellsChange } = renderExecution([cmd]);
       await act(() => result.current.runCell(cmd.id));
@@ -273,7 +366,7 @@ describe("useWorkbookExecution", () => {
 
     it("captures a device error when the command execution throws", async () => {
       const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
-      mockIsConnected = true;
+      setMockConnected(true);
       mockExecuteCommand.mockRejectedValue(new Error("Command timed out"));
 
       const { result, onCellsChange } = renderExecution([cmd]);
@@ -587,8 +680,10 @@ describe("useWorkbookExecution", () => {
     it("exposes connect and disconnect from IoT hook", () => {
       const { result } = renderExecution([]);
 
-      expect(result.current.connect).toBe(mockConnect);
-      expect(result.current.disconnect).toBe(mockDisconnect);
+      void result.current.connect();
+      expect(mockConnect).toHaveBeenCalledWith("serial");
+      void result.current.disconnect();
+      expect(mockDisconnect).toHaveBeenCalledOnce();
     });
 
     it("defaults sensor family to multispeq", () => {
