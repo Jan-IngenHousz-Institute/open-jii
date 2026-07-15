@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -53,8 +54,8 @@ interface WorkbookEditorProps {
   connectedDevices?: { id: string; label: string }[];
   sensorFamily?: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
-  connectionType?: "bluetooth" | "serial" | "mock";
-  onConnectionTypeChange?: (type: "bluetooth" | "serial" | "mock") => void;
+  connectionType?: WorkbookConnectionType;
+  onConnectionTypeChange?: (type: WorkbookConnectionType) => void;
   isRunningAll?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;

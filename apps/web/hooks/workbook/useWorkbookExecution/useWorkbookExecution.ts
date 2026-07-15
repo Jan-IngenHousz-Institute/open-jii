@@ -12,6 +12,7 @@ import {
 } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
 import { tsr } from "~/lib/tsr";
+import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type {
@@ -153,8 +154,6 @@ export function useWorkbookExecution({
 
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
-  const sensorFamilyRef = useRef(sensorFamily);
-  sensorFamilyRef.current = sensorFamily;
   const executeMacroMutationRef = useRef(executeMacroMutation);
   executeMacroMutationRef.current = executeMacroMutation;
 
@@ -259,10 +258,10 @@ export function useWorkbookExecution({
       // Multi-device fan-out (see mobile Multi-scan): one protocol, every
       // connected device in parallel, per-device outcomes.
       const devices = connectionsRef.current;
+      // Each driver runs with the family it was connected as; switching the
+      // toolbar family must not retarget live drivers.
       const settled = await Promise.allSettled(
-        devices.map((d) =>
-          executeProtocolWithDriver(d.driver, sensorFamilyRef.current, protocolCode),
-        ),
+        devices.map((d) => executeProtocolWithDriver(d.driver, d.family, protocolCode)),
       );
       return finishDeviceFanOut(
         cell.id,
@@ -322,10 +321,17 @@ export function useWorkbookExecution({
 
   // Runs the macro once against one device's measurement; throws on failure.
   const executeMacroOn = useCallback(async (macroId: string, data: Record<string, unknown>) => {
-    const result = await executeMacroMutationRef.current.mutateAsync({
-      params: { id: macroId },
-      body: { data },
-    });
+    let result;
+    try {
+      result = await executeMacroMutationRef.current.mutateAsync({
+        params: { id: macroId },
+        body: { data },
+      });
+    } catch (err) {
+      // ts-rest rejects with a raw response object on HTTP errors; surface
+      // the server's message instead of a generic one.
+      throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
+    }
     if (!result.body.success) {
       throw new Error(result.body.error ?? "Macro execution failed");
     }

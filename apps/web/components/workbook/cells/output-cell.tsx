@@ -161,19 +161,18 @@ function DataTabs({
 // switching the JSON view on one device doesn't flip the others.
 function DeviceResultBlock({
   result,
-  copy,
-  copied,
   showTimeseries,
   protocolCode,
   protocolLoading,
 }: {
   result: OutputDeviceResult;
-  copy: (text: string) => Promise<void>;
-  copied: boolean;
   showTimeseries: boolean;
   protocolCode?: unknown;
   protocolLoading?: boolean;
 }) {
+  // Own clipboard state: copying one device's JSON must not flash the
+  // success icon on every other block.
+  const { copy, copied } = useCopyToClipboard();
   const [activeTab, setActiveTab] = useState("table");
   const [pinnedChart, setPinnedChart] = useState<{ data: number[]; columnName: string } | null>(
     null,
@@ -363,8 +362,6 @@ export function OutputCellComponent({
                   <DeviceResultBlock
                     key={result.deviceId}
                     result={result}
-                    copy={copy}
-                    copied={copied}
                     showTimeseries={
                       protocolFamily === "multispeq" && isMultispeqOutput(result.data)
                     }

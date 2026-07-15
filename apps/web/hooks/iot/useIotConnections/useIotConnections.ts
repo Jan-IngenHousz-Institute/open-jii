@@ -13,8 +13,10 @@ export type WorkbookConnectionType = "bluetooth" | "serial" | "mock";
 export interface IotDeviceConnection {
   /** Stable per-connection id (uuid); devices carry no usable web identifier. */
   id: string;
-  /** "MultispeQ #N" by connect order; mock devices name themselves. */
+  /** "Device #N" by connect order; mock devices name themselves. */
   label: string;
+  /** Family captured at connect time; a later family switch must not retarget live drivers. */
+  family: SensorFamily;
   driver: IDeviceDriver;
 }
 
@@ -32,6 +34,9 @@ export function useIotConnections(sensorFamily: SensorFamily) {
   connectionsRef.current = connections;
   // Total devices ever connected; numbers labels so they never repeat.
   const connectCounterRef = useRef(0);
+  // Bumped by disconnectAll so an in-flight connect() started before the
+  // disconnect can't re-add its device afterwards.
+  const generationRef = useRef(0);
 
   // Disconnect every driver on unmount.
   useEffect(() => {
@@ -51,6 +56,7 @@ export function useIotConnections(sensorFamily: SensorFamily) {
       setIsConnecting(true);
       setError(null);
 
+      const generation = generationRef.current;
       let adapter: ITransportAdapter | undefined;
       try {
         const index = connectCounterRef.current + 1;
@@ -62,6 +68,13 @@ export function useIotConnections(sensorFamily: SensorFamily) {
         const driver = createDriver(sensorFamily);
         await driver.initialize(adapter);
 
+        // The user disconnected everything while this connect was in flight;
+        // honor that instead of resurrecting a connection.
+        if (generation !== generationRef.current) {
+          await driver.destroy();
+          return;
+        }
+
         const id = crypto.randomUUID();
         const label = connectionType === "mock" ? `Mock MultispeQ ${index}` : `Device #${index}`;
 
@@ -71,7 +84,7 @@ export function useIotConnections(sensorFamily: SensorFamily) {
         });
 
         connectCounterRef.current = index;
-        setConnections((prev) => [...prev, { id, label, driver }]);
+        setConnections((prev) => [...prev, { id, label, family: sensorFamily, driver }]);
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         await adapter?.disconnect().catch(() => {});
@@ -99,6 +112,7 @@ export function useIotConnections(sensorFamily: SensorFamily) {
   );
 
   const disconnectAll = useCallback(async () => {
+    generationRef.current += 1;
     const existing = connectionsRef.current;
     setConnections([]);
     setError(null);

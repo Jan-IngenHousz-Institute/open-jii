@@ -15,10 +15,7 @@ import {
   disconnectFromDevice,
   unpairDevice,
 } from "../services/device-connection-manager/device-connection";
-import {
-  getConnectedDevice,
-  getConnectedDevices,
-} from "../services/device-connection-manager/device-queries";
+import { getConnectedDevices } from "../services/device-connection-manager/device-queries";
 import { mergeDevice } from "../services/device-connection-manager/device-sort";
 import {
   bluetoothDeviceToDevice,
@@ -53,7 +50,7 @@ export function useConnectedDevice() {
 export function useConnectToDevice() {
   const client = useQueryClient();
   const [connectingDeviceId, setConnectingDeviceId] = useState<string>();
-  const { setDevice, addDevice, removeDevice, destroy } = useScannerCommandExecutorStore();
+  const { setDevice, addDevice, removeDevice } = useScannerCommandExecutorStore();
   const { setLastConnectedDevice } = useDeviceConnectionStore();
 
   return {
@@ -97,13 +94,9 @@ export function useConnectToDevice() {
 
       await client.invalidateQueries({ queryKey: connectionKeys.connectedDevices });
 
-      // Re-sync the executor store with whatever is still connected
-      // (in case the unpaired device was the connected one)
-      const connectedDevice = await getConnectedDevice();
-      await destroy();
-      if (connectedDevice) {
-        await setDevice(connectedDevice);
-      }
+      // Drop only the unpaired device's executor (if it was connected at
+      // all); every other connected device keeps running.
+      await removeDevice(device.id);
     },
   };
 }

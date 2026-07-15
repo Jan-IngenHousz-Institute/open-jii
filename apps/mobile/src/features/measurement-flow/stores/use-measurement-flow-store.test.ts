@@ -242,6 +242,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
     });
 
     it("decrements currentStep when no experiment is selected", () => {
@@ -297,6 +298,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
   });
@@ -318,6 +320,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
   });
@@ -355,6 +358,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.iterationCount).toBe(2);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
     });
   });
 
