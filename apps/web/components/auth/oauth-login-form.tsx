@@ -8,13 +8,21 @@ import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
+import { LastUsedBadge } from "./last-used-badge";
+
 interface OAuthLoginFormProps {
   provider: { id: string; name: string };
   callbackUrl: string | undefined;
   layoutCount?: number;
+  isLastUsed?: boolean;
 }
 
-export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLoginFormProps) {
+export function OAuthLoginForm({
+  provider,
+  callbackUrl,
+  layoutCount,
+  isLastUsed,
+}: OAuthLoginFormProps) {
   const { t } = useTranslation();
   const [isPending, setIsPending] = useState(false);
 
@@ -48,7 +56,7 @@ export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLogi
   const providerName = provider.id.charAt(0).toUpperCase() + provider.id.slice(1);
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="relative">
       <Button
         type="submit"
         variant="outline"
@@ -64,6 +72,7 @@ export function OAuthLoginForm({ provider, callbackUrl, layoutCount }: OAuthLogi
           loginWithKey={`auth.loginWith-${provider.id}`}
         />
       </Button>
+      {isLastUsed && <LastUsedBadge />}
     </form>
   );
 }

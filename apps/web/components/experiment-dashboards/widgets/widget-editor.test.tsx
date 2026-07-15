@@ -52,8 +52,13 @@ describe("WidgetEditor", () => {
       config: { visualizationId: undefined, showTitle: true, showDescription: false },
     });
     renderWidgetEditor(widget);
+    // next/dynamic pulls the Plotly chain; a cold import can exceed the default 1s.
     expect(
-      await screen.findByText("editor.visualizationConfig.pickVisualization"),
+      await screen.findByText(
+        "editor.visualizationConfig.pickVisualization",
+        {},
+        { timeout: 10000 },
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -42,7 +42,9 @@ describe("WidgetRenderer", () => {
       config: { visualizationId: undefined, showTitle: true, showDescription: false },
     });
     render(<WidgetRenderer widget={widget} experimentId="exp-1" />);
-    // The visualization renderer is dynamic; wait for it to mount.
-    expect(await screen.findByText("widget.emptyVisualization")).toBeInTheDocument();
+    // The visualization renderer is dynamic; a cold Plotly import can exceed the default 1s.
+    expect(
+      await screen.findByText("widget.emptyVisualization", {}, { timeout: 10000 }),
+    ).toBeInTheDocument();
   });
 });

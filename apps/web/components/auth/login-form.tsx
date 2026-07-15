@@ -14,8 +14,10 @@ import {
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { cva } from "@repo/ui/lib/utils";
 
+import { useLastLoginMethod } from "../../hooks/auth/useLastLoginMethod/useLastLoginMethod";
 import { EmailLoginForm } from "./email-login-form";
 import { OAuthLoginForm } from "./oauth-login-form";
+import { PasskeyLoginButton } from "./passkey-login-button";
 
 /**
  * Provider map for displaying available auth providers
@@ -43,9 +45,11 @@ const providerGridVariants = cva("mb-6 grid w-full grid-cols-1 gap-3", {
 function ProviderGrid({
   providers,
   callbackUrl,
+  lastLoginMethod,
 }: {
   providers: { id: string; name: string }[];
   callbackUrl: string | undefined;
+  lastLoginMethod: string | null;
 }) {
   const count = providers.length;
   const variant = count === 2 ? 2 : count === 3 ? 3 : count > 3 ? "many" : 1;
@@ -58,6 +62,7 @@ function ProviderGrid({
           provider={provider}
           callbackUrl={callbackUrl}
           layoutCount={count}
+          isLastUsed={lastLoginMethod === provider.id}
         />
       ))}
     </div>
@@ -76,6 +81,7 @@ interface LoginFormProps {
 export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
   const { t } = useTranslation();
   const [showOTP, setShowOTP] = useState(false);
+  const lastLoginMethod = useLastLoginMethod();
 
   const emailProvider = providerMap.find((p) => p.id === "email");
   const oauthProviders = providerMap.filter((p) => p.id !== "email");
@@ -89,7 +95,12 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
 
       {/* Email provider */}
       {emailProvider && (
-        <EmailLoginForm callbackUrl={callbackUrl} locale={locale} onShowOTPChange={setShowOTP} />
+        <EmailLoginForm
+          callbackUrl={callbackUrl}
+          locale={locale}
+          onShowOTPChange={setShowOTP}
+          isLastUsed={lastLoginMethod === "email"}
+        />
       )}
 
       {/* Divider */}
@@ -102,7 +113,18 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       )}
 
       {/* OAuth providers */}
-      {!showOTP && <ProviderGrid providers={oauthProviders} callbackUrl={callbackUrl} />}
+      {!showOTP && (
+        <ProviderGrid
+          providers={oauthProviders}
+          callbackUrl={callbackUrl}
+          lastLoginMethod={lastLoginMethod}
+        />
+      )}
+
+      {/* Passkey sign-in */}
+      {!showOTP && (
+        <PasskeyLoginButton callbackUrl={callbackUrl} isLastUsed={lastLoginMethod === "passkey"} />
+      )}
 
       <div className="flex-1" />
 
