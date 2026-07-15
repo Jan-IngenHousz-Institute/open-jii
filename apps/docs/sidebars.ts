@@ -124,6 +124,11 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "doc",
+      id: "data-platform/multi-device-measurements",
+      label: "Multi-device measurements",
+    },
+    {
+      type: "doc",
       id: "data-platform/data-governance",
       label: "Data Governance",
     },

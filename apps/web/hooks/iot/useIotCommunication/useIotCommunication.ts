@@ -25,7 +25,7 @@ interface DeviceInfo {
   device_id?: string;
 }
 
-async function createAdapter(
+export async function createAdapter(
   sensorFamily: SensorFamily,
   connectionType: ConnectionType,
 ): Promise<ITransportAdapter> {
@@ -49,13 +49,13 @@ async function createAdapter(
     });
   }
 
-  // Serial — use device-specific defaults
+  // Serial - use device-specific defaults
   const serialDefaults =
     sensorFamily === "multispeq" ? MULTISPEQ_SERIAL_DEFAULTS : GENERIC_SERIAL_DEFAULTS;
   return WebSerialAdapter.requestAndConnect(serialDefaults);
 }
 
-function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
+export function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
   return sensorFamily === "multispeq" ? new MultispeqDriver() : new GenericDeviceDriver();
 }
 

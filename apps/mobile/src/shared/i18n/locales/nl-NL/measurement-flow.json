@@ -121,6 +121,9 @@
       "answers": "Antwoorden: ",
       "date": "Datum: ",
       "noQuestionsAnswered": "Geen vragen beantwoord"
+    },
+    "workbookRun": {
+      "deviceHeading": "Apparaat {{index}}: {{name}}"
     }
   },
   "commandNode": {
@@ -173,7 +176,15 @@
     "cancelMeasurement": "Meting annuleren",
     "startMeasurement": "Meting starten",
     "retryMeasurement": "Meting opnieuw proberen",
-    "connectToDevice": "Verbinden met apparaat"
+    "connectToDevice": "Verbinden met apparaat",
+    "multiScan": {
+      "scanningOnCount": "Meten op {{count}} apparaten",
+      "deviceDone": "Klaar",
+      "deviceFailed": "Mislukt",
+      "partialTitle": "{{failed}} van {{total}} apparaten mislukt",
+      "continueWithSuccessful": "Doorgaan met {{count}}",
+      "retryFailed": "Mislukte apparaten opnieuw"
+    }
   },
   "questionNode": {
     "autoProceeded": {

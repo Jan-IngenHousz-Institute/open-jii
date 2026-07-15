@@ -37,6 +37,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const macro = content.macro;
   const {
     scanResult,
+    scanResults,
     previousStep,
     nextStep,
     experimentId,
@@ -60,12 +61,20 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     fallback: t("measurementFlow:analysis.node.defaultExperimentName"),
   });
 
+  // Multi-scan results; falls back to the legacy single scanResult for
+  // pre-migration persisted flow snapshots.
+  const results = useMemo(
+    () => scanResults ?? (scanResult ? [{ device: undefined, result: scanResult }] : []),
+    [scanResults, scanResult],
+  );
+  const isMultiDevice = results.length > 1;
+
   const { getCycleAnswers } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
 
-  const { isUploading, uploadMeasurement } = useMeasurementUpload();
+  const { isUploading, uploadMeasurements } = useMeasurementUpload();
   const { updateMeasurementComment } = useMeasurements();
 
   const cycleAnswers = getCycleAnswers(iterationCount);
@@ -96,7 +105,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   );
 
   const handleUploadMeasurement = async () => {
-    if (!scanResult) {
+    if (results.length === 0) {
       return;
     }
 
@@ -121,8 +130,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
 
-    await uploadMeasurement({
-      rawMeasurement: scanResult,
+    await uploadMeasurements({
+      results: results.map(({ device, result }) => ({ rawMeasurement: result, device })),
       timestamp,
       timezone,
       experimentName,
@@ -172,13 +181,33 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           onPress={() => setQuestionsModalVisible(true)}
         />
 
-        <AnalysisMacroResult
-          macro={macro}
-          isLoading={false}
-          macroId={content.macroId}
-          scanResult={scanResult}
-          onCommentPress={() => setCommentModalVisible(true)}
-        />
+        {isMultiDevice ? (
+          results.map(({ device, result }, index) => (
+            <View key={device?.id ?? index}>
+              <Text className={clsx("mt-3 text-sm font-bold", classes.text)}>
+                {t("measurementFlow:analysis.workbookRun.deviceHeading", {
+                  index: index + 1,
+                  name: device?.name ?? `#${index + 1}`,
+                })}
+              </Text>
+              <AnalysisMacroResult
+                macro={macro}
+                isLoading={false}
+                macroId={content.macroId}
+                scanResult={result}
+                onCommentPress={() => setCommentModalVisible(true)}
+              />
+            </View>
+          ))
+        ) : (
+          <AnalysisMacroResult
+            macro={macro}
+            isLoading={false}
+            macroId={content.macroId}
+            scanResult={scanResult}
+            onCommentPress={() => setCommentModalVisible(true)}
+          />
+        )}
       </ScrollView>
 
       <AnalysisActionBar

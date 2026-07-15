@@ -1,12 +1,17 @@
 import { clsx } from "clsx";
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
+import type { DeviceScanState } from "~/features/connection/hooks/use-multi-scanner";
 import type { CommandProgress } from "~/features/connection/services/multispeq-communication/driver-command-executor";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { DeviceScanProgressList } from "./device-scan-progress-list";
+
 interface ScanningStateProps {
   protocolName?: string;
+  /** Per-device round state; more than one entry switches to the multi-scan list. */
+  deviceStates?: DeviceScanState[];
   /** Live transfer progress of the in-flight command, if any. */
   progress?: CommandProgress;
   /** Epoch ms the scan started, drives the elapsed-time readout. */
@@ -41,10 +46,12 @@ function formatDuration(ms: number): string {
  * The honest progress signal is therefore time: a big, always-ticking elapsed
  * clock shown against the protocol's estimate. The activity line states plainly
  * that the device is working silently, and flips to "Receiving results…" the
- * moment the final reply burst lands.
+ * moment the final reply burst lands. A multi-scan round adds a per-device
+ * status list; the clock and estimate apply to the whole round (one protocol).
  */
 export function ScanningState({
   protocolName,
+  deviceStates,
   progress,
   scanStartedAt,
   estimatedMs,
@@ -52,6 +59,7 @@ export function ScanningState({
 }: ScanningStateProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
+  const isMultiDevice = (deviceStates?.length ?? 0) > 1;
 
   // Tick once a second so the elapsed clock advances even while the device is
   // silent, the timer, not a device event, is what proves liveness here.
@@ -72,7 +80,11 @@ export function ScanningState({
 
   const title = overEstimate
     ? t("measurementFlow:measurementNode.scanning.takingLonger")
-    : t("measurementFlow:measurementNode.scanning.title");
+    : isMultiDevice
+      ? t("measurementFlow:measurementNode.multiScan.scanningOnCount", {
+          count: deviceStates?.length,
+        })
+      : t("measurementFlow:measurementNode.scanning.title");
 
   // The MultispeQ stays silent until the protocol finishes, so until the final
   // reply lands the only honest status is "measuring"; it flips to "receiving"
@@ -88,7 +100,11 @@ export function ScanningState({
         <Text className={clsx("text-center text-base", classes.textMuted)}>{protocolName}</Text>
       )}
 
-      <ActivityIndicator size="large" color={colors.brand} />
+      {isMultiDevice && deviceStates ? (
+        <DeviceScanProgressList deviceStates={deviceStates} />
+      ) : (
+        <ActivityIndicator size="large" color={colors.brand} />
+      )}
 
       {/* Total elapsed, the primary, always-visible clock. Tabular figures so
           the width doesn't jitter as the digits tick. */}

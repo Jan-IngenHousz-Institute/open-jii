@@ -8,15 +8,15 @@ import type { Device } from "~/shared/types/device";
  * The single home of disconnect-detection wiring, mounted once at app boot
  * (mirrors mountOutboxBridge). Two paths feed it:
  *
- *   1. Native onDeviceDisconnected — fires immediately when the OS reports
+ *   1. Native onDeviceDisconnected: fires immediately when the OS reports
  *      a disconnect (when it bothers to). Invalidates the query so the UI
  *      flips to the disconnect state ASAP.
- *   2. QueryCache subscriber on the connected-device key — catches the
+ *   2. QueryCache subscriber on the connected-devices key: catches the
  *      polling-detected disconnect case (common on Android when the device
- *      is simply powered off and no native event fires) AND the native
- *      event case after the invalidation refetches null. Either way, the
- *      scanner executor store gets cleared exactly when data transitions
- *      from non-null → null.
+ *      is simply powered off or unplugged and no native event fires) AND
+ *      the native event case after the invalidation refetches. The id-set
+ *      diff clears exactly the disappeared devices' executors, so unplugging
+ *      one of N hub devices fails only that device's in-flight scan.
  *
  * Returns an unmount fn that detaches both listeners.
  */
@@ -26,18 +26,24 @@ export function mountConnectionLifecycle({
   queryClient: QueryClient;
 }): () => void {
   const nativeSub = RNBluetoothClassic.onDeviceDisconnected(() => {
-    void queryClient.invalidateQueries({ queryKey: connectionKeys.connectedDevice });
+    void queryClient.invalidateQueries({ queryKey: connectionKeys.connectedDevices });
   });
 
-  let prev: Device | null | undefined = queryClient.getQueryData(connectionKeys.connectedDevice);
+  let prevIds = new Set<string>(
+    queryClient.getQueryData<Device[]>(connectionKeys.connectedDevices)?.map((d) => d.id) ?? [],
+  );
   const unsubscribeCache = queryClient.getQueryCache().subscribe((event) => {
     if (event.type !== "updated") return;
-    if (event.query.queryKey[0] !== connectionKeys.connectedDevice[0]) return;
-    const next = event.query.state.data as Device | null | undefined;
-    if (prev && !next) {
-      void useScannerCommandExecutorStore.getState().setDevice(undefined);
-    }
-    prev = next;
+    if (event.query.queryKey[0] !== connectionKeys.connectedDevices[0]) return;
+    const next = event.query.state.data as Device[] | undefined;
+    if (next === undefined) return;
+    const nextIds = new Set(next.map((d) => d.id));
+    prevIds.forEach((id) => {
+      if (!nextIds.has(id)) {
+        void useScannerCommandExecutorStore.getState().removeDevice(id);
+      }
+    });
+    prevIds = nextIds;
   });
 
   return () => {

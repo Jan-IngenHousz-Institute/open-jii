@@ -6,7 +6,8 @@ At the moment the mobile app is mostly targeted at the MultispeQ sensor, but mor
 ## Key features
 
 - Log in via **ORCID, GitHub or email** (6-digit OTP code)
-- Connect to **MultispeQ** via Bluetooth
+- Connect sensors via Bluetooth or USB — including
+  [several devices at once](./004-multi-device-measurements.md) over a USB hub, measured in parallel
 - Inspect MultispeQ battery status
 - **Take measurements** via MultispeQ
 - Streamlined measurement flow with animated progress bar

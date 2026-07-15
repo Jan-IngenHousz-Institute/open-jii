@@ -16,6 +16,9 @@ export interface BuildUploadPayloadArgs {
   timezone: string;
   questions: AnswerData[];
   commentText?: string;
+  /** One uuid per multi-device round (see CONTEXT.md: Workbook run). */
+  workbookRunId?: string;
+  fallbackDeviceId?: string;
 }
 
 // Pure: never mutates rawMeasurement or its sample entries. Macro filenames
@@ -28,6 +31,8 @@ export function buildUploadPayload({
   timezone,
   questions,
   commentText,
+  workbookRunId,
+  fallbackDeviceId,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
 
@@ -49,6 +54,12 @@ export function buildUploadPayload({
     ...rawMeasurement,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
+    // The firmware-provided device_id wins; the local USB/BT id is a weak
+    // fallback (Android USB deviceIds are transient across replugs).
+    ...(rawMeasurement.device_id == null && fallbackDeviceId
+      ? { device_id: fallbackDeviceId }
+      : {}),
+    ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.

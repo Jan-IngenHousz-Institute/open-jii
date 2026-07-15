@@ -43,7 +43,10 @@
     "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt.",
     "allowBluetooth": "Bluetooth-scannen toestaan",
     "permissionHeading": "Bluetooth-scannen staat uit",
-    "permissionExplainer": "Sta Bluetooth toe om MultispeQs in de buurt te vinden."
+    "permissionExplainer": "Sta Bluetooth toe om MultispeQs in de buurt te vinden.",
+    "connectedCount_one": "{{count}} apparaat verbonden",
+    "connectedCount_other": "{{count}} apparaten verbonden",
+    "addAnotherHint": "Sluit meer sensoren aan op de hub en koppel ze. Een USB-hub met eigen voeding wordt aanbevolen."
   },
   "chip": {
     "connect": "Verbinden",

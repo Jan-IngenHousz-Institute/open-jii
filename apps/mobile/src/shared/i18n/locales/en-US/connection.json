@@ -43,7 +43,10 @@
     "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds.",
     "allowBluetooth": "Allow Bluetooth scanning",
     "permissionHeading": "Bluetooth scanning is off",
-    "permissionExplainer": "Allow Bluetooth to find nearby MultispeQs."
+    "permissionExplainer": "Allow Bluetooth to find nearby MultispeQs.",
+    "connectedCount_one": "{{count}} device connected",
+    "connectedCount_other": "{{count}} devices connected",
+    "addAnotherHint": "Plug more sensors into the hub and pair them. A powered USB hub is recommended."
   },
   "chip": {
     "connect": "Connect",
