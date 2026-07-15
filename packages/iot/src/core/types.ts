@@ -36,6 +36,11 @@ export interface DeviceTransportSupport {
    * Bluetooth Classic is available on React Native but NOT on Web Bluetooth API.
    */
   supportsBluetoothClassic: boolean;
+  /**
+   * Whether the device accepts a stored configuration (SET_CONFIG). MultispeQ
+   * does not: its procedure is sent inline at measurement time.
+   */
+  supportsStoredConfig: boolean;
 }
 
 /**
@@ -51,11 +56,13 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: true,
+    supportsStoredConfig: false,
   },
   generic: {
     supportedTransports: ["bluetooth", "serial"],
     supportsBLE: true,
     supportsBluetoothClassic: false,
+    supportsStoredConfig: true,
   },
 };
 

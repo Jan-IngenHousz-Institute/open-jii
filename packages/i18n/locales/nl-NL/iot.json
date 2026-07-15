@@ -55,12 +55,12 @@
       "connect": "Apparaat verbinden",
       "disconnect": "Verbinding verbreken",
       "push": "Naar apparaat sturen",
-      "serial": "Serieel",
-      "bluetooth": "Bluetooth",
       "connectError": "Kon geen verbinding maken met het apparaat",
       "pushSuccess": "Configuratie naar het apparaat gestuurd",
       "pushError": "Kon de configuratie niet versturen",
-      "multispeqNote": "MultispeQ-apparaten ontvangen hun procedure op meetmoment; download in plaats daarvan de configuratie."
+      "multispeqNote": "MultispeQ-apparaten ontvangen hun procedure op meetmoment; download in plaats daarvan de configuratie.",
+      "loadError": "Kon de experimenten niet laden. Probeer het opnieuw.",
+      "inactiveDevice": "Dit apparaat heeft geen actieve inloggegevens en kan daarom niet worden onboardet. Geef eerst inloggegevens uit."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",
@@ -70,7 +70,8 @@
       "empty": "Er zijn nog geen apparaten aan dit experiment gekoppeld.",
       "detach": "Ontkoppelen",
       "detachSuccess": "Apparaat ontkoppeld van het experiment",
-      "detachError": "Kon het apparaat niet ontkoppelen"
+      "detachError": "Kon het apparaat niet ontkoppelen",
+      "loadError": "Kon de apparaten niet laden. Probeer het opnieuw."
     }
   }
 }

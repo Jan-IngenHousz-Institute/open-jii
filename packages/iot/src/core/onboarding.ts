@@ -1,11 +1,12 @@
 import type { IDeviceDriver } from "../driver/driver-base";
-import { GenericDeviceDriver } from "../driver/generic/driver";
 import type { DeviceType } from "./types";
+import { DEVICE_TRANSPORT_SUPPORT } from "./types";
 
 /**
  * Payload delivered to a device during onboarding. The shape of `config` is
  * owned by the caller (e.g. the platform's onboarding config document); this
- * package only defines how it reaches the device.
+ * package only defines how it reaches the device. On the wire it becomes
+ * `{"command":"SET_CONFIG","params":{"config":...,"id":...}}`.
  */
 export interface DeviceConfigDeliveryPayload {
   config: Record<string, unknown>;
@@ -14,24 +15,25 @@ export interface DeviceConfigDeliveryPayload {
 }
 
 /**
- * Whether a device family can receive a stored configuration. MultispeQ has no
- * config command; its procedure is sent inline at measurement time.
+ * Whether a device family can receive a stored configuration, from the same
+ * registry that declares transport support.
  */
 export function supportsConfigDelivery(deviceType: DeviceType): boolean {
-  return deviceType !== "multispeq";
+  return DEVICE_TRANSPORT_SUPPORT[deviceType].supportsStoredConfig;
 }
 
 /**
  * Deliver an onboarding config to a connected device, platform-agnostically:
- * the driver may sit on Web Serial/BLE or a React Native transport alike.
+ * the driver may sit on Web Serial/BLE or a React Native transport alike. Any
+ * driver exposing the optional IDeviceDriver.setConfig can receive it.
  */
 export async function deliverDeviceConfig(
   driver: IDeviceDriver,
   payload: DeviceConfigDeliveryPayload,
 ): Promise<void> {
-  if (!(driver instanceof GenericDeviceDriver)) {
-    throw new Error("Config delivery requires a generic-family device driver");
+  if (!driver.setConfig) {
+    throw new Error("The connected device's driver does not support stored configuration");
   }
 
-  await driver.setConfig({ config: payload.config, id: payload.id });
+  await driver.setConfig(payload);
 }

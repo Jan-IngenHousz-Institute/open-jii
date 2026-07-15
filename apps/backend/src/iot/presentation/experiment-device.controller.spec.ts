@@ -6,6 +6,7 @@ import type {
   DeviceOnboardingConfig,
   ExperimentDeviceList,
 } from "@repo/api/schemas/iot.schema";
+import { eq, experiments } from "@repo/database";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { success } from "../../common/utils/fp-utils";
@@ -42,7 +43,7 @@ describe("ExperimentDeviceController", () => {
     testApp.resolvePath(contract.iot.onboardDevice.path, { deviceId });
 
   it("onboards a device and returns its config (200)", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "Photosynthesis", userId });
 
     const response: SuperTestResponse<DeviceOnboardingConfig> = await testApp
@@ -58,7 +59,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("re-issues the config for an empty body (200)", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
     await testApp
       .post(onboardPath(device.id))
@@ -76,7 +77,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("lists the experiments a device serves (200)", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "Alpha", userId });
     await testApp
       .post(onboardPath(device.id))
@@ -98,7 +99,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("lists and detaches a device on the experiment side", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
     await testApp
       .post(onboardPath(device.id))
@@ -129,10 +130,42 @@ describe("ExperimentDeviceController", () => {
     expect(after.body).toEqual([]);
   });
 
+  it("detaches a device from a since-archived experiment (204)", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    await testApp
+      .post(onboardPath(device.id))
+      .withAuth(userId)
+      .send({ experimentIds: [experiment.id] })
+      .expect(StatusCodes.OK);
+
+    await testApp.database
+      .update(experiments)
+      .set({ status: "archived" })
+      .where(eq(experiments.id, experiment.id));
+
+    const removePath = testApp.resolvePath(contract.experiments.removeExperimentDevice.path, {
+      id: experiment.id,
+      deviceId: device.id,
+    });
+    await testApp.delete(removePath).withAuth(userId).expect(StatusCodes.NO_CONTENT);
+  });
+
+  it("returns 400 when onboarding a device without active credentials", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+
+    await testApp
+      .post(onboardPath(device.id))
+      .withAuth(userId)
+      .send({ experimentIds: [experiment.id] })
+      .expect(StatusCodes.BAD_REQUEST);
+  });
+
   it("returns 403 when onboarding to an experiment the caller is not a member of", async () => {
     const stranger = await testApp.createTestUser({});
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
-    const device = await testApp.createIotDevice({ createdBy: stranger });
+    const device = await testApp.createIotDevice({ createdBy: stranger, status: "active" });
 
     await testApp
       .post(onboardPath(device.id))
@@ -142,7 +175,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("returns 400 for an invalid body", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
 
     await testApp
       .post(onboardPath(device.id))
@@ -152,7 +185,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("returns 401 when unauthenticated", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
 
     await testApp.post(onboardPath(device.id)).send({}).expect(StatusCodes.UNAUTHORIZED);
   });

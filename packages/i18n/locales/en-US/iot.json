@@ -193,12 +193,12 @@
       "connect": "Connect device",
       "disconnect": "Disconnect",
       "push": "Push to device",
-      "serial": "Serial",
-      "bluetooth": "Bluetooth",
       "connectError": "Could not connect to the device",
       "pushSuccess": "Configuration pushed to the device",
       "pushError": "Could not push the configuration",
-      "multispeqNote": "MultispeQ devices receive their procedure at measurement time; download the configuration instead."
+      "multispeqNote": "MultispeQ devices receive their procedure at measurement time; download the configuration instead.",
+      "loadError": "Could not load experiments. Try again.",
+      "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first."
     },
     "experimentDevices": {
       "tabLabel": "Devices",
@@ -208,7 +208,8 @@
       "empty": "No devices are onboarded to this experiment yet.",
       "detach": "Detach",
       "detachSuccess": "Device detached from the experiment",
-      "detachError": "Could not detach the device"
+      "detachError": "Could not detach the device",
+      "loadError": "Could not load the devices. Try again."
     }
   }
 }

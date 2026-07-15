@@ -1,3 +1,5 @@
+import { eq, experiments, workbookVersions } from "@repo/database";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ExperimentDeviceRepository } from "./experiment-device.repository";
@@ -38,10 +40,10 @@ describe("ExperimentDeviceRepository", () => {
     expect(byExperiment.value[0].device.serialNumber).toBe(device.serialNumber);
     expect(byExperiment.value[0].addedBy).toBe(userId);
 
-    const byDevice = await repository.listExperimentsByDevice(device.id);
+    const byDevice = await repository.listExperimentsByDeviceForOwner(device.id, userId);
     assertSuccess(byDevice);
     expect(byDevice.value).toHaveLength(1);
-    expect(byDevice.value[0].name).toBe("Alpha");
+    expect(byDevice.value?.[0].name).toBe("Alpha");
   });
 
   it("ignores a duplicate binding instead of raising a conflict", async () => {
@@ -63,9 +65,23 @@ describe("ExperimentDeviceRepository", () => {
     const bound = await repository.addExperiments(device.id, [], userId);
 
     assertSuccess(bound);
-    const listed = await repository.listExperimentsByDevice(device.id);
+    const listed = await repository.listExperimentsByDeviceForOwner(device.id, userId);
     assertSuccess(listed);
     expect(listed.value).toEqual([]);
+  });
+
+  it("distinguishes a missing device (null) from a device with no bindings ([])", async () => {
+    const stranger = await testApp.createTestUser({});
+    const mine = await testApp.createIotDevice({ createdBy: userId });
+    const theirs = await testApp.createIotDevice({ createdBy: stranger });
+
+    const unbound = await repository.listExperimentsByDeviceForOwner(mine.id, userId);
+    assertSuccess(unbound);
+    expect(unbound.value).toEqual([]);
+
+    const notMine = await repository.listExperimentsByDeviceForOwner(theirs.id, userId);
+    assertSuccess(notMine);
+    expect(notMine.value).toBeNull();
   });
 
   it("reports whether a binding was actually removed", async () => {
@@ -93,5 +109,37 @@ describe("ExperimentDeviceRepository", () => {
     expect(onboarding.value).toHaveLength(1);
     expect(onboarding.value[0].experimentName).toBe("Unpinned");
     expect(onboarding.value[0].workbook).toBeNull();
+  });
+
+  it("degrades a nonconforming pinned workbook to null instead of failing the whole call", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    const { experiment: healthy } = await testApp.createExperiment({ name: "Healthy", userId });
+    const { experiment: poisoned } = await testApp.createExperiment({ name: "Poisoned", userId });
+    await repository.addExperiments(device.id, [healthy.id, poisoned.id], userId);
+
+    const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
+    const [badVersion] = await testApp.database
+      .insert(workbookVersions)
+      .values({
+        workbookId: workbook.id,
+        version: 1,
+        // Not a valid cell shape: predates the current cell schema.
+        cells: [{ kind: "legacy-cell" }],
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+        createdBy: userId,
+      })
+      .returning();
+    await testApp.database
+      .update(experiments)
+      .set({ workbookId: workbook.id, workbookVersionId: badVersion.id })
+      .where(eq(experiments.id, poisoned.id));
+
+    const onboarding = await repository.listOnboardingExperiments(device.id);
+
+    assertSuccess(onboarding);
+    expect(onboarding.value).toHaveLength(2);
+    const poisonedRow = onboarding.value.find((row) => row.experimentId === poisoned.id);
+    expect(poisonedRow?.workbook).toBeNull();
   });
 });

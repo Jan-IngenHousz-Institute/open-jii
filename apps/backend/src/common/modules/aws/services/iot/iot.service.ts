@@ -13,7 +13,7 @@ import {
 import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { AppError, Result, tryCatch } from "../../../../utils/fp-utils";
+import { AppError, Result, success, tryCatch } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
 import type {
   CreateThingInput,
@@ -25,6 +25,7 @@ import type {
 @Injectable()
 export class AwsIotService {
   private readonly iotClient: IoTClient;
+  private cachedDataEndpoint: string | null = null;
 
   constructor(private readonly awsConfig: AwsConfigService) {
     this.iotClient = new IoTClient({ region: this.awsConfig.region });
@@ -126,9 +127,15 @@ export class AwsIotService {
   }
 
   // The account's MQTT broker host. ATS is the endpoint devices must use with
-  // the Amazon Root CA bundle handed out alongside the certificate.
+  // the Amazon Root CA bundle handed out alongside the certificate. The value is
+  // constant per account/region and DescribeEndpoint is throttled, so a resolved
+  // endpoint is cached for the process lifetime; failures are never cached.
   async describeDataEndpoint(): Promise<Result<string>> {
-    return tryCatch(
+    if (this.cachedDataEndpoint !== null) {
+      return success(this.cachedDataEndpoint);
+    }
+
+    const result = await tryCatch(
       async () => {
         const response = await this.iotClient.send(
           new DescribeEndpointCommand({ endpointType: "iot:Data-ATS" }),
@@ -145,6 +152,12 @@ export class AwsIotService {
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED),
     );
+
+    if (result.isSuccess()) {
+      this.cachedDataEndpoint = result.value;
+    }
+
+    return result;
   }
 
   async updateCertificateStatus(

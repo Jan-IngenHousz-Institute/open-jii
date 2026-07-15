@@ -1,6 +1,8 @@
 "use client";
 
+import { ConnectionTypeSelector } from "@/components/iot/iot-connection-type-selector";
 import { sensorFamilyToDeviceType } from "@/hooks/iot/device-type-mapping";
+import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import type { ConnectionType } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import { Download, Loader2, Send, Usb } from "lucide-react";
@@ -10,13 +12,6 @@ import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/schemas/iot.sc
 import { useTranslation } from "@repo/i18n";
 import { deliverDeviceConfig, supportsConfigDelivery } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { downloadText } from "./iot-credential-file";
@@ -31,25 +26,33 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
   const [connectionType, setConnectionType] = useState<ConnectionType>("serial");
   const [isPushing, setIsPushing] = useState(false);
 
-  const { isConnected, isConnecting, driver, connect, disconnect } = useIotCommunication(
+  const browserSupport = useIotBrowserSupport(device.deviceType);
+  const { isConnected, isConnecting, error, driver, connect, disconnect } = useIotCommunication(
     device.deviceType,
     connectionType,
   );
 
   // MultispeQ has no stored-config command, so delivery for it is download-only.
   const supportsPush = supportsConfigDelivery(sensorFamilyToDeviceType(device.deviceType));
+  const showConnectError = error !== null && !isConnected && !isConnecting;
 
   const handleDownload = () => {
     downloadText(`${device.thingName}-config.json`, JSON.stringify(config, null, 2));
   };
 
   const handleConnect = () => {
-    void connect().catch(() => {
-      toast({ title: t("iot.onboarding.connectError"), variant: "destructive" });
-    });
+    void connect();
   };
 
-  const handlePush = async () => {
+  const handleDisconnect = () => {
+    void disconnect();
+  };
+
+  const handleConnectionTypeChange = (type: ConnectionType) => {
+    setConnectionType(type);
+  };
+
+  const pushConfig = async () => {
     if (!driver) {
       return;
     }
@@ -64,8 +67,8 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
     }
   };
 
-  const startPush = () => {
-    void handlePush();
+  const handlePush = () => {
+    void pushConfig();
   };
 
   return (
@@ -89,6 +92,14 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
         </ul>
       </div>
 
+      {supportsPush && !isConnected && (
+        <ConnectionTypeSelector
+          connectionType={connectionType}
+          onConnectionTypeChange={handleConnectionTypeChange}
+          browserSupport={browserSupport}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" onClick={handleDownload}>
           <Download className="mr-1.5 h-4 w-4" />
@@ -96,36 +107,19 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
         </Button>
 
         {supportsPush && !isConnected && (
-          <>
-            <Select
-              value={connectionType}
-              onValueChange={(value) =>
-                setConnectionType(value === "bluetooth" ? "bluetooth" : "serial")
-              }
-              disabled={isConnecting}
-            >
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="serial">{t("iot.onboarding.serial")}</SelectItem>
-                <SelectItem value="bluetooth">{t("iot.onboarding.bluetooth")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleConnect} disabled={isConnecting}>
-              {isConnecting ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Usb className="mr-1.5 h-4 w-4" />
-              )}
-              {t("iot.onboarding.connect")}
-            </Button>
-          </>
+          <Button onClick={handleConnect} disabled={isConnecting}>
+            {isConnecting ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Usb className="mr-1.5 h-4 w-4" />
+            )}
+            {t("iot.onboarding.connect")}
+          </Button>
         )}
 
         {supportsPush && isConnected && (
           <>
-            <Button onClick={startPush} disabled={isPushing}>
+            <Button onClick={handlePush} disabled={isPushing}>
               {isPushing ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
@@ -133,12 +127,16 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
               )}
               {t("iot.onboarding.push")}
             </Button>
-            <Button variant="outline" onClick={() => void disconnect()}>
+            <Button variant="outline" onClick={handleDisconnect}>
               {t("iot.onboarding.disconnect")}
             </Button>
           </>
         )}
       </div>
+
+      {showConnectError && (
+        <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
+      )}
 
       {!supportsPush && (
         <p className="text-muted-foreground text-xs">{t("iot.onboarding.multispeqNote")}</p>

@@ -1,7 +1,7 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentDevicesPanel } from "@/components/experiment-settings/devices/experiment-devices-panel";
+import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { notFound } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -21,37 +21,28 @@ export default function ExperimentDevicesPage({ params }: ExperimentDevicesPageP
   const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
 
-  if (devicesEnabled === false) notFound();
-  if (!devicesEnabled) return null;
-
-  if (isLoading) {
-    return (
-      <div className="text-muted-foreground mx-auto w-full max-w-7xl p-8 text-center">
-        {t("iot.experimentDevices.loading")}
-      </div>
-    );
+  if (devicesEnabled === false) {
+    notFound();
   }
-
-  if (error) {
-    const errorObj = error as { status?: number };
-    if (errorObj.status === 404 || errorObj.status === 400) notFound();
-    return (
-      <div className="mx-auto w-full max-w-7xl">
-        <ErrorDisplay error={error} />
-      </div>
-    );
+  if (!devicesEnabled) {
+    return null;
   }
-
-  if (!accessData?.body.experiment) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold">{t("iot.experimentDevices.title")}</h2>
-        <p className="text-muted-foreground text-sm">{t("iot.experimentDevices.description")}</p>
-      </div>
+    <EntityLayoutShell
+      isLoading={isLoading}
+      error={error}
+      hasData={Boolean(accessData?.body.experiment)}
+      loadingMessage={t("iot.experimentDevices.loading")}
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold">{t("iot.experimentDevices.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("iot.experimentDevices.description")}</p>
+        </div>
 
-      <ExperimentDevicesPanel experimentId={id} />
-    </div>
+        <ExperimentDevicesPanel experimentId={id} />
+      </div>
+    </EntityLayoutShell>
   );
 }

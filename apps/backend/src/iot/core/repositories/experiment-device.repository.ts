@@ -68,7 +68,12 @@ export class ExperimentDeviceRepository {
     });
   }
 
-  async listExperimentsByDevice(deviceId: string): Promise<Result<DeviceExperimentDto[]>> {
+  // Owner-scoped in one round-trip: null means the device does not exist for
+  // this owner, an empty list means it exists with no bindings.
+  async listExperimentsByDeviceForOwner(
+    deviceId: string,
+    ownerId: string,
+  ): Promise<Result<DeviceExperimentDto[] | null>> {
     return tryCatch(async () => {
       const rows = await this.database
         .select({
@@ -77,11 +82,23 @@ export class ExperimentDeviceRepository {
           status: experiments.status,
           addedAt: experimentDevices.createdAt,
         })
-        .from(experimentDevices)
-        .innerJoin(experiments, eq(experimentDevices.experimentId, experiments.id))
-        .where(eq(experimentDevices.deviceId, deviceId))
+        .from(iotDevices)
+        .leftJoin(experimentDevices, eq(experimentDevices.deviceId, iotDevices.id))
+        .leftJoin(experiments, eq(experimentDevices.experimentId, experiments.id))
+        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, ownerId)))
         .orderBy(desc(experimentDevices.createdAt));
-      return rows;
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const bindings: DeviceExperimentDto[] = [];
+      for (const row of rows) {
+        if (row.id !== null && row.name !== null && row.status !== null && row.addedAt !== null) {
+          bindings.push({ id: row.id, name: row.name, status: row.status, addedAt: row.addedAt });
+        }
+      }
+      return bindings;
     });
   }
 
@@ -123,17 +140,25 @@ export class ExperimentDeviceRepository {
       return rows.map((row) => ({
         experimentId: row.experimentId,
         experimentName: row.experimentName,
-        // Parse (not cast) the jsonb into the typed procedure. Validating what a
-        // device is told to run is worth the round-trip.
-        workbook:
-          row.version === null
-            ? null
-            : {
-                version: row.version,
-                cells: zWorkbookCellArray.parse(row.cells),
-                entitySnapshots: zEntitySnapshots.parse(row.entitySnapshots),
-              },
+        workbook: row.version === null ? null : this.parseWorkbook(row.version, row),
       }));
     });
+  }
+
+  // Parse (not cast) the jsonb into the typed procedure. A version that no
+  // longer conforms (written before a schema change) degrades to a null
+  // workbook instead of failing the device's whole config.
+  private parseWorkbook(
+    version: number,
+    row: { cells: unknown; entitySnapshots: unknown },
+  ): DeviceOnboardingExperimentDto["workbook"] {
+    const cells = zWorkbookCellArray.safeParse(row.cells);
+    const entitySnapshots = zEntitySnapshots.safeParse(row.entitySnapshots);
+
+    if (!cells.success || !entitySnapshots.success) {
+      return null;
+    }
+
+    return { version, cells: cells.data, entitySnapshots: entitySnapshots.data };
   }
 }

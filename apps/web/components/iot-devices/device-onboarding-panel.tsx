@@ -3,45 +3,45 @@
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useOnboardDevice } from "@/hooks/iot/useOnboardDevice/useOnboardDevice";
 import { tsr } from "@/lib/tsr";
-import { FlaskConical, Loader2, Rocket } from "lucide-react";
+import { Loader2, Rocket } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { IotDevice } from "@repo/api/schemas/iot.schema";
-import type { DeviceOnboardingConfig } from "@repo/api/schemas/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { Checkbox } from "@repo/ui/components/checkbox";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { DeviceBoundExperimentRow } from "./device-bound-experiment-row";
 import { DeviceConfigDelivery } from "./device-config-delivery";
+import { DeviceSelectableExperimentRow } from "./device-selectable-experiment-row";
 
 export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   const { t } = useTranslation("iot");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [config, setConfig] = useState<DeviceOnboardingConfig | null>(null);
 
-  const { data: boundData, isLoading: isLoadingBound } = useDeviceExperiments(device.id);
+  const {
+    data: boundData,
+    isLoading: isLoadingBound,
+    isError: isBoundError,
+  } = useDeviceExperiments(device.id);
   const bound = useMemo(() => boundData?.body ?? [], [boundData]);
-  const boundIds = useMemo(() => new Set(bound.map((e) => e.id)), [bound]);
+  const boundIds = useMemo(() => new Set(bound.map((experiment) => experiment.id)), [bound]);
 
-  const { data: experimentsData } = tsr.experiments.listExperiments.useQuery({
-    queryData: { query: { filter: "member" } },
-    queryKey: ["experiments", "member"],
-  });
+  const { data: experimentsData, isError: isExperimentsError } =
+    tsr.experiments.listExperiments.useQuery({
+      queryData: { query: { filter: "member" } },
+      // Mirrors useExperiments' key shape (filter, status, search, archived) so
+      // prefix and exact-match invalidations both cover this cache.
+      queryKey: ["experiments", "member", undefined, "", false],
+    });
   const selectable = useMemo(
     () => (experimentsData?.body ?? []).filter((experiment) => !boundIds.has(experiment.id)),
     [experimentsData, boundIds],
   );
 
-  const { mutate: onboard, isPending: isOnboarding } = useOnboardDevice({
-    onSuccess: (issuedConfig) => {
-      setConfig(issuedConfig);
-      setSelectedIds([]);
-      toast({ title: t("iot.onboarding.onboardSuccess") });
-    },
-  });
+  const { mutate: onboard, isPending: isOnboarding, data: onboardData } = useOnboardDevice();
+  const config = onboardData?.body ?? null;
 
   const handleToggle = (experimentId: string, checked: boolean) => {
     setSelectedIds((ids) =>
@@ -53,15 +53,35 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     onboard(
       { params: { deviceId: device.id }, body: { experimentIds: selectedIds } },
       {
+        onSuccess: () => {
+          setSelectedIds([]);
+          toast({ title: t("iot.onboarding.onboardSuccess") });
+        },
         onError: () => toast({ title: t("iot.onboarding.onboardError"), variant: "destructive" }),
       },
     );
   };
 
+  const renderBoundRow = (experiment: (typeof bound)[number]) => (
+    <DeviceBoundExperimentRow key={experiment.id} experiment={experiment} />
+  );
+
+  const renderSelectableRow = (experiment: (typeof selectable)[number]) => (
+    <DeviceSelectableExperimentRow
+      key={experiment.id}
+      experiment={experiment}
+      isSelected={selectedIds.includes(experiment.id)}
+      onToggle={handleToggle}
+    />
+  );
+
+  // The config only works with live credentials; the backend rejects non-active
+  // devices, so the action is disabled up front with an explanation.
+  const isDeviceActive = device.status === "active";
   const hasBindings = bound.length > 0;
   const hasSelection = selectedIds.length > 0;
   // Re-issuing the config only makes sense once something is bound.
-  const canOnboard = (hasSelection || hasBindings) && !isOnboarding;
+  const canOnboard = isDeviceActive && (hasSelection || hasBindings) && !isOnboarding;
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -73,26 +93,18 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
 
         {isLoadingBound && <Skeleton className="h-14 w-full" />}
 
-        {!isLoadingBound && !hasBindings && (
+        {isBoundError && (
+          <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
+        )}
+
+        {!isLoadingBound && !isBoundError && !hasBindings && (
           <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
             {t("iot.onboarding.currentEmpty")}
           </p>
         )}
 
-        {!isLoadingBound && hasBindings && (
-          <ul className="divide-y rounded-lg border">
-            {bound.map((experiment) => (
-              <li key={experiment.id} className="flex items-center gap-3 px-3 py-2.5">
-                <FlaskConical className="text-muted-foreground h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {experiment.name}
-                </span>
-                <Badge variant="outline" className="shrink-0 capitalize">
-                  {experiment.status}
-                </Badge>
-              </li>
-            ))}
-          </ul>
+        {!isLoadingBound && !isBoundError && hasBindings && (
+          <ul className="divide-y rounded-lg border">{bound.map(renderBoundRow)}</ul>
         )}
       </section>
 
@@ -102,28 +114,20 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.addDescription")}</p>
         </div>
 
-        {selectable.length === 0 && (
+        {isExperimentsError && (
+          <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
+        )}
+
+        {!isExperimentsError && selectable.length === 0 && (
           <p className="text-muted-foreground text-sm">{t("iot.onboarding.addEmpty")}</p>
         )}
 
-        {selectable.length > 0 && (
-          <ul className="divide-y rounded-lg border">
-            {selectable.map((experiment) => (
-              <li key={experiment.id} className="flex items-center gap-3 px-3 py-2.5">
-                <Checkbox
-                  id={`onboard-${experiment.id}`}
-                  checked={selectedIds.includes(experiment.id)}
-                  onCheckedChange={(checked) => handleToggle(experiment.id, checked === true)}
-                />
-                <label
-                  htmlFor={`onboard-${experiment.id}`}
-                  className="min-w-0 flex-1 cursor-pointer truncate text-sm"
-                >
-                  {experiment.name}
-                </label>
-              </li>
-            ))}
-          </ul>
+        {!isExperimentsError && selectable.length > 0 && (
+          <ul className="divide-y rounded-lg border">{selectable.map(renderSelectableRow)}</ul>
+        )}
+
+        {!isDeviceActive && (
+          <p className="text-muted-foreground text-sm">{t("iot.onboarding.inactiveDevice")}</p>
         )}
 
         <Button onClick={handleOnboard} disabled={!canOnboard}>

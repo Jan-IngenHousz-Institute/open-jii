@@ -11,7 +11,7 @@ import { DeviceOnboardingPanel } from "./device-onboarding-panel";
 
 vi.mock("@repo/ui/hooks/use-toast", () => ({ toast: vi.fn() }));
 
-const device = createIotDevice({ deviceType: "ambyte" });
+const device = createIotDevice({ deviceType: "ambyte", status: "active" });
 
 const boundExperiment = {
   id: "11111111-1111-4111-8111-111111111111",

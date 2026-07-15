@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { IDeviceDriver } from "../driver/driver-base";
 import { GenericDeviceDriver } from "../driver/generic/driver";
 import { MultispeqDriver } from "../driver/multispeq/driver";
 import { deliverDeviceConfig, supportsConfigDelivery } from "./onboarding";
@@ -15,9 +16,14 @@ describe("supportsConfigDelivery", () => {
 });
 
 describe("deliverDeviceConfig", () => {
-  it("delivers the payload through the generic driver's stored-config command", async () => {
-    const driver = new GenericDeviceDriver();
-    const setConfig = vi.spyOn(driver, "setConfig").mockResolvedValue(undefined);
+  it("delivers the payload through any driver exposing setConfig", async () => {
+    const setConfig = vi.fn().mockResolvedValue(undefined);
+    const driver: IDeviceDriver = {
+      initialize: vi.fn(),
+      execute: vi.fn(),
+      setConfig,
+      destroy: vi.fn(),
+    };
 
     await deliverDeviceConfig(driver, {
       config: { endpoint: "abc-ats.example.com", experiments: [] },
@@ -34,7 +40,53 @@ describe("deliverDeviceConfig", () => {
     const driver = new MultispeqDriver();
 
     await expect(deliverDeviceConfig(driver, { config: {} })).rejects.toThrow(
-      "Config delivery requires a generic-family device driver",
+      "does not support stored configuration",
     );
+  });
+
+  it("frames the payload as the SET_CONFIG wire command on the generic driver", async () => {
+    const driver = new GenericDeviceDriver();
+    const execute = vi
+      .spyOn(driver, "execute")
+      .mockResolvedValue({ success: true, data: undefined });
+
+    await deliverDeviceConfig(driver, {
+      config: {
+        thingName: "ambyte_AA11",
+        deviceType: "ambyte",
+        endpoint: "abc-ats.example.com",
+        experiments: [
+          {
+            experimentId: "11111111-1111-4111-8111-111111111111",
+            experimentName: "E",
+            topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
+            workbook: null,
+          },
+        ],
+      },
+      id: "ambyte_AA11",
+    });
+
+    // Pins the firmware contract: SET_CONFIG envelope carrying the config
+    // document and the device identifier.
+    expect(execute).toHaveBeenCalledWith({
+      command: "SET_CONFIG",
+      params: {
+        config: {
+          thingName: "ambyte_AA11",
+          deviceType: "ambyte",
+          endpoint: "abc-ats.example.com",
+          experiments: [
+            {
+              experimentId: "11111111-1111-4111-8111-111111111111",
+              experimentName: "E",
+              topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
+              workbook: null,
+            },
+          ],
+        },
+        id: "ambyte_AA11",
+      },
+    });
   });
 });

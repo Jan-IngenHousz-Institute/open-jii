@@ -1,18 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { DeviceExperimentDto } from "../../../core/models/experiment-device.model";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
-import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 @Injectable()
 export class ListDeviceExperimentsUseCase {
   private readonly logger = new Logger(ListDeviceExperimentsUseCase.name);
 
-  constructor(
-    private readonly deviceRepository: IotDeviceRepository,
-    private readonly experimentDeviceRepository: ExperimentDeviceRepository,
-  ) {}
+  constructor(private readonly experimentDeviceRepository: ExperimentDeviceRepository) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<DeviceExperimentDto[]>> {
     this.logger.log({
@@ -22,15 +18,18 @@ export class ListDeviceExperimentsUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
-    if (deviceResult.isFailure()) {
-      return failure(deviceResult.error);
+    const bindingsResult = await this.experimentDeviceRepository.listExperimentsByDeviceForOwner(
+      deviceId,
+      userId,
+    );
+    if (bindingsResult.isFailure()) {
+      return failure(bindingsResult.error);
     }
 
-    if (!deviceResult.value) {
+    if (bindingsResult.value === null) {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
-    return this.experimentDeviceRepository.listExperimentsByDevice(deviceId);
+    return success(bindingsResult.value);
   }
 }

@@ -37,10 +37,8 @@ export class RemoveExperimentDeviceUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
-        if (experiment.status === "archived") {
-          return failure(AppError.forbidden("Cannot detach devices from archived experiments"));
-        }
-
+        // Detach stays allowed on archived experiments: it is cleanup, and the
+        // only way to stop re-issued configs from ever including the binding.
         if (!hasAccess) {
           return failure(AppError.forbidden("Only experiment members can detach its devices"));
         }

@@ -193,12 +193,12 @@
       "connect": "Gerät verbinden",
       "disconnect": "Trennen",
       "push": "An Gerät senden",
-      "serial": "Seriell",
-      "bluetooth": "Bluetooth",
       "connectError": "Verbindung zum Gerät fehlgeschlagen",
       "pushSuccess": "Konfiguration an das Gerät übertragen",
       "pushError": "Konfiguration konnte nicht übertragen werden",
-      "multispeqNote": "MultispeQ-Geräte erhalten ihre Prozedur zur Messzeit; laden Sie stattdessen die Konfiguration herunter."
+      "multispeqNote": "MultispeQ-Geräte erhalten ihre Prozedur zur Messzeit; laden Sie stattdessen die Konfiguration herunter.",
+      "loadError": "Experimente konnten nicht geladen werden. Bitte erneut versuchen.",
+      "inactiveDevice": "Dieses Gerät hat keine aktiven Zugangsdaten und kann daher nicht onboardet werden. Stellen Sie zuerst Zugangsdaten aus."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",
@@ -208,7 +208,8 @@
       "empty": "Diesem Experiment sind noch keine Geräte zugeordnet.",
       "detach": "Entfernen",
       "detachSuccess": "Gerät vom Experiment entfernt",
-      "detachError": "Gerät konnte nicht entfernt werden"
+      "detachError": "Gerät konnte nicht entfernt werden",
+      "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen."
     }
   }
 }
