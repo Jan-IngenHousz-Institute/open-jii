@@ -1,19 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClient, QueryCache, onlineManager, focusManager } from "@tanstack/react-query";
 import {
-  QueryClient,
-  QueryCache,
-  onlineManager,
-  focusManager,
-  defaultShouldDehydrateQuery,
-} from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+  PersistQueryClientProvider,
+  removeOldestQuery,
+} from "@tanstack/react-query-persist-client";
 import React, { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import { toast } from "sonner-native";
 import { isOnline } from "~/shared/device/is-online";
 import { i18n } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
+import { shouldPersistQuery } from "~/shared/ui/persist-query-filter";
 
 const log = createLogger("query-client");
 
@@ -65,8 +63,18 @@ const defaultOptions = {
   },
 };
 
+// New key so the fixed build never reads the old unbounded blob (that read is
+// the importArray OOM). retry sheds the oldest query if a write fails.
+const OFFLINE_CACHE_KEY = "REACT_QUERY_OFFLINE_CACHE_v4";
+
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
+  key: OFFLINE_CACHE_KEY,
+  retry: removeOldestQuery,
+});
+
+void AsyncStorage.removeItem("REACT_QUERY_OFFLINE_CACHE").catch((err) => {
+  log.warn("failed to drop legacy query cache", { err: (err as Error)?.message });
 });
 
 export function ConfiguredQueryClientProvider({ children }) {
@@ -115,12 +123,7 @@ export function ConfiguredQueryClientProvider({ children }) {
         // useInfiniteQuery). On mismatch the persisted cache is dropped, so
         // hydrating code doesn't see an old shape and crash.
         buster: "v3-workbook-version-cache",
-        // Persist any query that holds data, not just success-status ones, so an
-        // offline refetch error can't evict the cached list/flow we need offline.
-        dehydrateOptions: {
-          shouldDehydrateQuery: (query) =>
-            defaultShouldDehydrateQuery(query) || query.state.data !== undefined,
-        },
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
     >
       {children}
