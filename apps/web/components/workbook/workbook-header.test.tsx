@@ -78,15 +78,15 @@ describe("WorkbookHeader", () => {
     expect(props.onConnect).toHaveBeenCalledOnce();
   });
 
-  it("calls onDisconnect when connected and user clicks Disconnect", async () => {
+  it("calls onDisconnect via the device menu's Disconnect all item", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader({
       isConnected: true,
       connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
 
-    const disconnectButton = screen.getByTestId("disconnect-all");
-    await user.click(disconnectButton);
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    await user.click(screen.getByTestId("disconnect-all"));
 
     expect(props.onDisconnect).toHaveBeenCalledOnce();
   });
@@ -102,7 +102,7 @@ describe("WorkbookHeader", () => {
     expect(props.onConnect).toHaveBeenCalledOnce();
   });
 
-  it("lists device chips with per-device disconnect when several are connected", async () => {
+  it("lists connected devices in a dropdown with per-device disconnect", async () => {
     const user = userEvent.setup();
     const onDisconnectDevice = vi.fn();
     renderHeader({
@@ -115,8 +115,9 @@ describe("WorkbookHeader", () => {
     });
 
     expect(screen.getByText("2 devices")).toBeInTheDocument();
-    expect(screen.getAllByTestId("device-chip")).toHaveLength(2);
-    await user.click(screen.getByRole("button", { name: "Disconnect Mock MultispeQ 2" }));
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    expect(screen.getAllByTestId("device-menu-item")).toHaveLength(2);
+    await user.click(screen.getByRole("menuitem", { name: "Disconnect Mock MultispeQ 2" }));
     expect(onDisconnectDevice).toHaveBeenCalledWith("d2");
   });
 
