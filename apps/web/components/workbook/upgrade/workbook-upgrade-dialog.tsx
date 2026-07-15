@@ -230,10 +230,7 @@ export function WorkbookUpgradeDialog({
                     <ProtocolDiffRow
                       key={id}
                       id={id}
-                      oldCode={
-                        (pinned.entitySnapshots?.protocols[id] as { code?: unknown } | undefined)
-                          ?.code
-                      }
+                      oldCode={pinned.entitySnapshots?.protocols[id]?.code}
                       fallbackName={name}
                       onResolved={handleResolved}
                     />

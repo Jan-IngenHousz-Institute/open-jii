@@ -48,10 +48,8 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
   const onIssueError = () =>
     toast({ title: t("iot.devices.credentials.issueError"), variant: "destructive" });
 
-  const handleIssue = () =>
-    issue({ deviceId: device.id }, { onError: onIssueError });
-  const handleRotate = () =>
-    rotate({ deviceId: device.id }, { onError: onIssueError });
+  const handleIssue = () => issue({ deviceId: device.id }, { onError: onIssueError });
+  const handleRotate = () => rotate({ deviceId: device.id }, { onError: onIssueError });
   const handleRevoke = () =>
     revoke(
       { deviceId: device.id },
