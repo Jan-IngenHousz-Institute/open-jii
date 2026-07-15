@@ -50,6 +50,11 @@ function setEntries(entries: DeviceExecutorEntry[]) {
   });
 }
 
+// Pristine store snapshot: tests override actions (executeCommandOn, reset,
+// cancelAll) via setState, so each test must start from the real implementation
+// rather than whatever the previous test left behind.
+const initialStoreState = useScannerCommandExecutorStore.getState();
+
 describe("useMultiScanner", () => {
   let client: QueryClient;
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -58,7 +63,7 @@ describe("useMultiScanner", () => {
 
   beforeEach(() => {
     client = new QueryClient();
-    useScannerCommandExecutorStore.setState({ executors: new Map() });
+    useScannerCommandExecutorStore.setState({ ...initialStoreState, executors: new Map() }, true);
   });
 
   it("maps executor entries to per-device scan statuses", () => {
