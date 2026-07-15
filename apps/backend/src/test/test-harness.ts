@@ -32,6 +32,8 @@ import {
   experimentDashboards,
   experimentVisualizations,
   experimentJoinRequests,
+  resourceGrants,
+  ensurePersonalOrganization,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -185,6 +187,9 @@ export class TestHarness {
     }
 
     // Clean up test data in correct order (respecting foreign key constraints)
+    // resource_grants is polymorphic (no FK to org/resource), so it is not
+    // cleared by cascade — delete it explicitly to keep tests isolated.
+    await this.database.delete(resourceGrants).execute();
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentJoinRequests).execute();
@@ -367,6 +372,7 @@ export class TestHarness {
     visibility?: "private" | "public";
     embargoUntil?: Date;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.userId });
     const [experiment] = await this.database
       .insert(experiments)
       .values({
@@ -376,6 +382,7 @@ export class TestHarness {
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
+        organizationId,
       })
       .returning();
 
@@ -442,6 +449,7 @@ export class TestHarness {
     family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [protocol] = await this.database
       .insert(protocols)
       .values({
@@ -450,6 +458,7 @@ export class TestHarness {
         code: data.code ?? [{}],
         family: data.family ?? "multispeq",
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return protocol;
@@ -498,6 +507,7 @@ export class TestHarness {
     createdBy: string;
   }) {
     const macroId = crypto.randomUUID();
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [macro] = await this.database
       .insert(macros)
       .values({
@@ -508,6 +518,7 @@ export class TestHarness {
         language: data.language ?? "python",
         code: data.code ?? btoa("print('hello')"),
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return macro;
@@ -520,6 +531,7 @@ export class TestHarness {
     metadata?: Record<string, unknown>;
     createdBy: string;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [workbook] = await this.database
       .insert(workbooks)
       .values({
@@ -528,6 +540,7 @@ export class TestHarness {
         cells: data.cells ?? [],
         metadata: data.metadata ?? {},
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return workbook;

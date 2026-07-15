@@ -42,7 +42,11 @@ export class ExperimentController {
         embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
       };
 
-      const result = await this.createExperimentUseCase.execute(transformedBody, session.user.id);
+      const result = await this.createExperimentUseCase.execute(
+        transformedBody,
+        session.user.id,
+        session.session.activeOrganizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         const experiment = result.value;

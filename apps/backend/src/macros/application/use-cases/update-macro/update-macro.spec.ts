@@ -222,6 +222,6 @@ describe("UpdateMacroUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toBe("Only the macro creator can update this macro");
+    expect(result.error.message).toBe("You cannot update this macro");
   });
 });

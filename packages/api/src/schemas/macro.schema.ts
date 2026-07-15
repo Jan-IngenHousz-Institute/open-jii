@@ -33,6 +33,8 @@ export const zMacro = z.object({
   forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
 });
 export const zMacroList = z.array(zMacro);
 

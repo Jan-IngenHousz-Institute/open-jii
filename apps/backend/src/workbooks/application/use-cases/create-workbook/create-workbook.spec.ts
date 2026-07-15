@@ -1,3 +1,5 @@
+import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+
 import {
   assertFailure,
   assertSuccess,
@@ -41,6 +43,37 @@ describe("CreateWorkbookUseCase", () => {
     expect(result.value.createdBy).toBe(userId);
     expect(result.value.cells).toEqual([]);
     expect(result.value.metadata).toEqual({});
+  });
+
+  it("assigns the target organization to the workbook", async () => {
+    const [targetOrganization] = await testApp.database
+      .insert(organizations)
+      .values({ name: "Target Workbook Organization", slug: `target-${userId}` })
+      .returning();
+    await testApp.database.insert(organizationMembers).values({
+      organizationId: targetOrganization.id,
+      userId,
+      role: "owner",
+    });
+
+    const result = await useCase.execute(
+      { name: "Target Organization Workbook" },
+      userId,
+      targetOrganization.id,
+    );
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(targetOrganization.id);
+  });
+
+  it("falls back to the creator's personal organization when no target is provided", async () => {
+    const result = await useCase.execute({ name: "Personal Organization Workbook" }, userId, null);
+    const personalOrganizationId = await ensurePersonalOrganization(testApp.database, {
+      id: userId,
+    });
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(personalOrganizationId);
   });
 
   it("creates a workbook with all fields", async () => {

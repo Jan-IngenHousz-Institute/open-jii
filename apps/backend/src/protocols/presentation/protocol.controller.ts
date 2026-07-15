@@ -210,7 +210,11 @@ export class ProtocolController {
         forkedFrom: body.forkedFrom,
       };
 
-      const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
+      const result = await this.createProtocolUseCase.execute(
+        createDto,
+        session.user.id,
+        session.session.activeOrganizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         const protocol = {
@@ -238,28 +242,6 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.updateProtocol)
   updateProtocol(@Session() session: UserSession) {
     return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
-      // First check if protocol exists and user is the creator
-      const protocolResult = await this.getProtocolUseCase.execute(params.id);
-
-      if (protocolResult.isFailure()) {
-        return handleFailure(protocolResult, this.logger);
-      }
-
-      if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn({
-          msg: "Unauthorized protocol update attempt",
-          errorCode: ErrorCodes.FORBIDDEN,
-          operation: "updateProtocol",
-          protocolId: params.id,
-          userId: session.user.id,
-          ownerId: protocolResult.value.createdBy,
-        });
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Only the protocol creator can update this protocol" },
-        };
-      }
-
       if (body.code !== undefined) {
         const validationResult = await validateProtocolCode(
           body.code,
@@ -279,7 +261,11 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.updateProtocolUseCase.execute(params.id, updateDto);
+      const result = await this.updateProtocolUseCase.execute(
+        params.id,
+        updateDto,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         const protocol = {
@@ -319,29 +305,7 @@ export class ProtocolController {
         };
       }
 
-      // First check if protocol exists and user is the creator
-      const protocolResult = await this.getProtocolUseCase.execute(params.id);
-
-      if (protocolResult.isFailure()) {
-        return handleFailure(protocolResult, this.logger);
-      }
-
-      if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn({
-          msg: "Unauthorized protocol delete attempt",
-          errorCode: ErrorCodes.FORBIDDEN,
-          operation: "deleteProtocol",
-          protocolId: params.id,
-          userId: session.user.id,
-          ownerId: protocolResult.value.createdBy,
-        });
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Only the protocol creator can delete this protocol" },
-        };
-      }
-
-      const result = await this.deleteProtocolUseCase.execute(params.id);
+      const result = await this.deleteProtocolUseCase.execute(params.id, session.user.id);
 
       if (result.isSuccess()) {
         this.logger.log({

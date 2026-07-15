@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
@@ -12,6 +13,7 @@ export class RemoveCompatibleMacroUseCase {
   constructor(
     private readonly protocolRepository: ProtocolRepository,
     private readonly protocolMacroRepository: ProtocolMacroRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(protocolId: string, macroId: string, currentUserId: string): Promise<Result<void>> {
@@ -32,8 +34,13 @@ export class RemoveCompatibleMacroUseCase {
       return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
     }
 
-    // Check ownership
-    if (protocolResult.value.createdBy !== currentUserId) {
+    // Managing compatible macros is an update to the protocol.
+    const decision = await this.authz.can(currentUserId, {
+      resourceType: "protocol",
+      resourceId: protocolId,
+      action: "update",
+    });
+    if (!decision.allow) {
       this.logger.warn({
         msg: "Unauthorized attempt to remove compatible macro",
         errorCode: ErrorCodes.FORBIDDEN,
@@ -41,7 +48,7 @@ export class RemoveCompatibleMacroUseCase {
         protocolId,
         userId: currentUserId,
       });
-      return failure(AppError.forbidden("Only the protocol creator can manage compatible macros"));
+      return failure(AppError.forbidden("You cannot manage compatible macros for this protocol"));
     }
 
     const removeResult = await this.protocolMacroRepository.removeMacro(protocolId, macroId);

@@ -15,6 +15,8 @@ export const zProtocol = z.object({
   forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
 });
 export const zProtocolList = z.array(zProtocol);
 

@@ -257,6 +257,7 @@ export const zExperiment = z.object({
   anonymizeContributors: z.boolean(),
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),

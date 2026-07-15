@@ -8,6 +8,7 @@ import { LoggerModule } from "nestjs-pino";
 import { pinoConfig } from "@repo/analytics";
 import { auth } from "@repo/auth/server";
 
+import { AuthorizationModule } from "./authorization/authorization.module";
 import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
@@ -40,6 +41,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     ScheduleModule.forRoot(),
     BetterAuthModule.forRoot({ auth }),
     AnalyticsModule,
+    AuthorizationModule,
     DatabaseModule,
     ExperimentModule,
     IotModule,

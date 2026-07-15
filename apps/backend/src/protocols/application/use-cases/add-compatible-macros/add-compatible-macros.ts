@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
@@ -15,6 +16,7 @@ export class AddCompatibleMacrosUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly protocolMacroRepository: ProtocolMacroRepository,
     private readonly macroRepository: MacroRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -39,8 +41,13 @@ export class AddCompatibleMacrosUseCase {
       return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
     }
 
-    // Check ownership
-    if (protocolResult.value.createdBy !== currentUserId) {
+    // Managing compatible macros is an update to the protocol.
+    const decision = await this.authz.can(currentUserId, {
+      resourceType: "protocol",
+      resourceId: protocolId,
+      action: "update",
+    });
+    if (!decision.allow) {
       this.logger.warn({
         msg: "Unauthorized attempt to add compatible macros",
         errorCode: ErrorCodes.FORBIDDEN,
@@ -48,7 +55,7 @@ export class AddCompatibleMacrosUseCase {
         protocolId,
         userId: currentUserId,
       });
-      return failure(AppError.forbidden("Only the protocol creator can manage compatible macros"));
+      return failure(AppError.forbidden("You cannot manage compatible macros for this protocol"));
     }
 
     // Validate that all macros exist

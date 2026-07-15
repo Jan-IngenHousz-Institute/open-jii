@@ -13,6 +13,7 @@ import {
   users,
   sql,
   getTableColumns,
+  ensurePersonalOrganization,
 } from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
@@ -38,13 +39,18 @@ export class ProtocolRepository {
   async create(
     createProtocolDto: CreateProtocolDto,
     userId: string,
+    targetOrganizationId?: string | null,
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
+      // Own the protocol with the requested target org (fallback: the creator's personal org).
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const results = await this.database
         .insert(protocols)
         .values({
           ...createProtocolDto,
           createdBy: userId,
+          organizationId,
         })
         .returning(protocolColumns);
       return results as ProtocolDto[];

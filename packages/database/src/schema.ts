@@ -137,6 +137,15 @@ export const profiles = pgTable("profiles", {
   ...timestamps,
 });
 
+// Resource visibility (macros/protocols/workbooks; experiments have their own
+// experiment_visibility enum with identical values). Affects read access only.
+export const visibilityEnum = pgEnum("visibility", ["private", "public"]);
+
+// Org-wide base permission for plain members. none = explicit grant required;
+// read = read every org resource; admin = manage every org resource. Owners/admins
+// always have full access; explicit resource grants override this baseline.
+export const orgBasePermissionEnum = pgEnum("org_base_permission", ["none", "read", "admin"]);
+
 // Organizations Table.
 // Backs the Better Auth organization plugin (model "organization"): the plugin
 // owns slug/logo/metadata; type/description/website/location are openJII
@@ -151,6 +160,8 @@ export const organizations = pgTable("organizations", {
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),
+  // Baseline access a plain member gets to this org's resources (default read).
+  basePermission: orgBasePermissionEnum("base_permission").default("read").notNull(),
   ...timestamps,
 });
 
@@ -265,6 +276,11 @@ export const experiments = pgTable("experiments", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
+  // Owning organization (nullable during transition; backfilled to the creator's
+  // personal org). Experiments already carry visibility above.
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
   ...timestamps,
   // Weighted full-text search vector: name (A) + description (B). See migration for the
   // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
@@ -388,6 +404,10 @@ export const protocols = pgTable("protocols", {
   forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
     onDelete: "set null",
   }),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  visibility: visibilityEnum("visibility").default("public").notNull(),
   ...timestamps,
   // Weighted full-text search vector: name (A) + description (B). The `family` enum is matched at
   // query time (enum->text casts are not immutable, so they can't live in a generated column).
@@ -416,6 +436,10 @@ export const macros = pgTable("macros", {
   forkedFrom: uuid("forked_from").references((): AnyPgColumn => macros.id, {
     onDelete: "set null",
   }),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  visibility: visibilityEnum("visibility").default("public").notNull(),
   ...timestamps,
   // Weighted full-text search vector: name (A) + description (B). The `language` enum is matched at
   // query time (enum->text casts are not immutable, so they can't live in a generated column).
@@ -540,6 +564,10 @@ export const workbooks = pgTable(
     forkedFrom: uuid("forked_from").references((): AnyPgColumn => workbooks.id, {
       onDelete: "set null",
     }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
     // Weighted full-text search vector: name (A) + description (B). See migration for the
     // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
@@ -573,6 +601,45 @@ export const workbookVersions = pgTable(
   (table) => [
     unique("workbook_versions_workbook_version_uniq").on(table.workbookId, table.version),
     index("workbook_versions_workbook_id_idx").on(table.workbookId),
+  ],
+);
+
+// Resource grant scope + grantee enums (Phase 2 authorization substrate).
+// "device" is reserved now so wiring sensors later needs no ALTER TYPE.
+export const resourceTypeEnum = pgEnum("resource_type", [
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device",
+]);
+export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
+
+// Resource Grants: polymorphic per-resource sharing that generalizes
+// experiment_members to every resource type. A resource can be granted to a
+// single user, an organization, or a team. FK on the polymorphic ids is enforced
+// in the app layer since the referenced table varies by type.
+export const resourceGrants = pgTable(
+  "resource_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    resourceType: resourceTypeEnum("resource_type").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    granteeType: granteeTypeEnum("grantee_type").notNull(),
+    granteeId: uuid("grantee_id").notNull(),
+    role: text("role").default("member").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("resource_grants_unique").on(
+      t.resourceType,
+      t.resourceId,
+      t.granteeType,
+      t.granteeId,
+    ),
+    index("resource_grants_resource_idx").on(t.resourceType, t.resourceId),
+    index("resource_grants_grantee_idx").on(t.granteeType, t.granteeId),
   ],
 );
 

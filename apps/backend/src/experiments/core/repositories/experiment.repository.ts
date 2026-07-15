@@ -17,6 +17,7 @@ import {
   profiles,
   alias,
   getTableColumns,
+  ensurePersonalOrganization,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
@@ -46,16 +47,22 @@ export class ExperimentRepository {
   async create(
     createExperimentDto: CreateExperimentDto,
     userId: string,
+    targetOrganizationId?: string | null,
   ): Promise<Result<ExperimentDto[]>> {
-    return tryCatch(() =>
-      this.database
+    return tryCatch(async () => {
+      // Own the experiment with the requested target org, falling back to the
+      // creator's personal org so there is never an org-less resource.
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
+      return this.database
         .insert(experiments)
         .values({
           ...createExperimentDto,
           createdBy: userId,
+          organizationId,
         })
-        .returning(experimentColumns),
-    );
+        .returning(experimentColumns);
+    });
   }
 
   async findAll(
@@ -75,6 +82,7 @@ export class ExperimentRepository {
       anonymizeContributors: experiments.anonymizeContributors,
       workbookId: experiments.workbookId,
       workbookVersionId: experiments.workbookVersionId,
+      organizationId: experiments.organizationId,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
@@ -281,6 +289,7 @@ export class ExperimentRepository {
         anonymizeContributors: experiments.anonymizeContributors,
         workbookId: experiments.workbookId,
         workbookVersionId: experiments.workbookVersionId,
+        organizationId: experiments.organizationId,
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,

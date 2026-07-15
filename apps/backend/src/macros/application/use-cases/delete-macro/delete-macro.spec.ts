@@ -116,6 +116,6 @@ describe("DeleteMacroUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toBe("Only the macro creator can delete this macro");
+    expect(result.error.message).toBe("You cannot delete this macro");
   });
 });

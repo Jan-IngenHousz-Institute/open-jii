@@ -8,6 +8,8 @@ export const zWorkbook = z.object({
   description: z.string().nullable(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   forkedFrom: z.string().uuid().nullish(),

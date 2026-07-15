@@ -37,6 +37,7 @@ export class WorkbookController {
       const result = await this.createWorkbookUseCase.execute(
         body as CreateWorkbookDto,
         session.user.id,
+        session.session.activeOrganizationId ?? null,
       );
 
       if (result.isSuccess()) {

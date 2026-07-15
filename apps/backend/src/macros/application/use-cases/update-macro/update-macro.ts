@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateMacroDto, MacroDto } from "../../../core/models/macro.model";
@@ -9,7 +10,10 @@ import { MacroRepository } from "../../../core/repositories/macro.repository";
 export class UpdateMacroUseCase {
   private readonly logger = new Logger(UpdateMacroUseCase.name);
 
-  constructor(private readonly macroRepository: MacroRepository) {}
+  constructor(
+    private readonly macroRepository: MacroRepository,
+    private readonly authz: AuthorizationService,
+  ) {}
 
   async execute(id: string, data: UpdateMacroDto, userId: string): Promise<Result<MacroDto>> {
     this.logger.log({
@@ -37,7 +41,12 @@ export class UpdateMacroUseCase {
       return failure(AppError.notFound(`Macro with ID ${id} not found`));
     }
 
-    if (existingMacro.createdBy !== userId) {
+    const decision = await this.authz.can(userId, {
+      resourceType: "macro",
+      resourceId: id,
+      action: "update",
+    });
+    if (!decision.allow) {
       this.logger.warn({
         msg: "Unauthorized macro update attempt",
         errorCode: ErrorCodes.FORBIDDEN,
@@ -45,7 +54,7 @@ export class UpdateMacroUseCase {
         macroId: id,
         userId,
       });
-      return failure(AppError.forbidden("Only the macro creator can update this macro"));
+      return failure(AppError.forbidden("You cannot update this macro"));
     }
 
     const updateResult = await this.macroRepository.update(id, data);
