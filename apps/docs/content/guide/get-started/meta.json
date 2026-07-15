@@ -1,1 +1,4 @@
-{ "title": "Get Started", "pages": ["index", "quick-start", "create-account", "key-concepts"] }
+{
+  "title": "Get Started",
+  "pages": ["index", "quick-start", "create-account", "account-security-api-keys", "key-concepts"]
+}
