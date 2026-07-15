@@ -164,8 +164,11 @@ def main() -> int:
         page.screenshot(path=f"{OUT}/02-devices-connected.png", full_page=True)
 
         check("status shows 4 devices", page.get_by_text("4 devices").is_visible())
-        chips = page.get_by_test_id("device-chip")
-        check("4 device chips", chips.count() == DEVICE_COUNT, f"got {chips.count()}")
+        page.get_by_test_id("device-menu-trigger").click()
+        pause(page, 1200)
+        items = page.get_by_test_id("device-menu-item")
+        check("4 devices listed in the menu", items.count() == DEVICE_COUNT, f"got {items.count()}")
+        page.keyboard.press("Escape")
 
         run_protocol = page.get_by_role("button", name=re.compile(r"^Run .*Chlorophyll")).first
         run_macro = page.get_by_role("button", name=re.compile(r"^Run .*Phi2")).first
@@ -197,7 +200,7 @@ def main() -> int:
         )
 
         print("Round 2: rerun; the flaky device succeeds...")
-        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
+        page.get_by_test_id("device-menu-trigger").scroll_into_view_if_needed()
         pause(page, 800)
         run_protocol.click()
         expect(device_results("ok")).to_have_count(DEVICE_COUNT, timeout=30_000)
@@ -244,12 +247,14 @@ def main() -> int:
             page.get_by_text("MultispeQ Ready").first.is_visible(),
         )
 
-        print("Disconnect one device via its chip...")
-        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
+        print("Disconnect one device via the menu...")
+        page.get_by_test_id("device-menu-trigger").scroll_into_view_if_needed()
         pause(page, 800)
-        page.get_by_role("button", name="Disconnect Mock MultispeQ 4").click()
+        page.get_by_test_id("device-menu-trigger").click()
+        pause(page, 800)
+        page.get_by_role("menuitem", name="Disconnect Mock MultispeQ 4").click()
         expect(page.get_by_text("3 devices")).to_be_visible(timeout=5_000)
-        check("chip disconnect drops to 3 devices", page.get_by_text("3 devices").is_visible())
+        check("menu disconnect drops to 3 devices", page.get_by_text("3 devices").is_visible())
         pause(page, 1500)
         page.screenshot(path=f"{OUT}/07-after-disconnect.png", full_page=True)
 
