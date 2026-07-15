@@ -35,6 +35,144 @@
       "connectToDeviceDescription": "Verbinden Sie sich mit einem Gerät und testen Sie Ihr Protokoll vor dem Speichern",
       "browserNotSupported": "Ihr Browser unterstützt weder Web Bluetooth noch Web Serial APIs.",
       "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop."
+    },
+    "devices": {
+      "tabLabel": "Geräte",
+      "title": "Geräte",
+      "description": "Registrieren und verwalten Sie Ihre Hardware-Geräte. Zertifikate werden in einem späteren Schritt ausgestellt.",
+      "register": "Gerät registrieren",
+      "searchPlaceholder": "Nach Name oder Seriennummer suchen",
+      "loadError": "Geräte konnten nicht geladen werden.",
+      "columns": {
+        "name": "Name",
+        "serial": "Seriennummer",
+        "type": "Typ",
+        "status": "Status",
+        "created": "Registriert"
+      },
+      "status": {
+        "pending": "Ausstehend",
+        "active": "Aktiv",
+        "rotating": "Rotierend",
+        "revoked": "Widerrufen"
+      },
+      "tabs": {
+        "all": "Alle"
+      },
+      "sections": {
+        "overview": "Übersicht",
+        "devices": "Geräte",
+        "groups": "Gruppen",
+        "onboarding": "Einrichtung",
+        "monitoring": "Überwachung"
+      },
+      "detailTabs": {
+        "overview": "Übersicht",
+        "credentials": "Anmeldedaten",
+        "onboarding": "Einrichtung",
+        "members": "Mitglieder",
+        "lineage": "Herkunft",
+        "monitoring": "Überwachung"
+      },
+      "overview": {
+        "total": "Geräte insgesamt"
+      },
+      "comingSoon": {
+        "title": "Demnächst verfügbar",
+        "groups": "Organisieren Sie Geräte in Gruppen, die Sie gemeinsam verwalten, bereitstellen und einrichten können.",
+        "onboarding": "Richten Sie Geräte für Experimente ein: Übergeben Sie jedem Gerät seine Verbindung, sein Experiment und seine Workbook-Prozedur.",
+        "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
+        "members": "Teilen Sie die Geräteverwaltung mit Mitarbeitenden, so wie Experimente den Zugriff teilen.",
+        "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen."
+      },
+      "pageOf": "Seite {{page}} von {{total}}",
+      "actions": {
+        "more": "Geräteaktionen",
+        "view": "Details anzeigen",
+        "delete": "Löschen"
+      },
+      "empty": {
+        "title": "Noch keine Geräte",
+        "description": "Registrieren Sie ein Gerät, um seinen Datensatz zu erstellen. Ein Zertifikat wird in einem späteren Schritt ausgestellt, um es zu aktivieren.",
+        "cta": "Gerät registrieren"
+      },
+      "zeroResults": {
+        "title": "Keine Geräte entsprechen Ihren Filtern",
+        "description": "Versuchen Sie einen anderen Suchbegriff oder Statusfilter.",
+        "clear": "Filter zurücksetzen"
+      },
+      "dialog": {
+        "title": "Gerät registrieren",
+        "description": "Registrieren Sie ein Hardware-Gerät. In diesem Schritt wird kein Zertifikat ausgestellt.",
+        "serialLabel": "Seriennummer",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Gerätetyp",
+        "typePlaceholder": "Gerätetyp auswählen",
+        "nameLabel": "Name (optional)",
+        "namePlaceholder": "Gewächshaus-Sensor 1",
+        "submit": "Registrieren",
+        "createSuccess": "Gerät registriert",
+        "createSuccessDetail": "Ein Zertifikat wird ausgestellt, um es zu aktivieren.",
+        "createError": "Gerät konnte nicht registriert werden"
+      },
+      "remove": {
+        "title": "Gerät löschen",
+        "confirm": "Dies löscht {{name}} und seinen Gerätedatensatz endgültig.",
+        "success": "Gerät gelöscht"
+      },
+      "detail": {
+        "back": "Zurück zu Geräten",
+        "notFound": "Gerät nicht gefunden.",
+        "meta": {
+          "serial": "Seriennummer",
+          "type": "Typ",
+          "status": "Status",
+          "registered": "Registriert",
+          "thingName": "Gerätekennung"
+        },
+        "credentials": {
+          "title": "Anmeldedaten"
+        },
+        "dangerZone": {
+          "title": "Gefahrenzone",
+          "deleteLabel": "Dieses Gerät löschen",
+          "deleteDescription": "Entfernt das Gerät und seinen Cloud-Datensatz endgültig. Dies kann nicht rückgängig gemacht werden."
+        }
+      },
+      "credentials": {
+        "pendingDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es zu aktivieren und die Verbindung zu AWS IoT zu ermöglichen.",
+        "issue": "Zertifikat ausstellen",
+        "reissue": "Zertifikat neu ausstellen",
+        "issueError": "Zertifikat konnte nicht ausgestellt werden",
+        "activeLabel": "Zertifikat aktiv",
+        "rotate": "Zertifikat rotieren",
+        "rotatingDescription": "Eine Zertifikatsrotation läuft gerade.",
+        "revokedDescription": "Das Zertifikat wurde widerrufen, sodass sich dieses Gerät nicht mehr verbinden kann. Stellen Sie ein neues Zertifikat aus, um es wieder online zu bringen.",
+        "revoke": "Zertifikat widerrufen",
+        "revokeTitle": "Zertifikat widerrufen",
+        "revokeConfirm": "Dies widerruft das Gerätezertifikat sofort. Das Gerät kann sich nicht mehr verbinden. Sie können später ein neues Zertifikat ausstellen.",
+        "revokeSuccess": "Zertifikat widerrufen",
+        "revokeError": "Zertifikat konnte nicht widerrufen werden",
+        "dialogTitle": "Gerätezertifikat ausgestellt",
+        "dialogDescription": "Laden Sie die Zertifikat- und Schlüsseldateien herunter und installieren Sie sie auf dem Gerät, damit es sich mit AWS IoT verbinden kann. Nach dem Schließen können sie nicht mehr abgerufen werden.",
+        "showOnceWarning": "Dies ist die einzige Gelegenheit, diese Dateien herunterzuladen. Speichern Sie sie sicher, bevor Sie schließen.",
+        "sectionCertificate": "Gerätezertifikat",
+        "certificate": "Gerätezertifikat",
+        "sectionKeys": "Schlüsseldateien",
+        "keysDescription": "Die Schlüsseldateien sind für dieses Zertifikat einzigartig und können nach dem Schließen nicht erneut heruntergeladen werden.",
+        "publicKey": "Öffentliche Schlüsseldatei",
+        "privateKey": "Private Schlüsseldatei",
+        "sectionRootCa": "Root-CA-Zertifikate",
+        "rootCaDescription": "Laden Sie die Root-CA herunter, die zu Ihrem Endpunkt und Ihrer Cipher-Suite passt. Sie können diese auch später herunterladen.",
+        "rootCaLearnMore": "Mehr über CA-Zertifikate",
+        "rootCa1": "Amazon Root CA 1",
+        "rootCa1Sub": "RSA-2048-Bit-Schlüssel",
+        "rootCa3": "Amazon Root CA 3",
+        "rootCa3Sub": "ECC-256-Bit-Schlüssel",
+        "copy": "Kopieren",
+        "download": "Herunterladen",
+        "downloadAll": "Alle herunterladen"
+      }
     }
   }
 }

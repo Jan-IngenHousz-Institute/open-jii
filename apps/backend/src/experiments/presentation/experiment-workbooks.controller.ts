@@ -9,6 +9,7 @@ import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/attach-workbook";
 import { DetachWorkbookUseCase } from "../application/use-cases/detach-workbook/detach-workbook";
+import { SetWorkbookVersionUseCase } from "../application/use-cases/set-workbook-version/set-workbook-version";
 import { UpgradeWorkbookVersionUseCase } from "../application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 
 @Controller()
@@ -19,6 +20,7 @@ export class ExperimentWorkbooksController {
     private readonly attachWorkbookUseCase: AttachWorkbookUseCase,
     private readonly detachWorkbookUseCase: DetachWorkbookUseCase,
     private readonly upgradeWorkbookVersionUseCase: UpgradeWorkbookVersionUseCase,
+    private readonly setWorkbookVersionUseCase: SetWorkbookVersionUseCase,
   ) {}
 
   @Implement(experimentWorkbooksContract.attachWorkbook)
@@ -58,5 +60,20 @@ export class ExperimentWorkbooksController {
         return throwOrpcFailure(result, this.logger);
       },
     );
+  }
+
+  @Implement(experimentWorkbooksContract.setWorkbookVersion)
+  setWorkbookVersion(@Session() session: UserSession) {
+    return implement(experimentWorkbooksContract.setWorkbookVersion).handler(async ({ input }) => {
+      const result = await this.setWorkbookVersionUseCase.execute(
+        input.id,
+        input.versionId,
+        session.user.id,
+      );
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
   }
 }

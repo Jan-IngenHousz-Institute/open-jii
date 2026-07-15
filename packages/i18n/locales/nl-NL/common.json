@@ -50,7 +50,9 @@
     "megabytes": "MB",
     "comingSoon": "Binnenkort",
     "showAll": "Alles tonen",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "forkedFrom": "Geforkt van",
+    "viewOriginal": "Origineel bekijken"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -64,6 +66,8 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "commandPanelTitle": "Apparaatopdracht",
+    "commandPanelPlaceholder": "Typ een opdracht, bijv. battery",
     "title": "Experimenten",
     "newExperiment": "Nieuw experiment",
     "overview": "Overzicht",
@@ -276,18 +280,6 @@
     "recentExperiments": "Recente experimenten",
     "statistics": "Statistieken",
     "quickActions": "Snelle acties"
-  },
-  "breadcrumbs": {
-    "home": "Home",
-    "platform": "Platform",
-    "experiments": "Experimenten",
-    "protocols": "Protocollen",
-    "macros": "Macro's",
-    "new": "Nieuw",
-    "edit": "Bewerken",
-    "view": "Bekijken",
-    "account": "Account",
-    "settings": "Instellingen"
   },
   "experimentData": {
     "title": "Experimentgegevens",

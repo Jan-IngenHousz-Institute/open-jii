@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 
 import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
-import { SENSOR_FAMILY_OPTIONS, getSensorFamilyLabel } from "./sensor-family";
+import {
+  SENSOR_FAMILY_OPTIONS,
+  getSensorFamilyBadgeColor,
+  getSensorFamilyLabel,
+} from "./sensor-family";
 import type { SensorFamilyOption } from "./sensor-family";
 
 describe("SENSOR_FAMILY_OPTIONS", () => {
@@ -28,10 +32,16 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
     }
   });
 
-  it("should mark ambit as disabled", () => {
-    const ambit = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "ambit");
-    expect(ambit).toBeDefined();
-    expect(ambit?.disabled).toBe(true);
+  it("should mark ambyte as disabled", () => {
+    const ambyte = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "ambyte");
+    expect(ambyte).toBeDefined();
+    expect(ambyte?.disabled).toBe(true);
+  });
+
+  it("should mark minipar as disabled", () => {
+    const minipar = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "minipar");
+    expect(minipar).toBeDefined();
+    expect(minipar?.disabled).toBe(true);
   });
 
   it("should mark generic as enabled", () => {
@@ -54,7 +64,8 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
 
     expect(byValue.generic.label).toBe("Generic");
     expect(byValue.multispeq.label).toBe("MultispeQ");
-    expect(byValue.ambit.label).toBe("Ambit");
+    expect(byValue.ambyte.label).toBe("Ambyte");
+    expect(byValue.minipar.label).toBe("MiniPAR");
   });
 });
 
@@ -67,7 +78,26 @@ describe("getSensorFamilyLabel", () => {
     expect(getSensorFamilyLabel("multispeq")).toBe("MultispeQ");
   });
 
-  it("should return 'Ambit' for ambit", () => {
-    expect(getSensorFamilyLabel("ambit")).toBe("Ambit");
+  it("should return 'Ambyte' for ambyte", () => {
+    expect(getSensorFamilyLabel("ambyte")).toBe("Ambyte");
+  });
+
+  it("should return 'MiniPAR' for minipar", () => {
+    expect(getSensorFamilyLabel("minipar")).toBe("MiniPAR");
+  });
+});
+
+describe("getSensorFamilyBadgeColor", () => {
+  it("should return the published badge for multispeq", () => {
+    expect(getSensorFamilyBadgeColor("multispeq")).toBe("bg-badge-published");
+  });
+
+  it("should return the active badge for ambyte", () => {
+    expect(getSensorFamilyBadgeColor("ambyte")).toBe("bg-badge-active");
+  });
+
+  it("should fall back to the archived badge for any other family", () => {
+    expect(getSensorFamilyBadgeColor("generic")).toBe("bg-badge-archived");
+    expect(getSensorFamilyBadgeColor("minipar")).toBe("bg-badge-archived");
   });
 });

@@ -18,6 +18,7 @@ import {
   experimentLocations,
   experiments,
   invitations,
+  iotDevices,
   users,
   sessions,
   auditLogs,
@@ -28,6 +29,10 @@ import {
   macros,
   workbooks,
   workbookVersions,
+  accounts,
+  experimentDashboards,
+  experimentVisualizations,
+  experimentJoinRequests,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -121,8 +126,10 @@ export class TestHarness {
       await this.clearDatabase();
       this.resetMockAdapters();
     } catch (e) {
-      console.log("Failed to clean up database for integration tests.", e);
-      // Don't throw the error to allow tests to continue
+      // Fail loudly: a swallowed cleanup error leaves the shared test DB
+      // polluted, which surfaces later as confusing duplicate-key failures.
+      console.error("Failed to clean up database for integration tests.", e);
+      throw e;
     }
   }
 
@@ -181,8 +188,12 @@ export class TestHarness {
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
+    await this.database.delete(experimentJoinRequests).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
+    // Dashboards/visualizations reference experiments, delete before experiments
+    await this.database.delete(experimentVisualizations).execute();
+    await this.database.delete(experimentDashboards).execute();
     await this.database.delete(workbookVersions).execute();
     await this.database.delete(workbooks).execute();
     // Flows reference experiments, so delete flows before experiments
@@ -193,8 +204,11 @@ export class TestHarness {
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
-    // Sessions reference users, delete before users
+    // IoT devices reference users, delete before users
+    await this.database.delete(iotDevices).execute();
+    // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
+    await this.database.delete(accounts).execute();
     await this.database.delete(users).execute();
   }
 
@@ -305,6 +319,7 @@ export class TestHarness {
     activated = true,
     createProfile = true,
     registered = true,
+    deletedAt = null,
   }: {
     email?: string;
     name?: string;
@@ -313,6 +328,7 @@ export class TestHarness {
     activated?: boolean;
     createProfile?: boolean;
     registered?: boolean;
+    deletedAt?: Date | null;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
@@ -334,6 +350,7 @@ export class TestHarness {
         firstName,
         lastName,
         activated,
+        deletedAt,
       });
     }
 
@@ -389,13 +406,41 @@ export class TestHarness {
   }
 
   /**
+   * Helper to attach a location to an experiment for testing
+   */
+  public async addExperimentLocation(data: {
+    experimentId: string;
+    name: string;
+    country?: string;
+    region?: string;
+    municipality?: string;
+    addressLabel?: string;
+  }) {
+    const [location] = await this.database
+      .insert(experimentLocations)
+      .values({
+        experimentId: data.experimentId,
+        name: data.name,
+        latitude: "0",
+        longitude: "0",
+        country: data.country,
+        region: data.region,
+        municipality: data.municipality,
+        addressLabel: data.addressLabel,
+      })
+      .returning();
+
+    return location;
+  }
+
+  /**
    * Helper to create a protocol for testing
    */
   public async createProtocol(data: {
     name: string;
     description?: string;
     code?: Record<string, unknown>[];
-    family?: "multispeq" | "ambit" | "generic";
+    family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
   }) {
     const [protocol] = await this.database
@@ -409,6 +454,38 @@ export class TestHarness {
       })
       .returning();
     return protocol;
+  }
+
+  /**
+   * Helper to create an IoT device for testing
+   */
+  public async createIotDevice(data: {
+    createdBy: string;
+    serialNumber?: string;
+    thingName?: string;
+    name?: string;
+    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic";
+    status?: "pending" | "active" | "rotating" | "revoked";
+    certificateId?: string;
+    certificateArn?: string;
+  }) {
+    const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
+    const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
+    const [device] = await this.database
+      .insert(iotDevices)
+      .values({
+        thingName,
+        thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
+        serialNumber,
+        name: data.name ?? "Test device",
+        deviceType: data.deviceType ?? "generic",
+        status: data.status ?? "pending",
+        certificateId: data.certificateId ?? null,
+        certificateArn: data.certificateArn ?? null,
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return device;
   }
 
   /**

@@ -11,6 +11,7 @@ import { nodeTypeColorMap } from "./node-config";
 const DEFAULT_STEP_SPECIFICATIONS = {
   QUESTION: { kind: "open_ended", text: "" },
   MEASUREMENT: { protocolId: undefined },
+  COMMAND: { command: { format: "string", content: "" } },
   ANALYSIS: { macroId: undefined },
 } as const;
 

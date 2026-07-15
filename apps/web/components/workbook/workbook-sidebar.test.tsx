@@ -1,4 +1,9 @@
-import { createMarkdownCell, createProtocolCell, createQuestionCell } from "@/test/factories";
+import {
+  createCommandCell,
+  createMarkdownCell,
+  createProtocolCell,
+  createQuestionCell,
+} from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -56,6 +61,24 @@ describe("WorkbookSidebar", () => {
     render(<WorkbookSidebar cells={[markdownCell]} onCellClick={onCellClick} />);
     await user.click(screen.getByText("Markdown"));
     expect(onCellClick).toHaveBeenCalledWith("md-1");
+  });
+
+  it("shows the command content as the command cell subtitle", () => {
+    const commandCell = createCommandCell({
+      id: "cmd-1",
+      payload: { format: "string", content: "battery" },
+    });
+    render(<WorkbookSidebar cells={[commandCell]} onCellClick={onCellClick} />);
+    expect(screen.getByText("battery")).toBeInTheDocument();
+  });
+
+  it("falls back to the command format when the command has no name or content", () => {
+    const commandCell = createCommandCell({
+      id: "cmd-2",
+      payload: { format: "yaml", content: "" },
+    });
+    render(<WorkbookSidebar cells={[commandCell]} onCellClick={onCellClick} />);
+    expect(screen.getByText("yaml")).toBeInTheDocument();
   });
 
   it("shows empty markdown subtitle as 'Empty'", () => {

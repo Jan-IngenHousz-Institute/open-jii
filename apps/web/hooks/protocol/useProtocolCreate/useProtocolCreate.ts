@@ -16,7 +16,6 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
   return useMutation(
     orpc.protocols.createProtocol.mutationOptions({
       onSuccess: (...args) => {
-        toast({ description: t("protocols.protocolCreated") });
         options.onSuccess?.(...args);
       },
       onError: (...args) => {

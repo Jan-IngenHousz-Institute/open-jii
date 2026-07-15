@@ -276,11 +276,8 @@ export const zExperimentDataQuery = z.object({
     ),
   orderBy: z.string().optional().describe("Column name to order results by"),
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
-  // Filters and aggregation are JSON-encoded so the endpoint stays a real
-  // HTTP GET (cache-friendly under TanStack Query) while still supporting
-  // the structured `zExperimentDataFilter` / `zExperimentDataAggregation` shapes. Same primitives
-  // drive the persisted visualization `dataConfig`, so a saved viz can pass
-  // its config straight through.
+  // JSON-encoded so the endpoint stays a cache-friendly HTTP GET while carrying
+  // the structured filter/aggregation shapes (also reused by persisted viz `dataConfig`).
   filters: jsonQuerySchema(z.array(zExperimentDataFilter))
     .optional()
     .describe("JSON-encoded array of filter conditions applied as a WHERE clause"),
@@ -389,12 +386,18 @@ export const zExperimentContributorColumnType = z.literal(
   "STRUCT<id: STRING, name: STRING, avatar: STRING>",
 );
 
+export const zExperimentDeviceColumnType = z.literal(
+  "STRUCT<id: STRING, serial_number: STRING, owner: STRING, status: STRING, device_type: STRING>",
+);
+
 export type ExperimentAnnotationsColumnType = z.infer<typeof zExperimentAnnotationsColumnType>;
 export type ExperimentContributorColumnType = z.infer<typeof zExperimentContributorColumnType>;
+export type ExperimentDeviceColumnType = z.infer<typeof zExperimentDeviceColumnType>;
 
 export const WellKnownColumnTypes = {
   ANNOTATIONS: zExperimentAnnotationsColumnType.value,
   CONTRIBUTOR: zExperimentContributorColumnType.value,
+  DEVICE: zExperimentDeviceColumnType.value,
 } as const;
 
 export const zExperimentColumnInfo = z.object({

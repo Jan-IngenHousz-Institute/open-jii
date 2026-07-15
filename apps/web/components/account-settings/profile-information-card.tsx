@@ -17,14 +17,12 @@ import { InlineEditableProfileField } from "./inline-editable-profile-field";
 interface ProfileInformationCardProps {
   profile: CreateUserProfileBody;
   onSaveBio: (bio: string) => Promise<void>;
-  onSaveOrganization: (organization: string) => Promise<void>;
   isPending?: boolean;
 }
 
 export function ProfileInformationCard({
   profile,
   onSaveBio,
-  onSaveOrganization,
   isPending = false,
 }: ProfileInformationCardProps) {
   const { t } = useTranslation("account");
@@ -47,15 +45,6 @@ export function ProfileInformationCard({
           onSave={onSaveBio}
           isPending={isPending}
           multiline
-        />
-
-        <InlineEditableProfileField
-          label={t("settings.ProfileInformationCard.institution")}
-          value={profile.organization ?? ""}
-          emptyValue={t("settings.ProfileInformationCard.emptyInstitution")}
-          placeholder={t("settings.ProfileInformationCard.institutionPlaceholder")}
-          onSave={onSaveOrganization}
-          isPending={isPending}
         />
       </CardContent>
     </Card>

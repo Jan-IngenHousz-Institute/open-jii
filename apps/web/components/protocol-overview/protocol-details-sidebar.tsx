@@ -3,6 +3,7 @@
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
@@ -128,6 +129,18 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
         <h4 className="text-sm font-medium">{t("experiments.createdBy")}</h4>
         <p className="text-muted-foreground text-sm">{protocol.createdByName ?? "-"}</p>
       </div>
+
+      {protocol.forkedFrom ? (
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
+          <Link
+            href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
+            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+          >
+            {tCommon("common.viewOriginal")}
+          </Link>
+        </div>
+      ) : null}
 
       {/* Compatible Macros Section */}
       <div

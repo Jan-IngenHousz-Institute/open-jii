@@ -446,3 +446,84 @@ describe("FlowMapper.toApiGraph validation", () => {
     );
   });
 });
+
+describe("FlowMapper inline command node", () => {
+  const commandNode = {
+    id: "cmd-1",
+    type: "measurement" as const,
+    name: "battery",
+    content: { command: { format: "string" as const, content: "battery" } },
+    isStart: true,
+  };
+
+  it("maps a command-bearing measurement node to a COMMAND React Flow node", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    expect(nodes[0].type).toBe("COMMAND");
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    expect(data.command).toEqual({ format: "string", content: "battery" });
+  });
+
+  it("round-trips COMMAND back to a measurement node with command content", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const react = FlowMapper.toReactFlow(flow);
+    const api = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(api.nodes[0].type).toBe("measurement");
+    expect(api.nodes[0].content).toEqual({
+      command: { format: "string", content: "battery" },
+    });
+    expect(zExperimentUpsertFlowBody.safeParse(api).success).toBe(true);
+  });
+
+  it("prefers the edited data.command over the original stepSpecification", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const react = FlowMapper.toReactFlow(flow);
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.command = { format: "json", content: '{"cmd":"battery"}' };
+    const api = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(api.nodes[0].content).toEqual({
+      command: { format: "json", content: '{"cmd":"battery"}' },
+    });
+  });
+
+  it("falls back to stepSpecification.command when data.command is absent", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const react = FlowMapper.toReactFlow(flow);
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.command = undefined;
+    (data as { stepSpecification?: unknown }).stepSpecification = {
+      command: { format: "string", content: "battery" },
+    };
+    const api = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(api.nodes[0].content).toEqual({
+      command: { format: "string", content: "battery" },
+    });
+  });
+
+  it("errors when a command node has empty content", () => {
+    const flow = buildApiFlow({ nodes: [commandNode] });
+    const react = FlowMapper.toReactFlow(flow);
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.command = { format: "string", content: "" };
+    expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
+      "Command content is required",
+    );
+  });
+
+  it("keeps plain protocol measurement nodes on the MEASUREMENT type", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "m1",
+          type: "measurement" as const,
+          name: "M1",
+          content: { protocolId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    expect(nodes[0].type).toBe("MEASUREMENT");
+    expect((nodes[0].data as FlowNodeDataWithSpec).command).toBeUndefined();
+  });
+});

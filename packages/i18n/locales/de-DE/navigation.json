@@ -49,6 +49,40 @@
     "edit": "Bearbeiten",
     "view": "Ansehen"
   },
+  "commandPalette": {
+    "title": "Befehlspalette",
+    "placeholder": "Seiten und Aktionen suchen...",
+    "groups": {
+      "pages": "Seiten",
+      "actions": "Aktionen"
+    },
+    "entries": {
+      "home": "Startseite",
+      "experiments": "Experimente",
+      "workbooks": "Arbeitsmappen",
+      "protocols": "Protokolle",
+      "macros": "Makros",
+      "transferRequests": "Transferanfragen",
+      "settings": "Einstellungen",
+      "createExperiment": "Experiment erstellen",
+      "openWhatsNew": "Neuigkeiten öffnen",
+      "showKeyboardShortcuts": "Tastenkürzel anzeigen",
+      "openDocumentation": "Dokumentation öffnen"
+    },
+    "results": {
+      "experiments": "Experimente",
+      "protocols": "Protokolle",
+      "macros": "Makros",
+      "workbooks": "Arbeitsmappen"
+    },
+    "status": {
+      "searching": "Suche...",
+      "errorTitle": "Etwas ist schiefgelaufen",
+      "errorDescription": "Die Suche konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "noResultsTitle": "Keine Ergebnisse gefunden",
+      "noResultsDescription": "Nichts passte zu \"{{query}}\". Versuchen Sie einen anderen oder kürzeren Suchbegriff."
+    }
+  },
   "whatsNew": {
     "navLabel": "Neuigkeiten",
     "title": "Neuigkeiten im Web",

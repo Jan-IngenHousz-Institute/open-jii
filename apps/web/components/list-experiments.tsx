@@ -27,7 +27,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
-        <div className="relative w-full md:w-[220px]">
+        <div className="relative w-full md:w-56">
           <Input
             type="text"
             value={search}
@@ -48,7 +48,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger className="md:min-w-45 w-full md:w-auto">
               <SelectValue placeholder="Filter experiments" />
             </SelectTrigger>
             <SelectContent>

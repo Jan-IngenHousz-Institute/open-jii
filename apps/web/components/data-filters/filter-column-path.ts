@@ -6,6 +6,9 @@ export function filterColumnPathFor(column: ExperimentDataColumn): string {
   if (column.type_text === WellKnownColumnTypes.CONTRIBUTOR) {
     return `${column.name}.id`;
   }
+  if (column.type_text === WellKnownColumnTypes.DEVICE) {
+    return `${column.name}.serial_number`;
+  }
   return column.name;
 }
 

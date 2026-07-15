@@ -64,6 +64,7 @@ const MEASUREMENT_FIXTURE = `{
     "isFlowFinished": true,
     "isQuestionsSubmitPending": true,
     "scanResult": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] },
+    "producerCellId": "node-m1",
     "isFromOverview": true,
     "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
     "edges": [{ "id": "edge-1", "source": "node-q1", "target": "node-m1" }],
@@ -157,6 +158,7 @@ describe("measurement-flow-storage v1 wire format", () => {
       "isQuestionsSubmitPending",
       "iterationCount",
       "lastMatchedPath",
+      "producerCellId",
       "scanResult",
     ]);
   });

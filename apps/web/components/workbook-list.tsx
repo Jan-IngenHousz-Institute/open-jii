@@ -5,7 +5,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
 import { formatDate } from "@/util/date";
-import { Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { GitFork, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -168,6 +168,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
         description: workbook.description ?? undefined,
         cells: workbook.cells,
         metadata: workbook.metadata,
+        forkedFrom: workbook.id,
       },
       {
         onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),
@@ -256,8 +257,8 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
                     handleDuplicate();
                   }}
                 >
-                  <Copy className="mr-2 size-4" />
-                  {t("workbooks.actions.duplicate")}
+                  <GitFork className="mr-2 size-4" />
+                  {t("workbooks.actions.fork")}
                 </DropdownMenuItem>
                 {canDelete && (
                   <>

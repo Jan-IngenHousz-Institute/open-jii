@@ -212,8 +212,9 @@ describe("column-type-utils", () => {
   });
 
   describe("isWellKnownSortableType", () => {
-    it("should return true only for CONTRIBUTOR type", () => {
+    it("should return true for CONTRIBUTOR and DEVICE types", () => {
       expect(isWellKnownSortableType(WellKnownColumnTypes.CONTRIBUTOR)).toBe(true);
+      expect(isWellKnownSortableType(WellKnownColumnTypes.DEVICE)).toBe(true);
     });
 
     it("should return false for non-sortable well-known types", () => {
@@ -230,6 +231,10 @@ describe("column-type-utils", () => {
   describe("getWellKnownSortField", () => {
     it("should return 'name' for CONTRIBUTOR type", () => {
       expect(getWellKnownSortField(WellKnownColumnTypes.CONTRIBUTOR)).toBe("name");
+    });
+
+    it("should return 'serial_number' for DEVICE type", () => {
+      expect(getWellKnownSortField(WellKnownColumnTypes.DEVICE)).toBe("serial_number");
     });
 
     it("should return undefined for non-sortable well-known types", () => {

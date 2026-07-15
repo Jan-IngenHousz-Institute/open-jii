@@ -34,7 +34,7 @@
     "notUsed": "Niet gebruikt",
     "usedByCount_one": "{{count}} experiment",
     "usedByCount_other": "{{count}} experimenten",
-    "duplicateName": "Kopie van {{name}}",
+    "duplicateName": "Fork van {{name}}",
     "columns": {
       "name": "Naam",
       "usedBy": "Gebruikt door",
@@ -45,7 +45,8 @@
       "open": "Openen",
       "duplicate": "Dupliceren",
       "delete": "Verwijderen",
-      "more": "Meer acties"
+      "more": "Meer acties",
+      "fork": "Forken"
     },
     "messages": {
       "deleteSuccess": "Werkboek verwijderd",
@@ -56,6 +57,8 @@
     "cellSummary": {
       "protocol_one": "{{count}} Protocol",
       "protocol_other": "{{count}} Protocollen",
+      "command_one": "{{count}} Opdracht",
+      "command_other": "{{count}} Opdrachten",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macro's",
       "question_one": "{{count}} Vraag",
@@ -64,14 +67,15 @@
       "branch_other": "{{count}} Vertakkingen",
       "markdown_one": "{{count}} Notitie",
       "markdown_other": "{{count}} Notities"
-    }
+    },
+    "forkedFrom": "Geforkt van"
   },
   "output": {
     "label": "Uitvoer",
     "expand": "Uitvoer uitvouwen",
     "collapse": "Uitvoer samenvouwen",
     "clear": "Uitvoer wissen",
-    "empty": "Geen meetgegevens beschikbaar — voer eerst een protocolcel uit",
+    "empty": "Geen meetgegevens beschikbaar - voer eerst een protocol- of opdrachtcel uit",
     "noData": "Geen uitvoergegevens",
     "tabTable": "Tabel",
     "tabJson": "JSON",
@@ -85,5 +89,17 @@
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
     "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
+  },
+  "cells": {
+    "command": "Opdracht",
+    "protocolReadOnly": "Alleen-lezen. Fork het om te bewerken.",
+    "macroReadOnly": "Alleen-lezen. Fork het om te bewerken.",
+    "fork": "Forken om te bewerken",
+    "forkedFrom": "Geforkt van",
+    "rename": "Naam wijzigen",
+    "renameSave": "Naam opslaan",
+    "renameCancel": "Annuleren",
+    "renameConflict": "Die naam is al in gebruik",
+    "renameFailed": "Naam wijzigen mislukt"
   }
 }

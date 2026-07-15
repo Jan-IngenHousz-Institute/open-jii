@@ -118,6 +118,29 @@ resource "aws_iot_policy" "iot_policy" {
   })
 }
 
+# --------------------------------------------------
+# Managed device registry (Thing type + group)
+# --------------------------------------------------
+# Devices registered through the platform are created as Things of this type and
+# added to the managed-devices group. Certificates and their scoped policy are
+# attached in a later slice; nothing here issues credentials.
+resource "aws_iot_thing_type" "device" {
+  name = "open_jii_${var.environment}_device"
+
+  properties {
+    description           = "Platform-managed IoT device"
+    searchable_attributes = ["deviceType", "serialNumber"]
+  }
+}
+
+resource "aws_iot_thing_group" "managed_devices" {
+  name = "open_jii_${var.environment}_managed_devices"
+
+  properties {
+    description = "All platform-registered IoT devices"
+  }
+}
+
 # --------------------------------------------
 # IAM Role and Policy for Kinesis Integration
 # --------------------------------------------
@@ -283,9 +306,9 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
 resource "aws_iot_topic_rule" "iot_rules" {
   for_each = local.ingest_channels
 
-  name        = local.iot_rule_names[each.key]
-  enabled     = true
-  sql         = "SELECT topic() as topic, * FROM '${local.iot_topic_filters[each.key]}'"
+  name    = local.iot_rule_names[each.key]
+  enabled = true
+  sql         = "SELECT topic() as topic, clientid() as client_id, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
   kinesis {

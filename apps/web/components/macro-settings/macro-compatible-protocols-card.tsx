@@ -2,6 +2,7 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
+import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
 import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -24,17 +25,6 @@ import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibl
 import { useRemoveCompatibleProtocol } from "../../hooks/macro/useRemoveCompatibleProtocol/useRemoveCompatibleProtocol";
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
-
-const getFamilyColor = (family: string) => {
-  switch (family) {
-    case "multispeq":
-      return "bg-badge-published";
-    case "ambit":
-      return "bg-badge-active";
-    default:
-      return "bg-badge-archived";
-  }
-};
 
 interface MacroCompatibleProtocolsCardProps {
   macroId: string;
@@ -130,7 +120,9 @@ export function MacroCompatibleProtocolsCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={`${getFamilyColor(entry.protocol.family)} capitalize`}>
+                  <Badge
+                    className={`${getSensorFamilyBadgeColor(entry.protocol.family)} capitalize`}
+                  >
                     {entry.protocol.family}
                   </Badge>
                 </div>

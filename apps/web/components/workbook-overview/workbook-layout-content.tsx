@@ -7,6 +7,8 @@ import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-bad
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
+import { BookOpen } from "lucide-react";
+import Link from "next/link";
 import { parseApiError } from "~/util/apiError";
 
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
@@ -55,7 +57,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Title + metadata — fluid; the parent PageContainer controls overall width. */}
+      {/* Title + metadata (fluid; the parent PageContainer controls overall width). */}
       <div className="flex w-full flex-col gap-8">
         <div className="flex flex-col gap-2">
           <InlineEditableTitle
@@ -63,6 +65,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
             hasAccess={isCreator}
             onSave={handleTitleSave}
             isPending={isUpdating}
+            icon={<BookOpen className="h-6 w-6" />}
           />
           <AutosaveIndicator status={indicatorStatus} />
         </div>
@@ -109,6 +112,19 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
               </span>
             )}
           </div>
+          {workbook.forkedFrom ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+                {t("workbooks.forkedFrom")}
+              </span>
+              <Link
+                href={`/platform/workbooks/${workbook.forkedFrom}`}
+                className="text-sm leading-[21px] text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+              >
+                {tCommon("common.viewOriginal")}
+              </Link>
+            </div>
+          ) : null}
         </div>
       </div>
 

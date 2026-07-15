@@ -4,6 +4,7 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
 import { BranchCellComponent } from "./cells/branch-cell";
+import { CommandCellComponent } from "./cells/command-cell";
 import { MacroCellComponent } from "./cells/macro-cell";
 import { MarkdownCellComponent } from "./cells/markdown-cell";
 import { OutputCellComponent } from "./cells/output-cell";
@@ -62,6 +63,18 @@ export function CellRenderer({
           executionError={executionError}
           readOnly={readOnly}
           snapshot={entitySnapshots?.protocols[cell.payload.protocolId]}
+        />
+      );
+    case "command":
+      return (
+        <CommandCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onRun={onRun}
+          executionStatus={executionStatus}
+          executionError={executionError}
+          readOnly={readOnly}
         />
       );
     case "macro":

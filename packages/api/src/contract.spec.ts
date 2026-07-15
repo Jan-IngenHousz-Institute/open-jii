@@ -3,10 +3,8 @@ import { describe, expect, it } from "vitest";
 import { contract } from "./contract";
 
 // Walk every procedure in the aggregate oRPC contract and assert the HTTP
-// surface is well-formed. These are the invariants clients depend on: a
-// procedure that loses its route, gains a bad method/status, or collides with
-// another endpoint's (method, path) is a breaking API change, and this catches
-// it without hand-maintaining a route table.
+// surface is well-formed: no missing routes, bad method/status, or (method, path)
+// collisions (all breaking API changes), without hand-maintaining a route table.
 
 interface OrpcRoute {
   method?: string;
@@ -56,6 +54,7 @@ describe("orpc contract surface", () => {
       "iot",
       "macros",
       "protocols",
+      "search",
       "users",
       "workbooks",
     ]);

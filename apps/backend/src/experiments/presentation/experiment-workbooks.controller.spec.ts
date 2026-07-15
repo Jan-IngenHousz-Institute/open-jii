@@ -7,6 +7,7 @@ import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/attach-workbook";
 import { DetachWorkbookUseCase } from "../application/use-cases/detach-workbook/detach-workbook";
+import { SetWorkbookVersionUseCase } from "../application/use-cases/set-workbook-version/set-workbook-version";
 import { UpgradeWorkbookVersionUseCase } from "../application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 
 describe("ExperimentWorkbooksController", () => {
@@ -15,6 +16,7 @@ describe("ExperimentWorkbooksController", () => {
   let attachUseCase: AttachWorkbookUseCase;
   let detachUseCase: DetachWorkbookUseCase;
   let upgradeUseCase: UpgradeWorkbookVersionUseCase;
+  let setVersionUseCase: SetWorkbookVersionUseCase;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -27,6 +29,7 @@ describe("ExperimentWorkbooksController", () => {
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     detachUseCase = testApp.module.get(DetachWorkbookUseCase);
     upgradeUseCase = testApp.module.get(UpgradeWorkbookVersionUseCase);
+    setVersionUseCase = testApp.module.get(SetWorkbookVersionUseCase);
 
     vi.restoreAllMocks();
   });
@@ -188,6 +191,84 @@ describe("ExperimentWorkbooksController", () => {
         id: expId,
       });
       await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("setWorkbookVersion", () => {
+    it("should re-pin the experiment to the requested version", async () => {
+      const workbookId = faker.string.uuid();
+      const versionId = faker.string.uuid();
+      vi.spyOn(setVersionUseCase, "execute").mockResolvedValue(
+        success({ workbookId, workbookVersionId: versionId, version: 1 }),
+      );
+
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ versionId })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        workbookId,
+        workbookVersionId: versionId,
+        version: 1,
+      });
+    });
+
+    it("should return 400 for invalid body (missing versionId)", async () => {
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 for a non-uuid versionId", async () => {
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ versionId: "not-a-uuid" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 without auth", async () => {
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({ versionId: faker.string.uuid() })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should return 403 when user lacks admin access", async () => {
+      vi.spyOn(setVersionUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Only admins can change the workbook version")),
+      );
+
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ versionId: faker.string.uuid() })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("should return 404 when the target version is not found", async () => {
+      vi.spyOn(setVersionUseCase, "execute").mockResolvedValue(
+        failure(AppError.notFound("Workbook version not found")),
+      );
+
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ versionId: faker.string.uuid() })
+        .expect(StatusCodes.NOT_FOUND);
     });
   });
 });

@@ -22,6 +22,11 @@ const contributorColumn: ExperimentDataColumn = {
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,
 };
+const deviceColumn: ExperimentDataColumn = {
+  name: "device",
+  type_name: "STRUCT",
+  type_text: WellKnownColumnTypes.DEVICE,
+};
 
 describe("useDistinctOptions", () => {
   it("returns the fetched values and exposes truncated state", async () => {
@@ -48,6 +53,20 @@ describe("useDistinctOptions", () => {
     await waitFor(() => expect(result.current.values).toHaveLength(1));
     expect(result.current.isContributor).toBe(true);
     expect(result.current.contributorMap?.get("u-1")).toBe(struct);
+  });
+
+  it("flags DEVICE columns and does not build a contributor map", async () => {
+    const struct = JSON.stringify({ id: "d-1", serial_number: "AA:11" });
+    server.mount(contract.experiments.getDistinctColumnValues, {
+      body: { values: [struct], truncated: false },
+    });
+
+    const { result } = renderHook(() => useDistinctOptions(deviceColumn, "exp-1", "raw_data"));
+
+    await waitFor(() => expect(result.current.values).toHaveLength(1));
+    expect(result.current.isDevice).toBe(true);
+    expect(result.current.isContributor).toBe(false);
+    expect(result.current.contributorMap).toBeUndefined();
   });
 
   it("returns empty defaults while loading or when the request errors", async () => {
@@ -98,5 +117,19 @@ describe("chipValueForOption", () => {
 
   it("returns the raw value when contributor parsing fails", () => {
     expect(chipValueForOption("plain", true)).toBe("plain");
+  });
+
+  it("unwraps the serial number when the column is a DEVICE struct", () => {
+    const struct = JSON.stringify({ id: "d-1", serial_number: "AA:11", status: "active" });
+    expect(chipValueForOption(struct, false, true)).toBe("AA:11");
+  });
+
+  it("returns the raw value when device json is unparseable", () => {
+    expect(chipValueForOption("plain", false, true)).toBe("plain");
+  });
+
+  it("returns the raw value when the device struct has no serial number", () => {
+    const struct = JSON.stringify({ id: "d-1" });
+    expect(chipValueForOption(struct, false, true)).toBe(struct);
   });
 });

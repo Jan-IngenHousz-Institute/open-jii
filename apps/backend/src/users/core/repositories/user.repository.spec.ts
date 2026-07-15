@@ -2,11 +2,15 @@ import { faker } from "@faker-js/faker";
 
 import {
   users,
-  organizations,
   profiles,
   accounts,
   sessions,
   experimentMembers,
+  organizations,
+  organizationMembers,
+  personalOrgSlug,
+  personalOrgName,
+  ensurePersonalOrganization,
   eq,
 } from "@repo/database";
 
@@ -284,6 +288,75 @@ describe("UserRepository", () => {
       assertSuccess(result);
       expect(result.value).toEqual([]);
     });
+
+    it("should search users by last name", async () => {
+      await testApp.createTestUser({
+        name: "Barnaby Figglesworth",
+        email: "barnaby@example.com",
+      });
+
+      const result = await repository.search({ query: "figglesworth", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.lastName === "Figglesworth")).toBe(true);
+    });
+
+    it("should search users by an email substring", async () => {
+      const userId = await testApp.createTestUser({
+        name: "Zelda Quux",
+        email: "zorptastic@example.com",
+      });
+
+      const result = await repository.search({ query: "zorptastic", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.userId === userId)).toBe(true);
+    });
+
+    it("should tolerate a typo via trigram matching", async () => {
+      await testApp.createTestUser({
+        name: "Maxwell Thornberry",
+        email: "maxwell@example.com",
+      });
+
+      const result = await repository.search({ query: "thornbery", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.lastName === "Thornberry")).toBe(true);
+    });
+
+    it("should match a name prefix via substring search", async () => {
+      await testApp.createTestUser({
+        name: "Barnaby Figglesworth",
+        email: "prefixcase@example.com",
+      });
+
+      const result = await repository.search({ query: "barn", limit: 20 });
+
+      assertSuccess(result);
+      expect(result.value.some((user) => user.firstName === "Barnaby")).toBe(true);
+    });
+
+    it("should exclude deactivated and soft-deleted users", async () => {
+      await testApp.createTestUser({
+        name: "Ghosty Inactive",
+        email: "inactive@example.com",
+        activated: false,
+      });
+      await testApp.createTestUser({
+        name: "Removed Person",
+        email: "removed@example.com",
+        deletedAt: new Date(),
+      });
+
+      const inactiveResult = await repository.search({ query: "ghosty", limit: 20 });
+      const deletedResult = await repository.search({ query: "removed", limit: 20 });
+
+      assertSuccess(inactiveResult);
+      assertSuccess(deletedResult);
+      expect(inactiveResult.value.some((user) => user.firstName === "Ghosty")).toBe(false);
+      expect(deletedResult.value.some((user) => user.firstName === "Removed")).toBe(false);
+    });
   });
 
   describe("update", () => {
@@ -521,7 +594,6 @@ describe("UserRepository", () => {
       expect(profile.lastName).toBe("User");
       expect(profile.bio).toBeNull();
       expect(profile.avatarUrl).toBeNull();
-      expect(profile.organizationId).toBeNull();
       expect(profile.deletedAt).not.toBeNull();
 
       // Experiment memberships for this user should be deleted
@@ -531,40 +603,85 @@ describe("UserRepository", () => {
         .where(eq(experimentMembers.userId, userToDeleteId));
       expect(memberships.length).toBe(0);
     });
+
+    it("anonymizes the personal organization name so it no longer embeds PII", async () => {
+      // Arrange: a user whose personal org name embeds their real name.
+      const userToDeleteId = await testApp.createTestUser({
+        name: "Jane Secret",
+        email: "jane.secret@example.com",
+      });
+      const orgId = await ensurePersonalOrganization(testApp.database, {
+        id: userToDeleteId,
+        name: "Jane Secret",
+      });
+      const [before] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(before.name).toBe("Jane Secret's workspace");
+
+      // Act
+      const result = await repository.delete(userToDeleteId);
+      expect(result.isSuccess()).toBe(true);
+
+      // Assert: name scrubbed of PII; org (and ownership) intentionally kept.
+      const [after] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(after.name).toBe(personalOrgName("Deleted User"));
+      expect(after.name).not.toContain("Jane");
+      expect(after.name).not.toContain("Secret");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, orgId));
+      expect(members).toHaveLength(1);
+      expect(members[0].userId).toBe(userToDeleteId);
+    });
   });
 
   describe("createOrUpdateUserProfile", () => {
-    it("should create a new user profile with a new organization", async () => {
+    it("should create a new user profile", async () => {
+      // A user with no profile yet, so this exercises the create branch.
+      const newUserId = await testApp.createTestUser({ createProfile: false });
       const dto = {
         firstName: "Alice",
         lastName: "Smith",
-        organization: "NewOrg",
       };
 
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+      const result = await repository.createOrUpdateUserProfile(newUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: dto.organization,
       });
-
-      // Check organization was created
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, dto.organization));
-      expect(orgs.length).toBe(1);
 
       // Check profile was created
       const profs = await testApp.database
         .select()
         .from(profiles)
-        .where(eq(profiles.userId, testUserId));
+        .where(eq(profiles.userId, newUserId));
       expect(profs.length).toBe(1);
       expect(profs[0].firstName).toBe(dto.firstName);
+
+      // Creating the profile names the user's personal org from first + last
+      // and makes them its owner.
+      const [org] = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.slug, personalOrgSlug(newUserId)));
+      expect(org.name).toBe("Alice Smith's workspace");
+
+      const members = await testApp.database
+        .select()
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, org.id));
+      expect(members).toHaveLength(1);
+      expect(members[0].role).toBe("owner");
     });
 
     it("should update an existing user profile", async () => {
@@ -572,7 +689,6 @@ describe("UserRepository", () => {
       const initialDto = {
         firstName: "Bob",
         lastName: "Jones",
-        organization: "Org1",
       };
       await repository.createOrUpdateUserProfile(testUserId, initialDto);
 
@@ -580,7 +696,6 @@ describe("UserRepository", () => {
       const updateDto = {
         firstName: "Robert",
         lastName: "Jones",
-        organization: "Org1",
       };
       const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
 
@@ -599,7 +714,7 @@ describe("UserRepository", () => {
       // Cleanup
     });
 
-    it("should create a user profile without an organization", async () => {
+    it("should create a user profile without optional fields", async () => {
       const dto = {
         firstName: "Charlie",
         lastName: "Brown",
@@ -612,7 +727,6 @@ describe("UserRepository", () => {
       expect(result.value).toMatchObject({
         firstName: dto.firstName,
         lastName: dto.lastName,
-        organization: undefined,
       });
 
       // Check profile was created
@@ -624,37 +738,11 @@ describe("UserRepository", () => {
       expect(profs[0].firstName).toBe(dto.firstName);
     });
 
-    it("should use existing organization if it already exists", async () => {
-      // Pre-create organization
-      const orgName = "ExistingOrg";
-      await testApp.database.insert(organizations).values({ name: orgName }).returning();
-
-      const dto = {
-        firstName: "Dana",
-        lastName: "White",
-        organization: orgName,
-      };
-
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value.organization).toBe(orgName);
-
-      // Should not create a duplicate organization
-      const orgs = await testApp.database
-        .select()
-        .from(organizations)
-        .where(eq(organizations.name, orgName));
-      expect(orgs.length).toBe(1);
-    });
-
     it("should create a user profile with bio", async () => {
       const dto = {
         firstName: "John",
         lastName: "Smith",
         bio: "Software engineer with 10 years of experience.",
-        organization: "TechCorp",
       };
 
       const result = await repository.createOrUpdateUserProfile(testUserId, dto);
@@ -665,7 +753,6 @@ describe("UserRepository", () => {
         firstName: dto.firstName,
         lastName: dto.lastName,
         bio: dto.bio,
-        organization: dto.organization,
       });
 
       // Check profile was created with bio

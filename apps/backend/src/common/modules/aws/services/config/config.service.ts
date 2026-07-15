@@ -34,6 +34,8 @@ export class AwsConfigService {
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean),
+      deviceThingTypeName: this.configService.getOrThrow<string>("aws.iot.deviceThingTypeName"),
+      deviceThingGroupName: this.configService.getOrThrow<string>("aws.iot.deviceThingGroupName"),
       lambda: {
         macroSandboxPythonFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxPythonFunctionName",
@@ -106,6 +108,14 @@ export class AwsConfigService {
 
   get iotPolicyNames(): string[] {
     return this.config.iotPolicyNames;
+  }
+
+  get deviceThingTypeName(): string {
+    return this.config.deviceThingTypeName;
+  }
+
+  get deviceThingGroupName(): string {
+    return this.config.deviceThingGroupName;
   }
 
   /**

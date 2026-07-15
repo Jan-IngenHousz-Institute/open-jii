@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const zSensorFamily = z.enum(["multispeq", "ambit", "generic"]);
+export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic"]);
 
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({
@@ -12,6 +12,7 @@ export const zProtocol = z.object({
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
+  forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -38,6 +39,8 @@ export const zCreateProtocolRequestBody = z.object({
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
+  // Set when this protocol is a fork (copy) of another, to record its lineage.
+  forkedFrom: z.string().uuid().optional(),
 });
 
 export const zUpdateProtocolRequestBody = z.object({

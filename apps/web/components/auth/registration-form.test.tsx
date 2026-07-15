@@ -71,7 +71,6 @@ describe("RegistrationForm", () => {
 
     expect(screen.getByLabelText("registration.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("registration.lastName")).toBeInTheDocument();
-    expect(screen.getByLabelText("registration.organization")).toBeInTheDocument();
   });
 
   it("renders the terms and conditions section", async () => {
@@ -121,7 +120,6 @@ describe("RegistrationForm", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Jane");
     await user.type(screen.getByLabelText("registration.lastName"), "Doe");
-    await user.type(screen.getByLabelText("registration.organization"), "Acme");
 
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
@@ -130,7 +128,6 @@ describe("RegistrationForm", () => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
         firstName: "Jane",
         lastName: "Doe",
-        organization: "Acme",
         avatarUrl: null,
       });
     });
@@ -154,16 +151,7 @@ describe("RegistrationForm", () => {
   });
 
   it("pushes to default '/' when callbackUrl is undefined", async () => {
-    // Note: RegistrationForm component defaults to /platform if callbackUrl is undefined, not /
-    // let's check code: `router.push(callbackUrl ?? "/platform");`
-    // So if callbackUrl is undefined, it goes to /platform.
-    // The test below expects "/" which contradicts the code I read.
-    // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
-    // If I pass termsData but no callbackUrl...
-
-    // I will pass empty string or undefined and expect /platform or whatever the code does.
-    // My previous read said `router.push(callbackUrl ?? "/platform")`
-    // So expectation should be `/platform`.
+    // With no callbackUrl the form falls back to `router.push(callbackUrl ?? "/platform")`.
 
     // Let's stick to what the code says.
 
@@ -194,7 +182,6 @@ describe("RegistrationForm", () => {
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
-    expect(screen.getByLabelText("registration.organization")).toHaveValue("");
     expect(screen.getByRole("checkbox")).not.toBeChecked();
   });
 
@@ -351,12 +338,11 @@ describe("RegistrationForm", () => {
       expect(screen.getByText("registration.emailOnlyDescription")).toBeInTheDocument();
     });
 
-    it("does not render name, organization, or terms fields", () => {
+    it("does not render name or terms fields", () => {
       render(<RegistrationForm termsData={termsData} emailOnly />);
 
       expect(screen.queryByLabelText("registration.firstName")).not.toBeInTheDocument();
       expect(screen.queryByLabelText("registration.lastName")).not.toBeInTheDocument();
-      expect(screen.queryByLabelText("registration.organization")).not.toBeInTheDocument();
       expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     });
 

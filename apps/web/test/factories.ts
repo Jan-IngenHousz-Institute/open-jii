@@ -36,11 +36,13 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
+  CommandCell,
   MacroCell,
   MarkdownCell,
   OutputCell,
@@ -167,6 +169,7 @@ export function createMacro(overrides: Partial<Macro> = {}): Macro {
     sortOrder: null,
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -188,6 +191,7 @@ export function createProtocol(overrides: Partial<Protocol> = {}): Protocol {
     sortOrder: null,
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -206,6 +210,7 @@ export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
     metadata: {},
     createdBy: "user-1",
     createdByName: "Test User",
+    forkedFrom: null,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,
@@ -220,7 +225,6 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     firstName: "Test",
     lastName: "User",
     bio: null,
-    organization: undefined,
     activated: true,
     email: "test@example.com",
     ...overrides,
@@ -478,6 +482,26 @@ export function createProtocolCell(overrides: Partial<ProtocolCell> = {}): Proto
   };
 }
 
+export function createCommandCell(
+  overrides: Partial<Omit<CommandCell, "payload">> & {
+    payload?: Partial<{ format: "string" | "json" | "yaml"; content: string; name: string }>;
+  } = {},
+): CommandCell {
+  cellSeq++;
+  const { payload, ...rest } = overrides;
+  return {
+    id: `cell-cmd-${cellSeq}`,
+    type: "command",
+    isCollapsed: false,
+    ...rest,
+    payload: {
+      format: payload?.format ?? "string",
+      content: payload?.content ?? "battery",
+      ...(payload?.name !== undefined ? { name: payload.name } : {}),
+    },
+  };
+}
+
 export function createMacroCell(overrides: Partial<MacroCell> = {}): MacroCell {
   cellSeq++;
   return {
@@ -695,9 +719,33 @@ export function createUpload(
   };
 }
 
+// ── IoT Device ──────────────────────────────────────────────────
+
+let iotDeviceSeq = 0;
+
+export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
+  iotDeviceSeq++;
+  const thingName = `ambyte_${iotDeviceSeq}`;
+  return {
+    id: crypto.randomUUID(),
+    thingName,
+    thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
+    serialNumber: `SN-${iotDeviceSeq}`,
+    name: `Device ${iotDeviceSeq}`,
+    deviceType: "ambyte",
+    status: "pending",
+    certificateId: null,
+    certificateArn: null,
+    createdBy: crypto.randomUUID(),
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
-/** Reset sequence counters — useful in beforeEach if deterministic IDs matter */
+/** Reset sequence counters, useful in beforeEach if deterministic IDs matter */
 export function resetFactories() {
   experimentSeq = 0;
   transferSeq = 0;
@@ -715,6 +763,7 @@ export function resetFactories() {
   cellSeq = 0;
   versionSeq = 0;
   uploadSeq = 0;
+  iotDeviceSeq = 0;
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
 }

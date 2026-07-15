@@ -20,7 +20,6 @@ import {
 } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
-import { Breadcrumbs } from "../../../components/navigation/navigation-breadcrumbs/navigation-breadcrumbs";
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
 
 const getCallbackUrl = async () => {
@@ -60,14 +59,17 @@ export default async function AppLayout({
   return (
     <SidebarProvider>
       <ActivityProvider>
-        <NavigationSidebarWrapper locale={locale} releaseNotes={releaseNotes} />
+        <NavigationSidebarWrapper
+          locale={locale}
+          distinctId={session.user.email || session.user.id}
+          releaseNotes={releaseNotes}
+        />
         <SidebarEdgePeek />
         <SidebarFloatingReopen />
         <SidebarInset>
           <NavigationTopbar locale={locale} user={session.user} releaseNotes={releaseNotes} />
           <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 pb-6 pt-8 md:px-6">
             <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-              <Breadcrumbs locale={locale} />
               <Suspense>{children}</Suspense>
             </PageContainer>
           </div>

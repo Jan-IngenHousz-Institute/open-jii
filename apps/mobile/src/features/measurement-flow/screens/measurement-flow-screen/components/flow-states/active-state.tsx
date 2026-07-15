@@ -4,6 +4,7 @@ import { FlowNode } from "~/shared/measurements/flow-node";
 
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
 import { BranchNode } from "../flow-nodes/branch-node/branch-node";
+import { CommandNode } from "../flow-nodes/command-node/command-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
@@ -38,9 +39,14 @@ function renderNode(currentNode: FlowNode) {
         </ScrollableNode>
       );
     case "measurement":
+      // A measurement node carries either a protocol reference or an inline
+      // device command; the latter runs through the lightweight CommandNode.
+      if (currentNode.content?.command) {
+        return <CommandNode content={currentNode.content.command} nodeId={currentNode.id} />;
+      }
       return (
         <ScrollableNode>
-          <MeasurementNode content={currentNode.content} />
+          <MeasurementNode content={currentNode.content} nodeId={currentNode.id} />
         </ScrollableNode>
       );
     default:

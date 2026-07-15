@@ -68,6 +68,16 @@ describe("createDefaultCell", () => {
     expect(cell).toMatchObject({ type: "output", producedBy: "", isCollapsed: false });
   });
 
+  it("creates a command cell defaulting to an empty string payload", () => {
+    const cell = createDefaultCell("command");
+    expect(cell).toMatchObject({
+      type: "command",
+      payload: { format: "string", content: "" },
+      isCollapsed: false,
+    });
+    expect(cell.id).toBeDefined();
+  });
+
   it("creates a branch cell with one default path and condition", () => {
     const cell = createDefaultCell("branch");
     if (cell.type !== "branch") throw new Error("unexpected");

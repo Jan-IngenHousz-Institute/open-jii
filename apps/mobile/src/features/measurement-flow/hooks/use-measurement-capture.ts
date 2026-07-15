@@ -16,7 +16,8 @@ const log = createLogger("measurement-capture");
 // View-model for MeasurementNode: owns the scan lifecycle (preconditions +
 // user feedback, execution, store wiring, disconnect cleanup) so the
 // component is a pure render switch over the returned state.
-export function useMeasurementCapture(content: MeasurementContent) {
+// nodeId (== cell id) attributes the recorded result to its producing cell.
+export function useMeasurementCapture(content: MeasurementContent, nodeId?: string) {
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
   const protocol = content.protocol;
@@ -92,7 +93,7 @@ export function useMeasurementCapture(content: MeasurementContent) {
         const result = await executeScan(protocol);
         // executeScan types its payload as plain `object`; the device output
         // is JSON, so the structural ScanResult cast is safe at this seam.
-        setScanResult(result as ScanResult | undefined);
+        setScanResult(result as ScanResult | undefined, nodeId);
         // Play system notification sound when measurement completes
         await playSound();
         nextStep();

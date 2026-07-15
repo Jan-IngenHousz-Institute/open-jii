@@ -34,6 +34,9 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: macroKey });
         await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+        // Editing shared macro code changes workbook drift; refetch so an attached
+        // experiment's upgrade prompt reacts immediately.
+        await queryClient.invalidateQueries({ queryKey: orpc.workbooks.key() });
       },
       onSuccess: (data) => {
         props.onSuccess?.(data);

@@ -1,4 +1,5 @@
 import { contributorDisplayName } from "@/components/experiment-visualizations/charts/data/contributor-cells";
+import { deviceDisplayName } from "@/components/experiment-visualizations/charts/data/device-cells";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -93,23 +94,28 @@ function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolea
   return fns.every((f) => WINDOW_FUNCTIONS.has(f.function));
 }
 
-// Flatten CONTRIBUTOR structs to their `name` so the chart layer sees plain strings.
-function flattenContributorCells<
+// Flatten CONTRIBUTOR/DEVICE structs to their display field so the chart layer sees plain strings.
+function flattenStructCells<
   T extends {
     columns: { name: string; type_text: string }[];
     rows: Record<string, unknown>[];
   },
 >(table: T): T {
-  const contributorColumns = table.columns.filter(
-    (c) => c.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+  const structColumns = table.columns.filter(
+    (c) =>
+      c.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
+      c.type_text === WellKnownColumnTypes.DEVICE,
   );
-  if (contributorColumns.length === 0) {
+  if (structColumns.length === 0) {
     return table;
   }
   const rows = table.rows.map((row) => {
     const out: Record<string, unknown> = { ...row };
-    for (const col of contributorColumns) {
-      out[col.name] = contributorDisplayName(row[col.name]);
+    for (const col of structColumns) {
+      out[col.name] =
+        col.type_text === WellKnownColumnTypes.DEVICE
+          ? deviceDisplayName(row[col.name])
+          : contributorDisplayName(row[col.name]);
     }
     return out;
   });
@@ -244,7 +250,7 @@ export const useExperimentVisualizationData = (
         rows: remappedRows,
       };
     })();
-    return flattenContributorCells(afterAlias);
+    return flattenStructCells(afterAlias);
   }, [tableData, aggregation, aggregationActive]);
 
   return {

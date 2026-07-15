@@ -298,7 +298,7 @@ describe("UserController", () => {
       const response = await testApp
         .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
-        .send({ firstName: "Test", lastName: "User", organization: "Test Organization" })
+        .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.CREATED);
 
       expect(response.body).toEqual({});
@@ -312,7 +312,6 @@ describe("UserController", () => {
           firstName: "Test",
           lastName: "User",
           bio: "Software developer with experience in Node.js and React.",
-          organization: "Test Organization",
         })
         .expect(StatusCodes.CREATED);
 
@@ -343,7 +342,7 @@ describe("UserController", () => {
       await testApp
         .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
-        .send({ firstName: "Test", lastName: "User", organization: "Test Org" })
+        .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
@@ -361,7 +360,6 @@ describe("UserController", () => {
           firstName: "Ada",
           lastName: "Lovelace",
           bio: "Math enjoyer",
-          organization: "Analytical Engines Inc.",
         })
         .expect(StatusCodes.CREATED);
 
@@ -378,7 +376,6 @@ describe("UserController", () => {
         firstName: "Ada",
         lastName: "Lovelace",
         bio: "Math enjoyer",
-        organization: "Analytical Engines Inc.",
       });
     });
 

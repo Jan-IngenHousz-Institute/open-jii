@@ -16,6 +16,7 @@ function makeWorkbook(overrides: Partial<Workbook> & Pick<Workbook, "id" | "name
     metadata: {},
     createdBy: "00000000-0000-0000-0000-0000000000aa",
     createdByName: "Tester",
+    forkedFrom: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -92,7 +93,7 @@ describe("WorkbookList row actions", () => {
     const row = screen.getByText("Source WB").closest("tr");
     if (!row) throw new Error("row not found");
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
-    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
@@ -106,7 +107,7 @@ describe("WorkbookList row actions", () => {
     const row = screen.getByText("Source WB").closest("tr");
     if (!row) throw new Error("row not found");
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
-    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.duplicate" }));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),

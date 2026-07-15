@@ -435,7 +435,7 @@ describe("IotProtocolRunner", () => {
       const { rerender } = render(<IotProtocolRunner {...defaultProps} />);
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambit" />);
+      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambyte" />);
 
       await waitFor(() => {
         expect(mockDisconnect).toHaveBeenCalled();
@@ -460,7 +460,7 @@ describe("IotProtocolRunner", () => {
       });
 
       // Change sensor family
-      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambit" />);
+      rerender(<IotProtocolRunner {...defaultProps} sensorFamily="ambyte" />);
 
       await waitFor(() => {
         expect(screen.getByText("No result")).toBeInTheDocument();

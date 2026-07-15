@@ -16,8 +16,18 @@ export function useDistinctOptions(
     column: column.name,
   });
   const isContributor = column.type_text === WellKnownColumnTypes.CONTRIBUTOR;
+  const isDevice = column.type_text === WellKnownColumnTypes.DEVICE;
   const contributorMap = useContributorIdMap(values, isContributor);
-  return { values, truncated, isLoading, isSuccess, error, isContributor, contributorMap };
+  return {
+    values,
+    truncated,
+    isLoading,
+    isSuccess,
+    error,
+    isContributor,
+    isDevice,
+    contributorMap,
+  };
 }
 
 export function useContributorIdMap(
@@ -53,10 +63,27 @@ function tryParseContributorId(json: string): string | null {
   }
 }
 
-export function chipValueForOption(raw: string | number, isContributor: boolean): string | number {
-  if (!isContributor) {
-    return raw;
+function tryParseDeviceSerial(json: string): string | null {
+  try {
+    const parsed = JSON.parse(json) as { serial_number?: unknown };
+    return typeof parsed.serial_number === "string" ? parsed.serial_number : null;
+  } catch {
+    return null;
   }
-  const id = tryParseContributorId(String(raw));
-  return id ?? raw;
+}
+
+export function chipValueForOption(
+  raw: string | number,
+  isContributor: boolean,
+  isDevice = false,
+): string | number {
+  if (isContributor) {
+    const id = tryParseContributorId(String(raw));
+    return id ?? raw;
+  }
+  if (isDevice) {
+    const serial = tryParseDeviceSerial(String(raw));
+    return serial ?? raw;
+  }
+  return raw;
 }

@@ -108,6 +108,22 @@ export const zExperimentMeasurementContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+// Inline command formats a command cell can carry. Defined here (rather than in
+// workbook-cells.schema) so workbook-cells can import it without an import cycle,
+// since workbook-cells already depends on this module.
+export const zCommandFormat = z.enum(["string", "json", "yaml"]);
+export type CommandFormat = z.infer<typeof zCommandFormat>;
+
+// A measurement node may instead carry an inline device command (raw string,
+// JSON, or YAML) from a command cell. Old apps' cells->flow drops this node
+// (unknown content shape), degrading gracefully; protocol nodes are unaffected.
+export const zExperimentMeasurementCommandContent = z.object({
+  command: z.object({
+    format: zCommandFormat,
+    content: z.string().min(1, "Command content is required"),
+  }),
+});
+
 export const zExperimentAnalysisContent = z.object({
   macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
@@ -135,6 +151,7 @@ export const zExperimentFlowNode = z.object({
     zExperimentQuestionContent,
     zExperimentInstructionContent,
     zExperimentMeasurementContent,
+    zExperimentMeasurementCommandContent,
     zExperimentAnalysisContent,
     zExperimentBranchContent,
   ]),
@@ -212,16 +229,9 @@ export const zExperimentFlowGraph = z
       });
     }
 
-    // Reject duplicate question-node labels. Only question nodes need this:
-    // their labels become column keys in `questions_data`, so duplicates collide
-    // and lose answers downstream. Other node types' labels are display-only.
-    // Compare on the canonicalized form so labels that only differ by
-    // punctuation/whitespace (and would collapse to the same column key)
-    // are also caught.
-    //
-    // Also reject question labels whose canonical form lands on a reserved
-    // experiment-data column name. Those would shadow a system column once
-    // `questions_data` is flattened to top-level on read or export.
+    // Reject duplicate question-node labels (canonicalized) and any whose
+    // canonical form collides with a reserved experiment-data column name: both
+    // shadow/collide as column keys in `questions_data` and lose answers.
     const seen = new Map<string, number>();
     graph.nodes.forEach((node, index) => {
       if (node.type !== "question") return;

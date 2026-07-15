@@ -35,6 +35,7 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
+  navDevices: NavigationItem[];
   navWorkbooks: NavigationItem[];
   navLibrary: NavigationItem[];
 }
@@ -87,6 +88,7 @@ export function AppSidebar({
 
   const processedNavDashboard = navigationData.navDashboard.map(mapItem);
   const processedNavExperiments = navigationData.navExperiments.map(mapItem);
+  const processedNavDevices = navigationData.navDevices.map(mapItem);
   const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
   const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
@@ -126,6 +128,7 @@ export function AppSidebar({
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
           <NavItems items={processedNavDashboard} />
           <NavItems items={processedNavExperiments} />
+          <NavItems items={processedNavDevices} />
           <NavItems items={processedNavWorkbooks} />
           <NavItems items={processedNavLibrary} />
         </div>

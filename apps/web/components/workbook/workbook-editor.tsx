@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -57,8 +58,8 @@ interface WorkbookEditorProps {
   isConnected?: boolean;
   isConnecting?: boolean;
   deviceInfo?: DeviceInfo | null;
-  sensorFamily?: "multispeq" | "ambit" | "generic";
-  onSensorFamilyChange?: (family: "multispeq" | "ambit" | "generic") => void;
+  sensorFamily?: SensorFamily;
+  onSensorFamilyChange?: (family: SensorFamily) => void;
   connectionType?: "bluetooth" | "serial";
   onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
   isRunningAll?: boolean;
@@ -76,7 +77,7 @@ interface WorkbookEditorProps {
 
 export function createDefaultCell(
   type: WorkbookCell["type"],
-  _sensorFamily: "multispeq" | "ambit" | "generic" = "multispeq",
+  _sensorFamily: SensorFamily = "multispeq",
 ): WorkbookCell {
   const id = crypto.randomUUID();
   const base = { id, isCollapsed: false };
@@ -84,6 +85,8 @@ export function createDefaultCell(
   switch (type) {
     case "markdown":
       return { ...base, type: "markdown", content: "" };
+    case "command":
+      return { ...base, type: "command", payload: { format: "string", content: "" } };
     case "protocol":
       throw new Error("Protocol cells must be created via the protocol picker");
     case "macro":
@@ -192,7 +195,7 @@ interface SortableCellGroupProps {
   cells: WorkbookCell[];
   cellNumber?: number;
   executionStates?: Record<string, CellExecutionState>;
-  sensorFamily?: "multispeq" | "ambit" | "generic";
+  sensorFamily?: SensorFamily;
   readOnly?: boolean;
   entitySnapshots?: EntitySnapshots;
   onRunCell?: (cellId: string) => void;
@@ -459,6 +462,7 @@ export function WorkbookEditor({
     for (const cell of cells) {
       if (
         cell.type === "protocol" ||
+        cell.type === "command" ||
         cell.type === "macro" ||
         cell.type === "question" ||
         cell.type === "branch"

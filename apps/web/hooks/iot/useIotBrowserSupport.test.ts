@@ -104,13 +104,13 @@ describe("useIotBrowserSupport", () => {
       expect(result.current.any).toBe(true);
     });
 
-    it("keeps bluetooth enabled for ambit devices", () => {
+    it("keeps bluetooth enabled for ambyte devices", () => {
       Object.defineProperty(globalThis, "navigator", {
         value: { bluetooth: {}, serial: {}, userAgent: "test" },
         configurable: true,
       });
 
-      const { result } = renderHook(() => useIotBrowserSupport("ambit"));
+      const { result } = renderHook(() => useIotBrowserSupport("ambyte"));
 
       expect(result.current.bluetooth).toBe(true);
       expect(result.current.serial).toBe(true);

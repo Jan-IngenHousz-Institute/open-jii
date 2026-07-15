@@ -37,6 +37,7 @@
     "@orpc/contract": "catalog:orpc",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
+    "yaml": "2.8.3",
     "zod": "catalog:"
   },
   "devDependencies": {

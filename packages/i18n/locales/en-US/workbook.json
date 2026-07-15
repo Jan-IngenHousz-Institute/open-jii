@@ -34,7 +34,7 @@
     "notUsed": "Not used",
     "usedByCount_one": "{{count}} experiment",
     "usedByCount_other": "{{count}} experiments",
-    "duplicateName": "Copy of {{name}}",
+    "duplicateName": "Fork of {{name}}",
     "columns": {
       "name": "Name",
       "usedBy": "Used by",
@@ -45,7 +45,8 @@
       "open": "Open",
       "duplicate": "Duplicate",
       "delete": "Delete",
-      "more": "More actions"
+      "more": "More actions",
+      "fork": "Fork"
     },
     "messages": {
       "deleteSuccess": "Workbook deleted",
@@ -56,6 +57,8 @@
     "cellSummary": {
       "protocol_one": "{{count}} Protocol",
       "protocol_other": "{{count}} Protocols",
+      "command_one": "{{count}} Command",
+      "command_other": "{{count}} Commands",
       "macro_one": "{{count}} Macro",
       "macro_other": "{{count}} Macros",
       "question_one": "{{count}} Question",
@@ -64,14 +67,15 @@
       "branch_other": "{{count}} Branches",
       "markdown_one": "{{count}} Note",
       "markdown_other": "{{count}} Notes"
-    }
+    },
+    "forkedFrom": "Forked from"
   },
   "output": {
     "label": "Output",
     "expand": "Expand output",
     "collapse": "Collapse output",
     "clear": "Clear output",
-    "empty": "No measurement data available — run a protocol cell first",
+    "empty": "No measurement data available - run a protocol or command cell first",
     "noData": "No output data",
     "tabTable": "Table",
     "tabJson": "JSON",
@@ -85,5 +89,17 @@
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
     "timeseriesError": "Cannot decode this output against the source protocol"
+  },
+  "cells": {
+    "command": "Command",
+    "protocolReadOnly": "Read-only. Fork it to edit.",
+    "macroReadOnly": "Read-only. Fork it to edit.",
+    "fork": "Fork to edit",
+    "forkedFrom": "Forked from",
+    "rename": "Rename",
+    "renameSave": "Save name",
+    "renameCancel": "Cancel",
+    "renameConflict": "That name is already taken",
+    "renameFailed": "Rename failed"
   }
 }

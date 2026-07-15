@@ -73,14 +73,72 @@
       "INSTRUCTION": "Anleitung",
       "QUESTION": "Frage",
       "MEASUREMENT": "Messung",
-      "ANALYSIS": "Analyse"
+      "ANALYSIS": "Analyse",
+      "COMMAND": "Befehl"
     },
     "questionTooltip": {
       "title": "Datenspaltenname",
       "description": "Diese Bezeichnung wird zu einer Spalte in Ihrer Datenanalyse:",
       "defaultColumnName": "frage_name"
     },
-    "untitledNode": "(Ohne Titel)"
+    "untitledNode": "(Ohne Titel)",
+    "editingTitle": "Arbeitsbuch dieses Experiments bearbeiten",
+    "editAutoApplyNotice": "Jede Änderung, die du hier speicherst, wird automatisch auf dieses Experiment angewendet.",
+    "editIsolatedHint": "Wenn du Änderungen ausprobieren möchtest, ohne dieses Experiment zu beeinflussen, bearbeite über die Arbeitsbuch-Seite; diese Änderungen bleiben getrennt, bis du die Version aktualisierst.",
+    "editOpenWorkbookLink": "Arbeitsbuch-Seite öffnen",
+    "reviewAndUpgrade": "Prüfen & aktualisieren",
+    "versionHistory": {
+      "open": "Versionsverlauf",
+      "title": "Versionsverlauf",
+      "subtitle": "Jede Version, die beim Anhängen oder Aktualisieren dieses Arbeitsbuchs veröffentlicht wurde.",
+      "current": "Aktuell",
+      "restore": "Wiederherstellen",
+      "restoreConfirmTitle": "Diese Version wiederherstellen?",
+      "restoreConfirmMessage": "Dies setzt das Experiment wieder auf v{{version}} und ändert das Messprotokoll für künftige Messungen. Vorhandene Daten bleiben erhalten.",
+      "restored": "Auf v{{version}} zurückgesetzt",
+      "restoreFailed": "Version konnte nicht wiederhergestellt werden",
+      "empty": "Noch keine veröffentlichten Versionen.",
+      "loadError": "Versionsverlauf konnte nicht geladen werden. Bitte erneut versuchen."
+    },
+    "upgradeDiff": {
+      "title": "Änderungen vor dem Aktualisieren prüfen",
+      "subtitle": "Dieses Experiment wird von v{{from}} auf {{to}} umgestellt.",
+      "checking": "Kompatibilität wird geprüft...",
+      "loadError": "Änderungen konnten nicht geladen werden. Schließen und erneut versuchen.",
+      "upgrading": "Wird aktualisiert...",
+      "cellChanges": "Ablaufänderungen",
+      "noCellChanges": "Keine Änderungen an der Ablaufstruktur.",
+      "codeChanges": "Protokoll- & Makro-Änderungen",
+      "viewDiff": "Unterschiede anzeigen",
+      "macroCaveat": "Nur strukturelle Prüfungen. Makro-Logik wird nicht überprüft; testen Sie den Ablauf nach der Aktualisierung.",
+      "lastChanged": "geändert {{when}}",
+      "kind": { "protocol": "Protokoll", "macro": "Makro" },
+      "status": {
+        "added": "Hinzugefügt",
+        "changed": "Geändert",
+        "unchanged": "Unverändert",
+        "removed": "Entfernt"
+      },
+      "change": {
+        "added": "Hinzugefügt",
+        "removed": "Entfernt",
+        "changed": "Bearbeitet",
+        "moved": "Verschoben"
+      },
+      "verdict": {
+        "ok": "Keine strukturellen Probleme gefunden",
+        "warnings": "Aktualisierung möglich, mit Warnungen",
+        "errors": "Die Aktualisierung könnte dieses Arbeitsbuch beschädigen"
+      },
+      "issue": {
+        "missingProtocol": "Protokoll \"{{label}}\" existiert nicht mehr",
+        "missingMacro": "Makro \"{{label}}\" existiert nicht mehr",
+        "danglingSource": "Eine Verzweigungsbedingung verweist auf eine nicht mehr vorhandene Zelle ({{ref}})",
+        "danglingGoto": "Eine Verzweigung springt zu einer nicht mehr vorhandenen Zelle ({{ref}})",
+        "macroWithoutInput": "Makro \"{{label}}\" hat keine vorangehende Messung zum Ausführen",
+        "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät"
+      }
+    }
   },
   "overview": "Übersicht",
   "data": "Daten",
@@ -250,7 +308,7 @@
     },
     "fileUpload": {
       "title": "Ambyte-Daten hochladen",
-      "description": "Wählen Sie einen Ambyte-Ordner (z. B. \"Ambyte_10\") oder einzelne Ambit-Unterordner (z. B. \"1\", \"2\", \"3\", \"4\"). Der Ordner sollte .txt-Messdateien enthalten.",
+      "description": "Wählen Sie einen Ambyte-Ordner (z. B. \"Ambyte_10\") oder einzelne Ambyte-Unterordner (z. B. \"1\", \"2\", \"3\", \"4\"). Der Ordner sollte .txt-Messdateien enthalten.",
       "selectFolder": "Ambyte-Ordner auswählen",
       "changeSelection": "Ordnerauswahl ändern",
       "browseInstruction": "Klicken Sie hier, um nach einem Ambyte-Datenordner zu suchen",

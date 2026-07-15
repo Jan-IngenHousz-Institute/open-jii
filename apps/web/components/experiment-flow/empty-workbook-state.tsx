@@ -10,14 +10,9 @@ import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
+
+import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface EmptyWorkbookStateProps {
   experimentId: string;
@@ -92,18 +87,15 @@ export function EmptyWorkbookState({
         {hasAccess && (
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
-              <Select value={selectedWorkbookId} onValueChange={setSelectedWorkbookId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder={t("newExperiment.workbookPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {workbooks.map((wb) => (
-                    <SelectItem key={wb.id} value={wb.id}>
-                      {wb.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <WorkbookSelect
+                workbooks={workbooks}
+                value={selectedWorkbookId || undefined}
+                onChange={(id) => setSelectedWorkbookId(id ?? "")}
+                triggerPlaceholder={t("newExperiment.workbookPlaceholder")}
+                searchPlaceholder={t("flow.searchWorkbook")}
+                emptyText={t("flow.noWorkbooksFound")}
+                triggerClassName="w-64"
+              />
               <Button
                 onClick={handleAttach}
                 disabled={!selectedWorkbookId || attachWorkbook.isPending}

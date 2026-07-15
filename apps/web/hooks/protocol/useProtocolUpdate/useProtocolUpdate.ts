@@ -34,6 +34,9 @@ export const useProtocolUpdate = (protocolId: string, props: ProtocolUpdateProps
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: protocolKey });
         await queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() });
+        // Editing shared protocol code changes workbook drift; refetch so an
+        // attached experiment's upgrade prompt reacts immediately.
+        await queryClient.invalidateQueries({ queryKey: orpc.workbooks.key() });
       },
       onSuccess: (data) => {
         props.onSuccess?.(data);

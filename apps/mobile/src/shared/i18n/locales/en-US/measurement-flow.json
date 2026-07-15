@@ -123,6 +123,17 @@
       "noQuestionsAnswered": "No questions answered"
     }
   },
+  "commandNode": {
+    "heading": "Device command",
+    "responseLabel": "Response",
+    "run": "Run command",
+    "running": "Running…",
+    "continue": "Continue",
+    "toast": {
+      "notConnected": "Not connected to sensor",
+      "error": "Command failed"
+    }
+  },
   "measurementNode": {
     "errorState": {
       "title": "Measurement Failed",

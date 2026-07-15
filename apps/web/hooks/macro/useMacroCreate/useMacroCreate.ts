@@ -16,7 +16,6 @@ export function useMacroCreate(options: UseMacroCreateOptions = {}) {
   return useMutation(
     orpc.macros.createMacro.mutationOptions({
       onSuccess: (...args) => {
-        toast({ description: t("macros.macroCreated") });
         options.onSuccess?.(...args);
       },
       onError: (...args) => {

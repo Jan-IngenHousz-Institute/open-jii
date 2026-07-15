@@ -1,5 +1,6 @@
 import {
   createBranchCell,
+  createCommandCell,
   createMacroCell,
   createMarkdownCell,
   createOutputCell,
@@ -21,6 +22,7 @@ import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/work
 import { useWorkbookExecution } from "./useWorkbookExecution";
 
 const mockExecuteProtocol = vi.fn();
+const mockExecuteCommand = vi.fn();
 const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
@@ -41,6 +43,7 @@ vi.mock("~/hooks/iot/useIotCommunication/useIotCommunication", () => ({
 vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
   useIotProtocolExecution: () => ({
     executeProtocol: mockExecuteProtocol,
+    executeCommand: mockExecuteCommand,
   }),
 }));
 
@@ -71,6 +74,7 @@ describe("useWorkbookExecution", () => {
   beforeEach(() => {
     mockIsConnected = false;
     mockExecuteProtocol.mockReset();
+    mockExecuteCommand.mockReset();
     mockConnect.mockReset();
     mockDisconnect.mockReset();
     __resetProtocolCodeRegistry();
@@ -91,7 +95,7 @@ describe("useWorkbookExecution", () => {
     expect(updated).toHaveLength(2);
   });
 
-  describe("runCell — protocol", () => {
+  describe("runCell - protocol", () => {
     it("errors when protocol has no code", async () => {
       const proto = createProtocolCell();
       const protocol = createProtocol({
@@ -152,7 +156,7 @@ describe("useWorkbookExecution", () => {
 
     it("runs the live editor code directly, without re-fetching from the server", async () => {
       // Fixes the stale-protocol bug at the source: the device runs exactly the
-      // code currently in the editor, with no backend round-trip — so a debounced,
+      // code currently in the editor, with no backend round-trip, so a debounced,
       // not-yet-saved edit is never bypassed in favour of an older saved version.
       const proto = createProtocolCell();
       const liveCode = [{ _protocol_set_: [{ label: "live" }] }];
@@ -186,7 +190,7 @@ describe("useWorkbookExecution", () => {
       mockIsConnected = true;
       mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
 
-      // No code source registered — e.g. the cell's editor is not mounted.
+      // No code source registered (e.g. the cell's editor is not mounted).
       const { result } = renderExecution([proto]);
 
       await act(() => result.current.runCell(proto.id));
@@ -214,7 +218,85 @@ describe("useWorkbookExecution", () => {
     });
   });
 
-  describe("runCell — macro", () => {
+  describe("runCell - inline command", () => {
+    it("sends a raw string command and wraps a scalar response", async () => {
+      const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
+      mockIsConnected = true;
+      mockExecuteCommand.mockResolvedValue("87%");
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      expect(mockExecuteCommand).toHaveBeenCalledWith("battery");
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.data).toEqual({ response: "87%" });
+    });
+
+    it("parses a JSON command before sending and passes object responses through", async () => {
+      const cmd = createCommandCell({ payload: { format: "json", content: '[{"c":1}]' } });
+      mockIsConnected = true;
+      mockExecuteCommand.mockResolvedValue({ ok: true });
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      expect(mockExecuteCommand).toHaveBeenCalledWith([{ c: 1 }]);
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.data).toEqual({ ok: true });
+    });
+
+    it("records an error when no device is connected", async () => {
+      const cmd = createCommandCell({ payload: { format: "string", content: "hello" } });
+      mockIsConnected = false;
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.messages).toEqual(
+        expect.arrayContaining([expect.stringContaining("No device connected")]),
+      );
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+    });
+
+    it("records an error when inline content is invalid JSON", async () => {
+      const cmd = createCommandCell({ payload: { format: "json", content: "{not json" } });
+      mockIsConnected = true;
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.messages?.length).toBeGreaterThan(0);
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+    });
+
+    it("captures a device error when the command execution throws", async () => {
+      const cmd = createCommandCell({ payload: { format: "string", content: "battery" } });
+      mockIsConnected = true;
+      mockExecuteCommand.mockRejectedValue(new Error("Command timed out"));
+
+      const { result, onCellsChange } = renderExecution([cmd]);
+      await act(() => result.current.runCell(cmd.id));
+
+      const outputCell = findOutput(onCellsChange.mock.calls[0][0] as WorkbookCell[]);
+      expect(outputCell?.messages).toContain("Command timed out");
+    });
+  });
+
+  describe("runCell - non-executable cell", () => {
+    it("leaves the cells unchanged when dispatching a markdown cell", async () => {
+      const md = createMarkdownCell({ id: "md-1", content: "# Notes" });
+      const { result, onCellsChange } = renderExecution([md]);
+
+      await act(() => result.current.runCell(md.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(updated).toEqual([md]);
+    });
+  });
+
+  describe("runCell - macro", () => {
     it("errors when no preceding output data", async () => {
       const macro = createMacroCell();
       const { result, onCellsChange } = renderExecution([macro]);
@@ -279,7 +361,7 @@ describe("useWorkbookExecution", () => {
     });
   });
 
-  describe("runCell — question", () => {
+  describe("runCell - question", () => {
     it("errors when question text is empty", async () => {
       const q = createQuestionCell({
         question: { kind: "open_ended", text: "", required: false },
@@ -341,7 +423,7 @@ describe("useWorkbookExecution", () => {
     });
   });
 
-  describe("runCell — branch", () => {
+  describe("runCell - branch", () => {
     it("evaluates branch and records matched path", async () => {
       const q = createQuestionCell({
         id: "q-1",
@@ -518,9 +600,9 @@ describe("useWorkbookExecution", () => {
     it("allows changing sensor family", () => {
       const { result } = renderExecution([]);
 
-      act(() => result.current.setSensorFamily("ambit"));
+      act(() => result.current.setSensorFamily("ambyte"));
 
-      expect(result.current.sensorFamily).toBe("ambit");
+      expect(result.current.sensorFamily).toBe("ambyte");
     });
   });
 });

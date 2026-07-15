@@ -22,6 +22,7 @@ import {
 import { toBucketKey } from "../../../charts/data/cell-coercion";
 import { contributorDisplayName } from "../../../charts/data/contributor-cells";
 import { dataSourcesByRole, firstDataSourceByRole } from "../../../charts/data/data-sources";
+import { deviceDisplayName } from "../../../charts/data/device-cells";
 
 /** Cap the override list so a high-cardinality column doesn't make the
  *  shelf scrollable into oblivion. The user picks colors for the top N
@@ -66,8 +67,9 @@ export function CategoricalColorMap({ form, columns }: CategoricalColorMapProps)
   // CONTRIBUTOR distinct values arrive as STRUCT JSON; the renderer flattens
   // them to the contributor name, so the picker must key/label by name too or
   // the overrides never match what the chart looks up.
-  const isContributor =
-    columns.find((c) => c.name === colorColumn)?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
+  const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+  const isContributor = colorColumnType === WellKnownColumnTypes.CONTRIBUTOR;
+  const isDevice = colorColumnType === WellKnownColumnTypes.DEVICE;
 
   // Mirror the renderer's seriesKey for `getCategoryColor` lookups.
   const seriesKeys = useMemo(() => {
@@ -93,14 +95,18 @@ export function CategoricalColorMap({ form, columns }: CategoricalColorMapProps)
     const seen = new Set<string>();
     const out: Category[] = [];
     for (const value of rawValues) {
-      const key = isContributor ? contributorDisplayName(value) : toBucketKey(value);
+      const key = isContributor
+        ? contributorDisplayName(value)
+        : isDevice
+          ? deviceDisplayName(value)
+          : toBucketKey(value);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push({ key, label: key === "" ? t("workspace.shelves.colorMap.nullLabel") : key });
     }
     out.sort((a, b) => a.label.localeCompare(b.label));
     return out;
-  }, [rawValues, isContributor, t]);
+  }, [rawValues, isContributor, isDevice, t]);
 
   // Read the live colorMap at commit time, not the render-time snapshot:
   // debounced swatch commits from different rows can land close together and

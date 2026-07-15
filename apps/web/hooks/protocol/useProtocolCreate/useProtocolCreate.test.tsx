@@ -52,7 +52,7 @@ describe("useProtocolCreate", () => {
     });
   });
 
-  it("shows success toast after create", async () => {
+  it("does not toast on a successful create", async () => {
     server.mount(contract.protocols.createProtocol, {
       body: createProtocol({ id: "proto-1" }),
     });
@@ -71,9 +71,7 @@ describe("useProtocolCreate", () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      description: "protocols.protocolCreated",
-    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it("shows destructive toast on 409 conflict", async () => {

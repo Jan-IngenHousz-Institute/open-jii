@@ -2,6 +2,7 @@
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { Code } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
@@ -45,6 +46,7 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
         hasAccess={isCreator}
         onSave={handleTitleSave}
         isPending={isUpdating}
+        icon={<Code className="h-6 w-6" />}
         badges={
           macro.sortOrder !== null ? (
             <Badge className="bg-secondary/30 text-primary">{tCommon("common.preferred")}</Badge>

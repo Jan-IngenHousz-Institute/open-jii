@@ -20,6 +20,15 @@ const makeQuestion = (id: string): FlowNode =>
 const makeMeasurement = (id: string): FlowNode =>
   ({ id, type: "measurement", name: id, content: { params: {}, protocolId: "p" } }) as FlowNode;
 
+// A command cell also rides a "measurement" node but carries no protocolId.
+const makeCommand = (id: string): FlowNode =>
+  ({
+    id,
+    type: "measurement",
+    name: id,
+    content: { command: { format: "string", content: "battery" } },
+  }) as FlowNode;
+
 const inFlow = (overrides: Partial<FlowState> = {}): FlowState => ({
   ...initialFlowState,
   experimentId: "exp-1",
@@ -34,6 +43,14 @@ describe("flowProtocolId", () => {
 
   it("is undefined for questions-only flows", () => {
     expect(flowProtocolId([makeQuestion("q1"), makeQuestion("q2")])).toBeUndefined();
+  });
+
+  it("skips a leading command node so the real protocol still resolves", () => {
+    expect(flowProtocolId([makeCommand("c1"), makeMeasurement("m1")])).toBe("p");
+  });
+
+  it("is undefined for a command-only flow (no protocol to upload against)", () => {
+    expect(flowProtocolId([makeCommand("c1")])).toBeUndefined();
   });
 });
 

@@ -4,6 +4,7 @@ import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { Building2, Link2, Mail } from "lucide-react";
 
 import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
+import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -40,6 +41,9 @@ export function AccountIdentityCard({
   isPending = false,
 }: AccountIdentityCardProps) {
   const { t } = useTranslation("account");
+  // Read-only: the user's active organization (Better Auth). In phase 1 this is
+  // their auto-provisioned personal workspace.
+  const { data: activeOrg } = authClient.useActiveOrganization();
   const displayName =
     [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
     t("settings.profileCard.emptyName");
@@ -75,10 +79,10 @@ export function AccountIdentityCard({
                   <span className="truncate">{email}</span>
                 </span>
               )}
-              {profile.organization && (
+              {activeOrg?.name && (
                 <span className="bg-surface text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
                   <Building2 className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{profile.organization}</span>
+                  <span className="truncate">{activeOrg.name}</span>
                 </span>
               )}
               <Badge

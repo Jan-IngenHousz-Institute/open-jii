@@ -241,10 +241,8 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
 
   const showSolid = (isHomePage && !isIntersecting) || isGreenMode;
 
-  // Home nav sits over the dark hero (white logo); every other page uses the yellow platform logo
-  const logoSrc = isHomePage
-    ? "/openJII-logo-BW-horizontal-white.png"
-    : "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
+  // The yellow logo reads well everywhere, including over the home hero.
+  const logoSrc = "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
 
   return (
     <header
@@ -267,9 +265,9 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
           <Image
             src={logoSrc}
             alt="openJII logo"
-            width={isHomePage ? 94 : 150}
-            height={44}
-            className="h-11 w-auto max-w-none shrink-0"
+            width={isHomePage ? 85 : 135}
+            height={40}
+            className="h-10 w-auto max-w-none shrink-0"
           />
         </div>
 

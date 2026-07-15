@@ -14,6 +14,8 @@ interface InlineEditableTitleProps {
   hasAccess?: boolean;
   onSave: (newName: string) => Promise<void>;
   isPending?: boolean;
+  /** Section icon rendered before the title (replaces the page breadcrumb). */
+  icon?: ReactNode;
   badges?: ReactNode;
   actions?: ReactNode;
   /** When true, actions render right after the title instead of pushed to the row's far end. */
@@ -37,6 +39,7 @@ export function InlineEditableTitle({
   hasAccess = false,
   onSave,
   isPending = false,
+  icon,
   badges,
   actions,
   actionsInline = false,
@@ -76,51 +79,54 @@ export function InlineEditableTitle({
     <div
       className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
     >
-      {isEditing ? (
-        <div className="flex flex-1 items-center gap-2">
-          <Input
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void handleSave();
-              } else if (e.key === "Escape") {
-                e.preventDefault();
-                handleCancel();
-              }
-            }}
-            className="min-w-[300px] flex-1 text-2xl font-semibold"
-            disabled={isPending}
-            autoFocus
-            onBlur={handleBlur}
-          />
-          <Button
-            variant="secondary"
-            onClick={handleCancel}
-            disabled={isPending}
-            data-role="edit-action"
-            aria-label="Cancel"
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isPending}
-            data-role="edit-action"
-            aria-label="Save"
-          >
-            <Check className="h-6 w-6" />
-          </Button>
-        </div>
-      ) : (
-        <CardTitle className={titleVariants({ editable: hasAccess })} onClick={handleClick}>
-          {name}
-          {hasAccess && (
-            <Pencil className="text-muted-foreground ml-2 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
-          )}
-        </CardTitle>
-      )}
+      <div className="flex min-w-0 items-center gap-2">
+        {icon ? <span className="text-muted-foreground shrink-0">{icon}</span> : null}
+        {isEditing ? (
+          <div className="flex flex-1 items-center gap-2">
+            <Input
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleSave();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  handleCancel();
+                }
+              }}
+              className="min-w-[300px] flex-1 text-2xl font-semibold"
+              disabled={isPending}
+              autoFocus
+              onBlur={handleBlur}
+            />
+            <Button
+              variant="secondary"
+              onClick={handleCancel}
+              disabled={isPending}
+              data-role="edit-action"
+              aria-label="Cancel"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isPending}
+              data-role="edit-action"
+              aria-label="Save"
+            >
+              <Check className="h-6 w-6" />
+            </Button>
+          </div>
+        ) : (
+          <CardTitle className={titleVariants({ editable: hasAccess })} onClick={handleClick}>
+            {name}
+            {hasAccess && (
+              <Pencil className="text-muted-foreground ml-2 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+            )}
+          </CardTitle>
+        )}
+      </div>
 
       {(badges ?? actions) && (
         <div className="flex items-center gap-2">

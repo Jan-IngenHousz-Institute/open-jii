@@ -87,7 +87,6 @@ describe("DangerZoneCard", () => {
         firstName: "Ada",
         lastName: "Lovelace",
         bio: "Mathematician",
-        organization: "Royal Society",
         activated: true,
         avatarUrl: "https://example.com/ada.png",
       };

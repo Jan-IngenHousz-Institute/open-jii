@@ -319,6 +319,22 @@ describe("<MacroDetailsSidebar />", () => {
       expect(screen.getByText("-")).toBeInTheDocument();
     });
 
+    it("renders a 'view original' link when the macro is a fork", () => {
+      render(
+        <MacroDetailsSidebar macroId="abc12345" macro={{ ...baseMacro, forkedFrom: "m-src" }} />,
+      );
+
+      expect(screen.getByText("common.forkedFrom")).toBeInTheDocument();
+      const link = screen.getByRole("link", { name: "common.viewOriginal" });
+      expect(link.getAttribute("href")).toContain("/platform/macros/m-src");
+    });
+
+    it("does not render the fork link for a non-fork macro", () => {
+      render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
+
+      expect(screen.queryByText("common.forkedFrom")).not.toBeInTheDocument();
+    });
+
     it("renders a separator", () => {
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
 

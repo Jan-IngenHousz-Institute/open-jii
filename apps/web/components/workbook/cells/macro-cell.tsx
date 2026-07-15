@@ -1,16 +1,21 @@
 "use client";
 
+import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
+import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
-import { Check, Code, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import type { MacroCell as MacroCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Select,
@@ -19,9 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
+import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CellTitle } from "../cell-title";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
+import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
 
 interface MacroCellProps {
   cell: MacroCellType;
@@ -56,6 +70,7 @@ export function MacroCellComponent({
   const language = cell.payload.language;
   const { copy, copied } = useCopyToClipboard();
   const { data: session } = useSession();
+  const { t } = useTranslation("workbook");
 
   const useSnapshot = snapshot != null;
   const { data: macroData, isLoading: liveLoading } = useMacro(macroId, !useSnapshot);
@@ -65,55 +80,85 @@ export function MacroCellComponent({
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
   const macroLanguage = macroData?.language;
   const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
+  const isEditable = isOwner && !readOnly;
+  // Read-only purely because the viewer did not create this macro (not because
+  // the cell is rendered from a pinned snapshot or in a read-only host).
+  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
+  // Lineage: this macro is itself a fork of another one.
+  const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
-  const { mutate: saveMacro } = useMacroUpdate(macroId);
+  const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
+  const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
+  const onEntitySaved = useWorkbookEntitySaved();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (macroCode != null && localCode == null) {
       setLocalCode(macroCode);
-      savedKeyRef.current = macroCode;
     }
   }, [macroCode, localCode]);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
-
-  const handleCodeChange = useCallback(
-    (code: string) => {
-      setLocalCode(code);
-
-      if (code === savedKeyRef.current) return;
-
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        saveMacro(
-          { id: macroId, code: encodeBase64(code) },
-          {
-            onSuccess: () => {
-              savedKeyRef.current = code;
-            },
-          },
-        );
-      }, 1000);
+  // Mirror the protocol cell: persist via the shared `useAutosave` hook so a
+  // failed save surfaces a toast and the indicator flips to "error" instead of
+  // silently dropping the edit.
+  const save = useCallback(
+    async (code: string) => {
+      try {
+        await saveMacro({ id: macroId, code: encodeBase64(code) });
+        onEntitySaved();
+      } catch (err) {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        throw err;
+      }
     },
-    [macroId, saveMacro],
+    [macroId, saveMacro, onEntitySaved],
   );
+
+  const autosave = useAutosave<string>({
+    value: localCode ?? "",
+    toKey: (code) => code,
+    save,
+    enabled: isEditable && localCode != null,
+  });
 
   const handleCopy = () => {
     const text = localCode ?? macroCode ?? "";
     void copy(text);
   };
 
+  // Fork a macro the viewer does not own into an editable copy they do, then
+  // point this cell at the copy so it becomes editable in place.
+  const handleFork = useCallback(async () => {
+    if (!macroData) return;
+    try {
+      const suffix = crypto.randomUUID().slice(0, 8);
+      const res = await forkMacro({
+        name: `Copy of ${macroData.name}`.slice(0, 246) + ` ${suffix}`,
+        description: macroData.description ?? undefined,
+        language: macroData.language,
+        code: macroData.code,
+        forkedFrom: macroData.id,
+      });
+      onUpdate({
+        ...cell,
+        payload: {
+          ...cell.payload,
+          macroId: res.id,
+          language: res.language,
+          name: res.name,
+        },
+      });
+    } catch {
+      // useMacroCreate already surfaces the error toast.
+    }
+  }, [macroData, forkMacro, onUpdate, cell]);
+
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      saveMacro({ id: macroId, language: lang });
+      void saveMacro({ id: macroId, language: lang }).catch((err: unknown) => {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+      });
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
     [macroId, saveMacro, cell, onUpdate],
@@ -121,12 +166,60 @@ export function MacroCellComponent({
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
+  // Track the latest cell so the async rename merges into current state, not a
+  // stale snapshot from when the save began. Sync in a layout effect (not during
+  // render) so a speculative render never leaks into the ref.
+  const cellRef = useRef(cell);
+  useLayoutEffect(() => {
+    cellRef.current = cell;
+  }, [cell]);
+
+  // Rename the shared macro row and repoint the cell label at the new name.
+  // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
+  const [isRenaming, setIsRenaming] = useState(false);
+  const handleRename = useCallback(
+    async (next: string) => {
+      setIsRenaming(true);
+      try {
+        const res = await saveMacro({ id: macroId, name: next });
+        const latest = cellRef.current;
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.name } });
+      } catch (err) {
+        const parsed = parseApiError(err);
+        toast({
+          description:
+            parsed?.code === "REPOSITORY_DUPLICATE"
+              ? t("cells.renameConflict")
+              : (parsed?.message ?? t("cells.renameFailed")),
+          variant: "destructive",
+        });
+        throw err;
+      } finally {
+        setIsRenaming(false);
+      }
+    },
+    [macroId, saveMacro, onUpdate, t],
+  );
+
   const displayName = cell.payload.name ?? macroName ?? "Macro";
 
   return (
     <CellWrapper
       icon={<Code className="h-3.5 w-3.5" />}
-      label={displayName}
+      label={
+        <CellTitle
+          name={displayName}
+          canRename={isEditable}
+          onRename={handleRename}
+          isPending={isRenaming}
+          labels={{
+            rename: t("cells.rename"),
+            save: t("cells.renameSave"),
+            cancel: t("cells.renameCancel"),
+          }}
+        />
+      }
+      labelText={displayName}
       accentColor="#6C5CE7"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
@@ -136,6 +229,49 @@ export function MacroCellComponent({
       readOnly={readOnly}
       forceActionsVisible={langSelectOpen}
       onRun={onRun}
+      headerBadges={
+        isReadOnlyForNonOwner || (isEditable && localCode != null) || forkedFrom ? (
+          <div className="flex items-center gap-2">
+            {forkedFrom ? (
+              <Link
+                href={`/platform/macros/${forkedFrom}`}
+                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+              >
+                {t("cells.forkedFrom")}
+              </Link>
+            ) : null}
+            {isReadOnlyForNonOwner ? (
+              <>
+                <span className="text-muted-foreground text-xs">{t("cells.macroReadOnly")}</span>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        aria-label={t("cells.fork")}
+                        onClick={() => void handleFork()}
+                        disabled={isForking}
+                      >
+                        {isForking ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <GitFork className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("cells.fork")}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            ) : null}
+            {isEditable && localCode != null ? (
+              <AutosaveIndicator status={autosave.status} variant="compact" />
+            ) : null}
+          </div>
+        ) : undefined
+      }
       headerActions={
         <div className="flex items-center gap-1">
           <Button
@@ -154,7 +290,7 @@ export function MacroCellComponent({
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>
-          {isOwner && (
+          {isOwner ? (
             <Select
               value={macroLanguage ?? language}
               onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
@@ -174,8 +310,7 @@ export function MacroCellComponent({
                 )}
               </SelectContent>
             </Select>
-          )}
-          {!isOwner && (
+          ) : (
             <span className="text-muted-foreground px-2 text-xs">
               {languageLabels[macroLanguage ?? language]}
             </span>
@@ -198,12 +333,12 @@ export function MacroCellComponent({
       ) : localCode != null || macroCode != null ? (
         <WorkbookCodeEditor
           value={localCode ?? macroCode ?? ""}
-          onChange={isOwner && !readOnly ? handleCodeChange : undefined}
+          onChange={isEditable ? setLocalCode : undefined}
           language={macroLanguage ?? language}
-          minHeight={isOwner && !readOnly ? "120px" : "80px"}
-          maxHeight={isOwner && !readOnly ? "500px" : "400px"}
-          readOnly={readOnly ?? !isOwner}
-          syntaxLinting={isOwner && !readOnly}
+          minHeight={isEditable ? "120px" : "80px"}
+          maxHeight={isEditable ? "500px" : "400px"}
+          readOnly={!isEditable}
+          syntaxLinting={isEditable}
         />
       ) : (
         <p className="text-muted-foreground px-3 py-4 text-xs">Could not load macro code</p>

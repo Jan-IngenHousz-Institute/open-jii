@@ -52,22 +52,16 @@ vi.mock("./profile-information-card", () => ({
   ProfileInformationCard: ({
     profile,
     onSaveBio,
-    onSaveOrganization,
   }: {
     profile: CreateUserProfileBody;
     onSaveBio: (bio: string) => Promise<void>;
-    onSaveOrganization: (organization: string) => Promise<void>;
   }) => (
     <div data-testid="profile-information-card">
       <span data-testid="firstName">{profile.firstName}</span>
       <span data-testid="lastName">{profile.lastName}</span>
       <span data-testid="bio">{profile.bio ?? ""}</span>
-      <span data-testid="organization">{profile.organization ?? ""}</span>
       <button type="button" onClick={() => void onSaveBio("Updated bio")}>
         save-bio
-      </button>
-      <button type="button" onClick={() => void onSaveOrganization("Updated Org")}>
-        save-organization
       </button>
     </div>
   ),
@@ -87,7 +81,6 @@ const profile = createUserProfile({
   firstName: "Ada",
   lastName: "Lovelace",
   bio: "Math enjoyer",
-  organization: "Analytical Engines Inc.",
   avatarUrl: "https://example.com/ada.png",
 });
 
@@ -135,7 +128,6 @@ describe("<AccountSettings />", () => {
     expect(within(card).getByTestId("firstName")).toHaveTextContent("");
     expect(within(card).getByTestId("lastName")).toHaveTextContent("");
     expect(within(card).getByTestId("bio")).toHaveTextContent("");
-    expect(within(card).getByTestId("organization")).toHaveTextContent("");
   });
 
   it("renders existing profile data", async () => {
@@ -151,7 +143,6 @@ describe("<AccountSettings />", () => {
     const card = screen.getByTestId("profile-information-card");
     expect(within(card).getByTestId("lastName")).toHaveTextContent("Lovelace");
     expect(within(card).getByTestId("bio")).toHaveTextContent("Math enjoyer");
-    expect(within(card).getByTestId("organization")).toHaveTextContent("Analytical Engines Inc.");
 
     const pictureCard = screen.getByTestId("profile-picture-card");
     expect(within(pictureCard).getByTestId("avatarUrl")).toHaveTextContent(
@@ -173,7 +164,6 @@ describe("<AccountSettings />", () => {
       firstName: "Grace",
       lastName: "Hopper",
       bio: "Math enjoyer",
-      organization: "Analytical Engines Inc.",
       avatarUrl: "https://example.com/ada.png",
     });
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ description: "settings.saved" }));
@@ -208,7 +198,6 @@ describe("<AccountSettings />", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       bio: "Updated bio",
-      organization: "Analytical Engines Inc.",
     });
   });
 });

@@ -38,6 +38,13 @@ const protocolCell: WorkbookCell = {
   isCollapsed: false,
 };
 
+const commandCell: WorkbookCell = {
+  id: "cmd-1",
+  type: "command",
+  payload: { format: "string", content: "battery" },
+  isCollapsed: false,
+};
+
 function renderBranch(
   overrides: Partial<BranchCell> = {},
   props: Partial<React.ComponentProps<typeof BranchCellComponent>> = {},
@@ -109,6 +116,25 @@ describe("BranchCellComponent", () => {
 
     const updated = onUpdate.mock.calls[0][0] as BranchCell;
     expect(updated.paths[0].conditions).toHaveLength(2);
+  });
+
+  it("labels a command cell in the source-cell dropdown", async () => {
+    const user = userEvent.setup();
+    const cell = makeBranchCell();
+    render(
+      <BranchCellComponent
+        cell={cell}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        allCells={[cell, commandCell]}
+      />,
+    );
+
+    // The condition row renders the source-cell select first.
+    const [sourceTrigger] = screen.getAllByRole("combobox");
+    await user.click(sourceTrigger);
+
+    expect(await screen.findByText("Command (battery)")).toBeInTheDocument();
   });
 
   it("renders the condition's IF / AND labels correctly for multiple conditions", () => {
