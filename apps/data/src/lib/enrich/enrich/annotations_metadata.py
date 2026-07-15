@@ -96,16 +96,21 @@ def add_annotation_column(df, annotations_df):
 
         if has_existing_annotations:
             print("Found existing annotations column from upstream - will merge with database annotations")
-            # Rename existing annotations to avoid conflict during join
-            df = df.withColumnRenamed("annotations", "upstream_annotations")
+            # Rename existing annotations to avoid conflict during join. Use a separate
+            # variable so the original df is never mutated: if the join below raises, the
+            # except block's "annotations" in df.columns check still sees the real schema
+            # and preserves upstream data instead of leaking upstream_annotations.
+            join_df = df.withColumnRenamed("annotations", "upstream_annotations")
+        else:
+            join_df = df
 
         # Left join with annotations from database
         # IMPORTANT: Cast id to string for join since row_id is STRING but id is BIGINT
         enriched_df = (
-            df.join(
+            join_df.join(
                 annotations_grouped,
-                (df.id.cast("string") == annotations_grouped.row_id)
-                & (df.experiment_id == annotations_grouped.experiment_id),
+                (join_df.id.cast("string") == annotations_grouped.row_id)
+                & (join_df.experiment_id == annotations_grouped.experiment_id),
                 "left",
             )
             .drop(annotations_grouped.row_id)

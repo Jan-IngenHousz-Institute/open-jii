@@ -89,7 +89,10 @@ def clean_data():
         ).otherwise(
             F.when(
                 F.col("sample").isNotNull(),
-                F.expr("""
+                # coalesce guards the parse-failure path: from_json on a non-array
+                # sample returns null, which would leave macros null instead of [].
+                F.coalesce(
+                    F.expr("""
                     flatten(
                         transform(
                             from_json(sample, 'array<string>'),
@@ -103,7 +106,9 @@ def clean_data():
                             )
                         )
                     )
-                """)
+                """),
+                    F.array(),
+                )
             ).otherwise(F.array())
         )
     )

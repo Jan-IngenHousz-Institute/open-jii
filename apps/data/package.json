@@ -4,7 +4,7 @@
   "private": true,
   "description": "Databricks notebooks and Python packages for OpenJII",
   "scripts": {
-    "install": "command -v uv >/dev/null 2>&1 && (uv sync --frozen || uv sync) || (echo 'uv not found, skipping python env sync' && exit 0)",
+    "install": "if command -v uv >/dev/null 2>&1; then uv sync --frozen || uv sync; else echo 'uv not found, skipping python env sync'; fi",
     "build": "uv build --all-packages",
     "lint": "uv run ruff check . && uv run ruff format --check .",
     "format": "uv run ruff format .",

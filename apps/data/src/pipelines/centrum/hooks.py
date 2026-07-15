@@ -58,7 +58,7 @@ def send_slack_notifications(event):
 
         payload = {
             "channel": MONITORING_SLACK_CHANNEL,
-            "text": f"{pipeline_name} — a run has {state.lower()}.",
+            "text": f"{pipeline_name}: a run has {state.lower()}.",
             "attachments": [
                 {
                     "color": color,
@@ -114,7 +114,8 @@ def send_slack_notifications(event):
             response = requests.post(
                 url=SLACK_WEBHOOK_URL,
                 headers=SLACK_HEADERS,
-                json=payload
+                json=payload,
+                timeout=10,
             )
             print(f"Slack notification sent: {event_type} - {state}")
         except Exception as e:

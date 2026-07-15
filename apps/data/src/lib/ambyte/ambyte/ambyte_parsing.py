@@ -131,12 +131,15 @@ def parse_trace(trace: list):
     # Parse T0 timeline if present
     millis = 0
     time_warp_factor = 0.900 if protocol_name == "SPACER" else 0.8586
+    # Bound at function scope so the "no timeline" -> None Duration contract holds
+    # whether or not the T0 branch below is entered (replaces a fragile locals() guard).
+    start_ms_0, end_ms_0 = 0, 0
+    _has_start = False
     if trace[1][:2] == "T0":
         t0_timeline = trace[1].strip().split("\t")
         if len(t0_timeline) == 2:
             t0_info = np.fromstring(t0_timeline[1], dtype=np.uint32, sep=",")
             if len(t0_info) > 1:
-                start_ms_0, end_ms_0 = 0, 0
                 for e in t0_info:
                     millis = np.bitwise_and(e, 0xFFFF0000) >> 10
                     _type = np.bitwise_and(e, 0x0000F000) >> 12
@@ -147,6 +150,7 @@ def parse_trace(trace: list):
                     else:
                         if _type == 0 and start_ms_0 == 0:
                             start_ms_0 = millis + _data
+                            _has_start = True
                         if _type == 1:
                             end_ms_0 = millis + _data
                 if start_ms_0 > 0 and end_ms_0 > 100:
@@ -165,9 +169,9 @@ def parse_trace(trace: list):
         "t2": t1_rel_ms,
         "tm": millis,
         "Full": full_length,
-        # `end_ms_0`/`start_ms_0` only bind inside the timeline branch above;
-        # the locals() guard preserves the legacy "no timeline" -> None contract.
-        "Duration": end_ms_0 - start_ms_0 if "end_ms_0" in locals() else None,  # pyright: ignore
+        # Duration only when a start was actually seen and an end was recorded;
+        # preserves the legacy "no timeline" -> None contract.
+        "Duration": (end_ms_0 - start_ms_0) if _has_start and end_ms_0 > 0 else None,
     }
 
 
@@ -400,11 +404,11 @@ def process_trace_files(ambyte_folder: str, files_per_byte: list[list[list]]) ->
                         # Timestamp alignment using corrected per-ambit offset factor
                         idx = min(_header_counter, len(ms_offset_factor) - 1)
                         df["Time"] = pd.to_datetime(
-                            df["t"] + RTC_T0_MS - df["t"][0] * (1 - ms_offset_factor[idx]), unit="ms"
+                            df["t"] + RTC_T0_MS - df["t"].iloc[0] * (1 - ms_offset_factor[idx]), unit="ms"
                         )
                         df["PTS"] = np.arange(df.shape[0]).astype("int32")  # Use int32 instead of uint16
                         if len(df.loc[df["Time"] < "2020"]):
-                            df.drop(df.loc[df["Time"] < "2020"].index)
+                            df.drop(df.loc[df["Time"] < "2020"].index, inplace=True)
 
                         if Traces_df:
                             _last_df = Traces_df[-1]
@@ -499,12 +503,14 @@ def process_trace_files(ambyte_folder: str, files_per_byte: list[list[list]]) ->
 
             # Identification columns
             df_ambit["ambyte_folder"] = ambyte_folder
-            # Set ambit_index to null for unknown_ambit case, otherwise use normal index
+            # Set ambit_index to null for unknown_ambit case, otherwise use normal index.
+            # Only cast the known case: astype("int32") raises on pandas 2.x for the
+            # all-None unknown column, and None (not pd.NA) keeps it Spark-writable.
             if is_unknown_ambit:
-                df_ambit["ambit_index"] = None  # Use None instead of pd.NA for Spark compatibility
+                df_ambit["ambit_index"] = None
             else:
                 df_ambit["ambit_index"] = ambit_index + 1
-            df_ambit["ambit_index"] = df_ambit["ambit_index"].astype("int32")  # Ensure int32 type
+                df_ambit["ambit_index"] = df_ambit["ambit_index"].astype("int32")  # Ensure int32 type
             all_dfs.append(df_ambit)
 
         except Exception as e:
