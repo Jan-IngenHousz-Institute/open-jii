@@ -5,7 +5,7 @@ import { tsr } from "@/lib/tsr";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 import { mockDevicesEnabled } from "~/lib/iot/mock-devices";
@@ -118,7 +118,12 @@ export function WorkbookHeader({
   const compact = isMobile || isTablet || isLgTablet;
 
   const browserSupport = useIotBrowserSupport(sensorFamily);
-  const showMockDevices = mockDevicesEnabled();
+  // Resolved after mount: depends on window.location, so rendering it on the
+  // server would cause a hydration mismatch.
+  const [showMockDevices, setShowMockDevices] = useState(false);
+  useEffect(() => {
+    setShowMockDevices(mockDevicesEnabled());
+  }, []);
   const transportSupported =
     connectionType === "mock"
       ? true
