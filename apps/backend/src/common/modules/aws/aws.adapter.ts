@@ -201,6 +201,14 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   }
 
   /**
+   * The account's MQTT broker host, resolved live from AWS rather than baked in
+   * at build time, so a device is always onboarded against the current endpoint.
+   */
+  async getIotDataEndpoint(): Promise<Result<string>> {
+    return this.awsIotService.describeDataEndpoint();
+  }
+
+  /**
    * Invoke a Lambda function and return the result
    */
   async invokeLambda<TResponse = Record<string, unknown>>(

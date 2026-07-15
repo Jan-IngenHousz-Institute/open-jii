@@ -8,6 +8,7 @@ import {
   DetachThingPrincipalCommand,
   AttachPolicyCommand,
   UpdateCertificateCommand,
+  DescribeEndpointCommand,
 } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
@@ -121,6 +122,28 @@ export class AwsIotService {
         await this.iotClient.send(new AttachPolicyCommand({ policyName, target: certificateArn }));
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED),
+    );
+  }
+
+  // The account's MQTT broker host. ATS is the endpoint devices must use with
+  // the Amazon Root CA bundle handed out alongside the certificate.
+  async describeDataEndpoint(): Promise<Result<string>> {
+    return tryCatch(
+      async () => {
+        const response = await this.iotClient.send(
+          new DescribeEndpointCommand({ endpointType: "iot:Data-ATS" }),
+        );
+
+        if (!response.endpointAddress) {
+          throw AppError.internal(
+            "AWS IoT returned no endpoint address",
+            ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED,
+          );
+        }
+
+        return response.endpointAddress;
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED),
     );
   }
 

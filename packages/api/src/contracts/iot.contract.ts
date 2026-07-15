@@ -14,6 +14,9 @@ import {
   zIssueIotCredentialsResponse,
   zDeviceRegistryWebhookPayload,
   zDeviceRegistryWebhookResponse,
+  zDeviceExperimentList,
+  zDeviceOnboardingConfig,
+  zOnboardDeviceBody,
 } from "../schemas/iot.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 
@@ -169,5 +172,36 @@ export const iotContract = c.router({
     summary: "Revoke device credentials",
     description:
       "Revokes the device certificate and marks the device as revoked. The device can no longer connect.",
+  },
+
+  onboardDevice: {
+    method: "POST",
+    path: "/api/v1/devices/:deviceId/onboard",
+    pathParams: zIotDevicePathParam,
+    body: zOnboardDeviceBody,
+    responses: {
+      200: zDeviceOnboardingConfig,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+      500: zErrorResponse,
+    },
+    summary: "Onboard a device to experiments",
+    description:
+      "Binds the device to the given experiments and returns the full config to hand to the hardware: broker endpoint and, per bound experiment, the ingest topic prefix and pinned workbook version. An empty body re-issues the config without binding.",
+  },
+
+  listDeviceExperiments: {
+    method: "GET",
+    path: "/api/v1/devices/:deviceId/experiments",
+    pathParams: zIotDevicePathParam,
+    responses: {
+      200: zDeviceExperimentList,
+      401: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List the experiments a device serves",
+    description: "Returns the experiments this device is currently bound to.",
   },
 });

@@ -11,20 +11,31 @@ import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-creden
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
+import { ListDeviceExperimentsUseCase } from "./application/use-cases/list-device-experiments/list-device-experiments";
+import { ListExperimentDevicesUseCase } from "./application/use-cases/list-experiment-devices/list-experiment-devices";
 import { ListIotDevicesUseCase } from "./application/use-cases/list-iot-devices/list-iot-devices";
+import { OnboardDeviceUseCase } from "./application/use-cases/onboard-device/onboard-device";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
+import { RemoveExperimentDeviceUseCase } from "./application/use-cases/remove-experiment-device/remove-experiment-device";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
+import { ExperimentDeviceRepository } from "./core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
 import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
+import { ExperimentDeviceController } from "./presentation/experiment-device.controller";
 import { IotDeviceController } from "./presentation/iot-device.controller";
 import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [AwsModule, AnalyticsModule, ExperimentModule],
-  controllers: [IotController, IotDeviceController, DeviceRegistryWebhookController],
+  controllers: [
+    IotController,
+    IotDeviceController,
+    ExperimentDeviceController,
+    DeviceRegistryWebhookController,
+  ],
   providers: [
     GetDeviceRegistryUseCase,
     GetIotCredentialsUseCase,
@@ -36,7 +47,12 @@ import { IotController } from "./presentation/iot.controller";
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,
     RotateIotCredentialsUseCase,
+    OnboardDeviceUseCase,
+    ListDeviceExperimentsUseCase,
+    ListExperimentDevicesUseCase,
+    RemoveExperimentDeviceUseCase,
     IotDeviceRepository,
+    ExperimentDeviceRepository,
     {
       provide: AWS_PORT,
       useExisting: AwsAdapter,

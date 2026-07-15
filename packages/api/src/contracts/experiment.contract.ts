@@ -84,6 +84,7 @@ import {
   zCreateExperimentDashboardResponse,
   zUpdateExperimentDashboardResponse,
 } from "../schemas/experiment.schema";
+import { zExperimentDeviceList } from "../schemas/iot.schema";
 import { zWebhookAuthHeader, zWebhookErrorResponse } from "../schemas/user.schema";
 import {
   zAttachWorkbookBody,
@@ -209,6 +210,34 @@ export const experimentContract = c.router({
     },
     summary: "Remove experiment member",
     description: "Removes a member from the experiment",
+  },
+
+  listExperimentDevices: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/devices",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentDeviceList,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List experiment devices",
+    description: "Returns the devices bound to the specified experiment",
+  },
+
+  removeExperimentDevice: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/devices/:deviceId",
+    pathParams: zIdPathParam.extend({
+      deviceId: z.string().uuid().describe("ID of the device"),
+    }),
+    responses: {
+      204: null,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Detach a device from an experiment",
+    description: "Removes the binding between the device and the experiment",
   },
 
   updateExperimentMemberRole: {

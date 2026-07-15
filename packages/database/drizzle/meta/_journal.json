@@ -267,6 +267,13 @@
       "when": 1784036223478,
       "tag": "0037_last_doctor_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784116607287,
+      "tag": "0038_smart_zeigeist",
+      "breakpoints": true
     }
   ]
 }

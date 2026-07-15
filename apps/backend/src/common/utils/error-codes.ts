@@ -50,6 +50,7 @@ export enum ErrorCodes {
   AWS_IOT_ATTACH_PRINCIPAL_FAILED = "AWS_IOT_ATTACH_PRINCIPAL_FAILED", // IoT Attach/DetachThingPrincipal failed
   AWS_IOT_ATTACH_CERT_POLICY_FAILED = "AWS_IOT_ATTACH_CERT_POLICY_FAILED", // IoT AttachPolicy to certificate failed
   AWS_IOT_UPDATE_CERT_FAILED = "AWS_IOT_UPDATE_CERT_FAILED", // IoT UpdateCertificate status failed
+  AWS_IOT_DESCRIBE_ENDPOINT_FAILED = "AWS_IOT_DESCRIBE_ENDPOINT_FAILED", // IoT DescribeEndpoint failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
   AWS_OPERATION_FAILED = "AWS_OPERATION_FAILED", // Other AWS operations failed
 
