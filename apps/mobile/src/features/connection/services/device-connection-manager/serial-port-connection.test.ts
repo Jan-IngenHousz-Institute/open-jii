@@ -107,6 +107,18 @@ describe("serial port registry", () => {
     expect(getConnectedSerialPortDevices().map((d) => d.id)).toEqual(["11"]);
   });
 
+  it("swallows destroy failures while closing (already-dead port)", async () => {
+    const emitter = new Emitter<{ destroy: void }>();
+    emitter.on("destroy", () => {
+      throw new Error("port already closed");
+    });
+    openSerialPortConnection.mockResolvedValueOnce(emitter);
+    await openSerialPort(usbDevice("11"));
+
+    await expect(closeSerialPort("11")).resolves.toBeUndefined();
+    expect(getConnectedSerialPortDevices()).toEqual([]);
+  });
+
   it("closeAllSerialPorts empties the registry", async () => {
     const a = makeConnection();
     const b = makeConnection();
