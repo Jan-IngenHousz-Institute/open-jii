@@ -123,8 +123,6 @@
       "noQuestionsAnswered": "No questions answered"
     },
     "workbookRun": {
-      "toggleLabel": "Link as one run",
-      "toggleHint": "Tag these {{count}} measurements with a shared workbook run ID",
       "deviceHeading": "Device {{index}}: {{name}}"
     }
   },

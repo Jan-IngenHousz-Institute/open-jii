@@ -123,8 +123,6 @@
       "noQuestionsAnswered": "Geen vragen beantwoord"
     },
     "workbookRun": {
-      "toggleLabel": "Koppel als één run",
-      "toggleHint": "Markeer deze {{count}} metingen met een gedeeld workbook-run-ID",
       "deviceHeading": "Apparaat {{index}}: {{name}}"
     }
   },
