@@ -146,8 +146,13 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
     estimatedMs: undefined,
 
     addDevice: async (device: Device) => {
+      // Deregister a prior executor for this device BEFORE destroying it, so
+      // a failed re-initialization can't leave a dead executor registered.
       const prior = get().executors.get(device.id);
       if (prior) {
+        const next = new Map(get().executors);
+        next.delete(device.id);
+        setEntries(next);
         await destroyExecutor(prior.executor);
       }
 
@@ -282,8 +287,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       set({ isInitializing: true });
 
       try {
-        // Replace-all: destroy every existing executor first.
+        // Replace-all: deregister every existing executor before destroying,
+        // so an initialization failure can't leave dead executors registered.
         const existing = Array.from(get().executors.values());
+        setEntries(new Map());
         for (const entry of existing) {
           await destroyExecutor(entry.executor);
         }

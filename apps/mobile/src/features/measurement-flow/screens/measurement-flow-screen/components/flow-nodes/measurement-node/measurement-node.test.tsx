@@ -302,13 +302,23 @@ describe("MeasurementNode start-scan guards", () => {
 describe("MeasurementNode in-scan controls", () => {
   it("awaits cancel before resetting when the measurement is cancelled", async () => {
     scanState.isScanning = true;
-    cancelAll.mockResolvedValue(undefined);
+    // Keep the cancellation pending so the ordering is actually observable:
+    // reset must not run until the cancel settles.
+    let resolveCancel: () => void = () => undefined;
+    cancelAll.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveCancel = resolve;
+      }),
+    );
 
     render(<MeasurementNode content={content} nodeId="m1" />);
     fireEvent.press(screen.getByText(CANCEL_KEY));
 
     await waitFor(() => expect(cancelAll).toHaveBeenCalled());
-    expect(resetScan).toHaveBeenCalled();
+    expect(resetScan).not.toHaveBeenCalled();
+
+    resolveCancel();
+    await waitFor(() => expect(resetScan).toHaveBeenCalled());
   });
 
   it("aborts and resets the scan when every device drops mid-measurement", async () => {

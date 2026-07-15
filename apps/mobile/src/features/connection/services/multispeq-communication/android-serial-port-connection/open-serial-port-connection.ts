@@ -34,13 +34,21 @@ export async function listSerialPortDevices() {
   return await UsbSerialManager.list();
 }
 
+// Cap the wait so one denied/ignored device can't stall the permission gate
+// (and every device queued behind it) forever.
+const PERMISSION_TIMEOUT_MS = 60_000;
+
 async function waitForPermission(deviceId: number) {
+  const deadline = Date.now() + PERMISSION_TIMEOUT_MS;
   while (true) {
     if (await UsbSerialManager.hasPermission(deviceId)) {
       return;
     }
     if (await UsbSerialManager.tryRequestPermission(deviceId)) {
       return;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`USB permission not granted for device ${deviceId}`);
     }
     await delay(2000);
   }
