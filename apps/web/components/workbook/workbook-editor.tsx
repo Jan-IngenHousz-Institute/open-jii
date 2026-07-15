@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 
 import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
 import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
@@ -43,13 +44,6 @@ interface CellExecutionState {
   executionOrder?: number[];
 }
 
-interface DeviceInfo {
-  device_name?: string;
-  device_battery?: number;
-  device_version?: string;
-  device_id?: string;
-}
-
 interface WorkbookEditorProps {
   cells: WorkbookCell[];
   onCellsChange: (cells: WorkbookCell[]) => void;
@@ -57,14 +51,15 @@ interface WorkbookEditorProps {
   executionStates?: Record<string, CellExecutionState>;
   isConnected?: boolean;
   isConnecting?: boolean;
-  deviceInfo?: DeviceInfo | null;
+  connectedDevices?: { id: string; label: string }[];
   sensorFamily?: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
-  connectionType?: "bluetooth" | "serial";
-  onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
+  connectionType?: WorkbookConnectionType;
+  onConnectionTypeChange?: (type: WorkbookConnectionType) => void;
   isRunningAll?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onDisconnectDevice?: (id: string) => void;
   onRunAll?: () => void;
   onStopExecution?: () => void;
   onClearOutputs?: () => void;
@@ -332,12 +327,13 @@ export function WorkbookEditor({
   executionStates,
   isConnected,
   isConnecting,
-  deviceInfo,
+  connectedDevices,
   sensorFamily,
   connectionType,
   isRunningAll,
   onConnect,
   onDisconnect,
+  onDisconnectDevice,
   onRunAll,
   onStopExecution,
   onSensorFamilyChange,
@@ -530,7 +526,7 @@ export function WorkbookEditor({
           cells={cells}
           isConnected={isConnected ?? false}
           isConnecting={isConnecting ?? false}
-          deviceInfo={deviceInfo ?? null}
+          connectedDevices={connectedDevices ?? []}
           sensorFamily={sensorFamily ?? "multispeq"}
           onSensorFamilyChange={onSensorFamilyChange}
           connectionType={connectionType ?? "serial"}
@@ -539,6 +535,7 @@ export function WorkbookEditor({
           onConnect={onConnect}
           isSticky={isSticky}
           onDisconnect={onDisconnect ?? noop}
+          onDisconnectDevice={onDisconnectDevice}
           onRunAll={onRunAll}
           onStopExecution={onStopExecution ?? noop}
           onClearOutputs={onClearOutputs ?? noop}

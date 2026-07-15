@@ -12,207 +12,355 @@ import { estimateProtocolDurationMs } from "@repo/iot";
 
 const log = createLogger("scanner-executor");
 
+export interface DeviceExecutorEntry {
+  device: Device;
+  executor: IMultispeqCommandExecutor;
+  isExecuting: boolean;
+  isCancelled: boolean;
+  error: Error | undefined;
+  commandResponse: string | object | undefined;
+  /** Live progress of the entry's in-flight command (final-response transfer). */
+  progress: CommandProgress | undefined;
+  /** Epoch ms when the entry's current scan started; drives the elapsed-time UI. */
+  scanStartedAt: number | undefined;
+  /** Estimated protocol runtime (ms) for the in-flight command, if known. */
+  estimatedMs: number | undefined;
+}
+
+export type DeviceCommandOutcome =
+  | { device: Device; status: "fulfilled"; result: string | object }
+  | { device: Device; status: "rejected"; error: Error };
+
 interface ScannerCommandExecutorStore {
+  // One entry per connected device, keyed by Device.id. Insertion order =
+  // connect order; the first entry is the Primary device (see CONTEXT.md).
+  executors: ReadonlyMap<string, DeviceExecutorEntry>;
+  isInitializing: boolean;
+
+  // Legacy single-device mirrors, derived from the entries after every
+  // mutation. Primary's values, except isExecuting which is true when ANY
+  // device is executing. Removable once all consumers read entries directly.
   commandExecutor: IMultispeqCommandExecutor | undefined;
   commandResponse: string | object | undefined;
   isExecuting: boolean;
   isCancelled: boolean;
   error: Error | undefined;
-  isInitializing: boolean;
-
-  /** Live progress of the in-flight command (final-response transfer). */
   progress: CommandProgress | undefined;
-  /** Epoch ms when the current scan started — drives the elapsed-time UI. */
   scanStartedAt: number | undefined;
-  /** Estimated protocol runtime (ms) for the in-flight command, if known. */
   estimatedMs: number | undefined;
 
-  // Set the device and create/update the executor
-  setDevice: (device: Device | undefined) => Promise<void>;
+  // Multi-device API
+  addDevice: (device: Device) => Promise<void>;
+  removeDevice: (deviceId: string) => Promise<void>;
+  executeCommandOn: (
+    deviceId: string,
+    command: string | object,
+    options?: ExecuteOptions,
+  ) => Promise<string | object>;
+  executeOnAll: (
+    command: string | object,
+    options?: ExecuteOptions,
+  ) => Promise<DeviceCommandOutcome[]>;
+  cancelCommandOn: (deviceId: string) => Promise<void>;
+  cancelAll: () => Promise<void>;
 
-  // Execute a command (optionally overriding the response timeout)
+  // Legacy single-device API: operates on the Primary device. setDevice keeps
+  // its replace-all semantics; exactly the Bluetooth single-device behavior.
+  setDevice: (device: Device | undefined) => Promise<void>;
   executeCommand: (
     command: string | object,
     options?: ExecuteOptions,
   ) => Promise<string | object | undefined>;
-
-  // Send cancel command (-1+) to stop a running operation on the device
   cancelCommand: () => Promise<void>;
-
-  // Reset state
   reset: () => void;
-
-  // Cleanup
   destroy: () => Promise<void>;
 }
 
-export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore>((set, get) => ({
-  commandExecutor: undefined,
-  commandResponse: undefined,
-  isExecuting: false,
-  isCancelled: false,
-  error: undefined,
-  isInitializing: false,
-  progress: undefined,
-  scanStartedAt: undefined,
-  estimatedMs: undefined,
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
 
-  setDevice: async (device: Device | undefined) => {
-    // Prevent concurrent calls
-    if (get().isInitializing) {
+function freshEntry(device: Device, executor: IMultispeqCommandExecutor): DeviceExecutorEntry {
+  return {
+    device,
+    executor,
+    isExecuting: false,
+    isCancelled: false,
+    error: undefined,
+    commandResponse: undefined,
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
+  };
+}
+
+function syncLegacyFields(executors: ReadonlyMap<string, DeviceExecutorEntry>) {
+  const primary: DeviceExecutorEntry | undefined = executors.values().next().value;
+  let anyExecuting = false;
+  executors.forEach((entry) => {
+    anyExecuting ||= entry.isExecuting;
+  });
+  return {
+    commandExecutor: primary?.executor,
+    commandResponse: primary?.commandResponse,
+    isExecuting: anyExecuting,
+    isCancelled: primary?.isCancelled ?? false,
+    error: primary?.error,
+    progress: primary?.progress,
+    scanStartedAt: primary?.scanStartedAt,
+    estimatedMs: primary?.estimatedMs,
+  };
+}
+
+export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore>((set, get) => {
+  const setEntries = (executors: Map<string, DeviceExecutorEntry>) => {
+    set({ executors, ...syncLegacyFields(executors) });
+  };
+
+  const patchEntry = (deviceId: string, patch: Partial<DeviceExecutorEntry>) => {
+    const current = get().executors;
+    const entry = current.get(deviceId);
+    if (!entry) {
       return;
     }
+    const next = new Map(current);
+    next.set(deviceId, { ...entry, ...patch });
+    setEntries(next);
+  };
 
-    set({ isInitializing: true });
+  const destroyExecutor = (executor: IMultispeqCommandExecutor) =>
+    executor
+      .destroy()
+      .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
 
-    try {
-      // Cleanup existing executor
-      const currentExecutor = get().commandExecutor;
-      if (currentExecutor) {
-        await currentExecutor
-          .destroy()
-          .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
+  return {
+    executors: new Map(),
+    isInitializing: false,
+    commandExecutor: undefined,
+    commandResponse: undefined,
+    isExecuting: false,
+    isCancelled: false,
+    error: undefined,
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
+
+    addDevice: async (device: Device) => {
+      // Deregister a prior executor for this device BEFORE destroying it, so
+      // a failed re-initialization can't leave a dead executor registered.
+      const prior = get().executors.get(device.id);
+      if (prior) {
+        const next = new Map(get().executors);
+        next.delete(device.id);
+        setEntries(next);
+        await destroyExecutor(prior.executor);
       }
 
-      // Create new executor (or undefined if no device)
-      const executor = await createMultispeqCommandExecutor(device);
+      try {
+        const executor = await createMultispeqCommandExecutor(device);
+        if (!executor) {
+          return;
+        }
+        // Re-read after the await: a concurrent addDevice/removeDevice may
+        // have replaced the map in the meantime.
+        const next = new Map(get().executors);
+        next.set(device.id, freshEntry(device, executor));
+        setEntries(next);
+      } catch (error) {
+        set({ error: toError(error) });
+      }
+    },
 
-      // Update state
-      const updates: Partial<ScannerCommandExecutorStore> = {
-        commandExecutor: executor,
-        error: undefined,
-        isInitializing: false,
-      };
+    removeDevice: async (deviceId: string) => {
+      const entry = get().executors.get(deviceId);
+      if (!entry) {
+        return;
+      }
+      // Delete before destroy so an in-flight executeCommandOn observes the
+      // entry as gone and surfaces the executor's rejection as-is.
+      const next = new Map(get().executors);
+      next.delete(deviceId);
+      setEntries(next);
+      await destroyExecutor(entry.executor);
+    },
 
-      // Reset execution state when device disconnects
-      if (device === undefined) {
-        updates.commandResponse = undefined;
-        updates.isExecuting = false;
-        updates.progress = undefined;
-        updates.scanStartedAt = undefined;
-        updates.estimatedMs = undefined;
+    executeCommandOn: async (deviceId: string, command: string | object, options?) => {
+      const entry = get().executors.get(deviceId);
+      if (!entry) {
+        const error = new Error("Command executor not initialized. No device connected.");
+        set({ error });
+        throw error;
       }
 
-      set(updates);
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error : new Error(String(error)),
-        isInitializing: false,
-      });
-    }
-  },
-
-  executeCommand: async (command: string | object, options?: ExecuteOptions) => {
-    const { commandExecutor, isInitializing } = get();
-    if (isInitializing) {
-      const error = new Error("Command executor is being initialized. Please wait.");
-      set({ error, isExecuting: false });
-      throw error;
-    }
-    if (!commandExecutor) {
-      const error = new Error("Command executor not initialized. No device connected.");
-      set({ error, isExecuting: false });
-      throw error;
-    }
-
-    // Background commands (battery polling) run transparently: they must not
-    // touch the measurement-facing UI state or they'd reset the elapsed timer /
-    // estimate mid-measurement and surface their own timeout as a scan error.
-    // They also leave `isExecuting` untouched so the battery poller's
-    // `!isExecuting` gate reflects measurements only.
-    if (options?.background) {
-      return commandExecutor.execute(command, options);
-    }
-
-    // Estimated runtime sizes the elapsed-time progress bar. Console commands
-    // (plain strings) estimate to 0 → treated as indeterminate (no bar).
-    const estimatedMs = estimateProtocolDurationMs(command) || undefined;
-    set({
-      isExecuting: true,
-      isCancelled: false,
-      error: undefined,
-      progress: undefined,
-      scanStartedAt: Date.now(),
-      estimatedMs,
-    });
-
-    // Mirror live command progress into the store while this execute runs.
-    const unsubscribe = commandExecutor.onProgress((progress) => set({ progress }));
-
-    try {
-      const result = await commandExecutor.execute(command, options);
-      if (get().isCancelled) {
-        throw new Error("Measurement cancelled");
+      // Background commands (battery polling) bypass all measurement-facing UI
+      // state, including `isExecuting`, so the battery poller's `!isExecuting`
+      // gate reflects measurements only.
+      if (options?.background) {
+        return entry.executor.execute(command, options);
       }
-      set({ commandResponse: result, isExecuting: false, error: undefined });
-      return result;
-    } catch (err) {
-      // If cancelCommand preempted this execute() the underlying executor
-      // rejects with a "superseded" error — surface the user-facing reason
-      // instead so callers see a coherent cancellation message.
-      const error = get().isCancelled
-        ? new Error("Measurement cancelled")
-        : err instanceof Error
-          ? err
-          : new Error(String(err));
-      set({ error, isExecuting: false });
-      throw error;
-    } finally {
-      // Only the transfer indicator is cleared here; scanStartedAt/estimatedMs
-      // linger so the bar reads "complete" until the flow navigates away, and
-      // are overwritten by the next run (or cleared on reset/disconnect).
-      unsubscribe();
-      set({ progress: undefined });
-    }
-  },
 
-  cancelCommand: async () => {
-    set({ isCancelled: true, isExecuting: false });
-    const { commandExecutor } = get();
-    if (!commandExecutor) {
-      return;
-    }
-    try {
-      // Preemptively abort the in-flight command on the driver. This sends the
-      // `-1+` cancel switch to the device and rejects the running execute() —
-      // the in-flight executeCommand() then surfaces "Measurement cancelled".
-      await commandExecutor.cancel();
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      log.error("Failed to send cancel command", { err: error.message });
-      set({ error });
-      throw error;
-    }
-  },
-
-  reset: () => {
-    set({
-      commandResponse: undefined,
-      error: undefined,
-      isExecuting: false,
-      isCancelled: false,
-      progress: undefined,
-      scanStartedAt: undefined,
-      estimatedMs: undefined,
-    });
-  },
-
-  destroy: async () => {
-    const { commandExecutor } = get();
-    if (commandExecutor) {
-      await commandExecutor
-        .destroy()
-        .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
-      set({
-        commandExecutor: undefined,
-        commandResponse: undefined,
-        error: undefined,
-        isExecuting: false,
+      // Estimated runtime sizes the elapsed-time progress bar. Console commands
+      // (plain strings) estimate to 0 and are treated as indeterminate (no bar).
+      const estimatedMs = estimateProtocolDurationMs(command) || undefined;
+      patchEntry(deviceId, {
+        isExecuting: true,
         isCancelled: false,
+        error: undefined,
         progress: undefined,
-        scanStartedAt: undefined,
-        estimatedMs: undefined,
+        scanStartedAt: Date.now(),
+        estimatedMs,
       });
-    }
-  },
-}));
+
+      // Mirror live command progress into the entry while this execute runs.
+      const unsubscribe = entry.executor.onProgress((progress) =>
+        patchEntry(deviceId, { progress }),
+      );
+
+      try {
+        const result = await entry.executor.execute(command, options);
+        if (get().executors.get(deviceId)?.isCancelled) {
+          throw new Error("Measurement cancelled");
+        }
+        patchEntry(deviceId, { commandResponse: result, isExecuting: false, error: undefined });
+        return result;
+      } catch (err) {
+        // If cancelCommandOn preempted this execute() the underlying executor
+        // rejects with a "superseded" error; surface the user-facing reason
+        // instead so callers see a coherent cancellation message.
+        const error = get().executors.get(deviceId)?.isCancelled
+          ? new Error("Measurement cancelled")
+          : toError(err);
+        patchEntry(deviceId, { error, isExecuting: false });
+        throw error;
+      } finally {
+        // Only the transfer indicator is cleared here; scanStartedAt/estimatedMs
+        // linger so the bar reads "complete" until the flow navigates away, and
+        // are overwritten by the next run (or cleared on reset/disconnect).
+        unsubscribe();
+        patchEntry(deviceId, { progress: undefined });
+      }
+    },
+
+    executeOnAll: async (command: string | object, options?) => {
+      const entries = Array.from(get().executors.values());
+      const settled = await Promise.allSettled(
+        entries.map((entry) => get().executeCommandOn(entry.device.id, command, options)),
+      );
+      return entries.map((entry, i): DeviceCommandOutcome => {
+        const outcome = settled[i];
+        return outcome.status === "fulfilled"
+          ? { device: entry.device, status: "fulfilled", result: outcome.value }
+          : { device: entry.device, status: "rejected", error: toError(outcome.reason) };
+      });
+    },
+
+    cancelCommandOn: async (deviceId: string) => {
+      patchEntry(deviceId, { isCancelled: true, isExecuting: false });
+      const entry = get().executors.get(deviceId);
+      if (!entry) {
+        return;
+      }
+      try {
+        // Preemptively abort the in-flight command on the driver. This sends the
+        // `-1+` cancel switch to the device and rejects the running execute();
+        // the in-flight executeCommandOn() then surfaces "Measurement cancelled".
+        await entry.executor.cancel();
+      } catch (err) {
+        const error = toError(err);
+        log.error("Failed to send cancel command", { err: error.message });
+        patchEntry(deviceId, { error });
+        throw error;
+      }
+    },
+
+    cancelAll: async () => {
+      const ids = Array.from(get().executors.keys());
+      await Promise.allSettled(ids.map((deviceId) => get().cancelCommandOn(deviceId)));
+    },
+
+    setDevice: async (device: Device | undefined) => {
+      // Prevent concurrent calls
+      if (get().isInitializing) {
+        return;
+      }
+
+      set({ isInitializing: true });
+
+      try {
+        // Replace-all: deregister every existing executor before destroying,
+        // so an initialization failure can't leave dead executors registered.
+        const existing = Array.from(get().executors.values());
+        setEntries(new Map());
+        for (const entry of existing) {
+          await destroyExecutor(entry.executor);
+        }
+
+        const next = new Map<string, DeviceExecutorEntry>();
+        if (device) {
+          const executor = await createMultispeqCommandExecutor(device);
+          if (executor) {
+            next.set(device.id, freshEntry(device, executor));
+          }
+        }
+
+        setEntries(next);
+        set({ isInitializing: false, error: undefined });
+      } catch (error) {
+        set({
+          error: toError(error),
+          isInitializing: false,
+        });
+      }
+    },
+
+    executeCommand: async (command: string | object, options?) => {
+      const { executors, isInitializing } = get();
+      if (isInitializing) {
+        const error = new Error("Command executor is being initialized. Please wait.");
+        set({ error, isExecuting: false });
+        throw error;
+      }
+      const primary: DeviceExecutorEntry | undefined = executors.values().next().value;
+      if (!primary) {
+        const error = new Error("Command executor not initialized. No device connected.");
+        set({ error, isExecuting: false });
+        throw error;
+      }
+      return get().executeCommandOn(primary.device.id, command, options);
+    },
+
+    cancelCommand: async () => {
+      const primary: DeviceExecutorEntry | undefined = get().executors.values().next().value;
+      if (!primary) {
+        set({ isCancelled: true, isExecuting: false });
+        return;
+      }
+      await get().cancelCommandOn(primary.device.id);
+    },
+
+    reset: () => {
+      const next = new Map<string, DeviceExecutorEntry>();
+      get().executors.forEach((entry, deviceId) => {
+        next.set(deviceId, {
+          ...entry,
+          commandResponse: undefined,
+          error: undefined,
+          isExecuting: false,
+          isCancelled: false,
+          progress: undefined,
+          scanStartedAt: undefined,
+          estimatedMs: undefined,
+        });
+      });
+      setEntries(next);
+      set({ error: undefined });
+    },
+
+    destroy: async () => {
+      const entries = Array.from(get().executors.values());
+      setEntries(new Map());
+      set({ error: undefined });
+      await Promise.allSettled(entries.map((entry) => destroyExecutor(entry.executor)));
+    },
+  };
+});

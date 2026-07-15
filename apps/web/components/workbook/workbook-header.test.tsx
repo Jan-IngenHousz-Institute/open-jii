@@ -42,7 +42,7 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
     cells: [markdownCell, protocolCell, macroCell],
     isConnected: false,
     isConnecting: false,
-    deviceInfo: null,
+    connectedDevices: [] as { id: string; label: string }[],
     sensorFamily: "multispeq" as const,
     onSensorFamilyChange: vi.fn(),
     connectionType: "serial" as const,
@@ -78,17 +78,47 @@ describe("WorkbookHeader", () => {
     expect(props.onConnect).toHaveBeenCalledOnce();
   });
 
-  it("calls onDisconnect when connected and user clicks Disconnect", async () => {
+  it("calls onDisconnect via the device menu's Disconnect all item", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader({
       isConnected: true,
-      deviceInfo: { device_name: "MultispeQ v2" },
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
 
-    const disconnectButton = screen.getByRole("button", { name: /disconnect/i });
-    await user.click(disconnectButton);
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    await user.click(screen.getByTestId("disconnect-all"));
 
     expect(props.onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the connect button as Add device while connected", async () => {
+    const user = userEvent.setup();
+    const { props } = renderHeader({
+      isConnected: true,
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
+    });
+
+    await user.click(screen.getByTestId("connect-device"));
+    expect(props.onConnect).toHaveBeenCalledOnce();
+  });
+
+  it("lists connected devices in a dropdown with per-device disconnect", async () => {
+    const user = userEvent.setup();
+    const onDisconnectDevice = vi.fn();
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        { id: "d1", label: "Mock MultispeQ 1" },
+        { id: "d2", label: "Mock MultispeQ 2" },
+      ],
+      onDisconnectDevice,
+    });
+
+    expect(screen.getByText("2 devices")).toBeInTheDocument();
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    expect(screen.getAllByTestId("device-menu-item")).toHaveLength(2);
+    await user.click(screen.getByRole("menuitem", { name: "Disconnect Mock MultispeQ 2" }));
+    expect(onDisconnectDevice).toHaveBeenCalledWith("d2");
   });
 
   it("shows 'Disconnected' status when not connected", () => {
@@ -99,7 +129,7 @@ describe("WorkbookHeader", () => {
   it("shows device name when connected", () => {
     renderHeader({
       isConnected: true,
-      deviceInfo: { device_name: "MultispeQ v2" },
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
     expect(screen.getByText("MultispeQ v2")).toBeInTheDocument();
   });
@@ -174,14 +204,6 @@ describe("WorkbookHeader", () => {
     await user.click(flowButton);
 
     expect(props.onToggleFlowchart).toHaveBeenCalledOnce();
-  });
-
-  it("shows firmware version when connected with device info", () => {
-    renderHeader({
-      isConnected: true,
-      deviceInfo: { device_name: "Device", device_version: "3.0.1" },
-    });
-    expect(screen.getByText("FW 3.0.1")).toBeInTheDocument();
   });
 });
 

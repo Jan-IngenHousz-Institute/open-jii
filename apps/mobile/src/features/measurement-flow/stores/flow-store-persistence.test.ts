@@ -64,6 +64,12 @@ const MEASUREMENT_FIXTURE = `{
     "isFlowFinished": true,
     "isQuestionsSubmitPending": true,
     "scanResult": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] },
+    "scanResults": [
+      {
+        "device": { "id": "1002", "name": "MultispeQ #1002" },
+        "result": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] }
+      }
+    ],
     "producerCellId": "node-m1",
     "isFromOverview": true,
     "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
@@ -160,6 +166,7 @@ describe("measurement-flow-storage v1 wire format", () => {
       "lastMatchedPath",
       "producerCellId",
       "scanResult",
+      "scanResults",
     ]);
   });
 });

@@ -6,6 +6,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:3020"),
   NEXT_PUBLIC_DOCS_URL: z.string().url().default("http://localhost:3010"),
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
+  // Allows ?mockDevices=1 to offer fake IoT devices outside dev builds (e2e).
+  NEXT_PUBLIC_ENABLE_MOCK_DEVICES: z.enum(["true", "false"]).default("false"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),
@@ -37,6 +39,7 @@ const parseEnv = () => {
       CONTENTFUL_PREVIEW_SECRET: process.env.CONTENTFUL_PREVIEW_SECRET,
       CONTENTFUL_SPACE_ENVIRONMENT: process.env.CONTENTFUL_SPACE_ENVIRONMENT,
       NEXT_PUBLIC_ENABLE_DEVTOOLS: process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS,
+      NEXT_PUBLIC_ENABLE_MOCK_DEVICES: process.env.NEXT_PUBLIC_ENABLE_MOCK_DEVICES,
     };
 
     return envSchema.parse(rawEnv);

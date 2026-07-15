@@ -10,6 +10,7 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 import { protocolRequiresInteraction } from "@repo/iot";
 
+import { DeviceScanProgressList } from "./components/device-scan-progress-list";
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
 import { ReadyState } from "./components/ready-state";
@@ -28,10 +29,12 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
     device,
     protocol,
     isScanning,
-    scanResult,
-    scanError,
+    deviceStates,
+    lastRound,
+    succeededCount,
     startScan,
     cancelScan,
+    completeWithSuccesses,
     openDeviceSheet,
     navigateToQuestionFromOverview,
     scanProgress,
@@ -44,22 +47,55 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
       return <NoDeviceState />;
     }
 
-    if (scanError) {
+    if (!isScanning && lastRound && lastRound.failures.length > 0) {
+      // Every device failed: keep the classic full error state.
+      if (succeededCount === 0) {
+        return (
+          <View className="flex-1">
+            <View className="flex-1 p-4">
+              <ErrorState error={lastRound.failures[0].error} />
+            </View>
+            <View className="flex-row gap-4 px-4 py-3">
+              <Button
+                title={t("measurementFlow:measurementNode.retryMeasurement")}
+                onPress={startScan}
+                variant="tertiary"
+                style={{ flex: 1, height: 44, borderColor: "transparent" }}
+              />
+              <Button
+                title={t("measurementFlow:measurementNode.connectToDevice")}
+                onPress={openDeviceSheet}
+                style={{ height: 44, flex: 1 }}
+              />
+            </View>
+          </View>
+        );
+      }
+
+      // Partial failure: some devices have a measurement, some don't.
       return (
         <View className="flex-1">
-          <View className="flex-1 p-4">
-            <ErrorState error={scanError} />
+          <View className="flex-1 gap-3 p-4">
+            <Text className={clsx("text-center text-lg font-bold", classes.text)}>
+              {t("measurementFlow:measurementNode.multiScan.partialTitle", {
+                failed: lastRound.failures.length,
+                total: lastRound.failures.length + succeededCount,
+              })}
+            </Text>
+            <DeviceScanProgressList deviceStates={deviceStates} />
           </View>
           <View className="flex-row gap-4 px-4 py-3">
             <Button
-              title={t("measurementFlow:measurementNode.retryMeasurement")}
+              title={t("measurementFlow:measurementNode.multiScan.retryFailed")}
               onPress={startScan}
               variant="tertiary"
               style={{ flex: 1, height: 44, borderColor: "transparent" }}
             />
             <Button
-              title={t("measurementFlow:measurementNode.connectToDevice")}
-              onPress={openDeviceSheet}
+              title={t("measurementFlow:measurementNode.multiScan.continueWithSuccessful", {
+                count: succeededCount,
+              })}
+              onPress={completeWithSuccesses}
               style={{ height: 44, flex: 1 }}
             />
           </View>
@@ -67,12 +103,13 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
       );
     }
 
-    if (isScanning || scanResult) {
+    if (isScanning || lastRound) {
       return (
         <View className="flex-1">
           <View className="flex-1 p-4">
             <ScanningState
               protocolName={protocol?.name}
+              deviceStates={deviceStates}
               progress={scanProgress}
               scanStartedAt={scanStartedAt}
               estimatedMs={estimatedMs}

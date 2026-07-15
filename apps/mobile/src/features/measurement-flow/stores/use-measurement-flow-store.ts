@@ -5,6 +5,7 @@ import type {
   FlowState,
   MatchedPath,
   ScanResult,
+  ScanResultEntry,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import {
   dismissQuestionsSubmitState,
@@ -48,6 +49,9 @@ interface MeasurementFlowStore extends FlowState {
   // producerCellId records which cell (protocol or command) yielded the result;
   // omitting it clears any stale attribution.
   setScanResult: (result: ScanResult | undefined, producerCellId?: string) => void;
+  // Multi-scan: per-device results in connect order; scanResult mirrors the
+  // Primary device's result for branch evaluation and legacy consumers.
+  setScanResults: (results: ScanResultEntry[], producerCellId?: string) => void;
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
@@ -117,7 +121,15 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       finishFlow: () => set(finishFlowState),
 
-      setScanResult: (result, producerCellId) => set({ scanResult: result, producerCellId }),
+      setScanResult: (result, producerCellId) =>
+        set({
+          scanResult: result,
+          scanResults: result === undefined ? undefined : [{ result }],
+          producerCellId,
+        }),
+
+      setScanResults: (results, producerCellId) =>
+        set({ scanResults: results, scanResult: results[0]?.result, producerCellId }),
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
       dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
@@ -149,6 +161,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
+        scanResults: state.scanResults,
         producerCellId: state.producerCellId,
         isFromOverview: state.isFromOverview,
         cells: state.cells,
