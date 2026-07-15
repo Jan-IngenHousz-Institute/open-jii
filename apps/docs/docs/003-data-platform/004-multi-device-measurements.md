@@ -71,7 +71,7 @@ With a single device connected, nothing changes: cells behave exactly as before.
 
 To exercise the multi-device flow without a hub full of hardware, open a workbook with
 `?mockDevices=1` appended to the URL (available outside production builds). The connection-type
-dropdown gains a **Mock** option; each *Connect* adds a fake MultispeQ that answers through the
+dropdown gains a **Mock** option; each _Connect_ adds a fake MultispeQ that answers through the
 real device driver — framing, timeouts and command queueing all run genuinely, only the wire is
 simulated. Mock device 3 fails its first protocol run on purpose, so the partial-failure and
 retry paths can be demoed and end-to-end-tested deterministically.
