@@ -20,6 +20,14 @@ from playwright.sync_api import expect, sync_playwright
 OUT = os.environ.get("E2E_OUT", "/tmp/e2e-multi-device")
 API_URL = os.environ.get("E2E_API_URL", "http://localhost:3020")
 DEVICE_COUNT = 4
+# E2E_VIDEO=1 records the run to <OUT>/multi-device.webm (with pauses so the
+# flow is watchable, not just machine-fast).
+RECORD = os.environ.get("E2E_VIDEO") == "1"
+
+
+def pause(page, ms: int) -> None:
+    if RECORD:
+        page.wait_for_timeout(ms)
 
 failures: list[str] = []
 
@@ -71,6 +79,7 @@ def connect_mock_devices(page, count: int) -> None:
             expect(page.get_by_text("Mock MultispeQ 1")).to_be_visible(timeout=10_000)
         else:
             expect(page.get_by_text(f"{i} devices")).to_be_visible(timeout=10_000)
+        pause(page, 600)
 
 
 def main() -> int:
@@ -80,7 +89,11 @@ def main() -> int:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(viewport={"width": 1600, "height": 1000})
+        context_args = {"viewport": {"width": 1600, "height": 1000}}
+        if RECORD:
+            context_args["record_video_dir"] = OUT
+            context_args["record_video_size"] = {"width": 1600, "height": 1000}
+        context = browser.new_context(**context_args)
         page = context.new_page()
         console_errors: list[str] = []
         page.on(
@@ -97,6 +110,7 @@ def main() -> int:
         page.goto(f"{BASE_URL}/{LOCALE}/platform/workbooks/{workbook_id}?mockDevices=1")
         page.wait_for_load_state("networkidle")
         dismiss_cookie_banner(page)
+        pause(page, 1500)
         page.screenshot(path=f"{OUT}/01-workbook.png", full_page=True)
 
         print("Connecting 4 mock devices...")
@@ -112,6 +126,9 @@ def main() -> int:
         run_button.click()
         results = page.get_by_test_id("device-result")
         expect(results).to_have_count(DEVICE_COUNT, timeout=30_000)
+        pause(page, 1200)
+        results.nth(2).scroll_into_view_if_needed()
+        pause(page, 2000)
         page.screenshot(path=f"{OUT}/03-round1-partial.png", full_page=True)
 
         ok = page.locator('[data-testid="device-result"][data-status="ok"]')
@@ -128,10 +145,17 @@ def main() -> int:
         )
 
         print("Round 2: rerun; the flaky device succeeds...")
+        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
+        pause(page, 800)
         run_button.click()
         expect(page.locator('[data-testid="device-result"][data-status="ok"]')).to_have_count(
             DEVICE_COUNT, timeout=30_000
         )
+        pause(page, 1000)
+        page.locator('[data-testid="device-result"]').nth(2).scroll_into_view_if_needed()
+        pause(page, 2000)
+        page.get_by_test_id("device-chip").first.scroll_into_view_if_needed()
+        pause(page, 800)
         page.screenshot(path=f"{OUT}/04-round2-all-ok.png", full_page=True)
         check(
             "round 2: all 4 devices ok",
@@ -150,6 +174,7 @@ def main() -> int:
         page.get_by_role("button", name="Disconnect Mock MultispeQ 4").click()
         expect(page.get_by_text("3 devices")).to_be_visible(timeout=5_000)
         check("chip disconnect drops to 3 devices", page.get_by_text("3 devices").is_visible())
+        pause(page, 1500)
         page.screenshot(path=f"{OUT}/05-after-disconnect.png", full_page=True)
 
         hard_errors = [
@@ -159,8 +184,15 @@ def main() -> int:
         ]
         check("no unexpected console errors", len(hard_errors) == 0, "; ".join(hard_errors[:3]))
 
+        video = page.video if RECORD else None
+        context.close()
+        video_path = video.path() if video else None
         browser.close()
 
+    if video_path:
+        final = os.path.join(OUT, "multi-device.webm")
+        os.replace(video_path, final)
+        print(f"Video: {final}")
     print(f"\nScreenshots in {OUT}")
     if failures:
         print(f"FAILED: {len(failures)} check(s): {failures}")
