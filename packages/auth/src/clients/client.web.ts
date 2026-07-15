@@ -1,7 +1,10 @@
+import { apiKeyClient } from "@better-auth/api-key/client";
+import { passkeyClient } from "@better-auth/passkey/client";
 import {
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
+  lastLoginMethodClient,
   organizationClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
@@ -17,6 +20,9 @@ export const authClient = createAuthClient({
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
     organizationClient({ teams: { enabled: true } }),
+    apiKeyClient(),
+    passkeyClient(),
+    lastLoginMethodClient(),
   ],
 });
 

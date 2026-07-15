@@ -33,7 +33,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/api-key": "1.6.23",
     "@better-auth/expo": "1.6.23",
+    "@better-auth/passkey": "1.6.23",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "better-auth": "1.6.23",
