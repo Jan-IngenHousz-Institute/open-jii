@@ -7,7 +7,9 @@ generated_by: skills-for-architects
 # Multi-device measurements
 
 openJII can run **one protocol on several sensors of the same type at once** — for example four
-MultispeQs plugged into a powered USB hub, measuring four leaves in parallel. Every sensor still
+devices plugged into a powered USB hub, measuring four leaves in parallel. The mechanism is not
+tied to any particular instrument: it works for every sensor family the platform speaks
+(MultispeQ, Ambit, generic serial devices). Every sensor still
 produces its **own, independent measurement**: its own row in the lakehouse, its own macro output,
 its own upload. What ties them together is a small set of correlation fields stamped on each
 measurement, so the round can always be joined back together later.
@@ -17,7 +19,7 @@ The same model runs on both execution hosts:
 - the **mobile app** (field measurements over a USB hub), and
 - the **workbook editor on the web platform** (developing and testing protocols and macros).
 
-The walkthrough below shows the web workbook host with four (mocked) MultispeQs: connecting them
+The walkthrough below shows the web workbook host with four (mocked) devices: connecting them
 one by one, a protocol run where one device fails and is retried, a Python macro computing a
 distinct value per device, and an inline command fanning out to all four:
 
