@@ -1,0 +1,79 @@
+---
+title: "Account security & API keys"
+description: "Use remembered sign-in methods, passkeys, and personal API keys to access openJII securely."
+---
+
+Your account page (**Profile menu → Account**) is organised into three tabs:
+**General**, **Security**, and **API keys**.
+
+## Sign in faster
+
+The login page remembers how you last signed in and marks that method with a
+**Last used** badge, so you can pick the same one next time.
+
+![Login page with the Last used badge on the previously used sign-in method.](/img/guide/web/account-security/last-used-badge.png)
+
+![Signing in with an email code, then returning to the login page with the badge shown.](/img/guide/web/account-security/login-last-used.gif)
+
+## Passkeys
+
+Passkeys let you sign in without a code, using your device's screen lock
+(fingerprint, face, or PIN) or a hardware security key.
+
+### Create a passkey
+
+After signing in without a passkey, the platform offers to create one on the
+spot:
+
+![Invitation to create a passkey right after signing in.](/img/guide/web/account-security/passkey-prompt.gif)
+
+You can also create one any time from **Account → Security**:
+
+1. Select **Create passkey** and confirm with your device when the browser asks.
+2. The new passkey is labelled after its provider (for example, Google Password
+   Manager or Windows Hello); rename it any time from the list.
+
+![Adding, renaming, and signing in with a passkey.](/img/guide/web/account-security/passkey-flows.gif)
+
+You can rename or delete a passkey at any time from the same table. Deleting a
+passkey does not sign you out; it only removes that sign-in method.
+
+### Sign in with a passkey
+
+On the login page, choose **Sign in with a passkey**, or start typing in the
+email field and pick your passkey from the browser's autofill suggestion.
+
+![Passkeys listed on the Security tab.](/img/guide/web/account-security/passkeys-table.png)
+
+## API keys
+
+API keys let scripts and integrations call the openJII REST API on your behalf,
+without a browser session.
+
+### Create a key
+
+1. Go to **Account → API keys**.
+2. Select **Create API key**, name it, and optionally pick an expiration (30
+   days, 90 days, 1 year, or no expiration).
+3. Copy the key immediately. **It is shown only once** and cannot be retrieved
+   later.
+
+![Creating an API key and copying it from the one-time dialog.](/img/guide/web/account-security/api-key-create.gif)
+
+![The API keys tab with active keys.](/img/guide/web/account-security/api-keys-table.png)
+
+### Use a key
+
+Send the key in the `x-api-key` header. See the
+[REST API reference](/api/rest#authenticate-with-an-api-key) for details and an
+example.
+
+### Revoke a key
+
+Select the trash icon next to a key to revoke it. Revocation is immediate and
+permanent; any script still using the key will receive `401 Unauthorized`.
+
+<Callout type="warn">
+  Keep keys secret. A key acts with your account permissions. If a key leaks, revoke it immediately
+  and create a new one.
+</Callout>
