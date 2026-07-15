@@ -207,6 +207,37 @@ describe("MeasurementNode start-scan guards", () => {
     expect(nextStep).not.toHaveBeenCalled();
   });
 
+  it("stores a two-device round in connect order and advances", async () => {
+    useConnectedDevices.mockReturnValue({
+      data: [DEVICE, DEVICE_B],
+      refetch: refetchConnectedDevices,
+    });
+    refetchConnectedDevices.mockResolvedValue({ data: [DEVICE, DEVICE_B] });
+    // Results arrive out of connect order; the stored round must be sorted.
+    executeScanAll.mockResolvedValue(
+      round(
+        [
+          { device: DEVICE_B, result: { result: 2 } },
+          { device: DEVICE, result: { result: 1 } },
+        ],
+        [],
+      ),
+    );
+
+    render(<MeasurementNode content={content} nodeId="m1" />);
+    fireEvent.press(screen.getByText(START_KEY));
+
+    await waitFor(() => expect(setScanResults).toHaveBeenCalled());
+    expect(setScanResults).toHaveBeenCalledWith(
+      [
+        { device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 1 } },
+        { device: { id: "dev-2", name: "MultispeQ #2" }, result: { result: 2 } },
+      ],
+      "m1",
+    );
+    expect(nextStep).toHaveBeenCalled();
+  });
+
   it("advances with only the successful devices' results on a mixed round + continue", async () => {
     useConnectedDevices.mockReturnValue({
       data: [DEVICE, DEVICE_B],

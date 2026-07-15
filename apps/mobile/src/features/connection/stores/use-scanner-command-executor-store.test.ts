@@ -389,6 +389,101 @@ describe("useScannerCommandExecutorStore", () => {
       await expect(pendingB).resolves.toMatchObject({ message: "Measurement cancelled" });
     });
 
+    it("addDevice replaces (and destroys) a prior executor for the same device", async () => {
+      const stale = await addExecutorFor(USB_DEVICE_A);
+      const fresh = await addExecutorFor(USB_DEVICE_A);
+
+      expect(stale.destroyCalls()).toBe(1);
+      expect(fresh.destroyCalls()).toBe(0);
+      expect(useScannerCommandExecutorStore.getState().executors.size).toBe(1);
+    });
+
+    it("addDevice records the error when the executor factory throws", async () => {
+      createMultispeqCommandExecutor.mockRejectedValueOnce(new Error("no permission"));
+
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+
+      const state = useScannerCommandExecutorStore.getState();
+      expect(state.executors.size).toBe(0);
+      expect(state.error?.message).toBe("no permission");
+    });
+
+    it("addDevice is a no-op when the factory yields no executor", async () => {
+      createMultispeqCommandExecutor.mockResolvedValueOnce(undefined);
+
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+
+      expect(useScannerCommandExecutorStore.getState().executors.size).toBe(0);
+    });
+
+    it("removeDevice and cancelCommandOn ignore unknown device ids", async () => {
+      await useScannerCommandExecutorStore.getState().removeDevice("ghost");
+      await useScannerCommandExecutorStore.getState().cancelCommandOn("ghost");
+      expect(useScannerCommandExecutorStore.getState().executors.size).toBe(0);
+    });
+
+    it("executeCommandOn rejects when the device is not connected", async () => {
+      await expect(
+        useScannerCommandExecutorStore.getState().executeCommandOn("ghost", "hello"),
+      ).rejects.toThrow("Command executor not initialized");
+      expect(useScannerCommandExecutorStore.getState().error?.message).toContain("not initialized");
+    });
+
+    it("cancelCommandOn surfaces a failing driver cancel as the entry's error", async () => {
+      const exec = await addExecutorFor(USB_DEVICE_A);
+      exec.cancel = () => Promise.reject(new Error("cancel write failed"));
+
+      await expect(
+        useScannerCommandExecutorStore.getState().cancelCommandOn("usb-a"),
+      ).rejects.toThrow("cancel write failed");
+      expect(useScannerCommandExecutorStore.getState().executors.get("usb-a")?.error?.message).toBe(
+        "cancel write failed",
+      );
+    });
+
+    it("setDevice records the error when the executor factory throws", async () => {
+      createMultispeqCommandExecutor.mockRejectedValueOnce(new Error("bluetooth off"));
+
+      await useScannerCommandExecutorStore.getState().setDevice(FAKE_DEVICE);
+
+      const state = useScannerCommandExecutorStore.getState();
+      expect(state.error?.message).toBe("bluetooth off");
+      expect(state.isInitializing).toBe(false);
+    });
+
+    it("executeCommand rejects while a setDevice is still initializing", async () => {
+      useScannerCommandExecutorStore.setState({ isInitializing: true });
+
+      await expect(
+        useScannerCommandExecutorStore.getState().executeCommand("hello"),
+      ).rejects.toThrow("being initialized");
+    });
+
+    it("executeCommand rejects when no device is connected", async () => {
+      await expect(
+        useScannerCommandExecutorStore.getState().executeCommand("hello"),
+      ).rejects.toThrow("not initialized");
+    });
+
+    it("cancelCommand without a primary device just flags cancellation", async () => {
+      await useScannerCommandExecutorStore.getState().cancelCommand();
+
+      const state = useScannerCommandExecutorStore.getState();
+      expect(state.isCancelled).toBe(true);
+      expect(state.isExecuting).toBe(false);
+    });
+
+    it("destroy empties the registry and destroys every executor", async () => {
+      const execA = await addExecutorFor(USB_DEVICE_A);
+      const execB = await addExecutorFor(USB_DEVICE_B);
+
+      await useScannerCommandExecutorStore.getState().destroy();
+
+      expect(useScannerCommandExecutorStore.getState().executors.size).toBe(0);
+      expect(execA.destroyCalls()).toBe(1);
+      expect(execB.destroyCalls()).toBe(1);
+    });
+
     it("legacy setDevice replaces all entries (Bluetooth replace-all semantics)", async () => {
       const execA = await addExecutorFor(USB_DEVICE_A);
       const execB = await addExecutorFor(USB_DEVICE_B);

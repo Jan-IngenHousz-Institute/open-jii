@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react-native";
+import { act, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -205,6 +205,46 @@ describe("AnalysisNode upload with a command in the flow", () => {
       protocolId: "proto-1",
       tagWorkbookRun: false,
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
+    });
+  });
+
+  it("renders per-device results and uploads a linked multi-device round", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+      scanResults: [
+        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
+        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+      ],
+    });
+
+    render(<AnalysisNode content={withMacro} />);
+
+    // Per-device headings + the workbook-run toggle only show for multi rounds.
+    expect(screen.getByText("measurementFlow:analysis.workbookRun.toggleLabel")).toBeTruthy();
+    expect(screen.getAllByText(/measurementFlow:analysis.workbookRun.deviceHeading/)).toHaveLength(
+      2,
+    );
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      tagWorkbookRun: true,
+      results: [
+        { rawMeasurement: { sample: [{ phi2: 0.8 }] }, device: { id: "1" } },
+        { rawMeasurement: { sample: [{ phi2: 0.7 }] }, device: { id: "2" } },
+      ],
     });
   });
 });

@@ -495,6 +495,38 @@ describe("useWorkbookExecution", () => {
       ]);
     });
 
+    it("errors the macro cell when every device's input already failed", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({
+        producedBy: proto.id,
+        deviceResults: [
+          { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", error: "device not open" },
+          { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", error: "device not open" },
+        ],
+      });
+      const macro = createMacroCell();
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const macroOutput = findOutput(updated, macro.id);
+      expect(macroOutput?.data).toBeUndefined();
+      expect(macroOutput?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "Mock MultispeQ 1",
+          error: "No measurement data from this device",
+        },
+        {
+          deviceId: "dev-2",
+          deviceLabel: "Mock MultispeQ 2",
+          error: "No measurement data from this device",
+        },
+      ]);
+    });
+
     it("captures macro failure response", async () => {
       const proto = createProtocolCell();
       const output = createOutputCell({

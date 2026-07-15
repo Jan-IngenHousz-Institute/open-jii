@@ -93,6 +93,58 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("Measurement started")).toBeInTheDocument();
   });
 
+  describe("multi-device results", () => {
+    const deviceResults = [
+      { deviceId: "d1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1", spad: 41 } },
+      {
+        deviceId: "d2",
+        deviceLabel: "Mock MultispeQ 2",
+        error: "Mock device failure (simulated)",
+      },
+      { deviceId: "d3", deviceLabel: "Mock MultispeQ 3", data: { device_id: "mock-3", spad: 44 } },
+    ];
+
+    it("renders one block per device with ok/error status", () => {
+      const cell = createOutputCell({ data: { device_id: "mock-1" }, deviceResults });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      const blocks = screen.getAllByTestId("device-result");
+      expect(blocks).toHaveLength(3);
+      expect(blocks[0]).toHaveAttribute("data-status", "ok");
+      expect(blocks[1]).toHaveAttribute("data-status", "error");
+      expect(screen.getByText("Mock MultispeQ 2")).toBeInTheDocument();
+      expect(screen.getByText("Mock device failure (simulated)")).toBeInTheDocument();
+      // Per-device data renders through the same table view.
+      expect(screen.getByText("41")).toBeInTheDocument();
+      expect(screen.getByText("44")).toBeInTheDocument();
+      // The primary single-device view is suppressed in favour of the blocks.
+      expect(screen.getAllByText("device_id")).toHaveLength(2);
+    });
+
+    it("keeps per-device tab state independent", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({ data: { device_id: "mock-1" }, deviceResults });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      const jsonTabs = screen.getAllByRole("tab", { name: "output.tabJson" });
+      await user.click(jsonTabs[0]);
+
+      // First device shows raw JSON, third still shows its table.
+      expect(screen.getByText(/"spad": 41/)).toBeInTheDocument();
+      expect(screen.queryByText(/"spad": 44/)).not.toBeInTheDocument();
+      expect(screen.getByText("44")).toBeInTheDocument();
+    });
+
+    it("falls back to the label-less device id and counts as content", () => {
+      const cell = createOutputCell({
+        deviceResults: [{ deviceId: "dev-9", data: { v: 1 } }],
+      });
+      // A single entry keeps the classic single view (no blocks)...
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+      expect(screen.queryAllByTestId("device-result")).toHaveLength(0);
+    });
+  });
+
   it("shows question answer data when data has an answer field", () => {
     const cell = createOutputCell({ data: { answer: "Yes" } });
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
