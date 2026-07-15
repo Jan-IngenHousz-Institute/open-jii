@@ -173,6 +173,42 @@
         "download": "Download",
         "downloadAll": "Download all"
       }
+    },
+    "onboarding": {
+      "currentTitle": "Experiments",
+      "currentDescription": "The experiments this device currently streams into.",
+      "currentEmpty": "This device is not onboarded to any experiment yet.",
+      "addTitle": "Onboard to experiments",
+      "addDescription": "Pick the experiments this device should stream into. Onboarding issues the configuration to hand to the device.",
+      "addEmpty": "No further experiments available. You can re-issue the current configuration below.",
+      "onboard": "Onboard",
+      "reissue": "Re-issue configuration",
+      "onboardSuccess": "Device onboarded. Configuration ready below.",
+      "onboardError": "Could not onboard the device",
+      "deliveryTitle": "Device configuration",
+      "deliveryDescription": "Hand this configuration to the device: download it, or push it over a direct connection.",
+      "endpointLabel": "Broker endpoint",
+      "topicsLabel": "Publish topics",
+      "download": "Download JSON",
+      "connect": "Connect device",
+      "disconnect": "Disconnect",
+      "push": "Push to device",
+      "serial": "Serial",
+      "bluetooth": "Bluetooth",
+      "connectError": "Could not connect to the device",
+      "pushSuccess": "Configuration pushed to the device",
+      "pushError": "Could not push the configuration",
+      "multispeqNote": "MultispeQ devices receive their procedure at measurement time; download the configuration instead."
+    },
+    "experimentDevices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
+      "loading": "Loading devices...",
+      "empty": "No devices are onboarded to this experiment yet.",
+      "detach": "Detach",
+      "detachSuccess": "Device detached from the experiment",
+      "detachError": "Could not detach the device"
     }
   }
 }

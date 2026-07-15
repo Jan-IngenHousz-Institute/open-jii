@@ -5,8 +5,10 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
@@ -20,7 +22,9 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { t } = useTranslation("experiments");
   const { t: tCommon } = useTranslation("common");
   const { t: tSettings } = useTranslation();
+  const { t: tIot } = useTranslation("iot");
   const locale = useLocale();
+  const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
 
   // Access check
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
@@ -92,6 +96,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     if (pathname.includes("/dashboards")) return "dashboards";
     if (pathname.endsWith("/design")) return "design";
     if (pathname.includes("/collaborators")) return "collaborators";
+    if (pathname.includes("/devices")) return "devices";
     return "overview";
   };
 
@@ -135,6 +140,13 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               {tSettings("experimentSettings.collaborators")}
             </Link>
           </NavTabsTrigger>
+          {devicesEnabled && (
+            <NavTabsTrigger value="devices" asChild>
+              <Link href={`/${locale}/platform/experiments/${id}/devices`}>
+                {tIot("iot.experimentDevices.tabLabel")}
+              </Link>
+            </NavTabsTrigger>
+          )}
         </NavTabsList>
 
         <div className="mt-6 flex flex-1 flex-col">{children}</div>

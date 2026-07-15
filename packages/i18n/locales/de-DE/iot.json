@@ -173,6 +173,42 @@
         "download": "Herunterladen",
         "downloadAll": "Alle herunterladen"
       }
+    },
+    "onboarding": {
+      "currentTitle": "Experimente",
+      "currentDescription": "Die Experimente, in die dieses Gerät derzeit sendet.",
+      "currentEmpty": "Dieses Gerät ist noch keinem Experiment zugeordnet.",
+      "addTitle": "Zu Experimenten hinzufügen",
+      "addDescription": "Wählen Sie die Experimente, in die dieses Gerät senden soll. Beim Onboarding wird die Konfiguration für das Gerät erstellt.",
+      "addEmpty": "Keine weiteren Experimente verfügbar. Die aktuelle Konfiguration kann unten erneut ausgestellt werden.",
+      "onboard": "Onboarden",
+      "reissue": "Konfiguration erneut ausstellen",
+      "onboardSuccess": "Gerät onboardet. Konfiguration unten bereit.",
+      "onboardError": "Gerät konnte nicht onboardet werden",
+      "deliveryTitle": "Gerätekonfiguration",
+      "deliveryDescription": "Übergeben Sie diese Konfiguration an das Gerät: herunterladen oder über eine direkte Verbindung übertragen.",
+      "endpointLabel": "Broker-Endpunkt",
+      "topicsLabel": "Publish-Topics",
+      "download": "JSON herunterladen",
+      "connect": "Gerät verbinden",
+      "disconnect": "Trennen",
+      "push": "An Gerät senden",
+      "serial": "Seriell",
+      "bluetooth": "Bluetooth",
+      "connectError": "Verbindung zum Gerät fehlgeschlagen",
+      "pushSuccess": "Konfiguration an das Gerät übertragen",
+      "pushError": "Konfiguration konnte nicht übertragen werden",
+      "multispeqNote": "MultispeQ-Geräte erhalten ihre Prozedur zur Messzeit; laden Sie stattdessen die Konfiguration herunter."
+    },
+    "experimentDevices": {
+      "tabLabel": "Geräte",
+      "title": "Geräte",
+      "description": "Geräte, die diesem Experiment zugeordnet sind. Ein zugeordnetes Gerät kann seine Messungen dorthin senden.",
+      "loading": "Geräte werden geladen...",
+      "empty": "Diesem Experiment sind noch keine Geräte zugeordnet.",
+      "detach": "Entfernen",
+      "detachSuccess": "Gerät vom Experiment entfernt",
+      "detachError": "Gerät konnte nicht entfernt werden"
     }
   }
 }

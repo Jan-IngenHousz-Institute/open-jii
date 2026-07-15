@@ -28,6 +28,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
 import { ComingSoonPanel } from "./coming-soon-panel";
+import { DeviceOnboardingPanel } from "./device-onboarding-panel";
 import { IotDeviceCredentialsCard } from "./iot-device-credentials-card";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
@@ -151,7 +152,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
         </NavTabsContent>
 
         <NavTabsContent value="onboarding">
-          <ComingSoonPanel description={t("iot.devices.comingSoon.onboarding")} />
+          <DeviceOnboardingPanel device={device} />
         </NavTabsContent>
 
         <NavTabsContent value="members">

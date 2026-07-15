@@ -16,7 +16,7 @@ import { WebBluetoothAdapter, WebSerialAdapter } from "@repo/iot/transport/web";
 
 import { sensorFamilyToDeviceType } from "../device-type-mapping";
 
-type ConnectionType = "bluetooth" | "serial";
+export type ConnectionType = "bluetooth" | "serial";
 
 interface DeviceInfo {
   device_name?: string;
