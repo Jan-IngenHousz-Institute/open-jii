@@ -1,12 +1,18 @@
 "use client";
 
 import { KeyRound } from "lucide-react";
-import { useLocale } from "~/hooks/useLocale";
 import { useApiKeys } from "~/hooks/auth/useApiKeys/useApiKeys";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,

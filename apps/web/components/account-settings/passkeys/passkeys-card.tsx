@@ -1,12 +1,18 @@
 "use client";
 
 import { Fingerprint } from "lucide-react";
-import { useLocale } from "~/hooks/useLocale";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -67,14 +73,13 @@ export function PasskeysCard() {
                       {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {passkey.createdAt
-                      ? new Date(passkey.createdAt).toLocaleDateString(locale)
-                      : null}
-                  </TableCell>
+                  <TableCell>{new Date(passkey.createdAt).toLocaleDateString(locale)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <RenamePasskeyDialog passkeyId={passkey.id} currentName={passkey.name ?? ""} />
+                      <RenamePasskeyDialog
+                        passkeyId={passkey.id}
+                        currentName={passkey.name ?? ""}
+                      />
                       <DeletePasskeyDialog
                         passkeyId={passkey.id}
                         passkeyName={passkey.name ?? t("passkeys.unnamed")}

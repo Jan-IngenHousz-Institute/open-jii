@@ -16,7 +16,10 @@ async function openDialog() {
 
 describe("AddPasskeyDialog", () => {
   beforeEach(() => {
-    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
   });
 
   it("requires a name before registering", async () => {
@@ -45,7 +48,7 @@ describe("AddPasskeyDialog", () => {
     vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
       data: null,
       error: { message: "Cancelled" },
-    });
+    } as never);
     const user = await openDialog();
 
     await user.type(screen.getByPlaceholderText("passkeys.namePlaceholder"), "MacBook");

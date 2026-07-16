@@ -8,7 +8,7 @@ import { PasskeyLoginButton } from "./passkey-login-button";
 
 describe("PasskeyLoginButton", () => {
   beforeEach(() => {
-    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
   });
 
   it("signs in with a passkey and redirects to the callback URL", async () => {
@@ -34,7 +34,7 @@ describe("PasskeyLoginButton", () => {
     vi.mocked(authClient.signIn.passkey).mockResolvedValue({
       data: null,
       error: { message: "Cancelled" },
-    });
+    } as never);
     const user = userEvent.setup();
     const { router } = render(<PasskeyLoginButton callbackUrl="/cb" />);
 

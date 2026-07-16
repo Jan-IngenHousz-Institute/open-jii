@@ -7,7 +7,10 @@ import { useAddPasskey } from "./useAddPasskey";
 
 describe("useAddPasskey", () => {
   it("registers a passkey and invalidates the passkeys query", async () => {
-    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
 
     const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -21,7 +24,7 @@ describe("useAddPasskey", () => {
   });
 
   it("returns null when the response is undefined", async () => {
-    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue(undefined);
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue(undefined as never);
 
     const { result } = renderHook(() => useAddPasskey());
     const data = await result.current.mutateAsync({ name: "Phone" });
@@ -33,7 +36,7 @@ describe("useAddPasskey", () => {
     vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
       data: null,
       error: { message: "Ceremony cancelled" },
-    });
+    } as never);
 
     const { result } = renderHook(() => useAddPasskey());
 
