@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 
 /**
  * "Last used" marker overlaid on the login method the user signed in with
@@ -11,8 +10,8 @@ export function LastUsedBadge() {
   const { t } = useTranslation();
 
   return (
-    <Badge variant="secondary" className="absolute -right-2 -top-2 shadow-sm">
+    <span className="bg-secondary text-secondary-foreground absolute -right-1 -top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm">
       {t("auth.lastUsed")}
-    </Badge>
+    </span>
   );
 }
