@@ -52,6 +52,21 @@ describe("CreateApiKeyDialog", () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it("closes and resets after the created key is dismissed", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByPlaceholderText("apiKeys.namePlaceholder"), "CI key");
+    await user.click(screen.getByRole("button", { name: "apiKeys.createConfirm" }));
+
+    await waitFor(() => expect(screen.getByText("jii_abc123")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "apiKeys.done" }));
+
+    await waitFor(() => expect(screen.queryByText("jii_abc123")).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "apiKeys.create" }));
+    expect(screen.getByPlaceholderText("apiKeys.namePlaceholder")).toHaveValue("");
+  });
+
   it("shows a destructive toast when creation fails", async () => {
     vi.mocked(authClient.apiKey.create).mockResolvedValue({
       data: null,

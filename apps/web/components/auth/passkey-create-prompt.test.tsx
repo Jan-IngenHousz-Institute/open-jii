@@ -2,6 +2,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { PasskeyCreatePrompt } from "./passkey-create-prompt";
 
@@ -32,6 +33,25 @@ describe("PasskeyCreatePrompt", () => {
 
     await user.click(screen.getByRole("button", { name: "passkeys.promptDone" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows a destructive toast and stays on the invite when creation fails", async () => {
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
+      data: null,
+      error: { message: "cancelled" },
+    } as never);
+    const user = userEvent.setup();
+    render(<PasskeyCreatePrompt />);
+
+    await user.click(await screen.findByRole("button", { name: "passkeys.promptAction" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "passkeys.addError",
+        variant: "destructive",
+      }),
+    );
+    expect(screen.queryByText("passkeys.promptSuccessTitle")).not.toBeInTheDocument();
   });
 
   it("closes on Not now and counts the prompt", async () => {

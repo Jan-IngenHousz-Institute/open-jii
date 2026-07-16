@@ -21,6 +21,17 @@ describe("CreatePasskeyButton", () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it("shows a spinner and disables the button while the ceremony is in flight", async () => {
+    vi.mocked(authClient.passkey.addPasskey).mockReturnValue(new Promise(() => undefined) as never);
+    const user = userEvent.setup();
+    render(<CreatePasskeyButton />);
+
+    const button = screen.getByRole("button", { name: "passkeys.add" });
+    await user.click(button);
+
+    await waitFor(() => expect(button).toBeDisabled());
+  });
+
   it("shows a destructive toast when the ceremony fails", async () => {
     vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
       data: null,
