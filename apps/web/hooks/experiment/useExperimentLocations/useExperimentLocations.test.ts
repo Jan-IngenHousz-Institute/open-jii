@@ -17,7 +17,7 @@ describe("useExperimentLocations", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toEqual([]);
+    expect(result.current.data).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -29,16 +29,16 @@ describe("useExperimentLocations", () => {
     const { result } = renderHook(() => useExperimentLocations("exp-1"));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(2);
+      expect(result.current.data).toHaveLength(2);
     });
 
-    expect(result.current.data?.body[0]).toMatchObject({
+    expect(result.current.data?.[0]).toMatchObject({
       id: locations[0].id,
       name: locations[0].name,
       latitude: locations[0].latitude,
       longitude: locations[0].longitude,
     });
-    expect(result.current.data?.body[1]).toMatchObject({
+    expect(result.current.data?.[1]).toMatchObject({
       id: locations[1].id,
       name: locations[1].name,
     });
@@ -66,6 +66,6 @@ describe("useExperimentLocations", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 });

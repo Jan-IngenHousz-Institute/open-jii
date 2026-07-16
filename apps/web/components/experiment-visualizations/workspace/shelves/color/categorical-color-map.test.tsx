@@ -4,14 +4,14 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../../../charts/basic/line";
 import type { ChartFormValues } from "../../../charts/chart-config";
 import { CategoricalColorMap } from "./categorical-color-map";
 
-const columns: DataColumn[] = [
+const columns: ExperimentDataColumn[] = [
   { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
   { name: "sensor", type_name: "STRING", type_text: "STRING" },
   { name: "contributor", type_name: "STRUCT", type_text: WellKnownColumnTypes.CONTRIBUTOR },

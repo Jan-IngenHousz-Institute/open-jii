@@ -1,8 +1,8 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zWorkbookCellArray } from "@repo/api/schemas/workbook-cells.schema";
-import { zEntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import { workbookVersions } from "@repo/database";
 
 export const createWorkbookVersionSchema = createInsertSchema(workbookVersions)

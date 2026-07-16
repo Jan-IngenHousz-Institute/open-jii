@@ -23,7 +23,7 @@ export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
     return <div>{t("protocolSettings.notFound")}</div>;
   }
 
-  const protocol = data.body;
+  const protocol = data;
 
   return (
     <div className="flex flex-col gap-6">

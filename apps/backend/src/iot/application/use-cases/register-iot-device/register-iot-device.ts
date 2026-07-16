@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import type { RegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
+import type { RegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";

@@ -1,13 +1,12 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentVisualizationsContract } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
 import { DeleteExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/delete-experiment-visualization";
 import { GetExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/get-experiment-visualization";
@@ -26,145 +25,88 @@ export class ExperimentVisualizationsController {
     private readonly deleteExperimentVisualizationUseCase: DeleteExperimentVisualizationUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.listExperimentVisualizations)
+  @Implement(experimentVisualizationsContract.listExperimentVisualizations)
   listVisualizations(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listExperimentVisualizations, async ({ params }) => {
-      const result = await this.listExperimentVisualizationsUseCase.execute(
-        params.id,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        const visualizations = formatDatesList(result.value);
-        return {
-          status: StatusCodes.OK as const,
-          body: visualizations,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsContract.listExperimentVisualizations).handler(
+      async ({ input }) => {
+        const result = await this.listExperimentVisualizationsUseCase.execute(
+          input.id,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.createExperimentVisualization)
+  @Implement(experimentVisualizationsContract.createExperimentVisualization)
   createVisualization(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.createExperimentVisualization,
-      async ({ params, body }) => {
+    return implement(experimentVisualizationsContract.createExperimentVisualization).handler(
+      async ({ input }) => {
+        const { id, ...body } = input;
         const result = await this.createExperimentVisualizationUseCase.execute(
-          params.id,
+          id,
           body,
           session.user.id,
         );
-
         if (result.isSuccess()) {
-          const visualization = result.value;
-          this.logger.log({
-            msg: "Visualization created for experiment",
-            operation: "createExperimentVisualization",
-            experimentId: params.id,
-            visualizationId: visualization.id,
-            userId: session.user.id,
-            status: "success",
-          });
-
-          return {
-            status: StatusCodes.CREATED as const,
-            body: formatDates(visualization),
-          };
+          return formatDates(result.value);
         }
-
-        return handleFailure(result, this.logger);
+        return throwOrpcFailure(result, this.logger);
       },
     );
   }
 
-  @TsRestHandler(contract.experiments.getExperimentVisualization)
+  @Implement(experimentVisualizationsContract.getExperimentVisualization)
   getVisualization(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.getExperimentVisualization, async ({ params }) => {
-      const result = await this.getExperimentVisualizationUseCase.execute(
-        params.id,
-        params.visualizationId,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        const visualization = result.value;
-        this.logger.log({
-          msg: "Visualization retrieved for experiment",
-          operation: "getExperimentVisualization",
-          experimentId: params.id,
-          visualizationId: params.visualizationId,
-          userId: session.user.id,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDates(visualization),
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
-  }
-
-  @TsRestHandler(contract.experiments.updateExperimentVisualization)
-  updateVisualization(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.updateExperimentVisualization,
-      async ({ params, body }) => {
-        const result = await this.updateExperimentVisualizationUseCase.execute(
-          params.visualizationId,
-          body,
+    return implement(experimentVisualizationsContract.getExperimentVisualization).handler(
+      async ({ input }) => {
+        const result = await this.getExperimentVisualizationUseCase.execute(
+          input.id,
+          input.visualizationId,
           session.user.id,
         );
-
         if (result.isSuccess()) {
-          const visualization = result.value;
-          this.logger.log({
-            msg: "Visualization updated",
-            operation: "updateExperimentVisualization",
-            visualizationId: params.visualizationId,
-            userId: session.user.id,
-            status: "success",
-          });
-
-          return {
-            status: StatusCodes.OK as const,
-            body: formatDates(visualization),
-          };
+          return formatDates(result.value);
         }
-
-        return handleFailure(result, this.logger);
+        return throwOrpcFailure(result, this.logger);
       },
     );
   }
 
-  @TsRestHandler(contract.experiments.deleteExperimentVisualization)
+  @Implement(experimentVisualizationsContract.updateExperimentVisualization)
+  updateVisualization(@Session() session: UserSession) {
+    return implement(experimentVisualizationsContract.updateExperimentVisualization).handler(
+      async ({ input }) => {
+        const { id: _id, visualizationId, ...body } = input;
+        const result = await this.updateExperimentVisualizationUseCase.execute(
+          visualizationId,
+          body,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
+
+  @Implement(experimentVisualizationsContract.deleteExperimentVisualization)
   deleteVisualization(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.deleteExperimentVisualization, async ({ params }) => {
-      const result = await this.deleteExperimentVisualizationUseCase.execute(
-        params.visualizationId,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Visualization deleted",
-          operation: "deleteExperimentVisualization",
-          visualizationId: params.visualizationId,
-          userId: session.user.id,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.NO_CONTENT as const,
-          body: null,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+    return implement(experimentVisualizationsContract.deleteExperimentVisualization).handler(
+      async ({ input }) => {
+        const result = await this.deleteExperimentVisualizationUseCase.execute(
+          input.visualizationId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return undefined;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

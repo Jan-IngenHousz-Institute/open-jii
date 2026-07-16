@@ -7,8 +7,8 @@ import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
-import { isPlottableColumn } from "@repo/api/utils/column-type-utils";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isPlottableColumn } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 
 import type { ChartFormValues } from "../../../../experiment-visualizations/charts/chart-config";
@@ -71,11 +71,11 @@ function Loader({ visualizationId, experimentId, section }: LoaderProps) {
     );
   }
 
-  if (error || !data?.body) {
+  if (error || !data) {
     return <HintChip text={tViz("errors.failedToLoadData")} />;
   }
 
-  return <FormHost visualization={data.body} experimentId={experimentId} section={section} />;
+  return <FormHost visualization={data} experimentId={experimentId} section={section} />;
 }
 
 interface FormHostProps {

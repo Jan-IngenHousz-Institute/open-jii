@@ -3,25 +3,25 @@
 import { useMemo } from "react";
 import { z } from "zod";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
-import { zDataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useUrlState } from "./useUrlState";
 
-const zDataFilterArray = z.array(zDataFilter);
+const zDataFilterArray = z.array(zExperimentDataFilter);
 
 interface UseUrlDataFiltersResult {
-  filters: DataFilter[];
-  setFilters: (next: DataFilter[]) => void;
-  completeFilters: DataFilter[];
+  filters: ExperimentDataFilter[];
+  setFilters: (next: ExperimentDataFilter[]) => void;
+  completeFilters: ExperimentDataFilter[];
 }
 
 /** URL-synced filter state, namespaced per table. */
 export function useUrlDataFilters(tableName: string): UseUrlDataFiltersResult {
-  const [filters, setFilters] = useUrlState<DataFilter[]>({
+  const [filters, setFilters] = useUrlState<ExperimentDataFilter[]>({
     key: `f_${tableName}`,
     serialize: (next) => {
-      const complete = next.filter((f) => zDataFilter.safeParse(f).success);
+      const complete = next.filter((f) => zExperimentDataFilter.safeParse(f).success);
       return complete.length > 0 ? JSON.stringify(complete) : null;
     },
     parse: (raw) => {
@@ -31,8 +31,8 @@ export function useUrlDataFilters(tableName: string): UseUrlDataFiltersResult {
     },
   });
 
-  const completeFilters = useMemo<DataFilter[]>(
-    () => filters.filter((f) => zDataFilter.safeParse(f).success),
+  const completeFilters = useMemo<ExperimentDataFilter[]>(
+    () => filters.filter((f) => zExperimentDataFilter.safeParse(f).success),
     [filters],
   );
 

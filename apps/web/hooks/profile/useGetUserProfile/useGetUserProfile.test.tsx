@@ -18,7 +18,7 @@ describe("useGetUserProfile", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject({
+    expect(result.current.data).toMatchObject({
       firstName: "Test",
       lastName: "User",
     });
@@ -53,7 +53,7 @@ describe("useGetUserProfile", () => {
     });
 
     // On 404, the retry callback returns false → no retries → fast failure
-    expect(result.current.data?.body).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("uses different query keys for different user IDs", async () => {

@@ -13,8 +13,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { ProtocolCell as ProtocolCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolCell as ProtocolCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
@@ -65,23 +65,23 @@ export function ProtocolCellComponent({
   const useSnapshot = snapshot != null;
   const { data: protocolData, isLoading: liveLoading } = useProtocol(protocolId, !useSnapshot);
   const protocolLoading = !useSnapshot && liveLoading;
-  const protocolName = protocolData?.body.name;
+  const protocolName = protocolData?.name;
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
   // rather than treating it as a load failure.
   const protocolCode = useSnapshot
     ? JSON.stringify(snapshot.code ?? [], null, 2)
-    : protocolData?.body.code
-      ? JSON.stringify(protocolData.body.code, null, 2)
+    : protocolData?.code
+      ? JSON.stringify(protocolData.code, null, 2)
       : null;
 
-  const protocolFamily = useSnapshot ? snapshot.family : protocolData?.body.family;
-  const isOwner = !!session?.user.id && session.user.id === protocolData?.body.createdBy;
+  const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
+  const isOwner = !!session?.user.id && session.user.id === protocolData?.createdBy;
   const isEditable = isOwner && !readOnly;
   // Read-only purely because the viewer did not create this protocol (not
   // because the cell is rendered from a pinned snapshot or in a read-only host).
   const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
   // Lineage: this protocol is itself a fork of another one.
-  const forkedFrom = useSnapshot ? undefined : protocolData?.body.forkedFrom;
+  const forkedFrom = useSnapshot ? undefined : protocolData?.forkedFrom;
 
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
   const { mutateAsync: forkProtocol, isPending: isForking } = useProtocolCreate();
@@ -103,8 +103,8 @@ export function ProtocolCellComponent({
     async (code: string) => {
       try {
         await saveProtocol({
-          params: { id: protocolId },
-          body: { code: JSON.parse(code) as Record<string, unknown>[] },
+          id: protocolId,
+          code: JSON.parse(code) as Record<string, unknown>[],
         });
         onEntitySaved();
       } catch (err) {
@@ -171,22 +171,20 @@ export function ProtocolCellComponent({
   // Fork a protocol the viewer does not own into an editable copy they do, then
   // point this cell at the copy so it becomes editable in place.
   const handleFork = useCallback(async () => {
-    const src = protocolData?.body;
+    const src = protocolData;
     if (!src) return;
     try {
       const suffix = crypto.randomUUID().slice(0, 8);
       const res = await forkProtocol({
-        body: {
-          name: `Copy of ${src.name}`.slice(0, 246) + ` ${suffix}`,
-          description: src.description ?? undefined,
-          code: src.code,
-          family: src.family,
-          forkedFrom: src.id,
-        },
+        name: `Copy of ${src.name}`.slice(0, 246) + ` ${suffix}`,
+        description: src.description ?? undefined,
+        code: src.code,
+        family: src.family,
+        forkedFrom: src.id,
       });
       onUpdate({
         ...cell,
-        payload: { ...cell.payload, protocolId: res.body.id, name: res.body.name },
+        payload: { ...cell.payload, protocolId: res.id, name: res.name },
       });
     } catch {
       // useProtocolCreate already surfaces the error toast.
@@ -208,9 +206,9 @@ export function ProtocolCellComponent({
     async (next: string) => {
       setIsRenaming(true);
       try {
-        const res = await saveProtocol({ params: { id: protocolId }, body: { name: next } });
+        const res = await saveProtocol({ id: protocolId, name: next });
         const latest = cellRef.current;
-        onUpdate({ ...latest, payload: { ...latest.payload, name: res.body.name } });
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({

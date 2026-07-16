@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { HistogramSeriesData } from "@repo/ui/components/charts/histogram";
 
@@ -16,7 +16,7 @@ export interface HistogramTransformResult {
 /** Pure data transform for the histogram chart: emits one `HistogramSeriesData` per Y series, optionally split by colour and faceted by cell. */
 export function transformHistogramData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): HistogramTransformResult {
   const yEntries = dataSourcesByRole(dataSources, "y");

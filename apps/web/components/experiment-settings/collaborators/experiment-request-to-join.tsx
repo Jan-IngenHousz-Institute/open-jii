@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { CreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
-import { zCreateJoinRequestBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
+import { zExperimentCreateJoinRequestBody } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -31,8 +31,8 @@ interface ExperimentRequestToJoinProps {
 export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoinProps) {
   const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const form = useForm<CreateJoinRequestBody>({
-    resolver: zodResolver(zCreateJoinRequestBody),
+  const form = useForm<ExperimentCreateJoinRequestBody>({
+    resolver: zodResolver(zExperimentCreateJoinRequestBody),
     defaultValues: {
       message: "",
     },
@@ -51,7 +51,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
     return null;
   }
 
-  const pendingRequest = myRequestData?.status === 200 ? myRequestData.body : null;
+  const pendingRequest = myRequestData ?? null;
 
   const handleDialogOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
@@ -61,15 +61,15 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
     }
   };
 
-  const handleSubmit = (data: CreateJoinRequestBody) => {
+  const handleSubmit = (data: ExperimentCreateJoinRequestBody) => {
     const trimmedMessage = data.message?.trim();
     const message = trimmedMessage === "" ? undefined : trimmedMessage;
-    requestJoin({ params: { id: experimentId }, body: { message: message ?? undefined } });
+    requestJoin({ id: experimentId, message: message ?? undefined });
   };
 
   const handleCancel = () => {
     if (!pendingRequest) return;
-    cancelRequest({ params: { id: experimentId, requestId: pendingRequest.id } });
+    cancelRequest({ id: experimentId, requestId: pendingRequest.id });
   };
 
   if (pendingRequest) {

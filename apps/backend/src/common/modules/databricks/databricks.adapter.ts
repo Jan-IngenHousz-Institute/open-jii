@@ -1,7 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
-import { ExperimentTableName, zUploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
 import type {
   ExportFormat,
@@ -366,7 +367,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       if (!params.UPLOAD_ID || !params.USER_ID) {
         continue;
       }
-      const parsedKind = zUploadSourceKind.safeParse(params.SOURCE_KIND);
+      const parsedKind = zExperimentUploadSourceKind.safeParse(params.SOURCE_KIND);
       if (!parsedKind.success) {
         continue;
       }
@@ -423,7 +424,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       if (completedUploadIds.has(params.UPLOAD_ID)) {
         continue;
       }
-      const parsedKind = zUploadSourceKind.safeParse(params.SOURCE_KIND);
+      const parsedKind = zExperimentUploadSourceKind.safeParse(params.SOURCE_KIND);
       if (!parsedKind.success) {
         continue;
       }

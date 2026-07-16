@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,
@@ -73,8 +73,8 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
 
   // Effect to handle geocoded location data
   useEffect(() => {
-    if (geocodeData?.body && pendingLocation) {
-      const geocodeResults = geocodeData.body;
+    if (geocodeData && pendingLocation) {
+      const geocodeResults = geocodeData;
       // Use the first result if available, or create a basic location
       const firstResult = geocodeResults[0];
 
@@ -113,7 +113,7 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
     debouncedSearchQuery.length >= 3,
   );
 
-  const searchResults = searchData?.body ?? [];
+  const searchResults = searchData ?? [];
 
   return (
     <Card className="min-w-0 flex-1">

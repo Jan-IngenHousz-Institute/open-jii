@@ -10,30 +10,36 @@
  * ```
  */
 import type {
-  DashboardLayout,
-  DashboardWidget,
-  Experiment,
-  ExperimentAccess,
+  ExperimentDashboardLayout,
+  ExperimentDashboardWidget,
   ExperimentDashboard,
+  ExperimentFilterWidget,
+  ExperimentRichTextWidget,
+  ExperimentTableWidget,
+  ExperimentVisualizationWidget,
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type {
   ExperimentDataResponse,
   ExperimentTableMetadata,
-  ExperimentVisualization,
-  ExportRecord,
-  FilterWidget,
-  Flow,
-  FlowGraph,
-  Location,
-  PlaceSearchResult,
-  RichTextWidget,
-  TableWidget,
-  TransferRequest,
-  UploadMetadata,
-  VisualizationWidget,
-} from "@repo/api/schemas/experiment.schema";
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
-import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
-import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  Experiment,
+  ExperimentAccess,
+  ExperimentExportRecord,
+  ExperimentFlowGraph,
+  ExperimentUploadMetadata,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import type {
+  ExperimentLocation,
+  ExperimentPlaceSearchResult,
+} from "@repo/api/domains/experiment/locations/experiment-locations.schema";
+import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
   CommandCell,
@@ -42,9 +48,9 @@ import type {
   OutputCell,
   ProtocolCell,
   QuestionCell,
-} from "@repo/api/schemas/workbook-cells.schema";
-import type { WorkbookVersionSummary } from "@repo/api/schemas/workbook-version.schema";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { WorkbookVersionSummary } from "@repo/api/domains/workbook/workbook-version.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import type { Session } from "@repo/auth/types";
 
 // ── Experiment ──────────────────────────────────────────────────
@@ -77,7 +83,9 @@ export function createExperiment(overrides: Partial<Experiment> = {}): Experimen
 
 let transferSeq = 0;
 
-export function createTransferRequest(overrides: Partial<TransferRequest> = {}): TransferRequest {
+export function createTransferRequest(
+  overrides: Partial<ExperimentTransferRequest> = {},
+): ExperimentTransferRequest {
   transferSeq++;
   return {
     requestId: `req-${transferSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -291,7 +299,9 @@ export function createExperimentTable(
 
 let placeSeq = 0;
 
-export function createPlace(overrides: Partial<PlaceSearchResult> = {}): PlaceSearchResult {
+export function createPlace(
+  overrides: Partial<ExperimentPlaceSearchResult> = {},
+): ExperimentPlaceSearchResult {
   placeSeq++;
   return {
     label: `Place ${placeSeq}`,
@@ -305,15 +315,15 @@ export function createPlace(overrides: Partial<PlaceSearchResult> = {}): PlaceSe
   };
 }
 
-// ── Location ────────────────────────────────────────────────────
+// ── ExperimentLocation ────────────────────────────────────────────────────
 
 let locationSeq = 0;
 
-export function createLocation(overrides: Partial<Location> = {}): Location {
+export function createLocation(overrides: Partial<ExperimentLocation> = {}): ExperimentLocation {
   locationSeq++;
   return {
     id: `loc-${locationSeq}-${crypto.randomUUID().slice(0, 8)}`,
-    name: `Location ${locationSeq}`,
+    name: `ExperimentLocation ${locationSeq}`,
     latitude: 42.36 + locationSeq * 0.01,
     longitude: -71.06 + locationSeq * 0.01,
     country: "US",
@@ -361,9 +371,9 @@ export function createExperimentDataTable(
   };
 }
 
-// ── Flow ────────────────────────────────────────────────────────
+// ── ExperimentFlow ────────────────────────────────────────────────────────
 
-type FlowNode = FlowGraph["nodes"][number];
+type FlowNode = ExperimentFlowGraph["nodes"][number];
 
 let flowSeq = 0;
 
@@ -391,8 +401,8 @@ export function createFlowNode(
 }
 
 export function createFlow(
-  overrides: Partial<Omit<Flow, "graph">> & { graph?: Partial<FlowGraph> } = {},
-): Flow {
+  overrides: Partial<Omit<ExperimentFlow, "graph">> & { graph?: Partial<ExperimentFlowGraph> } = {},
+): ExperimentFlow {
   const { graph: graphOverrides, ...rest } = overrides;
   const defaultNode = createFlowNode({ isStart: true });
   return {
@@ -409,11 +419,13 @@ export function createFlow(
   };
 }
 
-// ── ExportRecord ────────────────────────────────────────────────
+// ── ExperimentExportRecord ────────────────────────────────────────────────
 
 let exportSeq = 0;
 
-export function createExportRecord(overrides: Partial<ExportRecord> = {}): ExportRecord {
+export function createExportRecord(
+  overrides: Partial<ExperimentExportRecord> = {},
+): ExperimentExportRecord {
   exportSeq++;
   return {
     exportId: `export-${exportSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -567,7 +579,9 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
-export function createRichTextWidget(overrides: Partial<RichTextWidget> = {}): RichTextWidget {
+export function createRichTextWidget(
+  overrides: Partial<ExperimentRichTextWidget> = {},
+): ExperimentRichTextWidget {
   dashboardWidgetSeq++;
   return {
     id: uuid(),
@@ -579,8 +593,8 @@ export function createRichTextWidget(overrides: Partial<RichTextWidget> = {}): R
 }
 
 export function createVisualizationWidget(
-  overrides: Partial<VisualizationWidget> = {},
-): VisualizationWidget {
+  overrides: Partial<ExperimentVisualizationWidget> = {},
+): ExperimentVisualizationWidget {
   dashboardWidgetSeq++;
   const { config: configOverride, ...rest } = overrides;
   return {
@@ -596,7 +610,9 @@ export function createVisualizationWidget(
   };
 }
 
-export function createTableWidget(overrides: Partial<TableWidget> = {}): TableWidget {
+export function createTableWidget(
+  overrides: Partial<ExperimentTableWidget> = {},
+): ExperimentTableWidget {
   dashboardWidgetSeq++;
   const { config: configOverride, ...rest } = overrides;
   return {
@@ -615,11 +631,11 @@ export function createTableWidget(overrides: Partial<TableWidget> = {}): TableWi
 
 // Accept Partial<config> so tests don't have to repeat showTitle/showDescription
 // when they only care about column/operator/value/tableName.
-type FilterWidgetOverrides = Omit<Partial<FilterWidget>, "config"> & {
-  config?: Partial<FilterWidget["config"]>;
+type FilterWidgetOverrides = Omit<Partial<ExperimentFilterWidget>, "config"> & {
+  config?: Partial<ExperimentFilterWidget["config"]>;
 };
 
-export function createFilterWidget(overrides: FilterWidgetOverrides = {}): FilterWidget {
+export function createFilterWidget(overrides: FilterWidgetOverrides = {}): ExperimentFilterWidget {
   dashboardWidgetSeq++;
   const { config: configOverride, ...rest } = overrides;
   return {
@@ -635,7 +651,9 @@ export function createFilterWidget(overrides: FilterWidgetOverrides = {}): Filte
   };
 }
 
-export function createDashboardLayout(overrides: Partial<DashboardLayout> = {}): DashboardLayout {
+export function createDashboardLayout(
+  overrides: Partial<ExperimentDashboardLayout> = {},
+): ExperimentDashboardLayout {
   return {
     columns: 12,
     rowHeight: 80,
@@ -646,8 +664,8 @@ export function createDashboardLayout(overrides: Partial<DashboardLayout> = {}):
 
 export function createExperimentDashboard(
   overrides: Partial<Omit<ExperimentDashboard, "layout" | "widgets">> & {
-    layout?: Partial<DashboardLayout>;
-    widgets?: DashboardWidget[];
+    layout?: Partial<ExperimentDashboardLayout>;
+    widgets?: ExperimentDashboardWidget[];
   } = {},
 ): ExperimentDashboard {
   dashboardSeq++;
@@ -687,7 +705,9 @@ export function createWorkbookVersionSummary(
 
 let uploadSeq = 0;
 
-export function createUpload(overrides: Partial<UploadMetadata> = {}): UploadMetadata {
+export function createUpload(
+  overrides: Partial<ExperimentUploadMetadata> = {},
+): ExperimentUploadMetadata {
   uploadSeq++;
   return {
     uploadId: `upload-${uploadSeq}`,

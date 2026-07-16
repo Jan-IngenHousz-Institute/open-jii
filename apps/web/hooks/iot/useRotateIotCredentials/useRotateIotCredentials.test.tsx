@@ -21,7 +21,7 @@ describe("useRotateIotCredentials", () => {
     const { result } = renderHook(() => useRotateIotCredentials({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" }, body: {} });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {
@@ -34,7 +34,7 @@ describe("useRotateIotCredentials", () => {
     const { result } = renderHook(() => useRotateIotCredentials());
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" }, body: {} });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {

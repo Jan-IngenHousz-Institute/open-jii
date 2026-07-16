@@ -3,7 +3,7 @@
 import { AlignVerticalJustifyCenter, Palette } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 import { useTranslation } from "@repo/i18n";
 
 import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";

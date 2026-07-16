@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -33,7 +34,7 @@ interface VisualizationDataStripProps {
   tablesError: unknown;
   selectedTableName: string;
   onTableChange: (tableName: string) => void;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   isColumnsLoading: boolean;
   columnsError: unknown;
 }
@@ -176,7 +177,7 @@ export function VisualizationDataStrip({
 
 interface BuildFieldItemsArgs {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   hasTable: boolean;
   hasColumns: boolean;
   isColumnsLoading: boolean;

@@ -1,9 +1,9 @@
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentData } from "../useExperimentData/useExperimentData";
 
 export interface ColumnMetadata {
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   isLoading: boolean;
 }
 

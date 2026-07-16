@@ -1,12 +1,14 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to list all published versions of a workbook.
  */
 export const useWorkbookVersions = (workbookId: string, options?: { enabled?: boolean }) => {
-  return tsr.workbooks.listWorkbookVersions.useQuery({
-    queryData: { params: { id: workbookId } },
-    queryKey: ["workbookVersions", workbookId],
-    enabled: options?.enabled ?? !!workbookId,
-  });
+  return useQuery(
+    orpc.workbooks.listWorkbookVersions.queryOptions({
+      input: { id: workbookId },
+      enabled: options?.enabled ?? !!workbookId,
+    }),
+  );
 };

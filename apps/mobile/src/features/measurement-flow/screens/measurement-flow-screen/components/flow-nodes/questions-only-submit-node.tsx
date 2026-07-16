@@ -19,7 +19,7 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { FlagTypeModal } from "~/shared/ui/measurement/flag-type-modal";
 
-import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { ReadyState } from "./measurement-node/components/ready-state";
 
@@ -45,7 +45,7 @@ export function QuestionsOnlySubmitNode() {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [flagPickerVisible, setFlagPickerVisible] = useState(false);
   const [measurementComment, setMeasurementComment] = useState("");
-  const [flagType, setFlagType] = useState<AnnotationFlagType | null>(null);
+  const [flagType, setFlagType] = useState<ExperimentAnnotationFlagType | null>(null);
 
   const trimmedComment = measurementComment.trim();
 

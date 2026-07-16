@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
-import type { Macro, MacroProtocolEntry } from "@repo/api/schemas/macro.schema";
+import type { Macro, MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -59,7 +59,7 @@ const getLanguageColor = (language: string) => {
 
 function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
   const { data } = useMacroCompatibleProtocols(macroId, enabled);
-  const protocols: MacroProtocolEntry[] = useMemo(() => data?.body ?? [], [data]);
+  const protocols: MacroProtocolEntry[] = useMemo(() => data ?? [], [data]);
 
   if (protocols.length === 0) return null;
 

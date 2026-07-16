@@ -14,7 +14,8 @@ describe("useRemoveCompatibleProtocol", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "macro-1", protocolId: "p-1" },
+        id: "macro-1",
+        protocolId: "p-1",
       });
     });
 
@@ -31,7 +32,8 @@ describe("useRemoveCompatibleProtocol", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "macro-1", protocolId: "p-1" },
+        id: "macro-1",
+        protocolId: "p-1",
       });
     });
 

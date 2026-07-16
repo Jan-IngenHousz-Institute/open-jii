@@ -2,7 +2,7 @@
 
 import { useFormContext } from "react-hook-form";
 
-import type { FilterWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 
 import type { DashboardFormValues } from "../../../dashboard-form-shell";
@@ -11,7 +11,7 @@ import { StripOverflowList } from "../strip-overflow-list";
 import { WidgetDisplayPopover } from "./widget-display-popover";
 
 interface FilterWidgetStripProps {
-  widget: FilterWidget;
+  widget: ExperimentFilterWidget;
   widgetIndex: number;
 }
 
@@ -21,7 +21,7 @@ export function FilterWidgetStrip({ widget, widgetIndex }: FilterWidgetStripProp
   const { t } = useTranslation("experimentDashboards");
   const form = useFormContext<DashboardFormValues>();
 
-  const setConfig = (next: Partial<FilterWidget["config"]>) => {
+  const setConfig = (next: Partial<ExperimentFilterWidget["config"]>) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, ...next },

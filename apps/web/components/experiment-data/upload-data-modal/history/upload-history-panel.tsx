@@ -19,7 +19,7 @@ export function UploadHistoryPanel({
 }: UploadHistoryPanelProps) {
   const { t } = useTranslation("experimentData");
   const { data, isLoading } = useListUploads(experimentId, { uploadTableName, enabled });
-  const uploads = data?.body.uploads ?? [];
+  const uploads = data?.uploads ?? [];
   const hasUploads = uploads.length > 0;
 
   return (

@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { GlobalSearchResponse } from "@repo/api/schemas/search.schema";
+import type { GlobalSearchResponse } from "@repo/api/domains/search/search.schema";
 
 import { TestHarness } from "../../test/test-harness";
 
@@ -30,7 +30,7 @@ describe("SearchController", () => {
     await testApp.createProtocol({ name: "Photosynthesis protocol", createdBy: userId });
 
     const response = await testApp
-      .get(contract.search.globalSearch.path)
+      .get(testApp.resolveOrpcPath(contract.search.globalSearch))
       .withAuth(userId)
       .query({ query: "photosynthesis" })
       .expect(StatusCodes.OK);
@@ -42,7 +42,7 @@ describe("SearchController", () => {
 
   it("returns 400 when the query param is missing", async () => {
     await testApp
-      .get(contract.search.globalSearch.path)
+      .get(testApp.resolveOrpcPath(contract.search.globalSearch))
       .withAuth(userId)
       .expect(StatusCodes.BAD_REQUEST);
   });

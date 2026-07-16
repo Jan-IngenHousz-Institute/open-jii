@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import type { PlaceSearchResult } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
 import { Result } from "../../../../common/utils/fp-utils";
 import type { AwsPort, SearchPlacesRequest } from "../../../core/ports/aws.port";
@@ -15,7 +15,7 @@ export class SearchPlacesUseCase {
     private readonly AwsPort: AwsPort,
   ) {}
 
-  async execute(request: SearchPlacesRequest): Promise<Result<PlaceSearchResult[]>> {
+  async execute(request: SearchPlacesRequest): Promise<Result<ExperimentPlaceSearchResult[]>> {
     this.logger.log({
       msg: "Searching places",
       operation: "searchPlaces",

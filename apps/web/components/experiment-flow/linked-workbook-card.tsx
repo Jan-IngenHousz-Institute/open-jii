@@ -8,6 +8,7 @@ import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+import { orpc } from "@/lib/orpc";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import {
   ArrowUpCircle,
@@ -70,7 +71,7 @@ export function LinkedWorkbookCard({
   const { data: versionsData } = useWorkbookVersions(workbookId, {
     enabled: !!workbookId,
   });
-  const versions = versionsData?.body ?? [];
+  const versions = versionsData ?? [];
   const pinnedVersion = versions.find((v) => v.id === workbookVersionId);
   const latestVersion = versions[0];
 
@@ -80,8 +81,12 @@ export function LinkedWorkbookCard({
   // Freeze the upgrade indicator while any workbook read/write is mid-flight
   // (autosave, auto-apply upgrade, refetch); otherwise the recomputed
   // `isUpgradable` flag flips transiently and flashes the banner on and off.
-  const fetchingWorkbook = useIsFetching({ queryKey: ["workbook", workbookId] });
-  const fetchingVersions = useIsFetching({ queryKey: ["workbookVersions", workbookId] });
+  const fetchingWorkbook = useIsFetching({
+    queryKey: orpc.workbooks.getWorkbook.key({ input: { id: workbookId } }),
+  });
+  const fetchingVersions = useIsFetching({
+    queryKey: orpc.workbooks.listWorkbookVersions.key({ input: { id: workbookId } }),
+  });
   const savingWorkbook = useIsMutating({ mutationKey: ["workbook", workbookId, "update"] });
   const upgradingWorkbook = useIsMutating({
     mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
@@ -121,7 +126,7 @@ export function LinkedWorkbookCard({
       return;
     }
     renameWorkbook.mutate(
-      { params: { id: workbookId }, body: { name: next } },
+      { id: workbookId, name: next },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookRenamed") });
@@ -137,7 +142,7 @@ export function LinkedWorkbookCard({
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
     attachWorkbook.mutate(
-      { params: { id: experimentId }, body: { workbookId: selectedWorkbookId } },
+      { id: experimentId, workbookId: selectedWorkbookId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
@@ -155,7 +160,7 @@ export function LinkedWorkbookCard({
 
   const handleDetach = () => {
     detachWorkbook.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookDetached") });
@@ -182,7 +187,7 @@ export function LinkedWorkbookCard({
   const handleUpgrade = useCallback(() => {
     setUpgradeState("upgrading");
     upgradeVersion.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           setReviewOpen(false);

@@ -126,7 +126,9 @@ describe("RegistrationForm", () => {
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", avatarUrl: null },
+        firstName: "Jane",
+        lastName: "Doe",
+        avatarUrl: null,
       });
     });
   });
@@ -149,16 +151,7 @@ describe("RegistrationForm", () => {
   });
 
   it("pushes to default '/' when callbackUrl is undefined", async () => {
-    // Note: RegistrationForm component defaults to /platform if callbackUrl is undefined, not /
-    // let's check code: `router.push(callbackUrl ?? "/platform");`
-    // So if callbackUrl is undefined, it goes to /platform.
-    // The test below expects "/" which contradicts the code I read.
-    // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
-    // If I pass termsData but no callbackUrl...
-
-    // I will pass empty string or undefined and expect /platform or whatever the code does.
-    // My previous read said `router.push(callbackUrl ?? "/platform")`
-    // So expectation should be `/platform`.
+    // With no callbackUrl the form falls back to `router.push(callbackUrl ?? "/platform")`.
 
     // Let's stick to what the code says.
 

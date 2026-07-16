@@ -47,8 +47,8 @@ export function ExperimentArchive({ experimentId, isArchived }: ExperimentArchiv
     try {
       await updateExperiment(
         {
-          params: { id: experimentId },
-          body: { status: newStatus },
+          id: experimentId,
+          status: newStatus,
         },
         {
           onSuccess: () => {

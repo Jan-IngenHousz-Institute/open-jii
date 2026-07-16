@@ -1,19 +1,22 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface CreateUserProfileProps {
   onSuccess?: () => Promise<void> | void;
 }
 
 export const useCreateUserProfile = (props: CreateUserProfileProps) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.users.createUserProfile.useMutation({
-    onSuccess: async () => {
-      if (props.onSuccess) await props.onSuccess();
-    },
-    onSettled: async () => {
-      // Ensure any component reading the user profile refetches and gets the latest data
-      await queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-    },
-  });
+  return useMutation(
+    orpc.users.createUserProfile.mutationOptions({
+      onSuccess: async () => {
+        if (props.onSuccess) await props.onSuccess();
+      },
+      onSettled: async () => {
+        // Ensure any component reading the user profile refetches and gets the latest data
+        await queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
+      },
+    }),
+  );
 };

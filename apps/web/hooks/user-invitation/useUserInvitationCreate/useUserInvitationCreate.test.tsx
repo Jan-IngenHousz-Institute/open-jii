@@ -18,12 +18,10 @@ describe("useUserInvitationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          resourceType: "experiment",
-          resourceId: "exp-1",
-          email: "new@example.com",
-          role: "member",
-        },
+        resourceType: "experiment",
+        resourceId: "exp-1",
+        email: "new@example.com",
+        role: "member",
       });
     });
 
@@ -54,11 +52,9 @@ describe("useUserInvitationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          resourceType: "experiment",
-          resourceId: "exp-1",
-          email: "new@example.com",
-        },
+        resourceType: "experiment",
+        resourceId: "exp-1",
+        email: "new@example.com",
       });
     });
 
@@ -78,11 +74,9 @@ describe("useUserInvitationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          resourceType: "experiment",
-          resourceId: "exp-1",
-          email: "new@example.com",
-        },
+        resourceType: "experiment",
+        resourceId: "exp-1",
+        email: "new@example.com",
       });
     });
 
@@ -99,11 +93,9 @@ describe("useUserInvitationCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: {
-          resourceType: "experiment",
-          resourceId: "exp-1",
-          email: "new@example.com",
-        },
+        resourceType: "experiment",
+        resourceId: "exp-1",
+        email: "new@example.com",
       });
     });
 

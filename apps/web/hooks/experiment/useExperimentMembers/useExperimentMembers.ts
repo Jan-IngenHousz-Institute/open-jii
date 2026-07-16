@@ -1,14 +1,15 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to fetch members of an experiment
  * @param experimentId The ID of the experiment
- * @param userId The ID of the current user for authentication
  * @returns Query result containing the experiment members
  */
 export const useExperimentMembers = (experimentId: string) => {
-  return tsr.experiments.listExperimentMembers.useQuery({
-    queryData: { params: { id: experimentId } },
-    queryKey: ["experiment-members", experimentId],
-  });
+  return useQuery(
+    orpc.experiments.listExperimentMembers.queryOptions({
+      input: { id: experimentId },
+    }),
+  );
 };

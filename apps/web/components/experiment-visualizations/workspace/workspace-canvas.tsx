@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";

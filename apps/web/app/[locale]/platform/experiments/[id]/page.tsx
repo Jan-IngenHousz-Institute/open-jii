@@ -11,7 +11,7 @@ import { ExperimentDetailsCard } from "~/components/experiment-overview/experime
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
 import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
-import type { Experiment } from "@repo/api/schemas/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 import ExperimentDashboardsDisplay from "../../../../../components/experiment-dashboards/list/experiment-dashboards-display";
@@ -26,16 +26,16 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   // Experiment with access info
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
-  const experiment = accessData?.body.experiment;
-  const hasAccess = accessData?.body.isAdmin;
+  const experiment = accessData?.experiment;
+  const hasAccess = accessData?.isAdmin;
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
-  const locations = locationsData?.body ?? [];
+  const locations = locationsData ?? [];
 
   // Members
   const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData?.body ?? [];
+  const members = membersData ?? [];
 
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 

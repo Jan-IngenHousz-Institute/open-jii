@@ -13,7 +13,7 @@ import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
-import { resolveInlineCommand } from "@repo/api/utils/command-payload";
+import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 
 const log = createLogger("command-node");
 

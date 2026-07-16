@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
 import { deriveMacroFilename } from "./derive-macro-filename";
 import { hydrateFlowNodes } from "./hydrate-flow-nodes";

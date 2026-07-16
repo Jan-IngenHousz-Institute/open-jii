@@ -1,8 +1,5 @@
-import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
-
-import { contract } from "@repo/api/contract";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useExperimentDataUpload } from "./useExperimentDataUpload";
 
@@ -36,11 +33,21 @@ function makeFileList(files: File[]): FileList {
 // ── hook + mutation ────────────────────────────────────────────
 
 describe("useExperimentDataUpload (mutation)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // uploadData is a native streaming endpoint posted via a raw fetch (off the
+  // oRPC contract), so the request is asserted against the mocked global fetch.
   it("posts a multipart upload to the generic uploads endpoint", async () => {
-    const spy = server.mount(contract.experiments.uploadData, {
-      body: { uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/Volumes/x/y" }] },
-      status: 201,
-    });
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ uploadId: "u-1", files: [{ fileName: "data.csv", filePath: "/x/y" }] }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        ),
+      );
 
     const { result } = renderHook(() => useExperimentDataUpload());
 
@@ -49,12 +56,23 @@ describe("useExperimentDataUpload (mutation)", () => {
     });
 
     await waitFor(() => {
-      expect(spy.called).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
     });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/experiments/exp-1/data/uploads"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetchSpy.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
   });
 
   it("surfaces a failed response on the mutation result", async () => {
-    server.mount(contract.experiments.uploadData, { status: 500 });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ message: "boom" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }),
+    );
 
     const { result } = renderHook(() => useExperimentDataUpload());
 

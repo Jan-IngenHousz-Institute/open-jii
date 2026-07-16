@@ -1,18 +1,19 @@
 "use client";
 
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { FilterChipFace } from "./chip-face";
 import { FilterRow } from "./filter-row";
 
 export interface FilterChipItemProps {
-  filter: DataFilter;
-  column: DataColumn | undefined;
-  columns: DataColumn[];
+  filter: ExperimentDataFilter;
+  column: ExperimentDataColumn | undefined;
+  columns: ExperimentDataColumn[];
   expanded: boolean;
   experimentId: string;
   tableName: string;
-  onChange: (next: DataFilter) => void;
+  onChange: (next: ExperimentDataFilter) => void;
   onSelect: () => void;
   onRemove: () => void;
 }

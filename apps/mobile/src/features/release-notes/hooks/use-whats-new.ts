@@ -1,13 +1,13 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useActiveReleaseNotes } from "~/features/release-notes/hooks/use-active-release-notes";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms/lib/__generated/sdk";
 
-const LAST_SEEN_QUERY_KEY = ["whats-new", "last-seen"];
+const LAST_SEEN_QUERY_KEY = orpc.users.getWhatsNewSeen.key();
 const log = createLogger("whats-new");
 
 /** Entries published after the user last opened the panel (null = never → all unread). */
@@ -39,22 +39,23 @@ export function useWhatsNew(): UseWhatsNewResult {
   const entries = useActiveReleaseNotes(i18n.language || "en-US");
 
   const queryClient = useQueryClient();
-  const lastSeenQuery = tsr.users.getWhatsNewSeen.useQuery({
-    queryKey: LAST_SEEN_QUERY_KEY,
-    staleTime: 5 * 60 * 1000,
-    refetchOnMount: "always",
-    refetchOnReconnect: "always",
-    refetchOnWindowFocus: "always",
-  });
-  const markSeenMutation = tsr.users.markWhatsNewSeen.useMutation();
+  const lastSeenQuery = useQuery(
+    orpc.users.getWhatsNewSeen.queryOptions({
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: "always",
+      refetchOnReconnect: "always",
+      refetchOnWindowFocus: "always",
+    }),
+  );
+  const markSeenMutation = useMutation(orpc.users.markWhatsNewSeen.mutationOptions());
 
-  const lastSeenAt = lastSeenQuery.data?.body.lastSeenAt ?? null;
+  const lastSeenAt = lastSeenQuery.data?.lastSeenAt ?? null;
   const unreadCount = useMemo(() => countUnread(entries, lastSeenAt), [entries, lastSeenAt]);
 
   const markSeen = () => {
     if (unreadCount === 0) return;
     markSeenMutation.mutate(
-      { body: {} },
+      {},
       {
         onSuccess: () => {
           void queryClient.invalidateQueries({ queryKey: LAST_SEEN_QUERY_KEY });

@@ -2,14 +2,14 @@
 
 import type { ChangeEvent } from "react";
 
-import type { DataFilterValue } from "@repo/api/schemas/experiment.schema";
-import type { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 
 export interface CommaSeparatedInputProps {
-  value: DataFilterValue;
-  onChange: (value: DataFilterValue) => void;
+  value: ExperimentDataFilterValue;
+  onChange: (value: ExperimentDataFilterValue) => void;
   kind: ReturnType<typeof getColumnKind>;
 }
 

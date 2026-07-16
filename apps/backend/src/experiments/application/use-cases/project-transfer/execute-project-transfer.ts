@@ -1,11 +1,11 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
+import type { ExperimentFlowGraph } from "@repo/api/domains/experiment/experiment.schema";
 import type {
-  FlowGraph,
-  ProjectTransferWebhookPayload,
-  ProjectTransferWebhookResponse,
-} from "@repo/api/schemas/experiment.schema";
-import { flowNodesToWorkbookCells } from "@repo/api/utils/flow-to-workbook-cells";
+  ExperimentProjectTransferWebhookPayload,
+  ExperimentProjectTransferWebhookResponse,
+} from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
+import { flowNodesToWorkbookCells } from "@repo/api/transforms/flow-to-workbook-cells";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -45,8 +45,8 @@ export class ExecuteProjectTransferUseCase {
   ) {}
 
   async execute(
-    data: ProjectTransferWebhookPayload,
-  ): Promise<Result<ProjectTransferWebhookResponse>> {
+    data: ExperimentProjectTransferWebhookPayload,
+  ): Promise<Result<ExperimentProjectTransferWebhookResponse>> {
     this.logger.log({
       msg: "Executing project transfer",
       operation: "executeProjectTransfer",
@@ -184,7 +184,7 @@ export class ExecuteProjectTransferUseCase {
     // 6. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
     if (protocolId && macroId) {
-      const questionNodes: FlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
+      const questionNodes: ExperimentFlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
         id: `q_${i}`,
         type: "question" as const,
         name: q.text.substring(0, 64),
@@ -198,7 +198,7 @@ export class ExecuteProjectTransferUseCase {
       }));
 
       const offset = questionNodes.length;
-      const allNodes: FlowGraph["nodes"] = [
+      const allNodes: ExperimentFlowGraph["nodes"] = [
         ...questionNodes,
         {
           id: `m_${offset}`,
@@ -228,7 +228,7 @@ export class ExecuteProjectTransferUseCase {
       }
 
       const nodeIds = allNodes.map((n) => n.id);
-      const edges: FlowGraph["edges"] = nodeIds.slice(0, -1).map((source, i) => ({
+      const edges: ExperimentFlowGraph["edges"] = nodeIds.slice(0, -1).map((source, i) => ({
         id: `e_${i}`,
         source,
         target: nodeIds[i + 1],

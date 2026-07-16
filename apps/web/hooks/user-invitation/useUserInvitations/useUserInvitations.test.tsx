@@ -22,9 +22,9 @@ describe("useUserInvitations", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toHaveLength(2);
-    expect(result.current.data?.body[0]?.email).toBe("user1@example.com");
-    expect(result.current.data?.body[1]?.role).toBe("admin");
+    expect(result.current.data).toHaveLength(2);
+    expect(result.current.data?.[0]?.email).toBe("user1@example.com");
+    expect(result.current.data?.[1]?.role).toBe("admin");
   });
 
   it("passes correct query params", async () => {

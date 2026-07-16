@@ -35,13 +35,10 @@ vi.mock("crypto-js", () => ({
 }));
 
 const okResponse = (expiration: string) => ({
-  status: 200 as const,
-  body: {
-    accessKeyId: "AKIA-EXAMPLE",
-    secretAccessKey: "secret-example",
-    sessionToken: "session-example",
-    expiration,
-  },
+  accessKeyId: "AKIA-EXAMPLE",
+  secretAccessKey: "secret-example",
+  sessionToken: "session-example",
+  expiration,
 });
 
 interface Mod {
@@ -147,11 +144,11 @@ describe("getCredentials — backend endpoint", () => {
     expect(mockGetCredentials).toHaveBeenCalledTimes(1);
   });
 
-  it("throws on a non-200 (e.g. 401 signed-out) and does not cache", async () => {
-    mockGetCredentials.mockResolvedValueOnce({ status: 401, body: { message: "Unauthorized" } });
+  it("throws when the credentials request fails (e.g. 401 signed-out) and does not cache", async () => {
+    mockGetCredentials.mockRejectedValueOnce(new Error("Unauthorized"));
 
     const mod = await freshModule();
-    await expect(mod.getCredentials()).rejects.toThrow("Failed to fetch IoT credentials: 401");
+    await expect(mod.getCredentials()).rejects.toThrow("Unauthorized");
 
     // Next caller retries rather than returning a poisoned cache.
     mockGetCredentials.mockResolvedValue(okResponse(new Date(Date.now() + 3600_000).toISOString()));

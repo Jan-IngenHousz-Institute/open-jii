@@ -3,7 +3,7 @@ import { render, screen, within } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
 import { describe, it, expect } from "vitest";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import ExperimentVisualizationsList from "./experiment-visualizations-list";
 

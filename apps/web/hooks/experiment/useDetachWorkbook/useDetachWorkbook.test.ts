@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -23,7 +24,7 @@ describe("useDetachWorkbook", () => {
     const { result } = renderHook(() => useDetachWorkbook());
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId } });
+      result.current.mutate({ id: experimentId });
     });
 
     await waitFor(() => {
@@ -40,15 +41,16 @@ describe("useDetachWorkbook", () => {
     });
 
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["experiment", experimentId], {
-      body: createExperiment({ id: experimentId, workbookId }),
-    });
+    queryClient.setQueryData(
+      orpc.experiments.getExperiment.queryKey({ input: { id: experimentId } }),
+      createExperiment({ id: experimentId, workbookId }),
+    );
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useDetachWorkbook(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId } });
+      result.current.mutate({ id: experimentId });
     });
 
     await waitFor(() => {
@@ -56,10 +58,14 @@ describe("useDetachWorkbook", () => {
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["workbook", workbookId] }),
+      expect.objectContaining({
+        queryKey: orpc.workbooks.getWorkbook.key({ input: { id: workbookId } }),
+      }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["workbookVersions", workbookId] }),
+      expect.objectContaining({
+        queryKey: orpc.workbooks.listWorkbookVersions.key({ input: { id: workbookId } }),
+      }),
     );
   });
 
@@ -69,7 +75,7 @@ describe("useDetachWorkbook", () => {
     const { result } = renderHook(() => useDetachWorkbook());
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId } });
+      result.current.mutate({ id: experimentId });
     });
 
     await waitFor(() => {

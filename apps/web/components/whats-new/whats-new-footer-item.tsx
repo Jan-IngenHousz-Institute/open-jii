@@ -24,7 +24,7 @@ export function WhatsNewFooterItem({
   const lastSeen = useWhatsNewLastSeen();
   // Wait for the query to resolve — treating a loading `undefined` as "never seen" flashes every
   // note as unread. A resolved null `lastSeenAt` still correctly means all unread.
-  const unreadCount = lastSeen.data ? countUnread(entries, lastSeen.data.body.lastSeenAt) : 0;
+  const unreadCount = lastSeen.data ? countUnread(entries, lastSeen.data.lastSeenAt) : 0;
   const hasUnread = unreadCount > 0;
   const label = t("whatsNew.navLabel");
 

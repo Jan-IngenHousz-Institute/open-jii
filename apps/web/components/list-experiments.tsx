@@ -59,7 +59,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         </div>
       </div>
 
-      <ExperimentOverviewCards experiments={data?.body} archived={archived} />
+      <ExperimentOverviewCards experiments={data} archived={archived} />
     </div>
   );
 }

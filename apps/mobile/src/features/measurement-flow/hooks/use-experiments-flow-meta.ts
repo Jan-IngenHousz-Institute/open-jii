@@ -1,8 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
-import { contentKeys } from "~/shared/api/content-query-keys";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
@@ -25,14 +24,9 @@ export function useExperimentsFlowMeta(
   experimentIds: string[],
 ): Record<string, ExperimentFlowMeta> {
   const results = useQueries({
-    queries: experimentIds.map((id) => ({
-      queryKey: contentKeys.experimentFlow(id),
-      queryFn: async () => {
-        const res = await tsr.experiments.getFlow.query({ params: { id } });
-        return res.status === 200 ? res.body : null;
-      },
-      enabled: !!id,
-    })),
+    queries: experimentIds.map((id) =>
+      orpc.experiments.getFlow.queryOptions({ input: { id }, enabled: !!id }),
+    ),
   });
 
   const out: Record<string, ExperimentFlowMeta> = {};

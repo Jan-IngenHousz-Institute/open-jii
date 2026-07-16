@@ -1,17 +1,18 @@
-import { tsr } from "~/shared/api/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/shared/api/orpc";
 import { ellipsize } from "~/shared/utils/ellipsize";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 export function useProtocols() {
-  const { data, isLoading, error } = tsr.protocols.listProtocols.useQuery({
-    queryKey: ["protocols"],
-    networkMode: "offlineFirst",
-  });
-
-  const protocols = data?.body;
+  const { data, isLoading, error } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: {},
+      networkMode: "offlineFirst",
+    }),
+  );
 
   const options =
-    protocols?.map((item) => ({
+    data?.map((item) => ({
       value: item.id,
       label: item.name,
       description: item.description

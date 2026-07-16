@@ -28,8 +28,9 @@ describe("useExperimentMemberRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", memberId: "user-1" },
-        body: { role: "admin" },
+        id: "exp-1",
+        memberId: "user-1",
+        role: "admin",
       });
     });
 
@@ -47,8 +48,9 @@ describe("useExperimentMemberRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", memberId: "user-2" },
-        body: { role: "member" },
+        id: "exp-1",
+        memberId: "user-2",
+        role: "member",
       });
     });
 
@@ -66,8 +68,9 @@ describe("useExperimentMemberRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", memberId: "user-1" },
-        body: { role: "admin" },
+        id: "exp-1",
+        memberId: "user-1",
+        role: "admin",
       });
     });
 

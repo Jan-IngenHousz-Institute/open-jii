@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 import type { ChartFormValues } from "../../../experiment-visualizations/charts/chart-config";
@@ -41,15 +41,15 @@ export function EmbeddedVisualizationBuilder({
     );
   }
 
-  if (error || !data?.body) {
+  if (error || !data) {
     return <div className="text-destructive p-4 text-sm">{t("errors.failedToLoadData")}</div>;
   }
 
   return (
     <BuilderShell
-      key={data.body.id}
+      key={data.id}
       experimentId={experimentId}
-      visualization={data.body}
+      visualization={data}
       renderWidgetTab={renderWidgetTab}
     />
   );

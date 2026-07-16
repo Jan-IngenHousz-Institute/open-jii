@@ -1,7 +1,7 @@
 "use client";
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
-import { tsr } from "@/lib/tsr";
+import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
@@ -10,8 +10,8 @@ import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 import { mockDevicesEnabled } from "~/lib/iot/mock-devices";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -163,13 +163,15 @@ export function WorkbookHeader({
     if (protocolCells.length === 0) return;
 
     for (const cell of protocolCells) {
-      const result = await tsr.protocols.getProtocol.query({
-        params: { id: cell.payload.protocolId },
-      });
-      if (result.status !== 200) continue;
-      const { name, code } = result.body;
-      const filename = `${slugify(name)}.json`;
-      downloadFile(JSON.stringify(code, null, 2), filename, "application/json");
+      try {
+        const { name, code } = await orpcClient.protocols.getProtocol({
+          id: cell.payload.protocolId,
+        });
+        const filename = `${slugify(name)}.json`;
+        downloadFile(JSON.stringify(code, null, 2), filename, "application/json");
+      } catch {
+        continue;
+      }
     }
   }, [cells]);
 
@@ -180,21 +182,23 @@ export function WorkbookHeader({
     // Use the macro's display name, not the stored DB filename (which can be
     // a generic placeholder like seed_macro_e5664d67...).
     for (const cell of macroCells) {
-      const result = await tsr.macros.getMacro.query({
-        params: { id: cell.payload.macroId },
-      });
-      if (result.status !== 200) continue;
-      const { name, language, code } = result.body;
-      const decoded = (() => {
-        try {
-          return decodeBase64(code);
-        } catch {
-          return code;
-        }
-      })();
-      const filename = `${slugify(name)}${macroExtension(language)}`;
-      // octet-stream preserves the filename; text/plain forces .txt in some browsers.
-      downloadFile(decoded, filename, "application/octet-stream");
+      try {
+        const { name, language, code } = await orpcClient.macros.getMacro({
+          id: cell.payload.macroId,
+        });
+        const decoded = (() => {
+          try {
+            return decodeBase64(code);
+          } catch {
+            return code;
+          }
+        })();
+        const filename = `${slugify(name)}${macroExtension(language)}`;
+        // octet-stream preserves the filename; text/plain forces .txt in some browsers.
+        downloadFile(decoded, filename, "application/octet-stream");
+      } catch {
+        continue;
+      }
     }
   }, [cells]);
 

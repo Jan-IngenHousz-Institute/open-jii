@@ -2,13 +2,13 @@
 
 import { Table2 } from "lucide-react";
 
-import type { TableWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentTableWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { TableWidgetView } from "./table-widget";
 
 interface TableWidgetEditorProps {
-  widget: TableWidget;
+  widget: ExperimentTableWidget;
   experimentId: string;
 }
 

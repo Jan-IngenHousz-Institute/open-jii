@@ -30,8 +30,10 @@ describe("useExperimentVisualizationUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Updated Viz", ...baseBody },
+        id: "exp-1",
+        visualizationId: "viz-1",
+        name: "Updated Viz",
+        ...baseBody,
       });
     });
 
@@ -52,8 +54,11 @@ describe("useExperimentVisualizationUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { ...baseBody, name: "Updated", chartType: "scatter" },
+        id: "exp-1",
+        visualizationId: "viz-1",
+        ...baseBody,
+        name: "Updated",
+        chartType: "scatter",
       });
     });
 
@@ -73,8 +78,10 @@ describe("useExperimentVisualizationUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Updated", ...baseBody },
+        id: "exp-1",
+        visualizationId: "viz-1",
+        name: "Updated",
+        ...baseBody,
       });
     });
 
@@ -92,8 +99,10 @@ describe("useExperimentVisualizationUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
-        body: { name: "Fail", ...baseBody },
+        id: "exp-1",
+        visualizationId: "viz-1",
+        name: "Fail",
+        ...baseBody,
       });
     });
 

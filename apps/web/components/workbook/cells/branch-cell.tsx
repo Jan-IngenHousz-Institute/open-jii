@@ -8,7 +8,7 @@ import type {
   BranchCondition,
   BranchPath,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,

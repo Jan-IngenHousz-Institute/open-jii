@@ -4,7 +4,7 @@ import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { MacroCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { MacroPicker } from "./macro-picker";
 

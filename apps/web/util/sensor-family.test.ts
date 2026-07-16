@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
+import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import {
   SENSOR_FAMILY_OPTIONS,

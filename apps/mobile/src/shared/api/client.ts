@@ -1,13 +1,9 @@
-import { initClient } from "@ts-rest/core";
-
-import { contract } from "@repo/api/contract";
-
-import { baseClientOptions } from "./fetcher";
+import { orpcClient } from "./orpc";
 
 /**
- * Plain ts-rest client for use outside of React components.
- * For React Query hooks, use `tsr` from ~/shared/api/tsr instead.
+ * Plain oRPC client for use outside of React components.
+ * For React Query hooks, use `orpc` from ~/shared/api/orpc instead.
  */
 export function getApiClient() {
-  return initClient(contract, baseClientOptions);
+  return orpcClient;
 }

@@ -2,11 +2,11 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, expect, it } from "vitest";
 
-import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 
 import { UploadHistoryCard } from "./upload-history-card";
 
-function baseUpload(overrides?: Partial<UploadMetadata>): UploadMetadata {
+function baseUpload(overrides?: Partial<ExperimentUploadMetadata>): ExperimentUploadMetadata {
   return {
     uploadId: "u-1",
     experimentId: "exp-1",

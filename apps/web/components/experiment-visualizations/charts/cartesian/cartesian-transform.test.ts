@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import type { ChartFormConfig } from "../chart-config";
 import { transformCartesianData } from "./cartesian-transform";
@@ -13,7 +13,10 @@ const baseOptions: CartesianTransformOptions = {
   supportsSize: false,
 };
 
-function ds(role: DataSourceConfig["role"], columnName: string): DataSourceConfig {
+function ds(
+  role: ExperimentDataSourceConfig["role"],
+  columnName: string,
+): ExperimentDataSourceConfig {
   return { tableName: "t", columnName, role };
 }
 
@@ -204,8 +207,13 @@ describe("transformCartesianData", () => {
     ];
     const sources = [
       ds("x", "x"),
-      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
-      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+      { tableName: "t", columnName: "a", role: "y" } as ExperimentDataSourceConfig,
+      {
+        tableName: "t",
+        columnName: "b",
+        role: "y",
+        axis: "secondary",
+      } as ExperimentDataSourceConfig,
     ];
     const config: ChartFormConfig = { stackMode: "stacked" };
     const result = transformCartesianData(rows, sources, config, {
@@ -262,8 +270,13 @@ describe("transformCartesianData", () => {
     ];
     const sources = [
       ds("x", "x"),
-      { tableName: "t", columnName: "a", role: "y" } as DataSourceConfig,
-      { tableName: "t", columnName: "b", role: "y", axis: "secondary" } as DataSourceConfig,
+      { tableName: "t", columnName: "a", role: "y" } as ExperimentDataSourceConfig,
+      {
+        tableName: "t",
+        columnName: "b",
+        role: "y",
+        axis: "secondary",
+      } as ExperimentDataSourceConfig,
       ds("facet", "site"),
     ];
     const result = transformCartesianData(rows, sources, baseConfig, baseOptions);

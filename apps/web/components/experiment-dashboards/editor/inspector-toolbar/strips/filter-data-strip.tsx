@@ -5,7 +5,7 @@ import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useE
 import { Columns3, Database, Filter as FilterIcon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { FilterWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -26,7 +26,7 @@ import { StripOverflowList } from "../strip-overflow-list";
 import { StripPopoverControl } from "../strip-popover-control";
 
 interface FilterDataStripProps {
-  widget: FilterWidget;
+  widget: ExperimentFilterWidget;
   widgetIndex: number;
   experimentId: string;
 }
@@ -48,7 +48,7 @@ export function FilterDataStrip({ widget, widgetIndex, experimentId }: FilterDat
   const pickedColumn = columns.find((c) => c.name === pickedColumnName);
   const operatorOptions = operatorsForColumn(pickedColumn);
 
-  const setConfig = (next: Partial<FilterWidget["config"]>) => {
+  const setConfig = (next: Partial<ExperimentFilterWidget["config"]>) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, ...next },

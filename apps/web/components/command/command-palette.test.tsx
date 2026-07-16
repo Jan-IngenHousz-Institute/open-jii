@@ -7,7 +7,7 @@ import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { render, screen, userEvent, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { SearchResult } from "@repo/api/schemas/search.schema";
+import type { SearchResult } from "@repo/api/domains/search/search.schema";
 
 import { CommandPalette } from "./command-palette";
 

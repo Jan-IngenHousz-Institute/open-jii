@@ -1,13 +1,22 @@
-import { Controller, Logger, Req } from "@nestjs/common";
+import {
+  Controller,
+  HttpCode,
+  HttpException,
+  Logger,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+} from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import type { Request } from "express";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentUploadsContract } from "@repo/api/domains/experiment/uploads/experiment-uploads.contract";
 
-import { handleFailure } from "../../common/utils/fp-utils";
+import type { AppError } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ListUploadsUseCase } from "../application/use-cases/experiment-data-uploads/list-uploads";
 import { UploadDataUseCase } from "../application/use-cases/experiment-data-uploads/upload-data";
 
@@ -20,43 +29,60 @@ export class ExperimentDataUploadsController {
     private readonly listUploadsUseCase: ListUploadsUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.uploadData)
-  uploadData(@Session() session: UserSession, @Req() request: Request) {
-    return tsRestHandler(contract.experiments.uploadData, async ({ params }) => {
-      // sourceKind is read from the multipart form by the use case.
-      const result = await this.uploadDataUseCase.execute({
-        experimentId: params.id,
-        userId: session.user.id,
-        requestStream: request,
-        requestHeaders: request.headers,
+  // Native streaming endpoint: the multipart body is piped straight to Databricks
+  // without buffering, so it stays off the oRPC contract (oRPC drains the body to
+  // materialise File parts). Form fields are validated in-flow against
+  // zExperimentUploadFormFields inside UploadDataUseCase.
+  @Post("/api/v1/experiments/:id/data/uploads")
+  @HttpCode(201)
+  async uploadData(
+    @Param("id", ParseUUIDPipe) experimentId: string,
+    @Session() session: UserSession,
+    @Req() request: Request,
+  ) {
+    const result = await this.uploadDataUseCase.execute({
+      experimentId,
+      userId: session.user.id,
+      requestStream: request,
+      requestHeaders: request.headers,
+    });
+
+    if (result.isFailure()) {
+      throw this.toHttpException(result.error);
+    }
+
+    return {
+      uploadId: result.value.uploadId,
+      uploadTableId: result.value.uploadTableId,
+      uploadTableName: result.value.uploadTableName,
+      runId: result.value.runId,
+      files: result.value.files,
+    };
+  }
+
+  @Implement(experimentUploadsContract.listUploads)
+  listUploads(@Session() session: UserSession) {
+    return implement(experimentUploadsContract.listUploads).handler(async ({ input }) => {
+      const result = await this.listUploadsUseCase.execute(input.id, session.user.id, {
+        uploadTableId: input.uploadTableId,
+        uploadTableName: input.uploadTableName,
       });
-      if (result.isFailure()) {
-        return handleFailure(result, this.logger);
+
+      if (result.isSuccess()) {
+        return result.value;
       }
-      return {
-        status: StatusCodes.CREATED,
-        body: {
-          uploadId: result.value.uploadId,
-          uploadTableId: result.value.uploadTableId,
-          uploadTableName: result.value.uploadTableName,
-          runId: result.value.runId,
-          files: result.value.files,
-        },
-      };
+
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.listUploads)
-  listUploads(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listUploads, async ({ params, query }) => {
-      const result = await this.listUploadsUseCase.execute(params.id, session.user.id, {
-        uploadTableId: query.uploadTableId,
-        uploadTableName: query.uploadTableName,
-      });
-      if (result.isFailure()) {
-        return handleFailure(result, this.logger);
-      }
-      return { status: StatusCodes.OK, body: result.value };
-    });
+  private toHttpException(error: AppError): HttpException {
+    if (error.statusCode >= 500) {
+      this.logger.error({ msg: error.message, errorCode: error.code, operation: "uploadData" });
+    } else {
+      this.logger.warn({ msg: error.message, errorCode: error.code, operation: "uploadData" });
+    }
+
+    return new HttpException({ message: error.message, code: error.code }, error.statusCode);
   }
 }

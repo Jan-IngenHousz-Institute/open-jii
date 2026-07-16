@@ -24,15 +24,15 @@ export default function DashboardLayout({ children }: LayoutProps) {
       <EntityLayoutShell
         isLoading={isLoading}
         error={error}
-        hasData={Boolean(data?.body)}
+        hasData={Boolean(data)}
         loadingMessage={t("common.loading")}
       >
-        {data?.body && (
+        {data && (
           <DashboardFormShell
-            key={data.body.id}
+            key={data.id}
             experimentId={experimentId}
             dashboardId={dashboardId}
-            dashboard={data.body}
+            dashboard={data}
             initialMode={initialMode}
           >
             {children}

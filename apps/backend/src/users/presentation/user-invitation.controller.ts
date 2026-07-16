@@ -1,13 +1,12 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { userContract } from "@repo/api/domains/user/user.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateInvitationUseCase } from "../application/use-cases/create-invitation/create-invitation";
 import { GetInvitationsUseCase } from "../application/use-cases/get-invitations/get-invitations";
 import { RevokeInvitationUseCase } from "../application/use-cases/revoke-invitation/revoke-invitation";
@@ -24,89 +23,63 @@ export class InvitationController {
     private readonly updateInvitationRoleUseCase: UpdateInvitationRoleUseCase,
   ) {}
 
-  @TsRestHandler(contract.users.createInvitation)
+  @Implement(userContract.createInvitation)
   createInvitation(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.createInvitation, async ({ body }) => {
+    return implement(userContract.createInvitation).handler(async ({ input }) => {
       const result = await this.createInvitationUseCase.execute(
-        body.resourceType as "experiment",
-        body.resourceId,
-        body.email,
-        body.role,
+        input.resourceType as "experiment",
+        input.resourceId,
+        input.email,
+        input.role,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED as 201,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.listInvitations)
-  listInvitations(@Session() _session: UserSession) {
-    return tsRestHandler(contract.users.listInvitations, async ({ query }) => {
+  @Implement(userContract.listInvitations)
+  listInvitations() {
+    return implement(userContract.listInvitations).handler(async ({ input }) => {
       const result = await this.getInvitationsUseCase.execute(
-        query.resourceType as "experiment",
-        query.resourceId,
+        input.resourceType as "experiment",
+        input.resourceId,
       );
-
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK as 200,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.updateInvitationRole)
+  @Implement(userContract.updateInvitationRole)
   updateInvitationRole(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.updateInvitationRole, async ({ params, body }) => {
+    return implement(userContract.updateInvitationRole).handler(async ({ input }) => {
       const result = await this.updateInvitationRoleUseCase.execute(
-        params.invitationId,
-        body.role,
+        input.invitationId,
+        input.role,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        this.logger.log(
-          `Invitation ${params.invitationId} role updated to ${body.role} by user ${session.user.id}`,
-        );
-
-        return {
-          status: StatusCodes.OK as 200,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.revokeInvitation)
+  @Implement(userContract.revokeInvitation)
   revokeInvitation(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.revokeInvitation, async ({ params }) => {
+    return implement(userContract.revokeInvitation).handler(async ({ input }) => {
       const result = await this.revokeInvitationUseCase.execute(
-        params.invitationId,
+        input.invitationId,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        this.logger.log(`Invitation ${params.invitationId} revoked by user ${session.user.id}`);
-
-        return {
-          status: StatusCodes.NO_CONTENT as 204,
-          body: null,
-        };
+        return undefined;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

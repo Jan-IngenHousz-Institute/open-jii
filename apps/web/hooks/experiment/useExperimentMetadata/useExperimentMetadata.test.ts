@@ -6,15 +6,23 @@ import { contract } from "@repo/api/contract";
 
 import { useExperimentMetadata } from "./useExperimentMetadata";
 
+const metadataPayload = {
+  name: "Plates",
+  columns: [{ id: "col-1", name: "plate_id", type: "string" as const }],
+  rows: [],
+  identifierColumnId: "col-1",
+  experimentQuestionId: "q-1",
+};
+
 describe("useExperimentMetadata", () => {
   it("returns metadata for an experiment", async () => {
     server.mount(contract.experiments.listExperimentMetadata, {
       body: [
         {
-          metadataId: "meta-1",
-          experimentId: "exp-123",
-          metadata: { location: "Lab A" },
-          createdBy: "user-1",
+          metadataId: "00000000-0000-0000-0000-000000000001",
+          experimentId: "00000000-0000-0000-0000-0000000000aa",
+          metadata: metadataPayload,
+          createdBy: "00000000-0000-0000-0000-0000000000bb",
           createdAt: "2025-01-01T00:00:00.000Z",
           updatedAt: "2025-01-02T00:00:00.000Z",
         },
@@ -24,9 +32,9 @@ describe("useExperimentMetadata", () => {
     const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(1);
-      expect(result.current.data?.body[0].metadataId).toBe("meta-1");
-      expect(result.current.data?.body[0].metadata).toEqual({ location: "Lab A" });
+      expect(result.current.data).toHaveLength(1);
+      expect(result.current.data?.[0].metadataId).toBe("00000000-0000-0000-0000-000000000001");
+      expect(result.current.data?.[0].metadata).toEqual(metadataPayload);
     });
   });
 
@@ -36,7 +44,7 @@ describe("useExperimentMetadata", () => {
     const { result } = renderHook(() => useExperimentMetadata("exp-123"));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toEqual([]);
+      expect(result.current.data).toEqual([]);
     });
   });
 

@@ -8,8 +8,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -52,13 +52,13 @@ export function NewProtocolForm() {
       setIsSubmitting(false);
     },
     onSuccess: (data) => {
-      const id = data.body.id;
+      const id = data.id;
       // Link selected macros after protocol creation, then redirect
       if (selectedMacros.length > 0 && addMacrosMutationRef.current) {
         addMacrosMutationRef.current
           .mutateAsync({
-            params: { id },
-            body: { macroIds: selectedMacros.map((m) => m.id) },
+            id,
+            macroIds: selectedMacros.map((m) => m.id),
           })
           .catch(() => {
             // Protocol created successfully, macro linking failed - still redirect
@@ -159,12 +159,10 @@ export function NewProtocolForm() {
   function onSubmit(data: CreateProtocolRequestBody) {
     setIsSubmitting(true);
     createProtocol({
-      body: {
-        name: data.name,
-        description: data.description,
-        code: data.code,
-        family: data.family,
-      },
+      name: data.name,
+      description: data.description,
+      code: data.code,
+      family: data.family,
     });
   }
 

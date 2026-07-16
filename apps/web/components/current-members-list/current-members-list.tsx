@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
-import type { UserProfile } from "@repo/api/schemas/user.schema";
+import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type { UserProfile } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -99,8 +99,9 @@ export function MemberList({
     setUpdatingMemberId(userId);
     updateMemberRole(
       {
-        params: { id: experimentId, memberId: userId },
-        body: { role: newRole },
+        id: experimentId,
+        memberId: userId,
+        role: newRole,
       },
       {
         onSuccess: () => {

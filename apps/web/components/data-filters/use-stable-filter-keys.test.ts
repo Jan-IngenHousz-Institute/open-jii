@@ -1,11 +1,11 @@
 import { renderHook } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useStableFilterKeys } from "./use-stable-filter-keys";
 
-function makeFilter(column: string): DataFilter {
+function makeFilter(column: string): ExperimentDataFilter {
   return { column, operator: "equals", value: "x" };
 }
 
@@ -52,7 +52,7 @@ describe("useStableFilterKeys", () => {
   });
 
   it("returns an empty array for no filters", () => {
-    const empty: DataFilter[] = [];
+    const empty: ExperimentDataFilter[] = [];
     const { result } = renderHook(() => useStableFilterKeys(empty));
     expect(result.current).toEqual([]);
   });

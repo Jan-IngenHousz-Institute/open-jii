@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type {
   QuestionCell as QuestionCellType,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";

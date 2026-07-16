@@ -1,9 +1,9 @@
-import type { PlaceSearchResult } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
 import type { Result } from "../../../common/utils/fp-utils";
 
-// Re-export GeocodeResult type since it's the same as PlaceSearchResult
-export type GeocodeResult = PlaceSearchResult;
+// Re-export GeocodeResult type since it's the same as ExperimentPlaceSearchResult
+export type GeocodeResult = ExperimentPlaceSearchResult;
 
 /**
  * Injection token for the AWS Location port
@@ -37,7 +37,7 @@ export interface AwsPort {
    * @param request - Search parameters including query and optional max results
    * @returns Result containing array of place search results
    */
-  searchPlaces(request: SearchPlacesRequest): Promise<Result<PlaceSearchResult[]>>;
+  searchPlaces(request: SearchPlacesRequest): Promise<Result<ExperimentPlaceSearchResult[]>>;
 
   /**
    * Reverse geocode coordinates to get place information

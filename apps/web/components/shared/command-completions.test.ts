@@ -3,7 +3,7 @@ import { completionStatus, startCompletion } from "@codemirror/autocomplete";
 import type { EditorView } from "@codemirror/view";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { KNOWN_DEVICE_COMMANDS } from "@repo/api/schemas/device-command.schema";
+import { KNOWN_DEVICE_COMMANDS } from "@repo/api/domains/workbook/device-command.schema";
 
 import {
   buildCommandTooltipDom,

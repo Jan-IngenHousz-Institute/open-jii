@@ -1,11 +1,9 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Fetch a single IoT device owned by the authenticated user.
  */
 export const useIotDevice = (deviceId: string) => {
-  return tsr.iot.getIotDevice.useQuery({
-    queryData: { params: { deviceId } },
-    queryKey: ["devices", deviceId],
-  });
+  return useQuery(orpc.iot.getIotDevice.queryOptions({ input: { deviceId } }));
 };

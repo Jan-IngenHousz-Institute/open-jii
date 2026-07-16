@@ -1,4 +1,7 @@
-import type { DataSourceConfig, SeriesTraceType } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentDataSourceConfig,
+  ExperimentSeriesTraceType,
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { MarkerConfig } from "@repo/ui/components/charts/types";
@@ -12,7 +15,7 @@ import type { IndexedDataSource } from "../data/data-sources";
 import { dataSourcesByRole } from "../data/data-sources";
 
 export interface CartesianTransformOptions {
-  defaultTraceType: SeriesTraceType;
+  defaultTraceType: ExperimentSeriesTraceType;
   /** Allow per-point continuous color (scatter / bubble). */
   supportsContinuousColor: boolean;
   /** Allow a `role: "size"` data source to drive bubble sizes. */
@@ -42,7 +45,7 @@ export interface CartesianTransformResult {
  */
 export function transformCartesianData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
   options: CartesianTransformOptions,
 ): CartesianTransformResult {
@@ -472,11 +475,11 @@ interface BuildSeriesArgs {
   source: {
     columnName: string;
     alias?: string;
-    traceType?: SeriesTraceType;
+    traceType?: ExperimentSeriesTraceType;
     axis?: "primary" | "secondary";
   };
   errorValues?: number[];
-  defaultTraceType: SeriesTraceType;
+  defaultTraceType: ExperimentSeriesTraceType;
   seriesOrdinal: number;
   fallbackColor: string | undefined;
   continuousColorValues?: number[];
@@ -504,7 +507,7 @@ const SCATTER_MODES = new Set<CartesianSeries["mode"]>(["markers", "lines+marker
 // line traces drop "markers"-only, scatter drops "lines"-only. Falls back
 // to the type's natural default when the user's mode doesn't fit.
 function resolveSeriesMode(
-  traceType: SeriesTraceType,
+  traceType: ExperimentSeriesTraceType,
   rawMode: ChartFormConfig["mode"],
 ): CartesianSeries["mode"] | undefined {
   const userMode = typeof rawMode === "string" ? (rawMode as CartesianSeries["mode"]) : undefined;

@@ -16,7 +16,7 @@ import {
   findProtocolErrorLine,
   getErrorMessage,
   validateProtocolJson,
-} from "@repo/api/schemas/protocol-validator";
+} from "@repo/api/domains/protocol/protocol-validator";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {

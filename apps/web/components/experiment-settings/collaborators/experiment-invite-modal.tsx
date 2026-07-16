@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { ExperimentMember, ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
-import type { Invitation, UserProfile } from "@repo/api/schemas/user.schema";
+import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
+import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -68,8 +69,8 @@ export function ExperimentInviteModal({
   const isSubmitDisabled = !selection || isAddingMember || isCreatingInvitation || isArchived;
 
   const availableUsers = useMemo(() => {
-    if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId));
+    if (userSearchData && Array.isArray(userSearchData)) {
+      return userSearchData.filter((user) => !members.some((m) => m.user.id === user.userId));
     }
     return [];
   }, [userSearchData, members]);
@@ -91,8 +92,8 @@ export function ExperimentInviteModal({
     if (selection.type === "user") {
       await addMember(
         {
-          params: { id: experimentId },
-          body: { members: [{ userId: selection.user.userId, role: selectedRole }] },
+          id: experimentId,
+          members: [{ userId: selection.user.userId, role: selectedRole }],
         },
         {
           onSuccess: () => {
@@ -105,12 +106,10 @@ export function ExperimentInviteModal({
     } else {
       await createInvitation(
         {
-          body: {
-            resourceType: "experiment",
-            resourceId: experimentId,
-            email: selection.email,
-            role: selectedRole,
-          },
+          resourceType: "experiment",
+          resourceId: experimentId,
+          email: selection.email,
+          role: selectedRole,
         },
         {
           onSuccess: () => {

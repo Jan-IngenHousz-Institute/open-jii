@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -23,6 +24,8 @@ const metadataResponse = {
   updatedAt: "2025-01-02T00:00:00.000Z",
 };
 
+const metadataKey = orpc.experiments.listExperimentMetadata.queryKey({ input: { id: "exp-123" } });
+
 describe("useExperimentMetadataUpdate", () => {
   it("sends PUT request with correct params and body", async () => {
     const spy = server.mount(contract.experiments.updateExperimentMetadata, {
@@ -33,8 +36,9 @@ describe("useExperimentMetadataUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadataId: "meta-1",
+        metadata: metadataPayload,
       });
     });
 
@@ -47,9 +51,7 @@ describe("useExperimentMetadataUpdate", () => {
 
   it("invalidates cache after successful update", async () => {
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["experiment", "exp-123", "metadata"], {
-      body: [{ metadataId: "meta-1", metadata: { key: "old" } }],
-    });
+    queryClient.setQueryData(metadataKey, [metadataResponse]);
 
     server.mount(contract.experiments.updateExperimentMetadata, {
       body: metadataResponse,
@@ -61,8 +63,9 @@ describe("useExperimentMetadataUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadataId: "meta-1",
+        metadata: metadataPayload,
       });
     });
 
@@ -73,8 +76,7 @@ describe("useExperimentMetadataUpdate", () => {
 
   it("reverts cache on error", async () => {
     const queryClient = createTestQueryClient();
-    const previousData = { body: [{ metadataId: "meta-1", metadata: { key: "original" } }] };
-    queryClient.setQueryData(["experiment", "exp-123", "metadata"], previousData);
+    queryClient.setQueryData(metadataKey, [metadataResponse]);
 
     server.mount(contract.experiments.updateExperimentMetadata, { status: 500 });
 
@@ -84,8 +86,9 @@ describe("useExperimentMetadataUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadataId: "meta-1",
+        metadata: metadataPayload,
       });
     });
 
@@ -107,8 +110,9 @@ describe("useExperimentMetadataUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-123", metadataId: "meta-1" },
-        body: { metadata: metadataPayload },
+        id: "exp-123",
+        metadataId: "meta-1",
+        metadata: metadataPayload,
       });
     });
 

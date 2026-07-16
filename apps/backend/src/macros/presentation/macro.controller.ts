@@ -1,14 +1,14 @@
 import { Controller, Inject, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { macroContract } from "@repo/api/contracts/macro.contract";
+import { macroContract } from "@repo/api/domains/macro/macro.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
+import { AppError, isSuccess } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
@@ -39,176 +39,135 @@ export class MacroController {
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
   ) {}
 
-  @TsRestHandler(macroContract.createMacro)
+  @Implement(macroContract.createMacro)
   createMacro(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.createMacro, async ({ body }) => {
+    return implement(macroContract.createMacro).handler(async ({ input }) => {
       const result = await this.createMacroUseCase.execute(
-        body,
+        input,
         session.user.id,
         session.session.activeOrganizationId ?? null,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.getMacro)
+  @Implement(macroContract.getMacro)
   getMacro() {
-    return tsRestHandler(macroContract.getMacro, async ({ params }) => {
-      const result = await this.getMacroUseCase.execute(params.id);
-
+    return implement(macroContract.getMacro).handler(async ({ input }) => {
+      const result = await this.getMacroUseCase.execute(input.id);
       if (isSuccess(result)) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.listMacros)
+  @Implement(macroContract.listMacros)
   listMacros(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.listMacros, async ({ query }) => {
+    return implement(macroContract.listMacros).handler(async ({ input }) => {
       const result = await this.listMacrosUseCase.execute({
-        search: query.search,
-        language: query.language,
-        filter: query.filter,
+        search: input.search,
+        language: input.language,
+        filter: input.filter,
         userId: session.user.id,
       });
-
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.updateMacro)
+  @Implement(macroContract.updateMacro)
   updateMacro(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.updateMacro, async ({ params, body }) => {
-      const result = await this.updateMacroUseCase.execute(params.id, body, session.user.id);
-
+    return implement(macroContract.updateMacro).handler(async ({ input }) => {
+      const { id, ...body } = input;
+      const result = await this.updateMacroUseCase.execute(id, body, session.user.id);
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.executeMacro)
-  executeMacro(@Session() _session: UserSession) {
-    return tsRestHandler(macroContract.executeMacro, async ({ params, body }) => {
-      const result = await this.executeMacroUseCase.execute(params.id, body);
-
+  @Implement(macroContract.executeMacro)
+  executeMacro() {
+    return implement(macroContract.executeMacro).handler(async ({ input }) => {
+      const { id, ...body } = input;
+      const result = await this.executeMacroUseCase.execute(id, body);
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: result.value,
-        };
+        return result.value;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.deleteMacro)
+  @Implement(macroContract.deleteMacro)
   deleteMacro(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
+    return implement(macroContract.deleteMacro).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.MACRO_DELETION,
         session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: undefined,
-        };
+        return throwOrpcError(
+          AppError.forbidden("Macro deletion is currently disabled"),
+          this.logger,
+          "deleteMacro",
+        );
       }
 
-      const result = await this.deleteMacroUseCase.execute(params.id, session.user.id);
-
+      const result = await this.deleteMacroUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: undefined,
-        };
+        return undefined;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.listCompatibleProtocols)
+  @Implement(macroContract.listCompatibleProtocols)
   listCompatibleProtocols() {
-    return tsRestHandler(macroContract.listCompatibleProtocols, async ({ params }) => {
-      const result = await this.listCompatibleProtocolsUseCase.execute(params.id);
-
+    return implement(macroContract.listCompatibleProtocols).handler(async ({ input }) => {
+      const result = await this.listCompatibleProtocolsUseCase.execute(input.id);
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.addCompatibleProtocols)
+  @Implement(macroContract.addCompatibleProtocols)
   addCompatibleProtocols(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.addCompatibleProtocols, async ({ params, body }) => {
+    return implement(macroContract.addCompatibleProtocols).handler(async ({ input }) => {
       const result = await this.addCompatibleProtocolsUseCase.execute(
-        params.id,
-        body.protocolIds,
+        input.id,
+        input.protocolIds,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(macroContract.removeCompatibleProtocol)
+  @Implement(macroContract.removeCompatibleProtocol)
   removeCompatibleProtocol(@Session() session: UserSession) {
-    return tsRestHandler(macroContract.removeCompatibleProtocol, async ({ params }) => {
+    return implement(macroContract.removeCompatibleProtocol).handler(async ({ input }) => {
       const result = await this.removeCompatibleProtocolUseCase.execute(
-        params.id,
-        params.protocolId,
+        input.id,
+        input.protocolId,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: null,
-        };
+        return undefined;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

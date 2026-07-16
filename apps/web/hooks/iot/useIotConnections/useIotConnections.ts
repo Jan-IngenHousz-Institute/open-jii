@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MockTransportAdapter } from "~/lib/iot/mock-devices";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { IDeviceDriver, ITransportAdapter } from "@repo/iot";
 
 import { createAdapter, createDriver } from "../useIotCommunication/useIotCommunication";

@@ -21,7 +21,7 @@ describe("useIssueIotCredentials", () => {
     const { result } = renderHook(() => useIssueIotCredentials({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" }, body: {} });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {
@@ -34,7 +34,7 @@ describe("useIssueIotCredentials", () => {
     const { result } = renderHook(() => useIssueIotCredentials());
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" }, body: {} });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {

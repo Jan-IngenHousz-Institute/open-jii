@@ -4,7 +4,7 @@ import { stripHtml } from "@/util/strip-html";
 import { BookOpen, Code, FileSliders, Leaf } from "lucide-react";
 import * as React from "react";
 
-import type { SearchResult, SearchResultType } from "@repo/api/schemas/search.schema";
+import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { CommandItem } from "@repo/ui/components/command";
 

@@ -2,7 +2,7 @@ import { createMarkdownCell, createQuestionCell } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 
 import { QuestionPicker } from "./question-picker";

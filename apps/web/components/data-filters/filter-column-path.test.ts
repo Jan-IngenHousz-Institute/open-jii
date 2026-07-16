@@ -1,19 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { filterColumnPathFor, parentColumnName } from "./filter-column-path";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
-const contributorColumn: DataColumn = {
+const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,
 };
 
-const deviceColumn: DataColumn = {
+const deviceColumn: ExperimentDataColumn = {
   name: "device",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.DEVICE,

@@ -5,7 +5,7 @@ import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { IotDevice, IotDeviceStatus } from "@repo/api/schemas/iot.schema";
+import type { IotDevice, IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -29,7 +29,7 @@ export function IotDevicesTableView() {
   const { t } = useTranslation("iot");
   const { openRegister } = useDevicesRegister();
   const { data, isLoading, isError, error } = useIotDevices();
-  const devices = useMemo<IotDevice[]>(() => data?.body ?? [], [data]);
+  const devices = useMemo<IotDevice[]>(() => data ?? [], [data]);
 
   const [status, setStatus] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");

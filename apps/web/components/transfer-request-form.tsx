@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useTransferRequestCreate } from "~/hooks/useTransferRequestCreate/useTransferRequestCreate";
 
-import { zCreateTransferRequestBody } from "@repo/api/schemas/experiment.schema";
+import { zExperimentCreateTransferRequestBody } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
@@ -23,7 +23,7 @@ import {
 } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 
-const transferRequestSchema = zCreateTransferRequestBody.extend({
+const transferRequestSchema = zExperimentCreateTransferRequestBody.extend({
   consent: z.boolean().refine((val) => val === true, {
     message: "You must confirm ownership or permission",
   }),
@@ -51,7 +51,7 @@ export function TransferRequestForm() {
   });
 
   const onSubmit = (data: TransferRequestFormValues) => {
-    createRequest({ body: data });
+    createRequest(data);
   };
 
   if (isSuccess) {

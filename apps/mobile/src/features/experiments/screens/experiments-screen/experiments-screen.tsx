@@ -21,7 +21,7 @@ export function ExperimentsScreen() {
   const { data, isFetching, refetch } = useExperimentMeasurements(selectedExperimentId);
   const { experiments } = useExperiments();
 
-  const parsedTables = data?.body ? parseExperimentData(data.body) : [];
+  const parsedTables = data ? parseExperimentData(data) : [];
 
   React.useEffect(() => {
     if (isFetching) {

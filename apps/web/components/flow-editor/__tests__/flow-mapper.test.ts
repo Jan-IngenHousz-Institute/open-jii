@@ -1,14 +1,14 @@
 import { createFlow } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { Flow } from "@repo/api/schemas/experiment.schema";
-import { zUpsertFlowBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import { zExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-mapper";
 import type { FlowNodeDataWithSpec } from "../flow-mapper";
 
-// Helper to build a minimal valid Flow object
-function buildApiFlow(overrides: Partial<Flow["graph"]> = {}): Flow {
+// Helper to build a minimal valid ExperimentFlow object
+function buildApiFlow(overrides: Partial<ExperimentFlow["graph"]> = {}): ExperimentFlow {
   return createFlow({
     id: "11111111-1111-1111-1111-111111111111",
     experimentId: "22222222-2222-2222-2222-222222222222",
@@ -29,7 +29,7 @@ function buildApiFlow(overrides: Partial<Flow["graph"]> = {}): Flow {
 }
 
 describe("FlowMapper.toReactFlow", () => {
-  it("maps API question node to React Flow node", () => {
+  it("maps API question node to React ExperimentFlow node", () => {
     const flow = buildApiFlow();
     const { nodes, edges } = FlowMapper.toReactFlow(flow);
     expect(nodes).toHaveLength(1);
@@ -42,7 +42,7 @@ describe("FlowMapper.toReactFlow", () => {
     expect(edges).toHaveLength(0);
   });
 
-  it("maps API analysis node to React Flow node", () => {
+  it("maps API analysis node to React ExperimentFlow node", () => {
     const flow = buildApiFlow({
       nodes: [
         {
@@ -69,7 +69,7 @@ describe("FlowMapper.toReactFlow", () => {
     });
   });
 
-  it("maps API number question to React Flow with NUMBER answer type", () => {
+  it("maps API number question to React ExperimentFlow with NUMBER answer type", () => {
     const flow = buildApiFlow({
       nodes: [
         {
@@ -95,7 +95,7 @@ describe("FlowMapper.toReactFlow", () => {
     });
   });
 
-  it("maps API yes_no question to React Flow with BOOLEAN answer type", () => {
+  it("maps API yes_no question to React ExperimentFlow with BOOLEAN answer type", () => {
     const flow = buildApiFlow({
       nodes: [
         {
@@ -116,7 +116,7 @@ describe("FlowMapper.toReactFlow", () => {
     });
   });
 
-  it("maps API multi_choice question to React Flow with SELECT answer type", () => {
+  it("maps API multi_choice question to React ExperimentFlow with SELECT answer type", () => {
     const flow = buildApiFlow({
       nodes: [
         {
@@ -145,7 +145,7 @@ describe("FlowMapper.toReactFlow", () => {
 });
 
 describe("FlowMapper branch + sourceHandle", () => {
-  it("maps an API branch node to a BRANCH React Flow node and surfaces paths in stepSpecification", () => {
+  it("maps an API branch node to a BRANCH React ExperimentFlow node and surfaces paths in stepSpecification", () => {
     const flow = buildApiFlow({
       nodes: [
         {
@@ -257,7 +257,7 @@ describe("FlowMapper round-trip", () => {
     const back = FlowMapper.toApiGraph(reactSide.nodes, reactSide.edges);
 
     // Validate schema
-    expect(() => zUpsertFlowBody.parse(back)).not.toThrow();
+    expect(() => zExperimentUpsertFlowBody.parse(back)).not.toThrow();
 
     // Compare node ids/types and start flags (positions are ephemeral)
     const simplifiedOriginal = flow.graph.nodes.map((n) => ({
@@ -472,7 +472,7 @@ describe("FlowMapper inline command node", () => {
     expect(api.nodes[0].content).toEqual({
       command: { format: "string", content: "battery" },
     });
-    expect(zUpsertFlowBody.safeParse(api).success).toBe(true);
+    expect(zExperimentUpsertFlowBody.safeParse(api).success).toBe(true);
   });
 
   it("prefers the edited data.command over the original stepSpecification", () => {

@@ -11,7 +11,7 @@ import {
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
-import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 const log = createLogger("questions-upload");
 
@@ -38,7 +38,7 @@ export function useQuestionsUpload() {
       userId: string;
       questions: AnswerData[];
       commentText?: string;
-      flagType?: AnnotationFlagType | null;
+      flagType?: ExperimentAnnotationFlagType | null;
     }) => {
       const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
 

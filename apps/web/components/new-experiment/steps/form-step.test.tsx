@@ -2,7 +2,7 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 
-import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import type { WizardStep } from "@repo/ui/components/wizard-form";
 
 import { FormStep } from "./form-step";

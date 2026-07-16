@@ -1,4 +1,4 @@
-import type { AggregationItem } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAggregationItem } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 /**
  * Stable, order-independent alias for a correlation pair's SQL projection.
@@ -11,9 +11,9 @@ export function aliasForCorrelationPair(a: string, b: string): string {
 }
 
 /** Pairwise `corr` aggregation over the deduped column set (one per unordered pair). */
-export function correlationPairFunctions(columns: string[]): AggregationItem[] {
+export function correlationPairFunctions(columns: string[]): ExperimentAggregationItem[] {
   const unique = Array.from(new Set(columns));
-  const functions: AggregationItem[] = [];
+  const functions: ExperimentAggregationItem[] = [];
   for (let i = 0; i < unique.length; i++) {
     for (let j = i + 1; j < unique.length; j++) {
       functions.push({

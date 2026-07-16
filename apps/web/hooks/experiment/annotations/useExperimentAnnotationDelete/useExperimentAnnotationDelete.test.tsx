@@ -16,7 +16,8 @@ describe("useExperimentAnnotationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", annotationId: "ann-1" },
+        id: "exp-1",
+        annotationId: "ann-1",
       });
     });
 
@@ -32,7 +33,8 @@ describe("useExperimentAnnotationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-42", annotationId: "ann-99" },
+        id: "exp-42",
+        annotationId: "ann-99",
       });
     });
 
@@ -49,7 +51,8 @@ describe("useExperimentAnnotationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", annotationId: "ann-1" },
+        id: "exp-1",
+        annotationId: "ann-1",
       });
     });
 
