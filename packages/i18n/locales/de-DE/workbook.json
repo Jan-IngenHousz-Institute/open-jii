@@ -8,6 +8,8 @@
     "workbookUpdated": "Arbeitsmappe erfolgreich aktualisiert",
     "createError": "Fehler beim Erstellen der Arbeitsmappe. Bitte versuchen Sie es erneut.",
     "listDescription": "Ihre Mess-Notebooks anzeigen und verwalten.",
+    "descriptionTitle": "Beschreibung",
+    "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "noDescription": "Keine Beschreibung vorhanden",
     "notFound": "Arbeitsmappe nicht gefunden",
     "searchPlaceholder": "Arbeitsmappen durchsuchen...",

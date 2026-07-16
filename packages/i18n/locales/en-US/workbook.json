@@ -13,6 +13,8 @@
     "workbookUpdated": "Workbook updated successfully",
     "createError": "Failed to create workbook. Please try again.",
     "listDescription": "View and manage your measurement notebooks.",
+    "descriptionTitle": "Description",
+    "descriptionPlaceholder": "Add a description...",
     "noDescription": "No description provided",
     "notFound": "Workbook not found",
     "searchPlaceholder": "Search workbooks...",
