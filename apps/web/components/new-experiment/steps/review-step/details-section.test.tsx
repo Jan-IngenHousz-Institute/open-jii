@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 
 import { DetailsSection } from "./details-section";
 

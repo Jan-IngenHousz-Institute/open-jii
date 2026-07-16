@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { AddFilterPopover } from "./add-filter/add-filter-popover";
 import { FilterChip } from "./chips/filter-chip";
@@ -10,9 +11,9 @@ import { parentColumnName } from "./filter-column-path";
 import { useStableFilterKeys } from "./use-stable-filter-keys";
 
 interface FilterChipBarProps {
-  value: DataFilter[];
-  onChange: (next: DataFilter[]) => void;
-  columns: DataColumn[];
+  value: ExperimentDataFilter[];
+  onChange: (next: ExperimentDataFilter[]) => void;
+  columns: ExperimentDataColumn[];
   experimentId: string;
   tableName: string;
 }
@@ -24,7 +25,7 @@ export function FilterChipBar({
   experimentId,
   tableName,
 }: FilterChipBarProps) {
-  const handleChipChange = (index: number, next: DataFilter) => {
+  const handleChipChange = (index: number, next: ExperimentDataFilter) => {
     const out = [...value];
     out[index] = next;
     onChange(out);
@@ -34,7 +35,7 @@ export function FilterChipBar({
     onChange(value.filter((_, i) => i !== index));
   };
 
-  const handleAdd = (filter: DataFilter) => {
+  const handleAdd = (filter: ExperimentDataFilter) => {
     onChange([...value, filter]);
   };
 

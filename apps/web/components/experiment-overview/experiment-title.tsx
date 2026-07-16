@@ -30,8 +30,8 @@ export function ExperimentTitle({
   const handleSave = async (newName: string) => {
     await updateExperiment(
       {
-        params: { id: experimentId },
-        body: { name: newName },
+        id: experimentId,
+        name: newName,
       },
       {
         onSuccess: () => {

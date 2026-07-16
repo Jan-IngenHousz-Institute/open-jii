@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -48,7 +48,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
 
   const handleDelete = () => {
     deleteDevice(
-      { params: { deviceId: device.id } },
+      { deviceId: device.id },
       {
         onSuccess: () => {
           toast({ title: t("iot.devices.remove.success") });

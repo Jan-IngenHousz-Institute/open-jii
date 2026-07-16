@@ -3,8 +3,9 @@
 import { X } from "lucide-react";
 import { forwardRef } from "react";
 
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -13,8 +14,8 @@ import { operatorsForColumn } from "../filter-operators";
 import { ChipValue } from "./chip-value";
 
 interface FilterChipFaceProps {
-  filter: DataFilter;
-  column: DataColumn | undefined;
+  filter: ExperimentDataFilter;
+  column: ExperimentDataColumn | undefined;
   experimentId?: string;
   tableName?: string;
   onClick?: () => void;

@@ -2,7 +2,7 @@ import { useExperimentMetadataDelete } from "@/hooks/experiment/useExperimentMet
 import { ArrowLeft, FileSpreadsheet, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -51,7 +51,7 @@ export function MetadataListView({
         });
       };
       try {
-        await deleteMutation.mutateAsync({ params: { id: experimentId, metadataId } });
+        await deleteMutation.mutateAsync({ id: experimentId, metadataId });
         setIsDeleting((prev) => ({ ...prev, [metadataId]: "deleted" }));
         await new Promise((r) => setTimeout(r, 600));
         cleanup();

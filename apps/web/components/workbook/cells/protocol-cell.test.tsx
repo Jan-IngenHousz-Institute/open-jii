@@ -7,7 +7,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";

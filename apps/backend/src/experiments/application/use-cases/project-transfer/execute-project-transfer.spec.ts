@@ -1,4 +1,4 @@
-import type { ProjectTransferWebhookPayload } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentProjectTransferWebhookPayload } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 
 import {
   AppError,
@@ -44,8 +44,8 @@ describe("ExecuteProjectTransferUseCase", () => {
     await testApp.teardown();
   });
 
-  const buildPayload = (overrides?: Partial<ProjectTransferWebhookPayload>) => {
-    const base: ProjectTransferWebhookPayload = {
+  const buildPayload = (overrides?: Partial<ExperimentProjectTransferWebhookPayload>) => {
+    const base: ExperimentProjectTransferWebhookPayload = {
       experiment: {
         name: "Transfer Experiment",
         createdBy: testUserId,

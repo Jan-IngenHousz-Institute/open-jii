@@ -11,7 +11,7 @@ import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import type { SearchResult, SearchResultType } from "@repo/api/schemas/search.schema";
+import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   CommandDialog,

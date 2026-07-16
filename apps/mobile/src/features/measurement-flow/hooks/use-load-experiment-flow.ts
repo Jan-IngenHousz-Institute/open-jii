@@ -1,10 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useWorkbookVersionQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 // Loads an experiment's workbook flow into the store: fetch the workbook version
 // and derive the graph locally via cellsToFlowGraph (cells kept for branch eval).
@@ -23,13 +24,14 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     data: experimentsData,
     isLoading: isExperimentsLoading,
     error: experimentsError,
-  } = tsr.experiments.listExperiments.useQuery({
-    queryKey: ["experiments"],
-    queryData: { query: { filter: "member" } },
-    enabled: !!experimentId,
-  });
+  } = useQuery(
+    orpc.experiments.listExperiments.queryOptions({
+      input: { filter: "member" },
+      enabled: !!experimentId,
+    }),
+  );
 
-  const selected = experimentsData?.body?.find((e) => e.id === experimentId);
+  const selected = experimentsData?.find((e) => e.id === experimentId);
   const workbookId = selected?.workbookId ?? undefined;
   const workbookVersionId = selected?.workbookVersionId ?? undefined;
   const hasWorkbook = !!workbookId && !!workbookVersionId;
@@ -43,7 +45,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   // Derive the graph in document order (preserve branches; don't collapse to a
   // single path) and hydrate each node so scan + upload read offline off it.
   useEffect(() => {
-    const body = versionData?.body;
+    const body = versionData;
     const cells = body?.cells;
     if (!cells) return;
     const { nodes, edges } = cellsToFlowGraph(cells);
@@ -54,7 +56,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
   // workbook-backed, so surface an error rather than hang.
   const noWorkbook = !!experimentId && experimentsData != null && !hasWorkbook;
 
-  const isReady = !!versionData?.body?.cells;
+  const isReady = !!versionData?.cells;
 
   // Clear a previously-loaded graph when this load fails, so consumers don't keep
   // rendering the prior experiment's nodes.

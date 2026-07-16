@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { diffCells } from "./workbook-diff";
 

@@ -16,8 +16,10 @@ describe("useExperimentAnnotationDeleteBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { tableName: "measurements", rowIds: ["row-1", "row-2"], type: "comment" },
+        id: "exp-1",
+        tableName: "measurements",
+        rowIds: ["row-1", "row-2"],
+        type: "comment",
       });
     });
 
@@ -33,8 +35,10 @@ describe("useExperimentAnnotationDeleteBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-42" },
-        body: { tableName: "results", rowIds: ["row-10", "row-20", "row-30"], type: "flag" },
+        id: "exp-42",
+        tableName: "results",
+        rowIds: ["row-10", "row-20", "row-30"],
+        type: "flag",
       });
     });
 
@@ -55,8 +59,10 @@ describe("useExperimentAnnotationDeleteBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { tableName: "measurements", rowIds: ["row-1"], type: "comment" },
+        id: "exp-1",
+        tableName: "measurements",
+        rowIds: ["row-1"],
+        type: "comment",
       });
     });
 

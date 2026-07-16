@@ -1,7 +1,7 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 
 import { AccountIdentityCard } from "./account-identity-card";
 

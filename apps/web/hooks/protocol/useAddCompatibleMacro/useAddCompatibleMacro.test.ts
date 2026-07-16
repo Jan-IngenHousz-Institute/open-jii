@@ -16,8 +16,8 @@ describe("useAddCompatibleMacro", () => {
 
     act(() => {
       result.current.mutate({
-        body: { macroIds: ["m-1", "m-2"] },
-        params: { id: "protocol-1" },
+        id: "protocol-1",
+        macroIds: ["m-1", "m-2"],
       });
     });
 
@@ -33,8 +33,8 @@ describe("useAddCompatibleMacro", () => {
 
     act(() => {
       result.current.mutate({
-        body: { macroIds: ["m-1"] },
-        params: { id: "protocol-1" },
+        id: "protocol-1",
+        macroIds: ["m-1"],
       });
     });
 

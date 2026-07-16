@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -68,7 +68,7 @@ describe("ExperimentMetadataController", () => {
         },
       } as never);
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -100,7 +100,7 @@ describe("ExperimentMetadataController", () => {
         },
       } as never);
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -118,7 +118,7 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -127,7 +127,7 @@ describe("ExperimentMetadataController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.listExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: nonExistentId,
       });
 
@@ -161,7 +161,7 @@ describe("ExperimentMetadataController", () => {
         },
       } as never);
 
-      const path = testApp.resolvePath(contract.experiments.createExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -181,7 +181,7 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.createExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -200,7 +200,7 @@ describe("ExperimentMetadataController", () => {
 
       const otherUserId = await testApp.createTestUser({});
 
-      const path = testApp.resolvePath(contract.experiments.createExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: experiment.id,
       });
 
@@ -213,7 +213,7 @@ describe("ExperimentMetadataController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.createExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
         id: nonExistentId,
       });
 
@@ -252,7 +252,7 @@ describe("ExperimentMetadataController", () => {
         },
       } as never);
 
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -274,7 +274,7 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -294,7 +294,7 @@ describe("ExperimentMetadataController", () => {
 
       const otherUserId = await testApp.createTestUser({});
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -309,7 +309,7 @@ describe("ExperimentMetadataController", () => {
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.updateExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
         id: nonExistentId,
         metadataId,
       });
@@ -340,7 +340,7 @@ describe("ExperimentMetadataController", () => {
         },
       } as never);
 
-      const path = testApp.resolvePath(contract.experiments.deleteExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -355,7 +355,7 @@ describe("ExperimentMetadataController", () => {
       });
 
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.deleteExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -372,7 +372,7 @@ describe("ExperimentMetadataController", () => {
       const otherUserId = await testApp.createTestUser({});
 
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.deleteExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: experiment.id,
         metadataId,
       });
@@ -383,7 +383,7 @@ describe("ExperimentMetadataController", () => {
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
       const metadataId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.deleteExperimentMetadata.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
         id: nonExistentId,
         metadataId,
       });

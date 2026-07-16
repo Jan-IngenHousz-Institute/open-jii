@@ -17,7 +17,7 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
   const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation("experiments");
 
-  const experiment = data?.body;
+  const experiment = data;
 
   if (isLoading) {
     return <div>{t("loading")}</div>;

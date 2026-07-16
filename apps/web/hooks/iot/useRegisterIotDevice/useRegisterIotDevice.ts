@@ -1,20 +1,23 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 
 interface RegisterIotDeviceProps {
   onSuccess?: (device: IotDevice) => void;
 }
 
 export const useRegisterIotDevice = (props: RegisterIotDeviceProps = {}) => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.iot.registerIotDevice.useMutation({
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["devices"] });
-    },
-    onSuccess: (data) => {
-      props.onSuccess?.(data.body);
-    },
-  });
+  return useMutation(
+    orpc.iot.registerIotDevice.mutationOptions({
+      onSettled: async () => {
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDevices.key() });
+      },
+      onSuccess: (data) => {
+        props.onSuccess?.(data);
+      },
+    }),
+  );
 };

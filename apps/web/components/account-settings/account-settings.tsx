@@ -5,7 +5,7 @@ import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCr
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 import { parseApiError } from "~/util/apiError";
 
-import type { CreateUserProfileBody, User } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody, User } from "@repo/api/domains/user/user.schema";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -33,13 +33,13 @@ export function AccountSettings({ session }: { session: Session | null }) {
     return <ErrorDisplay error={error} title={t("settings.errorTitle")} />;
   }
 
-  const initialValues: CreateUserProfileBody = userProfile?.body
+  const initialValues: CreateUserProfileBody = userProfile
     ? {
-        firstName: userProfile.body.firstName,
-        lastName: userProfile.body.lastName,
-        bio: userProfile.body.bio ?? "",
-        activated: userProfile.body.activated ?? true,
-        avatarUrl: userProfile.body.avatarUrl ?? user?.image ?? null,
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        bio: userProfile.bio ?? "",
+        activated: userProfile.activated ?? true,
+        avatarUrl: userProfile.avatarUrl ?? user?.image ?? null,
       }
     : {
         firstName: "",
@@ -53,7 +53,7 @@ export function AccountSettings({ session }: { session: Session | null }) {
     <AccountSettingsContent
       initialValues={initialValues}
       userId={user?.id ?? ""}
-      email={userProfile?.body.email ?? user?.email ?? null}
+      email={user?.email ?? null}
     />
   );
 }
@@ -77,10 +77,13 @@ function AccountSettingsContent({
 
   const saveProfile = async (nextProfile: CreateUserProfileBody) => {
     try {
-      await updateProfile({ body: nextProfile });
+      await updateProfile(nextProfile);
       setProfile(nextProfile);
     } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
+      toast({
+        description: parseApiError(err)?.message,
+        variant: "destructive",
+      });
       throw err;
     }
   };

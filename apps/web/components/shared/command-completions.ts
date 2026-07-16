@@ -5,8 +5,8 @@ import { EditorState } from "@codemirror/state";
 import type { Tooltip } from "@codemirror/view";
 import { EditorView, hoverTooltip, placeholder as placeholderExt } from "@codemirror/view";
 
-import type { DeviceCommandOption } from "@repo/api/schemas/device-command.schema";
-import { KNOWN_DEVICE_COMMANDS } from "@repo/api/schemas/device-command.schema";
+import type { DeviceCommandOption } from "@repo/api/domains/workbook/device-command.schema";
+import { KNOWN_DEVICE_COMMANDS } from "@repo/api/domains/workbook/device-command.schema";
 
 const COMMANDS: readonly DeviceCommandOption[] = KNOWN_DEVICE_COMMANDS;
 

@@ -6,17 +6,17 @@
       "types": "./dist/contract.d.ts",
       "default": "./dist/contract.js"
     },
-    "./contracts/*": {
-      "types": "./dist/contracts/*.d.ts",
-      "default": "./dist/contracts/*.js"
+    "./domains/*": {
+      "types": "./dist/domains/*.d.ts",
+      "default": "./dist/domains/*.js"
     },
-    "./schemas/*": {
-      "types": "./dist/schemas/*.d.ts",
-      "default": "./dist/schemas/*.js"
+    "./transforms/*": {
+      "types": "./dist/transforms/*.d.ts",
+      "default": "./dist/transforms/*.js"
     },
-    "./utils/*": {
-      "types": "./dist/utils/*.d.ts",
-      "default": "./dist/utils/*.js"
+    "./shared/*": {
+      "types": "./dist/shared/*.d.ts",
+      "default": "./dist/shared/*.js"
     }
   },
   "private": true,
@@ -34,8 +34,9 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@ts-rest/core": "^3.52.1",
-    "@ts-rest/open-api": "^3.52.1",
+    "@orpc/contract": "catalog:orpc",
+    "@orpc/openapi": "catalog:orpc",
+    "@orpc/zod": "catalog:orpc",
     "yaml": "2.8.3",
     "zod": "catalog:"
   },

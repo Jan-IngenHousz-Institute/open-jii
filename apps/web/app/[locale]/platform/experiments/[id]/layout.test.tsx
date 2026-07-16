@@ -71,7 +71,7 @@ describe("ExperimentLayout", () => {
     // Simulate a successful response whose `experiment` is null — the layout
     // defends against this even though it's outside the schema's typed shape.
     server.mount(contract.experiments.getExperimentAccess, {
-      body: { experiment: null, hasAccess: false, isAdmin: false } as never,
+      body: { experiment: null, hasAccess: false, isAdmin: false },
     });
     renderLayout();
     await waitFor(() => {

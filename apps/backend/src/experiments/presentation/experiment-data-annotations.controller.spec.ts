@@ -2,12 +2,12 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  AddAnnotationBody,
-  AddAnnotationsBulkBody,
-  AnnotationRowsAffected,
-  DeleteAnnotationsBulkBody,
-  UpdateAnnotationBody,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAddAnnotationBody,
+  ExperimentAddAnnotationsBulkBody,
+  ExperimentAnnotationRowsAffected,
+  ExperimentDeleteAnnotationsBulkBody,
+  ExperimentUpdateAnnotationBody,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -49,12 +49,12 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(addAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -67,7 +67,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(addAnnotationsData)
@@ -78,12 +78,12 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if experiment id is incorrect", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
         id: "wrong-id",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -105,7 +105,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if tableName is missing", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
@@ -131,12 +131,12 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationBody = {
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
         tableName: "data_table_1",
         rowId: "row_123",
         annotation: {
@@ -162,12 +162,12 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(addAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 3 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -180,7 +180,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(addAnnotationsData)
@@ -191,12 +191,12 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if experiment id is incorrect", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
         id: "wrong-id",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -218,7 +218,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if annotation type is unknown", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
@@ -245,12 +245,12 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.addAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const addAnnotationsData: AddAnnotationsBulkBody = {
+      const addAnnotationsData: ExperimentAddAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456", "row_789"],
         annotation: {
@@ -276,13 +276,13 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(updateAnnotationUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.updateAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -290,7 +290,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .patch(path)
         .withAuth(testUserId)
         .send(updateAnnotationData)
@@ -303,13 +303,13 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(updateAnnotationUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.updateAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
         id: "wrong-id",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -328,13 +328,13 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(updateAnnotationUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.updateAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "wrong-id",
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -353,7 +353,7 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(updateAnnotationUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.updateAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
@@ -377,13 +377,13 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(updateAnnotationUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.updateAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
       // Create the request body
-      const updateAnnotationData: UpdateAnnotationBody = {
+      const updateAnnotationData: ExperimentUpdateAnnotationBody = {
         content: {
           type: "comment",
           text: "This is the modified comment",
@@ -391,7 +391,7 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .patch(path)
         .withAuth(testUserId)
         .send(updateAnnotationData)
@@ -406,13 +406,13 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(deleteAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 1 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -422,7 +422,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if experiment id is incorrect", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
         id: "wrong-id",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
@@ -433,7 +433,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 400 if annotation id is incorrect", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "wrong-id",
       });
@@ -444,7 +444,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotation.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
@@ -459,19 +459,19 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(deleteAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 5 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",
       };
 
       // Send the request
-      const response: SuperTestResponse<AnnotationRowsAffected> = await testApp
+      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(deleteAnnotationsBulkData)
@@ -484,12 +484,12 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(deleteAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 5 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
         id: "wrong-id",
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",
@@ -507,7 +507,7 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(deleteAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 5 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
@@ -529,12 +529,12 @@ describe("ExperimentDataAnnotationsController", () => {
       vi.spyOn(deleteAnnotationsUseCase, "execute").mockResolvedValue(success({ rowsAffected: 5 }));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.deleteAnnotationsBulk.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
         id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
       });
 
       // Create the request body
-      const deleteAnnotationsBulkData: DeleteAnnotationsBulkBody = {
+      const deleteAnnotationsBulkData: ExperimentDeleteAnnotationsBulkBody = {
         tableName: "data_table_1",
         rowIds: ["row_123", "row_456"],
         type: "comment",

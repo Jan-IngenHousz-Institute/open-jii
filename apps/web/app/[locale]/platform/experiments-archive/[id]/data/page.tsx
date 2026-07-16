@@ -69,7 +69,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  const experiment = data.body;
+  const experiment = data;
 
   // Check if experiment is archived - if not, redirect to not found
   if (experiment.status !== "archived") {

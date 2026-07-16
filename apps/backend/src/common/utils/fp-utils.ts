@@ -1,4 +1,3 @@
-import type { Logger } from "@nestjs/common";
 import { isAxiosError } from "axios";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
@@ -247,55 +246,6 @@ export class AppError extends Error {
   ): AppError {
     return new AppError(message, code, StatusCodes.CONFLICT, details);
   }
-}
-
-/**
- * Utility for handling errors in a controller context
- * @param failure The AppError object to handle
- * @param logger Logger to use for logging errors
- * @param operation Optional operation name for structured logging
- * @param context Optional context (class name) for structured logging
- */
-export function handleFailure(
-  failure: Failure<AppError>,
-  logger: Logger,
-  operation?: string,
-  context?: string,
-) {
-  const error = failure.error;
-
-  // Log the error with structured logging
-  const logObject: Record<string, unknown> = {
-    msg: error.message,
-    errorCode: error.code,
-  };
-
-  if (operation) {
-    logObject.operation = operation;
-  }
-  if (context) {
-    logObject.context = context;
-  }
-  if (error.details) {
-    logObject.details = error.details;
-  }
-
-  if (error.statusCode >= 500) {
-    logger.error(logObject);
-  } else {
-    logger.warn(logObject);
-  }
-
-  return {
-    // Todo: fix type casting
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    status: error.statusCode as any,
-    body: {
-      message: error.message,
-      code: error.code,
-      ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),
-    },
-  };
 }
 
 /**

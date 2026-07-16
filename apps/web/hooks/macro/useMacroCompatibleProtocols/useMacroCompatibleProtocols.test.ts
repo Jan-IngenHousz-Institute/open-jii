@@ -21,10 +21,10 @@ describe("useMacroCompatibleProtocols", () => {
     const { result } = renderHook(() => useMacroCompatibleProtocols("macro-1"));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(1);
+      expect(result.current.data).toHaveLength(1);
     });
 
-    expect(result.current.data?.body[0]?.protocol.name).toBe("Protocol A");
+    expect(result.current.data?.[0]?.protocol.name).toBe("Protocol A");
   });
 
   it("does not fetch when macroId is empty", () => {

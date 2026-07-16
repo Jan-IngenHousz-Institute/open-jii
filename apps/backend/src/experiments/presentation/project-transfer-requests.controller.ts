@@ -1,14 +1,13 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
-import type { TransferRequestStatus } from "@repo/api/schemas/experiment.schema";
+import { experimentTransferRequestsContract } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.contract";
+import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateTransferRequestUseCase } from "../application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "../application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 
@@ -21,61 +20,42 @@ export class ProjectTransferRequestsController {
     private readonly listTransferRequestsUseCase: ListTransferRequestsUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.createTransferRequest)
+  @Implement(experimentTransferRequestsContract.createTransferRequest)
   createTransferRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.createTransferRequest, async ({ body }) => {
-      this.logger.log({
-        msg: "Creating transfer request",
-        operation: "createTransferRequest",
-        userId: session.user.id,
-      });
+    return implement(experimentTransferRequestsContract.createTransferRequest).handler(
+      async ({ input }) => {
+        const result = await this.createTransferRequestUseCase.execute(
+          session.user.id,
+          session.user.email,
+          input,
+        );
 
-      const result = await this.createTransferRequestUseCase.execute(
-        session.user.id,
-        session.user.email,
-        body,
-      );
+        if (result.isSuccess()) {
+          return formatDates({
+            ...result.value,
+            status: result.value.status as ExperimentTransferRequestStatus,
+          });
+        }
 
-      if (result.isSuccess()) {
-        const request = {
-          ...result.value,
-          status: result.value.status as TransferRequestStatus,
-        };
-
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDates(request),
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.listTransferRequests)
+  @Implement(experimentTransferRequestsContract.listTransferRequests)
   listTransferRequests(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listTransferRequests, async () => {
-      this.logger.log({
-        msg: "Listing transfer requests",
-        operation: "listTransferRequests",
-        userId: session.user.id,
-      });
-
+    return implement(experimentTransferRequestsContract.listTransferRequests).handler(async () => {
       const result = await this.listTransferRequestsUseCase.execute(session.user.id);
 
       if (result.isSuccess()) {
         const requests = result.value.map((request) => ({
           ...request,
-          status: request.status as TransferRequestStatus,
+          status: request.status as ExperimentTransferRequestStatus,
         }));
-
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(requests),
-        };
+        return formatDatesList(requests);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

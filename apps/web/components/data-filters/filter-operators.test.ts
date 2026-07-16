@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   ALL_OPERATORS,
@@ -13,19 +13,27 @@ import {
   operatorsForKind,
 } from "./filter-operators";
 
-const numericColumn: DataColumn = { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" };
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
-const timestampColumn: DataColumn = {
+const numericColumn: ExperimentDataColumn = {
+  name: "value",
+  type_name: "DOUBLE",
+  type_text: "DOUBLE",
+};
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
+const timestampColumn: ExperimentDataColumn = {
   name: "ts",
   type_name: "TIMESTAMP",
   type_text: "TIMESTAMP",
 };
-const contributorColumn: DataColumn = {
+const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,
 };
-const arrayColumn: DataColumn = {
+const arrayColumn: ExperimentDataColumn = {
   name: "items",
   type_name: "ARRAY",
   type_text: "ARRAY<STRING>",

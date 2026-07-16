@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import type {
   IotDeviceConnection,
@@ -10,11 +11,11 @@ import {
   executeCommandWithDriver,
   executeProtocolWithDriver,
 } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
+import { orpc, orpcClient } from "~/lib/orpc";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
-import { tsr } from "~/lib/tsr";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
   BranchCell,
   CommandCell,
@@ -23,9 +24,9 @@ import type {
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
-import { resolveInlineCommand } from "@repo/api/utils/command-payload";
-import { evaluateBranch, validateBranchCell } from "@repo/api/utils/evaluate-branch";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
+import { evaluateBranch, validateBranchCell } from "@repo/api/transforms/evaluate-branch";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -54,11 +55,8 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
   if (live && live.length > 0) return live;
 
   try {
-    const result = await tsr.protocols.getProtocol.query({
-      params: { id: cell.payload.protocolId },
-    });
-    if (result.status !== 200) return null;
-    const code = result.body.code;
+    const result = await orpcClient.protocols.getProtocol({ id: cell.payload.protocolId });
+    const code = result.code;
     if (code.length > 0) {
       return code;
     }
@@ -150,7 +148,7 @@ export function useWorkbookExecution({
     useIotConnections(sensorFamily);
   const isConnected = connections.length > 0;
 
-  const executeMacroMutation = tsr.macros.executeMacro.useMutation();
+  const executeMacroMutation = useMutation(orpc.macros.executeMacro.mutationOptions());
 
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
@@ -323,19 +321,15 @@ export function useWorkbookExecution({
   const executeMacroOn = useCallback(async (macroId: string, data: Record<string, unknown>) => {
     let result;
     try {
-      result = await executeMacroMutationRef.current.mutateAsync({
-        params: { id: macroId },
-        body: { data },
-      });
+      result = await executeMacroMutationRef.current.mutateAsync({ id: macroId, data });
     } catch (err) {
-      // ts-rest rejects with a raw response object on HTTP errors; surface
-      // the server's message instead of a generic one.
+      // oRPC throws an ORPCError on HTTP errors; surface the server's message.
       throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
     }
-    if (!result.body.success) {
-      throw new Error(result.body.error ?? "Macro execution failed");
+    if (!result.success) {
+      throw new Error(result.error ?? "Macro execution failed");
     }
-    return result.body.output;
+    return result.output;
   }, []);
 
   const runMacroCell = useCallback(
@@ -353,11 +347,8 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      // Multi-device input: apply the macro to EVERY device's measurement
-      // individually, so each sensor gets its own derived output. Runs are
-      // serialized: each is its own sandbox invocation, and a handful of
-      // sequential calls beats hammering the executor concurrently. Devices
-      // whose measurement already failed carry their error through.
+      // Multi-device input: apply the macro to every device's measurement
+      // individually (serialized sandbox invocations); failed measurements carry their error through.
       const inputResults = input.deviceResults;
       if (inputResults && inputResults.length > 1) {
         const settled: PromiseSettledResult<unknown>[] = [];

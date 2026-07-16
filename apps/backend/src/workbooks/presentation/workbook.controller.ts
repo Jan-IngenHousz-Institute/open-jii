@@ -1,13 +1,13 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { workbookContract } from "@repo/api/contracts/workbook.contract";
+import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure, isSuccess } from "../../common/utils/fp-utils";
+import { isSuccess } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
 import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook-version/get-workbook-version";
@@ -31,126 +31,106 @@ export class WorkbookController {
     private readonly getWorkbookVersionUseCase: GetWorkbookVersionUseCase,
   ) {}
 
-  @TsRestHandler(workbookContract.createWorkbook)
+  @Implement(workbookContract.createWorkbook)
   createWorkbook(@Session() session: UserSession) {
-    return tsRestHandler(workbookContract.createWorkbook, async ({ body }) => {
+    return implement(workbookContract.createWorkbook).handler(async ({ input }) => {
       const result = await this.createWorkbookUseCase.execute(
-        body as CreateWorkbookDto,
+        input as CreateWorkbookDto,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.getWorkbook)
+  @Implement(workbookContract.getWorkbook)
   getWorkbook(@Session() session: UserSession) {
-    return tsRestHandler(workbookContract.getWorkbook, async ({ params }) => {
-      const result = await this.getWorkbookUseCase.execute(params.id, session.user.id);
+    return implement(workbookContract.getWorkbook).handler(async ({ input }) => {
+      const result = await this.getWorkbookUseCase.execute(input.id, session.user.id);
 
       if (isSuccess(result)) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.listWorkbooks)
+  @Implement(workbookContract.listWorkbooks)
   listWorkbooks(@Session() session: UserSession) {
-    return tsRestHandler(workbookContract.listWorkbooks, async ({ query }) => {
+    return implement(workbookContract.listWorkbooks).handler(async ({ input }) => {
       const result = await this.listWorkbooksUseCase.execute({
-        search: query.search,
-        filter: query.filter,
+        search: input.search,
+        filter: input.filter,
         userId: session.user.id,
       });
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.updateWorkbook)
+  @Implement(workbookContract.updateWorkbook)
   updateWorkbook(@Session() session: UserSession) {
-    return tsRestHandler(workbookContract.updateWorkbook, async ({ params, body }) => {
+    return implement(workbookContract.updateWorkbook).handler(async ({ input }) => {
+      const { id, ...body } = input;
       const result = await this.updateWorkbookUseCase.execute(
-        params.id,
+        id,
         body as UpdateWorkbookDto,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.deleteWorkbook)
+  @Implement(workbookContract.deleteWorkbook)
   deleteWorkbook(@Session() session: UserSession) {
-    return tsRestHandler(workbookContract.deleteWorkbook, async ({ params }) => {
-      const result = await this.deleteWorkbookUseCase.execute(params.id, session.user.id);
+    return implement(workbookContract.deleteWorkbook).handler(async ({ input }) => {
+      const result = await this.deleteWorkbookUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: undefined,
-        };
+        return undefined;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.listWorkbookVersions)
+  @Implement(workbookContract.listWorkbookVersions)
   listWorkbookVersions() {
-    return tsRestHandler(workbookContract.listWorkbookVersions, async ({ params }) => {
-      const result = await this.listWorkbookVersionsUseCase.execute(params.id);
+    return implement(workbookContract.listWorkbookVersions).handler(async ({ input }) => {
+      const result = await this.listWorkbookVersionsUseCase.execute(input.id);
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(workbookContract.getWorkbookVersion)
+  @Implement(workbookContract.getWorkbookVersion)
   getWorkbookVersion() {
-    return tsRestHandler(workbookContract.getWorkbookVersion, async ({ params }) => {
-      const result = await this.getWorkbookVersionUseCase.execute(params.versionId);
+    return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {
+      const result = await this.getWorkbookVersionUseCase.execute(input.versionId);
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

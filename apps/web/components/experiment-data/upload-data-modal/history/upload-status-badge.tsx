@@ -2,11 +2,11 @@
 
 import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 
-import type { UploadHistoryStatus } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadHistoryStatus } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 
 export interface UploadStatusBadgeProps {
-  status: UploadHistoryStatus;
+  status: ExperimentUploadHistoryStatus;
 }
 
 export function UploadStatusBadge({ status }: UploadStatusBadgeProps) {
@@ -26,7 +26,7 @@ export function UploadStatusBadge({ status }: UploadStatusBadgeProps) {
 }
 
 const STATUS_CONFIG: Record<
-  UploadHistoryStatus,
+  ExperimentUploadHistoryStatus,
   { icon: typeof Clock; className: string; labelKey: string; spin: boolean }
 > = {
   pending: {
@@ -59,7 +59,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export const UPLOAD_STATUS_BORDER_COLOR: Record<UploadHistoryStatus, string> = {
+export const UPLOAD_STATUS_BORDER_COLOR: Record<ExperimentUploadHistoryStatus, string> = {
   pending: "border-l-yellow-400",
   running: "border-l-blue-400",
   completed: "border-l-green-500",

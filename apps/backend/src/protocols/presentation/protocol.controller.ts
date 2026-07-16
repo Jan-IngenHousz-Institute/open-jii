@@ -1,16 +1,16 @@
 import { Controller, Inject, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { contract } from "@repo/api/contract";
-import { validateProtocolJson } from "@repo/api/schemas/protocol-validator";
+import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
+import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";
-import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddCompatibleMacrosUseCase } from "../application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
@@ -23,19 +23,12 @@ import { CreateProtocolDto } from "../core/models/protocol.model";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
-/**
- * Safely parses the protocol code field, ensuring it's a proper Record<string, unknown>
- * @param code The code field from the protocol, which could be a string, object, or null/undefined
- * @param logger Logger function
- * @returns Parsed code as an object or empty object if input is null/undefined or if parsing fails
- */
 export function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
   if (!code) {
     return [{}];
   }
 
   if (typeof code === "object" && Array.isArray(code)) {
-    // If code is already an object, ensure it's a Record<string, unknown>
     return code as Record<string, unknown>[];
   }
 
@@ -56,14 +49,7 @@ export function parseProtocolCode(code: unknown, logger: Logger): Record<string,
   return [{}];
 }
 
-/**
- * Validates the protocol code JSON structure
- * @param code The code field from the protocol
- * @param logger Logger function
- * @returns Success if valid JSON structure, failure otherwise
- */
 function validateJsonStructure(code: unknown, logger: Logger) {
-  // Ensure code is present and is a valid array
   if (!code) {
     return failure(AppError.badRequest("Protocol code is required"));
   }
@@ -73,7 +59,6 @@ function validateJsonStructure(code: unknown, logger: Logger) {
   }
 
   try {
-    // Verify it can be stringified (valid JSON structure)
     JSON.stringify(code);
     return success(code);
   } catch (error) {
@@ -87,30 +72,20 @@ function validateJsonStructure(code: unknown, logger: Logger) {
   }
 }
 
-/**
- * Validates the protocol code fields with full schema validation
- * @param code The code field from the protocol, which could be a string, object, or null/undefined
- * @param logger Logger function
- * @param analyticsPort Analytics port to check feature flags
- * @param useStrictValidation Whether to use strict protocol validation (default: false)
- */
 async function validateProtocolCode(
   code: unknown,
   logger: Logger,
   analyticsPort: AnalyticsPort,
   useStrictValidation = false,
 ) {
-  // Check feature flag to determine validation strategy
   const validationAsWarning = await analyticsPort.isFeatureFlagEnabled(
     FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
   );
 
-  // If feature flag is enabled and not using strict validation, only validate JSON structure
   if (validationAsWarning && !useStrictValidation) {
     return validateJsonStructure(code, logger);
   }
 
-  // Otherwise, perform full protocol validation
   const validationResult = validateProtocolJson(code);
   if (!validationResult.success) {
     logger.warn({
@@ -141,73 +116,64 @@ export class ProtocolController {
     private readonly removeCompatibleMacroUseCase: RemoveCompatibleMacroUseCase,
   ) {}
 
-  @TsRestHandler(contract.protocols.listProtocols)
+  @Implement(protocolContract.listProtocols)
   listProtocols(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.listProtocols, async ({ query }) => {
+    return implement(protocolContract.listProtocols).handler(async ({ input }) => {
       const result = await this.listProtocolsUseCase.execute(
-        query.search,
-        query.filter,
+        input.search,
+        input.filter,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        // Transform the code field to ensure it's a proper Record<string, unknown>
         const protocols = result.value.map((protocol) => ({
           ...protocol,
           code: parseProtocolCode(protocol.code, this.logger),
         }));
 
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(protocols),
-        };
+        return formatDatesList(protocols);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.getProtocol)
+  @Implement(protocolContract.getProtocol)
   getProtocol() {
-    return tsRestHandler(contract.protocols.getProtocol, async ({ params }) => {
-      const result = await this.getProtocolUseCase.execute(params.id);
+    return implement(protocolContract.getProtocol).handler(async ({ input }) => {
+      const result = await this.getProtocolUseCase.execute(input.id);
 
       if (result.isSuccess()) {
-        // Transform the code field to ensure it's a proper Record<string, unknown>
         const protocol = {
           ...result.value,
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(protocol),
-        };
+        return formatDates(protocol);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.createProtocol)
+  @Implement(protocolContract.createProtocol)
   createProtocol(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
+    return implement(protocolContract.createProtocol).handler(async ({ input }) => {
       const validationResult = await validateProtocolCode(
-        body.code,
+        input.code,
         this.logger,
         this.analyticsPort,
       );
       if (validationResult.isFailure()) {
-        return handleFailure(validationResult, this.logger);
+        return throwOrpcFailure(validationResult, this.logger);
       }
 
-      // Convert the code from Record<string, unknown> to a JSON string for database storage
       const createDto: CreateProtocolDto = {
-        name: body.name,
-        description: body.description,
-        code: JSON.stringify(body.code),
-        family: body.family,
-        forkedFrom: body.forkedFrom,
+        name: input.name,
+        description: input.description,
+        code: JSON.stringify(input.code),
+        family: input.family,
+        forkedFrom: input.forkedFrom,
       };
 
       const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
@@ -225,39 +191,29 @@ export class ProtocolController {
           userId: session.user.id,
           status: "success",
         });
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDates(protocol),
-        };
+        return formatDates(protocol);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.updateProtocol)
+  @Implement(protocolContract.updateProtocol)
   updateProtocol(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
-      // First check if protocol exists and user is the creator
-      const protocolResult = await this.getProtocolUseCase.execute(params.id);
+    return implement(protocolContract.updateProtocol).handler(async ({ input }) => {
+      const { id, ...body } = input;
+      const protocolResult = await this.getProtocolUseCase.execute(id);
 
       if (protocolResult.isFailure()) {
-        return handleFailure(protocolResult, this.logger);
+        return throwOrpcFailure(protocolResult, this.logger);
       }
 
       if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn({
-          msg: "Unauthorized protocol update attempt",
-          errorCode: ErrorCodes.FORBIDDEN,
-          operation: "updateProtocol",
-          protocolId: params.id,
-          userId: session.user.id,
-          ownerId: protocolResult.value.createdBy,
-        });
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Only the protocol creator can update this protocol" },
-        };
+        return throwOrpcError(
+          AppError.forbidden("Only the protocol creator can update this protocol"),
+          this.logger,
+          "updateProtocol",
+        );
       }
 
       if (body.code !== undefined) {
@@ -267,11 +223,10 @@ export class ProtocolController {
           this.analyticsPort,
         );
         if (validationResult.isFailure()) {
-          return handleFailure(validationResult, this.logger);
+          return throwOrpcFailure(validationResult, this.logger);
         }
       }
 
-      // Convert API contract body to DTO with proper JSON handling
       const updateDto = {
         name: body.name,
         description: body.description,
@@ -279,7 +234,7 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.updateProtocolUseCase.execute(params.id, updateDto);
+      const result = await this.updateProtocolUseCase.execute(id, updateDto);
 
       if (result.isSuccess()) {
         const protocol = {
@@ -294,126 +249,104 @@ export class ProtocolController {
           userId: session.user.id,
           status: "success",
         });
-        return {
-          status: StatusCodes.OK,
-          body: formatDates(protocol),
-        };
+        return formatDates(protocol);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.deleteProtocol)
+  @Implement(protocolContract.deleteProtocol)
   deleteProtocol(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
+    return implement(protocolContract.deleteProtocol).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_DELETION,
         session.user.email || session.user.id,
       );
 
       if (!isDeletionEnabled) {
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Protocol deletion is currently disabled" },
-        };
+        return throwOrpcError(
+          AppError.forbidden("Protocol deletion is currently disabled"),
+          this.logger,
+          "deleteProtocol",
+        );
       }
 
-      // First check if protocol exists and user is the creator
-      const protocolResult = await this.getProtocolUseCase.execute(params.id);
+      const protocolResult = await this.getProtocolUseCase.execute(input.id);
 
       if (protocolResult.isFailure()) {
-        return handleFailure(protocolResult, this.logger);
+        return throwOrpcFailure(protocolResult, this.logger);
       }
 
       if (protocolResult.value.createdBy !== session.user.id) {
-        this.logger.warn({
-          msg: "Unauthorized protocol delete attempt",
-          errorCode: ErrorCodes.FORBIDDEN,
-          operation: "deleteProtocol",
-          protocolId: params.id,
-          userId: session.user.id,
-          ownerId: protocolResult.value.createdBy,
-        });
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "Only the protocol creator can delete this protocol" },
-        };
+        return throwOrpcError(
+          AppError.forbidden("Only the protocol creator can delete this protocol"),
+          this.logger,
+          "deleteProtocol",
+        );
       }
 
-      const result = await this.deleteProtocolUseCase.execute(params.id);
+      const result = await this.deleteProtocolUseCase.execute(input.id);
 
       if (result.isSuccess()) {
         this.logger.log({
           msg: "Protocol deleted",
           operation: "deleteProtocol",
-          protocolId: params.id,
+          protocolId: input.id,
           userId: session.user.id,
           status: "success",
         });
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: null,
-        };
+        return undefined;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.listCompatibleMacros)
+  @Implement(protocolContract.listCompatibleMacros)
   listCompatibleMacros() {
-    return tsRestHandler(contract.protocols.listCompatibleMacros, async ({ params }) => {
-      const result = await this.listCompatibleMacrosUseCase.execute(params.id);
+    return implement(protocolContract.listCompatibleMacros).handler(async ({ input }) => {
+      const result = await this.listCompatibleMacrosUseCase.execute(input.id);
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.addCompatibleMacros)
+  @Implement(protocolContract.addCompatibleMacros)
   addCompatibleMacros(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.addCompatibleMacros, async ({ params, body }) => {
+    return implement(protocolContract.addCompatibleMacros).handler(async ({ input }) => {
       const result = await this.addCompatibleMacrosUseCase.execute(
-        params.id,
-        body.macroIds,
+        input.id,
+        input.macroIds,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.protocols.removeCompatibleMacro)
+  @Implement(protocolContract.removeCompatibleMacro)
   removeCompatibleMacro(@Session() session: UserSession) {
-    return tsRestHandler(contract.protocols.removeCompatibleMacro, async ({ params }) => {
+    return implement(protocolContract.removeCompatibleMacro).handler(async ({ input }) => {
       const result = await this.removeCompatibleMacroUseCase.execute(
-        params.id,
-        params.macroId,
+        input.id,
+        input.macroId,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: null,
-        };
+        return undefined;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

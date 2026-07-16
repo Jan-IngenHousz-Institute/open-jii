@@ -4,7 +4,8 @@ import { Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn, Role } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentRole } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -27,8 +28,8 @@ import { useDataSourcesFieldArray } from "../context/data-sources-field-array-co
 
 interface MultiColumnShelfProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
-  role: Role;
+  columns: ExperimentDataColumn[];
+  role: ExperimentRole;
   heading: string;
   columnLabel: string;
   placeholder: string;

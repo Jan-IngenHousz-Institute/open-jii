@@ -23,8 +23,9 @@ describe("useMacroUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "test-macro-id" },
-        body: { name: "Updated Name", description: "Updated Description" },
+        id: "test-macro-id",
+        name: "Updated Name",
+        description: "Updated Description",
       });
     });
 
@@ -55,8 +56,8 @@ describe("useMacroUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "test-macro-id" },
-        body: { name: "Updated Macro" },
+        id: "test-macro-id",
+        name: "Updated Macro",
       });
     });
 
@@ -85,8 +86,8 @@ describe("useMacroUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "test-macro-id" },
-        body: { name: "Will Fail" },
+        id: "test-macro-id",
+        name: "Will Fail",
       });
     });
 

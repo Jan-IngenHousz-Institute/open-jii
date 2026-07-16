@@ -13,7 +13,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { WorkbookVersion } from "@repo/api/schemas/workbook-version.schema";
+import type { WorkbookVersion } from "@repo/api/domains/workbook/workbook-version.schema";
 
 import { WorkbookUpgradeDialog } from "./workbook-upgrade-dialog";
 

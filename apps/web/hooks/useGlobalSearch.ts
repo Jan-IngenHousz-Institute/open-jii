@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 import { useDebounce } from "./useDebounce";
 
@@ -17,19 +18,20 @@ export function useGlobalSearch(query: string, limit = DEFAULT_LIMIT) {
   const [debouncedQuery, isDebounced] = useDebounce(trimmed, SEARCH_DEBOUNCE_MS);
   const enabled = debouncedQuery.length >= MIN_QUERY_LENGTH;
 
-  const result = tsr.search.globalSearch.useQuery({
-    queryData: { query: { query: debouncedQuery, limit } },
-    queryKey: ["global-search", debouncedQuery, limit],
-    enabled,
-    placeholderData: (prev) => prev,
-  });
+  const result = useQuery(
+    orpc.search.globalSearch.queryOptions({
+      input: { query: debouncedQuery, limit },
+      enabled,
+      placeholderData: (prev) => prev,
+    }),
+  );
 
   const isSearching =
     trimmed.length >= MIN_QUERY_LENGTH && (!isDebounced || (enabled && result.isFetching));
 
   return {
     ...result,
-    results: result.data?.body.results ?? [],
+    results: result.data?.results ?? [],
     isSearching,
     enabled,
     minQueryLength: MIN_QUERY_LENGTH,

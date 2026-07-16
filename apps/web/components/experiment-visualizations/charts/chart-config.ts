@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Resolver } from "react-hook-form";
 
-import type { CreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
-import { zCreateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { CreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { zCreateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import type { ScatterSeriesData } from "@repo/ui/components/charts/scatter-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";

@@ -1,12 +1,11 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentProjectTransferWebhookContract } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
 
 import { HmacGuard } from "../../common/guards/hmac.guard";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ExecuteProjectTransferUseCase } from "../application/use-cases/project-transfer/execute-project-transfer";
 
 @Controller()
@@ -17,19 +16,18 @@ export class ProjectTransferWebhookController {
 
   constructor(private readonly executeProjectTransferUseCase: ExecuteProjectTransferUseCase) {}
 
-  @TsRestHandler(contract.experiments.projectTransfer)
+  @Implement(experimentProjectTransferWebhookContract.projectTransfer)
   handleProjectTransfer() {
-    return tsRestHandler(contract.experiments.projectTransfer, async ({ body }) => {
-      const result = await this.executeProjectTransferUseCase.execute(body);
+    return implement(experimentProjectTransferWebhookContract.projectTransfer).handler(
+      async ({ input }) => {
+        const result = await this.executeProjectTransferUseCase.execute(input);
 
-      if (result.isSuccess()) {
-        return {
-          status: StatusCodes.CREATED as const,
-          body: result.value,
-        };
-      }
+        if (result.isSuccess()) {
+          return result.value;
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

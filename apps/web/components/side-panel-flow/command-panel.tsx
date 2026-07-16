@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 
-import type { CommandFormat } from "@repo/api/schemas/experiment.schema";
-import { validateInlineCommand } from "@repo/api/utils/command-payload";
+import type { CommandFormat } from "@repo/api/domains/experiment/experiment.schema";
+import { validateInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import {

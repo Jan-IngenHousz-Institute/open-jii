@@ -7,8 +7,8 @@ import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -69,18 +69,16 @@ export function ProtocolPicker({
     setIsCreating(true);
     try {
       const result = await createProtocol.mutateAsync({
-        body: {
-          name: newName.trim(),
-          family: newFamily,
-          code: [],
-        },
+        name: newName.trim(),
+        family: newFamily,
+        code: [],
       });
       const cell: ProtocolCell = {
         id: crypto.randomUUID(),
         type: "protocol",
         isCollapsed: false,
         payload: {
-          protocolId: result.body.id,
+          protocolId: result.id,
           version: 1,
           name: newName.trim(),
         },

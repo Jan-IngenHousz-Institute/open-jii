@@ -23,7 +23,7 @@ export default function ExperimentVisualizationsPage() {
       </div>
 
       <ExperimentVisualizationsList
-        visualizations={visualizationsData?.body ?? []}
+        visualizations={visualizationsData ?? []}
         experimentId={id}
         isLoading={isLoading}
         isArchived={true}

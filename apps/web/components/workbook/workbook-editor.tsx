@@ -22,9 +22,9 @@ import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { EntitySnapshots } from "@repo/api/schemas/workbook-version.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";

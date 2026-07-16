@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import type { ExperimentMember } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { UserAvatar } from "../user-avatar";

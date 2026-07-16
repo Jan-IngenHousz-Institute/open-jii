@@ -20,13 +20,15 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Test", code: [{}], family: "multispeq" },
+        name: "Test",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalled();
-      expect((onSuccess.mock.calls[0][0] as { body: { id: string } }).body.id).toBe("proto-1");
+      expect((onSuccess.mock.calls[0][0] as { id: string }).id).toBe("proto-1");
     });
   });
 
@@ -39,7 +41,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "My Protocol", code: [{ averages: 2 }], family: "multispeq" },
+        name: "My Protocol",
+        code: [{ averages: 2 }],
+        family: "multispeq",
       });
     });
 
@@ -57,7 +61,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "T", code: [{}], family: "multispeq" },
+        name: "T",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
@@ -75,7 +81,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Dup", code: [{}], family: "multispeq" },
+        name: "Dup",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
@@ -96,7 +104,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Bad", code: [{}], family: "multispeq" },
+        name: "Bad",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
@@ -117,7 +127,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Dup", code: [{}], family: "multispeq" },
+        name: "Dup",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
@@ -136,7 +148,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "T", code: [{}], family: "multispeq" },
+        name: "T",
+        code: [{}],
+        family: "multispeq",
       });
     });
 
@@ -163,7 +177,9 @@ describe("useProtocolCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Fail", code: [{}], family: "multispeq" },
+        name: "Fail",
+        code: [{}],
+        family: "multispeq",
       });
     });
 

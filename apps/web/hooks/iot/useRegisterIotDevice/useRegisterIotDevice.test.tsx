@@ -4,7 +4,7 @@ import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { RegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
+import type { RegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 import { useRegisterIotDevice } from "./useRegisterIotDevice";
 
@@ -21,7 +21,7 @@ describe("useRegisterIotDevice", () => {
     const { result } = renderHook(() => useRegisterIotDevice());
 
     act(() => {
-      result.current.mutate({ body });
+      result.current.mutate(body);
     });
 
     await waitFor(() => {
@@ -36,7 +36,7 @@ describe("useRegisterIotDevice", () => {
     const { result } = renderHook(() => useRegisterIotDevice({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ body });
+      result.current.mutate(body);
     });
 
     await waitFor(() => {
@@ -50,7 +50,7 @@ describe("useRegisterIotDevice", () => {
     const { result } = renderHook(() => useRegisterIotDevice());
 
     act(() => {
-      result.current.mutate({ body });
+      result.current.mutate(body);
     });
 
     await waitFor(() => {

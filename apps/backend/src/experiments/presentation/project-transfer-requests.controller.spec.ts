@@ -2,9 +2,9 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type {
-  CreateTransferRequestBody,
-  TransferRequest,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentCreateTransferRequestBody,
+  ExperimentTransferRequest,
+} from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -57,16 +57,16 @@ describe("ProjectTransferRequestsController", () => {
       );
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.createTransferRequest, {});
 
       // Create the request body
-      const createRequestData: CreateTransferRequestBody = {
+      const createRequestData: ExperimentCreateTransferRequestBody = {
         projectIdOld: "12345",
         projectUrlOld: "https://photosynq.org/projects/12345",
       };
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(createRequestData)
@@ -80,7 +80,7 @@ describe("ProjectTransferRequestsController", () => {
 
     it("should return 400 if projectIdOld is missing", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -97,7 +97,7 @@ describe("ProjectTransferRequestsController", () => {
 
     it("should return 400 if projectUrlOld is missing", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -114,7 +114,7 @@ describe("ProjectTransferRequestsController", () => {
 
     it("should return 400 if projectUrlOld is not a valid URL", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.createTransferRequest, {});
 
       // Create the request body
       const createRequestData = {
@@ -132,10 +132,10 @@ describe("ProjectTransferRequestsController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.createTransferRequest.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.createTransferRequest, {});
 
       // Create the request body
-      const createRequestData: CreateTransferRequestBody = {
+      const createRequestData: ExperimentCreateTransferRequestBody = {
         projectIdOld: "12345",
         projectUrlOld: "https://photosynq.org/projects/12345",
       };
@@ -180,10 +180,10 @@ describe("ProjectTransferRequestsController", () => {
       );
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.listTransferRequests, {});
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest[]> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -199,10 +199,10 @@ describe("ProjectTransferRequestsController", () => {
       vi.spyOn(listTransferRequestsUseCase, "execute").mockResolvedValue(success([]));
 
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.listTransferRequests, {});
 
       // Send the request
-      const response: SuperTestResponse<TransferRequest[]> = await testApp
+      const response: SuperTestResponse<ExperimentTransferRequest[]> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -212,7 +212,7 @@ describe("ProjectTransferRequestsController", () => {
 
     it("should return 401 when not authenticated", async () => {
       // Construct the path
-      const path = testApp.resolvePath(contract.experiments.listTransferRequests.path, {});
+      const path = testApp.resolveOrpcPath(contract.experiments.listTransferRequests, {});
 
       // Send the request
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);

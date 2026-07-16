@@ -1,13 +1,12 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentMembersContract } from "@repo/api/domains/experiment/members/experiment-members.contract";
 
 import { formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
@@ -26,128 +25,82 @@ export class ExperimentMembersController {
     private readonly transferExperimentAdminUseCase: TransferExperimentAdminUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.listExperimentMembers)
+  @Implement(experimentMembersContract.listExperimentMembers)
   listMembers(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listExperimentMembers, async ({ params }) => {
-      const result = await this.listExperimentMembersUseCase.execute(params.id, session.user.id);
-
+    return implement(experimentMembersContract.listExperimentMembers).handler(async ({ input }) => {
+      const result = await this.listExperimentMembersUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
-        // Format dates to strings for the API contract
-        const members = result.value;
-        const formattedMembers = formatDatesList(members);
-
-        return {
-          status: StatusCodes.OK as const,
-          body: formattedMembers,
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.addExperimentMembers)
+  @Implement(experimentMembersContract.addExperimentMembers)
   addMembers(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.addExperimentMembers, async ({ params, body }) => {
+    return implement(experimentMembersContract.addExperimentMembers).handler(async ({ input }) => {
+      const { id, ...body } = input;
       const result = await this.addExperimentMembersUseCase.execute(
-        params.id,
+        id,
         body.members,
         session.user.id,
       );
-
       if (result.isSuccess()) {
-        const members = result.value;
-        const formattedMembers = formatDatesList(members);
-
-        this.logger.log(
-          `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${session.user.id}`,
-        );
-
-        return {
-          status: StatusCodes.CREATED,
-          body: formattedMembers,
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.removeExperimentMember)
+  @Implement(experimentMembersContract.removeExperimentMember)
   removeMember(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.removeExperimentMember, async ({ params }) => {
-      const result = await this.removeExperimentMemberUseCase.execute(
-        params.id,
-        params.memberId,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log(
-          `Member ${params.memberId} removed from experiment ${params.id} by user ${session.user.id}`,
-        );
-
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: null,
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
-  }
-
-  @TsRestHandler(contract.experiments.updateExperimentMemberRole)
-  updateMemberRole(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.updateExperimentMemberRole,
-      async ({ params, body }) => {
-        const result = await this.updateExperimentMemberRoleUseCase.execute(
-          params.id,
-          params.memberId,
-          body.role,
+    return implement(experimentMembersContract.removeExperimentMember).handler(
+      async ({ input }) => {
+        const result = await this.removeExperimentMemberUseCase.execute(
+          input.id,
+          input.memberId,
           session.user.id,
         );
-
         if (result.isSuccess()) {
-          const member = result.value;
-          const formattedMember = formatDatesList([member])[0];
-
-          this.logger.log(
-            `Member ${params.memberId} role updated to ${body.role} in experiment ${params.id} by user ${session.user.id}`,
-          );
-
-          return {
-            status: StatusCodes.OK,
-            body: formattedMember,
-          };
+          return undefined;
         }
-
-        return handleFailure(result, this.logger);
+        return throwOrpcFailure(result, this.logger);
       },
     );
   }
 
-  @TsRestHandler(contract.experiments.transferExperimentAdmin)
-  transferAdmin(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.transferExperimentAdmin, async ({ body }) => {
-      const result = await this.transferExperimentAdminUseCase.execute(
-        body.transfers,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log(
-          `Admin transfer across ${body.transfers.length} experiment(s) processed by user ${session.user.id}`,
+  @Implement(experimentMembersContract.updateExperimentMemberRole)
+  updateMemberRole(@Session() session: UserSession) {
+    return implement(experimentMembersContract.updateExperimentMemberRole).handler(
+      async ({ input }) => {
+        const { id, memberId, ...body } = input;
+        const result = await this.updateExperimentMemberRoleUseCase.execute(
+          id,
+          memberId,
+          body.role,
+          session.user.id,
         );
+        if (result.isSuccess()) {
+          return formatDatesList([result.value])[0];
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
 
-        return {
-          status: StatusCodes.OK,
-          body: { results: result.value },
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
+  @Implement(experimentMembersContract.transferExperimentAdmin)
+  transferAdmin(@Session() session: UserSession) {
+    return implement(experimentMembersContract.transferExperimentAdmin).handler(
+      async ({ input }) => {
+        const result = await this.transferExperimentAdminUseCase.execute(
+          input.transfers,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return { results: result.value };
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

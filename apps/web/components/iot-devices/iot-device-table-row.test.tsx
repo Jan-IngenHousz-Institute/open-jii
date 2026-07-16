@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
 

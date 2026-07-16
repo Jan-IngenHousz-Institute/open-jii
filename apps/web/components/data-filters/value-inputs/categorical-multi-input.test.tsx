@@ -3,14 +3,18 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { CategoricalMultiInput } from "./categorical-multi-input";
 
-const labelColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const labelColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
-const contributorColumn: DataColumn = {
+const contributorColumn: ExperimentDataColumn = {
   name: "owner",
   type_name: "STRUCT",
   type_text: WellKnownColumnTypes.CONTRIBUTOR,

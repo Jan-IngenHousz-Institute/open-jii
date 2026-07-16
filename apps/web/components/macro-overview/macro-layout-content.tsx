@@ -5,7 +5,7 @@ import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { Code } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
-import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -27,7 +27,7 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
 
   const handleTitleSave = async (newName: string) => {
     await updateMacro(
-      { params: { id }, body: { name: newName } },
+      { id, name: newName },
       {
         onSuccess: () => {
           toast({ description: t("macros.macroUpdated") });

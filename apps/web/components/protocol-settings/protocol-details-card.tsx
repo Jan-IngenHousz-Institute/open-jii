@@ -8,7 +8,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { UpdateProtocolRequestBody, SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type {
+  UpdateProtocolRequestBody,
+  SensorFamily,
+} from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -83,8 +86,8 @@ export function ProtocolDetailsCard({
     data: UpdateProtocolRequestBody & { name: string; family: SensorFamily },
   ) {
     await updateProtocol({
-      params: { id: protocolId },
-      body: data,
+      id: protocolId,
+      ...data,
     });
     toast({ description: t("protocols.protocolUpdated") });
   }

@@ -20,7 +20,10 @@ import { useListExports } from "~/hooks/experiment/useListExports/useListExports
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
-import type { ExportRecord, InitiateExportBody } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentExportRecord,
+  ExperimentInitiateExportBody,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -45,7 +48,7 @@ interface ExportListStepProps {
   experimentId: string;
   tableName: string;
   displayName?: string;
-  onCreateExport: (format: InitiateExportBody["format"]) => void;
+  onCreateExport: (format: ExperimentInitiateExportBody["format"]) => void;
   onClose: () => void;
   creationStatus?: CreationStatus;
 }
@@ -58,7 +61,7 @@ const statusBorderColor: Record<string, string> = {
   failed: "border-l-red-500",
 };
 
-const StatusBadge = ({ status }: { status: ExportRecord["status"] }) => {
+const StatusBadge = ({ status }: { status: ExperimentExportRecord["status"] }) => {
   const { t } = useTranslation("experimentData");
 
   const statusConfig = {
@@ -136,7 +139,7 @@ const ExportCard = ({
   isDownloading,
   index,
 }: {
-  export: ExportRecord;
+  export: ExperimentExportRecord;
   onDownload: (exportId: string) => void;
   isDownloading: boolean;
   index: number;
@@ -253,7 +256,7 @@ export function ExportListStep({
   const { t } = useTranslation("experimentData");
   const { data, isLoading, error } = useListExports({ experimentId, tableName });
   const { downloadExport, isDownloading, downloadingExportId } = useDownloadExport(experimentId);
-  const exports = data?.body.exports ?? [];
+  const exports = data?.exports ?? [];
 
   // Mirror every poll into the global activity context so the topbar bell
   // shows export status without the user keeping this modal open.

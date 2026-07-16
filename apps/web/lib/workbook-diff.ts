@@ -1,4 +1,4 @@
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 // Mirrors the backend drift projection (is-workbook-upgradable `designOf`): the
 // upgrade diff must ignore the same runtime/UI artifacts so a re-run never shows

@@ -2,14 +2,14 @@
 
 import { BarChart3 } from "lucide-react";
 
-import type { VisualizationWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { LoadedVisualizationView } from "./loaded-visualization-view";
 
 interface VisualizationWidgetViewProps {
-  widget: VisualizationWidget;
+  widget: ExperimentVisualizationWidget;
   experimentId: string;
 }
 

@@ -17,8 +17,8 @@ describe("useExperimentLocationsUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { locations: [{ name: "Updated Site", latitude: 40.71, longitude: -74.01 }] },
+        id: "exp-1",
+        locations: [{ name: "Updated Site", latitude: 40.71, longitude: -74.01 }],
       });
     });
 
@@ -37,7 +37,7 @@ describe("useExperimentLocationsUpdate", () => {
     const locations = [{ name: "Updated Site", latitude: 40.71, longitude: -74.01 }];
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-2" }, body: { locations } });
+      result.current.mutate({ id: "exp-2", locations });
     });
 
     await waitFor(() => {
@@ -53,8 +53,8 @@ describe("useExperimentLocationsUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { locations: [{ name: "Updated Site", latitude: 40.71, longitude: -74.01 }] },
+        id: "exp-1",
+        locations: [{ name: "Updated Site", latitude: 40.71, longitude: -74.01 }],
       });
     });
 

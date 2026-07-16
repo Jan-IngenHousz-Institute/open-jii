@@ -1,12 +1,11 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentDataContract } from "@repo/api/domains/experiment/data/experiment-data.contract";
 
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
@@ -21,109 +20,38 @@ export class ExperimentDataController {
     private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.getExperimentTables)
+  @Implement(experimentDataContract.getExperimentTables)
   getExperimentTables(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.getExperimentTables, async ({ params }) => {
-      const { id: experimentId } = params;
-
-      this.logger.log({
-        msg: "Processing tables metadata request",
-        operation: "getTables",
-        experimentId,
-        userId: session.user.id,
-      });
-
-      const result = await this.getExperimentTablesUseCase.execute(experimentId, session.user.id);
-
+    return implement(experimentDataContract.getExperimentTables).handler(async ({ input }) => {
+      const result = await this.getExperimentTablesUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
-        const data = result.value;
-
-        this.logger.log({
-          msg: "Successfully retrieved table metadata",
-          operation: "getTables",
-          experimentId,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK,
-          body: data,
-        };
+        return result.value;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.getExperimentData)
+  @Implement(experimentDataContract.getExperimentData)
   getExperimentData(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
-      const { id: experimentId } = params;
-
-      this.logger.log({
-        msg: "Processing data request",
-        operation: "getData",
-        experimentId,
-        userId: session.user.id,
-      });
-
-      // Forward the parsed query verbatim; `filters` and `aggregation` are
-      // already decoded from JSON-encoded strings into their structured
-      // shapes by the contract's zod transforms.
-      const result = await this.getExperimentDataUseCase.execute(
-        experimentId,
-        session.user.id,
-        query,
-      );
-
+    return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
+      const { id, ...query } = input;
+      const result = await this.getExperimentDataUseCase.execute(id, session.user.id, query);
       if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Successfully retrieved data",
-          operation: "getData",
-          experimentId,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK,
-          body: result.value,
-        };
+        return result.value;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.getDistinctColumnValues)
+  @Implement(experimentDataContract.getDistinctColumnValues)
   getDistinctColumnValues(@Session() session: UserSession) {
-    return tsRestHandler(
-      contract.experiments.getDistinctColumnValues,
-      async ({ params, query }) => {
-        const { id: experimentId } = params;
-
-        this.logger.log({
-          msg: "Processing distinct values request",
-          operation: "getDistinctColumnValues",
-          experimentId,
-          userId: session.user.id,
-          column: query.column,
-        });
-
-        const result = await this.getDistinctColumnValuesUseCase.execute(
-          experimentId,
-          session.user.id,
-          query,
-        );
-
-        if (result.isSuccess()) {
-          return {
-            status: StatusCodes.OK,
-            body: result.value,
-          };
-        }
-
-        return handleFailure(result, this.logger);
-      },
-    );
+    return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
+      const { id, ...query } = input;
+      const result = await this.getDistinctColumnValuesUseCase.execute(id, session.user.id, query);
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
   }
 }

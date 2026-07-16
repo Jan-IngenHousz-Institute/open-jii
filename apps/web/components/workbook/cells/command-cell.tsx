@@ -4,9 +4,9 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy, Terminal } from "lucide-react";
 import { useMemo } from "react";
 
-import type { CommandFormat } from "@repo/api/schemas/experiment.schema";
-import type { CommandCell as CommandCellType } from "@repo/api/schemas/workbook-cells.schema";
-import { validateInlineCommand } from "@repo/api/utils/command-payload";
+import type { CommandFormat } from "@repo/api/domains/experiment/experiment.schema";
+import type { CommandCell as CommandCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { validateInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

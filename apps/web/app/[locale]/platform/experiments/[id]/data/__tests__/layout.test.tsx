@@ -99,7 +99,7 @@ describe("<DataLayout />", () => {
         body: {
           ...createExperiment({ id: "test-experiment-id" }),
           status: "unknown",
-        } as never,
+        },
       });
 
       render(

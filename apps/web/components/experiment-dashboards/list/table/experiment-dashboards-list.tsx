@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {

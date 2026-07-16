@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DeletionBlocker, UserMetadata } from "@repo/api/schemas/user.schema";
+import type { DeletionBlocker, UserMetadata } from "@repo/api/domains/user/user.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DeleteAccountBlockers } from "./delete-account-blockers";

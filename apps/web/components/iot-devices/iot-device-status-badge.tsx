@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Clock, RefreshCw, XCircle } from "lucide-react";
 
-import type { IotDeviceStatus } from "@repo/api/schemas/iot.schema";
+import type { IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
 const STATUS_CONFIG: Record<IotDeviceStatus, { icon: typeof Clock; className: string }> = {

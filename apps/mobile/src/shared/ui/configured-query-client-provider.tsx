@@ -88,12 +88,10 @@ export function ConfiguredQueryClientProvider({ children }) {
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any, query) => {
-        const bodyMessage = error?.body?.message;
-        // Always log the raw error so observability sees it even when the
-        // API's own message is what the user gets toasted.
+        // oRPC throws an ORPCError whose user-facing message is at `.message`
+        // (there is no ts-rest-style `.body`). Log the raw error for observability.
         log.warn("query error", {
           message: error?.message,
-          body_message: bodyMessage,
           status: error?.status,
         });
         // Don't toast connection failures. A network/timeout error never got an
@@ -103,7 +101,7 @@ export function ConfiguredQueryClientProvider({ children }) {
         // Queries that gracefully fall back (e.g. user profile) opt out of the
         // global toast via meta.suppressToast so a 404 doesn't blare at the user.
         if (query.meta?.suppressToast) return;
-        toast.error(bodyMessage ?? i18n.t("common:errorGeneric"));
+        toast.error(error?.message ?? i18n.t("common:errorGeneric"));
       },
     });
 

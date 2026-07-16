@@ -1,8 +1,9 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
-import type { ExperimentStatus } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 
 import { useDebounce } from "../../useDebounce";
 
@@ -68,16 +69,15 @@ export const useExperiments = ({
   );
 
   // When filter is "all", we don't pass any filter to the API
-  const { data } = tsr.experiments.listExperiments.useQuery({
-    queryData: {
-      query: {
+  const { data } = useQuery(
+    orpc.experiments.listExperiments.queryOptions({
+      input: {
         filter: filter === "all" ? undefined : filter,
         status: archived ? "archived" : status,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
-    },
-    queryKey: ["experiments", filter, status, debouncedSearch, archived],
-  });
+    }),
+  );
 
   // Return query result with filter, status, and search controls
   return {

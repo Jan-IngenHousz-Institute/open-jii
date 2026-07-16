@@ -17,7 +17,7 @@ describe("useRevokeIotCredentials", () => {
     const { result } = renderHook(() => useRevokeIotCredentials({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" } });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {
@@ -30,7 +30,7 @@ describe("useRevokeIotCredentials", () => {
     const { result } = renderHook(() => useRevokeIotCredentials());
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "d1" } });
+      result.current.mutate({ deviceId: "d1" });
     });
 
     await waitFor(() => {

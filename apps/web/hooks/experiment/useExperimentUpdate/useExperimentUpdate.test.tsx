@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -18,8 +19,8 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "Updated" },
+        id: "exp-1",
+        name: "Updated",
       });
     });
 
@@ -34,10 +35,13 @@ describe("useExperimentUpdate", () => {
       defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
     });
 
+    const experimentKey = orpc.experiments.getExperiment.queryKey({ input: { id: "exp-1" } });
+
     // Pre-populate the single experiment cache
-    queryClient.setQueryData(["experiment", "exp-1"], {
-      body: createExperiment({ id: "exp-1", name: "Old Name", description: "Old desc" }),
-    });
+    queryClient.setQueryData(
+      experimentKey,
+      createExperiment({ id: "exp-1", name: "Old Name", description: "Old desc" }),
+    );
 
     // Delay the response so we can observe optimistic state
     server.mount(contract.experiments.updateExperiment, {
@@ -49,24 +53,25 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "New Name" },
+        id: "exp-1",
+        name: "New Name",
       });
     });
 
     // Optimistic update should apply immediately
     await waitFor(() => {
-      const cached = queryClient.getQueryData<{ body: { name: string } }>(["experiment", "exp-1"]);
-      expect(cached?.body.name).toBe("New Name");
+      const cached = queryClient.getQueryData<{ name: string }>(experimentKey);
+      expect(cached?.name).toBe("New Name");
     });
   });
 
   it("reverts cache on error", async () => {
     const queryClient = createTestQueryClient();
 
-    queryClient.setQueryData(["experiment", "exp-1"], {
-      body: createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
-    });
+    queryClient.setQueryData(
+      orpc.experiments.getExperiment.queryKey({ input: { id: "exp-1" } }),
+      createExperiment({ id: "exp-1", name: "Original", description: "desc" }),
+    );
 
     server.mount(contract.experiments.updateExperiment, { status: 500 });
 
@@ -78,8 +83,8 @@ describe("useExperimentUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: { name: "Should Revert" },
+        id: "exp-1",
+        name: "Should Revert",
       });
     });
 
@@ -107,14 +112,18 @@ describe("useExperimentUpdate", () => {
     const { result } = renderHook(() => useExperimentUpdate(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-1" }, body: { anonymizeContributors: true } });
+      result.current.mutate({ id: "exp-1", anonymizeContributors: true });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
-    expect(invalidatedKeys).toContainEqual(["experiment-distinct-values", "exp-1"]);
-    expect(invalidatedKeys).toContainEqual(["experiment-visualization-data", "exp-1"]);
+    expect(invalidatedKeys).toContainEqual(
+      orpc.experiments.getDistinctColumnValues.key({ input: { id: "exp-1" } }),
+    );
+    expect(invalidatedKeys).toContainEqual(
+      orpc.experiments.getExperimentData.key({ input: { id: "exp-1" } }),
+    );
   });
 
   it("does not invalidate distinct values / data on a non-anonymization update", async () => {
@@ -128,13 +137,17 @@ describe("useExperimentUpdate", () => {
     const { result } = renderHook(() => useExperimentUpdate(), { queryClient });
 
     act(() => {
-      result.current.mutate({ params: { id: "exp-1" }, body: { name: "Renamed" } });
+      result.current.mutate({ id: "exp-1", name: "Renamed" });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) => arg?.queryKey);
-    expect(invalidatedKeys).not.toContainEqual(["experiment-distinct-values", "exp-1"]);
-    expect(invalidatedKeys).not.toContainEqual(["experiment-visualization-data", "exp-1"]);
+    expect(invalidatedKeys).not.toContainEqual(
+      orpc.experiments.getDistinctColumnValues.key({ input: { id: "exp-1" } }),
+    );
+    expect(invalidatedKeys).not.toContainEqual(
+      orpc.experiments.getExperimentData.key({ input: { id: "exp-1" } }),
+    );
   });
 });

@@ -4,7 +4,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { WorkbookList } from "./workbook-list";

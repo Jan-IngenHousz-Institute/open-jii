@@ -19,7 +19,7 @@ describe("useExperimentDashboardDelete", () => {
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId, dashboardId } });
+      result.current.mutate({ id: experimentId, dashboardId });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -33,7 +33,7 @@ describe("useExperimentDashboardDelete", () => {
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId, onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId, dashboardId } });
+      result.current.mutate({ id: experimentId, dashboardId });
     });
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
@@ -45,7 +45,7 @@ describe("useExperimentDashboardDelete", () => {
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId, dashboardId } });
+      result.current.mutate({ id: experimentId, dashboardId });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -58,7 +58,7 @@ describe("useExperimentDashboardDelete", () => {
     const { result } = renderHook(() => useExperimentDashboardDelete({ experimentId, onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId, dashboardId } });
+      result.current.mutate({ id: experimentId, dashboardId });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

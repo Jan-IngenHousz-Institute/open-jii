@@ -68,7 +68,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
     );
   }
 
-  const device = data.body;
+  const device = data;
   const displayName = device.name ?? device.serialNumber;
 
   return (
@@ -179,7 +179,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
               disabled={isDeleting}
               onClick={(e) => {
                 e.preventDefault();
-                deleteDevice({ params: { deviceId: device.id } });
+                deleteDevice({ deviceId: device.id });
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

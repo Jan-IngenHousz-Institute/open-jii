@@ -1,18 +1,18 @@
 import type { ComponentType } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
-  ChartFamily,
-  ChartType,
-  DataColumn,
+  ExperimentChartFamily,
+  ExperimentChartType,
   ExperimentVisualization,
-} from "@repo/api/schemas/experiment.schema";
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./chart-config";
 
 export interface ChartPanelProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   /** Render inline with no Collapsible chrome (for popover-hosted shelves). */
   flat?: boolean;
 }
@@ -50,8 +50,8 @@ export interface ShelfDef {
 }
 
 export interface ChartTypeDef {
-  type: ChartType;
-  family: ChartFamily;
+  type: ExperimentChartType;
+  family: ExperimentChartFamily;
   labelKey: string;
   descriptionKey: string;
   icon: ComponentType<ChartTypeIconProps>;

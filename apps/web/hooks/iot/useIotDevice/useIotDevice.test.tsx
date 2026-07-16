@@ -16,7 +16,7 @@ describe("useIotDevice", () => {
     const { result } = renderHook(() => useIotDevice("dev-1"));
 
     await waitFor(() => {
-      expect(result.current.data?.body.id).toBe("dev-1");
+      expect(result.current.data?.id).toBe("dev-1");
     });
     expect(spy.params.deviceId).toBe("dev-1");
   });

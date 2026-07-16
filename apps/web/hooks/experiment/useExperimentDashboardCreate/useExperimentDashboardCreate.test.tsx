@@ -20,7 +20,7 @@ describe("useExperimentDashboardCreate", () => {
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId }, body: { name: "Fresh dash" } });
+      result.current.mutate({ id: experimentId, name: "Fresh dash" });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -39,7 +39,7 @@ describe("useExperimentDashboardCreate", () => {
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId, onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId }, body: { name: "Fresh dash" } });
+      result.current.mutate({ id: experimentId, name: "Fresh dash" });
     });
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
@@ -52,7 +52,7 @@ describe("useExperimentDashboardCreate", () => {
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId }, body: { name: "x" } });
+      result.current.mutate({ id: experimentId, name: "x" });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -65,7 +65,7 @@ describe("useExperimentDashboardCreate", () => {
     const { result } = renderHook(() => useExperimentDashboardCreate({ experimentId, onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { id: experimentId }, body: { name: "x" } });
+      result.current.mutate({ id: experimentId, name: "x" });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

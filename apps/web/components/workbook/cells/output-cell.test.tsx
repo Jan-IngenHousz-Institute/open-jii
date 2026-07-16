@@ -58,7 +58,7 @@ vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
   };
 });
 
-// jsdom does not implement navigator.clipboard — provide a minimal stub so
+// jsdom does not implement navigator.clipboard, so provide a minimal stub so
 // useCopyToClipboard resolves instead of throwing. Hoisted so tests can
 // assert payloads and reset between runs (otherwise call counts leak).
 const writeText = vi.fn().mockResolvedValue(undefined);
@@ -380,7 +380,7 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
     expect(screen.getByText("missing")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
   });
 
   it("renders an empty-array placeholder for empty-array cell values", () => {
@@ -464,7 +464,7 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     // Non-object rows render as em-dash placeholders in every column.
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByText("\u2014").length).toBeGreaterThanOrEqual(4);
   });
 
   describe("Timeseries tab (multispeq)", () => {
@@ -505,7 +505,7 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "ambyte", code: multispeqProtocolCode() } },
+        data: { family: "ambyte", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -526,7 +526,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -545,7 +545,7 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -575,7 +575,7 @@ describe("OutputCellComponent", () => {
       // Family is multispeq so the tab shows; `isLoading: true` triggers the
       // loading branch in OutputCellTimeseries.
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: undefined } },
+        data: { family: "multispeq", code: undefined },
         isLoading: true,
       });
       render(
@@ -595,10 +595,10 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       // Family is multispeq, isLoading is false, but no protocol code is
-      // available — measurementToTimeseries can't decode. Falls into the
+      // available, so measurementToTimeseries can't decode. Falls into the
       // error branch.
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: undefined } },
+        data: { family: "multispeq", code: undefined },
         isLoading: false,
       });
       render(
@@ -627,7 +627,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -646,12 +646,12 @@ describe("OutputCellComponent", () => {
       const user = userEvent.setup();
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Pick the inner ProtocolJson object directly — pickProtocolJson should
+      // Pick the inner ProtocolJson object directly, since pickProtocolJson should
       // accept it as-is (the code field can be either a 1-element array or
       // the inner dict, depending on how the protocol was saved).
       const inner = multispeqProtocolCode()[0];
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: inner } },
+        data: { family: "multispeq", code: inner },
         isLoading: false,
       });
       render(
@@ -695,7 +695,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code } },
+        data: { family: "multispeq", code },
         isLoading: false,
       });
       render(
@@ -722,7 +722,7 @@ describe("OutputCellComponent", () => {
       // the picker should unwrap it.
       const inner = multispeqProtocolCode()[0];
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: { protocol_json: inner } } },
+        data: { family: "multispeq", code: { protocol_json: inner } },
         isLoading: false,
       });
       render(

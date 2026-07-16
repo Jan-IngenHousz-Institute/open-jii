@@ -1,13 +1,13 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { userContract } from "@repo/api/domains/user/user.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { AppError } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
 import { DeleteUserUseCase } from "../application/use-cases/delete-user/delete-user";
 import { GetDeletionBlockersUseCase } from "../application/use-cases/get-deletion-blockers/get-deletion-blockers";
@@ -28,115 +28,72 @@ export class UserController {
     private readonly getDeletionBlockersUseCase: GetDeletionBlockersUseCase,
   ) {}
 
-  @TsRestHandler(contract.users.deleteUser)
+  @Implement(userContract.deleteUser)
   deleteUser() {
-    return tsRestHandler(contract.users.deleteUser, async ({ params }) => {
-      const result = await this.deleteUserUseCase.execute(params.id);
-
+    return implement(userContract.deleteUser).handler(async ({ input }) => {
+      const result = await this.deleteUserUseCase.execute(input.id);
       if (result.isSuccess()) {
         this.logger.log({
           msg: "User deleted",
           operation: "deleteUser",
-          userId: params.id,
+          userId: input.id,
           status: "success",
         });
-        return {
-          status: StatusCodes.NO_CONTENT,
-          body: null,
-        };
+        return undefined;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.getDeletionBlockers)
+  @Implement(userContract.getDeletionBlockers)
   getDeletionBlockers(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.getDeletionBlockers, async ({ params }) => {
-      // Only the user themselves may inspect what blocks their own account deletion.
-      if (params.id !== session.user.id) {
-        return {
-          status: StatusCodes.FORBIDDEN,
-          body: { message: "You can only view your own deletion blockers" },
-        };
+    return implement(userContract.getDeletionBlockers).handler(async ({ input }) => {
+      if (input.id !== session.user.id) {
+        return throwOrpcError(
+          AppError.forbidden("You can only view your own deletion blockers"),
+          this.logger,
+          "getDeletionBlockers",
+        );
       }
 
-      const result = await this.getDeletionBlockersUseCase.execute(params.id);
-
+      const result = await this.getDeletionBlockersUseCase.execute(input.id);
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: { experiments: result.value },
-        };
+        return { experiments: result.value };
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.searchUsers)
-  searchUsers(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.searchUsers, async ({ query }) => {
+  @Implement(userContract.searchUsers)
+  searchUsers() {
+    return implement(userContract.searchUsers).handler(async ({ input }) => {
       const result = await this.searchUsersUseCase.execute({
-        query: query.query,
-        limit: query.limit,
-        offset: query.offset,
+        query: input.query,
+        limit: input.limit,
+        offset: input.offset,
       });
-
       if (result.isSuccess()) {
-        const users = result.value;
-
-        // Format dates to strings for the API contract
-        const formattedUsers = formatDatesList(users);
-
-        this.logger.log({
-          msg: "Users searched",
-          operation: "searchUsers",
-          userId: session.user.id,
-          resultCount: users.length,
-          status: "success",
-        });
-        return {
-          status: StatusCodes.OK,
-          body: formattedUsers,
-        };
+        return formatDatesList(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.getUser)
+  @Implement(userContract.getUser)
   getUser() {
-    return tsRestHandler(contract.users.getUser, async ({ params }) => {
-      const result = await this.getUserUseCase.execute(params.id);
-
+    return implement(userContract.getUser).handler(async ({ input }) => {
+      const result = await this.getUserUseCase.execute(input.id);
       if (result.isSuccess()) {
-        const user = result.value;
-
-        // Format dates to strings for the API contract
-        const formattedUser = formatDates(user);
-
-        this.logger.log({
-          msg: "User retrieved",
-          operation: "getUser",
-          userId: params.id,
-          status: "success",
-        });
-        return {
-          status: StatusCodes.OK,
-          body: formattedUser,
-        };
+        return formatDates(result.value);
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.createUserProfile)
+  @Implement(userContract.createUserProfile)
   createUserProfile(@Session() session: UserSession) {
-    return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
-      const result = await this.createUserProfileUseCase.execute(body, session.user.id);
+    return implement(userContract.createUserProfile).handler(async ({ input }) => {
+      const result = await this.createUserProfileUseCase.execute(input, session.user.id);
       if (result.isSuccess()) {
         this.logger.log({
           msg: "User profile created",
@@ -144,36 +101,20 @@ export class UserController {
           userId: session.user.id,
           status: "success",
         });
-        return {
-          status: StatusCodes.CREATED,
-          body: {},
-        };
+        return {};
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.users.getUserProfile)
+  @Implement(userContract.getUserProfile)
   getUserProfile() {
-    return tsRestHandler(contract.users.getUserProfile, async ({ params }) => {
-      const result = await this.getUserProfileUseCase.execute(params.id);
-
+    return implement(userContract.getUserProfile).handler(async ({ input }) => {
+      const result = await this.getUserProfileUseCase.execute(input.id);
       if (result.isSuccess()) {
-        const userProfile = result.value;
-        this.logger.log({
-          msg: "User profile retrieved",
-          operation: "getUserProfile",
-          userId: params.id,
-          status: "success",
-        });
-        return {
-          status: StatusCodes.OK,
-          body: userProfile,
-        };
+        return result.value;
       }
-
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

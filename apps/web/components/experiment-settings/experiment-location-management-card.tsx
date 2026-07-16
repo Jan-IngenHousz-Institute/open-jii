@@ -33,7 +33,7 @@ export function ExperimentLocationManagement({
   const updateLocationsMutation = useExperimentLocationsUpdate();
 
   // Get experiment locations from API response
-  const locations = useMemo(() => locationsData?.body ?? [], [locationsData]);
+  const locations = useMemo(() => locationsData ?? [], [locationsData]);
 
   const mapLocations: LocationPoint[] = useMemo(
     () =>
@@ -81,7 +81,7 @@ export function ExperimentLocationManagement({
     debouncedSearchQuery.length >= 3,
   );
 
-  const searchResults = searchData?.body ?? [];
+  const searchResults = searchData ?? [];
 
   const saveLocations = useCallback(
     (locationsToUpdate: LocationPoint[]) => {
@@ -99,8 +99,8 @@ export function ExperimentLocationManagement({
 
       updateLocationsMutation.mutate(
         {
-          params: { id: experimentId },
-          body: { locations: locationsToSave },
+          id: experimentId,
+          locations: locationsToSave,
         },
         {
           onSuccess: () => {
@@ -138,8 +138,8 @@ export function ExperimentLocationManagement({
 
   // Effect to handle geocoded location data
   useEffect(() => {
-    if (geocodeData?.body && pendingLocation) {
-      const geocodeResults = geocodeData.body;
+    if (geocodeData && pendingLocation) {
+      const geocodeResults = geocodeData;
       // Use the first result if available, or create a basic location
       const firstResult = geocodeResults[0];
 

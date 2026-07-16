@@ -83,7 +83,11 @@ describe("ExperimentDashboardsController", () => {
       );
 
       const response: SuperTestResponse<ExperimentDashboardDto[]> = await testApp
-        .get(contract.experiments.listExperimentDashboards.path.replace(":id", experimentId))
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentDashboards, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -101,7 +105,11 @@ describe("ExperimentDashboardsController", () => {
       );
 
       await testApp
-        .get(contract.experiments.listExperimentDashboards.path.replace(":id", experimentId))
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentDashboards, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect((response) => {
@@ -123,7 +131,11 @@ describe("ExperimentDashboardsController", () => {
       );
 
       const response = await testApp
-        .post(contract.experiments.createExperimentDashboard.path.replace(":id", experimentId))
+        .post(
+          testApp.resolveOrpcPath(contract.experiments.createExperimentDashboard, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .send(body)
         .expect(StatusCodes.CREATED);
@@ -144,7 +156,11 @@ describe("ExperimentDashboardsController", () => {
       );
 
       await testApp
-        .post(contract.experiments.createExperimentDashboard.path.replace(":id", experimentId))
+        .post(
+          testApp.resolveOrpcPath(contract.experiments.createExperimentDashboard, {
+            id: experimentId,
+          }),
+        )
         .withAuth(testUserId)
         .send(createTestDashboardBody())
         .expect(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -164,9 +180,10 @@ describe("ExperimentDashboardsController", () => {
 
       const response = await testApp
         .get(
-          contract.experiments.getExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.getExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -186,9 +203,10 @@ describe("ExperimentDashboardsController", () => {
 
       await testApp
         .get(
-          contract.experiments.getExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.getExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
@@ -211,9 +229,10 @@ describe("ExperimentDashboardsController", () => {
 
       const response = await testApp
         .patch(
-          contract.experiments.updateExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.updateExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .send({ name: "Updated Dashboard" })
@@ -234,9 +253,10 @@ describe("ExperimentDashboardsController", () => {
 
       await testApp
         .patch(
-          contract.experiments.updateExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.updateExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .send({ name: "Updated Dashboard" })
@@ -256,9 +276,10 @@ describe("ExperimentDashboardsController", () => {
 
       await testApp
         .delete(
-          contract.experiments.deleteExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.deleteExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
@@ -275,9 +296,10 @@ describe("ExperimentDashboardsController", () => {
 
       await testApp
         .delete(
-          contract.experiments.deleteExperimentDashboard.path
-            .replace(":id", experimentId)
-            .replace(":dashboardId", dashboardId),
+          testApp.resolveOrpcPath(contract.experiments.deleteExperimentDashboard, {
+            id: experimentId,
+            dashboardId: dashboardId,
+          }),
         )
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)

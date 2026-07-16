@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { isTransportSupported } from "@repo/iot";
 
 import { sensorFamilyToDeviceType } from "./device-type-mapping";

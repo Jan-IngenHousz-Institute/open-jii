@@ -13,7 +13,7 @@ import { ExperimentDetailsCard } from "~/components/experiment-overview/experime
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
 import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
-import type { Experiment } from "@repo/api/schemas/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface ExperimentOverviewPageProps {
@@ -26,15 +26,15 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   // Experiment with access info
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
-  const experiment = accessData?.body.experiment;
+  const experiment = accessData?.experiment;
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
-  const locations = locationsData?.body ?? [];
+  const locations = locationsData ?? [];
 
   // Members
   const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData?.body ?? [];
+  const members = membersData ?? [];
 
   // Visualizations
   const { data: visualizationsData, isLoading: visualizationsLoading } =
@@ -84,7 +84,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
         <ExperimentVisualizationsDisplay
           experimentId={id}
-          visualizations={visualizationsData?.body ?? []}
+          visualizations={visualizationsData ?? []}
           isLoading={visualizationsLoading}
           isArchived
         />

@@ -7,8 +7,8 @@ import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { MacroProtocolEntry } from "@repo/api/schemas/macro.schema";
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import type { MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -42,7 +42,7 @@ export function MacroCompatibleProtocolsCard({
   const compatibleQuery = useMacroCompatibleProtocols(macroId);
   const isLoading = compatibleQuery.isLoading;
   const compatibleProtocols: MacroProtocolEntry[] = useMemo(
-    () => compatibleQuery.data?.body ?? [],
+    () => compatibleQuery.data ?? [],
     [compatibleQuery.data],
   );
 
@@ -68,17 +68,12 @@ export function MacroCompatibleProtocolsCard({
   );
 
   const handleAddProtocol = async (protocolId: string) => {
-    await addMutation.mutateAsync({
-      params: { id: macroId },
-      body: { protocolIds: [protocolId] },
-    });
+    await addMutation.mutateAsync({ id: macroId, protocolIds: [protocolId] });
     setProtocolSearch("");
   };
 
   const handleRemoveProtocol = async (protocolId: string) => {
-    await removeMutation.mutateAsync({
-      params: { id: macroId, protocolId },
-    });
+    await removeMutation.mutateAsync({ id: macroId, protocolId });
   };
 
   const content = (

@@ -6,8 +6,8 @@ import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 
-import type { CreateExperimentBody } from "@repo/api/schemas/experiment.schema";
-import { zExperimentVisibility } from "@repo/api/schemas/experiment.schema";
+import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
+import { zExperimentVisibility } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -90,7 +90,7 @@ export function NewExperimentForm() {
       // If a workbook was selected, attach it to create a version snapshot
       if (pendingWorkbookId.current) {
         attachWorkbook.mutate(
-          { params: { id: experimentId }, body: { workbookId: pendingWorkbookId.current } },
+          { id: experimentId, workbookId: pendingWorkbookId.current },
           {
             onSettled: () => {
               setIsSubmitting(true);
@@ -110,9 +110,7 @@ export function NewExperimentForm() {
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
     pendingWorkbookId.current = data.workbookId ?? undefined;
-    createExperiment({
-      body: data,
-    });
+    createExperiment(data);
   }
 
   // Track if user has entered any data

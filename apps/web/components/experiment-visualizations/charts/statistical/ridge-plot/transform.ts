@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { RidgeSeriesData } from "@repo/ui/components/charts/ridge-plot";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -36,7 +36,7 @@ function clamp(v: number, lo: number, hi: number): number {
 /** Pure data transform for the ridge-plot chart: per-category KDE on a shared X range, peaks normalised to a fixed lane allowance. */
 export function transformRidgePlotData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): RidgePlotTransformResult {
   const yColumn = dataSourcesByRole(dataSources, "y")[0]?.source.columnName;

@@ -16,7 +16,7 @@ describe("useIotDevices", () => {
     const { result } = renderHook(() => useIotDevices());
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(2);
+      expect(result.current.data).toHaveLength(2);
     });
   });
 

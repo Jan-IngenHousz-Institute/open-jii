@@ -2,7 +2,7 @@
 
 import { Filter, RotateCcw } from "lucide-react";
 
-import type { FilterWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
@@ -13,7 +13,7 @@ import { WidgetHeader } from "../shell/widget-header";
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
 interface FilterWidgetViewProps {
-  widget: FilterWidget;
+  widget: ExperimentFilterWidget;
   experimentId: string;
 }
 

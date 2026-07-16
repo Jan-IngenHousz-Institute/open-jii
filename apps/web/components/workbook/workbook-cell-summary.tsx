@@ -3,7 +3,7 @@
 import { Code, FileText, FlaskConical, GitBranch, HelpCircle, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 

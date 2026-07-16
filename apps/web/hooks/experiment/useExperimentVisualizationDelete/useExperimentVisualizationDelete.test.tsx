@@ -16,7 +16,8 @@ describe("useExperimentVisualizationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
+        id: "exp-1",
+        visualizationId: "viz-1",
       });
     });
 
@@ -37,7 +38,8 @@ describe("useExperimentVisualizationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
+        id: "exp-1",
+        visualizationId: "viz-1",
       });
     });
 
@@ -55,7 +57,8 @@ describe("useExperimentVisualizationDelete", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1", visualizationId: "viz-1" },
+        id: "exp-1",
+        visualizationId: "viz-1",
       });
     });
 

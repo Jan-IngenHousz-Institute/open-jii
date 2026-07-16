@@ -9,8 +9,14 @@ import { useForm } from "react-hook-form";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { parseApiError } from "~/util/apiError";
 
-import { UPLOAD_KIND_CONSTANTS, zUploadFormFields } from "@repo/api/schemas/experiment.schema";
-import type { UploadFormFields, UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import {
+  UPLOAD_KIND_CONSTANTS,
+  zExperimentUploadFormFields,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentUploadFormFields,
+  ExperimentUploadSourceKind,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { DialogFooter } from "@repo/ui/components/dialog";
@@ -20,7 +26,7 @@ import { UploadTargetPicker } from "./upload-target-picker";
 
 export interface UploadCreateViewProps {
   experimentId: string;
-  sourceKind: UploadSourceKind;
+  sourceKind: ExperimentUploadSourceKind;
   onBack: () => void;
   onUploaded: () => void;
 }
@@ -46,8 +52,8 @@ export function UploadCreateView({
   const [fileError, setFileError] = React.useState<UploadValidationError | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
-  const form = useForm<UploadFormFields>({
-    resolver: zodResolver(zUploadFormFields),
+  const form = useForm<ExperimentUploadFormFields>({
+    resolver: zodResolver(zExperimentUploadFormFields),
     mode: "onSubmit",
     defaultValues: { targetKind: "new", sourceKind, targetName: "" },
   });
@@ -89,7 +95,7 @@ export function UploadCreateView({
     setFileError("code" in fileCheck ? fileCheck : null);
   };
 
-  const onSubmit = (values: UploadFormFields) => {
+  const onSubmit = (values: ExperimentUploadFormFields) => {
     if (!files || files.length === 0) {
       setFileError({ code: "noFiles" });
       return;

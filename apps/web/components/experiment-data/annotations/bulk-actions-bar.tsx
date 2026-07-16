@@ -1,7 +1,7 @@
 import { MessageSquare, ChevronDown, Trash2, Download, Flag } from "lucide-react";
 import React from "react";
 
-import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -21,8 +21,8 @@ interface BulkActionsBarProps {
   rowIds: string[];
   tableRows?: { id?: unknown; annotations?: unknown }[];
   downloadTable: () => void;
-  onAddAnnotation: (rowIds: string[], type: AnnotationType) => void;
-  onDeleteAnnotations: (rowIds: string[], type: AnnotationType) => void;
+  onAddAnnotation: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onDeleteAnnotations: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
 export function BulkActionsBar({

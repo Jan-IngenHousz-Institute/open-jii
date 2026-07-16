@@ -6,8 +6,8 @@ import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { FormColorInput } from "@repo/ui/components/form-color-input";
@@ -31,7 +31,7 @@ const MAX_CATEGORIES = 50;
 
 interface CategoricalColorMapProps {
   form: UseFormReturn<ChartFormValues>;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
 }
 
 interface Category {

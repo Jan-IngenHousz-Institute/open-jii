@@ -1,6 +1,6 @@
 "use client";
 
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {

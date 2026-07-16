@@ -139,7 +139,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   const signOut = useSignOut();
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
-  const profile = userProfile?.body;
+  const profile = userProfile;
   const displayName =
     profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
 

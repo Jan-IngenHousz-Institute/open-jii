@@ -3,12 +3,9 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type {
-  ErrorResponse,
-  Experiment,
-  ExperimentMemberList,
-  ExperimentList,
-} from "@repo/api/schemas/experiment.schema";
+import type { Experiment, ExperimentList } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
@@ -51,7 +48,7 @@ describe("ExperimentController", () => {
       };
 
       const response = await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withAuth(testUserId)
         .send(experimentData)
         .expect(StatusCodes.CREATED);
@@ -61,7 +58,7 @@ describe("ExperimentController", () => {
 
     it("should return 400 if name is missing", async () => {
       await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withAuth(testUserId)
         .send({
           description: "Missing name",
@@ -73,7 +70,7 @@ describe("ExperimentController", () => {
 
     it("should return 401 if not authenticated", async () => {
       await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withoutAuth()
         .send({
           name: "Unauthorized Experiment",
@@ -88,7 +85,7 @@ describe("ExperimentController", () => {
       const tooLongName = "a".repeat(300);
 
       await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withAuth(testUserId)
         .send({
           name: tooLongName,
@@ -113,7 +110,7 @@ describe("ExperimentController", () => {
       };
 
       const response = await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withAuth(testUserId)
         .send(experimentData)
         .expect(StatusCodes.CREATED);
@@ -130,7 +127,7 @@ describe("ExperimentController", () => {
 
     it("should return 400 if embargoUntil is not a valid ISO date string", async () => {
       await testApp
-        .post(contract.experiments.createExperiment.path)
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
         .withAuth(testUserId)
         .send({
           name: "Test Experiment",
@@ -146,7 +143,7 @@ describe("ExperimentController", () => {
   describe("listExperiments", () => {
     it("should return an empty array if no experiments exist", async () => {
       const response = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -161,7 +158,7 @@ describe("ExperimentController", () => {
 
       // Act
       const response = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .query({ search: "Experiment" })
         .expect(StatusCodes.OK);
@@ -219,7 +216,7 @@ describe("ExperimentController", () => {
 
       // Act
       const response = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(mainUserId)
         .query({ status: "active", search: "Searchable" })
         .expect(StatusCodes.OK);
@@ -253,7 +250,7 @@ describe("ExperimentController", () => {
       });
 
       const response = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -284,7 +281,7 @@ describe("ExperimentController", () => {
       });
 
       const response: SuperTestResponse<ExperimentList> = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .query({ userId: testUserId, filter: "member" })
         .expect(StatusCodes.OK);
@@ -310,7 +307,7 @@ describe("ExperimentController", () => {
       });
 
       const response: SuperTestResponse<ExperimentList> = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .query({ status: "active" })
         .expect(StatusCodes.OK);
@@ -347,7 +344,7 @@ describe("ExperimentController", () => {
       });
 
       const response: SuperTestResponse<ExperimentList> = await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withAuth(testUserId)
         .query({ filter: "member", status: "active" })
         .expect(StatusCodes.OK);
@@ -360,7 +357,7 @@ describe("ExperimentController", () => {
 
     it("should return 401 if not authenticated", async () => {
       await testApp
-        .get(contract.experiments.listExperiments.path)
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -374,7 +371,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.getExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
         id: experiment.id,
       });
 
@@ -397,7 +394,7 @@ describe("ExperimentController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.getExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
         id: nonExistentId,
       });
 
@@ -412,7 +409,7 @@ describe("ExperimentController", () => {
 
     it("should return 400 for invalid UUID", async () => {
       const invalidId = "invalid-uuid";
-      const path = testApp.resolvePath(contract.experiments.getExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
         id: invalidId,
       });
 
@@ -421,7 +418,7 @@ describe("ExperimentController", () => {
 
     it("should return 401 if not authenticated", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.getExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
         id: nonExistentId,
       });
 
@@ -437,7 +434,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
         id: experiment.id,
       });
 
@@ -456,7 +453,7 @@ describe("ExperimentController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
         id: nonExistentId,
       });
 
@@ -472,7 +469,7 @@ describe("ExperimentController", () => {
 
     it("should return 401 if not authenticated", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
         id: nonExistentId,
       });
 
@@ -494,7 +491,7 @@ describe("ExperimentController", () => {
       futureDate.setDate(futureDate.getDate() + 60); // 60 days from now
       const embargoUntilISO = futureDate.toISOString();
 
-      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
         id: experiment.id,
       });
 
@@ -533,7 +530,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
         id: experiment.id,
       });
 
@@ -559,14 +556,14 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.deleteExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
         id: experiment.id,
       });
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Verify it's gone
-      const getPath = testApp.resolvePath(contract.experiments.getExperiment.path, {
+      const getPath = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
         id: experiment.id,
       });
       await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
@@ -581,7 +578,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.deleteExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
         id: experiment.id,
       });
 
@@ -596,7 +593,7 @@ describe("ExperimentController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.deleteExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
         id: nonExistentId,
       });
 
@@ -611,7 +608,7 @@ describe("ExperimentController", () => {
 
     it("should return 401 if not authenticated", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.experiments.deleteExperiment.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
         id: nonExistentId,
       });
 
@@ -626,7 +623,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -650,7 +647,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
 
@@ -666,7 +663,7 @@ describe("ExperimentController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -689,7 +686,7 @@ describe("ExperimentController", () => {
         });
 
       // Verify member was added
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       const response = await testApp.get(listPath).withAuth(testUserId).query({
@@ -707,7 +704,7 @@ describe("ExperimentController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+      const path = testApp.resolveOrpcPath(contract.experiments.addExperimentMembers, {
         id: experiment.id,
       });
 
@@ -731,7 +728,7 @@ describe("ExperimentController", () => {
       await testApp.addExperimentMember(experiment.id, newMemberId, "member");
 
       // Verify there are 2 members
-      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+      const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
         id: experiment.id,
       });
       let response: SuperTestResponse<ExperimentMemberList> = await testApp
@@ -744,7 +741,7 @@ describe("ExperimentController", () => {
       expect(response.body).toHaveLength(2);
 
       // Now remove the member
-      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: newMemberId,
       });
@@ -772,7 +769,7 @@ describe("ExperimentController", () => {
       await testApp.addExperimentMember(experiment.id, newMemberId, "member");
 
       // Now try to remove the member without auth
-      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+      const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentMember, {
         id: experiment.id,
         memberId: newMemberId,
       });

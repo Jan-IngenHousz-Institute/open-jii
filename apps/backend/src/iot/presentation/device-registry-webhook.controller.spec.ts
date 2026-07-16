@@ -2,7 +2,7 @@ import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { DeviceRegistryWebhookResponse } from "@repo/api/schemas/iot.schema";
+import type { DeviceRegistryWebhookResponse } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, failure } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
@@ -55,7 +55,7 @@ describe("DeviceRegistryWebhookController", () => {
       const { timestamp, signature } = sign(body);
 
       const response: SuperTestResponse<DeviceRegistryWebhookResponse> = await testApp
-        .post(contract.iot.getDeviceRegistry.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getDeviceRegistry))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -85,7 +85,7 @@ describe("DeviceRegistryWebhookController", () => {
       const { timestamp, signature } = sign(body);
 
       await testApp
-        .post(contract.iot.getDeviceRegistry.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getDeviceRegistry))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -95,7 +95,7 @@ describe("DeviceRegistryWebhookController", () => {
 
     it("rejects an unsigned request", async () => {
       await testApp
-        .post(contract.iot.getDeviceRegistry.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getDeviceRegistry))
         .send({ thingNames: ["ambyte_AA11"] })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -105,7 +105,7 @@ describe("DeviceRegistryWebhookController", () => {
       const { timestamp, signature } = sign(body);
 
       await testApp
-        .post(contract.iot.getDeviceRegistry.path)
+        .post(testApp.resolveOrpcPath(contract.iot.getDeviceRegistry))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)

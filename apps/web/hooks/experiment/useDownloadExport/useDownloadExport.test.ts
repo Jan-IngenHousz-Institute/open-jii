@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useDownloadExport } from "./useDownloadExport";
 
-// Mock env
-vi.mock("~/env", () => ({
-  env: {
-    NEXT_PUBLIC_API_URL: "http://localhost:3020",
+const { downloadExport } = vi.hoisted(() => ({ downloadExport: vi.fn() }));
+
+vi.mock("@/lib/orpc", () => ({
+  orpcClient: {
+    experiments: {
+      downloadExport,
+    },
   },
 }));
 
@@ -32,24 +35,11 @@ describe("useDownloadExport", () => {
     expect(result.current.downloadingExportId).toBeUndefined();
   });
 
-  it("should fetch the correct URL with credentials and trigger download", async () => {
-    const mockBlob = new Blob(["test data"], { type: "text/csv" });
-    const mockResponse = {
-      ok: true,
-      statusText: "OK",
-      blob: vi.fn().mockResolvedValue(mockBlob),
-      headers: {
-        get: vi.fn().mockReturnValue('attachment; filename="export-456.csv"'),
-      },
-    };
+  it("calls the endpoint and triggers a download using the file name", async () => {
+    const file = new File(["test data"], "export-456.csv", { type: "text/csv" });
+    downloadExport.mockResolvedValue(file);
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
-
-    const mockLink = {
-      href: "",
-      download: "",
-      click: vi.fn(),
-    };
+    const mockLink = { href: "", download: "", click: vi.fn() };
     const originalCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation(
       (tag: string, options?: ElementCreationOptions) => {
@@ -67,10 +57,7 @@ describe("useDownloadExport", () => {
     });
 
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        `http://localhost:3020/api/v1/experiments/${experimentId}/data/exports/export-456`,
-        { credentials: "include" },
-      );
+      expect(downloadExport).toHaveBeenCalledWith({ id: experimentId, exportId: "export-456" });
     });
 
     await waitFor(() => {
@@ -82,18 +69,9 @@ describe("useDownloadExport", () => {
     });
   });
 
-  it("should use fallback filename when Content-Disposition is missing", async () => {
-    const mockBlob = new Blob(["test data"]);
-    const mockResponse = {
-      ok: true,
-      statusText: "OK",
-      blob: vi.fn().mockResolvedValue(mockBlob),
-      headers: {
-        get: vi.fn().mockReturnValue(null),
-      },
-    };
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
+  it("falls back to a generated name when the file has no name", async () => {
+    const file = new File(["test data"], "");
+    downloadExport.mockResolvedValue(file);
 
     const mockLink = { href: "", download: "", click: vi.fn() };
     const originalCreateElement = document.createElement.bind(document);
@@ -117,13 +95,8 @@ describe("useDownloadExport", () => {
     });
   });
 
-  it("should not create download link when response is not ok", async () => {
-    const mockResponse = {
-      ok: false,
-      statusText: "Not Found",
-    };
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as never);
+  it("does not create a download link when the request fails", async () => {
+    downloadExport.mockRejectedValue(new Error("Not Found"));
     const createElementSpy = vi.spyOn(document, "createElement");
 
     const { result } = renderHook(() => useDownloadExport(experimentId));
@@ -133,15 +106,13 @@ describe("useDownloadExport", () => {
     });
 
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalled();
+      expect(downloadExport).toHaveBeenCalled();
     });
 
-    // Wait for mutation to settle
     await waitFor(() => {
       expect(result.current.isDownloading).toBe(false);
     });
 
-    // Download link should not have been created
     expect(createElementSpy).not.toHaveBeenCalledWith("a");
   });
 });

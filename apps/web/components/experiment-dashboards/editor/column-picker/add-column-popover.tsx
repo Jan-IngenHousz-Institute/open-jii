@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -17,7 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
 export interface AddColumnPopoverProps {
-  remaining: DataColumn[];
+  remaining: ExperimentDataColumn[];
   onAdd: (name: string) => void;
 }
 

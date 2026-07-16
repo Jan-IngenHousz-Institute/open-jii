@@ -1,5 +1,6 @@
 import { shouldRetryQuery } from "@/util/query-retry";
-import { tsr } from "~/lib/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/lib/orpc";
 
 const STALE_TIME = 10 * 60 * 1000;
 
@@ -18,22 +19,20 @@ export const useExperimentDistinctValues = ({
   limit,
   enabled = true,
 }: UseExperimentDistinctValuesArgs) => {
-  const { data, isLoading, isSuccess, error } = tsr.experiments.getDistinctColumnValues.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: { tableName, column, limit },
-    },
-    queryKey: ["experiment-distinct-values", experimentId, tableName, column, limit ?? null],
-    staleTime: STALE_TIME,
-    enabled: enabled && Boolean(experimentId) && Boolean(tableName) && Boolean(column),
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: shouldRetryQuery,
-  });
+  const { data, isLoading, isSuccess, error } = useQuery(
+    orpc.experiments.getDistinctColumnValues.queryOptions({
+      input: { id: experimentId, tableName, column, limit },
+      staleTime: STALE_TIME,
+      enabled: enabled && Boolean(experimentId) && Boolean(tableName) && Boolean(column),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: shouldRetryQuery,
+    }),
+  );
 
   return {
-    values: data?.body.values ?? [],
-    truncated: data?.body.truncated ?? false,
+    values: data?.values ?? [],
+    truncated: data?.truncated ?? false,
     isLoading,
     isSuccess,
     error,

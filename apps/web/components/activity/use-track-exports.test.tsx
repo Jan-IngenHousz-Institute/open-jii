@@ -1,7 +1,7 @@
 import { act, renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ExportRecord } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useActivity } from "./activity-context";
@@ -22,7 +22,7 @@ function track(exports: ExportLike[]) {
         experimentId: "exp-1",
         tableName: "centrum",
         displayName: "Light Response",
-        exports: props.exports as unknown as ExportRecord[],
+        exports: props.exports as unknown as ExperimentExportRecord[],
       });
       return useActivity();
     },

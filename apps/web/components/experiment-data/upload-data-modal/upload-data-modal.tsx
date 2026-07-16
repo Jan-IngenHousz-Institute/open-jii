@@ -3,7 +3,7 @@
 import { Upload } from "lucide-react";
 import * as React from "react";
 
-import type { UploadSourceKind } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Dialog,
@@ -22,7 +22,7 @@ export interface UploadDataModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type UploadView = { name: "list" } | { name: "create"; sourceKind: UploadSourceKind };
+type UploadView = { name: "list" } | { name: "create"; sourceKind: ExperimentUploadSourceKind };
 
 export function UploadDataModal({ experimentId, open, onOpenChange }: UploadDataModalProps) {
   const { t } = useTranslation("experimentData");

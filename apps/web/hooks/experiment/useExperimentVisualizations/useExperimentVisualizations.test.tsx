@@ -30,7 +30,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toHaveLength(2);
+    expect(result.current.data).toHaveLength(2);
     expect(result.current.error).toBeNull();
   });
 
@@ -55,7 +55,7 @@ describe("useExperimentVisualizations", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toEqual([]);
+    expect(result.current.data).toEqual([]);
   });
 
   describe("chartFamily filter", () => {

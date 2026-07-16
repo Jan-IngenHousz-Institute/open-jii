@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";

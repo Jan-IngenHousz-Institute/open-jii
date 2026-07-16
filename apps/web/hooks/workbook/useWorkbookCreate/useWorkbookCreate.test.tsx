@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -20,14 +21,12 @@ describe("useWorkbookCreate", () => {
     const { result } = renderHook(() => useWorkbookCreate({ onSuccess }), { queryClient });
 
     act(() => {
-      result.current.mutate({
-        body: { name: "New WB", description: "Desc", cells: [] },
-      });
+      result.current.mutate({ name: "New WB", description: "Desc", cells: [] });
     });
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalled();
-      expect((onSuccess.mock.calls[0][0] as { body: { id: string } }).body.id).toBe("wb-1");
+      expect((onSuccess.mock.calls[0][0] as { id: string }).id).toBe("wb-1");
     });
   });
 
@@ -39,9 +38,7 @@ describe("useWorkbookCreate", () => {
     const { result } = renderHook(() => useWorkbookCreate());
 
     act(() => {
-      result.current.mutate({
-        body: { name: "Test", description: "A desc", cells: [] },
-      });
+      result.current.mutate({ name: "Test", description: "A desc", cells: [] });
     });
 
     await waitFor(() => {
@@ -56,7 +53,7 @@ describe("useWorkbookCreate", () => {
     const { result } = renderHook(() => useWorkbookCreate({ onError }));
 
     act(() => {
-      result.current.mutate({ body: { name: "", description: "", cells: [] } });
+      result.current.mutate({ name: "", description: "", cells: [] });
     });
 
     await waitFor(() => {
@@ -70,18 +67,17 @@ describe("useWorkbookCreate", () => {
     });
 
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbooks"], { body: [] });
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useWorkbookCreate(), { queryClient });
 
     act(() => {
-      result.current.mutate({ body: { name: "WB", description: "", cells: [] } });
+      result.current.mutate({ name: "WB", description: "", cells: [] });
     });
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: ["workbooks"] }),
+        expect.objectContaining({ queryKey: orpc.workbooks.listWorkbooks.key() }),
       );
     });
   });

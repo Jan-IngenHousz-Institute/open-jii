@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { MacroCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";

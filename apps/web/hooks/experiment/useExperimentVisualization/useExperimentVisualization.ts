@@ -1,10 +1,10 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 export const useExperimentVisualization = (visualizationId: string, experimentId: string) => {
-  return tsr.experiments.getExperimentVisualization.useQuery({
-    queryData: {
-      params: { id: experimentId, visualizationId },
-    },
-    queryKey: ["experiment-visualization", experimentId, visualizationId],
-  });
+  return useQuery(
+    orpc.experiments.getExperimentVisualization.queryOptions({
+      input: { id: experimentId, visualizationId },
+    }),
+  );
 };

@@ -3,10 +3,10 @@ import { renderHook } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import type {
-  ExperimentDataResponse,
-  AnnotationType,
-  AnnotationContent,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentAnnotationType,
+  ExperimentAnnotationContent,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentAnnotationOptimisticUpdate } from "./useExperimentAnnotationOptimisticUpdate";
 
@@ -49,7 +49,10 @@ describe("useExperimentAnnotationOptimisticUpdate", () => {
     },
   ];
 
-  const mockAnnotationRequest: { type: AnnotationType; content: AnnotationContent } = {
+  const mockAnnotationRequest: {
+    type: ExperimentAnnotationType;
+    content: ExperimentAnnotationContent;
+  } = {
     type: "comment",
     content: { type: "comment", text: "Test annotation" },
   };
