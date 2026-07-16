@@ -32,7 +32,6 @@ export function DeletePasskeyDialog({
   const handleDelete = async () => {
     try {
       await deletePasskey.mutateAsync({ id: passkeyId });
-      toast({ description: t("passkeys.deleted") });
       setOpen(false);
     } catch {
       toast({ description: t("passkeys.deleteError"), variant: "destructive" });

@@ -22,7 +22,7 @@ describe("RevokeApiKeyDialog", () => {
     await user.click(within(dialog).getByRole("button", { name: "apiKeys.revoke" }));
 
     await waitFor(() => expect(authClient.apiKey.delete).toHaveBeenCalledWith({ keyId: "k1" }));
-    expect(toast).toHaveBeenCalledWith({ description: "apiKeys.revoked" });
+    expect(toast).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 

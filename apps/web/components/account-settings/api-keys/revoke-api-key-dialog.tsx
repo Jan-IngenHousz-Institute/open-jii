@@ -26,7 +26,6 @@ export function RevokeApiKeyDialog({ keyId, keyName }: { keyId: string; keyName:
   const handleRevoke = async () => {
     try {
       await deleteApiKey.mutateAsync({ keyId });
-      toast({ description: t("apiKeys.revoked") });
       setOpen(false);
     } catch {
       toast({ description: t("apiKeys.revokeError"), variant: "destructive" });

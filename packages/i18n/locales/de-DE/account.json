@@ -159,7 +159,6 @@
     "createdTitle": "API-Schlüssel erstellt",
     "createdWarning": "Kopieren Sie den Schlüssel jetzt. Aus Sicherheitsgründen wird er nicht erneut angezeigt.",
     "copy": "Schlüssel kopieren",
-    "copied": "Schlüssel in die Zwischenablage kopiert.",
     "done": "Fertig",
     "neverUsed": "Nie",
     "columns": {
@@ -172,7 +171,6 @@
     "revoke": "Widerrufen",
     "revokeTitle": "API-Schlüssel widerrufen?",
     "revokeConfirm": "\"{{name}}\" funktioniert sofort nicht mehr. Dies kann nicht rückgängig gemacht werden.",
-    "revoked": "API-Schlüssel widerrufen.",
     "revokeError": "Der API-Schlüssel konnte nicht widerrufen werden. Bitte versuchen Sie es erneut.",
     "cancel": "Abbrechen"
   },
@@ -182,7 +180,6 @@
     "empty": "Sie haben noch keine Passkeys.",
     "add": "Passkey erstellen",
     "addTitle": "Passkey erstellen",
-    "added": "Passkey erstellt.",
     "addError": "Der Passkey konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "unnamed": "Unbenannter Passkey",
     "columns": {
@@ -194,16 +191,18 @@
     "deviceBound": "Gerätegebunden",
     "rename": "Umbenennen",
     "renameTitle": "Passkey umbenennen",
-    "renamed": "Passkey umbenannt.",
     "renameError": "Der Passkey konnte nicht umbenannt werden. Bitte versuchen Sie es erneut.",
     "delete": "Löschen",
     "deleteTitle": "Passkey löschen?",
     "deleteConfirm": "\"{{name}}\" kann nicht mehr zur Anmeldung verwendet werden. Dies kann nicht rückgängig gemacht werden.",
-    "deleted": "Passkey gelöscht.",
     "deleteError": "Der Passkey konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "cancel": "Abbrechen",
-    "promptTitle": "Beim nächsten Mal schneller anmelden",
-    "promptDescription": "Erstellen Sie einen Passkey, um sich mit der Bildschirmsperre Ihres Geräts statt mit einem Code anzumelden.",
-    "promptAction": "Passkey erstellen"
+    "promptTitle": "Schneller anmelden mit einem Passkey",
+    "promptDescription": "Nutzen Sie die Bildschirmsperre Ihres Geräts (Fingerabdruck, Gesicht oder PIN), statt auf einen E-Mail-Code zu warten.",
+    "promptAction": "Passkey erstellen",
+    "promptNotNow": "Jetzt nicht",
+    "promptSuccessTitle": "Alles bereit",
+    "promptSuccessDescription": "Wählen Sie beim nächsten Mal \"Mit Passkey anmelden\" oder den Vorschlag im E-Mail-Feld.",
+    "promptDone": "Fertig"
   }
 }

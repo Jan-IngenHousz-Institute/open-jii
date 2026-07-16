@@ -159,7 +159,6 @@
     "createdTitle": "API key created",
     "createdWarning": "Copy this key now. For security reasons it will not be shown again.",
     "copy": "Copy key",
-    "copied": "Key copied to clipboard.",
     "done": "Done",
     "neverUsed": "Never",
     "columns": {
@@ -172,7 +171,6 @@
     "revoke": "Revoke",
     "revokeTitle": "Revoke API key?",
     "revokeConfirm": "\"{{name}}\" will stop working immediately. This cannot be undone.",
-    "revoked": "API key revoked.",
     "revokeError": "Failed to revoke the API key. Please try again.",
     "cancel": "Cancel"
   },
@@ -182,7 +180,6 @@
     "empty": "You have no passkeys yet.",
     "add": "Create passkey",
     "addTitle": "Create a passkey",
-    "added": "Passkey created.",
     "addError": "Could not create the passkey. Please try again.",
     "unnamed": "Unnamed passkey",
     "columns": {
@@ -194,16 +191,18 @@
     "deviceBound": "Device-bound",
     "rename": "Rename",
     "renameTitle": "Rename passkey",
-    "renamed": "Passkey renamed.",
     "renameError": "Could not rename the passkey. Please try again.",
     "delete": "Delete",
     "deleteTitle": "Delete passkey?",
     "deleteConfirm": "\"{{name}}\" can no longer be used to sign in. This cannot be undone.",
-    "deleted": "Passkey deleted.",
     "deleteError": "Could not delete the passkey. Please try again.",
     "cancel": "Cancel",
-    "promptTitle": "Sign in faster next time",
-    "promptDescription": "Create a passkey to sign in with your device's screen lock instead of a code.",
-    "promptAction": "Create passkey"
+    "promptTitle": "Sign in faster with a passkey",
+    "promptDescription": "Use your device's screen lock (fingerprint, face, or PIN) instead of waiting for an email code.",
+    "promptAction": "Create a passkey",
+    "promptNotNow": "Not now",
+    "promptSuccessTitle": "You're all set",
+    "promptSuccessDescription": "Next time, choose \"Sign in with a passkey\" or pick it from the email field's suggestions.",
+    "promptDone": "Done"
   }
 }

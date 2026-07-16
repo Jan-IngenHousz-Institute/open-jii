@@ -1,8 +1,7 @@
-import { render, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { PasskeyCreatePrompt } from "./passkey-create-prompt";
 
@@ -14,15 +13,34 @@ describe("PasskeyCreatePrompt", () => {
     vi.mocked(authClient.getLastUsedLoginMethod).mockReturnValue(null);
   });
 
-  it("prompts a passkey-less user once", async () => {
-    render(<PasskeyCreatePrompt locale="en-US" />);
+  it("invites a passkey-less user and creates a passkey in place", async () => {
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
+    const user = userEvent.setup();
+    render(<PasskeyCreatePrompt />);
 
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "passkeys.promptTitle" }),
-      ),
-    );
+    expect(await screen.findByText("passkeys.promptTitle")).toBeInTheDocument();
     expect(sessionStorage.getItem("openjii.passkey-prompt-shown")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "passkeys.promptAction" }));
+
+    await waitFor(() => expect(authClient.passkey.addPasskey).toHaveBeenCalledWith({}));
+    expect(await screen.findByText("passkeys.promptSuccessTitle")).toBeInTheDocument();
+    expect(localStorage.getItem("openjii.passkey-prompt-dismissed")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "passkeys.promptDone" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("closes on Not now and counts the prompt", async () => {
+    const user = userEvent.setup();
+    render(<PasskeyCreatePrompt />);
+
+    await user.click(await screen.findByRole("button", { name: "passkeys.promptNotNow" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(localStorage.getItem("openjii.passkey-prompt-count")).toBe("1");
   });
 
@@ -31,25 +49,25 @@ describe("PasskeyCreatePrompt", () => {
       data: [{ id: "p1" }],
       error: null,
     });
-    render(<PasskeyCreatePrompt locale="en-US" />);
+    render(<PasskeyCreatePrompt />);
 
     await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalled());
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("does not prompt when dismissed or over the cap", async () => {
     localStorage.setItem("openjii.passkey-prompt-count", "3");
-    render(<PasskeyCreatePrompt locale="en-US" />);
+    render(<PasskeyCreatePrompt />);
 
     await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalled());
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("does not prompt right after a passkey sign-in", async () => {
     vi.mocked(authClient.getLastUsedLoginMethod).mockReturnValue("passkey");
-    render(<PasskeyCreatePrompt locale="en-US" />);
+    render(<PasskeyCreatePrompt />);
 
     await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalled());
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

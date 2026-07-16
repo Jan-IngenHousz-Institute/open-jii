@@ -32,7 +32,6 @@ export function RenamePasskeyDialog({
   const handleRename = async () => {
     try {
       await updatePasskey.mutateAsync({ id: passkeyId, name });
-      toast({ description: t("passkeys.renamed") });
       setOpen(false);
     } catch {
       toast({ description: t("passkeys.renameError"), variant: "destructive" });
