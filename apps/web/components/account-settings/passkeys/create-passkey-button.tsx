@@ -16,7 +16,6 @@ export function CreatePasskeyButton() {
   const handleClick = async () => {
     try {
       await addPasskey.mutateAsync({});
-      toast({ description: t("passkeys.added") });
     } catch {
       toast({ description: t("passkeys.addError"), variant: "destructive" });
     }

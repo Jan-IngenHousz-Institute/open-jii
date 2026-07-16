@@ -1,12 +1,21 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { CheckCircle2, Fingerprint, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useAddPasskey } from "~/hooks/auth/useAddPasskey/useAddPasskey";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { ToastAction } from "@repo/ui/components/toast";
+import { Button } from "@repo/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 const DISMISSED_KEY = "openjii.passkey-prompt-dismissed";
@@ -15,14 +24,17 @@ const SHOWN_KEY = "openjii.passkey-prompt-shown";
 const MAX_PROMPTS = 3;
 
 /**
- * After a non-passkey sign-in, users without a passkey get a dismissible
- * invitation to create one: at most once per session and three times overall;
- * following the prompt silences it for good.
+ * After a non-passkey sign-in, users without a passkey are invited to create
+ * one on the spot (Google passkey UX journey: invite, run the OS ceremony,
+ * confirm). Shown at most once per session and three times overall; "Not now"
+ * on the third strike, or creating a passkey, silences it for good.
  */
-export function PasskeyCreatePrompt({ locale }: { locale: string }) {
+export function PasskeyCreatePrompt() {
   const { t } = useTranslation("account");
-  const router = useRouter();
   const { data: passkeys } = usePasskeys();
+  const addPasskey = useAddPasskey();
+  const [open, setOpen] = useState(false);
+  const [created, setCreated] = useState(false);
   const prompted = useRef(false);
 
   useEffect(() => {
@@ -35,23 +47,63 @@ export function PasskeyCreatePrompt({ locale }: { locale: string }) {
     prompted.current = true;
     sessionStorage.setItem(SHOWN_KEY, "true");
     localStorage.setItem(COUNT_KEY, String(count + 1));
-    toast({
-      title: t("passkeys.promptTitle"),
-      description: t("passkeys.promptDescription"),
-      duration: 20000,
-      action: (
-        <ToastAction
-          altText={t("passkeys.promptAction")}
-          onClick={() => {
-            localStorage.setItem(DISMISSED_KEY, "true");
-            router.push(`/${locale}/platform/account/security`);
-          }}
-        >
-          {t("passkeys.promptAction")}
-        </ToastAction>
-      ),
-    });
-  }, [passkeys, router, locale, t]);
+    if (count + 1 >= MAX_PROMPTS) localStorage.setItem(DISMISSED_KEY, "true");
+    setOpen(true);
+  }, [passkeys]);
 
-  return null;
+  const handleCreate = async () => {
+    try {
+      await addPasskey.mutateAsync({});
+      localStorage.setItem(DISMISSED_KEY, "true");
+      setCreated(true);
+    } catch {
+      toast({ description: t("passkeys.addError"), variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-md">
+        {created ? (
+          <>
+            <DialogHeader>
+              <div className="flex justify-center py-2">
+                <CheckCircle2 className="text-jii-dark-green h-10 w-10" />
+              </div>
+              <DialogTitle className="text-center">{t("passkeys.promptSuccessTitle")}</DialogTitle>
+              <DialogDescription className="text-center">
+                {t("passkeys.promptSuccessDescription")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button className="w-full" onClick={() => setOpen(false)}>
+                {t("passkeys.promptDone")}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <div className="flex justify-center py-2">
+                <Fingerprint className="text-muted-foreground h-10 w-10" />
+              </div>
+              <DialogTitle className="text-center">{t("passkeys.promptTitle")}</DialogTitle>
+              <DialogDescription className="text-center">
+                {t("passkeys.promptDescription")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button className="w-full" onClick={handleCreate} disabled={addPasskey.isPending}>
+                {addPasskey.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t("passkeys.promptAction")}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setOpen(false)}>
+                {t("passkeys.promptNotNow")}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }

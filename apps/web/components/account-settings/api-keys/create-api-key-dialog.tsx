@@ -80,7 +80,6 @@ export function CreateApiKeyDialog() {
     if (!createdKey) return;
     await navigator.clipboard.writeText(createdKey);
     setCopied(true);
-    toast({ description: t("apiKeys.copied") });
   };
 
   return (

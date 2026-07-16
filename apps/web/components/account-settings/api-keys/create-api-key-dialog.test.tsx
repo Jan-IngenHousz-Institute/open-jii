@@ -49,7 +49,7 @@ describe("CreateApiKeyDialog", () => {
     await user.click(screen.getByRole("button", { name: "apiKeys.copy" }));
 
     expect(writeText).toHaveBeenCalledWith("jii_abc123");
-    expect(toast).toHaveBeenCalledWith({ description: "apiKeys.copied" });
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it("shows a destructive toast when creation fails", async () => {
