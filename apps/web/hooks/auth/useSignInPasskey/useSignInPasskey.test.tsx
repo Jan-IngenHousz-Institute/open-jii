@@ -7,7 +7,7 @@ import { useSignInPasskey } from "./useSignInPasskey";
 
 describe("useSignInPasskey", () => {
   it("signs in with a passkey and invalidates auth queries", async () => {
-    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
 
     const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -21,7 +21,7 @@ describe("useSignInPasskey", () => {
   });
 
   it("passes autoFill through for conditional UI", async () => {
-    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
 
     const { result } = renderHook(() => useSignInPasskey());
     await result.current.mutateAsync({ autoFill: true });
@@ -33,7 +33,7 @@ describe("useSignInPasskey", () => {
     vi.mocked(authClient.signIn.passkey).mockResolvedValue({
       data: null,
       error: { message: "Ceremony cancelled" },
-    });
+    } as never);
 
     const { result } = renderHook(() => useSignInPasskey());
 

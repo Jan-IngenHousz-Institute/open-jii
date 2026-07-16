@@ -64,10 +64,16 @@ export function EmailLoginForm({
   // email field's autofill (autocomplete="... webauthn"). Resolves only if
   // the user picks a passkey; expected to reject when ignored or aborted.
   useEffect(() => {
-    const available = window.PublicKeyCredential?.isConditionalMediationAvailable?.();
-    if (!available) return;
+    // Typed as optional: older browsers lack the WebAuthn API entirely.
+    const publicKeyCredential = (
+      window as {
+        PublicKeyCredential?: { isConditionalMediationAvailable?: () => Promise<boolean> };
+      }
+    ).PublicKeyCredential;
+    const availability = publicKeyCredential?.isConditionalMediationAvailable?.();
+    if (!availability) return;
     let cancelled = false;
-    void available.then((supported) => {
+    void availability.then((supported) => {
       if (!supported || cancelled) return;
       signInPasskeyMutation
         .mutateAsync({ autoFill: true })

@@ -68,8 +68,7 @@ export function CreateApiKeyDialog() {
     try {
       const result = await createApiKey.mutateAsync({
         name: data.name,
-        expiresIn:
-          data.expiration === "never" ? undefined : Number(data.expiration) * DAY_SECONDS,
+        expiresIn: data.expiration === "never" ? undefined : Number(data.expiration) * DAY_SECONDS,
       });
       setCreatedKey(result.key);
     } catch {
@@ -106,7 +105,12 @@ export function CreateApiKeyDialog() {
               <code className="bg-muted min-w-0 flex-1 break-all rounded-md p-3 text-xs">
                 {createdKey}
               </code>
-              <Button variant="outline" size="icon" onClick={handleCopy} aria-label={t("apiKeys.copy")}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopy}
+                aria-label={t("apiKeys.copy")}
+              >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>

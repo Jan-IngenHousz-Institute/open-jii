@@ -14,7 +14,10 @@ export function useAddPasskey() {
 
   return useMutation({
     mutationFn: async (input: { name?: string }) => {
-      const response = await authClient.passkey.addPasskey(input);
+      // Runtime can resolve undefined despite the client types.
+      const response = (await authClient.passkey.addPasskey(input)) as
+        | Awaited<ReturnType<typeof authClient.passkey.addPasskey>>
+        | undefined;
       if (response?.error) throw new Error(response.error.message);
       return response?.data ?? null;
     },
