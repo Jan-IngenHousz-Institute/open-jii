@@ -59,6 +59,8 @@ describe("WorkbookController", () => {
     description: "A test workbook",
     cells: [],
     metadata: {},
+    organizationId: null,
+    visibility: "public",
     createdBy: testUserId,
     createdByName: faker.person.fullName(),
     createdAt: new Date(),

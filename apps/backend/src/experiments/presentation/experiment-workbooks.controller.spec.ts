@@ -123,6 +123,8 @@ describe("ExperimentWorkbooksController", () => {
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
+          organizationId: null,
+          anonymizeContributors: false,
           workbookId: null,
           workbookVersionId: faker.string.uuid(),
         } as any),

@@ -77,6 +77,8 @@ describe("MacroController", () => {
         description: macroData.description ?? "",
         language: macroData.language,
         code: macroData.code,
+        organizationId: null,
+        visibility: "public",
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -192,6 +194,8 @@ describe("MacroController", () => {
         description: "Test Description",
         language: "python",
         code: "cHl0aG9uIGNvZGU=",
+        organizationId: null,
+        visibility: "public",
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -254,6 +258,8 @@ describe("MacroController", () => {
           description: "Test Description 1",
           language: "python",
           code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
+          organizationId: null,
+          visibility: "public",
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -266,6 +272,8 @@ describe("MacroController", () => {
           description: "Test Description 2",
           language: "javascript",
           code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
+          organizationId: null,
+          visibility: "public",
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -352,6 +360,8 @@ describe("MacroController", () => {
         description: "Updated Description",
         language: "javascript",
         code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+        organizationId: null,
+        visibility: "public",
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -414,6 +424,8 @@ describe("MacroController", () => {
         description: "Description",
         language: "python",
         code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
+        organizationId: null,
+        visibility: "public",
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
