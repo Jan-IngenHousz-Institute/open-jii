@@ -1,4 +1,5 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
+import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PageContainer } from "@/components/page-container";
@@ -78,6 +79,7 @@ export default async function AppLayout({
         <CommandPalette locale={locale} />
         <Toaster />
         <ShortcutHint />
+        <PasskeyCreatePrompt locale={locale} />
         <WhatsNewSheet entries={releaseNotes} />
       </ActivityProvider>
     </SidebarProvider>
