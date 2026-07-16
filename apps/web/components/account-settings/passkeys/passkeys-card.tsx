@@ -3,6 +3,7 @@
 import { Fingerprint } from "lucide-react";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
 import { useLocale } from "~/hooks/useLocale";
+import { getAuthenticatorName } from "~/lib/authenticator-names";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
-import { AddPasskeyDialog } from "./add-passkey-dialog";
+import { CreatePasskeyButton } from "./create-passkey-button";
 import { DeletePasskeyDialog } from "./delete-passkey-dialog";
 import { RenamePasskeyDialog } from "./rename-passkey-dialog";
 
@@ -39,7 +40,7 @@ export function PasskeysCard() {
           <CardTitle>{t("passkeys.title")}</CardTitle>
           <CardDescription>{t("passkeys.description")}</CardDescription>
         </div>
-        <AddPasskeyDialog />
+        <CreatePasskeyButton />
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -63,31 +64,32 @@ export function PasskeysCard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {passkeys.map((passkey) => (
-                <TableRow key={passkey.id}>
-                  <TableCell className="font-medium">
-                    {passkey.name ?? t("passkeys.unnamed")}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(passkey.createdAt).toLocaleDateString(locale)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      <RenamePasskeyDialog
-                        passkeyId={passkey.id}
-                        currentName={passkey.name ?? ""}
-                      />
-                      <DeletePasskeyDialog
-                        passkeyId={passkey.id}
-                        passkeyName={passkey.name ?? t("passkeys.unnamed")}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {passkeys.map((passkey) => {
+                const provider = getAuthenticatorName(passkey.aaguid);
+                const displayName = passkey.name ?? provider ?? t("passkeys.unnamed");
+                return (
+                  <TableRow key={passkey.id}>
+                    <TableCell>
+                      <div className="font-medium">{displayName}</div>
+                      {provider && provider !== displayName && (
+                        <div className="text-muted-foreground text-xs">{provider}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(passkey.createdAt).toLocaleDateString(locale)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <RenamePasskeyDialog passkeyId={passkey.id} currentName={displayName} />
+                        <DeletePasskeyDialog passkeyId={passkey.id} passkeyName={displayName} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

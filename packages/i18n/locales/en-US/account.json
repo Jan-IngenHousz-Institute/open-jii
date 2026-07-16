@@ -180,15 +180,10 @@
     "title": "Passkeys",
     "description": "Sign in without a code using your device's screen lock or a security key.",
     "empty": "You have no passkeys yet.",
-    "add": "Add passkey",
-    "addTitle": "Add passkey",
-    "addDescription": "Your browser will ask you to confirm with your device.",
-    "addConfirm": "Continue",
-    "added": "Passkey added.",
-    "addError": "Could not add the passkey. Please try again.",
-    "name": "Name",
-    "namePlaceholder": "e.g. Work laptop",
-    "nameRequired": "Please enter a name.",
+    "add": "Create passkey",
+    "addTitle": "Create a passkey",
+    "added": "Passkey created.",
+    "addError": "Could not create the passkey. Please try again.",
     "unnamed": "Unnamed passkey",
     "columns": {
       "name": "Name",
@@ -206,6 +201,9 @@
     "deleteConfirm": "\"{{name}}\" can no longer be used to sign in. This cannot be undone.",
     "deleted": "Passkey deleted.",
     "deleteError": "Could not delete the passkey. Please try again.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "promptTitle": "Sign in faster next time",
+    "promptDescription": "Create a passkey to sign in with your device's screen lock instead of a code.",
+    "promptAction": "Create passkey"
   }
 }
