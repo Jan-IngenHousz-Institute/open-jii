@@ -63,4 +63,29 @@ describe("ApiKeysCard", () => {
     expect(screen.getByText("apiKeys.expirationNever")).toBeInTheDocument();
     expect(screen.getByText("apiKeys.neverUsed")).toBeInTheDocument();
   });
+
+  it("falls back to the prefix when a key has no stored start", async () => {
+    vi.mocked(authClient.apiKey.list).mockResolvedValue({
+      data: {
+        apiKeys: [
+          {
+            id: "k1",
+            name: "Prefix only",
+            start: null,
+            prefix: "jii_pre",
+            createdAt: "2026-07-01T00:00:00.000Z",
+            expiresAt: null,
+            lastRequest: null,
+          },
+        ],
+        total: 1,
+      },
+      error: null,
+    });
+
+    render(<ApiKeysCard />);
+
+    await waitFor(() => expect(screen.getByText("Prefix only")).toBeInTheDocument());
+    expect(screen.getByText(/jii_pre/)).toBeInTheDocument();
+  });
 });
