@@ -44,6 +44,8 @@ describe("Macro Schema", () => {
       const m = {
         id: uuidA,
         name: "Plot Temperature",
+        organizationId: null,
+        visibility: "public",
         filename: "plot_temp.py",
         description: "Visualize temperature data",
         language: "python",
@@ -61,6 +63,8 @@ describe("Macro Schema", () => {
       const m = {
         id: uuidA,
         name: "Statistical Analysis",
+        organizationId: null,
+        visibility: "public",
         filename: "stats.r",
         description: null,
         language: "r",
@@ -109,6 +113,8 @@ describe("Macro Schema", () => {
       const m = {
         id: uuidA,
         name: "Null Sort",
+        organizationId: null,
+        visibility: "public",
         filename: "null.py",
         description: null,
         language: "python",
@@ -125,6 +131,8 @@ describe("Macro Schema", () => {
       const m1 = {
         id: uuidA,
         name: "M1",
+        organizationId: null,
+        visibility: "public",
         filename: "m1.py",
         description: null,
         language: "python",
