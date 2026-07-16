@@ -71,6 +71,7 @@ const MEASUREMENT_FIXTURE = `{
       }
     ],
     "producerCellId": "node-m1",
+    "cellOutputs": { "node-a1": { "spad_avg": 40.5 } },
     "isFromOverview": true,
     "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
     "edges": [{ "id": "edge-1", "source": "node-q1", "target": "node-m1" }],
@@ -152,6 +153,7 @@ describe("measurement-flow-storage v1 wire format", () => {
     expect(Object.keys(persisted).sort()).toEqual([
       "branchReturnStack",
       "branchVisitCounts",
+      "cellOutputs",
       "cells",
       "currentFlowStep",
       "currentStep",

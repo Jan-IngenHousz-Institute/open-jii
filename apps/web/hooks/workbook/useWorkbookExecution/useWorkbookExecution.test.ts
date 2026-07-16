@@ -29,7 +29,16 @@ const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
 // One entry per connected device; single-entry = legacy single-device runs.
-let mockConnections: { id: string; label: string; driver: unknown }[] = [];
+function mockConnection(id: string, label: string) {
+  return {
+    id,
+    label,
+    family: "multispeq" as const,
+    identity: { family: "multispeq" as const, name: label, raw: {} },
+    driver: {},
+  };
+}
+let mockConnections: ReturnType<typeof mockConnection>[] = [];
 
 vi.mock("~/hooks/iot/useIotConnections/useIotConnections", () => ({
   useIotConnections: () => ({
@@ -50,7 +59,7 @@ vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
 }));
 
 function setMockConnected(connected: boolean) {
-  mockConnections = connected ? [{ id: "dev-1", label: "Device #1", driver: {} }] : [];
+  mockConnections = connected ? [mockConnection("dev-1", "Device #1")] : [];
 }
 
 function renderExecution(
@@ -168,10 +177,10 @@ describe("useWorkbookExecution", () => {
       });
       server.mount(contract.protocols.getProtocol, { body: protocol });
       mockConnections = [
-        { id: "dev-1", label: "Mock MultispeQ 1", driver: {} },
-        { id: "dev-2", label: "Mock MultispeQ 2", driver: {} },
-        { id: "dev-3", label: "Mock MultispeQ 3", driver: {} },
-        { id: "dev-4", label: "Mock MultispeQ 4", driver: {} },
+        mockConnection("dev-1", "Mock MultispeQ 1"),
+        mockConnection("dev-2", "Mock MultispeQ 2"),
+        mockConnection("dev-3", "Mock MultispeQ 3"),
+        mockConnection("dev-4", "Mock MultispeQ 4"),
       ];
       // Device 3 fails; the round still completes with the other three.
       mockExecuteProtocol
@@ -189,15 +198,20 @@ describe("useWorkbookExecution", () => {
       const outputCell = findOutput(updated);
       // Primary data mirrors the first successful device for macro cells.
       expect(outputCell?.data).toEqual({ device_id: "mock-1" });
+      const identified = (label: string) => ({
+        deviceLabel: label,
+        deviceName: label,
+        family: "multispeq",
+      });
       expect(outputCell?.deviceResults).toEqual([
-        { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1" } },
-        { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", data: { device_id: "mock-2" } },
+        { deviceId: "dev-1", ...identified("Mock MultispeQ 1"), data: { device_id: "mock-1" } },
+        { deviceId: "dev-2", ...identified("Mock MultispeQ 2"), data: { device_id: "mock-2" } },
         {
           deviceId: "dev-3",
-          deviceLabel: "Mock MultispeQ 3",
+          ...identified("Mock MultispeQ 3"),
           error: "Mock device failure (simulated)",
         },
-        { deviceId: "dev-4", deviceLabel: "Mock MultispeQ 4", data: { device_id: "mock-4" } },
+        { deviceId: "dev-4", ...identified("Mock MultispeQ 4"), data: { device_id: "mock-4" } },
       ]);
       expect(outputCell?.messages).toEqual(["Mock MultispeQ 3: Mock device failure (simulated)"]);
     });
@@ -230,8 +244,8 @@ describe("useWorkbookExecution", () => {
       });
       server.mount(contract.protocols.getProtocol, { body: protocol });
       mockConnections = [
-        { id: "dev-1", label: "Mock MultispeQ 1", driver: {} },
-        { id: "dev-2", label: "Mock MultispeQ 2", driver: {} },
+        mockConnection("dev-1", "Mock MultispeQ 1"),
+        mockConnection("dev-2", "Mock MultispeQ 2"),
       ];
       mockExecuteProtocol.mockRejectedValue(new Error("device not open"));
 
@@ -428,6 +442,108 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const macroOutput = findOutput(updated, macro.id);
       expect(macroOutput?.data).toEqual({ result: 99 });
+    });
+
+    it("sends named upstream outputs and $device in the macro context", async () => {
+      setMockConnected(true);
+      const proto = createProtocolCell({
+        id: "proto-base",
+        payload: { protocolId: crypto.randomUUID(), version: 1, name: "Baseline" },
+      });
+      const output = createOutputCell({ producedBy: "proto-base", data: { value: 0.8 } });
+      const question = createQuestionCell({
+        id: "q-note",
+        name: "Note",
+        answer: "ok",
+        isAnswered: true,
+      });
+      const macro = createMacroCell();
+
+      let capturedContext: Record<string, unknown> | undefined;
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          const body = (await request.json()) as { context?: Record<string, unknown> };
+          capturedContext = body.context;
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { done: true },
+          });
+        }),
+      );
+
+      const { result } = renderExecution([proto, output, question, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(capturedContext?.baseline).toEqual({ value: 0.8 });
+      expect(capturedContext?.note).toEqual({ answer: "ok" });
+      expect(capturedContext?.$device).toMatchObject({ family: "multispeq", index: 0 });
+    });
+
+    it("runs a ctx-only macro without a preceding measurement", async () => {
+      const question = createQuestionCell({
+        id: "q-only",
+        name: "Threshold",
+        answer: "42",
+        isAnswered: true,
+      });
+      const macro = createMacroCell();
+
+      let capturedBody: { data?: unknown; context?: Record<string, unknown> } | undefined;
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          capturedBody = (await request.json()) as typeof capturedBody;
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { threshold: 42 },
+          });
+        }),
+      );
+
+      const { result, onCellsChange } = renderExecution([question, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(capturedBody?.data).toEqual({});
+      expect(capturedBody?.context?.threshold).toEqual({ answer: "42" });
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, macro.id)?.data).toEqual({ threshold: 42 });
+    });
+
+    it("scopes each per-device macro run's ctx to that device's results", async () => {
+      const proto = createProtocolCell({
+        id: "proto-scan",
+        payload: { protocolId: crypto.randomUUID(), version: 1, name: "Scan" },
+      });
+      const output = createOutputCell({
+        producedBy: "proto-scan",
+        data: { device_id: "mock-1" },
+        deviceResults: [
+          { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1" } },
+          { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", data: { device_id: "mock-2" } },
+        ],
+      });
+      const macro = createMacroCell();
+
+      const contexts: Record<string, unknown>[] = [];
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          const body = (await request.json()) as { context?: Record<string, unknown> };
+          contexts.push(body.context ?? {});
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { ok: true },
+          });
+        }),
+      );
+
+      const { result } = renderExecution([proto, output, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(contexts).toHaveLength(2);
+      expect(contexts[0].scan).toEqual({ device_id: "mock-1" });
+      expect(contexts[1].scan).toEqual({ device_id: "mock-2" });
     });
 
     it("applies the macro to every device's measurement individually", async () => {
@@ -655,6 +771,201 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("Yes path")]),
       );
+    });
+
+    function deviceBranch(targets: { multispeq: string; other: string }) {
+      return createBranchCell({
+        id: "branch-dev",
+        paths: [
+          {
+            id: "path-multispeq",
+            label: "MultispeQ path",
+            color: "#22c55e",
+            gotoCellId: targets.multispeq,
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: "$device",
+                field: "family",
+                operator: "eq",
+                value: "multispeq",
+              },
+            ],
+          },
+          {
+            id: "path-other",
+            label: "Other path",
+            color: "#0ea5e9",
+            gotoCellId: targets.other,
+            conditions: [
+              {
+                id: "cond-2",
+                sourceCellId: "$device",
+                field: "family",
+                operator: "neq",
+                value: "multispeq",
+              },
+            ],
+          },
+        ],
+      });
+    }
+
+    it("dispatches each device group to its resolved protocol/command target", async () => {
+      const proto = createProtocolCell({ id: "proto-ms" });
+      const command = createCommandCell({ id: "cmd-other" });
+      mockConnections = [
+        mockConnection("dev-1", "MultispeQ A"),
+        {
+          ...mockConnection("dev-2", "Ambit B"),
+          family: "ambit" as never,
+          identity: { family: "ambit" as never, name: "Ambit B", raw: {} },
+        },
+      ];
+      const protocol = createProtocol();
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockExecuteProtocol.mockResolvedValue({ device_id: "ms-1" });
+      mockExecuteCommand.mockResolvedValue("NEW Ambit B Ready");
+
+      const branch = deviceBranch({ multispeq: "proto-ms", other: "cmd-other" });
+      const { result, onCellsChange } = renderExecution([branch, proto, command]);
+      await act(() => result.current.runCell(branch.id));
+
+      // The protocol ran for the MultispeQ only, the command for the Ambit only.
+      expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
+      expect(mockExecuteCommand).toHaveBeenCalledTimes(1);
+      const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
+      const protoOutput = findOutput(updated, "proto-ms");
+      const cmdOutput = findOutput(updated, "cmd-other");
+      expect(protoOutput?.data).toEqual({ device_id: "ms-1" });
+      expect(cmdOutput?.data).toEqual({ response: "NEW Ambit B Ready" });
+      const branchOutput = findOutput(updated, branch.id);
+      expect(branchOutput?.messages?.join("\n")).toContain("MultispeQ path");
+      expect(branchOutput?.messages?.join("\n")).toContain("Other path");
+    });
+
+    it("skips (not errors) devices whose branch resolves no measurement", async () => {
+      const proto = createProtocolCell({ id: "proto-ms" });
+      mockConnections = [
+        mockConnection("dev-1", "MultispeQ A"),
+        {
+          ...mockConnection("dev-2", "Ambit B"),
+          family: "ambit" as never,
+          identity: { family: "ambit" as never, name: "Ambit B", raw: {} },
+        },
+      ];
+      const protocol = createProtocol();
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockExecuteProtocol.mockResolvedValue({ device_id: "ms-1" });
+
+      // Only the multispeq path exists; the Ambit matches nothing.
+      const branch = createBranchCell({
+        id: "branch-dev",
+        paths: [
+          {
+            id: "path-multispeq",
+            label: "MultispeQ path",
+            color: "#22c55e",
+            gotoCellId: "proto-ms",
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: "$device",
+                field: "family",
+                operator: "eq",
+                value: "multispeq",
+              },
+            ],
+          },
+        ],
+      });
+      const { result, onCellsChange } = renderExecution([branch, proto]);
+      await act(() => result.current.runCell(branch.id));
+
+      const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
+      const branchOutput = findOutput(updated, branch.id);
+      expect(branchOutput?.messages?.join("\n")).toContain(
+        "Ambit B (ambit): no measurement resolved this round",
+      );
+      const branchCell = updated.find((c) => c.id === branch.id);
+      expect(branchCell).toHaveProperty("evaluatedPathId", undefined);
+    });
+
+    it("runAll skips a dispatched target exactly once (no double run)", async () => {
+      const proto = createProtocolCell({ id: "proto-ms" });
+      mockConnections = [mockConnection("dev-1", "MultispeQ A")];
+      const protocol = createProtocol();
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockExecuteProtocol.mockResolvedValue({ device_id: "ms-1" });
+
+      const branch = createBranchCell({
+        id: "branch-dev",
+        paths: [
+          {
+            id: "path-multispeq",
+            label: "MultispeQ path",
+            color: "#22c55e",
+            gotoCellId: "proto-ms",
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: "$device",
+                field: "family",
+                operator: "eq",
+                value: "multispeq",
+              },
+            ],
+          },
+        ],
+      });
+
+      const { result } = renderExecution([branch, proto]);
+      await act(() => result.current.runAll());
+
+      expect(mockExecuteProtocol).toHaveBeenCalledTimes(1);
+    });
+
+    it("errors a device-scoped branch when no device is connected", async () => {
+      setMockConnected(false);
+      const proto = createProtocolCell({ id: "proto-ms" });
+      const branch = deviceBranch({ multispeq: "proto-ms", other: "proto-ms" });
+
+      const { result, onCellsChange } = renderExecution([branch, proto]);
+      await act(() => result.current.runCell(branch.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const branchOutput = findOutput(updated, branch.id);
+      expect(branchOutput?.messages?.join("\n")).toContain("No device connected");
+    });
+
+    it("rejects a device-scoped branch whose path lacks a measurement target", async () => {
+      setMockConnected(true);
+      const branch = createBranchCell({
+        id: "branch-dev",
+        paths: [
+          {
+            id: "path-multispeq",
+            label: "MultispeQ path",
+            color: "#22c55e",
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: "$device",
+                field: "family",
+                operator: "eq",
+                value: "multispeq",
+              },
+            ],
+          },
+        ],
+      });
+
+      const { result, onCellsChange } = renderExecution([branch]);
+      await act(() => result.current.runCell(branch.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const branchOutput = findOutput(updated, branch.id);
+      expect(branchOutput?.messages?.join("\n")).toMatch(/must jump to a protocol or command/);
     });
 
     it("reports validation errors for misconfigured branch", async () => {

@@ -30,9 +30,11 @@ function entry(device: Device, patch: Partial<DeviceExecutorEntry> = {}): Device
     executor: {
       execute: vi.fn(),
       cancel: vi.fn().mockResolvedValue(undefined),
+      getIdentity: vi.fn().mockResolvedValue({ family: "multispeq", raw: {} }),
       onProgress: vi.fn(() => () => undefined),
       destroy: vi.fn().mockResolvedValue(undefined),
     },
+    identity: undefined,
     isExecuting: false,
     isCancelled: false,
     error: undefined,
@@ -107,6 +109,51 @@ describe("useMultiScanner", () => {
     ]);
     expect(client.getQueryData(connectionKeys.battery(DEVICE_A.id))).toBe(81);
     expect(client.getQueryData(connectionKeys.battery(DEVICE_B.id))).toBeUndefined();
+  });
+
+  it("runs each assignment's own command; devices without one sit the round out", async () => {
+    setEntries([entry(DEVICE_A), entry(DEVICE_B)]);
+    const executeCommandOn = vi.fn().mockResolvedValue({ ok: 1 });
+    useScannerCommandExecutorStore.setState({ executeCommandOn });
+
+    const { result } = renderHook(() => useMultiScanner(), { wrapper });
+
+    const commandA = [{ _protocol_set_: [{ v: "a" }] }];
+    let round: Round | undefined;
+    await act(async () => {
+      round = await result.current.executeScanAssignments([
+        { device: DEVICE_A, command: commandA, protocolId: "proto-a", protocolName: "A" },
+      ]);
+    });
+
+    expect(executeCommandOn).toHaveBeenCalledTimes(1);
+    expect(executeCommandOn).toHaveBeenCalledWith(DEVICE_A.id, commandA);
+    expect(round?.successes.map((s) => s.device.id)).toEqual([DEVICE_A.id]);
+    expect(round?.failures).toEqual([]);
+  });
+
+  it("merges pre-resolved failures into the round without touching the devices", async () => {
+    setEntries([entry(DEVICE_A), entry(DEVICE_B)]);
+    const executeCommandOn = vi.fn().mockResolvedValue({ device_battery: 55 });
+    useScannerCommandExecutorStore.setState({ executeCommandOn });
+
+    const { result } = renderHook(() => useMultiScanner(), { wrapper });
+
+    let round: Round | undefined;
+    await act(async () => {
+      round = await result.current.executeScanAssignments(
+        [{ device: DEVICE_A, command: "battery" }],
+        [{ device: DEVICE_B, error: new Error("Protocol code is unavailable") }],
+      );
+    });
+
+    expect(executeCommandOn).toHaveBeenCalledTimes(1);
+    expect(round?.successes.map((s) => s.device.id)).toEqual([DEVICE_A.id]);
+    expect(round?.failures).toEqual([
+      { device: DEVICE_B, error: new Error("Protocol code is unavailable") },
+    ]);
+    // Battery patching applies to assignment rounds too.
+    expect(client.getQueryData(connectionKeys.battery(DEVICE_A.id))).toBe(55);
   });
 
   it("returns an empty round without devices", async () => {

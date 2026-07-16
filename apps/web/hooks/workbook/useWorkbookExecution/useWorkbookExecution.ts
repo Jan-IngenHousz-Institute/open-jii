@@ -21,12 +21,20 @@ import type {
   CommandCell,
   MacroCell,
   OutputCell,
+  OutputDeviceResult,
   ProtocolCell,
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
-import { evaluateBranch, validateBranchCell } from "@repo/api/transforms/evaluate-branch";
+import { toDeviceContext } from "@repo/api/transforms/device-context";
+import {
+  evaluateBranch,
+  isDeviceScopedBranch,
+  validateBranchCell,
+  validateDeviceBranch,
+} from "@repo/api/transforms/evaluate-branch";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -158,8 +166,8 @@ export function useWorkbookExecution({
   const setCellState = useCallback(
     (cellId: string, state: Omit<CellExecutionState, "executionOrder">) => {
       setExecutionStates((prev) => {
-        const existing = prev[cellId];
-        return { ...prev, [cellId]: { ...state, executionOrder: existing.executionOrder } };
+        const existing = prev[cellId] as CellExecutionState | undefined;
+        return { ...prev, [cellId]: { ...state, executionOrder: existing?.executionOrder } };
       });
     },
     [],
@@ -180,13 +188,22 @@ export function useWorkbookExecution({
       fallbackMessage: string,
       normalize: (data: unknown) => Record<string, unknown>,
     ): WorkbookCell[] => {
-      const results = devices.map((d, i) => {
+      const results: {
+        deviceId: string;
+        deviceLabel: string;
+        family: SensorFamily;
+        deviceName?: string;
+        data?: Record<string, unknown>;
+        error?: string;
+      }[] = devices.map((d, i) => {
         const outcome = settled[i];
+        const identity = { family: d.family, deviceName: d.identity.name };
         return outcome.status === "fulfilled"
-          ? { deviceId: d.id, deviceLabel: d.label, data: normalize(outcome.value) }
+          ? { deviceId: d.id, deviceLabel: d.label, ...identity, data: normalize(outcome.value) }
           : {
               deviceId: d.id,
               deviceLabel: d.label,
+              ...identity,
               error:
                 outcome.reason instanceof Error
                   ? outcome.reason.message
@@ -224,7 +241,11 @@ export function useWorkbookExecution({
   );
 
   const runProtocolCell = useCallback(
-    async (cell: ProtocolCell, currentCells: WorkbookCell[]) => {
+    async (
+      cell: ProtocolCell,
+      currentCells: WorkbookCell[],
+      deviceSubset?: IotDeviceConnection[],
+    ) => {
       const protocolCode = await getProtocolCode(cell);
       if (!protocolCode) {
         setCellState(cell.id, { status: "error", error: "Invalid or missing protocol code" });
@@ -255,9 +276,9 @@ export function useWorkbookExecution({
 
       // Multi-device fan-out (see mobile Multi-scan): one protocol, every
       // connected device in parallel, per-device outcomes.
-      const devices = connectionsRef.current;
-      // Each driver runs with the family it was connected as; switching the
-      // toolbar family must not retarget live drivers.
+      const devices = deviceSubset ?? connectionsRef.current;
+      // Each driver runs with the family the handshake identified; switching
+      // the toolbar family must not retarget live drivers.
       const settled = await Promise.allSettled(
         devices.map((d) => executeProtocolWithDriver(d.driver, d.family, protocolCode)),
       );
@@ -275,7 +296,11 @@ export function useWorkbookExecution({
   );
 
   const runCommandCell = useCallback(
-    async (cell: CommandCell, currentCells: WorkbookCell[]) => {
+    async (
+      cell: CommandCell,
+      currentCells: WorkbookCell[],
+      deviceSubset?: IotDeviceConnection[],
+    ) => {
       let command: string | Record<string, unknown> | unknown[];
       try {
         command = resolveInlineCommand(cell.payload);
@@ -300,7 +325,7 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      const devices = connectionsRef.current;
+      const devices = deviceSubset ?? connectionsRef.current;
       const settled = await Promise.allSettled(
         devices.map((d) => executeCommandWithDriver(d.driver, command)),
       );
@@ -318,24 +343,38 @@ export function useWorkbookExecution({
   );
 
   // Runs the macro once against one device's measurement; throws on failure.
-  const executeMacroOn = useCallback(async (macroId: string, data: Record<string, unknown>) => {
-    let result;
-    try {
-      result = await executeMacroMutationRef.current.mutateAsync({ id: macroId, data });
-    } catch (err) {
-      // oRPC throws an ORPCError on HTTP errors; surface the server's message.
-      throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
-    }
-    if (!result.success) {
-      throw new Error(result.error ?? "Macro execution failed");
-    }
-    return result.output;
+  const executeMacroOn = useCallback(
+    async (macroId: string, data: Record<string, unknown>, context?: Record<string, unknown>) => {
+      let result;
+      try {
+        result = await executeMacroMutationRef.current.mutateAsync({ id: macroId, data, context });
+      } catch (err) {
+        // oRPC throws an ORPCError on HTTP errors; surface the server's message.
+        throw new Error(parseApiError(err)?.message ?? "Macro execution failed");
+      }
+      if (!result.success) {
+        throw new Error(result.error ?? "Macro execution failed");
+      }
+      return result.output;
+    },
+    [],
+  );
+
+  // The $device entry a macro run for this connection reads from ctx.
+  const deviceContextFor = useCallback((deviceId?: string) => {
+    const connections = connectionsRef.current;
+    const index = deviceId ? connections.findIndex((c) => c.id === deviceId) : 0;
+    const connection = connections.at(Math.max(index, 0));
+    return connection ? toDeviceContext(connection.identity, Math.max(index, 0)) : undefined;
   }, []);
 
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
-      if (!input) {
+      const namespace = buildCellNamespace(currentCells, cellIndex);
+      // A macro can run from ctx alone; error only when there is neither a
+      // nearest measurement nor any upstream output to read.
+      if (!input && Object.keys(namespace.byId).length === 0) {
         setCellState(cell.id, { status: "error", error: "No input data available" });
         return insertOutputAfterCell(
           currentCells,
@@ -347,9 +386,9 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
       const startTime = performance.now();
 
-      // Multi-device input: apply the macro to every device's measurement
-      // individually (serialized sandbox invocations); failed measurements carry their error through.
-      const inputResults = input.deviceResults;
+      // Multi-device input: the macro runs once per device's measurement,
+      // serialized; devices whose measurement failed carry their error through.
+      const inputResults = input?.deviceResults;
       if (inputResults && inputResults.length > 1) {
         const settled: PromiseSettledResult<unknown>[] = [];
         for (const r of inputResults) {
@@ -357,9 +396,19 @@ export function useWorkbookExecution({
             if (r.data == null) {
               throw new Error("No measurement data from this device");
             }
+            // Each device's run reads a ctx scoped to ITS results, plus its
+            // own $device entry.
+            const ns = buildCellNamespace(currentCells, cellIndex, {
+              deviceId: r.deviceId,
+              device: deviceContextFor(r.deviceId),
+            });
             settled.push({
               status: "fulfilled",
-              value: await executeMacroOn(cell.payload.macroId, r.data as Record<string, unknown>),
+              value: await executeMacroOn(
+                cell.payload.macroId,
+                r.data as Record<string, unknown>,
+                ns.ctx,
+              ),
             });
           } catch (err) {
             settled.push({ status: "rejected", reason: err });
@@ -367,13 +416,15 @@ export function useWorkbookExecution({
         }
         const executionTime = performance.now() - startTime;
 
-        const results = inputResults.map((r, i) => {
+        const results: OutputDeviceResult[] = inputResults.map((r, i) => {
           const outcome = settled[i];
+          const identity = { family: r.family, deviceName: r.deviceName };
           return outcome.status === "fulfilled"
-            ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, data: outcome.value }
+            ? { deviceId: r.deviceId, deviceLabel: r.deviceLabel, ...identity, data: outcome.value }
             : {
                 deviceId: r.deviceId,
                 deviceLabel: r.deviceLabel,
+                ...identity,
                 error:
                   outcome.reason instanceof Error
                     ? outcome.reason.message
@@ -408,9 +459,13 @@ export function useWorkbookExecution({
       }
 
       try {
+        const ns = buildCellNamespace(currentCells, cellIndex, {
+          device: deviceContextFor(),
+        });
         const output = await executeMacroOn(
           cell.payload.macroId,
-          input.data as Record<string, unknown>,
+          (input?.data ?? {}) as Record<string, unknown>,
+          ns.ctx,
         );
         const executionTime = performance.now() - startTime;
         setCellState(cell.id, { status: "completed" });
@@ -430,7 +485,7 @@ export function useWorkbookExecution({
         );
       }
     },
-    [setCellState, executeMacroOn],
+    [setCellState, executeMacroOn, deviceContextFor],
   );
 
   const runQuestionCell = useCallback(
@@ -469,11 +524,91 @@ export function useWorkbookExecution({
     [setCellState],
   );
 
+  // Target cells a device-scoped branch already executed this run; the linear
+  // walk skips each exactly once instead of re-running it.
+  const dispatchConsumedRef = useRef(new Set<string>());
+
+  /**
+   * Device-scoped branch = dispatcher: every connected device evaluates the
+   * branch with ITS identity, devices group by resolved path, and each path's
+   * protocol/command target runs against only its group. Devices matching no
+   * path are skipped with a message, never an error. No jump: execution
+   * continues after the branch, and consumed targets are skipped once.
+   */
+  const runDeviceDispatchBranch = useCallback(
+    async (cell: BranchCell, currentCells: WorkbookCell[]): Promise<WorkbookCell[]> => {
+      const connections = connectionsRef.current;
+      if (connections.length === 0) {
+        setCellState(cell.id, { status: "error", error: "No device connected" });
+        return insertOutputAfterCell(
+          currentCells,
+          cell.id,
+          makeErrorOutputCell(cell.id, "No device connected - connect devices to dispatch"),
+        );
+      }
+
+      const groups = new Map<string, IotDeviceConnection[]>();
+      const skipped: IotDeviceConnection[] = [];
+      connections.forEach((connection, index) => {
+        const path = evaluateBranch(cell, currentCells, {
+          device: toDeviceContext(connection.identity, index),
+        });
+        const target = path?.gotoCellId
+          ? currentCells.find((c) => c.id === path.gotoCellId)
+          : undefined;
+        if (path && target && (target.type === "protocol" || target.type === "command")) {
+          const group = groups.get(path.id);
+          if (group) group.push(connection);
+          else groups.set(path.id, [connection]);
+        } else {
+          skipped.push(connection);
+        }
+      });
+
+      let updated = currentCells;
+      const messages: string[] = [];
+      for (const path of cell.paths) {
+        const group = groups.get(path.id);
+        if (!group || group.length === 0 || !path.gotoCellId) continue;
+        const target = updated.find((c) => c.id === path.gotoCellId);
+        if (!target) continue;
+        messages.push(`${path.label || "Unnamed path"} -> ${group.map((g) => g.label).join(", ")}`);
+        dispatchConsumedRef.current.add(target.id);
+        updated =
+          target.type === "protocol"
+            ? await runProtocolCell(target, updated, group)
+            : target.type === "command"
+              ? await runCommandCell(target, updated, group)
+              : updated;
+      }
+      for (const s of skipped) {
+        messages.push(`${s.label} (${s.family}): no measurement resolved this round`);
+      }
+
+      setCellState(cell.id, { status: "completed" });
+      updated = insertOutputAfterCell(
+        updated,
+        cell.id,
+        makeOutputCell(cell.id, undefined, 0, messages),
+      );
+      // A dispatcher matches several paths at once; no single ACTIVE path.
+      return updated.map((c) => (c.id === cell.id ? { ...cell, evaluatedPathId: undefined } : c));
+    },
+    [setCellState, runProtocolCell, runCommandCell],
+  );
+
   const runBranchCell = useCallback(
-    (cell: BranchCell, currentCells: WorkbookCell[], pass?: number): WorkbookCell[] => {
+    async (
+      cell: BranchCell,
+      currentCells: WorkbookCell[],
+      pass?: number,
+    ): Promise<WorkbookCell[]> => {
       setCellState(cell.id, { status: "running" });
 
-      const configErrors = validateBranchCell(cell);
+      const configErrors = [
+        ...validateBranchCell(cell),
+        ...validateDeviceBranch(cell, currentCells),
+      ];
       if (configErrors.length > 0) {
         setCellState(cell.id, { status: "error", error: configErrors.join("; ") });
         return insertOutputAfterCell(
@@ -481,6 +616,10 @@ export function useWorkbookExecution({
           cell.id,
           makeOutputCell(cell.id, undefined, 0, configErrors),
         );
+      }
+
+      if (isDeviceScopedBranch(cell)) {
+        return runDeviceDispatchBranch(cell, currentCells);
       }
 
       const matchedPath = evaluateBranch(cell, currentCells);
@@ -500,7 +639,7 @@ export function useWorkbookExecution({
         c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
       );
     },
-    [setCellState],
+    [setCellState, runDeviceDispatchBranch],
   );
 
   const dispatchCell = useCallback(
@@ -558,6 +697,7 @@ export function useWorkbookExecution({
       const cell = currentCells.find((c) => c.id === cellId);
       if (!cell) return;
 
+      dispatchConsumedRef.current.clear();
       currentCells = await dispatchCell(cell, currentCells);
       onCellsChangeRef.current(currentCells);
 
@@ -570,6 +710,11 @@ export function useWorkbookExecution({
           for (let i = jumpIndex; i < currentCells.length; i++) {
             const c = currentCells[i];
             if (c.type === "output" || c.type === "markdown") continue;
+
+            if (dispatchConsumedRef.current.has(c.id)) {
+              dispatchConsumedRef.current.delete(c.id);
+              continue;
+            }
 
             const count = visitCounts.get(c.id) ?? 0;
             if (count >= MAX_VISITS) continue;
@@ -601,6 +746,7 @@ export function useWorkbookExecution({
     let currentCells = [...cellsRef.current];
     const visitCounts = new Map<string, number>();
     const MAX_VISITS_PER_CELL = 100;
+    dispatchConsumedRef.current.clear();
 
     for (let i = 0; i < currentCells.length; i++) {
       if (shouldAbort()) break;
@@ -608,6 +754,13 @@ export function useWorkbookExecution({
       const cell = currentCells[i];
 
       if (cell.type === "output" || cell.type === "markdown") continue;
+
+      // A device-scoped branch already ran this target with its device group;
+      // skip it exactly once.
+      if (dispatchConsumedRef.current.has(cell.id)) {
+        dispatchConsumedRef.current.delete(cell.id);
+        continue;
+      }
 
       // Cap revisits to avoid infinite loops from branch jumps.
       const count = visitCounts.get(cell.id) ?? 0;
@@ -642,7 +795,7 @@ export function useWorkbookExecution({
   return {
     isConnected,
     isConnecting,
-    connectedDevices: connections.map(({ id, label }) => ({ id, label })),
+    connectedDevices: connections.map(({ id, label, family }) => ({ id, label, family })),
     sensorFamily,
     setSensorFamily,
     connectionType,

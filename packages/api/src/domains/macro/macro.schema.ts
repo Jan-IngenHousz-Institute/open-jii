@@ -109,6 +109,9 @@ export const zMacroProtocolPathParams = z.object({
 
 export const zMacroExecutionRequestBody = z.object({
   data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
+  // Upstream cell outputs keyed by canonical name, injected into the sandbox as
+  // read-only `ctx`. Additive: `data` still carries the nearest output (`json`).
+  context: jsonStringOrValue(z.record(z.unknown())).optional(),
   timeout: z.number().int().min(1).max(60).optional(),
 });
 
@@ -182,5 +185,6 @@ export interface MacroBatchExecutionWireBody {
 }
 export interface MacroExecutionWireBody {
   data: MacroExecutionRequestBody["data"] | string;
+  context?: MacroExecutionRequestBody["context"] | string;
   timeout?: number;
 }

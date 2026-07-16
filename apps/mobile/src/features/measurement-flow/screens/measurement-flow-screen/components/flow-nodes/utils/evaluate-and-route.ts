@@ -1,11 +1,41 @@
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
+import type { DeviceExecutorEntry } from "~/features/connection/stores/use-scanner-command-executor-store";
+import type { DevicePlanEntry } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { FlowNode } from "~/shared/measurements/flow-node";
+import { createLogger } from "~/shared/observability/logger";
 
 import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { evaluateBranch } from "@repo/api/transforms/evaluate-branch";
+import { toDeviceContext } from "@repo/api/transforms/device-context";
+import type { BranchRuntimeContext } from "@repo/api/transforms/evaluate-branch";
+import { evaluateBranch, isDeviceScopedBranch } from "@repo/api/transforms/evaluate-branch";
 
 import { hydrateCells } from "./hydrate-cells";
+
+const log = createLogger("evaluate-and-route");
+
+// Identity is best-effort; while the handshake is pending (or failed) the
+// family falls back to multispeq, the only family mobile connects today.
+function entryIdentity(entry: DeviceExecutorEntry) {
+  return (
+    entry.identity ?? {
+      family: "multispeq",
+      name: entry.device.name,
+      deviceId: entry.device.id,
+    }
+  );
+}
+
+/** `$device` conditions of a non-dispatch branch read the primary device. */
+function primaryDeviceRuntime(): BranchRuntimeContext | undefined {
+  const primary: DeviceExecutorEntry | undefined = useScannerCommandExecutorStore
+    .getState()
+    .executors.values()
+    .next().value;
+  if (!primary) return undefined;
+  return { device: toDeviceContext(entryIdentity(primary), 0) };
+}
 
 // Caps branch goto-loops; mirrors web's useWorkbookExecution MAX_VISITS_PER_CELL.
 export const MAX_BRANCH_VISITS = 100;
@@ -24,6 +54,67 @@ function advanceSequential(): void {
   }
   recordBranchJump(nextIndex);
   setCurrentFlowStep(nextIndex);
+}
+
+type FlowStore = ReturnType<typeof useMeasurementFlowStore.getState>;
+
+/**
+ * Device-scoped branch = dispatcher (mirrors web's runDeviceDispatchBranch):
+ * every connected device evaluates the branch with ITS identity and the plan
+ * maps each device to its matched protocol/command cell. The flow routes to
+ * the EARLIEST target in flow order; the measurement round there executes
+ * every device's own payload, so the other targets are consumed (skipped
+ * once). Devices matching no measurement are skipped, never an error.
+ */
+function dispatchDeviceBranch(
+  flow: FlowStore,
+  branchCell: BranchCell,
+  hydrated: WorkbookCell[],
+): void {
+  const entries = Array.from(useScannerCommandExecutorStore.getState().executors.values());
+
+  const plan: DevicePlanEntry[] = [];
+  const skipped: string[] = [];
+  entries.forEach((entry, index) => {
+    const matched = evaluateBranch(branchCell, hydrated, {
+      device: toDeviceContext(entryIdentity(entry), index),
+    });
+    const target = matched?.gotoCellId
+      ? hydrated.find((c) => c.id === matched.gotoCellId)
+      : undefined;
+    const isMeasurementTarget =
+      !!target && (target.type === "protocol" || target.type === "command");
+    if (isMeasurementTarget && flow.flowNodes.some((n) => n.id === target.id)) {
+      plan.push({ deviceId: entry.device.id, targetCellId: target.id });
+    } else {
+      skipped.push(entry.device.name);
+    }
+  });
+
+  // A dispatcher matches several paths at once: no single ACTIVE path chip.
+  flow.setLastMatchedPath(undefined);
+
+  if (skipped.length > 0) {
+    log.info("dispatch: devices without a matched measurement sit out this round", {
+      devices: skipped.join(", "),
+    });
+  }
+
+  if (plan.length === 0) {
+    flow.setDevicePlan(undefined, []);
+    advanceSequential();
+    return;
+  }
+
+  const targetIds = new Set(plan.map((p) => p.targetCellId));
+  const firstIdx = flow.flowNodes.findIndex((n) => targetIds.has(n.id));
+  const consumed = flow.flowNodes
+    .filter((n, i) => targetIds.has(n.id) && i !== firstIdx)
+    .map((n) => n.id);
+  flow.setDevicePlan(plan, consumed);
+  // Same Back semantics as a plain matched jump: only forward records a return.
+  if (firstIdx > flow.currentFlowStep) flow.recordBranchJump(firstIdx);
+  flow.setCurrentFlowStep(firstIdx);
 }
 
 // Evaluates a branch via the reused `evaluateBranch` (first match wins, else
@@ -50,6 +141,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     getAnswer,
     scanResult: flow.scanResult,
     producerCellId: flow.producerCellId,
+    cellOutputs: flow.cellOutputs,
   });
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");
@@ -61,7 +153,12 @@ export function evaluateAndRoute(node: FlowNode): void {
     return;
   }
 
-  const matched = evaluateBranch(branchCell, hydrated);
+  if (isDeviceScopedBranch(branchCell)) {
+    dispatchDeviceBranch(flow, branchCell, hydrated);
+    return;
+  }
+
+  const matched = evaluateBranch(branchCell, hydrated, primaryDeviceRuntime());
   flow.setLastMatchedPath(matched ? { label: matched.label, color: matched.color } : undefined);
 
   if (matched?.gotoCellId) {

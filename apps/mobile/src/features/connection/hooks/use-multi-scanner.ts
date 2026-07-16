@@ -23,12 +23,22 @@ export interface MultiScanRound {
   failures: DeviceScanFailure[];
 }
 
+/** One device's payload for a scan round; devices without one sit the round out. */
+export interface ScanAssignment {
+  device: Device;
+  command: string | object;
+  /** Provenance of the payload (dispatch rounds), threaded to the upload. */
+  protocolId?: string;
+  protocolName?: string;
+}
+
 /**
- * Multi-scan (see CONTEXT.md): run one protocol on the given devices in
- * parallel. Per-device outcomes; one failing sensor doesn't block the
- * others. The round always resolves; failures are data, not exceptions, so
- * the caller keeps successes accumulated across retry rounds and decides
- * between continue-with-successful and retry-failed.
+ * Multi-scan (see CONTEXT.md): run each assignment's command on its device in
+ * parallel (the broadcast form assigns one protocol to every device).
+ * Per-device outcomes; one failing sensor doesn't block the others. The round
+ * always resolves; failures are data, not exceptions, so the caller keeps
+ * successes accumulated across retry rounds and decides between
+ * continue-with-successful and retry-failed.
  */
 export function useMultiScanner() {
   const executors = useScannerCommandExecutorStore((s) => s.executors);
@@ -37,22 +47,22 @@ export function useMultiScanner() {
   const mutation = useMutation({
     networkMode: "always",
     mutationFn: async ({
-      protocol,
-      devices,
+      assignments,
+      prefailed = [],
     }: {
-      protocol: { code: Record<string, unknown>[] };
-      devices: Device[];
+      assignments: ScanAssignment[];
+      /** Entries that failed before reaching the device (e.g. unresolvable payload). */
+      prefailed?: DeviceScanFailure[];
     }): Promise<MultiScanRound> => {
-      const protocolCode = protocol.code;
-      if (!protocolCode || devices.length === 0) {
-        return { successes: [], failures: [] };
+      if (assignments.length === 0) {
+        return { successes: [], failures: [...prefailed] };
       }
 
       const { executeCommandOn } = useScannerCommandExecutorStore.getState();
       const settled = await Promise.allSettled(
-        devices.map((device) => executeCommandOn(device.id, protocolCode)),
+        assignments.map(({ device, command }) => executeCommandOn(device.id, command)),
       );
-      const outcomes = devices.map((device, i): DeviceCommandOutcome => {
+      const outcomes = assignments.map(({ device }, i): DeviceCommandOutcome => {
         const result = settled[i];
         return result.status === "fulfilled"
           ? { device, status: "fulfilled", result: result.value }
@@ -65,6 +75,7 @@ export function useMultiScanner() {
       });
 
       const round = partitionScanOutcomes(outcomes);
+      round.failures.push(...prefailed);
 
       // Scan replies embed the battery level; patch each device's battery
       // cache so consumers stay fresh without re-firing the battery command.
@@ -97,7 +108,15 @@ export function useMultiScanner() {
 
   return {
     executeScanAll: (protocol: { code: Record<string, unknown>[] }, devices: Device[]) =>
-      mutation.mutateAsync({ protocol, devices }),
+      mutation.mutateAsync({
+        assignments: protocol.code
+          ? devices.map((device) => ({ device, command: protocol.code }))
+          : [],
+      }),
+    // Dispatch rounds: each device runs its own payload; pre-resolved
+    // failures ride along so one bad target doesn't sink the round.
+    executeScanAssignments: (assignments: ScanAssignment[], prefailed?: DeviceScanFailure[]) =>
+      mutation.mutateAsync({ assignments, prefailed }),
     deviceStates,
     isScanning: mutation.isPending,
     lastRound: mutation.data,

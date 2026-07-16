@@ -11,6 +11,15 @@ export type ScanResult = Record<string, unknown>;
 export interface ScanResultEntry {
   device?: { id: string; name: string };
   result: ScanResult;
+  /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
+  protocolId?: string;
+  protocolName?: string;
+}
+
+/** One device's routing from a device-scoped (dispatcher) branch. */
+export interface DevicePlanEntry {
+  deviceId: string;
+  targetCellId: string;
 }
 
 /** The branch path the flow last routed through, surfaced inline in the hero. */
@@ -45,6 +54,9 @@ export interface FlowState {
   // Cell id of the producer (protocol or command) that yielded scanResult;
   // keys the synthetic output cell in hydrateCells for branch evaluation.
   producerCellId?: string;
+  // Macro/analysis outputs keyed by cell id so downstream branches and macros
+  // can read them on-device (the web runtime stores these as output cells).
+  cellOutputs: Record<string, unknown>;
   isFromOverview: boolean;
   // Workbook-derived data for on-device branch evaluation; empty for legacy
   // flow-only experiments. Persisted so a resumed branching flow keeps routing.
@@ -53,6 +65,11 @@ export interface FlowState {
   lastMatchedPath?: MatchedPath;
   branchVisitCounts: Record<string, number>;
   branchReturnStack: BranchReturn[];
+  // Transient dispatch routing from a device-scoped branch (NOT persisted:
+  // excluded from partialize; a resumed flow re-broadcasts like before).
+  devicePlan?: DevicePlanEntry[];
+  // Dispatch targets already executed this round; nextStep skips each once.
+  consumedNodeIds: string[];
 }
 
 export const initialFlowState: FlowState = {
@@ -67,12 +84,15 @@ export const initialFlowState: FlowState = {
   scanResult: undefined,
   scanResults: undefined,
   producerCellId: undefined,
+  cellOutputs: {},
   isFromOverview: false,
   cells: [],
   edges: [],
   lastMatchedPath: undefined,
   branchVisitCounts: {},
   branchReturnStack: [],
+  devicePlan: undefined,
+  consumedNodeIds: [],
 };
 
 // Iteration-scoped branch routing, cleared on every new iteration, retry,
@@ -81,6 +101,8 @@ const clearedBranchIteration: Partial<FlowState> = {
   branchVisitCounts: {},
   lastMatchedPath: undefined,
   branchReturnStack: [],
+  devicePlan: undefined,
+  consumedNodeIds: [],
 };
 
 // One readable interpretation of the mode flags. Precedence mirrors the
@@ -118,7 +140,16 @@ export function nextStepState(state: FlowState): Partial<FlowState> {
     return { currentFlowStep: firstMeasurementStep(state.flowNodes), isFromOverview: false };
   }
   if (state.experimentId && state.flowNodes.length > 0) {
-    const nextFlowStep = state.currentFlowStep + 1;
+    // Skip dispatch targets the last device round already executed, each once.
+    let nextFlowStep = state.currentFlowStep + 1;
+    const skippedIds: string[] = [];
+    while (
+      nextFlowStep < state.flowNodes.length &&
+      state.consumedNodeIds.includes(state.flowNodes[nextFlowStep].id)
+    ) {
+      skippedIds.push(state.flowNodes[nextFlowStep].id);
+      nextFlowStep += 1;
+    }
     if (nextFlowStep >= state.flowNodes.length) {
       if (isQuestionsOnlyFlow(state.flowNodes)) {
         return { isQuestionsSubmitPending: true, currentFlowStep: state.flowNodes.length };
@@ -128,6 +159,12 @@ export function nextStepState(state: FlowState): Partial<FlowState> {
         currentFlowStep: 0,
         iterationCount: state.iterationCount + 1,
         ...clearedBranchIteration,
+      };
+    }
+    if (skippedIds.length > 0) {
+      return {
+        currentFlowStep: nextFlowStep,
+        consumedNodeIds: state.consumedNodeIds.filter((id) => !skippedIds.includes(id)),
       };
     }
     return { currentFlowStep: nextFlowStep };
@@ -170,6 +207,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       scanResult: undefined,
       scanResults: undefined,
       producerCellId: undefined,
+      cellOutputs: {},
       cells: [],
       edges: [],
       ...clearedBranchIteration,
@@ -190,6 +228,7 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     scanResult: undefined,
     scanResults: undefined,
     producerCellId: undefined,
+    cellOutputs: {},
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -202,6 +241,7 @@ export function retryIterationState(): Partial<FlowState> {
     scanResult: undefined,
     scanResults: undefined,
     producerCellId: undefined,
+    cellOutputs: {},
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -224,6 +264,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     scanResult: undefined,
     scanResults: undefined,
     producerCellId: undefined,
+    cellOutputs: {},
     ...clearedBranchIteration,
   };
 }

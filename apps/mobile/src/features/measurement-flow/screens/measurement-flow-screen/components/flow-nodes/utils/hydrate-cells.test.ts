@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type {
   CommandCell,
+  MacroCell,
   OutputCell,
   ProtocolCell,
   QuestionCell,
@@ -31,6 +32,12 @@ const cCell = (id: string): CommandCell => ({
   type: "command",
   isCollapsed: false,
   payload: { format: "string", content: "battery" },
+});
+const mCell = (id: string): MacroCell => ({
+  id,
+  type: "macro",
+  isCollapsed: false,
+  payload: { macroId: "00000000-0000-0000-0000-000000000001", language: "javascript" },
 });
 
 const ctx = (over: Partial<HydrationContext> = {}): HydrationContext => ({
@@ -115,5 +122,36 @@ describe("hydrateCells", () => {
     const cells = [qCell("q1")];
     hydrateCells(cells, ctx({ getAnswer: () => "x" }));
     expect(cells[0].answer).toBeUndefined();
+  });
+
+  it("synthesizes output cells from cellOutputs (macro results)", () => {
+    const hydrated = hydrateCells([mCell("m1")], ctx({ cellOutputs: { m1: { fvfm: 0.72 } } }));
+    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
+  });
+
+  it("synthesizes both a macro output and the latest scan", () => {
+    const hydrated = hydrateCells(
+      [pCell("p1", "proto-1"), mCell("m1")],
+      ctx({
+        scanResult: { sample: [{ phi2: 0.8 }] },
+        producerCellId: "p1",
+        cellOutputs: { m1: { fvfm: 0.72 } },
+      }),
+    );
+    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
+    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
+  });
+
+  it("prefers the live scan over a stored cellOutputs entry for the same producer", () => {
+    const hydrated = hydrateCells(
+      [pCell("p1", "proto-1")],
+      ctx({
+        scanResult: { sample: [{ phi2: 0.9 }] },
+        producerCellId: "p1",
+        cellOutputs: { p1: { phi2: 0.1 } },
+      }),
+    );
+    expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
+    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);
   });
 });

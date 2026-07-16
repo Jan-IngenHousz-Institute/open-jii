@@ -12,7 +12,12 @@ export function sensorFamilyToDeviceType(sensorFamily: SensorFamily): DeviceType
   switch (sensorFamily) {
     case "multispeq":
       return "multispeq";
-    default:
+    case "ambit":
+      return "ambit";
+    case "minipar":
+      return "minipar";
+    case "ambyte":
+    case "generic":
       return "generic";
   }
 }

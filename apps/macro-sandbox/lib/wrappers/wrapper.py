@@ -260,12 +260,23 @@ class SafeInstance:
     def __repr__(self):
         return repr(object.__getattribute__(self, '_obj'))
 
+def _freeze(value):
+    """Make ctx read-only to macro code: dicts become MappingProxyType and lists
+    become tuples, recursively, so a macro cannot mutate shared upstream state."""
+    if isinstance(value, dict):
+        return types.MappingProxyType({k: _freeze(v) for k, v in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(v) for v in value)
+    return value
+
+
 results = []
 
 # 4. EXECUTION LOOP
 for item in batch_items:
     row_data = item.get("data")
     row_id = item.get("id")
+    row_context = item.get("context") or {}
 
     # Macros expect `json` to be the single measurement object. Unwrap a
     # non-empty list down to its first element, matching the legacy
@@ -290,6 +301,7 @@ for item in batch_items:
             "NameError": NameError,
         },
         "json": row_data,
+        "ctx": _freeze(row_context),
         "output": {},
         "ArrayNth": SafeCallable(ArrayNth),
         "ArrayRange": SafeCallable(ArrayRange),

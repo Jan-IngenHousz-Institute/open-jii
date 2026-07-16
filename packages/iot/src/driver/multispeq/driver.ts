@@ -5,6 +5,7 @@
  * Commands are sent as strings (or JSON) terminated with \r\n.
  * Responses are newline-terminated with an 8-char checksum before the newline.
  */
+import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
 import {
   stringifyIfObject,
@@ -37,6 +38,8 @@ function summarizeCommand(commandStr: string, maxLength = 120): string {
  * Implements the MultispeQ device communication with checksums and JSON framing
  */
 export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
+  override readonly family: SensorFamily = "multispeq";
+
   private dataBuffer: string[] = [];
   private bufferLength = 0;
 
@@ -189,6 +192,46 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
     }
 
     return info;
+  }
+
+  /**
+   * Structured identity via `device_info` (JSON: name, version, id, battery,
+   * firmware); falls back to the battery+hello probe on older firmware.
+   */
+  async getDeviceIdentity(): Promise<DeviceIdentity> {
+    // Identity runs during connect; never let it hang on the 60s console default.
+    const result = await this.execute<Record<string, unknown>>(MULTISPEQ_COMMANDS.DEVICE_INFO, {
+      timeoutMs: 5_000,
+    });
+    if (result.success && typeof result.data === "object") {
+      const data = result.data;
+      const batteryRaw = data.device_battery;
+      const battery =
+        typeof batteryRaw === "number"
+          ? batteryRaw
+          : typeof batteryRaw === "string"
+            ? parseInt(batteryRaw, 10)
+            : NaN;
+      const fw = data.device_firmware;
+      return {
+        family: this.family,
+        name: typeof data.device_name === "string" ? data.device_name : undefined,
+        deviceId: typeof data.device_id === "string" ? data.device_id : undefined,
+        firmwareVersion: typeof fw === "string" ? fw : typeof fw === "number" ? `${fw}` : undefined,
+        batteryPercent: isNaN(battery) ? undefined : battery,
+        raw: data,
+      };
+    }
+
+    const info = await this.getDeviceInfo();
+    return {
+      family: this.family,
+      name: typeof info.device_name === "string" ? info.device_name : undefined,
+      deviceId: info.device_id,
+      firmwareVersion: info.device_version,
+      batteryPercent: info.device_battery,
+      raw: info,
+    };
   }
 
   private waitForResponse(timeoutMs: number): Promise<MultispeqCommandResult> {

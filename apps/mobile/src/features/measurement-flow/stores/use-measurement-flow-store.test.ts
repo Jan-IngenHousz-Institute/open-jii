@@ -39,6 +39,8 @@ function resetStore() {
     lastMatchedPath: undefined,
     branchVisitCounts: {},
     branchReturnStack: [],
+    devicePlan: undefined,
+    consumedNodeIds: [],
   });
 }
 
@@ -515,6 +517,60 @@ describe("useMeasurementFlowStore", () => {
       expect(state.lastMatchedPath).toBeUndefined();
       expect(state.branchReturnStack).toEqual([]);
     });
+  });
+
+  describe("device dispatch plan", () => {
+    const plan = [
+      { deviceId: "usb-1", targetCellId: "m1" },
+      { deviceId: "usb-2", targetCellId: "m2" },
+    ];
+
+    it("setDevicePlan stores the plan with its consumed targets", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toEqual(plan);
+      expect(state.consumedNodeIds).toEqual(["m2"]);
+    });
+
+    it("setDevicePlan(undefined) deactivates dispatch entirely", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      useMeasurementFlowStore.getState().setDevicePlan(undefined, []);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toBeUndefined();
+      expect(state.consumedNodeIds).toEqual([]);
+    });
+
+    it("completeDevicePlan drops the plan but keeps consumed ids for skip-once", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      useMeasurementFlowStore.getState().completeDevicePlan();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toBeUndefined();
+      expect(state.consumedNodeIds).toEqual(["m2"]);
+    });
+
+    it("nextStep skips a consumed target once, then removes it", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeMeasurement("m1"), makeMeasurement("m2"), makeQuestion("q1")],
+        currentFlowStep: 0,
+        consumedNodeIds: ["m2"],
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(2);
+      expect(state.consumedNodeIds).toEqual([]);
+    });
+
+    it.each(["startNewIteration", "retryCurrentIteration", "resetFlow"] as const)(
+      "%s clears the plan and consumed targets",
+      (action) => {
+        useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+        useMeasurementFlowStore.getState()[action]();
+        const state = useMeasurementFlowStore.getState();
+        expect(state.devicePlan).toBeUndefined();
+        expect(state.consumedNodeIds).toEqual([]);
+      },
+    );
   });
 
   describe("branch back navigation", () => {

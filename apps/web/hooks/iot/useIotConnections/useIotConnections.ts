@@ -1,30 +1,38 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MockTransportAdapter } from "~/lib/iot/mock-devices";
+import { MockTransportAdapter, parseMockFamilies } from "~/lib/iot/mock-devices";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
-import type { IDeviceDriver, ITransportAdapter } from "@repo/iot";
+import type { DeviceIdentity, IDeviceDriver, ITransportAdapter } from "@repo/iot";
+import { identifyDevice } from "@repo/iot";
+import { toast } from "@repo/ui/hooks/use-toast";
 
-import { createAdapter, createDriver } from "../useIotCommunication/useIotCommunication";
+import { createAdapter } from "../useIotCommunication/useIotCommunication";
 
 export type WorkbookConnectionType = "bluetooth" | "serial" | "mock";
 
 export interface IotDeviceConnection {
   /** Stable per-connection id (uuid); devices carry no usable web identifier. */
   id: string;
-  /** "Device #N" by connect order; mock devices name themselves. */
+  /** Device-reported name when the handshake resolved one, else "Device #N". */
   label: string;
-  /** Family captured at connect time; a later family switch must not retarget live drivers. */
+  /**
+   * Family resolved by the post-connect identification handshake. The
+   * handshake outranks the toolbar selection: what answered the probe is
+   * what we are talking to.
+   */
   family: SensorFamily;
+  /** Structured identity from the handshake (name, id, firmware, battery). */
+  identity: DeviceIdentity;
   driver: IDeviceDriver;
 }
 
 /**
- * Device registry for the workbook host: N same-family devices connected at
- * once (a USB hub of sensors), each with its own driver. Connect order is
- * insertion order; the first entry is the primary device. Mirrors the mobile
- * scanner registry semantics.
+ * Device registry for the workbook host: N devices connected at once (a USB
+ * hub of sensors), each identified by a post-connect handshake and driving
+ * its own connector. Connect order is insertion order; the first entry is
+ * the primary device. Mirrors the mobile scanner registry semantics.
  */
 export function useIotConnections(sensorFamily: SensorFamily) {
   const [connections, setConnections] = useState<IotDeviceConnection[]>([]);
@@ -60,23 +68,36 @@ export function useIotConnections(sensorFamily: SensorFamily) {
       let adapter: ITransportAdapter | undefined;
       try {
         const index = connectCounterRef.current + 1;
-        adapter =
-          connectionType === "mock"
-            ? new MockTransportAdapter(index)
-            : await createAdapter(sensorFamily, connectionType);
+        if (connectionType === "mock") {
+          // Successive connect clicks cycle through the ?mockDevices= families.
+          const families = parseMockFamilies();
+          adapter = new MockTransportAdapter(index, families[(index - 1) % families.length]);
+        } else {
+          adapter = await createAdapter(sensorFamily, connectionType);
+        }
 
-        const driver = createDriver(sensorFamily);
-        await driver.initialize(adapter);
+        // Identification handshake: probe who actually answered, and let that
+        // outrank the toolbar family.
+        const { family, info, connector } = await identifyDevice(adapter, {
+          probeTimeoutMs: 2000,
+        });
 
         // The user disconnected everything while this connect was in flight;
         // honor that instead of resurrecting a connection.
         if (generation !== generationRef.current) {
-          await driver.destroy();
+          await connector.destroy();
           return;
         }
 
+        if (family !== sensorFamily) {
+          toast({
+            title: "Different device identified",
+            description: `Connected as ${sensorFamily}, but the device identifies as ${family}. Using ${family}.`,
+          });
+        }
+
         const id = crypto.randomUUID();
-        const label = connectionType === "mock" ? `Mock MultispeQ ${index}` : `Device #${index}`;
+        const label = info.name ?? `Device #${index}`;
 
         // Unplug/power-off: drop exactly this device; the others keep running.
         adapter.onStatusChanged((connected) => {
@@ -84,7 +105,10 @@ export function useIotConnections(sensorFamily: SensorFamily) {
         });
 
         connectCounterRef.current = index;
-        setConnections((prev) => [...prev, { id, label, family: sensorFamily, driver }]);
+        setConnections((prev) => [
+          ...prev,
+          { id, label, family, identity: info, driver: connector },
+        ]);
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         await adapter?.disconnect().catch(() => {});

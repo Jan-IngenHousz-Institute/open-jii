@@ -78,7 +78,14 @@ export function useMeasurementUpload() {
       questions,
       commentText,
     }: SharedUploadArgs & {
-      results: { rawMeasurement: any; device?: { id: string; name: string } }[];
+      results: {
+        rawMeasurement: any;
+        device?: { id: string; name: string };
+        // Dispatch rounds: the protocol this device actually ran; overrides
+        // the batch-level protocolId/protocolName for this result only.
+        protocolId?: string;
+        protocolName?: string;
+      }[];
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
@@ -95,16 +102,21 @@ export function useMeasurementUpload() {
         throw new Error("No measurements to upload");
       }
 
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId });
       // Measurements taken together ARE one run: every multi-device round is
       // stamped with one shared workbook_run_id. Each row is still its own
-      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run).
+      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run),
+      // published on ITS protocol's topic when the round was heterogeneous.
       const workbookRunId = results.length > 1 ? uuidv4() : undefined;
 
       const savedIds: string[] = [];
       let lastStorageError: unknown;
 
-      for (const { rawMeasurement, device } of results) {
+      for (const result of results) {
+        const { rawMeasurement, device } = result;
+        const topic = getMultispeqMqttTopic({
+          experimentId,
+          protocolId: result.protocolId ?? protocolId,
+        });
         const measurementData = buildUploadPayload({
           rawMeasurement,
           userId,
@@ -120,7 +132,11 @@ export function useMeasurementUpload() {
         const measurement = {
           topic,
           measurementResult: measurementData,
-          metadata: { experimentName, protocolName, timestamp: measurementData.timestamp },
+          metadata: {
+            experimentName,
+            protocolName: result.protocolName ?? protocolName,
+            timestamp: measurementData.timestamp,
+          },
         };
 
         try {

@@ -1,13 +1,15 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { useMeasurementUpload } from "~/features/recent-measurements/hooks/use-measurement-upload";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
@@ -20,6 +22,10 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
+import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
+import { DEVICE_CONTEXT_KEY, toDeviceContext } from "@repo/api/transforms/device-context";
+
+import { hydrateCells } from "../utils/hydrate-cells";
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
 import { AnalysisMacroResult } from "./analysis-macro-result";
 import { AnalysisSummaryCard } from "./analysis-summary-card";
@@ -28,9 +34,11 @@ const log = createLogger("analysis-node");
 
 interface AnalysisNodeProps {
   content: AnalysisContent;
+  /** Flow node id == workbook cell id of this macro cell. */
+  nodeId: string;
 }
 
-export function AnalysisNode({ content }: AnalysisNodeProps) {
+export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
@@ -44,10 +52,15 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     experimentLabel,
     iterationCount,
     flowNodes,
+    cells,
+    producerCellId,
+    cellOutputs,
+    setCellOutput,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
+  const executors = useScannerCommandExecutorStore((s) => s.executors);
 
   // Name of the active measurement's protocol, read off its hydrated flow node.
   const activeProtocolName = flowNodes.find(
@@ -69,7 +82,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   );
   const isMultiDevice = results.length > 1;
 
-  const { getCycleAnswers } = useFlowAnswersStore();
+  const { getCycleAnswers, getAnswer } = useFlowAnswersStore();
   const [measurementComment, setMeasurementComment] = useState("");
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [questionsModalVisible, setQuestionsModalVisible] = useState(false);
@@ -79,6 +92,54 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+
+  // Upstream outputs this macro reads as `ctx.<name>`: question answers, the
+  // live scan and prior macro outputs. beforeIndex stops at this cell, so the
+  // macro never reads its own (or a later cell's) output.
+  const baseCtx = useMemo(() => {
+    const hydrated = hydrateCells(cells, {
+      iterationCount,
+      getAnswer,
+      scanResult,
+      producerCellId,
+      cellOutputs,
+    });
+    const selfIndex = hydrated.findIndex((c) => c.id === nodeId);
+    return buildCellNamespace(hydrated, selfIndex >= 0 ? selfIndex : undefined).ctx;
+  }, [cells, iterationCount, getAnswer, scanResult, producerCellId, cellOutputs, nodeId]);
+
+  // One ctx per rendered result: baseCtx plus that device's `$device` identity
+  // from the scanner store (handshake identity when it landed, else a
+  // multispeq fallback built from the device record).
+  const macroCtxs = useMemo<Record<string, unknown>[]>(() => {
+    const entries = Array.from(executors.values());
+    return results.map(({ device }, index) => {
+      const entry = device ? executors.get(device.id) : entries[index];
+      const identity =
+        entry?.identity ??
+        (device
+          ? { family: "multispeq", name: device.name, deviceId: device.id }
+          : entry
+            ? { family: "multispeq", name: entry.device.name, deviceId: entry.device.id }
+            : undefined);
+      if (!identity) return baseCtx;
+      return { ...baseCtx, [DEVICE_CONTEXT_KEY]: toDeviceContext(identity, index) };
+    });
+  }, [executors, results, baseCtx]);
+
+  // Persist the Primary device's macro output so downstream branches/macros can
+  // read it. Compare-before-set: the store write rebuilds ctx and re-runs this
+  // callback, so an identical output must not write (and loop) again.
+  const handleProcessed = useCallback(
+    (outputs: MacroOutput[]) => {
+      const first = outputs[0];
+      if (first === undefined) return;
+      const existing = useMeasurementFlowStore.getState().cellOutputs[nodeId];
+      if (existing !== undefined && JSON.stringify(existing) === JSON.stringify(first)) return;
+      setCellOutput(nodeId, first);
+    },
+    [nodeId, setCellOutput],
+  );
 
   // Capture the display timestamp once so it stays stable across re-renders.
   // The upload handler captures its own fresh timestamp independently.
@@ -131,7 +192,14 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     const timezone = getTimeSyncState().timezone;
 
     await uploadMeasurements({
-      results: results.map(({ device, result }) => ({ rawMeasurement: result, device })),
+      // Dispatch rounds stamped a per-device protocolId/protocolName on each
+      // result; the upload publishes those on their own protocol topic.
+      results: results.map(({ device, result, protocolId: resultProtocolId, protocolName }) => ({
+        rawMeasurement: result,
+        device,
+        protocolId: resultProtocolId,
+        protocolName,
+      })),
       timestamp,
       timezone,
       experimentName,
@@ -195,6 +263,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
                 isLoading={false}
                 macroId={content.macroId}
                 scanResult={result}
+                ctx={macroCtxs[index]}
+                onProcessed={index === 0 ? handleProcessed : undefined}
                 onCommentPress={() => setCommentModalVisible(true)}
               />
             </View>
@@ -205,6 +275,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
             isLoading={false}
             macroId={content.macroId}
             scanResult={scanResult}
+            ctx={macroCtxs[0]}
+            onProcessed={handleProcessed}
             onCommentPress={() => setCommentModalVisible(true)}
           />
         )}

@@ -47,6 +47,11 @@ vi.mock("~/shared/time/time-sync", () => ({
   getSyncedLocalISO: () => getSyncedLocalISO(),
   getTimeSyncState: () => getTimeSyncState(),
 }));
+// $device ctx reads the connected-device registry; empty here (no device).
+vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
+  useScannerCommandExecutorStore: (selector: (s: { executors: Map<string, unknown> }) => unknown) =>
+    selector({ executors: new Map() }),
+}));
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     t: (key: string) =>
@@ -117,7 +122,7 @@ describe("AnalysisNode experiment name", () => {
       experimentId: "exp-1",
       experimentLabel: "Greenhouse Trial B",
     });
-    render(<AnalysisNode content={CONTENT} />);
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Greenhouse Trial B");
   });
 
@@ -127,20 +132,20 @@ describe("AnalysisNode experiment name", () => {
       experimentId: "exp-1",
       experimentLabel: "Wheat Trial 2026",
     });
-    render(<AnalysisNode content={CONTENT} />);
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Wheat Trial 2026");
   });
 
   it("uses the live query label when no persisted label is present", () => {
     useMeasurementFlowStore.setState({ experimentId: "exp-1", experimentLabel: undefined });
-    render(<AnalysisNode content={CONTENT} />);
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("From Query");
   });
 
   it("falls back to the default when neither label nor query resolves", () => {
     useExperiments.mockReturnValue({ experiments: [] });
     useMeasurementFlowStore.setState({ experimentId: "exp-missing", experimentLabel: undefined });
-    render(<AnalysisNode content={CONTENT} />);
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Experiment");
   });
 });
@@ -191,7 +196,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
       scanResult: { sample: [{ phi2: 0.8 }] },
     });
 
-    render(<AnalysisNode content={withMacro} />);
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
 
     const props = actionBarProps.mock.calls.at(-1)?.[0] as
       | { onUpload: () => Promise<void> }
@@ -222,7 +227,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
       ],
     });
 
-    render(<AnalysisNode content={withMacro} />);
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
 
     // Per-device headings only show for multi rounds.
     expect(screen.getAllByText(/measurementFlow:analysis.workbookRun.deviceHeading/)).toHaveLength(
@@ -241,6 +246,48 @@ describe("AnalysisNode upload with a command in the flow", () => {
       results: [
         { rawMeasurement: { sample: [{ phi2: 0.8 }] }, device: { id: "1" } },
         { rawMeasurement: { sample: [{ phi2: 0.7 }] }, device: { id: "2" } },
+      ],
+    });
+  });
+
+  it("threads each dispatch result's own protocolId/protocolName to the upload", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+      scanResults: [
+        {
+          device: { id: "1", name: "MultispeQ #1" },
+          result: { sample: [{ phi2: 0.8 }] },
+          protocolId: "proto-1",
+          protocolName: "Proto",
+        },
+        {
+          device: { id: "2", name: "Ambit #1" },
+          result: { sample: [{ spad: 40 }] },
+          protocolId: "proto-2",
+          protocolName: "SPAD",
+        },
+      ],
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      results: [
+        { device: { id: "1" }, protocolId: "proto-1", protocolName: "Proto" },
+        { device: { id: "2" }, protocolId: "proto-2", protocolName: "SPAD" },
       ],
     });
   });
