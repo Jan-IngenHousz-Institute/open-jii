@@ -4,6 +4,8 @@ import {
   macros,
   organizationMembers,
   organizations,
+  teamMembers,
+  teams,
 } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
@@ -166,6 +168,45 @@ describe("AuthorizationService.can", () => {
       action: "update",
     });
     expect(after).toMatchObject({ allow: true, reason: "resource-grant:user", role: "admin" });
+  });
+
+  it("honors a team grant for a user who belongs to the grantee team", async () => {
+    const ownerOrgId = await ensurePersonalOrganization(testApp.database, { id: ownerId });
+    const macro = await makeMacro({ organizationId: ownerOrgId, visibility: "private" });
+    const { orgId: granteeOrgId, memberId } = await makeOrgWithMember(
+      "none",
+      "team-grant@example.com",
+    );
+    const [team] = await testApp.database
+      .insert(teams)
+      .values({ name: "Imaging", organizationId: granteeOrgId })
+      .returning();
+    await testApp.database.insert(teamMembers).values({ teamId: team.id, userId: memberId });
+
+    const before = await authz.can(memberId, {
+      resourceType: "macro",
+      resourceId: macro.id,
+      action: "update",
+    });
+    expect(before).toMatchObject({ allow: false, reason: "forbidden" });
+
+    await grantResource(testApp.database, {
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "team",
+      granteeId: team.id,
+      role: "admin",
+    });
+    const after = await authz.can(memberId, {
+      resourceType: "macro",
+      resourceId: macro.id,
+      action: "update",
+    });
+    expect(after).toMatchObject({
+      allow: true,
+      reason: "resource-grant:team",
+      role: "admin",
+    });
   });
 
   it("honors an organization grant to a user who is a member of the grantee org", async () => {
