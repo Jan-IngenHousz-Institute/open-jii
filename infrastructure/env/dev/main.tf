@@ -2224,7 +2224,8 @@ module "grafana_dashboard" {
   large_iot_dlq_name                        = module.iot_core.large_iot_dlq_name
   large_iot_ingestion_lag_threshold_seconds = 10800 # 3 hours — pipeline disabled in dev
 
-  route53_health_check_id = module.route53.health_check_id
+  enable_site_availability_alert = true
+  route53_health_check_id        = module.route53.health_check_id
 
   providers = {
     grafana.amg = grafana.amg
