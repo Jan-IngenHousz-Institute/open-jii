@@ -41,3 +41,8 @@ output "cloudfront_certificate_arns" {
     for key, cert in aws_acm_certificate.cloudfront_certs : key => cert.arn
   }
 }
+
+output "health_check_id" {
+  description = "Route53 health check ID for active site-up monitoring (empty string when enable_health_check=false)"
+  value       = try(aws_route53_health_check.site_up[0].id, "")
+}

@@ -93,4 +93,16 @@ variable "large_iot_ingestion_lag_threshold_seconds" {
   default     = 900 # 15 minutes
 }
 
+variable "enable_site_availability_alert" {
+  description = "Whether to create the Route53 health-check-based site availability alert. Must be a static bool (not derived from health_check_id) since it gates a resource count."
+  type        = bool
+  default     = true
+}
+
+variable "route53_health_check_id" {
+  description = "Route53 health check ID for active site-up monitoring. Only used when enable_site_availability_alert is true."
+  type        = string
+  default     = ""
+}
+
 
