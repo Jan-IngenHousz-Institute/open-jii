@@ -479,13 +479,14 @@ resource "grafana_rule_group" "site_availability" {
         namespace  = "AWS/Route53"
         metricName = "HealthCheckStatus"
         statistic  = "Minimum"
+        period     = 60
         dimensions = {
           HealthCheckId = var.route53_health_check_id
         }
       })
 
       relative_time_range {
-        from = 180
+        from = 300
         to   = 0
       }
     }
