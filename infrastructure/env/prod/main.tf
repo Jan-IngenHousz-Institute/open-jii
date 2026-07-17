@@ -1989,6 +1989,8 @@ module "route53" {
     }
   }
 
+  enable_health_check = true
+
   tags = {
     Environment = var.environment
     ManagedBy   = "Terraform"
@@ -2189,6 +2191,9 @@ module "grafana_dashboard" {
 
   large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
   large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
+
+  enable_site_availability_alert = true
+  route53_health_check_id        = module.route53.health_check_id
 
   providers = {
     grafana.amg = grafana.amg

@@ -185,3 +185,22 @@ resource "aws_route53_record" "www_cname" {
   ttl     = 300
   records = [local.base_domain]
 }
+
+resource "aws_route53_health_check" "site_up" {
+  count = var.enable_health_check ? 1 : 0
+
+  fqdn              = local.base_domain
+  port              = 443
+  type              = "HTTPS"
+  resource_path     = "/"
+  request_interval  = 30
+  failure_threshold = 3
+
+  tags = merge(
+    {
+      Name        = "${var.environment}-site-up"
+      Environment = var.environment
+    },
+    var.tags
+  )
+}

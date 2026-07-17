@@ -642,6 +642,12 @@ locals {
         "route53:ChangeResourceRecordSets",
         "route53:ListResourceRecordSets",
         "route53:GetChange",
+        # Health checks (Terraform - site availability alert)
+        "route53:CreateHealthCheck",
+        "route53:DeleteHealthCheck",
+        "route53:GetHealthCheck",
+        "route53:UpdateHealthCheck",
+        "route53:ListHealthChecks",
         # Tags (Terraform)
         "route53:ListTagsForResource",
         "route53:ChangeTagsForResource",
