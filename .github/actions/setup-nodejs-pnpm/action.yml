@@ -4,7 +4,7 @@ inputs:
   node-version:
     description: "Node.js version"
     required: true
-    default: "22"
+    default: "24"
   hoisted:
     description: "Use hoisted node linker (required for AWS Lambda deployments)"
     required: false

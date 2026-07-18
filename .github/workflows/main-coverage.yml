@@ -42,7 +42,7 @@ jobs:
         if: steps.download.outcome == 'failure'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Regenerate coverage if artifacts not found
         if: steps.download.outcome == 'failure'
