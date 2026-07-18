@@ -4,21 +4,16 @@
   "private": true,
   "description": "Databricks notebooks and Python packages for OpenJII",
   "scripts": {
-    "check-python": "command -v python3 >/dev/null 2>&1 || (echo 'Python3 not found, skipping Python operations' && exit 1)",
-    "check-poetry": "(python3 -m poetry --version >/dev/null 2>&1) || (command -v pip3 >/dev/null 2>&1 && (pip3 install poetry || true)); exit 0",
-    "install": "pnpm run check-python && pnpm run check-poetry && ((python3 -m poetry --version >/dev/null 2>&1 && python3 -m poetry install) || (echo 'Skipping poetry install (Poetry not available)' && exit 0))",
-    "build": "pnpm run check-python && pnpm run build:ambyte && pnpm run build:enrich && pnpm run build:openjii && pnpm run build:data_repair",
-    "build:ambyte": "cd src/lib/ambyte && python3 -m build",
-    "build:enrich": "cd src/lib/enrich && python3 -m build",
-    "build:openjii": "cd src/lib/openjii && python3 -m build",
-    "build:data_repair": "cd src/lib/data_repair && python3 -m build",
+    "install": "if command -v uv >/dev/null 2>&1; then uv sync --frozen || uv sync; else echo 'uv not found, skipping python env sync'; fi",
+    "build": "uv build --all-packages",
+    "lint": "uv run ruff check . && uv run ruff format --check .",
+    "format": "uv run ruff format .",
+    "check-types": "uv run pyright",
+    "test": "uv run pytest",
+    "test:coverage": "uv run pytest --cov --cov-report=term-missing",
     "validate": "databricks bundle validate",
     "validate:dev": "databricks bundle validate -t dev",
     "validate:prod": "databricks bundle validate -t prod",
-    "clean": "git clean -xdf .cache .turbo dist/ *.egg-info/ && pnpm run clean:ambyte && pnpm run clean:enrich && pnpm run clean:openjii && pnpm run clean:data_repair",
-    "clean:ambyte": "cd src/lib/ambyte && git clean -xdf dist/ build/ *.egg-info/",
-    "clean:enrich": "cd src/lib/enrich && git clean -xdf dist/ build/ *.egg-info/",
-    "clean:openjii": "cd src/lib/openjii && git clean -xdf dist/ build/ *.egg-info/",
-    "clean:data_repair": "cd src/lib/data_repair && git clean -xdf dist/ build/ *.egg-info/"
+    "clean": "git clean -xdf .cache .turbo .venv dist src/lib/*/dist src/lib/*/build src/lib/*/*.egg-info"
   }
 }
