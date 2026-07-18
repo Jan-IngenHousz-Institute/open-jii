@@ -65,11 +65,11 @@ return output`;
         throw new Error("Encoding failed");
       });
 
-      const result = encodeBase64("test content");
-
-      expect(result).toBe("");
-
-      global.btoa = originalBtoa;
+      try {
+        expect(encodeBase64("test content")).toBe("");
+      } finally {
+        global.btoa = originalBtoa;
+      }
     });
   });
 
