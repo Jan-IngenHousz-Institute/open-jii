@@ -412,9 +412,11 @@ describe("MacroCellComponent", () => {
         isPending: false,
       } as ReturnType<typeof useSession>);
       server.mount(contract.macros.getMacro, { body: baseMacro });
+      // The delay must outlast the click-to-rerender gap below or the save
+      // resolves against the stale cell on slow runners.
       server.mount(contract.macros.updateMacro, {
         body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
-        delay: 100,
+        delay: 500,
       });
       const onUpdate = vi.fn();
 
@@ -438,7 +440,7 @@ describe("MacroCellComponent", () => {
         />,
       );
 
-      await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+      await waitFor(() => expect(onUpdate).toHaveBeenCalled(), { timeout: 3000 });
       const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
       // The rename must preserve the concurrent language switch, not revert it.
       expect(updated.payload.language).toBe("r");
