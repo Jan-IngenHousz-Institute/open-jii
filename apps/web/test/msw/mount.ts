@@ -1,12 +1,12 @@
 /**
- * `server.mount()` — concise per-test endpoint override.
+ * `server.mount()`: concise per-test endpoint override.
  *
  * A thin wrapper around `server.use(http[method](url, handler))` that:
  * - Derives the HTTP method & URL from an oRPC contract procedure
  * - Returns a {@link RequestSpy} for asserting on request details
  * - Picks sensible default status codes (200/201/204) per method
  *
- * No factory knowledge — tests provide the exact body they want.
+ * No factory knowledge; tests provide the exact body they want.
  */
 import type { AnyContractProcedure } from "@orpc/contract";
 import { http, HttpResponse, delay as mswDelay } from "msw";
@@ -32,6 +32,8 @@ export type MountFn = <T extends AnyContractProcedure>(
     body?: unknown;
     /** Artificial delay in ms (or "infinite" to hang forever). */
     delay?: number | "infinite";
+    /** Hold the response until this promise resolves (deterministic in-flight windows). */
+    unblock?: Promise<unknown>;
   },
 ) => RequestSpy;
 
@@ -96,7 +98,12 @@ function statusForMethod(method: HttpMethod): number {
 export function createMount(server: SetupServer): MountFn {
   function mount(
     endpoint: RouteCarrier,
-    options: { body?: unknown; status?: number; delay?: number | "infinite" } = {},
+    options: {
+      body?: unknown;
+      status?: number;
+      delay?: number | "infinite";
+      unblock?: Promise<unknown>;
+    } = {},
   ): RequestSpy {
     const route = endpoint["~orpc"].route;
     const method = (route.method ?? "GET").toLowerCase() as HttpMethod;
@@ -155,6 +162,7 @@ export function createMount(server: SetupServer): MountFn {
 
       // ── Delay ───────────────────────────────────────────────
       if (options.delay) await mswDelay(options.delay);
+      if (options.unblock) await options.unblock;
 
       // ── Response ────────────────────────────────────────────
       const status = options.status ?? route.successStatus ?? statusForMethod(method);
