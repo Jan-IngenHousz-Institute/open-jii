@@ -191,9 +191,16 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage-reports-${{ github.event.pull_request.head.sha }}
+          # Keep this in sync with the codecov `files` globs so a cache hit on
+          # main uploads the same set a regenerate would (apps + packages + tooling).
           path: |
-            apps/*/coverage/lcov.info
             apps/*/coverage.json
+            apps/*/coverage/lcov.info
+            packages/*/coverage.json
+            packages/*/coverage/lcov.info
+            tooling/*/coverage.json
+            tooling/*/coverage/lcov.info
+          if-no-files-found: ignore
           retention-days: 1
 
   production_checks:
