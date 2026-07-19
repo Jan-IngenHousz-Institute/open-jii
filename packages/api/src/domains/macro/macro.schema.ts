@@ -128,6 +128,10 @@ export const zMacroBatchExecutionItem = z.object({
   id: z.string(),
   macro_id: z.string().uuid(),
   data: jsonStringOrValue(z.union([z.record(z.unknown()), z.array(z.unknown())])),
+  // Published workbook version that owns the exact macro snapshot. Optional
+  // for legacy/non-workbook callers, which continue to resolve the live macro.
+  workbook_version_id: z.string().uuid().optional(),
+  context: jsonStringOrValue(z.record(z.unknown())).optional(),
 });
 
 export const zMacroBatchExecutionRequestBody = z.object({

@@ -128,13 +128,24 @@ describe("AmbitDriver", () => {
     expect(result.data).toBe("OK sensors");
   });
 
-  it("getDeviceIdentity captures the name before the Ready sentinel", async () => {
+  it("does not expose the firmware's hardcoded hello placeholder as a device name", async () => {
     const transport = tableTransport({ "hello\n": HELLO_REPLY });
     const driver = fastDriver();
     await driver.initialize(transport);
 
     const identity = await driver.getDeviceIdentity();
-    expect(identity).toMatchObject({ family: "ambit", name: "NEW Name Here" });
+    expect(identity).toEqual({ family: "ambit", raw: { helloReply: HELLO_REPLY.trim() } });
+  });
+
+  it("clears buffered state and disconnects when destroyed", async () => {
+    const transport = tableTransport({ "hello\n": HELLO_REPLY });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    await driver.destroy();
+
+    expect(transport.disconnect).toHaveBeenCalledOnce();
+    await expect(driver.execute("hello")).rejects.toThrow(/not initialized/);
   });
 
   it("times out with an error when a reply-carrying command stays silent", async () => {

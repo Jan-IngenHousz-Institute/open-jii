@@ -4,6 +4,8 @@ export interface HydrationContext {
   iterationCount: number;
   getAnswer: (cycle: number, cellId: string) => string | undefined;
   scanResult?: unknown;
+  /** Per-device form of the live result, used to scope ctx/branches by connection id. */
+  scanResults?: { device?: { id: string; name: string }; result: unknown }[];
   /** Cell id of the producer (protocol or command) whose output `scanResult` holds. */
   producerCellId?: string;
   /** Macro/analysis outputs keyed by cell id (store.cellOutputs). */
@@ -15,7 +17,7 @@ export interface HydrationContext {
 // measurement, and macro outputs, each as a synthetic output cell keyed to
 // its producer.
 export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): WorkbookCell[] {
-  const { iterationCount, getAnswer, scanResult, producerCellId, cellOutputs } = ctx;
+  const { iterationCount, getAnswer, scanResult, scanResults, producerCellId, cellOutputs } = ctx;
 
   const hydrated: WorkbookCell[] = cells.map((cell) =>
     cell.type === "question"
@@ -28,27 +30,40 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
 
   // The scan belongs to the cell that produced it (store.producerCellId, a
   // protocol or command); find it so the synthetic output is keyed to the producer.
-  if (scanResult != null && producerCellId) {
+  const liveResults = scanResults ?? (scanResult != null ? [{ result: scanResult }] : []);
+  if (liveResults.length > 0 && producerCellId) {
     const producer = hydrated.find((c) => c.id === producerCellId);
     if (producer) {
-      let data: unknown;
-      if (producer.type === "command") {
-        // Mirror web's toOutputData so a branch reads the same shape on both hosts:
-        // a plain object passes through; any scalar/array is wrapped as { response }.
-        data =
-          typeof scanResult === "object" && !Array.isArray(scanResult)
-            ? scanResult
-            : { response: scanResult };
-      } else {
-        const sample = (scanResult as { sample?: unknown }).sample;
-        data = sample != null ? (Array.isArray(sample) ? sample : [sample]) : scanResult;
-      }
+      const normalize = (result: unknown): unknown => {
+        if (producer.type === "command") {
+          // Mirror web's toOutputData so a branch reads the same shape on both hosts:
+          // a plain object passes through; any scalar/array is wrapped as { response }.
+          return typeof result === "object" && !Array.isArray(result)
+            ? result
+            : { response: result };
+        }
+        const sample = (result as { sample?: unknown }).sample;
+        return sample != null ? (Array.isArray(sample) ? sample : [sample]) : result;
+      };
+      const data = normalize(liveResults[0].result);
+      const deviceResults = liveResults.flatMap((entry) =>
+        entry.device
+          ? [
+              {
+                deviceId: entry.device.id,
+                deviceLabel: entry.device.name,
+                data: normalize(entry.result),
+              },
+            ]
+          : [],
+      );
       synthetic.push({
         id: `synthetic-output-${producer.id}`,
         type: "output",
         isCollapsed: false,
         producedBy: producer.id,
         data,
+        deviceResults: deviceResults.length > 0 ? deviceResults : undefined,
       });
       producedIds.add(producer.id);
     }

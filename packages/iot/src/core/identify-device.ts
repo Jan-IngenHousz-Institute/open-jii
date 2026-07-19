@@ -143,8 +143,10 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
 
   const readyMatch = /^(.*?)\s*\bready\b\s*$/im.exec(text);
   if (readyMatch) {
-    const name = readyMatch[1].trim();
-    return { family: "ambit", name: name === "" ? undefined : name, raw };
+    // Ambit firmware currently hardcodes the text before "Ready".  It is a
+    // family signature, not a device name, so do not leak the placeholder into
+    // $device.name.
+    return { family: "ambit", raw };
   }
 
   return null;

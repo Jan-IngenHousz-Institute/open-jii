@@ -151,6 +151,8 @@ def experiment_raw_data():
             "user_id",
             "protocol_id",
             "workbook_run_id",
+            "workbook_version_id",
+            "macro_context",
             "data",
             "output_data",
             "date",

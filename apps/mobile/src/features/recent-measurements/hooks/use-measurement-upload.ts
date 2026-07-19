@@ -55,6 +55,7 @@ interface SharedUploadArgs {
   macro: { id: string; name: string; filename: string } | null;
   questions: AnswerData[];
   commentText?: string;
+  workbookVersionId?: string;
 }
 
 export function useMeasurementUpload() {
@@ -77,6 +78,7 @@ export function useMeasurementUpload() {
       macro,
       questions,
       commentText,
+      workbookVersionId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
@@ -85,6 +87,7 @@ export function useMeasurementUpload() {
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
         protocolName?: string;
+        macroContext?: Record<string, unknown>;
       }[];
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
@@ -112,7 +115,7 @@ export function useMeasurementUpload() {
       let lastStorageError: unknown;
 
       for (const result of results) {
-        const { rawMeasurement, device } = result;
+        const { rawMeasurement, device, macroContext } = result;
         const topic = getMultispeqMqttTopic({
           experimentId,
           protocolId: result.protocolId ?? protocolId,
@@ -126,6 +129,8 @@ export function useMeasurementUpload() {
           questions,
           commentText,
           workbookRunId,
+          workbookVersionId,
+          macroContext,
           fallbackDeviceId: device?.id,
         });
 

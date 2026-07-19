@@ -145,7 +145,7 @@ describe("identifyDevice", () => {
     expect(identified.family).toBe("ambit");
     expect(identified.connector).toBeInstanceOf(AmbitDriver);
     expect(identified.info.family).toBe("ambit");
-    expect(identified.info.name).toBe("NEW Name Here");
+    expect(identified.info.name).toBeUndefined();
     expect(identified.info.raw.helloReply).toBe("NEW Name Here Ready");
   });
 

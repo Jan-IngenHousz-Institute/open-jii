@@ -98,6 +98,21 @@ describe("buildUploadPayload payload construction", () => {
     expect("_sample_encoding" in payload).toBe(false);
   });
 
+  it("serializes workbook version and device-scoped macro context", () => {
+    const macroContext = { measurement: { phi2: 0.8 }, $device: { id: "device-1" } };
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [{ phi2: 0.8 }] },
+      workbookVersionId: "version-1",
+      macroContext,
+    });
+
+    expect(payload).toMatchObject({
+      workbook_version_id: "version-1",
+      macro_context: JSON.stringify(macroContext),
+    });
+  });
+
   it("null sample survives untouched: no injection, no compression, no marker", () => {
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample: null } });
 

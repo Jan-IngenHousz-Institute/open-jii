@@ -60,6 +60,8 @@ def clean_data():
         # Null on single-device uploads; rows of one multi-device workbook
         # run share it and can be joined back on it.
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
+        .withColumn("workbook_version_id", F.col("workbook_version_id"))
+        .withColumn("macro_context", F.col("macro_context"))
         # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
         # Together they are the source of truth: all local-time representations are derived from these two.
         .withColumn("timezone", F.col("parsed_data.timezone"))
@@ -188,6 +190,8 @@ def clean_data():
         "experiment_id",
         "protocol_id",
         "workbook_run_id",
+        "workbook_version_id",
+        "macro_context",
         "timestamp",
         "date",
         "hour",
@@ -236,6 +240,8 @@ def clean_data():
         # Imported/legacy data has no topic and no workbook-run concept.
         .withColumn("protocol_id", F.lit(None).cast("string"))
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
+        .withColumn("workbook_version_id", F.lit(None).cast("string"))
+        .withColumn("macro_context", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
@@ -256,6 +262,8 @@ def clean_data():
             "experiment_id",
             "protocol_id",
             "workbook_run_id",
+            "workbook_version_id",
+            "macro_context",
             "timestamp",
             "date",
             "hour",

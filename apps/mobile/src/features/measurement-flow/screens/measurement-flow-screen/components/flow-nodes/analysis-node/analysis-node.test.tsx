@@ -12,6 +12,7 @@ import { AnalysisNode } from "./analysis-node";
 // summaryProps captures the name the node hands to the summary card.
 const {
   summaryProps,
+  macroResultProps,
   actionBarProps,
   useExperiments,
   useSession,
@@ -22,6 +23,7 @@ const {
   getTimeSyncState,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
+  macroResultProps: vi.fn(),
   actionBarProps: vi.fn(),
   useExperiments: vi.fn(),
   useSession: vi.fn(),
@@ -65,7 +67,12 @@ vi.mock("./analysis-summary-card", () => ({
     return null;
   },
 }));
-vi.mock("./analysis-macro-result", () => ({ AnalysisMacroResult: () => null }));
+vi.mock("./analysis-macro-result", () => ({
+  AnalysisMacroResult: (props: { ctx?: Record<string, unknown> }) => {
+    macroResultProps(props);
+    return null;
+  },
+}));
 vi.mock("./analysis-action-bar", () => ({
   AnalysisActionBar: (props: { onUpload: () => void }) => {
     actionBarProps(props);
@@ -102,6 +109,7 @@ beforeEach(() => {
     rememberAnswerSettings: {},
   });
   summaryProps.mockClear();
+  macroResultProps.mockClear();
   actionBarProps.mockClear();
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
@@ -191,6 +199,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
@@ -208,6 +217,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(uploadMeasurements).toHaveBeenCalledTimes(1);
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
       protocolId: "proto-1",
+      workbookVersionId: "version-1",
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
     });
   });
@@ -218,12 +228,28 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
         { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
         { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+      ],
+      producerCellId: "p1",
+      cells: [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: "proto-1", version: 1, name: "Measurement" },
+        },
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: "macro-1", language: "python", name: "Analysis" },
+        },
       ],
     });
 
@@ -233,6 +259,9 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(screen.getAllByText(/measurementFlow:analysis.workbookRun.deviceHeading/)).toHaveLength(
       2,
     );
+    const contexts = macroResultProps.mock.calls.map(([props]) => props.ctx);
+    expect(contexts[0]).toMatchObject({ measurement: { phi2: 0.8 } });
+    expect(contexts[1]).toMatchObject({ measurement: { phi2: 0.7 } });
 
     const props = actionBarProps.mock.calls.at(-1)?.[0] as
       | { onUpload: () => Promise<void> }
@@ -243,9 +272,18 @@ describe("AnalysisNode upload with a command in the flow", () => {
 
     expect(uploadMeasurements).toHaveBeenCalledTimes(1);
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      workbookVersionId: "version-1",
       results: [
-        { rawMeasurement: { sample: [{ phi2: 0.8 }] }, device: { id: "1" } },
-        { rawMeasurement: { sample: [{ phi2: 0.7 }] }, device: { id: "2" } },
+        {
+          rawMeasurement: { sample: [{ phi2: 0.8 }] },
+          device: { id: "1" },
+          macroContext: { measurement: { phi2: 0.8 } },
+        },
+        {
+          rawMeasurement: { sample: [{ phi2: 0.7 }] },
+          device: { id: "2" },
+          macroContext: { measurement: { phi2: 0.7 } },
+        },
       ],
     });
   });

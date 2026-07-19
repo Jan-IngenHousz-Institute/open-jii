@@ -552,6 +552,7 @@ export function useWorkbookExecution({
       connections.forEach((connection, index) => {
         const path = evaluateBranch(cell, currentCells, {
           device: toDeviceContext(connection.identity, index),
+          deviceId: connection.id,
         });
         const target = path?.gotoCellId
           ? currentCells.find((c) => c.id === path.gotoCellId)

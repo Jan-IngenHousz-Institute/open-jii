@@ -224,11 +224,8 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     const result = await this.execute<unknown>(AMBIT_COMMANDS.HELLO);
     const text = typeof result.data === "string" ? result.data : "";
-    const match = /^(.*?)\s*\bready\b\s*$/im.exec(text);
-    const name = match?.[1]?.trim();
     return {
       family: this.family,
-      name: name === "" ? undefined : name,
       raw: { helloReply: text },
     };
   }

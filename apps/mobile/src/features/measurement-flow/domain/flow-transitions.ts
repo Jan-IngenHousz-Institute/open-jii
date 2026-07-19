@@ -40,6 +40,9 @@ export interface BranchReturn {
 export interface FlowState {
   experimentId?: string;
   experimentLabel?: string;
+  // Immutable workbook version whose protocol/macro snapshots this run uses.
+  // Uploaded with measurements so cloud macro execution resolves the same code.
+  workbookVersionId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -75,6 +78,7 @@ export interface FlowState {
 export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
+  workbookVersionId: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -198,6 +202,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
     return {
       experimentId: undefined,
       experimentLabel: undefined,
+      workbookVersionId: undefined,
       currentStep: 0,
       flowNodes: [],
       currentFlowStep: 0,

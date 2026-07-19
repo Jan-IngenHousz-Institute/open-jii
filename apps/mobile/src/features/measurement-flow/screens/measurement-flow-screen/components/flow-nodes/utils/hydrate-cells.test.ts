@@ -66,6 +66,23 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
   });
 
+  it("hydrates and scopes every device's live measurement", () => {
+    const hydrated = hydrateCells(
+      [pCell("p1", "proto-1")],
+      ctx({
+        scanResult: { sample: [{ phi2: 0.8 }] },
+        scanResults: [
+          { device: { id: "usb-a", name: "A" }, result: { sample: [{ phi2: 0.8 }] } },
+          { device: { id: "usb-b", name: "B" }, result: { sample: [{ phi2: 0.6 }] } },
+        ],
+        producerCellId: "p1",
+      }),
+    );
+
+    expect(resolveConditionValue(hydrated, "p1", "phi2", { deviceId: "usb-a" })).toBe(0.8);
+    expect(resolveConditionValue(hydrated, "p1", "phi2", { deviceId: "usb-b" })).toBe(0.6);
+  });
+
   it("wraps a scalar command result under `response` (mirrors web) so a branch resolves it", () => {
     const hydrated = hydrateCells([cCell("c1")], ctx({ scanResult: "87", producerCellId: "c1" }));
     expect(resolveConditionValue(hydrated, "c1", "response")).toBe("87");

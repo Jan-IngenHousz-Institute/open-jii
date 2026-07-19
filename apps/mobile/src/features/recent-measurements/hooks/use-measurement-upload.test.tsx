@@ -49,7 +49,11 @@ const SHARED = {
 type SavedCall = [
   {
     topic: string;
-    measurementResult: { workbook_run_id?: string };
+    measurementResult: {
+      workbook_run_id?: string;
+      workbook_version_id?: string;
+      macro_context?: string;
+    };
     metadata: { protocolName: string };
   },
   string,
@@ -74,12 +78,14 @@ describe("useMeasurementUpload", () => {
     await act(async () => {
       await result.current.uploadMeasurements({
         ...SHARED,
+        workbookVersionId: "version-1",
         results: [
           {
             rawMeasurement: { a: 1 },
             device: { id: "d1", name: "A" },
             protocolId: "proto-a",
             protocolName: "Proto A",
+            macroContext: { measurement: { a: 1 } },
           },
           {
             rawMeasurement: { b: 2 },
@@ -104,6 +110,10 @@ describe("useMeasurementUpload", () => {
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
     expect(runIds[0]).toBeTruthy();
     expect(new Set(runIds).size).toBe(1);
+    expect(calls[0][0].measurementResult).toMatchObject({
+      workbook_version_id: "version-1",
+      macro_context: JSON.stringify({ measurement: { a: 1 } }),
+    });
 
     expect(enqueueMany).toHaveBeenCalledWith(["saved-1", "saved-2", "saved-3"]);
   });

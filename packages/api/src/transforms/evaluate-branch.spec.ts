@@ -593,7 +593,27 @@ describe("$device runtime source", () => {
     expect(evaluateBranch(cell, [], { device: { ...device, index: 1 } })).toBeUndefined();
   });
 
-  it("leaves regular cell sources unaffected by runtime context", () => {
+  it("scopes regular output sources to the runtime device", () => {
+    const output: WorkbookCell = {
+      id: "out-1",
+      type: "output",
+      isCollapsed: false,
+      producedBy: "p1",
+      data: { value: 1 },
+      deviceResults: [
+        { deviceId: "host-a", data: { value: 10 } },
+        { deviceId: "host-b", data: { value: 20 } },
+      ],
+    };
+    const producer = { id: "p1", type: "protocol", isCollapsed: false } as WorkbookCell;
+    expect(resolveConditionValue([producer, output], "p1", "value", { device })).toBe(1);
+    expect(
+      resolveConditionValue([producer, output], "p1", "value", {
+        device,
+        deviceId: "host-b",
+      }),
+    ).toBe(20);
+
     const cells: WorkbookCell[] = [makeQuestionCell("q1", "42")];
     expect(resolveConditionValue(cells, "q1", "ignored", { device })).toBe("42");
   });

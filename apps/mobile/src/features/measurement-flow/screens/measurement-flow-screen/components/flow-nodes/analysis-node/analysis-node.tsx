@@ -23,7 +23,7 @@ import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
 import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
-import { DEVICE_CONTEXT_KEY, toDeviceContext } from "@repo/api/transforms/device-context";
+import { toDeviceContext } from "@repo/api/transforms/device-context";
 
 import { hydrateCells } from "../utils/hydrate-cells";
 import { AnalysisActionBar, useScrollToTop } from "./analysis-action-bar";
@@ -55,6 +55,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     cells,
     producerCellId,
     cellOutputs,
+    workbookVersionId,
     setCellOutput,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
@@ -96,21 +97,20 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   // Upstream outputs this macro reads as `ctx.<name>`: question answers, the
   // live scan and prior macro outputs. beforeIndex stops at this cell, so the
   // macro never reads its own (or a later cell's) output.
-  const baseCtx = useMemo(() => {
+  const hydratedCells = useMemo(() => {
     const hydrated = hydrateCells(cells, {
       iterationCount,
       getAnswer,
       scanResult,
+      scanResults,
       producerCellId,
       cellOutputs,
     });
-    const selfIndex = hydrated.findIndex((c) => c.id === nodeId);
-    return buildCellNamespace(hydrated, selfIndex >= 0 ? selfIndex : undefined).ctx;
-  }, [cells, iterationCount, getAnswer, scanResult, producerCellId, cellOutputs, nodeId]);
+    return hydrated;
+  }, [cells, iterationCount, getAnswer, scanResult, scanResults, producerCellId, cellOutputs]);
 
-  // One ctx per rendered result: baseCtx plus that device's `$device` identity
-  // from the scanner store (handshake identity when it landed, else a
-  // multispeq fallback built from the device record).
+  // One device-scoped ctx per rendered result, including that device's
+  // upstream measurement and `$device` identity.
   const macroCtxs = useMemo<Record<string, unknown>[]>(() => {
     const entries = Array.from(executors.values());
     return results.map(({ device }, index) => {
@@ -122,10 +122,13 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
           : entry
             ? { family: "multispeq", name: entry.device.name, deviceId: entry.device.id }
             : undefined);
-      if (!identity) return baseCtx;
-      return { ...baseCtx, [DEVICE_CONTEXT_KEY]: toDeviceContext(identity, index) };
+      const selfIndex = hydratedCells.findIndex((c) => c.id === nodeId);
+      return buildCellNamespace(hydratedCells, selfIndex >= 0 ? selfIndex : undefined, {
+        deviceId: device?.id,
+        device: identity ? toDeviceContext(identity, index) : undefined,
+      }).ctx;
     });
-  }, [executors, results, baseCtx]);
+  }, [executors, results, hydratedCells, nodeId]);
 
   // Persist the Primary device's macro output so downstream branches/macros can
   // read it. Compare-before-set: the store write rebuilds ctx and re-runs this
@@ -194,12 +197,15 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     await uploadMeasurements({
       // Dispatch rounds stamped a per-device protocolId/protocolName on each
       // result; the upload publishes those on their own protocol topic.
-      results: results.map(({ device, result, protocolId: resultProtocolId, protocolName }) => ({
-        rawMeasurement: result,
-        device,
-        protocolId: resultProtocolId,
-        protocolName,
-      })),
+      results: results.map(
+        ({ device, result, protocolId: resultProtocolId, protocolName }, index) => ({
+          rawMeasurement: result,
+          device,
+          protocolId: resultProtocolId,
+          protocolName,
+          macroContext: macroCtxs[index],
+        }),
+      ),
       timestamp,
       timezone,
       experimentName,
@@ -211,6 +217,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         name: macro.name,
         filename: macro.filename,
       },
+      workbookVersionId,
       questions,
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,

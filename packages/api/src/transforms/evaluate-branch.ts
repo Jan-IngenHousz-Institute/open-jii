@@ -15,6 +15,8 @@ import { DEVICE_CONTEXT_KEY } from "./device-context";
  */
 export interface BranchRuntimeContext {
   device?: DeviceContext;
+  /** Host connection id used to scope upstream multi-device outputs. */
+  deviceId?: string;
 }
 
 /** True when any condition of the branch reads the reserved `$device` source. */
@@ -102,7 +104,7 @@ export function resolveConditionValue(
     return sourceCell.answer ?? undefined;
   }
 
-  const data = resolveOutputData(cells, sourceCellId);
+  const data = resolveOutputData(cells, sourceCellId, runtime?.deviceId);
   if (data == null) return undefined;
 
   const val = data[field];

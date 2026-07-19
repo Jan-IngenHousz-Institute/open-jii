@@ -34,7 +34,7 @@ function primaryDeviceRuntime(): BranchRuntimeContext | undefined {
     .executors.values()
     .next().value;
   if (!primary) return undefined;
-  return { device: toDeviceContext(entryIdentity(primary), 0) };
+  return { device: toDeviceContext(entryIdentity(primary), 0), deviceId: primary.device.id };
 }
 
 // Caps branch goto-loops; mirrors web's useWorkbookExecution MAX_VISITS_PER_CELL.
@@ -78,6 +78,7 @@ function dispatchDeviceBranch(
   entries.forEach((entry, index) => {
     const matched = evaluateBranch(branchCell, hydrated, {
       device: toDeviceContext(entryIdentity(entry), index),
+      deviceId: entry.device.id,
     });
     const target = matched?.gotoCellId
       ? hydrated.find((c) => c.id === matched.gotoCellId)
@@ -140,6 +141,7 @@ export function evaluateAndRoute(node: FlowNode): void {
     iterationCount: flow.iterationCount,
     getAnswer,
     scanResult: flow.scanResult,
+    scanResults: flow.scanResults,
     producerCellId: flow.producerCellId,
     cellOutputs: flow.cellOutputs,
   });

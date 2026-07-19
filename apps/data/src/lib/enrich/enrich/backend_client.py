@@ -9,7 +9,6 @@ import hashlib
 import hmac
 import json
 import time
-from operator import itemgetter
 from typing import Any
 from urllib.parse import urljoin
 
@@ -271,11 +270,13 @@ class BackendClient:
         """
         Execute macros via the backend batch endpoint.
 
-        The backend groups items by macro_id, fetches scripts from the DB,
-        fans out Lambda invocations (one per macro_id), and returns results.
+        The backend groups items by macro_id + workbook_version_id, resolves
+        published snapshots (or the live macro for legacy items), fans out
+        Lambda invocations, and returns results.
 
         Args:
-            items: List of dicts with keys: id (str), macro_id (str uuid), data (dict).
+            items: Dicts with id, macro_id, data, and optional
+                workbook_version_id/context.
             timeout: Per-Lambda timeout in seconds (1-60).
             max_batch_size: Max items per HTTP request (default 500, API limit 5000).
 
@@ -289,11 +290,15 @@ class BackendClient:
         if not items:
             return {"results": []}
 
-        # Sort by macro_id so each HTTP chunk is homogeneous: the backend's
-        # internal groupBy(macro_id) then produces fewer Lambda invocations
-        # per request, and any chunk-level failure is scoped to items sharing
-        # a macro_id rather than a random mix.
-        sorted_items = sorted(items, key=itemgetter("macro_id"))
+        # Keep each HTTP chunk as homogeneous as possible. A macro UUID may
+        # point at different immutable code across workbook versions.
+        sorted_items = sorted(
+            items,
+            key=lambda item: (
+                item.get("macro_id") or "",
+                item.get("workbook_version_id") or "",
+            ),
+        )
 
         all_results: list[dict[str, Any]] = []
         all_errors: list[str] = []

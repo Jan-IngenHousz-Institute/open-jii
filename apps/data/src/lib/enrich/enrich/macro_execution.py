@@ -5,8 +5,8 @@ Provides a pandas UDF that calls the backend's /api/v1/macros/execute-batch
 endpoint instead of running macros locally on Spark workers.
 
 The backend:
-  1. Groups items by macro_id
-  2. Fetches macro scripts from the database
+  1. Groups items by macro_id + workbook_version_id
+  2. Resolves immutable workbook snapshots (or live macros for legacy rows)
   3. Invokes the appropriate Lambda function (Python / JS / R)
   4. Returns results with output or error per item
 
@@ -15,6 +15,7 @@ ran unsandboxed code on Databricks workers.
 """
 
 import json
+from typing import Any
 
 import pandas as pd
 from pyspark.sql import functions as F
@@ -35,6 +36,16 @@ def _is_scalar_na(value) -> bool:
     """``True`` iff ``value`` is a scalar NA. Wraps the pandas check so pyright
     sees a bool instead of the ndarray-or-bool union ``pd.isna`` declares."""
     return bool(pd.api.types.is_scalar(value) and pd.isna(value))
+
+
+def _add_workbook_metadata(item: dict[str, Any], row) -> None:
+    """Attach optional deterministic workbook execution fields to an API item."""
+    workbook_version_id = row.get("workbook_version_id")
+    macro_context = row.get("macro_context")
+    if not _is_scalar_na(workbook_version_id):
+        item["workbook_version_id"] = str(workbook_version_id)
+    if not _is_scalar_na(macro_context):
+        item["context"] = macro_context
 
 
 # Schema returned by the pandas UDF
@@ -60,6 +71,8 @@ def make_execute_macro_udf(
       - id: row identifier (string)
       - macro_id: UUID of the macro to execute (string)
       - data: measurement data (VARIANT, string, or native object)
+      - workbook_version_id: immutable workbook snapshot UUID (optional)
+      - macro_context: upstream workbook namespace as JSON (optional)
 
     Returns a struct<result: string, error: string> where result is JSON.
 
@@ -94,7 +107,7 @@ def make_execute_macro_udf(
         errors: list[str | None] = [None] * len(pdf)
 
         # Build items list for the backend
-        items = []
+        items: list[dict[str, Any]] = []
         idx_map = []  # maps backend item index -> original DataFrame index
 
         for pos, (_, row) in enumerate(pdf.iterrows()):
@@ -113,13 +126,13 @@ def make_execute_macro_udf(
             elif not isinstance(data, str):
                 data = json.dumps(data)
 
-            items.append(
-                {
-                    "id": str(row_id),
-                    "macro_id": str(macro_id),
-                    "data": data,
-                }
-            )
+            item: dict[str, Any] = {
+                "id": str(row_id),
+                "macro_id": str(macro_id),
+                "data": data,
+            }
+            _add_workbook_metadata(item, row)
+            items.append(item)
             idx_map.append(pos)
 
         if not items:

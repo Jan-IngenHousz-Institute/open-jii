@@ -435,12 +435,13 @@ describe("useMeasurementFlowStore", () => {
         },
       ] as never;
 
-      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells);
+      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells, "version-1");
 
       const state = useMeasurementFlowStore.getState();
       expect(state.flowNodes).toEqual(nodes);
       expect(state.edges).toEqual(edges);
       expect(state.cells).toEqual(cells);
+      expect(state.workbookVersionId).toBe("version-1");
       expect(state.currentFlowStep).toBe(0);
       expect(state.branchVisitCounts).toEqual({});
       expect(state.lastMatchedPath).toBeUndefined();

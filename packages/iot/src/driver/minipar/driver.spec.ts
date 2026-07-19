@@ -117,6 +117,26 @@ describe("MiniParDriver", () => {
     expect(result.error?.message).toBe("Response timeout");
   });
 
+  it("returns a partial LINE reply at the overall timeout", async () => {
+    driver.initialize(tableTransport({ "par\n": "345.61" }));
+
+    const result = await driver.execute<string>("par", { timeoutMs: 60 });
+    expect(result).toEqual({ success: true, data: "345.61" });
+  });
+
+  it("reports a footer-terminated corrupt protocol envelope", async () => {
+    const protocol = [{ set: [{ label: "par" }] }];
+    driver.initialize(
+      tableTransport({
+        [`${JSON.stringify(protocol)}\n`]: "not-json7A1E3AA1\n",
+      }),
+    );
+
+    const result = await driver.execute(protocol, { timeoutMs: 60 });
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toMatch(/complete measurement envelope/);
+  });
+
   it("getDeviceIdentity prefers the persisted name over the CSV product name", async () => {
     driver.initialize(
       tableTransport({
@@ -143,5 +163,31 @@ describe("MiniParDriver", () => {
 
     const identity = await driver.getDeviceIdentity();
     expect(identity.name).toBe("MiniPAR");
+  });
+
+  it("reads identity from the JSON hello form when no persisted name is available", async () => {
+    driver.initialize(
+      tableTransport({
+        "hello\n": '{"device":"MiniPAR","version":"2.3"}\n',
+        "get_name\n": "\n",
+      }),
+    );
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity).toMatchObject({
+      family: "minipar",
+      name: "MiniPAR",
+      firmwareVersion: "2.3",
+    });
+  });
+
+  it("clears buffered state and disconnects when destroyed", async () => {
+    const transport = tableTransport({});
+    driver.initialize(transport);
+
+    await driver.destroy();
+
+    expect(transport.disconnect).toHaveBeenCalledOnce();
+    await expect(driver.execute("hello")).rejects.toThrow(/not initialized/);
   });
 });
