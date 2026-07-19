@@ -79,7 +79,7 @@ export default async function AppLayout({
         <CommandPalette locale={locale} />
         <Toaster />
         <ShortcutHint />
-        <PasskeyCreatePrompt />
+        <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
         <WhatsNewSheet entries={releaseNotes} />
       </ActivityProvider>
     </SidebarProvider>

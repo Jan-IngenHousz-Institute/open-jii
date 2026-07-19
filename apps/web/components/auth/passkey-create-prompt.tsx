@@ -23,38 +23,50 @@ const COUNT_KEY = "openjii.passkey-prompt-count";
 const SHOWN_KEY = "openjii.passkey-prompt-shown";
 const MAX_PROMPTS = 3;
 
+function userStorageKey(key: string, userId: string) {
+  return `${key}:${userId}`;
+}
+
 /**
  * After a non-passkey sign-in, users without a passkey are invited to create
  * one on the spot (Google passkey UX journey: invite, run the OS ceremony,
- * confirm). Shown at most once per session and three times overall; "Not now"
- * on the third strike, or creating a passkey, silences it for good.
+ * confirm). Shown at most once per auth session; a user's third dismissal, or
+ * creating a passkey, silences it for good in this browser.
  */
-export function PasskeyCreatePrompt() {
+export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; sessionId: string }) {
   const { t } = useTranslation("account");
   const { data: passkeys } = usePasskeys();
   const addPasskey = useAddPasskey();
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState(false);
   const prompted = useRef(false);
+  const dismissedKey = userStorageKey(DISMISSED_KEY, userId);
+  const countKey = userStorageKey(COUNT_KEY, userId);
+  const shownKey = `${userStorageKey(SHOWN_KEY, userId)}:${sessionId}`;
 
   useEffect(() => {
     if (prompted.current || !passkeys || passkeys.length > 0) return;
-    if (localStorage.getItem(DISMISSED_KEY) === "true") return;
-    if (sessionStorage.getItem(SHOWN_KEY) === "true") return;
+    if (localStorage.getItem(dismissedKey) === "true") return;
+    if (sessionStorage.getItem(shownKey) === "true") return;
     if (authClient.getLastUsedLoginMethod() === "passkey") return;
-    const count = Number(localStorage.getItem(COUNT_KEY) ?? "0");
+    const count = Number(localStorage.getItem(countKey) ?? "0");
     if (count >= MAX_PROMPTS) return;
     prompted.current = true;
-    sessionStorage.setItem(SHOWN_KEY, "true");
-    localStorage.setItem(COUNT_KEY, String(count + 1));
-    if (count + 1 >= MAX_PROMPTS) localStorage.setItem(DISMISSED_KEY, "true");
+    sessionStorage.setItem(shownKey, "true");
     setOpen(true);
-  }, [passkeys]);
+  }, [countKey, dismissedKey, passkeys, shownKey]);
+
+  const handleDismiss = () => {
+    const count = Number(localStorage.getItem(countKey) ?? "0") + 1;
+    localStorage.setItem(countKey, String(count));
+    if (count >= MAX_PROMPTS) localStorage.setItem(dismissedKey, "true");
+    setOpen(false);
+  };
 
   const handleCreate = async () => {
     try {
       await addPasskey.mutateAsync({});
-      localStorage.setItem(DISMISSED_KEY, "true");
+      localStorage.setItem(dismissedKey, "true");
       setCreated(true);
     } catch {
       toast({ description: t("passkeys.addError"), variant: "destructive" });
@@ -62,7 +74,14 @@ export function PasskeyCreatePrompt() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) setOpen(true);
+        else if (created) setOpen(false);
+        else handleDismiss();
+      }}
+    >
       <DialogContent className="max-w-md">
         {created ? (
           <>
@@ -97,7 +116,7 @@ export function PasskeyCreatePrompt() {
                 {addPasskey.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t("passkeys.promptAction")}
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => setOpen(false)}>
+              <Button variant="ghost" className="w-full" onClick={handleDismiss}>
                 {t("passkeys.promptNotNow")}
               </Button>
             </DialogFooter>
