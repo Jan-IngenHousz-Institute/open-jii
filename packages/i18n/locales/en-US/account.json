@@ -155,24 +155,22 @@
     "expiration-90": "90 days",
     "expiration-365": "1 year",
     "expiration-never": "No expiration",
-    "expirationNever": "Never",
     "createdTitle": "API key created",
     "createdWarning": "Copy this key now. For security reasons it will not be shown again.",
     "copy": "Copy key",
     "done": "Done",
-    "neverUsed": "Never",
-    "columns": {
-      "name": "Name",
-      "key": "Key",
-      "created": "Created",
-      "expires": "Expires",
-      "lastUsed": "Last used"
-    },
+    "neverUsed": "never",
     "revoke": "Revoke",
     "revokeTitle": "Revoke API key?",
     "revokeConfirm": "\"{{name}}\" will stop working immediately. This cannot be undone.",
     "revokeError": "Failed to revoke the API key. Please try again.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "noExpiry": "No expiry",
+    "expiresUntil": "Until {{date}}",
+    "expiresInDays": "Expires in {{count}} days",
+    "expired": "Expired"
   },
   "passkeys": {
     "title": "Passkeys",
@@ -182,11 +180,6 @@
     "addTitle": "Create a passkey",
     "addError": "Could not create the passkey. Please try again.",
     "unnamed": "Unnamed passkey",
-    "columns": {
-      "name": "Name",
-      "type": "Type",
-      "created": "Created"
-    },
     "synced": "Synced",
     "deviceBound": "Device-bound",
     "rename": "Rename",
@@ -203,6 +196,18 @@
     "promptNotNow": "Not now",
     "promptSuccessTitle": "You're all set",
     "promptSuccessDescription": "Next time, choose \"Sign in with a passkey\" or pick it from the email field's suggestions.",
-    "promptDone": "Done"
+    "promptDone": "Done",
+    "added": "Added"
+  },
+  "signInMethods": {
+    "title": "How you sign in",
+    "description": "Ways to prove it's you when signing in to openJII.",
+    "emailTitle": "Email code",
+    "emailDescription": "A one-time code sent to your inbox",
+    "emailBadge": "Always on",
+    "passkeysTitle": "Passkeys",
+    "passkeysDescription": "Your device's screen lock or a security key",
+    "passkeysCount": "{{count}} active",
+    "passkeysNone": "None yet"
   }
 }

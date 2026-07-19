@@ -1,9 +1,11 @@
 "use client";
 
-import { Fingerprint } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Fingerprint, Laptop, Monitor, Smartphone, Usb } from "lucide-react";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
 import { useLocale } from "~/hooks/useLocale";
 import { getAuthenticatorName } from "~/lib/authenticator-names";
+import { formatShortDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -15,18 +17,19 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components/table";
 
 import { CreatePasskeyButton } from "./create-passkey-button";
 import { DeletePasskeyDialog } from "./delete-passkey-dialog";
 import { RenamePasskeyDialog } from "./rename-passkey-dialog";
+
+function providerIcon(provider: string | undefined): LucideIcon {
+  if (!provider) return Fingerprint;
+  if (provider.includes("iCloud") || provider.includes("Apple")) return Laptop;
+  if (provider.includes("Google") || provider.includes("Samsung")) return Smartphone;
+  if (provider.includes("Windows")) return Monitor;
+  if (provider.includes("YubiKey")) return Usb;
+  return Fingerprint;
+}
 
 export function PasskeysCard() {
   const { t } = useTranslation("account");
@@ -35,7 +38,7 @@ export function PasskeysCard() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1.5">
           <CardTitle>{t("passkeys.title")}</CardTitle>
           <CardDescription>{t("passkeys.description")}</CardDescription>
@@ -45,8 +48,8 @@ export function PasskeysCard() {
       <CardContent>
         {isLoading ? (
           <div className="space-y-2" data-testid="passkeys-loading">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
           </div>
         ) : !passkeys || passkeys.length === 0 ? (
           <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-sm">
@@ -54,44 +57,34 @@ export function PasskeysCard() {
             {t("passkeys.empty")}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("passkeys.columns.name")}</TableHead>
-                <TableHead>{t("passkeys.columns.type")}</TableHead>
-                <TableHead>{t("passkeys.columns.created")}</TableHead>
-                <TableHead className="w-20" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {passkeys.map((passkey) => {
-                const provider = getAuthenticatorName(passkey.aaguid);
-                const displayName = passkey.name ?? provider ?? t("passkeys.unnamed");
-                return (
-                  <TableRow key={passkey.id}>
-                    <TableCell>
-                      <div className="font-medium">{displayName}</div>
-                      {provider && provider !== displayName && (
-                        <div className="text-muted-foreground text-xs">{provider}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(passkey.createdAt).toLocaleDateString(locale)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <RenamePasskeyDialog passkeyId={passkey.id} currentName={displayName} />
-                        <DeletePasskeyDialog passkeyId={passkey.id} passkeyName={displayName} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="divide-y rounded-lg border">
+            {passkeys.map((passkey) => {
+              const provider = getAuthenticatorName(passkey.aaguid);
+              const displayName = passkey.name ?? provider ?? t("passkeys.unnamed");
+              const Icon = providerIcon(provider);
+              return (
+                <div key={passkey.id} className="flex items-center gap-4 px-4 py-3.5">
+                  <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{displayName}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {provider && provider !== displayName ? `${provider} · ` : ""}
+                      {t("passkeys.added")} {formatShortDate(passkey.createdAt, locale)}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">
+                    {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
+                  </Badge>
+                  <div className="flex items-center">
+                    <RenamePasskeyDialog passkeyId={passkey.id} currentName={displayName} />
+                    <DeletePasskeyDialog passkeyId={passkey.id} passkeyName={displayName} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
