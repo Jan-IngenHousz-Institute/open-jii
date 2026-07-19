@@ -10,6 +10,7 @@ import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/databas
 import * as schema from "@repo/database/schema";
 
 import { ac, roles } from "./access";
+import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
 import { orcidProvider } from "./providers/orcid";
 
@@ -207,12 +208,7 @@ export const auth = betterAuth({
         timeWindow: 60 * 1000,
         maxRequests: 100,
       },
-      // Only turn an API key into a mocked Better Auth session for the
-      // get-session call made by the Nest AuthGuard. If this is left on for
-      // every auth route, an API key can mint or revoke credentials through
-      // endpoints such as /api-key/create.
-      customAPIKeyGetter: (ctx) =>
-        ctx.path === "/get-session" ? (ctx.headers?.get("x-api-key") ?? null) : null,
+      customAPIKeyGetter: getApiKeyForSessionCheck,
       enableSessionForAPIKeys: true,
     }),
     passkey({
