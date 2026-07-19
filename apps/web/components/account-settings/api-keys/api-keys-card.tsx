@@ -3,6 +3,7 @@
 import { KeyRound } from "lucide-react";
 import { useApiKeys } from "~/hooks/auth/useApiKeys/useApiKeys";
 import { useLocale } from "~/hooks/useLocale";
+import { daysUntil, formatRelativeTime, formatShortDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -14,17 +15,35 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components/table";
 
 import { CreateApiKeyDialog } from "./create-api-key-dialog";
 import { RevokeApiKeyDialog } from "./revoke-api-key-dialog";
+
+const EXPIRY_WARNING_DAYS = 14;
+
+function ExpiryStatus({ expiresAt }: { expiresAt: Date | string | null }) {
+  const { t } = useTranslation("account");
+  const locale = useLocale();
+
+  if (!expiresAt) return <Badge variant="secondary">{t("apiKeys.noExpiry")}</Badge>;
+
+  const days = daysUntil(expiresAt);
+  if (days <= 0) {
+    return <span className="text-destructive text-xs font-medium">{t("apiKeys.expired")}</span>;
+  }
+  if (days <= EXPIRY_WARNING_DAYS) {
+    return (
+      <span className="text-xs font-medium text-amber-600 dark:text-amber-500">
+        {t("apiKeys.expiresInDays", { count: days })}
+      </span>
+    );
+  }
+  return (
+    <Badge variant="secondary">
+      {t("apiKeys.expiresUntil", { date: formatShortDate(expiresAt, locale) })}
+    </Badge>
+  );
+}
 
 export function ApiKeysCard() {
   const { t } = useTranslation("account");
@@ -33,12 +52,9 @@ export function ApiKeysCard() {
 
   const apiKeys = data?.apiKeys ?? [];
 
-  const formatDate = (value: Date | string | null) =>
-    value ? new Date(value).toLocaleDateString(locale) : null;
-
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1.5">
           <CardTitle>{t("apiKeys.title")}</CardTitle>
           <CardDescription>{t("apiKeys.description")}</CardDescription>
@@ -48,8 +64,8 @@ export function ApiKeysCard() {
       <CardContent>
         {isLoading ? (
           <div className="space-y-2" data-testid="api-keys-loading">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
           </div>
         ) : apiKeys.length === 0 ? (
           <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-sm">
@@ -57,46 +73,32 @@ export function ApiKeysCard() {
             {t("apiKeys.empty")}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("apiKeys.columns.name")}</TableHead>
-                <TableHead>{t("apiKeys.columns.key")}</TableHead>
-                <TableHead>{t("apiKeys.columns.created")}</TableHead>
-                <TableHead>{t("apiKeys.columns.expires")}</TableHead>
-                <TableHead>{t("apiKeys.columns.lastUsed")}</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {apiKeys.map((apiKey) => (
-                <TableRow key={apiKey.id}>
-                  <TableCell className="font-medium">{apiKey.name}</TableCell>
-                  <TableCell>
-                    <code className="text-muted-foreground text-xs">
+          <div className="divide-y rounded-lg border">
+            {apiKeys.map((apiKey) => (
+              <div key={apiKey.id} className="flex items-center gap-4 px-4 py-3.5">
+                <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                  <KeyRound className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{apiKey.name}</span>
+                    <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-xs">
                       {apiKey.start ?? apiKey.prefix ?? ""}…
                     </code>
-                  </TableCell>
-                  <TableCell>{formatDate(apiKey.createdAt)}</TableCell>
-                  <TableCell>
-                    {apiKey.expiresAt ? (
-                      formatDate(apiKey.expiresAt)
-                    ) : (
-                      <Badge variant="secondary">{t("apiKeys.expirationNever")}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(apiKey.lastRequest) ?? (
-                      <span className="text-muted-foreground">{t("apiKeys.neverUsed")}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <RevokeApiKeyDialog keyId={apiKey.id} keyName={apiKey.name ?? ""} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {t("apiKeys.created")} {formatShortDate(apiKey.createdAt, locale)} ·{" "}
+                    {t("apiKeys.lastUsed")}{" "}
+                    {apiKey.lastRequest
+                      ? formatRelativeTime(apiKey.lastRequest, locale)
+                      : t("apiKeys.neverUsed")}
+                  </p>
+                </div>
+                <ExpiryStatus expiresAt={apiKey.expiresAt} />
+                <RevokeApiKeyDialog keyId={apiKey.id} keyName={apiKey.name ?? ""} />
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

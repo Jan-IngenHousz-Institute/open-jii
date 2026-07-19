@@ -155,24 +155,22 @@
     "expiration-90": "90 Tage",
     "expiration-365": "1 Jahr",
     "expiration-never": "Kein Ablauf",
-    "expirationNever": "Nie",
     "createdTitle": "API-Schlüssel erstellt",
     "createdWarning": "Kopieren Sie den Schlüssel jetzt. Aus Sicherheitsgründen wird er nicht erneut angezeigt.",
     "copy": "Schlüssel kopieren",
     "done": "Fertig",
-    "neverUsed": "Nie",
-    "columns": {
-      "name": "Name",
-      "key": "Schlüssel",
-      "created": "Erstellt",
-      "expires": "Läuft ab",
-      "lastUsed": "Zuletzt verwendet"
-    },
+    "neverUsed": "nie",
     "revoke": "Widerrufen",
     "revokeTitle": "API-Schlüssel widerrufen?",
     "revokeConfirm": "\"{{name}}\" funktioniert sofort nicht mehr. Dies kann nicht rückgängig gemacht werden.",
     "revokeError": "Der API-Schlüssel konnte nicht widerrufen werden. Bitte versuchen Sie es erneut.",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "created": "Erstellt",
+    "lastUsed": "Zuletzt verwendet",
+    "noExpiry": "Kein Ablauf",
+    "expiresUntil": "Bis {{date}}",
+    "expiresInDays": "Läuft in {{count}} Tagen ab",
+    "expired": "Abgelaufen"
   },
   "passkeys": {
     "title": "Passkeys",
@@ -182,11 +180,6 @@
     "addTitle": "Passkey erstellen",
     "addError": "Der Passkey konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "unnamed": "Unbenannter Passkey",
-    "columns": {
-      "name": "Name",
-      "type": "Typ",
-      "created": "Erstellt"
-    },
     "synced": "Synchronisiert",
     "deviceBound": "Gerätegebunden",
     "rename": "Umbenennen",
@@ -203,6 +196,18 @@
     "promptNotNow": "Jetzt nicht",
     "promptSuccessTitle": "Alles bereit",
     "promptSuccessDescription": "Wählen Sie beim nächsten Mal \"Mit Passkey anmelden\" oder den Vorschlag im E-Mail-Feld.",
-    "promptDone": "Fertig"
+    "promptDone": "Fertig",
+    "added": "Hinzugefügt"
+  },
+  "signInMethods": {
+    "title": "So melden Sie sich an",
+    "description": "So weisen Sie bei der Anmeldung bei openJII Ihre Identität nach.",
+    "emailTitle": "E-Mail-Code",
+    "emailDescription": "Ein Einmalcode an Ihr Postfach",
+    "emailBadge": "Immer aktiv",
+    "passkeysTitle": "Passkeys",
+    "passkeysDescription": "Die Bildschirmsperre Ihres Geräts oder ein Sicherheitsschlüssel",
+    "passkeysCount": "{{count}} aktiv",
+    "passkeysNone": "Noch keine"
   }
 }

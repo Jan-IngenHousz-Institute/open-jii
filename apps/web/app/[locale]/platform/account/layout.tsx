@@ -14,13 +14,13 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   const locale = useLocale();
 
   const getActiveTab = () => {
-    if (pathname.endsWith("/security")) return "security";
-    if (pathname.endsWith("/api-keys")) return "api-keys";
+    if (pathname.includes("/security")) return "security";
+    if (pathname.includes("/api-keys")) return "api-keys";
     return "general";
   };
 
   return (
-    <PageContainer width="reading" className="space-y-6">
+    <PageContainer width="wide" className="space-y-6">
       <NavTabs value={getActiveTab()} className="flex w-full flex-1 flex-col">
         <NavTabsList>
           <NavTabsTrigger value="general" asChild>

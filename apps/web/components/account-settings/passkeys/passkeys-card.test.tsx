@@ -76,7 +76,7 @@ describe("PasskeysCard", () => {
     render(<PasskeysCard />);
 
     await waitFor(() => expect(screen.getByText("My work key")).toBeInTheDocument());
-    // Named row shows the provider as a subtitle; unnamed row uses the provider as its name.
-    expect(screen.getAllByText("Google Password Manager")).toHaveLength(2);
+    // Named row shows the provider in the meta line; unnamed row uses the provider as its name.
+    expect(screen.getAllByText(/Google Password Manager/)).toHaveLength(2);
   });
 });
