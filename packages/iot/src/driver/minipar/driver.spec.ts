@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
 import { MiniParDriver } from "./driver";
@@ -39,6 +40,17 @@ describe("MiniParDriver", () => {
 
   it("exposes the minipar family", () => {
     expect(driver.family).toBe("minipar");
+  });
+
+  it("discards an oversized receive buffer and emits its size", () => {
+    const transport = tableTransport({});
+    const overflow = vi.fn();
+    driver.on("bufferOverflow", overflow);
+    driver.initialize(transport);
+
+    transport.simulateData("x".repeat(DEFAULT_MAX_BUFFER_SIZE + 1));
+
+    expect(overflow).toHaveBeenCalledWith({ discardedBytes: DEFAULT_MAX_BUFFER_SIZE + 1 });
   });
 
   it("runs LINE commands and strips the firmware's blank-line echo", async () => {

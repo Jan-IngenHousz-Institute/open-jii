@@ -68,7 +68,10 @@ vi.mock("./analysis-summary-card", () => ({
   },
 }));
 vi.mock("./analysis-macro-result", () => ({
-  AnalysisMacroResult: (props: { ctx?: Record<string, unknown> }) => {
+  AnalysisMacroResult: (props: {
+    ctx?: Record<string, unknown>;
+    onProcessed?: (outputs: Record<string, unknown>[]) => void;
+  }) => {
     macroResultProps(props);
     return null;
   },
@@ -155,6 +158,25 @@ describe("AnalysisNode experiment name", () => {
     useMeasurementFlowStore.setState({ experimentId: "exp-missing", experimentLabel: undefined });
     render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Experiment");
+  });
+});
+
+describe("AnalysisNode macro output", () => {
+  it("persists the primary output once and ignores empty or identical callbacks", () => {
+    useMeasurementFlowStore.setState({ cellOutputs: {} });
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+    const onProcessed = macroResultProps.mock.calls.at(-1)?.[0]?.onProcessed as
+      | ((outputs: Record<string, unknown>[]) => void)
+      | undefined;
+
+    act(() => onProcessed?.([]));
+    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toBeUndefined();
+
+    act(() => onProcessed?.([{ chlorophyll: 42 }]));
+    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
+
+    act(() => onProcessed?.([{ chlorophyll: 42 }]));
+    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
 import { AmbitDriver } from "./driver";
@@ -39,6 +40,35 @@ describe("AmbitDriver", () => {
 
     expect(driver.family).toBe("ambit");
     expect(vi.mocked(transport.send).mock.calls[0][0]).toBe("hello\n");
+  });
+
+  it("keeps initialization best-effort when every wake attempt times out", async () => {
+    vi.useFakeTimers();
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const driver = new AmbitDriver({ quietWindowMs: 20, timeoutMs: 60 }, logger);
+    const initialize = driver.initialize(tableTransport({}));
+
+    await vi.runAllTimersAsync();
+    await initialize;
+
+    expect(logger.warn).toHaveBeenCalledWith("Ambit wake handshake failed during initialize");
+  });
+
+  it("discards an oversized receive buffer and emits its size", async () => {
+    const transport = tableTransport({ "hello\n": HELLO_REPLY });
+    const driver = fastDriver();
+    const overflow = vi.fn();
+    driver.on("bufferOverflow", overflow);
+    await driver.initialize(transport);
+
+    transport.simulateData("x".repeat(DEFAULT_MAX_BUFFER_SIZE + 1));
+
+    expect(overflow).toHaveBeenCalledWith({ discardedBytes: DEFAULT_MAX_BUFFER_SIZE + 1 });
   });
 
   it("rejects protocol JSON with a command-cell hint", async () => {
@@ -102,6 +132,25 @@ describe("AmbitDriver", () => {
     expect(result.error?.message).toMatch(/Response timeout|did not acknowledge/);
   });
 
+  it("fails a silent writer when hello replies without the ready sentinel", async () => {
+    const transport = createMockTransport();
+    let helloCalls = 0;
+    vi.mocked(transport.send).mockImplementation((payload: string) => {
+      if (payload === "hello\n") {
+        const reply = helloCalls++ === 0 ? HELLO_REPLY : "awake\n";
+        setTimeout(() => transport.simulateData(reply), 0);
+      }
+      return Promise.resolve();
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute("set_name,bench-3");
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toMatch(/did not acknowledge set_name/);
+  });
+
   it("surfaces BAD COMMAND as a command error", async () => {
     const transport = tableTransport({
       "hello\n": HELLO_REPLY,
@@ -126,6 +175,38 @@ describe("AmbitDriver", () => {
     const result = await driver.execute<string>("check", { timeoutMs: 500 });
     expect(result.success).toBe(true);
     expect(result.data).toBe("OK sensors");
+  });
+
+  it("runs the wake handshake again after the console has idled", async () => {
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      "temp\n": "23.1\t22.4\t23.0\n",
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+    vi.mocked(transport.send).mockClear();
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 30_000);
+
+    const result = await driver.execute("temp");
+
+    expect(result.success).toBe(true);
+    expect(vi.mocked(transport.send).mock.calls.map(([payload]) => payload)).toEqual([
+      "hello\n",
+      "temp\n",
+    ]);
+  });
+
+  it("returns a partial unframed reply at the overall timeout", async () => {
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      "check\n": "partial diagnostics",
+    });
+    const driver = new AmbitDriver({ quietWindowMs: 1_000, timeoutMs: 60 });
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("check", { timeoutMs: 60 });
+
+    expect(result).toEqual({ success: true, data: "partial diagnostics" });
   });
 
   it("does not expose the firmware's hardcoded hello placeholder as a device name", async () => {

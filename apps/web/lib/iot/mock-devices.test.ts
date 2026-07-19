@@ -151,6 +151,15 @@ describe("per-family mock replies", () => {
     expect(reply).toBe('{"device":"MiniPAR","version":"1.1"}');
   });
 
+  it("minipar mirrors its remaining LINE command responses", async () => {
+    const adapter = new MockTransportAdapter(2, "minipar");
+
+    expect(await sendAndReceive(adapter, "get_name\n")).toBe("Mock MiniPAR 2\n");
+    expect(await sendAndReceive(adapter, "par\n")).toBe("360.00\n");
+    expect(await sendAndReceive(adapter, "battery\n")).toBe("NaN\n");
+    expect(await sendAndReceive(adapter, "unknown\n")).toBe("error:unknown_command\n");
+  });
+
   it("minipar answers protocol JSON with the envelope plus 7A1E3AA1 footer", async () => {
     const adapter = new MockTransportAdapter(2, "minipar");
     const reply = await sendAndReceive(adapter, '[{"set":[{"label":"par"}]}]\n');
