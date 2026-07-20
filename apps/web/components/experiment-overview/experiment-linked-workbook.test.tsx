@@ -56,6 +56,20 @@ describe("ExperimentLinkedWorkbook", () => {
     });
   });
 
+  it("renders a rich-text description without HTML tags", async () => {
+    const workbook = createWorkbook({
+      id: workbookId,
+      description: "<p>Measures <strong>chlorophyll</strong>&nbsp; fluorescence</p>",
+    });
+    server.mount(contract.workbooks.getWorkbook, { body: workbook });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+
+    render(<ExperimentLinkedWorkbook workbookId={workbookId} />);
+
+    expect(await screen.findByText("Measures chlorophyll fluorescence")).toBeInTheDocument();
+    expect(screen.queryByText(/<strong>/)).not.toBeInTheDocument();
+  });
+
   it("renders cell summary pills", async () => {
     const cells = [
       createProtocolCell({ id: "c1" }),

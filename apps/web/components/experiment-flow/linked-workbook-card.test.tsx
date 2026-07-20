@@ -58,6 +58,24 @@ describe("LinkedWorkbookCard", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/en-US/platform/workbooks/wb-1");
   });
 
+  it("renders a line-clamped plain-text description without a section heading", async () => {
+    server.mount(contract.workbooks.getWorkbook, {
+      body: {
+        ...workbook,
+        description: "<p>Measures <strong>chlorophyll</strong>&nbsp; fluorescence</p>",
+      },
+    });
+    server.mount(contract.workbooks.listWorkbookVersions, { body: [v2, v1] });
+    server.mount(contract.workbooks.listWorkbooks, { body: [workbook, otherWorkbook] });
+
+    render(<LinkedWorkbookCard {...defaultProps} />);
+
+    const description = await screen.findByText("Measures chlorophyll fluorescence");
+    expect(description).toHaveClass("line-clamp-2");
+    expect(screen.queryByText("workbooks.descriptionTitle")).not.toBeInTheDocument();
+    expect(screen.getByText(/workbooks.lastUpdate.*Test User/)).toBeInTheDocument();
+  });
+
   it("shows version badge for the pinned version", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);
