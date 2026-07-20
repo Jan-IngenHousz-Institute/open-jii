@@ -1,5 +1,5 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
 
@@ -8,6 +8,40 @@ import { PasskeysCard } from "./passkeys-card";
 describe("PasskeysCard", () => {
   beforeEach(() => {
     vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({ data: [], error: null });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the create action when WebAuthn is supported", async () => {
+    vi.stubGlobal("PublicKeyCredential", class PublicKeyCredential {});
+
+    render(<PasskeysCard />);
+
+    expect(await screen.findByRole("button", { name: "passkeys.add" })).toBeInTheDocument();
+  });
+
+  it("hides only the create action when WebAuthn is unavailable", async () => {
+    vi.stubGlobal("PublicKeyCredential", undefined);
+    vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
+      data: [
+        {
+          id: "p1",
+          name: "Existing passkey",
+          backedUp: true,
+          createdAt: "2026-07-01T00:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    render(<PasskeysCard />);
+
+    expect(await screen.findByText("Existing passkey")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "passkeys.add" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "passkeys.rename" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "passkeys.delete" })).toBeInTheDocument();
   });
 
   it("shows a loading skeleton while passkeys load", () => {

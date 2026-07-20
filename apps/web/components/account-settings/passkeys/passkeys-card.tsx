@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Fingerprint, Laptop, Loader2, Monitor, Smartphone, Usb } from "lucide-react";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
+import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 import { useLocale } from "~/hooks/useLocale";
 import { getAuthenticatorName } from "~/lib/authenticator-names";
 import { formatShortDate } from "~/util/date";
@@ -36,6 +37,7 @@ export function PasskeysCard() {
   const { t } = useTranslation("account");
   const locale = useLocale();
   const { data: passkeys, isError, isFetching, isLoading, refetch } = usePasskeys();
+  const webAuthnSupported = useWebAuthnSupport();
 
   return (
     <Card>
@@ -44,7 +46,7 @@ export function PasskeysCard() {
           <CardTitle>{t("passkeys.title")}</CardTitle>
           <CardDescription>{t("passkeys.description")}</CardDescription>
         </div>
-        <CreatePasskeyButton />
+        {webAuthnSupported && <CreatePasskeyButton />}
       </CardHeader>
       <CardContent>
         {isLoading ? (
