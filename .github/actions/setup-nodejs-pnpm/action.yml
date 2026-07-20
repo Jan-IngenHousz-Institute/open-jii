@@ -45,5 +45,5 @@ runs:
         # Persist the setting in pnpm-workspace.yaml (job-local checkout) instead of a
         # one-shot CLI flag: pnpm 11's verifyDepsBeforeRun otherwise treats the hoisted
         # tree as stale on the next `pnpm run` and silently reinstalls it symlinked.
-        printf '\nnodeLinker: hoisted\n' >> pnpm-workspace.yaml
+        pnpm config set --location project node-linker hoisted
         pnpm install --frozen-lockfile
