@@ -286,7 +286,7 @@ jobs:
           aws s3api list-object-versions \
             --bucket "$ASSETS_BUCKET" \
             --query 'Versions[?IsLatest==`true`].[Key,VersionId]' \
-            --output text | while read KEY VERSION; do
+            --output text | while IFS=$'\t' read -r KEY VERSION; do
               if [[ "$KEY" == _deploy-tmp/* ]]; then
                 continue
               fi
@@ -305,7 +305,7 @@ jobs:
           aws s3api list-object-versions \
             --bucket "$ASSETS_BUCKET" \
             --query 'DeleteMarkers[?IsLatest==`true`].[Key,VersionId]' \
-            --output text | while read KEY VERSION; do
+            --output text | while IFS=$'\t' read -r KEY VERSION; do
               if [[ "$KEY" == _deploy-tmp/* ]]; then
                 continue
               fi

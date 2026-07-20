@@ -24,7 +24,7 @@ runs:
           tr '\t' '\n' | sort -n | head -n -"$KEEP" | while read VERSION; do
             if [[ -n "$VERSION" ]]; then
               echo "Deleting old version: $VERSION"
-              aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION"
+              aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION" || true
             fi
           done
         echo "✅ Version pruning complete"

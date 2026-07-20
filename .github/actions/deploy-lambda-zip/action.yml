@@ -62,6 +62,5 @@ runs:
         if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
           UPDATE_ARGS+=(--s3-object-version "$STAGED_VERSION_ID")
         fi
-        UPDATE_OUTPUT=$(aws lambda update-function-code "${UPDATE_ARGS[@]}")
-        VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
+        VERSION=$(aws lambda update-function-code "${UPDATE_ARGS[@]}" --query 'Version' --output text)
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
