@@ -5,7 +5,8 @@ import { useAddPasskey } from "~/hooks/auth/useAddPasskey/useAddPasskey";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/hooks/use-toast";
+
+import { runMutationWithToast } from "./run-mutation-with-toast";
 
 // One-click creation: the browser/OS owns the ceremony UI, the passkey is
 // labeled from its authenticator (aaguid) and can be renamed in the list.
@@ -14,11 +15,7 @@ export function CreatePasskeyButton() {
   const addPasskey = useAddPasskey();
 
   const handleClick = async () => {
-    try {
-      await addPasskey.mutateAsync({});
-    } catch {
-      toast({ description: t("passkeys.addError"), variant: "destructive" });
-    }
+    await runMutationWithToast(() => addPasskey.mutateAsync({}), t("passkeys.addError"));
   };
 
   return (

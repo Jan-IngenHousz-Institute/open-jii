@@ -15,7 +15,7 @@ describe("RevokeApiKeyDialog", () => {
     const user = userEvent.setup();
     render(<RevokeApiKeyDialog keyId="k1" keyName="CI key" />);
 
-    await user.click(screen.getByRole("button", { name: "apiKeys.revoke" }));
+    await user.click(screen.getByRole("button", { name: "apiKeys.revokeNamed" }));
     const dialog = screen.getByRole("alertdialog");
     expect(within(dialog).getByText("apiKeys.revokeTitle")).toBeInTheDocument();
 
@@ -34,7 +34,7 @@ describe("RevokeApiKeyDialog", () => {
     const user = userEvent.setup();
     render(<RevokeApiKeyDialog keyId="k1" keyName="CI key" />);
 
-    await user.click(screen.getByRole("button", { name: "apiKeys.revoke" }));
+    await user.click(screen.getByRole("button", { name: "apiKeys.revokeNamed" }));
     await user.click(
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "apiKeys.revoke" }),
     );

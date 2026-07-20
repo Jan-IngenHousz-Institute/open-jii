@@ -16,7 +16,7 @@ describe("RenamePasskeyDialog", () => {
     render(<RenamePasskeyDialog passkeyId="p1" currentName="Old name" />);
 
     await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("textbox", { name: "passkeys.name" });
     await user.clear(input);
     await user.type(input, "New name");
     await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
@@ -36,7 +36,7 @@ describe("RenamePasskeyDialog", () => {
     render(<RenamePasskeyDialog passkeyId="p1" currentName="Keeper" />);
 
     await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("textbox", { name: "passkeys.name" });
     await user.clear(input);
 
     // Radix marks the trigger aria-hidden while the modal is open, so the only
