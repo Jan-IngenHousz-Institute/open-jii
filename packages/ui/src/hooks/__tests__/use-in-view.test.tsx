@@ -10,6 +10,7 @@ class MockIntersectionObserver implements IntersectionObserver {
   callback: IntersectionObserverCallback;
   root: Element | Document | null;
   rootMargin: string;
+  scrollMargin = "0px";
   thresholds: ReadonlyArray<number>;
   disconnected = false;
 

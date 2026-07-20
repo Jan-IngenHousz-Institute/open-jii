@@ -149,7 +149,7 @@
     "lightningcss": "1.30.1",
     "postcss": "catalog:",
     "react-test-renderer": "19.2.3",
-    "typescript": "~6.0.3",
+    "typescript": "catalog:",
     "vitest": "catalog:testing"
   },
   "private": true

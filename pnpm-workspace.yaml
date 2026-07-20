@@ -39,7 +39,7 @@ patchedDependencies:
 
 catalog:
   axios: 1.16.1
-  typescript: 5.9.3
+  typescript: 6.0.3
   zod: 3.25.76
   eslint: 9.39.4
   prettier: 3.5.3
