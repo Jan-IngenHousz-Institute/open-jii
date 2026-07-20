@@ -1,0 +1,66 @@
+name: "Deploy Lambda Function from Zip"
+description: "Zips a directory and deploys it to a Lambda function via S3-staged update-function-code, avoiding the ~70MB direct-upload request size limit. Cleans up the staged copy afterward."
+inputs:
+  function-name:
+    description: "Name of the Lambda function to update"
+    required: true
+  source-dir:
+    description: "Directory containing the function's code to zip"
+    required: true
+  zip-name:
+    description: "Basename for the zip file, created as a sibling of source-dir"
+    required: true
+  assets-bucket:
+    description: "S3 bucket used to stage the zip before update-function-code"
+    required: true
+  sha:
+    description: "Commit SHA, used to build a unique staging key"
+    required: true
+outputs:
+  version:
+    description: "Published Lambda version"
+    value: ${{ steps.deploy.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Zip, stage in S3, and deploy to Lambda
+      id: deploy
+      shell: bash
+      run: |
+        echo "Zipping ${{ inputs.source-dir }}..."
+        ZIP_PATH="$(pwd)/$(dirname "${{ inputs.source-dir }}")/${{ inputs.zip-name }}"
+        (cd "${{ inputs.source-dir }}" && zip -rq "$ZIP_PATH" .)
+
+        # Direct --zip-file upload is capped at ~70MB; stage via S3 (250MB limit) under a per-run key
+        S3_KEY="_deploy-tmp/${{ inputs.zip-name }}-${{ inputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}.zip"
+        echo "Staging code in s3://${{ inputs.assets-bucket }}/${S3_KEY}..."
+        STAGED_VERSION_ID=$(aws s3api put-object \
+          --bucket "${{ inputs.assets-bucket }}" \
+          --key "${S3_KEY}" \
+          --body "$ZIP_PATH" \
+          --query 'VersionId' --output text)
+
+        # Versioned bucket: delete the exact uploaded version (s3 rm would only add a delete marker)
+        cleanup_staged_zip() {
+          echo "Cleaning up staged deployment package..."
+          if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+            aws s3api delete-object --bucket "${{ inputs.assets-bucket }}" --key "${S3_KEY}" --version-id "$STAGED_VERSION_ID" || true
+          else
+            aws s3 rm "s3://${{ inputs.assets-bucket }}/${S3_KEY}" || true
+          fi
+        }
+        trap cleanup_staged_zip EXIT
+
+        echo "Uploading code to Lambda function ${{ inputs.function-name }}..."
+        UPDATE_ARGS=(
+          --function-name "${{ inputs.function-name }}"
+          --s3-bucket "${{ inputs.assets-bucket }}"
+          --s3-key "${S3_KEY}"
+          --publish
+        )
+        if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+          UPDATE_ARGS+=(--s3-object-version "$STAGED_VERSION_ID")
+        fi
+        VERSION=$(aws lambda update-function-code "${UPDATE_ARGS[@]}" --query 'Version' --output text)
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
