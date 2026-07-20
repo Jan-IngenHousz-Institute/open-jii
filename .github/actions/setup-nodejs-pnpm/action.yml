@@ -42,8 +42,6 @@ runs:
       shell: bash
       run: |
         echo "Installing dependencies with hoisted node linker (AWS Lambda compatible)..."
-        # Persist the setting in pnpm-workspace.yaml (job-local checkout) instead of a
-        # one-shot CLI flag: pnpm 11's verifyDepsBeforeRun otherwise treats the hoisted
-        # tree as stale on the next `pnpm run` and silently reinstalls it symlinked.
+        # Persisted, not a CLI flag: pnpm 11's verifyDepsBeforeRun would otherwise reinstall symlinked on the next pnpm run
         pnpm config set --location project node-linker hoisted
         pnpm install --frozen-lockfile

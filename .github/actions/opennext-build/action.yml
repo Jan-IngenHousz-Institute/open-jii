@@ -77,10 +77,7 @@ runs:
         fi
         echo "  [ok] open-next.output.json"
 
-        # A populated pnpm virtual store means the install was not hoisted at build
-        # time; the resulting bundle fails on Lambda with Runtime.ImportModuleError.
-        # -print -quit stops find at the first match: piping into `read` instead would
-        # SIGPIPE a chatty find under pipefail and silently pass a large bad store.
+        # A populated virtual store means the install was not hoisted; the bundle would crash at Lambda Init
         PNPM_STORE="apps/web/.open-next/server-functions/default/node_modules/.pnpm"
         if [[ -L "$PNPM_STORE" ]] || [[ -n "$(find "$PNPM_STORE" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)" ]]; then
           echo "::error::Server bundle contains a populated pnpm virtual store (${PNPM_STORE}) — node_modules was not hoisted when Next.js traced the build; this bundle would crash at Lambda Init"
