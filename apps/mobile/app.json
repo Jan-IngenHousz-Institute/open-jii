@@ -19,7 +19,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.openjii.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "openJII uses your location to determine your timezone for accurate measurement timestamps."
+        "NSLocationWhenInUseUsageDescription": "openJII uses your location to determine your timezone and to record where each measurement was taken."
       }
     },
     "android": {
@@ -70,7 +70,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "openJII uses your location to determine your timezone for accurate measurement timestamps."
+          "locationWhenInUsePermission": "openJII uses your location to determine your timezone and to record where each measurement was taken."
         }
       ],
       [

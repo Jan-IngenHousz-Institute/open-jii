@@ -33,6 +33,10 @@ vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
 vi.mock("~/shared/ui/AlertDialog", () => ({ showAlert: vi.fn() }));
 vi.mock("sonner-native", () => ({ toast: { error: vi.fn() } }));
 vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
+// Keeps expo-location (and expo internals that need __DEV__) out of jsdom.
+vi.mock("~/shared/location/measurement-location", () => ({
+  getMeasurementLocation: vi.fn(() => Promise.resolve(null)),
+}));
 
 const SHARED = {
   timestamp: "2026-04-20T10:00:00.000Z",
