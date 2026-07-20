@@ -184,10 +184,10 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
 
     let name: string | undefined;
     let firmwareVersion: string | undefined;
-    const csv = /^minipar\s*,\s*([^,\s]+)\s*(?:,\s*([^,\s]+))?/im.exec(text);
+    const csv = /^minipar\s*,\s*(?<version>[^,\s]+)\s*(?:,\s*(?<firmware>[^,\s]+))?/im.exec(text);
     if (csv) {
       name = "MiniPAR";
-      firmwareVersion = csv[2] ?? csv[1];
+      firmwareVersion = csv.groups?.firmware ?? csv.groups?.version;
     } else {
       try {
         const parsed = JSON.parse(text) as Record<string, unknown>;

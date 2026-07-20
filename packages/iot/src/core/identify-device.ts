@@ -127,12 +127,14 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
     }
   }
 
-  const csvMatch = /^minipar\s*,\s*([^,\s]+)\s*(?:,\s*([^,\s]+))?/im.exec(text);
+  const csvMatch = /^minipar\s*,\s*(?<version>[^,\s]+)\s*(?:,\s*(?<firmware>[^,\s]+))?/im.exec(
+    text,
+  );
   if (csvMatch) {
     return {
       family: "minipar",
       name: "MiniPAR",
-      firmwareVersion: csvMatch[2] ?? csvMatch[1],
+      firmwareVersion: csvMatch.groups?.firmware ?? csvMatch.groups?.version,
       raw,
     };
   }
