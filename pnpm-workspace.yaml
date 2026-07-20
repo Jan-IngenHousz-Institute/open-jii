@@ -39,7 +39,7 @@ patchedDependencies:
 
 catalog:
   axios: 1.16.1
-  typescript: 5.9.3
+  typescript: 6.0.3
   zod: 3.25.76
   eslint: 9.39.4
   prettier: 3.5.3
@@ -66,8 +66,8 @@ catalogs:
     "@orpc/tanstack-query": 1.14.6
     "@orpc/zod": 1.14.6
   react19:
-    react: 19.2.4
-    react-dom: 19.2.4
+    react: 19.2.3
+    react-dom: 19.2.3
     "@types/react": 19.2.14
     "@types/react-dom": 19.2.3
   react-query:

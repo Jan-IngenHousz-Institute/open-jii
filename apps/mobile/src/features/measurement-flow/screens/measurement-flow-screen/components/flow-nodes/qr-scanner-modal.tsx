@@ -70,7 +70,7 @@ export function QRScannerModal({
     return (
       <View className="flex-1">
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           onBarcodeScanned={handleBarcodeScanned}

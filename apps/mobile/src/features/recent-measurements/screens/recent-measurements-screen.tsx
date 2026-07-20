@@ -1,5 +1,5 @@
-import { useIsFocused } from "@react-navigation/native";
 import { FlashList } from "@shopify/flash-list";
+import { useIsFocused } from "expo-router";
 import { useNavigation } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { ActivityIndicator, InteractionManager, View } from "react-native";

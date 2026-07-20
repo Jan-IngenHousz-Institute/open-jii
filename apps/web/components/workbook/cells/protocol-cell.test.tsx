@@ -463,6 +463,9 @@ describe("ProtocolCellComponent", () => {
       await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
       await user.click(screen.getByTestId("simulate-change"));
 
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving"),
+      );
       await vi.advanceTimersByTimeAsync(1100);
       await waitFor(() => expect(updateSpy.called).toBe(true));
       await waitFor(() =>

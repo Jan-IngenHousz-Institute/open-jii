@@ -1,5 +1,6 @@
 import Head from "@docusaurus/Head";
 import Layout from "@theme/Layout";
+import type { JSX } from "react";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 

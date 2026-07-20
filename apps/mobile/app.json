@@ -5,9 +5,8 @@
     "slug": "openjii",
     "version": "1.1.0",
     "orientation": "default",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/adaptive-icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -81,7 +80,11 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-sqlite"
     ],
     "experiments": {
       "autolinkingModuleResolution": true

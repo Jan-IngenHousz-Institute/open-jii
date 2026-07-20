@@ -7,7 +7,6 @@
     "declarationMap": false,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
       "~/features/*": ["./src/features/*"],
