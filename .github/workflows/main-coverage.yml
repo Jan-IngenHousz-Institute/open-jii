@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   actions: read
+  pull-requests: read
 
 jobs:
   upload_coverage:
@@ -22,55 +23,100 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get original PR commit SHA
-        id: get-pr-sha
+      # The coverage artifact is uploaded by the PR run and keyed off the PR head
+      # SHA. On main the commit is the squash-merge SHA (different), and the
+      # artifact lives on a *different* workflow run — so resolve the PR from the
+      # merge commit's "(#N)" suffix, then find its head SHA and run id.
+      - name: Locate PR coverage artifact
+        id: locate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          # For squash merges, use the current HEAD commit SHA
-          PR_SHA=$(git rev-parse HEAD)
-          echo "pr_sha=$PR_SHA" >> $GITHUB_OUTPUT
-          echo "Found PR SHA: $PR_SHA"
+          set -euo pipefail
+          SUBJECT=$(git log -1 --pretty=%s)
+          PR_NUMBER=$(printf '%s' "$SUBJECT" | sed -nE 's/.*\(#([0-9]+)\).*/\1/p')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR number in commit subject ('$SUBJECT'); will regenerate."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HEAD_SHA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid -q .headRefOid 2>/dev/null || true)
+          if [ -z "$HEAD_SHA" ]; then
+            echo "Could not resolve head SHA for #$PR_NUMBER; will regenerate."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NAME="coverage-reports-$HEAD_SHA"
+          RUN_ID=$(gh api "repos/$REPO/actions/artifacts?name=$NAME&per_page=100" \
+            --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty' \
+            2>/dev/null || true)
+          if [ -z "$RUN_ID" ]; then
+            echo "No live artifact named $NAME; will regenerate."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "PR #$PR_NUMBER (head $HEAD_SHA): found $NAME on run $RUN_ID"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Try to download coverage artifacts
         id: download
+        if: steps.locate.outputs.found == 'true'
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: coverage-reports-${{ steps.get-pr-sha.outputs.pr_sha }}
+          name: ${{ steps.locate.outputs.artifact_name }}
           path: ./coverage-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.locate.outputs.run_id }}
 
       - name: Setup Node.js and pnpm (only if regenerating coverage)
-        if: steps.download.outcome == 'failure'
+        if: steps.download.outcome != 'success'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "24"
 
+      # apps/data tests through uv; the regenerate path runs the full test suite.
+      - name: Setup uv (only if regenerating coverage)
+        if: steps.download.outcome != 'success'
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "apps/data/uv.lock"
+
       - name: Regenerate coverage if artifacts not found
-        if: steps.download.outcome == 'failure'
+        if: steps.download.outcome != 'success'
         run: |
           echo "Coverage artifacts not found, regenerating coverage..."
           pnpm install --frozen-lockfile
           pnpm run test
 
-      - name: Use downloaded coverage artifacts
-        if: steps.download.outcome == 'success'
+      - name: Collect coverage files
+        id: collect
         run: |
-          echo "Using downloaded coverage artifacts"
-          ls -la ./coverage-artifacts
+          if [ "${{ steps.download.outcome }}" = "success" ]; then
+            FILES=$(find ./coverage-artifacts -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
+          else
+            FILES=$(find apps packages tooling -maxdepth 3 -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
+          fi
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          if [ -z "$FILES" ]; then
+            echo "⚠️ No coverage files found to upload"
+          else
+            echo "Coverage files: $FILES"
+          fi
 
       - name: Upload coverage to Codecov for main branch
+        if: steps.collect.outputs.files != ''
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: apps/*/coverage.json,tooling/*/coverage.json,packages/*/coverage.json
+          files: ${{ steps.collect.outputs.files }}
           flags: main
           fail_ci_if_error: false
           verbose: true
           override_branch: main
           override_commit: ${{ github.sha }}
-
-      - name: Clean up artifacts
-        if: steps.download.outcome == 'success'
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: coverage-reports-${{ steps.get-pr-sha.outputs.pr_sha }}
-          failOnError: false
