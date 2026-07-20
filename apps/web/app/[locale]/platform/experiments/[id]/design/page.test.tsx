@@ -130,6 +130,7 @@ function mountWithWorkbook(overrides?: {
     body: createWorkbook({
       id: WB_ID,
       name: "Test Workbook",
+      description: "Measures canopy temperature",
       cells: [
         createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
       ],
@@ -218,6 +219,13 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
     });
+  });
+
+  it("displays the linked workbook description", async () => {
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    expect(await screen.findByText("Measures canopy temperature")).toBeInTheDocument();
   });
 
   it("shows version badge when workbook is linked", async () => {

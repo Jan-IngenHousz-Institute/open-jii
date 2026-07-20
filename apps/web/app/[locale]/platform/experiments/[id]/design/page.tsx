@@ -170,18 +170,16 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         />
 
         <NavTabs defaultValue="list">
-          <div className="border-border border-b">
-            <NavTabsList>
-              <NavTabsTrigger value="list">
-                <List className="h-4 w-4" />
-                {t("flow.viewList")}
-              </NavTabsTrigger>
-              <NavTabsTrigger value="graph">
-                <GitBranch className="h-4 w-4" />
-                {t("flow.viewGraph")}
-              </NavTabsTrigger>
-            </NavTabsList>
-          </div>
+          <NavTabsList>
+            <NavTabsTrigger value="list">
+              <List className="h-4 w-4" />
+              {t("flow.viewList")}
+            </NavTabsTrigger>
+            <NavTabsTrigger value="graph">
+              <GitBranch className="h-4 w-4" />
+              {t("flow.viewGraph")}
+            </NavTabsTrigger>
+          </NavTabsList>
 
           <NavTabsContent value="list" className="mt-6">
             {canEdit ? (
