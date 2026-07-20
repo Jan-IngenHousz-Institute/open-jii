@@ -1,6 +1,7 @@
 /**
  * Device driver interface - handles device-specific command/response patterns
  */
+import type { DeviceIdentity, SensorFamily } from "../core/families";
 import type { ITransportAdapter } from "../transport/interface";
 import { CommandQueue } from "../utils/command-queue/command-queue";
 import { Emitter } from "../utils/emitter/emitter";
@@ -43,6 +44,12 @@ export interface IDeviceDriver {
   /** Get device information (battery, version, etc.) */
   getDeviceInfo?(): Promise<Record<string, unknown>>;
 
+  /** Sensor family this driver speaks, when known. */
+  readonly family?: SensorFamily;
+
+  /** Fetch the device's structured identity (name, id, firmware, battery). */
+  getDeviceIdentity?(): Promise<DeviceIdentity>;
+
   /** Cleanup and destroy driver */
   destroy(): Promise<void>;
 }
@@ -67,6 +74,9 @@ export abstract class DeviceDriver<
 {
   protected transport?: ITransportAdapter;
   protected initialized = false;
+
+  /** Sensor family this driver speaks; subclasses override. */
+  readonly family: SensorFamily = "generic";
 
   /** Override to change the maximum receive buffer size per driver */
   protected maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;

@@ -13,6 +13,10 @@ import type { LambdaExecutionPayload } from "../../../core/models/macro-executio
 import { LambdaExecutionResponseSchema } from "../../../core/models/macro-execution.model";
 import type { MacroScript } from "../../../core/models/macro.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
+import {
+  macroSnapshotKey,
+  MacroSnapshotRepository,
+} from "../../../core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
 @Injectable()
@@ -21,6 +25,7 @@ export class ExecuteMacroBatchUseCase {
 
   constructor(
     private readonly macroRepository: MacroRepository,
+    private readonly macroSnapshotRepository: MacroSnapshotRepository,
     @Inject(LAMBDA_PORT) private readonly lambdaPort: LambdaPort,
   ) {}
 
@@ -34,31 +39,65 @@ export class ExecuteMacroBatchUseCase {
       timeout: request.timeout,
     });
 
-    // 1. Collect unique macro IDs and fetch scripts (cached in repository)
-    const uniqueMacroIds = [...new Set(request.items.map((item) => item.macro_id))];
+    // 1. Resolve published snapshot scripts for workbook measurements. Legacy
+    // callers without a workbook version continue to use the live macro row.
+    const liveMacroIds = [
+      ...new Set(
+        request.items.filter((item) => !item.workbook_version_id).map((item) => item.macro_id),
+      ),
+    ];
+    const workbookVersionIds = [
+      ...new Set(
+        request.items.flatMap((item) =>
+          item.workbook_version_id ? [item.workbook_version_id] : [],
+        ),
+      ),
+    ];
 
-    const macrosResult = await this.macroRepository.findScriptsByIds(uniqueMacroIds);
-    if (macrosResult.isFailure()) {
+    const [macrosResult, snapshotsResult] = await Promise.all([
+      this.macroRepository.findScriptsByIds(liveMacroIds),
+      this.macroSnapshotRepository.findScriptsByVersionIds(workbookVersionIds),
+    ]);
+    if (macrosResult.isFailure() || snapshotsResult.isFailure()) {
       return failure(
         AppError.internal("Failed to fetch macro scripts", ErrorCodes.MACRO_EXECUTION_FAILED),
       );
     }
 
     const macroMap = macrosResult.value;
+    const snapshotMap = snapshotsResult.value;
 
-    // 2. Group items by macro_id
-    const groups = new Map<string, typeof request.items>();
+    // 2. Group by macro + version. The same macro UUID can legitimately have
+    // different code in two published workbook versions in one Spark batch.
+    const groups = new Map<
+      string,
+      {
+        macroId: string;
+        workbookVersionId?: string;
+        items: typeof request.items;
+      }
+    >();
     for (const item of request.items) {
-      const group = groups.get(item.macro_id) ?? [];
-      group.push(item);
-      groups.set(item.macro_id, group);
+      const key = item.workbook_version_id
+        ? macroSnapshotKey(item.workbook_version_id, item.macro_id)
+        : `live:${item.macro_id}`;
+      const group = groups.get(key) ?? {
+        macroId: item.macro_id,
+        workbookVersionId: item.workbook_version_id,
+        items: [],
+      };
+      group.items.push(item);
+      groups.set(key, group);
     }
 
-    // 3. Fan out Lambda invocations in parallel (one per macro_id)
+    // 3. Fan out Lambda invocations in parallel (one per macro snapshot)
     const groupResults = await Promise.all(
-      [...groups.entries()].map(([macroId, items]) =>
-        this.processGroup(macroId, items, macroMap.get(macroId), request.timeout ?? 30),
-      ),
+      [...groups.values()].map(({ macroId, workbookVersionId, items }) => {
+        const macro = workbookVersionId
+          ? snapshotMap.get(macroSnapshotKey(workbookVersionId, macroId))
+          : macroMap.get(macroId);
+        return this.processGroup(macroId, items, macro, request.timeout ?? 30, workbookVersionId);
+      }),
     );
 
     // 4. Merge results
@@ -96,16 +135,20 @@ export class ExecuteMacroBatchUseCase {
     items: MacroBatchExecutionRequestBody["items"],
     macro: MacroScript | undefined,
     timeout: number,
+    workbookVersionId?: string,
   ): Promise<{ results: MacroBatchExecutionResultItem[]; error?: string }> {
     if (!macro) {
+      const notFound = workbookVersionId
+        ? `Macro snapshot not found: ${macroId} in workbook version ${workbookVersionId}`
+        : `Macro not found: ${macroId}`;
       return {
         results: items.map((item) => ({
           id: item.id,
           macro_id: macroId,
           success: false,
-          error: `Macro not found: ${macroId}`,
+          error: notFound,
         })),
-        error: `Macro not found: ${macroId}`,
+        error: notFound,
       };
     }
 
@@ -113,7 +156,11 @@ export class ExecuteMacroBatchUseCase {
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: items.map((item) => ({ id: item.id, data: item.data })),
+      items: items.map((item) => ({
+        id: item.id,
+        data: item.data,
+        context: item.context,
+      })),
       timeout,
     };
 

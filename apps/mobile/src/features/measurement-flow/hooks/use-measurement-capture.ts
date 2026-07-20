@@ -2,18 +2,54 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
 import { useConnectedDevices } from "~/features/connection/hooks/use-device-connection";
 import { useMultiScanner } from "~/features/connection/hooks/use-multi-scanner";
-import type { DeviceScanResult } from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
+import type { MultiScanRound, ScanAssignment } from "~/features/connection/hooks/use-multi-scanner";
+import type {
+  DeviceScanFailure,
+  DeviceScanResult,
+} from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { classifyScanError } from "~/features/connection/utils/classify-scan-error";
-import type { ScanResult } from "~/features/measurement-flow/domain/flow-transitions";
+import type {
+  DevicePlanEntry,
+  ScanResult,
+} from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
-import type { MeasurementContent } from "~/shared/measurements/flow-node";
+import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
+import type { Device } from "~/shared/types/device";
+
+import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 
 const log = createLogger("measurement-capture");
+
+interface ResolvedTarget {
+  command: string | object;
+  protocolId?: string;
+  protocolName?: string;
+}
+
+// Resolves a dispatch target's payload from its hydrated flow node (protocol
+// snapshot code or inline command), the same mechanism the current node uses.
+// Errors fail only that device's round entry, never the whole round.
+function resolveTargetPayload(node: FlowNode | undefined): ResolvedTarget | Error {
+  const content = node?.content as MeasurementContent | undefined;
+  if (!node || !content) return new Error("Dispatch target is not part of this flow");
+  if (content.command) {
+    try {
+      return { command: resolveInlineCommand(content.command), protocolName: node.name };
+    } catch (err) {
+      return err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  const code = content.protocol?.code;
+  if (!content.protocolId || !code || code.length === 0) {
+    return new Error("Protocol code is unavailable for this dispatch target");
+  }
+  return { command: code, protocolId: content.protocolId, protocolName: content.protocol?.name };
+}
 
 // View-model for MeasurementNode: owns the multi-scan lifecycle so the
 // component is a pure render switch over the returned state. nodeId (== cell
@@ -24,6 +60,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   const protocol = content.protocol;
   const {
     executeScanAll,
+    executeScanAssignments,
     isScanning,
     deviceStates,
     lastRound,
@@ -31,7 +68,17 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     cancelAll,
   } = useMultiScanner();
   const { data: devices = [], refetch: refetchConnectedDevices } = useConnectedDevices();
-  const { nextStep, setScanResults, navigateToQuestionFromOverview } = useMeasurementFlowStore();
+  const {
+    nextStep,
+    setScanResults,
+    navigateToQuestionFromOverview,
+    devicePlan,
+    completeDevicePlan,
+  } = useMeasurementFlowStore();
+  // The dispatch plan applies only while THIS node is one of its targets;
+  // otherwise it is stale routing state and the node broadcasts as before.
+  const activePlan =
+    nodeId && devicePlan?.some((p) => p.targetCellId === nodeId) ? devicePlan : undefined;
   const openDeviceSheet = useDeviceSheetStore((s) => s.open);
   // Primary's live progress (legacy mirrors); the round shares one protocol so
   // the estimate applies to every device.
@@ -43,6 +90,12 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   // that already returned a result is not re-scanned when the user retries
   // the failed ones.
   const successesRef = useRef<DeviceScanResult[]>([]);
+
+  // Per-device payload provenance of the dispatch round (deviceId keyed),
+  // stamped onto each result so its upload carries its own protocolId.
+  const assignmentMetaRef = useRef<Record<string, { protocolId?: string; protocolName?: string }>>(
+    {},
+  );
 
   // Keep stable refs so the disconnect-cleanup effect below doesn't need to
   // list these as dependencies (avoids any memoisation concerns).
@@ -85,9 +138,14 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       ordered.map(({ device, result }) => ({
         device: { id: device.id, name: device.name },
         result: result as ScanResult,
+        ...assignmentMetaRef.current[device.id],
       })),
       nodeId,
     );
+    assignmentMetaRef.current = {};
+    // The round covered every dispatch target; consumedNodeIds keeps skipping
+    // the other targets once while the plan itself is done.
+    if (activePlan) completeDevicePlan();
     // Single-node flows wrap nextStep() straight back to this same mounted
     // node; clear the finished round first so it renders Ready again instead
     // of a stale scanning screen with a dead Cancel button.
@@ -98,6 +156,29 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     nextStep();
   };
 
+  // Build per-device assignments from the plan; a device whose target payload
+  // cannot be resolved fails its own entry, the rest of the round still runs.
+  const runDispatchRound = (plan: DevicePlanEntry[], pendingDevices: Device[]) => {
+    const { flowNodes } = useMeasurementFlowStore.getState();
+    const assignments: ScanAssignment[] = [];
+    const prefailed: DeviceScanFailure[] = [];
+    for (const device of pendingDevices) {
+      const target = plan.find((p) => p.deviceId === device.id);
+      const node = flowNodes.find((n) => n.id === target?.targetCellId);
+      const resolved = resolveTargetPayload(node);
+      if (resolved instanceof Error) {
+        prefailed.push({ device, error: resolved });
+      } else {
+        assignments.push({ device, ...resolved });
+        assignmentMetaRef.current[device.id] = {
+          protocolId: resolved.protocolId,
+          protocolName: resolved.protocolName,
+        };
+      }
+    }
+    return executeScanAssignments(assignments, prefailed);
+  };
+
   const startScan = async () => {
     if (isScanning || isStartingRef.current) return;
     isStartingRef.current = true;
@@ -106,13 +187,17 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
         return;
       }
-      if (!content.protocolId) {
-        toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
-        return;
-      }
-      if (!protocol) {
-        toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
-        return;
+      // A dispatch round resolves each device's payload from ITS target cell,
+      // so the current node's own protocol guards only apply to broadcast.
+      if (!activePlan) {
+        if (!content.protocolId) {
+          toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
+          return;
+        }
+        if (!protocol) {
+          toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
+          return;
+        }
       }
 
       // The cached device list is polled (~3s) and lags a real drop; probe the
@@ -124,9 +209,12 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         return;
       }
 
-      // Only scan devices that haven't succeeded in a previous round.
+      // Only scan devices that haven't succeeded in a previous round; a
+      // dispatch round additionally covers only the devices in the plan.
       const pendingDevices = liveDevices.filter(
-        (d) => !successesRef.current.some((s) => s.device.id === d.id),
+        (d) =>
+          !successesRef.current.some((s) => s.device.id === d.id) &&
+          (!activePlan || activePlan.some((p) => p.deviceId === d.id)),
       );
       if (pendingDevices.length === 0) {
         completeWithSuccesses();
@@ -134,7 +222,14 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       }
 
       try {
-        const round = await executeScanAll(protocol, pendingDevices);
+        let round: MultiScanRound;
+        if (activePlan) {
+          round = await runDispatchRound(activePlan, pendingDevices);
+        } else if (protocol) {
+          round = await executeScanAll(protocol, pendingDevices);
+        } else {
+          return; // unreachable: guarded above
+        }
         successesRef.current = [
           ...successesRef.current.filter(
             (s) => !round.successes.some((r) => r.device.id === s.device.id),
@@ -175,6 +270,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
   const cancelScan = () => {
     successesRef.current = [];
+    assignmentMetaRef.current = {};
     // Await the cancel before resetting so the commands settle as
     // "Measurement cancelled", not a raw error the scan catch would misread.
     void (async () => {

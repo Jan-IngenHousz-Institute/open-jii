@@ -8,9 +8,14 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import type { CreateMacroDto } from "../../../core/models/macro.model";
 import type { LambdaPort } from "../../../core/ports/lambda.port";
 import { LAMBDA_PORT } from "../../../core/ports/lambda.port";
+import {
+  macroSnapshotKey,
+  MacroSnapshotRepository,
+} from "../../../core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { ExecuteMacroBatchUseCase } from "./execute-macro-batch";
 
@@ -19,6 +24,7 @@ describe("ExecuteMacroBatchUseCase", () => {
   let testUserId: string;
   let useCase: ExecuteMacroBatchUseCase;
   let macroRepository: MacroRepository;
+  let macroSnapshotRepository: MacroSnapshotRepository;
   let lambdaPort: LambdaPort;
 
   beforeAll(async () => {
@@ -30,6 +36,7 @@ describe("ExecuteMacroBatchUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(ExecuteMacroBatchUseCase);
     macroRepository = testApp.module.get(MacroRepository);
+    macroSnapshotRepository = testApp.module.get(MacroSnapshotRepository);
     lambdaPort = testApp.module.get(LAMBDA_PORT);
   });
 
@@ -157,6 +164,93 @@ describe("ExecuteMacroBatchUseCase", () => {
       });
 
       expect(invokeSpy).toHaveBeenCalledWith("test-fn", expect.objectContaining({ timeout: 30 }));
+    });
+
+    it("passes each item's workbook context to the sandbox", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: [{ id: "item-1", success: true, output: {} }],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const context = { baseline: { value: 3 } };
+      await useCase.execute({
+        items: [{ id: "item-1", macro_id: macro.id, data: {}, context }],
+      });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [{ id: "item-1", data: {}, context }],
+        }),
+      );
+    });
+
+    it("uses the published snapshot and separates versions of the same macro", async () => {
+      const macroId = faker.string.uuid();
+      const version1 = faker.string.uuid();
+      const version2 = faker.string.uuid();
+      vi.spyOn(macroSnapshotRepository, "findScriptsByVersionIds").mockResolvedValue(
+        success(
+          new Map([
+            [
+              macroSnapshotKey(version1, macroId),
+              { id: macroId, name: "Pinned v1", language: "python", code: "code-v1" },
+            ],
+            [
+              macroSnapshotKey(version2, macroId),
+              { id: macroId, name: "Pinned v2", language: "javascript", code: "code-v2" },
+            ],
+          ]),
+        ),
+      );
+      const liveSpy = vi.spyOn(macroRepository, "findScriptsByIds");
+      const invokeSpy = vi
+        .spyOn(lambdaPort, "invokeLambda")
+        .mockImplementation((_name, payload) => {
+          const items = (payload as LambdaExecutionPayload).items;
+          return Promise.resolve(
+            success({
+              statusCode: 200,
+              payload: {
+                status: "success",
+                results: items.map((item) => ({
+                  id: item.id,
+                  success: true,
+                  output: {},
+                })),
+              },
+            }),
+          );
+        });
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockImplementation(
+        (language) => `sandbox-${language}`,
+      );
+
+      const result = await useCase.execute({
+        items: [
+          { id: "item-1", macro_id: macroId, workbook_version_id: version1, data: {} },
+          { id: "item-2", macro_id: macroId, workbook_version_id: version2, data: {} },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(liveSpy).toHaveBeenCalledWith([]);
+      expect(invokeSpy).toHaveBeenCalledTimes(2);
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "sandbox-python",
+        expect.objectContaining({ script: "code-v1" }),
+      );
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "sandbox-javascript",
+        expect.objectContaining({ script: "code-v2" }),
+      );
     });
   });
 

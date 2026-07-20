@@ -22,6 +22,7 @@
  * });
  * ```
  */
+import type { DeviceIdentity } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
@@ -98,6 +99,26 @@ export class GenericDeviceDriver extends DeviceDriver<GenericDeviceEvents> {
   /** Cached device info from the INFO probe during initialize(), or `null` if unavailable */
   get cachedDeviceInfo(): Readonly<GenericDeviceInfo> | null {
     return this.deviceInfo;
+  }
+
+  /** Structured identity mapped from the cached INFO probe (re-probing if needed). */
+  async getDeviceIdentity(): Promise<DeviceIdentity> {
+    const info = this.deviceInfo ?? (await this.getDeviceInfo().catch(() => null));
+    if (!info) {
+      return { family: this.family, raw: {} };
+    }
+    return {
+      family: this.family,
+      name: typeof info.device_name === "string" ? info.device_name : undefined,
+      deviceId: typeof info.device_id === "string" ? info.device_id : undefined,
+      firmwareVersion:
+        typeof info.firmware_version === "string"
+          ? info.firmware_version
+          : typeof info.device_version === "string"
+            ? info.device_version
+            : undefined,
+      raw: { ...info },
+    };
   }
 
   private handleDataReceived(data: string): void {

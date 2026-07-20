@@ -3,7 +3,7 @@ import { createLogger } from "~/shared/observability/logger";
 import type { Trace } from "~/shared/observability/trace";
 import { startTrace } from "~/shared/observability/trace";
 
-import type { ITransportAdapter, Logger as IotLogger } from "@repo/iot";
+import type { DeviceIdentity, ITransportAdapter, Logger as IotLogger } from "@repo/iot";
 import { MultispeqDriver } from "@repo/iot";
 
 const log = createLogger("multispeq");
@@ -49,6 +49,12 @@ export interface IMultispeqCommandExecutor {
   execute(command: string | object, options?: ExecuteOptions): Promise<string | object>;
   /** Abort the in-flight command (sends `-1+` and rejects it as cancelled). */
   cancel(): Promise<void>;
+  /**
+   * Structured device identity (name, id, firmware, battery) via the driver's
+   * identification handshake. Bypasses progress/trace plumbing like a
+   * background command; safe to fire right after connect.
+   */
+  getIdentity(): Promise<DeviceIdentity>;
   /**
    * Subscribe to live progress of the in-flight command. Returns an
    * unsubscribe function. Emissions are throttled so a chatty transfer can't
@@ -262,6 +268,10 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
 
   cancel(): Promise<void> {
     return this.initPromise.then(() => this.driver.cancel());
+  }
+
+  getIdentity(): Promise<DeviceIdentity> {
+    return this.initPromise.then(() => this.driver.getDeviceIdentity());
   }
 
   destroy(): Promise<void> {

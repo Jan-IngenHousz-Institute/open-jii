@@ -56,6 +56,8 @@ def experiment_macro_data():
             "questions_data",
             "annotations",
             "skip_macro_processing",
+            "workbook_version_id",
+            "macro_context",
             F.explode("macros").alias("macro")
         )
         .select(
@@ -74,6 +76,8 @@ def experiment_macro_data():
             "questions_data",
             "annotations",
             "skip_macro_processing",
+            "workbook_version_id",
+            "macro_context",
             F.col("macro.id").alias("macro_id"),
             F.col("macro.name").alias("macro_name"),
             F.col("macro.filename").alias("macro_filename")
@@ -93,7 +97,13 @@ def experiment_macro_data():
                 & F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN)
                 & ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
                 sandbox_macro_udf(
-                    F.struct("id", "macro_id", F.col("data"))
+                    F.struct(
+                        "id",
+                        "macro_id",
+                        F.col("data"),
+                        "workbook_version_id",
+                        "macro_context",
+                    )
                 ),
             )
         )
@@ -146,6 +156,7 @@ def experiment_macro_data():
             "macro_id",
             "macro_name",
             "macro_filename",
+            "workbook_version_id",
             "macro_output",
             "macro_error",
             "processed_timestamp",

@@ -4,6 +4,49 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "../domains/workbook/workbook-cells.schema";
+import { resolveOutputData } from "./build-cell-namespace";
+import type { DeviceContext } from "./device-context";
+import { DEVICE_CONTEXT_KEY } from "./device-context";
+
+/**
+ * Host-supplied values that only exist at run time. `device` is the connected
+ * device a `$device`-sourced condition evaluates against; without it those
+ * conditions are false and the branch falls to its default path.
+ */
+export interface BranchRuntimeContext {
+  device?: DeviceContext;
+  /** Host connection id used to scope upstream multi-device outputs. */
+  deviceId?: string;
+}
+
+/** True when any condition of the branch reads the reserved `$device` source. */
+export function isDeviceScopedBranch(cell: BranchCell): boolean {
+  return cell.paths.some((path) =>
+    path.conditions.some((cond) => cond.sourceCellId === DEVICE_CONTEXT_KEY),
+  );
+}
+
+/**
+ * A device-scoped branch dispatches devices to measurement cells, so every
+ * path (and the default) must point at a protocol or command cell.
+ */
+export function validateDeviceBranch(cell: BranchCell, cells: WorkbookCell[]): string[] {
+  if (!isDeviceScopedBranch(cell)) return [];
+
+  const errors: string[] = [];
+  for (const path of cell.paths) {
+    const label = path.label || "Unnamed path";
+    if (!path.gotoCellId) {
+      errors.push(`${label}: device-scoped paths must jump to a protocol or command cell`);
+      continue;
+    }
+    const target = cells.find((c) => c.id === path.gotoCellId);
+    if (!target || (target.type !== "protocol" && target.type !== "command")) {
+      errors.push(`${label}: jump target must be a protocol or command cell`);
+    }
+  }
+  return errors;
+}
 
 export function validateBranchCell(cell: BranchCell): string[] {
   const errors: string[] = [];
@@ -44,7 +87,16 @@ export function resolveConditionValue(
   cells: WorkbookCell[],
   sourceCellId: string,
   field: string,
+  runtime?: BranchRuntimeContext,
 ): string | number | undefined {
+  if (sourceCellId === DEVICE_CONTEXT_KEY) {
+    const device = runtime?.device;
+    if (!device) return undefined;
+    const val = device[field as keyof DeviceContext];
+    if (typeof val === "number" || typeof val === "string") return val;
+    return undefined;
+  }
+
   const sourceCell = cells.find((c) => c.id === sourceCellId);
   if (!sourceCell) return undefined;
 
@@ -52,21 +104,8 @@ export function resolveConditionValue(
     return sourceCell.answer ?? undefined;
   }
 
-  const outputCell = cells.find((c) => c.type === "output" && c.producedBy === sourceCellId);
-  if (outputCell?.type !== "output" || outputCell.data == null) {
-    return undefined;
-  }
-
-  const data = outputCell.data as Record<string, unknown>;
-
-  if (Array.isArray(data)) {
-    const first = data[0] as Record<string, unknown> | undefined;
-    if (!first) return undefined;
-    const val = first[field];
-    if (typeof val === "number") return val;
-    if (typeof val === "string") return val;
-    return val != null ? JSON.stringify(val) : undefined;
-  }
+  const data = resolveOutputData(cells, sourceCellId, runtime?.deviceId);
+  if (data == null) return undefined;
 
   const val = data[field];
   if (typeof val === "number") return val;
@@ -74,8 +113,12 @@ export function resolveConditionValue(
   return val != null ? JSON.stringify(val) : undefined;
 }
 
-function evaluateCondition(cond: BranchCondition, cells: WorkbookCell[]): boolean {
-  const resolved = resolveConditionValue(cells, cond.sourceCellId, cond.field);
+function evaluateCondition(
+  cond: BranchCondition,
+  cells: WorkbookCell[],
+  runtime?: BranchRuntimeContext,
+): boolean {
+  const resolved = resolveConditionValue(cells, cond.sourceCellId, cond.field, runtime);
   if (resolved === undefined) return false;
 
   const left = typeof resolved === "number" ? resolved : Number(resolved);
@@ -101,14 +144,22 @@ function evaluateCondition(cond: BranchCondition, cells: WorkbookCell[]): boolea
 }
 
 // AND logic across conditions.
-export function evaluatePathConditions(path: BranchPath, cells: WorkbookCell[]): boolean {
+export function evaluatePathConditions(
+  path: BranchPath,
+  cells: WorkbookCell[],
+  runtime?: BranchRuntimeContext,
+): boolean {
   if (path.conditions.length === 0) return false;
-  return path.conditions.every((cond) => evaluateCondition(cond, cells));
+  return path.conditions.every((cond) => evaluateCondition(cond, cells, runtime));
 }
 
-export function evaluateBranch(cell: BranchCell, cells: WorkbookCell[]): BranchPath | undefined {
+export function evaluateBranch(
+  cell: BranchCell,
+  cells: WorkbookCell[],
+  runtime?: BranchRuntimeContext,
+): BranchPath | undefined {
   for (const path of cell.paths) {
-    if (evaluatePathConditions(path, cells)) {
+    if (evaluatePathConditions(path, cells, runtime)) {
       return path;
     }
   }

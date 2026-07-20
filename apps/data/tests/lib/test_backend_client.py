@@ -169,3 +169,25 @@ def test_execute_macro_batch_chunk_failure_synthesizes_per_item_errors(client: B
 
 def test_execute_macro_batch_empty_short_circuits(client: BackendClient) -> None:
     assert client.execute_macro_batch([]) == {"results": []}
+
+
+@responses.activate
+def test_execute_macro_batch_sorts_same_macro_by_workbook_version(client: BackendClient) -> None:
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/macros/execute-batch",
+        json={"success": True, "results": []},
+        status=200,
+    )
+    client.execute_macro_batch(
+        [
+            {"id": "v2", "macro_id": "macro", "workbook_version_id": "version-2", "data": {}},
+            {"id": "live", "macro_id": "macro", "data": {}},
+            {"id": "v1", "macro_id": "macro", "workbook_version_id": "version-1", "data": {}},
+        ]
+    )
+
+    body = responses.calls[0].request.body
+    assert body is not None
+    sent = json.loads(body)["items"]
+    assert [item["id"] for item in sent] == ["live", "v1", "v2"]

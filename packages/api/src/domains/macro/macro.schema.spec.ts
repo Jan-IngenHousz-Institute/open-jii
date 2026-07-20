@@ -374,6 +374,22 @@ describe("Macro Schema", () => {
       const parsed = zMacroBatchExecutionItem.parse(item);
       expect(parsed.data).toEqual([{ trace: [1] }]);
     });
+
+    it("parses an optional workbook snapshot id and stringified context", () => {
+      const workbookVersionId = "550e8400-e29b-41d4-a716-446655440000";
+      const item = {
+        id: "m1",
+        macro_id: uuidA,
+        data: {},
+        workbook_version_id: workbookVersionId,
+        context: JSON.stringify({ baseline: { value: 3 } }),
+      };
+
+      expect(zMacroBatchExecutionItem.parse(item)).toEqual({
+        ...item,
+        context: { baseline: { value: 3 } },
+      });
+    });
   });
 
   describe("zMacroBatchExecutionRequestBody", () => {

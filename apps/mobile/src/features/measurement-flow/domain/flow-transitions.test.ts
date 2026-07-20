@@ -88,7 +88,42 @@ describe("edge transitions", () => {
       branchVisitCounts: {},
       lastMatchedPath: undefined,
       branchReturnStack: [],
+      devicePlan: undefined,
+      consumedNodeIds: [],
     });
+  });
+
+  it("nextStep skips consumed dispatch targets exactly once", () => {
+    const state = inFlow({
+      flowNodes: [makeMeasurement("m1"), makeMeasurement("m2"), makeQuestion("q1")],
+      currentFlowStep: 0,
+      consumedNodeIds: ["m2"],
+    });
+    expect(nextStepState(state)).toEqual({ currentFlowStep: 2, consumedNodeIds: [] });
+  });
+
+  it("nextStep wraps the iteration when only consumed targets remain", () => {
+    const state = inFlow({
+      flowNodes: [makeQuestion("q1"), makeMeasurement("m1"), makeMeasurement("m2")],
+      currentFlowStep: 1,
+      iterationCount: 1,
+      consumedNodeIds: ["m2"],
+    });
+    expect(nextStepState(state)).toMatchObject({
+      currentFlowStep: 0,
+      iterationCount: 2,
+      consumedNodeIds: [],
+      devicePlan: undefined,
+    });
+  });
+
+  it("nextStep leaves unrelated consumed ids for a later skip", () => {
+    const state = inFlow({
+      flowNodes: [makeMeasurement("m1"), makeQuestion("q1"), makeMeasurement("m2")],
+      currentFlowStep: 0,
+      consumedNodeIds: ["m2"],
+    });
+    expect(nextStepState(state)).toEqual({ currentFlowStep: 1 });
   });
 
   it("previousStep from step 0 abandons the flow but leaves isFromOverview untouched", () => {

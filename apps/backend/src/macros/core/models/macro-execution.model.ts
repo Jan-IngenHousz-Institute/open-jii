@@ -11,6 +11,9 @@ import { z } from "zod";
 export interface LambdaExecutionItem {
   id: string;
   data: Record<string, unknown> | unknown[];
+  // Upstream cell outputs keyed by canonical name; injected into the sandbox as
+  // read-only `ctx`. Absent for legacy/batch callers that send only `data`.
+  context?: Record<string, unknown>;
 }
 
 export interface LambdaExecutionPayload {

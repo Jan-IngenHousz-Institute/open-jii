@@ -9,6 +9,7 @@ import type {
   BranchPath,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { DEVICE_CONTEXT_FIELDS, DEVICE_CONTEXT_KEY } from "@repo/api/transforms/device-context";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -92,6 +93,9 @@ export function BranchCellComponent({
 
   const getFieldsForSource = useCallback(
     (sourceCellId: string): string[] => {
+      // The connected device exposes a fixed field list from its identity.
+      if (sourceCellId === DEVICE_CONTEXT_KEY) return [...DEVICE_CONTEXT_FIELDS];
+
       if (!allCells) return [];
 
       // Questions only expose a single implicit "answer" field.
@@ -192,7 +196,12 @@ export function BranchCellComponent({
                   const updated = { ...c, [field]: value };
                   if (field === "sourceCellId") {
                     const src = (allCells ?? []).find((ac) => ac.id === value);
-                    if (src?.type === "question") {
+                    if (value === DEVICE_CONTEXT_KEY) {
+                      // Keep a still-valid device field on reselect; default to family.
+                      if (!(DEVICE_CONTEXT_FIELDS as readonly string[]).includes(c.field)) {
+                        updated.field = "family";
+                      }
+                    } else if (src?.type === "question") {
                       updated.field = "answer";
                     } else if (c.field === "answer") {
                       updated.field = "";
@@ -263,6 +272,9 @@ export function BranchCellComponent({
             <SelectValue placeholder="source..." />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={DEVICE_CONTEXT_KEY} className="text-xs font-medium">
+              Connected device
+            </SelectItem>
             {sourceCells.map((sc) => (
               <SelectItem key={sc.id} value={sc.id} className="text-xs">
                 {getCellLabel(sc)}

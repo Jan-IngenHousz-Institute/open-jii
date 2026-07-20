@@ -24,6 +24,7 @@ import { CACHE_PORT } from "./core/ports/cache.port";
 import { LAMBDA_PORT } from "./core/ports/lambda.port";
 // Repositories
 import { MacroProtocolRepository } from "./core/repositories/macro-protocol.repository";
+import { MacroSnapshotRepository } from "./core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "./core/repositories/macro.repository";
 import { MacroWebhookController } from "./presentation/macro-webhook.controller";
 // Controllers
@@ -49,6 +50,7 @@ import { MacroController } from "./presentation/macro.controller";
 
     // Repositories
     MacroRepository,
+    MacroSnapshotRepository,
     MacroProtocolRepository,
 
     // Macro use cases

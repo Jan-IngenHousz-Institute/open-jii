@@ -49,8 +49,13 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     const cells = body?.cells;
     if (!cells) return;
     const { nodes, edges } = cellsToFlowGraph(cells);
-    setFlowGraph(hydrateFlowNodes(nodes, cells, body?.entitySnapshots), edges, cells);
-  }, [versionData, setFlowGraph]);
+    setFlowGraph(
+      hydrateFlowNodes(nodes, cells, body?.entitySnapshots),
+      edges,
+      cells,
+      workbookVersionId,
+    );
+  }, [versionData, workbookVersionId, setFlowGraph]);
 
   // The list resolved but the experiment has no workbook: every experiment is
   // workbook-backed, so surface an error rather than hang.

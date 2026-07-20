@@ -1,6 +1,10 @@
 import type { MacroOutput } from "./process-scan";
 
-export type RunPythonMacroFn = (code: string, json: object) => Promise<MacroOutput>;
+export type RunPythonMacroFn = (
+  code: string,
+  json: object,
+  ctx?: Record<string, unknown>,
+) => Promise<MacroOutput>;
 
 let runner: RunPythonMacroFn | null = null;
 
