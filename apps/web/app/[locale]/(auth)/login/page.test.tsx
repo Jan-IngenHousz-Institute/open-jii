@@ -19,6 +19,9 @@ vi.mock("~/components/auth/login-form", () => ({
 vi.mock("~/components/auth/terms-and-conditions-dialog", () => ({
   TermsAndConditionsDialog: () => Promise.resolve({ terms: [] }),
 }));
+vi.mock("@repo/ui/components/toaster", () => ({
+  Toaster: () => <div data-testid="toaster" />,
+}));
 
 describe("LoginPage", () => {
   beforeEach(() => {
@@ -40,6 +43,7 @@ describe("LoginPage", () => {
     expect(screen.getByRole("form", { name: /login/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /auth hero/i })).toBeInTheDocument();
     expect(screen.getByAltText(/login background/i)).toBeInTheDocument();
+    expect(screen.getByTestId("toaster")).toBeInTheDocument();
   });
 
   it("forwards callbackUrl to the login form", async () => {

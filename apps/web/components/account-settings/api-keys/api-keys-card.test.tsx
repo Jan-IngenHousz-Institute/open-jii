@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { authClient } from "@repo/auth/client";
@@ -28,6 +28,23 @@ describe("ApiKeysCard", () => {
 
     await waitFor(() => expect(screen.getByText("apiKeys.empty")).toBeInTheDocument());
     expect(screen.queryByTestId("api-keys-loading")).not.toBeInTheDocument();
+  });
+
+  it("shows a retryable error instead of the empty state when loading fails", async () => {
+    vi.mocked(authClient.apiKey.list).mockResolvedValue({
+      data: null,
+      error: { message: "Server error" },
+    });
+    const user = userEvent.setup();
+
+    render(<ApiKeysCard />);
+
+    expect(await screen.findByTestId("api-keys-error")).toBeInTheDocument();
+    expect(screen.getByText("apiKeys.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("apiKeys.empty")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "apiKeys.retry" }));
+    await waitFor(() => expect(authClient.apiKey.list).toHaveBeenCalledTimes(2));
   });
 
   it("renders a row per key with masked key, no-expiry badge, and never-used meta", async () => {

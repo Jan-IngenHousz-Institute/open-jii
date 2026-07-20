@@ -147,6 +147,8 @@
     "createDescription": "Der Schlüssel wird nach der Erstellung einmalig angezeigt.",
     "createConfirm": "Schlüssel erstellen",
     "createError": "Der API-Schlüssel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "loadError": "Ihre API-Schlüssel konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
     "name": "Name",
     "namePlaceholder": "z. B. Analyse-Skript",
     "nameRequired": "Bitte geben Sie einen Namen ein.",
@@ -179,6 +181,8 @@
     "add": "Passkey erstellen",
     "addTitle": "Passkey erstellen",
     "addError": "Der Passkey konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "loadError": "Ihre Passkeys konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
     "unnamed": "Unbenannter Passkey",
     "synced": "Synchronisiert",
     "deviceBound": "Gerätegebunden",
@@ -208,6 +212,8 @@
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Die Bildschirmsperre Ihres Geräts oder ein Sicherheitsschlüssel",
     "passkeysCount": "{{count}} aktiv",
-    "passkeysNone": "Noch keine"
+    "passkeysNone": "Noch keine",
+    "passkeysLoading": "Wird geladen…",
+    "passkeysUnavailable": "Nicht verfügbar"
   }
 }

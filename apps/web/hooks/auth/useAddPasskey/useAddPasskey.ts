@@ -18,8 +18,9 @@ export function useAddPasskey() {
       const response = (await authClient.passkey.addPasskey(input)) as
         | Awaited<ReturnType<typeof authClient.passkey.addPasskey>>
         | undefined;
-      if (response?.error) throw new Error(response.error.message);
-      return response?.data ?? null;
+      if (!response) throw new Error("Passkey registration returned no response");
+      if (response.error) throw new Error(response.error.message);
+      return response.data;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "passkeys"] });

@@ -1,5 +1,5 @@
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
 
@@ -41,6 +41,15 @@ vi.mock("./passkey-login-button", () => ({
 const termsData = { title: "Terms Title", content: "Terms Content" };
 
 describe("LoginForm", () => {
+  beforeEach(() => {
+    vi.stubGlobal("PublicKeyCredential", class PublicKeyCredential {});
+    vi.mocked(authClient.getLastUsedLoginMethod).mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders email form, OAuth providers, title, and divider", () => {
     render(<LoginForm callbackUrl="/cb" locale="en-US" termsData={termsData} />);
 
@@ -99,5 +108,13 @@ describe("LoginForm", () => {
     render(<LoginForm locale="en-US" termsData={termsData} />);
 
     expect(screen.getByTestId("passkey-login-button")).toHaveAttribute("data-last-used", "true");
+  });
+
+  it("hides the passkey option when WebAuthn is unavailable", () => {
+    vi.stubGlobal("PublicKeyCredential", undefined);
+
+    render(<LoginForm locale="en-US" termsData={termsData} />);
+
+    expect(screen.queryByTestId("passkey-login-button")).not.toBeInTheDocument();
   });
 });

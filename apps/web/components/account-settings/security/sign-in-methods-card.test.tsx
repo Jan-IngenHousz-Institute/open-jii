@@ -39,4 +39,25 @@ describe("SignInMethodsCard", () => {
 
     await waitFor(() => expect(screen.getByText("signInMethods.passkeysNone")).toBeInTheDocument());
   });
+
+  it("does not report an empty state while passkeys are still loading", () => {
+    vi.mocked(authClient.passkey.listUserPasskeys).mockReturnValue(new Promise(() => undefined));
+
+    render(<SignInMethodsCard />);
+
+    expect(screen.getByText("signInMethods.passkeysLoading")).toBeInTheDocument();
+    expect(screen.queryByText("signInMethods.passkeysNone")).not.toBeInTheDocument();
+  });
+
+  it("reports passkey data as unavailable when loading fails", async () => {
+    vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
+      data: null,
+      error: { message: "Server error" },
+    });
+
+    render(<SignInMethodsCard />);
+
+    expect(await screen.findByText("signInMethods.passkeysUnavailable")).toBeInTheDocument();
+    expect(screen.queryByText("signInMethods.passkeysNone")).not.toBeInTheDocument();
+  });
 });

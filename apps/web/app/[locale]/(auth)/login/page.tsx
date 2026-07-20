@@ -7,6 +7,8 @@ import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { LoginForm } from "~/components/auth/login-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
 
+import { Toaster } from "@repo/ui/components/toaster";
+
 export default async function LoginPage(props: {
   params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;
@@ -55,6 +57,7 @@ export default async function LoginPage(props: {
           </div>
         </div>
       </div>
+      <Toaster />
     </>
   );
 }

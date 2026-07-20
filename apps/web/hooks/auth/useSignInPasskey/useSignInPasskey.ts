@@ -18,8 +18,9 @@ export function useSignInPasskey() {
       const response = (await authClient.signIn.passkey(input)) as
         | Awaited<ReturnType<typeof authClient.signIn.passkey>>
         | undefined;
-      if (response?.error) throw new Error(response.error.message);
-      return response?.data ?? null;
+      if (!response) throw new Error("Passkey sign-in returned no response");
+      if (response.error) throw new Error(response.error.message);
+      return response.data;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth"] });
