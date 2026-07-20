@@ -3,6 +3,7 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
@@ -59,15 +60,23 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
     <div className="flex flex-1 flex-col">
       {/* Title + metadata (fluid; the parent PageContainer controls overall width). */}
       <div className="flex w-full flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <InlineEditableTitle
-            name={workbook.name}
+        <div className="space-y-5">
+          <div className="flex flex-col gap-2">
+            <InlineEditableTitle
+              name={workbook.name}
+              hasAccess={isCreator}
+              onSave={handleTitleSave}
+              isPending={isUpdating}
+              icon={<BookOpen className="h-6 w-6" />}
+            />
+            <AutosaveIndicator status={indicatorStatus} />
+          </div>
+
+          <WorkbookDescription
+            workbookId={id}
+            description={workbook.description ?? ""}
             hasAccess={isCreator}
-            onSave={handleTitleSave}
-            isPending={isUpdating}
-            icon={<BookOpen className="h-6 w-6" />}
           />
-          <AutosaveIndicator status={indicatorStatus} />
         </div>
 
         <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">

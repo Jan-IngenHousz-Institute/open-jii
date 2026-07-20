@@ -8,6 +8,8 @@
     "workbookUpdated": "Werkboek succesvol bijgewerkt",
     "createError": "Kan werkboek niet aanmaken. Probeer het opnieuw.",
     "listDescription": "Bekijk en beheer uw meetnotebooks.",
+    "descriptionTitle": "Beschrijving",
+    "descriptionPlaceholder": "Beschrijving toevoegen...",
     "noDescription": "Geen beschrijving beschikbaar",
     "notFound": "Werkboek niet gevonden",
     "searchPlaceholder": "Werkboeken zoeken...",
