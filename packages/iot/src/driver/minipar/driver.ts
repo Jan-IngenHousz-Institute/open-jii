@@ -187,7 +187,7 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
     const csv = /^minipar\s*,\s*([^,\s]+)\s*(?:,\s*([^,\s]+))?/im.exec(text);
     if (csv) {
       name = "MiniPAR";
-      firmwareVersion = csv.at(2) ?? csv.at(1);
+      firmwareVersion = csv[2] ?? csv[1];
     } else {
       try {
         const parsed = JSON.parse(text) as Record<string, unknown>;

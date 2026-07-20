@@ -132,7 +132,7 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
     return {
       family: "minipar",
       name: "MiniPAR",
-      firmwareVersion: csvMatch.at(2) ?? csvMatch.at(1),
+      firmwareVersion: csvMatch[2] ?? csvMatch[1],
       raw,
     };
   }
