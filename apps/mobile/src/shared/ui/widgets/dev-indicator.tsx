@@ -1,11 +1,11 @@
 import { HardHat, User } from "lucide-react-native";
-import { View, Text } from "react-native";
+import { View, Text, type ColorValue } from "react-native";
 import { colors } from "~/shared/constants/colors";
 import { useIsDevelopment } from "~/shared/device/use-is-development";
 
 interface Props {
   size: number;
-  color: string;
+  color: ColorValue;
 }
 
 export function DevIndicator({ size, color, focused }: Props & { focused?: boolean }) {
