@@ -157,6 +157,43 @@ variable "contentful_preview_secret" {
   sensitive   = true
 }
 
+# Mailchimp configuration variables
+variable "mailchimp_api_key" {
+  description = "Mailchimp API key"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailchimp_server_prefix" {
+  description = "Mailchimp server prefix"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailchimp_audience_id" {
+  description = "Mailchimp audience ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailchimp_community_kind" {
+  description = "Mailchimp community member type"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailchimp_community_id" {
+  description = "Mailchimp community identifier"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailchimp_community_name" {
+  description = "Mailchimp community name"
+  type        = string
+  sensitive   = true
+}
+
 variable "centralized_metastore_bucket_name" {
   description = "Name of the centralized S3 bucket for Unity Catalog metastore storage in data governance account"
   type        = string
