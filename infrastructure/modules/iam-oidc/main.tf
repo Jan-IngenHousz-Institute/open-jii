@@ -200,6 +200,8 @@ locals {
         "lambda:ListLayers",
         "lambda:ListLayerVersions",
         "lambda:PublishLayerVersion",
+        # Lambda@Edge replication (CloudFront enables this when attaching a function to a distribution)
+        "lambda:EnableReplication*",
       ]
       resource = "*"
     }
