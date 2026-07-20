@@ -98,9 +98,9 @@ jobs:
         id: collect
         run: |
           if [ "${{ steps.download.outcome }}" = "success" ]; then
-            FILES=$(find ./coverage-artifacts -name coverage.json -type f 2>/dev/null | paste -sd, -)
+            FILES=$(find ./coverage-artifacts -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
           else
-            FILES=$(find apps packages tooling -maxdepth 2 -name coverage.json -type f 2>/dev/null | paste -sd, -)
+            FILES=$(find apps packages tooling -maxdepth 3 -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
           fi
           echo "files=$FILES" >> "$GITHUB_OUTPUT"
           if [ -z "$FILES" ]; then
