@@ -36,6 +36,9 @@ jobs:
     name: Build & Deploy Next.js with OpenNext
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    # Job-level (workflow_call ignores workflow-level): overlapping runs' sync --delete would remove each other's staged zip
+    concurrency:
+      group: web-deploy-opennext-${{ inputs.environment }}
     permissions:
       id-token: write
       contents: read
@@ -92,6 +95,7 @@ jobs:
             # Upload assets with appropriate cache headers
             aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
               --delete \
+              --exclude "_deploy-tmp/*" \
               --exact-timestamps \
               --cache-control "public, max-age=31536000, immutable" \
               --metadata-directive REPLACE \
@@ -164,11 +168,39 @@ jobs:
           cd apps/web/.open-next/server-functions/default
           zip -r ../../server-function.zip .
           cd -
+
+          # Direct --zip-file upload is capped at ~70MB; stage via S3 (250MB limit) under a per-run key
+          ASSETS_BUCKET="${{ env.ASSETS_BUCKET }}"
+          S3_KEY="_deploy-tmp/server-function-${{ steps.get-sha.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}.zip"
+          echo "Staging server function code in s3://${ASSETS_BUCKET}/${S3_KEY}..."
+          STAGED_VERSION_ID=$(aws s3api put-object \
+            --bucket "${ASSETS_BUCKET}" \
+            --key "${S3_KEY}" \
+            --body apps/web/.open-next/server-function.zip \
+            --query 'VersionId' --output text)
+
+          # Versioned bucket: delete the exact uploaded version (s3 rm would only add a delete marker)
+          cleanup_staged_zip() {
+            echo "Cleaning up staged deployment package..."
+            if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+              aws s3api delete-object --bucket "${ASSETS_BUCKET}" --key "${S3_KEY}" --version-id "$STAGED_VERSION_ID" || true
+            else
+              aws s3 rm "s3://${ASSETS_BUCKET}/${S3_KEY}" || true
+            fi
+          }
+          trap cleanup_staged_zip EXIT
+
           echo "Uploading server function code to Lambda..."
-          UPDATE_OUTPUT=$(aws lambda update-function-code \
-            --function-name "${{ env.SERVER_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/server-function.zip \
-            --publish)
+          UPDATE_ARGS=(
+            --function-name "${{ env.SERVER_FUNCTION }}"
+            --s3-bucket "${ASSETS_BUCKET}"
+            --s3-key "${S3_KEY}"
+            --publish
+          )
+          if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+            UPDATE_ARGS+=(--s3-object-version "$STAGED_VERSION_ID")
+          fi
+          UPDATE_OUTPUT=$(aws lambda update-function-code "${UPDATE_ARGS[@]}")
           VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -281,11 +313,14 @@ jobs:
           ASSETS_BUCKET: ${{ env.ASSETS_BUCKET }}
         run: |
           echo "❌ Reverting latest S3 asset versions due to failed deployment..."
-          # List all latest versions and delete them to expose previous versions
+          # List all latest versions and delete them to expose previous versions (skip _deploy-tmp/ staged zips)
           aws s3api list-object-versions \
             --bucket "$ASSETS_BUCKET" \
             --query 'Versions[?IsLatest==`true`].[Key,VersionId]' \
             --output text | while read KEY VERSION; do
+              if [[ "$KEY" == _deploy-tmp/* ]]; then
+                continue
+              fi
               if [[ -n "$KEY" && -n "$VERSION" ]]; then
                 echo "Deleting latest version of $KEY ($VERSION)"
                 aws s3api delete-object \

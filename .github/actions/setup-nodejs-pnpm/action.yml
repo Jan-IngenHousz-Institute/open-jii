@@ -42,7 +42,6 @@ runs:
       shell: bash
       run: |
         echo "Installing dependencies with hoisted node linker (AWS Lambda compatible)..."
-        # Install dependencies using pnpm with hoisted node linker
-        # This is because AWS lambdas do not support symlinks
-        # Read more at https://pnpm.io/settings#nodelinker
-        pnpm install --node-linker=hoisted --frozen-lockfile
+        # Persisted, not a CLI flag: pnpm 11's verifyDepsBeforeRun would otherwise reinstall symlinked on the next pnpm run
+        pnpm config set --location project node-linker hoisted
+        pnpm install --frozen-lockfile

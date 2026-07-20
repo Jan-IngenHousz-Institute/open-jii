@@ -76,3 +76,11 @@ runs:
           exit 1
         fi
         echo "  [ok] open-next.output.json"
+
+        # A populated virtual store means the install was not hoisted; the bundle would crash at Lambda Init
+        PNPM_STORE="apps/web/.open-next/server-functions/default/node_modules/.pnpm"
+        if [[ -L "$PNPM_STORE" ]] || [[ -n "$(find "$PNPM_STORE" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)" ]]; then
+          echo "::error::Server bundle contains a populated pnpm virtual store (${PNPM_STORE}) — node_modules was not hoisted when Next.js traced the build; this bundle would crash at Lambda Init"
+          exit 1
+        fi
+        echo "  [ok] no pnpm virtual store in server bundle"
