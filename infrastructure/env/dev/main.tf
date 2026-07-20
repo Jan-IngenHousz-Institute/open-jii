@@ -590,6 +590,8 @@ module "centrum_pipeline" {
     "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
     "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
     "LARGE_IOT_INGEST_ENABLED"   = "false"
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
   continuous_mode  = false
