@@ -15,7 +15,9 @@ import {
   DialogTrigger,
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/hooks/use-toast";
+import { Label } from "@repo/ui/components/label";
+
+import { runMutationWithToast } from "./run-mutation-with-toast";
 
 export function RenamePasskeyDialog({
   passkeyId,
@@ -30,12 +32,11 @@ export function RenamePasskeyDialog({
   const updatePasskey = useUpdatePasskey();
 
   const handleRename = async () => {
-    try {
-      await updatePasskey.mutateAsync({ id: passkeyId, name });
-      setOpen(false);
-    } catch {
-      toast({ description: t("passkeys.renameError"), variant: "destructive" });
-    }
+    await runMutationWithToast(
+      () => updatePasskey.mutateAsync({ id: passkeyId, name }),
+      t("passkeys.renameError"),
+      () => setOpen(false),
+    );
   };
 
   return (
@@ -55,7 +56,10 @@ export function RenamePasskeyDialog({
         <DialogHeader>
           <DialogTitle>{t("passkeys.renameTitle")}</DialogTitle>
         </DialogHeader>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="space-y-2">
+          <Label htmlFor="passkey-name">{t("passkeys.name")}</Label>
+          <Input id="passkey-name" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             {t("passkeys.cancel")}

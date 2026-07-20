@@ -35,7 +35,11 @@ export function RevokeApiKeyDialog({ keyId, keyName }: { keyId: string; keyName:
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("apiKeys.revoke")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t("apiKeys.revokeNamed", { name: keyName })}
+        >
           <Trash2 className="text-destructive h-4 w-4" />
         </Button>
       </AlertDialogTrigger>

@@ -16,7 +16,8 @@ import {
   AlertDialogTrigger,
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/hooks/use-toast";
+
+import { runMutationWithToast } from "./run-mutation-with-toast";
 
 export function DeletePasskeyDialog({
   passkeyId,
@@ -30,12 +31,11 @@ export function DeletePasskeyDialog({
   const deletePasskey = useDeletePasskey();
 
   const handleDelete = async () => {
-    try {
-      await deletePasskey.mutateAsync({ id: passkeyId });
-      setOpen(false);
-    } catch {
-      toast({ description: t("passkeys.deleteError"), variant: "destructive" });
-    }
+    await runMutationWithToast(
+      () => deletePasskey.mutateAsync({ id: passkeyId }),
+      t("passkeys.deleteError"),
+      () => setOpen(false),
+    );
   };
 
   return (
