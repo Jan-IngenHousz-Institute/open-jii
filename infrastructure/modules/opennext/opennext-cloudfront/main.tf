@@ -66,7 +66,7 @@ resource "aws_lambda_function" "edge_hash_body" {
   function_name    = "${var.project_name}-edge-hash-body"
   role             = aws_iam_role.edge_hash_body.arn
   handler          = "index.handler"
-  runtime          = "nodejs22.x"
+  runtime          = "nodejs24.x"
   publish          = true
 
   lifecycle {

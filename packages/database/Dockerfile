@@ -1,5 +1,5 @@
 # Base image with Node
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 
 # Alpine image
 FROM node:${NODE_VERSION}-alpine AS alpine
@@ -11,6 +11,8 @@ ENV TURBO_TELEMETRY_DISABLED=1
 FROM alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+# pnpm 11 prompts before purging a stale modules dir; CI=true keeps builds non-interactive
+ENV CI=true
 RUN corepack enable
 RUN npm install turbo --global
 

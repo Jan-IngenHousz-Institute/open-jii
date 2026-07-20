@@ -61,7 +61,7 @@ module "server_lambda" {
 
   function_name         = "opennext-server"
   handler              = "index.handler"
-  runtime              = "nodejs18.x"
+  runtime              = "nodejs24.x"
   memory_size          = 1024
   timeout              = 30
   create_function_url  = true
@@ -92,7 +92,7 @@ module "image_lambda" {
 
   function_name        = "opennext-image"
   handler             = "index.handler"
-  runtime             = "nodejs18.x"
+  runtime             = "nodejs24.x"
   memory_size         = 1536
   timeout             = 30
   create_function_url = true
@@ -117,7 +117,7 @@ module "image_lambda" {
 | ----------------------- | ------------------------------------------ | -------------- | ----------------- | :------: |
 | `function_name`         | Name of the Lambda function                | `string`       | n/a               |  ✅ Yes  |
 | `handler`               | Lambda function handler                    | `string`       | `"index.handler"` |  ❌ No   |
-| `runtime`               | Lambda runtime                             | `string`       | `"nodejs18.x"`    |  ❌ No   |
+| `runtime`               | Lambda runtime                             | `string`       | `"nodejs24.x"`    |  ❌ No   |
 | `architecture`          | Lambda architecture (x86_64 or arm64)      | `string`       | `"arm64"`         |  ❌ No   |
 | `memory_size`           | Memory size in MB                          | `number`       | `512`             |  ❌ No   |
 | `timeout`               | Timeout in seconds                         | `number`       | `30`              |  ❌ No   |
