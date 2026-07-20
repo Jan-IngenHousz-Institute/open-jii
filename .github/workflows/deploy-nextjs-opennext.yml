@@ -164,13 +164,25 @@ jobs:
           cd apps/web/.open-next/server-functions/default
           zip -r ../../server-function.zip .
           cd -
+
+          # Direct --zip-file upload is capped at ~70MB (API request body limit); stage via S3 instead,
+          # which supports the full 250MB unzipped Lambda code size limit.
+          ASSETS_BUCKET="${{ env.ASSETS_BUCKET }}"
+          S3_KEY="_deploy-tmp/server-function-${{ steps.get-sha.outputs.sha }}.zip"
+          echo "Staging server function code in s3://${ASSETS_BUCKET}/${S3_KEY}..."
+          aws s3 cp apps/web/.open-next/server-function.zip "s3://${ASSETS_BUCKET}/${S3_KEY}"
+
           echo "Uploading server function code to Lambda..."
           UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${{ env.SERVER_FUNCTION }}" \
-            --zip-file fileb://apps/web/.open-next/server-function.zip \
+            --s3-bucket "${ASSETS_BUCKET}" \
+            --s3-key "${S3_KEY}" \
             --publish)
           VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          echo "Cleaning up staged deployment package..."
+          aws s3 rm "s3://${ASSETS_BUCKET}/${S3_KEY}" || true
 
       - name: Get Previous Server Alias Version
         id: get-server-alias
