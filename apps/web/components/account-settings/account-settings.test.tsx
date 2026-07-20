@@ -67,6 +67,10 @@ vi.mock("./profile-information-card", () => ({
   ),
 }));
 
+vi.mock("./newsletter-subscription-card", () => ({
+  NewsletterSubscriptionCard: () => <div data-testid="newsletter-subscription-card" />,
+}));
+
 const session: Session = {
   user: {
     id: "u-1",
@@ -149,6 +153,7 @@ describe("<AccountSettings />", () => {
       "https://example.com/ada.png",
     );
     expect(within(pictureCard).getByTestId("email")).toHaveTextContent("hello@example.com");
+    expect(screen.getByTestId("newsletter-subscription-card")).toBeInTheDocument();
   });
 
   it("saves an inline name edit", async () => {

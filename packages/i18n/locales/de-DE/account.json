@@ -36,6 +36,20 @@
       "institutionPlaceholder": "Institution oder Organisation eingeben",
       "emptyInstitution": "Keine Institution hinzugefügt"
     },
+    "NewsletterSubscriptionCard": {
+      "title": "Newsletter",
+      "description": "Verwalten Sie Ihr Abonnement des openJII-Community-Newsletters.",
+      "toggleLabel": "Community-Newsletter",
+      "subscribed": "Sie haben den Community-Newsletter abonniert.",
+      "pending": "Bestätigungs-E-Mail gesendet. Prüfen Sie Ihren Posteingang, um das Abonnement abzuschließen.",
+      "unsubscribed": "Abonnieren Sie Neuigkeiten und Updates aus der Community.",
+      "loading": "Ihr Newsletter-Abonnement wird geprüft…",
+      "error": "Ihr Newsletter-Abonnement konnte nicht geladen werden. Ihre anderen Einstellungen sind weiterhin verfügbar.",
+      "retry": "Erneut versuchen",
+      "retrying": "Erneuter Versuch…",
+      "updating": "Ihr Newsletter-Abonnement wird aktualisiert…",
+      "updateError": "Ihr Newsletter-Abonnement konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+    },
     "status": {
       "active": "Konto aktiv",
       "deactivated": "Konto deaktiviert"

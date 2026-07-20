@@ -327,6 +327,8 @@
     "termsAndConditions": "Allgemeine Geschäftsbedingungen",
     "acceptTerms": "Ich akzeptiere die allgemeinen Geschäftsbedingungen",
     "acceptTermsError": "Sie müssen die allgemeinen Geschäftsbedingungen akzeptieren",
+    "newsletterOptIn": "Ich möchte den openJII-Newsletter erhalten",
+    "newsletterOptInError": "Die Newsletter-Anmeldung ist fehlgeschlagen. Sie können sich später in den Kontoeinstellungen anmelden.",
     "register": "Registrieren",
     "successMessage": "Registrierung erfolgreich",
     "signOutTitle": "Abmelden",

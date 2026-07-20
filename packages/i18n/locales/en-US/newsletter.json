@@ -1,0 +1,14 @@
+{
+  "footer": {
+    "title": "Subscribe to our newsletter",
+    "description": "Community updates from openJII, straight to your inbox. Unsubscribe anytime.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "invalidEmail": "Please enter a valid email address.",
+    "submit": "Subscribe",
+    "submitting": "Subscribing…",
+    "successTitle": "Almost there!",
+    "successMessage": "Check your inbox to confirm your subscription.",
+    "errorMessage": "Something went wrong. Please try again in a moment."
+  }
+}

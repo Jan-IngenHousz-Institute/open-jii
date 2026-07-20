@@ -122,6 +122,7 @@ export function RegistrationFields({
                 <Checkbox
                   id={field.name}
                   name={field.name}
+                  aria-label={t("registration.acceptTerms")}
                   checked={!!field.value}
                   onCheckedChange={field.onChange}
                   ref={field.ref}
@@ -129,7 +130,7 @@ export function RegistrationFields({
                   onBlur={field.onBlur}
                 />
               </FormControl>
-              <FormLabel className="left text-sm font-medium leading-none">
+              <FormLabel htmlFor={field.name} className="left text-sm font-medium leading-none">
                 {t("auth.termsPrefix")}
                 <Dialog>
                   <DialogTrigger asChild>
@@ -147,6 +148,34 @@ export function RegistrationFields({
                     </ScrollArea>
                   </DialogContent>
                 </Dialog>
+              </FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* Newsletter — explicit, optional consent and unchecked by default */}
+      {!emailOnly && (
+        <FormField
+          control={form.control}
+          name="newsletterOptIn"
+          render={({ field }) => (
+            <FormItem className="flex items-end space-x-2">
+              <FormControl>
+                <Checkbox
+                  id={field.name}
+                  name={field.name}
+                  aria-label={t("registration.newsletterOptIn")}
+                  checked={!!field.value}
+                  onCheckedChange={field.onChange}
+                  ref={field.ref}
+                  disabled={isPending}
+                  onBlur={field.onBlur}
+                />
+              </FormControl>
+              <FormLabel htmlFor={field.name} className="left text-sm font-medium leading-none">
+                {t("registration.newsletterOptIn")}
               </FormLabel>
               <FormMessage />
             </FormItem>

@@ -474,6 +474,8 @@
     "termsAndConditions": "Terms and conditions",
     "acceptTerms": "I accept the terms and conditions",
     "acceptTermsError": "You must accept the terms and conditions",
+    "newsletterOptIn": "I'd like to receive the openJII newsletter",
+    "newsletterOptInError": "Newsletter subscription failed. You can subscribe later in account settings.",
     "registering": "Registering...",
     "register": "Register",
     "verifyAndRegister": "Verify & Register",

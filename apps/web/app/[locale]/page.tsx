@@ -1,4 +1,5 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
@@ -83,7 +84,12 @@ export default async function Home({ params }: HomePageProps) {
         <HomeKeyFeatures featuresData={features} preview={preview} locale={locale} />
 
         {/* Footer */}
-        <HomeFooter locale={locale} footerData={footer} preview={preview} />
+        <HomeFooter
+          locale={locale}
+          footerData={footer}
+          preview={preview}
+          newsletterSlot={<NewsletterSubscribeForm />}
+        />
       </main>
     </>
   );

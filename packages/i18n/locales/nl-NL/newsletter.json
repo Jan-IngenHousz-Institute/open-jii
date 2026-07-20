@@ -1,0 +1,14 @@
+{
+  "footer": {
+    "title": "Abonneer je op onze nieuwsbrief",
+    "description": "Community-updates van openJII, rechtstreeks in je inbox. Je kunt je altijd afmelden.",
+    "emailLabel": "E-mailadres",
+    "emailPlaceholder": "jij@voorbeeld.nl",
+    "invalidEmail": "Voer een geldig e-mailadres in.",
+    "submit": "Abonneren",
+    "submitting": "Bezig met abonneren…",
+    "successTitle": "Bijna klaar!",
+    "successMessage": "Controleer je inbox om je abonnement te bevestigen.",
+    "errorMessage": "Er is iets misgegaan. Probeer het zo meteen opnieuw."
+  }
+}
