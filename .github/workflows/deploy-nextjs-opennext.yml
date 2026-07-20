@@ -36,6 +36,11 @@ jobs:
     name: Build & Deploy Next.js with OpenNext
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    # Serialize deploys per environment: an overlapping run's asset `sync --delete`
+    # or failure revert would remove another run's staged server-function zip.
+    # Job-level because workflow-level concurrency is ignored under workflow_call.
+    concurrency:
+      group: web-deploy-opennext-${{ inputs.environment }}
     permissions:
       id-token: write
       contents: read
@@ -92,6 +97,7 @@ jobs:
             # Upload assets with appropriate cache headers
             aws s3 sync apps/web/.open-next/assets/ "s3://${ASSETS_BUCKET}/" \
               --delete \
+              --exclude "_deploy-tmp/*" \
               --exact-timestamps \
               --cache-control "public, max-age=31536000, immutable" \
               --metadata-directive REPLACE \
@@ -166,23 +172,24 @@ jobs:
           cd -
 
           # Direct --zip-file upload is capped at ~70MB (API request body limit); stage via S3 instead,
-          # which supports the full 250MB unzipped Lambda code size limit.
+          # which supports the full 250MB unzipped Lambda code size limit. The key is
+          # per-run so retries and overlapping runs never share (or delete) each other's object.
           ASSETS_BUCKET="${{ env.ASSETS_BUCKET }}"
-          S3_KEY="_deploy-tmp/server-function-${{ steps.get-sha.outputs.sha }}.zip"
+          S3_KEY="_deploy-tmp/server-function-${{ steps.get-sha.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}.zip"
           echo "Staging server function code in s3://${ASSETS_BUCKET}/${S3_KEY}..."
-          aws s3 cp apps/web/.open-next/server-function.zip "s3://${ASSETS_BUCKET}/${S3_KEY}"
+          STAGED_VERSION_ID=$(aws s3api put-object \
+            --bucket "${ASSETS_BUCKET}" \
+            --key "${S3_KEY}" \
+            --body apps/web/.open-next/server-function.zip \
+            --query 'VersionId' --output text)
 
           # EXIT trap so the staged zip is removed even if the Lambda update fails.
           # The assets bucket is versioned, so `s3 rm` would only add a delete marker;
-          # delete every version of the key explicitly to avoid accumulating ~100MB zips.
+          # delete exactly the version we uploaded to avoid leaking ~100MB zips.
           cleanup_staged_zip() {
             echo "Cleaning up staged deployment package..."
-            VERSION_IDS=$(aws s3api list-object-versions --bucket "${ASSETS_BUCKET}" --prefix "${S3_KEY}" \
-              --query "Versions[?Key=='${S3_KEY}'].VersionId" --output text 2>/dev/null || true)
-            if [[ -n "$VERSION_IDS" && "$VERSION_IDS" != "None" ]]; then
-              for VID in $VERSION_IDS; do
-                aws s3api delete-object --bucket "${ASSETS_BUCKET}" --key "${S3_KEY}" --version-id "$VID" || true
-              done
+            if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+              aws s3api delete-object --bucket "${ASSETS_BUCKET}" --key "${S3_KEY}" --version-id "$STAGED_VERSION_ID" || true
             else
               aws s3 rm "s3://${ASSETS_BUCKET}/${S3_KEY}" || true
             fi
@@ -190,11 +197,16 @@ jobs:
           trap cleanup_staged_zip EXIT
 
           echo "Uploading server function code to Lambda..."
-          UPDATE_OUTPUT=$(aws lambda update-function-code \
-            --function-name "${{ env.SERVER_FUNCTION }}" \
-            --s3-bucket "${ASSETS_BUCKET}" \
-            --s3-key "${S3_KEY}" \
-            --publish)
+          UPDATE_ARGS=(
+            --function-name "${{ env.SERVER_FUNCTION }}"
+            --s3-bucket "${ASSETS_BUCKET}"
+            --s3-key "${S3_KEY}"
+            --publish
+          )
+          if [[ -n "$STAGED_VERSION_ID" && "$STAGED_VERSION_ID" != "None" ]]; then
+            UPDATE_ARGS+=(--s3-object-version "$STAGED_VERSION_ID")
+          fi
+          UPDATE_OUTPUT=$(aws lambda update-function-code "${UPDATE_ARGS[@]}")
           VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -307,11 +319,15 @@ jobs:
           ASSETS_BUCKET: ${{ env.ASSETS_BUCKET }}
         run: |
           echo "❌ Reverting latest S3 asset versions due to failed deployment..."
-          # List all latest versions and delete them to expose previous versions
+          # List all latest versions and delete them to expose previous versions.
+          # _deploy-tmp/ holds staged Lambda zips owned by their own runs, not assets.
           aws s3api list-object-versions \
             --bucket "$ASSETS_BUCKET" \
             --query 'Versions[?IsLatest==`true`].[Key,VersionId]' \
             --output text | while read KEY VERSION; do
+              if [[ "$KEY" == _deploy-tmp/* ]]; then
+                continue
+              fi
               if [[ -n "$KEY" && -n "$VERSION" ]]; then
                 echo "Deleting latest version of $KEY ($VERSION)"
                 aws s3api delete-object \
