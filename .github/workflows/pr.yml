@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Detect Affected Packages
         id: detect
@@ -76,7 +76,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Prettier Check
         shell: bash
@@ -95,7 +95,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Sherif (workspace dependency lint)
         shell: bash
@@ -144,7 +144,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       # apps/data builds/lints/tests through uv; only provision it when that app is affected.
       - name: Setup uv
@@ -231,7 +231,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Filter Apps for Release
         id: filter_apps

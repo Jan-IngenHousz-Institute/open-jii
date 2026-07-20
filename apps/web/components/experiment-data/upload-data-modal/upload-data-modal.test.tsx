@@ -3,6 +3,7 @@ import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
+import { File as NodeFile } from "node:buffer";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -34,7 +35,15 @@ function mountUploadCapture(status = 201) {
 
   server.use(
     http.post(`${API_URL}/api/v1/experiments/:id/data/uploads`, async ({ request }) => {
-      calls.push({ body: await request.formData() });
+      // Node 24's undici multipart parser builds entries with the global File
+      // (jsdom's here) then brand-checks its own; parse with Node's File.
+      const JsdomFile = globalThis.File;
+      globalThis.File = NodeFile as unknown as typeof File;
+      try {
+        calls.push({ body: await request.formData() });
+      } finally {
+        globalThis.File = JsdomFile;
+      }
 
       if (status >= 400) {
         return HttpResponse.json({ message: "Error" }, { status });
