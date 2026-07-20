@@ -172,6 +172,23 @@ jobs:
           echo "Staging server function code in s3://${ASSETS_BUCKET}/${S3_KEY}..."
           aws s3 cp apps/web/.open-next/server-function.zip "s3://${ASSETS_BUCKET}/${S3_KEY}"
 
+          # EXIT trap so the staged zip is removed even if the Lambda update fails.
+          # The assets bucket is versioned, so `s3 rm` would only add a delete marker;
+          # delete every version of the key explicitly to avoid accumulating ~100MB zips.
+          cleanup_staged_zip() {
+            echo "Cleaning up staged deployment package..."
+            VERSION_IDS=$(aws s3api list-object-versions --bucket "${ASSETS_BUCKET}" --prefix "${S3_KEY}" \
+              --query "Versions[?Key=='${S3_KEY}'].VersionId" --output text 2>/dev/null || true)
+            if [[ -n "$VERSION_IDS" && "$VERSION_IDS" != "None" ]]; then
+              for VID in $VERSION_IDS; do
+                aws s3api delete-object --bucket "${ASSETS_BUCKET}" --key "${S3_KEY}" --version-id "$VID" || true
+              done
+            else
+              aws s3 rm "s3://${ASSETS_BUCKET}/${S3_KEY}" || true
+            fi
+          }
+          trap cleanup_staged_zip EXIT
+
           echo "Uploading server function code to Lambda..."
           UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${{ env.SERVER_FUNCTION }}" \
@@ -180,9 +197,6 @@ jobs:
             --publish)
           VERSION=$(echo "$UPDATE_OUTPUT" | jq -r '.Version')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          echo "Cleaning up staged deployment package..."
-          aws s3 rm "s3://${ASSETS_BUCKET}/${S3_KEY}" || true
 
       - name: Get Previous Server Alias Version
         id: get-server-alias
