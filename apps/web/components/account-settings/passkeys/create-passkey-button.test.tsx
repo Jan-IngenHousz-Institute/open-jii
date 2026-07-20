@@ -49,4 +49,19 @@ describe("CreatePasskeyButton", () => {
       }),
     );
   });
+
+  it("shows a destructive toast when the client returns no response", async () => {
+    vi.mocked(authClient.passkey.addPasskey).mockResolvedValue(undefined as never);
+    const user = userEvent.setup();
+    render(<CreatePasskeyButton />);
+
+    await user.click(screen.getByRole("button", { name: "passkeys.add" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "passkeys.addError",
+        variant: "destructive",
+      }),
+    );
+  });
 });

@@ -15,8 +15,16 @@ import {
 
 export function SignInMethodsCard() {
   const { t } = useTranslation("account");
-  const { data: passkeys } = usePasskeys();
+  const { data: passkeys, isError, isLoading } = usePasskeys();
   const passkeyCount = passkeys?.length ?? 0;
+
+  const passkeyStatus = isLoading
+    ? t("signInMethods.passkeysLoading")
+    : isError
+      ? t("signInMethods.passkeysUnavailable")
+      : passkeyCount > 0
+        ? t("signInMethods.passkeysCount", { count: passkeyCount })
+        : t("signInMethods.passkeysNone");
 
   return (
     <Card>
@@ -45,11 +53,7 @@ export function SignInMethodsCard() {
               {t("signInMethods.passkeysDescription")}
             </p>
           </div>
-          <Badge variant="secondary">
-            {passkeyCount > 0
-              ? t("signInMethods.passkeysCount", { count: passkeyCount })
-              : t("signInMethods.passkeysNone")}
-          </Badge>
+          <Badge variant="secondary">{passkeyStatus}</Badge>
         </div>
       </CardContent>
     </Card>

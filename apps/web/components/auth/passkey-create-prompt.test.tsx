@@ -1,5 +1,5 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -15,8 +15,13 @@ describe("PasskeyCreatePrompt", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    vi.stubGlobal("PublicKeyCredential", class PublicKeyCredential {});
     vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({ data: [], error: null });
     vi.mocked(authClient.getLastUsedLoginMethod).mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("invites a passkey-less user and creates a passkey in place", async () => {
@@ -28,7 +33,7 @@ describe("PasskeyCreatePrompt", () => {
     render(<PasskeyCreatePrompt {...defaultProps} />);
 
     expect(await screen.findByText("passkeys.promptTitle")).toBeInTheDocument();
-    expect(sessionStorage.getItem(shownKey)).toBe("true");
+    expect(localStorage.getItem(shownKey)).toBe("true");
 
     await user.click(screen.getByRole("button", { name: "passkeys.promptAction" }));
 
@@ -86,12 +91,32 @@ describe("PasskeyCreatePrompt", () => {
 
   it("scopes prompt suppression to the current user and auth session", async () => {
     localStorage.setItem("openjii.passkey-prompt-dismissed:user-2", "true");
-    sessionStorage.setItem("openjii.passkey-prompt-shown:user-1:old-session", "true");
+    localStorage.setItem("openjii.passkey-prompt-shown:user-1:old-session", "true");
 
     render(<PasskeyCreatePrompt {...defaultProps} />);
 
     expect(await screen.findByText("passkeys.promptTitle")).toBeInTheDocument();
-    expect(sessionStorage.getItem(shownKey)).toBe("true");
+    expect(localStorage.getItem(shownKey)).toBe("true");
+    expect(localStorage.getItem("openjii.passkey-prompt-shown:user-1:old-session")).toBeNull();
+  });
+
+  it("does not repeat the prompt in another tab for the same auth session", async () => {
+    localStorage.setItem(shownKey, "true");
+
+    render(<PasskeyCreatePrompt {...defaultProps} />);
+
+    await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not prompt when WebAuthn is unavailable", async () => {
+    vi.stubGlobal("PublicKeyCredential", undefined);
+
+    render(<PasskeyCreatePrompt {...defaultProps} />);
+
+    await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(localStorage.getItem(shownKey)).toBeNull();
   });
 
   it("does not prompt when the user already has a passkey", async () => {

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -82,6 +83,7 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
   const { t } = useTranslation();
   const [showOTP, setShowOTP] = useState(false);
   const lastLoginMethod = useLastLoginMethod();
+  const webAuthnSupported = useWebAuthnSupport();
 
   const emailProvider = providerMap.find((p) => p.id === "email");
   const oauthProviders = providerMap.filter((p) => p.id !== "email");
@@ -122,7 +124,7 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       )}
 
       {/* Passkey sign-in */}
-      {!showOTP && (
+      {!showOTP && webAuthnSupported && (
         <PasskeyLoginButton callbackUrl={callbackUrl} isLastUsed={lastLoginMethod === "passkey"} />
       )}
 

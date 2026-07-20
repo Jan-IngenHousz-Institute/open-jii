@@ -83,14 +83,29 @@ export function CreateApiKeyDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleClose())}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (v) setOpen(true);
+        else if (!createdKey) handleClose();
+      }}
+    >
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           {t("apiKeys.create")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent
+        className="max-w-md"
+        showCloseButton={!createdKey}
+        onEscapeKeyDown={(event) => {
+          if (createdKey) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (createdKey) event.preventDefault();
+        }}
+      >
         {createdKey ? (
           <>
             <DialogHeader>

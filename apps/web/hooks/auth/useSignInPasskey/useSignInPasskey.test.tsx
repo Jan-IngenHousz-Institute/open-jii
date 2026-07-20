@@ -39,4 +39,14 @@ describe("useSignInPasskey", () => {
 
     await expect(result.current.mutateAsync(undefined)).rejects.toThrow("Ceremony cancelled");
   });
+
+  it("throws when the response is undefined", async () => {
+    vi.mocked(authClient.signIn.passkey).mockResolvedValue(undefined as never);
+
+    const { result } = renderHook(() => useSignInPasskey());
+
+    await expect(result.current.mutateAsync(undefined)).rejects.toThrow(
+      "Passkey sign-in returned no response",
+    );
+  });
 });

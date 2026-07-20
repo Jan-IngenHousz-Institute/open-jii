@@ -23,13 +23,14 @@ describe("useAddPasskey", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth", "passkeys"] });
   });
 
-  it("returns null when the response is undefined", async () => {
+  it("throws when the response is undefined", async () => {
     vi.mocked(authClient.passkey.addPasskey).mockResolvedValue(undefined as never);
 
     const { result } = renderHook(() => useAddPasskey());
-    const data = await result.current.mutateAsync({ name: "Phone" });
 
-    expect(data).toBeNull();
+    await expect(result.current.mutateAsync({ name: "Phone" })).rejects.toThrow(
+      "Passkey registration returned no response",
+    );
   });
 
   it("throws when the response contains an error", async () => {

@@ -1,12 +1,13 @@
 "use client";
 
-import { KeyRound } from "lucide-react";
+import { CircleAlert, KeyRound, Loader2 } from "lucide-react";
 import { useApiKeys } from "~/hooks/auth/useApiKeys/useApiKeys";
 import { useLocale } from "~/hooks/useLocale";
 import { daysUntil, formatRelativeTime, formatShortDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
@@ -48,7 +49,7 @@ function ExpiryStatus({ expiresAt }: { expiresAt: Date | string | null }) {
 export function ApiKeysCard() {
   const { t } = useTranslation("account");
   const locale = useLocale();
-  const { data, isLoading } = useApiKeys();
+  const { data, isError, isFetching, isLoading, refetch } = useApiKeys();
 
   const apiKeys = data?.apiKeys ?? [];
 
@@ -66,6 +67,24 @@ export function ApiKeysCard() {
           <div className="space-y-2" data-testid="api-keys-loading">
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
+          </div>
+        ) : isError ? (
+          <div
+            className="text-muted-foreground flex flex-col items-center gap-3 py-8 text-sm"
+            data-testid="api-keys-error"
+          >
+            <CircleAlert className="text-destructive h-8 w-8" />
+            <p>{t("apiKeys.loadError")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("apiKeys.retry")}
+            </Button>
           </div>
         ) : apiKeys.length === 0 ? (
           <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-sm">

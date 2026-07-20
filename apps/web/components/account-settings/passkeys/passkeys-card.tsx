@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Fingerprint, Laptop, Monitor, Smartphone, Usb } from "lucide-react";
+import { CircleAlert, Fingerprint, Laptop, Loader2, Monitor, Smartphone, Usb } from "lucide-react";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
 import { useLocale } from "~/hooks/useLocale";
 import { getAuthenticatorName } from "~/lib/authenticator-names";
@@ -9,6 +9,7 @@ import { formatShortDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
@@ -34,7 +35,7 @@ function providerIcon(provider: string | undefined): LucideIcon {
 export function PasskeysCard() {
   const { t } = useTranslation("account");
   const locale = useLocale();
-  const { data: passkeys, isLoading } = usePasskeys();
+  const { data: passkeys, isError, isFetching, isLoading, refetch } = usePasskeys();
 
   return (
     <Card>
@@ -50,6 +51,24 @@ export function PasskeysCard() {
           <div className="space-y-2" data-testid="passkeys-loading">
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
+          </div>
+        ) : isError ? (
+          <div
+            className="text-muted-foreground flex flex-col items-center gap-3 py-8 text-sm"
+            data-testid="passkeys-error"
+          >
+            <CircleAlert className="text-destructive h-8 w-8" />
+            <p>{t("passkeys.loadError")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("passkeys.retry")}
+            </Button>
           </div>
         ) : !passkeys || passkeys.length === 0 ? (
           <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-sm">

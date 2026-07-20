@@ -147,6 +147,8 @@
     "createDescription": "The key will be shown once after creation.",
     "createConfirm": "Create key",
     "createError": "Failed to create the API key. Please try again.",
+    "loadError": "Could not load your API keys.",
+    "retry": "Try again",
     "name": "Name",
     "namePlaceholder": "e.g. Analysis script",
     "nameRequired": "Please enter a name.",
@@ -179,6 +181,8 @@
     "add": "Create passkey",
     "addTitle": "Create a passkey",
     "addError": "Could not create the passkey. Please try again.",
+    "loadError": "Could not load your passkeys.",
+    "retry": "Try again",
     "unnamed": "Unnamed passkey",
     "synced": "Synced",
     "deviceBound": "Device-bound",
@@ -208,6 +212,8 @@
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Your device's screen lock or a security key",
     "passkeysCount": "{{count}} active",
-    "passkeysNone": "None yet"
+    "passkeysNone": "None yet",
+    "passkeysLoading": "Loading…",
+    "passkeysUnavailable": "Unavailable"
   }
 }

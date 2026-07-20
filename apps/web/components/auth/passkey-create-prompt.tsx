@@ -4,6 +4,7 @@ import { CheckCircle2, Fingerprint, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAddPasskey } from "~/hooks/auth/useAddPasskey/useAddPasskey";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
+import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -37,24 +38,38 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
   const { t } = useTranslation("account");
   const { data: passkeys } = usePasskeys();
   const addPasskey = useAddPasskey();
+  const webAuthnSupported = useWebAuthnSupport();
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState(false);
   const prompted = useRef(false);
   const dismissedKey = userStorageKey(DISMISSED_KEY, userId);
   const countKey = userStorageKey(COUNT_KEY, userId);
-  const shownKey = `${userStorageKey(SHOWN_KEY, userId)}:${sessionId}`;
+  const shownKeyPrefix = `${userStorageKey(SHOWN_KEY, userId)}:`;
+  const shownKey = `${shownKeyPrefix}${sessionId}`;
 
   useEffect(() => {
-    if (prompted.current || !passkeys || passkeys.length > 0) return;
+    if (!webAuthnSupported || prompted.current || !passkeys || passkeys.length > 0) return;
     if (localStorage.getItem(dismissedKey) === "true") return;
-    if (sessionStorage.getItem(shownKey) === "true") return;
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(shownKeyPrefix) && key !== shownKey) localStorage.removeItem(key);
+    }
+    if (localStorage.getItem(shownKey) === "true") return;
     if (authClient.getLastUsedLoginMethod() === "passkey") return;
     const count = Number(localStorage.getItem(countKey) ?? "0");
     if (count >= MAX_PROMPTS) return;
     prompted.current = true;
-    sessionStorage.setItem(shownKey, "true");
+    localStorage.setItem(shownKey, "true");
     setOpen(true);
-  }, [countKey, dismissedKey, passkeys, shownKey]);
+  }, [countKey, dismissedKey, passkeys, shownKey, shownKeyPrefix, webAuthnSupported]);
+
+  useEffect(() => {
+    const closeDuplicatePrompt = (event: StorageEvent) => {
+      if (event.key === shownKey && event.newValue === "true") setOpen(false);
+    };
+    window.addEventListener("storage", closeDuplicatePrompt);
+    return () => window.removeEventListener("storage", closeDuplicatePrompt);
+  }, [shownKey]);
 
   const handleDismiss = () => {
     const count = Number(localStorage.getItem(countKey) ?? "0") + 1;

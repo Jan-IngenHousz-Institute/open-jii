@@ -67,6 +67,20 @@ describe("CreateApiKeyDialog", () => {
     expect(screen.getByPlaceholderText("apiKeys.namePlaceholder")).toHaveValue("");
   });
 
+  it("does not discard a newly created key through an implicit close", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByPlaceholderText("apiKeys.namePlaceholder"), "CI key");
+    await user.click(screen.getByRole("button", { name: "apiKeys.createConfirm" }));
+
+    expect(await screen.findByText("jii_abc123")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByText("jii_abc123")).toBeInTheDocument();
+  });
+
   it("shows a destructive toast when creation fails", async () => {
     vi.mocked(authClient.apiKey.create).mockResolvedValue({
       data: null,

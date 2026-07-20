@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { authClient } from "@repo/auth/client";
@@ -23,6 +23,23 @@ describe("PasskeysCard", () => {
 
     await waitFor(() => expect(screen.getByText("passkeys.empty")).toBeInTheDocument());
     expect(screen.queryByTestId("passkeys-loading")).not.toBeInTheDocument();
+  });
+
+  it("shows a retryable error instead of the empty state when loading fails", async () => {
+    vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
+      data: null,
+      error: { message: "Server error" },
+    });
+    const user = userEvent.setup();
+
+    render(<PasskeysCard />);
+
+    expect(await screen.findByTestId("passkeys-error")).toBeInTheDocument();
+    expect(screen.getByText("passkeys.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("passkeys.empty")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "passkeys.retry" }));
+    await waitFor(() => expect(authClient.passkey.listUserPasskeys).toHaveBeenCalledTimes(2));
   });
 
   it("renders a row per passkey with the sync badge", async () => {
