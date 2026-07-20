@@ -77,7 +77,7 @@ jobs:
         if: steps.download.outcome != 'success'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       # apps/data tests through uv; the regenerate path runs the full test suite.
       - name: Setup uv (only if regenerating coverage)

@@ -426,8 +426,11 @@ describe("ProtocolCellComponent", () => {
         <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
       );
 
-      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
-      expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved");
+      // The indicator can render a tick after the editor mounts, so assert it
+      // eventually rather than synchronously.
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved"),
+      );
     });
 
     it("shows the saving state immediately after a valid edit, before the debounce", async () => {

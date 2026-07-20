@@ -37,7 +37,7 @@ AWS infrastructure managed with OpenTofu (formerly Terraform) and Databricks for
 
 ### Prerequisites
 
-- Node.js v22+
+- Node.js v24+
 - pnpm
 - Docker (for local development)
 - [uv](https://docs.astral.sh/uv/) (Python package manager, required for the `apps/data` Databricks workspace)

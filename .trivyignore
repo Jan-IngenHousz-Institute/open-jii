@@ -9,6 +9,13 @@ CVE-2026-33671
 # Clears once the Node base image bundles npm >= 11 (ships sigstore >= 4.1.1); Node 22 currently bundles npm 10.9.x.
 CVE-2026-48815
 
+# CVE-2026-12151: undici DoS via unbounded memory growth in WebSocket handling,
+# in system npm (usr/local/lib/node_modules/npm/node_modules/undici@6.26.0).
+# Bundled with the node:24 image's npm CLI, not in the app's runtime; the container
+# runs `node dist/...`, never invokes npm, and npm's CLI opens no WebSockets.
+# Clears once the Node 24 base image bundles npm with undici >= 6.27.0.
+CVE-2026-12151
+
 # CVE-2026-4926: path-to-regexp ReDoS via crafted route patterns
 # Affects path-to-regexp@8.3.0 pinned by Express 5's `router` package (exact version constraint).
 # The vulnerability requires an attacker to control route *definition* patterns, not URL paths.
