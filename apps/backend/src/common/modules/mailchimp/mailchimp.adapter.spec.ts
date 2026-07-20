@@ -10,6 +10,7 @@ const SERVER_PREFIX = "us1";
 const AUDIENCE_ID = "test-audience-id";
 const API_KEY = "test-mailchimp-api-key";
 const COMMUNITY_ID = "community-interest-id";
+const MERGE_FIELD_ID = "MMERGE10";
 const COMMUNITY_NAME = "Community";
 const EMAIL = "Person@Example.com";
 
@@ -39,7 +40,7 @@ function buildConfig(kind: MailchimpCommunityKind, isConfigured = true): Mailchi
     serverPrefix: SERVER_PREFIX,
     audienceId: AUDIENCE_ID,
     communityKind: kind,
-    communityId: COMMUNITY_ID,
+    communityId: kind === "merge_field" ? MERGE_FIELD_ID : COMMUNITY_ID,
     communityName: COMMUNITY_NAME,
     baseUrl: `https://${SERVER_PREFIX}.api.mailchimp.com/3.0`,
   } as unknown as MailchimpConfigService;
@@ -99,7 +100,25 @@ describe("MailchimpAdapter", () => {
       );
     });
 
-    it("is a no-op for an already-subscribed member (never downgrades to pending)", async () => {
+    it("includes the Community merge field when upserting an unknown member", async () => {
+      const { adapter, axiosRef } = buildAdapter("merge_field");
+      axiosRef.get.mockRejectedValue(axiosError(404, { title: "Resource Not Found" }));
+
+      const result = await adapter.subscribePending(EMAIL);
+
+      assertSuccess(result);
+      const [, body] = putCall(axiosRef, 0);
+      expect(body).toMatchObject({
+        status_if_new: "pending",
+        status: "pending",
+        merge_fields: { [MERGE_FIELD_ID]: COMMUNITY_NAME },
+      });
+      expect(body).not.toHaveProperty("interests");
+      expect(axiosRef.patch).not.toHaveBeenCalled();
+      expect(axiosRef.post).not.toHaveBeenCalled();
+    });
+
+    it("preserves subscribed status and patches only the Community interest group", async () => {
       const { adapter, axiosRef } = buildAdapter("group");
       axiosRef.get.mockResolvedValue({ data: { status: "subscribed" } });
 
@@ -107,7 +126,55 @@ describe("MailchimpAdapter", () => {
 
       assertSuccess(result);
       expect(axiosRef.put).not.toHaveBeenCalled();
+      expect(axiosRef.patch).toHaveBeenCalledWith(
+        expectedMemberUrl,
+        { interests: { [COMMUNITY_ID]: true } },
+        expect.objectContaining({ auth: { username: "anystring", password: API_KEY } }),
+      );
       expect(axiosRef.post).not.toHaveBeenCalled();
+    });
+
+    it("preserves subscribed status and patches only the Community merge field", async () => {
+      const { adapter, axiosRef } = buildAdapter("merge_field");
+      axiosRef.get.mockResolvedValue({ data: { status: "subscribed" } });
+
+      const result = await adapter.subscribePending(EMAIL);
+
+      assertSuccess(result);
+      expect(axiosRef.put).not.toHaveBeenCalled();
+      expect(axiosRef.patch).toHaveBeenCalledWith(
+        expectedMemberUrl,
+        { merge_fields: { [MERGE_FIELD_ID]: COMMUNITY_NAME } },
+        expect.objectContaining({ auth: { username: "anystring", password: API_KEY } }),
+      );
+      expect(axiosRef.post).not.toHaveBeenCalled();
+    });
+
+    it("preserves subscribed status and applies the Community tag", async () => {
+      const { adapter, axiosRef } = buildAdapter("tag");
+      axiosRef.get.mockResolvedValue({ data: { status: "subscribed" } });
+
+      const result = await adapter.subscribePending(EMAIL);
+
+      assertSuccess(result);
+      expect(axiosRef.put).not.toHaveBeenCalled();
+      expect(axiosRef.patch).not.toHaveBeenCalled();
+      expect(axiosRef.post).toHaveBeenCalledWith(
+        `${expectedMemberUrl}/tags`,
+        { tags: [{ name: COMMUNITY_NAME, status: "active" }] },
+        expect.objectContaining({ auth: { username: "anystring", password: API_KEY } }),
+      );
+    });
+
+    it("returns failure when subscribed-member classification fails", async () => {
+      const { adapter, axiosRef } = buildAdapter("merge_field");
+      axiosRef.get.mockResolvedValue({ data: { status: "subscribed" } });
+      axiosRef.patch.mockRejectedValue(axiosError(500, { detail: "classification failed" }));
+
+      const result = await adapter.subscribePending(EMAIL);
+
+      assertFailure(result);
+      expect(axiosRef.put).not.toHaveBeenCalled();
     });
 
     it("re-enters the pending flow for a previously unsubscribed member", async () => {
@@ -167,8 +234,24 @@ describe("MailchimpAdapter", () => {
       expect(body).toMatchObject({ status_if_new: "subscribed", status: "subscribed" });
     });
 
+    it("includes the Community merge field in a direct subscribed upsert", async () => {
+      const { adapter, axiosRef } = buildAdapter("merge_field");
+
+      const result = await adapter.subscribeDirect(EMAIL);
+
+      assertSuccess(result);
+      expect(result.value).toBe("subscribed");
+      const [, body] = putCall(axiosRef, 0);
+      expect(body).toMatchObject({
+        status_if_new: "subscribed",
+        status: "subscribed",
+        merge_fields: { [MERGE_FIELD_ID]: COMMUNITY_NAME },
+      });
+      expect(body).not.toHaveProperty("interests");
+    });
+
     it("falls back to pending when Mailchimp rejects with a compliance state", async () => {
-      const { adapter, axiosRef } = buildAdapter("group");
+      const { adapter, axiosRef } = buildAdapter("merge_field");
       axiosRef.put
         .mockRejectedValueOnce(axiosError(400, { title: "Member In Compliance State" }))
         .mockResolvedValueOnce({ data: {} });
@@ -179,7 +262,11 @@ describe("MailchimpAdapter", () => {
       expect(result.value).toBe("pending");
       expect(axiosRef.put).toHaveBeenCalledTimes(2);
       const [, secondBody] = putCall(axiosRef, 1);
-      expect(secondBody).toMatchObject({ status_if_new: "pending", status: "pending" });
+      expect(secondBody).toMatchObject({
+        status_if_new: "pending",
+        status: "pending",
+        merge_fields: { [MERGE_FIELD_ID]: COMMUNITY_NAME },
+      });
     });
 
     it("returns failure for a non-compliance error", async () => {

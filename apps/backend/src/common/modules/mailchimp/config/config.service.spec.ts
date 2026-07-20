@@ -51,6 +51,18 @@ describe("MailchimpConfigService", () => {
       const service = makeService(FULL_ENV);
       expect(service.baseUrl).toBe("https://us1.api.mailchimp.com/3.0");
     });
+
+    it("accepts a merge field as the Community classification", () => {
+      const service = makeService({
+        ...FULL_ENV,
+        "mailchimp.community.kind": "merge_field",
+        "mailchimp.community.id": "MMERGE10",
+      });
+
+      expect(service.communityKind).toBe("merge_field");
+      expect(service.communityId).toBe("MMERGE10");
+      expect(service.communityName).toBe("Community");
+    });
   });
 
   describe("misconfigured (partial/invalid)", () => {

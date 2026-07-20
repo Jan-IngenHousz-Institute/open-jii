@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type MailchimpCommunityKind = "group" | "tag";
+export type MailchimpCommunityKind = "group" | "tag" | "merge_field";
 
 export interface MailchimpConfig {
   apiKey: string;
@@ -18,7 +18,7 @@ export const mailchimpConfigSchema = z.object({
   serverPrefix: z.string().min(1),
   audienceId: z.string().min(1),
   community: z.object({
-    kind: z.enum(["group", "tag"]),
+    kind: z.enum(["group", "tag", "merge_field"]),
     id: z.string().min(1),
     name: z.string().min(1),
   }),

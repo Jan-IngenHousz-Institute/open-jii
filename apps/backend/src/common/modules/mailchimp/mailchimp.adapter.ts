@@ -34,15 +34,20 @@ export class MailchimpAdapter implements NewsletterPort {
       return this.notConfigured("subscribePending");
     }
     // Branch on current state so the anonymous footer path never regresses an
-    // existing member: an already-subscribed address is a no-op (keep them
-    // subscribed), while unsubscribed/pending/absent addresses (re)enter the
-    // double opt-in confirmation flow.
+    // existing member: an already-subscribed address keeps its status and only
+    // receives the Community classification, while unsubscribed/pending/absent
+    // addresses (re)enter the double opt-in confirmation flow.
     const statusResult = await this.getStatus(email);
     if (statusResult.isFailure()) {
       return failure(statusResult.error);
     }
     if (statusResult.value === "subscribed") {
-      return success(undefined);
+      try {
+        await this.applyCommunityClassification(email);
+        return success(undefined);
+      } catch (error) {
+        return this.toFailure(error, ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED, "subscribePending");
+      }
     }
 
     try {
@@ -163,10 +168,12 @@ export class MailchimpAdapter implements NewsletterPort {
       status,
     };
 
-    // A Community interest group is set inline on the member; a Community tag is
-    // applied through the dedicated tags endpoint after the upsert.
+    // Groups and merge fields are set inline because Mailchimp may require the
+    // classification when creating the member. Tags use their dedicated endpoint.
     if (this.config.communityKind === "group") {
       body.interests = { [this.config.communityId]: true };
+    } else if (this.config.communityKind === "merge_field") {
+      body.merge_fields = { [this.config.communityId]: this.config.communityName };
     }
 
     await this.httpService.axiosRef.put(this.memberUrl(email), body, this.requestConfig());
@@ -178,6 +185,28 @@ export class MailchimpAdapter implements NewsletterPort {
         this.requestConfig(),
       );
     }
+  }
+
+  private async applyCommunityClassification(email: string): Promise<void> {
+    if (this.config.communityKind === "tag") {
+      await this.httpService.axiosRef.post(
+        `${this.memberUrl(email)}/tags`,
+        { tags: [{ name: this.config.communityName, status: "active" }] },
+        this.requestConfig(),
+      );
+      return;
+    }
+
+    const classification =
+      this.config.communityKind === "group"
+        ? { interests: { [this.config.communityId]: true } }
+        : { merge_fields: { [this.config.communityId]: this.config.communityName } };
+
+    await this.httpService.axiosRef.patch(
+      this.memberUrl(email),
+      classification,
+      this.requestConfig(),
+    );
   }
 
   // Returns null for unknown/malformed statuses so the caller can fail closed

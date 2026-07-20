@@ -34,7 +34,10 @@ describe("NewsletterSubscribeForm", () => {
 
     expect(screen.getByText("footer.title")).toBeInTheDocument();
     expect(screen.getByLabelText("footer.emailLabel")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "footer.submit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "footer.submit" })).toHaveClass(
+      "bg-quaternary",
+      "text-primary",
+    );
   });
 
   it("submits exactly { email } to the subscribe endpoint", async () => {

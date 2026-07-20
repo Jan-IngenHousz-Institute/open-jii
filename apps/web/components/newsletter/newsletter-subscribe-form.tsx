@@ -103,8 +103,9 @@ export function NewsletterSubscribeForm() {
             />
             <Button
               type="submit"
+              variant="secondary"
               disabled={isPending}
-              className="bg-jii-bright-green text-jii-dark-green hover:bg-jii-bright-green/90 shrink-0 font-semibold"
+              className="shrink-0 font-semibold"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
               {isPending ? t("footer.submitting") : t("footer.submit")}
