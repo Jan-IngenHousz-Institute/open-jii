@@ -48,7 +48,11 @@ export function RenamePasskeyDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("passkeys.rename")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t("passkeys.renameNamed", { name: currentName })}
+        >
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>

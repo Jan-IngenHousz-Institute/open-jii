@@ -5,6 +5,14 @@ import { authClient } from "@repo/auth/client";
 
 import { PasskeysCard } from "./passkeys-card";
 
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { name?: string }) =>
+      options?.name ? `${key}:${options.name}` : key,
+    i18n: { language: "en-US", changeLanguage: vi.fn() },
+  }),
+}));
+
 describe("PasskeysCard", () => {
   beforeEach(() => {
     vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({ data: [], error: null });
@@ -40,8 +48,12 @@ describe("PasskeysCard", () => {
 
     expect(await screen.findByText("Existing passkey")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "passkeys.add" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "passkeys.rename" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "passkeys.delete" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "passkeys.renameNamed:Existing passkey" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "passkeys.deleteNamed:Existing passkey" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a loading skeleton while passkeys load", () => {
@@ -101,6 +113,37 @@ describe("PasskeysCard", () => {
     expect(screen.getByText("passkeys.synced")).toBeInTheDocument();
     expect(screen.getByText("passkeys.deviceBound")).toBeInTheDocument();
     expect(screen.getByText("passkeys.unnamed")).toBeInTheDocument();
+  });
+
+  it("gives each passkey row distinct action labels", async () => {
+    vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
+      data: [
+        {
+          id: "p1",
+          name: "Work laptop",
+          backedUp: true,
+          createdAt: "2026-07-01T00:00:00.000Z",
+        },
+        {
+          id: "p2",
+          name: "Phone",
+          backedUp: true,
+          createdAt: "2026-07-02T00:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    render(<PasskeysCard />);
+
+    expect(
+      await screen.findByRole("button", { name: "passkeys.renameNamed:Work laptop" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "passkeys.deleteNamed:Work laptop" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "passkeys.renameNamed:Phone" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "passkeys.deleteNamed:Phone" })).toBeInTheDocument();
   });
 
   it("labels a passkey from its authenticator and shows the provider as a subtitle", async () => {
