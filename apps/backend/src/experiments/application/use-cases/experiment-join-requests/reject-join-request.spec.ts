@@ -40,7 +40,9 @@ describe("RejectJoinRequestUseCase", () => {
     joinRequestRepository = testApp.module.get(ExperimentJoinRequestRepository);
     memberRepository = testApp.module.get(ExperimentMemberRepository);
     emailPort = testApp.module.get(EMAIL_PORT);
-    vi.spyOn(emailPort, "sendJoinRequestRejectedNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailPort, "sendJoinRequestRejectedNotification").mockResolvedValue(
+      success(undefined),
+    );
   });
 
   afterEach(() => {
