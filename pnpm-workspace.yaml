@@ -38,7 +38,7 @@ patchedDependencies:
   "@better-auth/expo@1.6.23": patches/@better-auth__expo@1.6.23.patch
 
 catalog:
-  axios: 1.16.1
+  axios: 1.18.1
   typescript: 6.0.3
   zod: 3.25.76
   eslint: 9.39.4
