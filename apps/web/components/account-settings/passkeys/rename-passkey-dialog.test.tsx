@@ -6,6 +6,14 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { RenamePasskeyDialog } from "./rename-passkey-dialog";
 
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { name?: string }) =>
+      options?.name ? `${key}:${options.name}` : key,
+    i18n: { language: "en-US", changeLanguage: vi.fn() },
+  }),
+}));
+
 describe("RenamePasskeyDialog", () => {
   it("renames the passkey and closes without a success toast", async () => {
     vi.mocked(authClient.passkey.updatePasskey).mockResolvedValue({
@@ -15,7 +23,7 @@ describe("RenamePasskeyDialog", () => {
     const user = userEvent.setup();
     render(<RenamePasskeyDialog passkeyId="p1" currentName="Old name" />);
 
-    await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
+    await user.click(screen.getByRole("button", { name: "passkeys.renameNamed:Old name" }));
     const input = screen.getByRole("textbox", { name: "passkeys.name" });
     await user.clear(input);
     await user.type(input, "New name");
@@ -35,7 +43,7 @@ describe("RenamePasskeyDialog", () => {
     const user = userEvent.setup();
     render(<RenamePasskeyDialog passkeyId="p1" currentName="Keeper" />);
 
-    await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
+    await user.click(screen.getByRole("button", { name: "passkeys.renameNamed:Keeper" }));
     const input = screen.getByRole("textbox", { name: "passkeys.name" });
     await user.clear(input);
 
@@ -52,7 +60,7 @@ describe("RenamePasskeyDialog", () => {
     const user = userEvent.setup();
     render(<RenamePasskeyDialog passkeyId="p1" currentName="Old name" />);
 
-    await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
+    await user.click(screen.getByRole("button", { name: "passkeys.renameNamed:Old name" }));
     await user.click(screen.getByRole("button", { name: "passkeys.rename" }));
 
     await waitFor(() =>
