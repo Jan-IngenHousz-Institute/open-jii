@@ -7,6 +7,24 @@
 # Suppressing here only affects the built-image scans; a real vulnerable version
 # pulled in by the app itself would still be caught by the dependency-scan job.
 
+# CVE-2026-33671: picomatch ReDoS in system npm installation (usr/local/lib/node_modules/npm)
+# Bundled with the Node.js Docker image's npm CLI, not in either app's runtime.
+# The containers run `node dist/main` / `node dist/migrate.js` and never invoke npm.
+CVE-2026-33671
+
+# CVE-2026-48815: sigstore certificateOIDs constraints dropped, in system npm (usr/local/lib/node_modules/npm)
+# sigstore is bundled inside the Node.js Docker image's npm CLI (via libnpmpublish), not in either app's runtime.
+# The affected path is npm publish provenance signing; the containers never invoke npm.
+# Clears once the Node base image bundles npm >= 11 (ships sigstore >= 4.1.1); Node 22 currently bundles npm 10.9.x.
+CVE-2026-48815
+
+# CVE-2026-12151: undici DoS via unbounded memory growth in WebSocket handling,
+# in system npm (usr/local/lib/node_modules/npm/node_modules/undici@6.26.0).
+# Bundled with the node:24 image's npm CLI, not in either app's runtime; the containers
+# never invoke npm, and npm's CLI opens no WebSockets.
+# Clears once the Node 24 base image bundles npm with undici >= 6.27.0.
+CVE-2026-12151
+
 # CVE-2026-13149: brace-expansion ReDoS via exponential-time complexity,
 # in system npm (usr/local/lib/node_modules/npm/node_modules/brace-expansion@5.0.6).
 # Bundled with the node:24 image's npm CLI, not in either app's runtime; the containers
