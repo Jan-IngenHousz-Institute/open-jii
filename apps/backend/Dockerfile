@@ -78,4 +78,4 @@ HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=3 \
 
 # Use tini as init process
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
