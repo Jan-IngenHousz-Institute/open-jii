@@ -24,6 +24,7 @@ jobs:
           image-name: open-jii-backend:pr-check
           dockerfile: apps/backend/Dockerfile
           build-args: PROJECT=backend
+          trivyignores: .trivyignore.docker-images
 
   database:
     name: Docker Build (Database Migrations)
@@ -35,6 +36,7 @@ jobs:
         with:
           image-name: open-jii-database:pr-check
           dockerfile: packages/database/Dockerfile
+          trivyignores: .trivyignore.docker-images
 
   macro-sandbox:
     name: Docker Build (Macro Sandbox - ${{ matrix.language }})
