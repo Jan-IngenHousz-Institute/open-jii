@@ -16,21 +16,6 @@ CVE-2026-48815
 # Clears once the Node 24 base image bundles npm with undici >= 6.27.0.
 CVE-2026-12151
 
-# CVE-2026-13149: brace-expansion ReDoS via exponential-time complexity,
-# in system npm (usr/local/lib/node_modules/npm/node_modules/brace-expansion@5.0.6).
-# Bundled with the node:24 image's npm CLI, not in the app's runtime; the container
-# runs `node dist/...` and never invokes npm.
-# Clears once the Node 24 base image bundles npm with brace-expansion >= 5.0.7.
-CVE-2026-13149
-
-# CVE-2026-59873 / CVE-2026-59874: node-tar DoS via crafted gzip bomb / malformed
-# tar header, in system npm (usr/local/lib/node_modules/npm/node_modules/tar@7.5.15).
-# Bundled with the node:24 image's npm CLI, not in the app's runtime; the container
-# runs `node dist/...` and never invokes npm, so no untrusted archive is ever extracted.
-# Clears once the Node 24 base image bundles npm with tar >= 7.5.19.
-CVE-2026-59873
-CVE-2026-59874
-
 # CVE-2026-4926: path-to-regexp ReDoS via crafted route patterns
 # Affects path-to-regexp@8.3.0 pinned by Express 5's `router` package (exact version constraint).
 # The vulnerability requires an attacker to control route *definition* patterns, not URL paths.
