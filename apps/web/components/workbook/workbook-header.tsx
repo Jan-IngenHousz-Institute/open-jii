@@ -3,7 +3,11 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
-import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import {
+  SENSOR_FAMILY_OPTIONS,
+  getSensorFamilyBadgeColor,
+  getSensorFamilyLabel,
+} from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
@@ -40,7 +44,7 @@ interface WorkbookHeaderProps {
   cells: WorkbookCell[];
   isConnected: boolean;
   isConnecting: boolean;
-  connectedDevices: { id: string; label: string }[];
+  connectedDevices: { id: string; label: string; family?: SensorFamily }[];
   sensorFamily: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
   connectionType: WorkbookConnectionType;
@@ -346,7 +350,16 @@ export function WorkbookHeader({
                   className="flex items-center justify-between gap-4"
                   onSelect={() => onDisconnectDevice?.(device.id)}
                 >
-                  <span>{device.label}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>{device.label}</span>
+                    {device.family && (
+                      <span
+                        className={`rounded px-1 py-0.5 text-[10px] font-medium text-white ${getSensorFamilyBadgeColor(device.family)}`}
+                      >
+                        {getSensorFamilyLabel(device.family)}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[11px] text-[#68737B]">Disconnect</span>
                 </DropdownMenuItem>
               ))}

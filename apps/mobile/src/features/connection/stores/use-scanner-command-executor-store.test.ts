@@ -52,6 +52,9 @@ function createControllableExecutor(): ControllableExecutor {
       calls[calls.length - 1]?.reject(new Error("Command cancelled"));
       return Promise.resolve();
     },
+    getIdentity() {
+      return Promise.resolve({ family: "multispeq" as const, name: "MultispeQ", raw: {} });
+    },
     onProgress(listener) {
       progressListener = listener;
       return () => {

@@ -189,6 +189,10 @@ for (item in batch_items) {
     measurement <- measurement[[1]]
   }
   run_env$json <- measurement
+  # Upstream cell outputs keyed by canonical name, read-only via a locked binding.
+  # R copy-on-modify means nested reads are inherently isolated per item.
+  run_env$ctx <- if (is.null(item$context)) list() else item$context
+  lockBinding("ctx", run_env)
   # Use an environment (reference semantics) so output$key <- val works in-place.
   run_env$output <- new.env(parent = emptyenv())
   

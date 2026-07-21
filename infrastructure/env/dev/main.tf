@@ -552,7 +552,28 @@ module "centrum_pipeline" {
   catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum_pipeline"
+    # bronze
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
+    # silver
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_data",
+    # gold
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_status",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_devices",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
+    # enriched
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
+    # event hooks
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
   ]
 
   configuration = {
@@ -569,6 +590,8 @@ module "centrum_pipeline" {
     "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
     "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
     "LARGE_IOT_INGEST_ENABLED"   = "false"
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
   continuous_mode  = false
@@ -2031,6 +2054,8 @@ module "route53" {
     }
   }
 
+  enable_health_check = true
+
   tags = {
     Environment = var.environment
     ManagedBy   = "Terraform"
@@ -2221,6 +2246,9 @@ module "grafana_dashboard" {
   large_iot_notification_queue_name         = module.iot_core.large_iot_notification_queue_name
   large_iot_dlq_name                        = module.iot_core.large_iot_dlq_name
   large_iot_ingestion_lag_threshold_seconds = 10800 # 3 hours — pipeline disabled in dev
+
+  enable_site_availability_alert = true
+  route53_health_check_id        = module.route53.health_check_id
 
   providers = {
     grafana.amg = grafana.amg

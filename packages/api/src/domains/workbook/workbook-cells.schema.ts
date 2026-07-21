@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zCommandFormat, zExperimentQuestionContent } from "../experiment/experiment.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
+import { zSensorFamily } from "../protocol/protocol.schema";
 
 const zBaseCell = z.object({
   id: z.string().min(1, "Cell ID is required"),
@@ -94,6 +95,9 @@ export const zBranchCell = zBaseCell.extend({
 export const zOutputDeviceResult = z.object({
   deviceId: z.string(),
   deviceLabel: z.string().optional(),
+  // Identified sensor family and device-reported name, when the handshake resolved them.
+  family: zSensorFamily.optional(),
+  deviceName: z.string().optional(),
   data: z.unknown().optional(),
   error: z.string().optional(),
 });
@@ -161,3 +165,20 @@ export type WorkbookCell =
   | BranchCell
   | OutputCell
   | MarkdownCell;
+
+/**
+ * The author-facing name a cell contributes to the macro `ctx` namespace.
+ * Undefined for cell types that never produce a namespace entry.
+ */
+export function namespaceNameOf(cell: WorkbookCell): string | undefined {
+  switch (cell.type) {
+    case "question":
+      return cell.name;
+    case "protocol":
+    case "macro":
+    case "command":
+      return cell.payload.name;
+    default:
+      return undefined;
+  }
+}

@@ -55,3 +55,9 @@ variable "create_dns_records" {
   type        = bool
   default     = true
 }
+
+variable "enable_health_check" {
+  description = "Whether to create a Route53 health check that actively probes the base domain for active site-up monitoring."
+  type        = bool
+  default     = false
+}

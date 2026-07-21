@@ -33,6 +33,6 @@
     "glob": "^11.1.0",
     "jsdom": "catalog:testing",
     "nyc": "^17.1.0",
-    "typescript": "5.9.3"
+    "typescript": "catalog:"
   }
 }

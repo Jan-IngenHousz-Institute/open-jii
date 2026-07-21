@@ -75,6 +75,45 @@ resource "aws_s3_bucket_versioning" "cache" {
   }
 }
 
+# _deploy-tmp/ holds server-function zips staged during deploys; backstop cleanup
+resource "aws_s3_bucket_lifecycle_configuration" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  rule {
+    id     = "expire-deploy-tmp"
+    status = "Enabled"
+
+    filter {
+      prefix = "_deploy-tmp/"
+    }
+
+    expiration {
+      days = 1
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 1
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+
+  rule {
+    id     = "cleanup-deploy-tmp-delete-markers"
+    status = "Enabled"
+
+    filter {
+      prefix = "_deploy-tmp/"
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
   bucket = aws_s3_bucket.assets.id
 

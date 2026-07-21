@@ -34,6 +34,16 @@ export function createMockCommandExecutor(deviceId: string): IMultispeqCommandEx
       cancelled = true;
       return Promise.resolve();
     },
+    getIdentity() {
+      return Promise.resolve({
+        family: "multispeq" as const,
+        name: `Mock MultispeQ ${deviceId}`,
+        deviceId: `mock-${deviceId}`,
+        firmwareVersion: "2.311-mock",
+        batteryPercent: 80 + parseInt(deviceId, 10),
+        raw: {},
+      });
+    },
     onProgress() {
       return () => undefined;
     },

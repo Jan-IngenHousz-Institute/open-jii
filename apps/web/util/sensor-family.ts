@@ -16,16 +16,18 @@ const SENSOR_FAMILY_LABELS: Record<SensorFamily, string> = {
   multispeq: "MultispeQ",
   ambyte: "Ambyte",
   minipar: "MiniPAR",
+  ambit: "Ambit",
 };
 
 /**
- * Families that are not yet available for local connection (ingest-only).
+ * Families that are not available for local connection (Ambyte is an
+ * MQTT-only gateway; its data arrives via ingest, never a local port).
  */
-const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "minipar"]);
+const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte"]);
 
 /**
  * Selectable sensor family options derived from the API enum.
- * Adding a new value to `zSensorFamily` automatically surfaces it here —
+ * Adding a new value to `zSensorFamily` automatically surfaces it here;
  * just add its label to `SENSOR_FAMILY_LABELS` and optionally disable it.
  */
 export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options.map((value) => ({
@@ -50,7 +52,10 @@ export function getSensorFamilyBadgeColor(family: string): string {
     case "multispeq":
       return "bg-badge-published";
     case "ambyte":
+    case "ambit":
       return "bg-badge-active";
+    case "minipar":
+      return "bg-badge-stale";
     default:
       return "bg-badge-archived";
   }

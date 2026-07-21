@@ -8,6 +8,7 @@ import { createMultispeqCommandExecutor } from "~/features/connection/services/s
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
+import type { DeviceIdentity } from "@repo/iot";
 import { estimateProtocolDurationMs } from "@repo/iot";
 
 const log = createLogger("scanner-executor");
@@ -15,6 +16,12 @@ const log = createLogger("scanner-executor");
 export interface DeviceExecutorEntry {
   device: Device;
   executor: IMultispeqCommandExecutor;
+  /**
+   * Identification-handshake result, patched in asynchronously after connect.
+   * Undefined while the handshake is in flight or when it failed; consumers
+   * must treat it as best-effort.
+   */
+  identity: DeviceIdentity | undefined;
   isExecuting: boolean;
   isCancelled: boolean;
   error: Error | undefined;
@@ -84,6 +91,7 @@ function freshEntry(device: Device, executor: IMultispeqCommandExecutor): Device
   return {
     device,
     executor,
+    identity: undefined,
     isExecuting: false,
     isCancelled: false,
     error: undefined,
@@ -133,6 +141,16 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       .destroy()
       .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
 
+  // Best-effort, fire-and-patch: connect never blocks on identification, and a
+  // failed handshake just leaves `identity` undefined ($device branches then
+  // fall to their default path).
+  const captureIdentity = (deviceId: string, executor: IMultispeqCommandExecutor) => {
+    executor
+      .getIdentity()
+      .then((identity) => patchEntry(deviceId, { identity }))
+      .catch((e) => log.warn("identity handshake failed", { err: (e as Error)?.message }));
+  };
+
   return {
     executors: new Map(),
     isInitializing: false,
@@ -166,6 +184,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
         const next = new Map(get().executors);
         next.set(device.id, freshEntry(device, executor));
         setEntries(next);
+        captureIdentity(device.id, executor);
       } catch (error) {
         set({ error: toError(error) });
       }
@@ -296,15 +315,18 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
         }
 
         const next = new Map<string, DeviceExecutorEntry>();
+        let added: { deviceId: string; executor: IMultispeqCommandExecutor } | undefined;
         if (device) {
           const executor = await createMultispeqCommandExecutor(device);
           if (executor) {
             next.set(device.id, freshEntry(device, executor));
+            added = { deviceId: device.id, executor };
           }
         }
 
         setEntries(next);
         set({ isInitializing: false, error: undefined });
+        if (added) captureIdentity(added.deviceId, added.executor);
       } catch (error) {
         set({
           error: toError(error),

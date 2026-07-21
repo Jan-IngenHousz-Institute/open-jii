@@ -18,21 +18,25 @@ const __filename = fileURLToPath(import.meta.url);
 const APP_ROOT = resolve(dirname(__filename), "..");
 const appJson = JSON.parse(readFileSync(resolve(APP_ROOT, "app.json"), "utf-8")) as {
   expo?: {
-    newArchEnabled?: boolean;
     jsEngine?: string;
   };
+};
+const packageJson = JSON.parse(readFileSync(resolve(APP_ROOT, "package.json"), "utf-8")) as {
+  dependencies?: { expo?: string };
 };
 
 const expo = appJson.expo ?? {};
 const checks: Check[] = [];
 
-// 1. Fabric + Turbo Modules: both are gated on Expo's `newArchEnabled`. The
-//    flag must be explicit (Expo SDK 55+ defaults to true, but the build
-//    pipeline still emits a warning if absent — keep it explicit).
+// 1. Expo SDK 57 and React Native 0.86 only support the New Architecture.
+//    `newArchEnabled` is no longer part of the Expo config schema, so guard
+//    the SDK contract instead of asserting the removed flag.
+const expoVersion = packageJson.dependencies?.expo ?? "";
+const expoMajor = Number(expoVersion.match(/\d+/)?.[0]);
 checks.push({
-  name: "newArchEnabled is true",
-  pass: expo.newArchEnabled === true,
-  details: `app.json -> expo.newArchEnabled = ${String(expo.newArchEnabled)}`,
+  name: "Expo SDK requires the New Architecture",
+  pass: expoMajor >= 57,
+  details: `package.json -> expo = ${expoVersion}`,
 });
 
 // 2. Hermes is the only JS engine that supports the new architecture's

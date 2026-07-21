@@ -10,11 +10,7 @@ from pyspark.sql import functions as F
 
 def _group_metadata(metadata_df):
     """Collapse raw metadata rows into one row per experiment."""
-    return (
-        metadata_df
-        .groupBy("experiment_id")
-        .agg(F.collect_list("metadata").alias("_meta_records"))
-    )
+    return metadata_df.groupBy("experiment_id").agg(F.collect_list("metadata").alias("_meta_records"))
 
 
 def add_custom_metadata_column(df, metadata_df):
@@ -75,5 +71,5 @@ def add_custom_metadata_column(df, metadata_df):
         return enriched
 
     except Exception as e:
-        print(f"Warning: Could not enrich with experiment metadata: {str(e)}")
+        print(f"Warning: Could not enrich with experiment metadata: {e!s}")
         return df.withColumn("custom_metadata", F.lit(None).cast("variant"))

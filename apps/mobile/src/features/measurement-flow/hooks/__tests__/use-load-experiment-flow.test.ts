@@ -81,8 +81,9 @@ describe("useLoadExperimentFlow", () => {
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
     await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
-    const [nodesArg, edgesArg, cellsArg] = setFlowGraph.mock.calls[0] as [
+    const [nodesArg, edgesArg, cellsArg, versionIdArg] = setFlowGraph.mock.calls[0] as [
       FlowNode[],
+      unknown,
       unknown,
       unknown,
     ];
@@ -92,6 +93,7 @@ describe("useLoadExperimentFlow", () => {
     expect(measurement?.content?.protocol).toBeDefined();
     expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
     expect(cellsArg).toBe(cells);
+    expect(versionIdArg).toBe("v1");
     expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });

@@ -18,6 +18,7 @@ const mockNextStep = vi.fn();
 const mockSetLastMatchedPath = vi.fn();
 const mockIncrementBranchVisit = vi.fn();
 const mockRecordBranchJump = vi.fn();
+const mockSetDevicePlan = vi.fn();
 const mockGetAnswer = vi.fn((_c: number, _id: string): string | undefined => undefined);
 
 interface MockFlowState {
@@ -33,6 +34,7 @@ interface MockFlowState {
   setLastMatchedPath: typeof mockSetLastMatchedPath;
   incrementBranchVisit: typeof mockIncrementBranchVisit;
   recordBranchJump: typeof mockRecordBranchJump;
+  setDevicePlan: typeof mockSetDevicePlan;
 }
 
 const flowState: MockFlowState = {
@@ -48,6 +50,7 @@ const flowState: MockFlowState = {
   setLastMatchedPath: mockSetLastMatchedPath,
   incrementBranchVisit: mockIncrementBranchVisit,
   recordBranchJump: mockRecordBranchJump,
+  setDevicePlan: mockSetDevicePlan,
 };
 
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
@@ -56,6 +59,19 @@ vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => (
 vi.mock("~/features/measurement-flow/stores/use-flow-answers-store", () => ({
   useFlowAnswersStore: { getState: () => ({ getAnswer: mockGetAnswer }) },
 }));
+
+// Primary-device registry backing the $device branch source.
+const scannerState: { executors: Map<string, unknown> } = { executors: new Map() };
+vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
+  useScannerCommandExecutorStore: { getState: () => scannerState },
+}));
+
+function connectDevice(id: string, name: string, identity?: Record<string, unknown>) {
+  scannerState.executors.set(id, {
+    device: { type: "usb", name, id },
+    identity,
+  });
+}
 
 const branchFlowNode = (id: string): FlowNode => ({
   id,
@@ -130,6 +146,7 @@ const branch = (id: string, paths: BranchPath[], defaultPathId?: string): Branch
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetAnswer.mockReturnValue(undefined);
+  scannerState.executors = new Map();
   flowState.flowNodes = [];
   flowState.currentFlowStep = 0;
   flowState.iterationCount = 0;
@@ -381,5 +398,164 @@ describe("evaluateAndRoute", () => {
     expect(mockSetLastMatchedPath).not.toHaveBeenCalled();
     expect(mockSetCurrentFlowStep).not.toHaveBeenCalled();
     expect(mockNextStep).not.toHaveBeenCalled();
+  });
+});
+
+describe("$device branch = dispatcher", () => {
+  // Family-split fixture: multispeq devices go to protocol "pm", ambit
+  // devices to protocol "pa"; both targets ride measurement flow nodes.
+  const familyBranch = () =>
+    branch(
+      "b1",
+      [
+        path("pms", [cond("$device", "eq", "multispeq", "family")], "pm"),
+        path("pam", [cond("$device", "eq", "ambit", "family")], "pa"),
+      ],
+      undefined,
+    );
+  const familyFixture = () => {
+    flowState.cells = [familyBranch(), pCell("pm", "proto-m"), pCell("pa", "proto-a")];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      measurementFlowNode("pm", "proto-m"),
+      measurementFlowNode("pa", "proto-a"),
+      plainFlowNode("after"),
+    ];
+    flowState.currentFlowStep = 0;
+  };
+
+  it("builds a per-device plan and routes to the earliest target, consuming the rest", () => {
+    connectDevice("usb-1", "MultispeQ A", { family: "multispeq", deviceId: "aa", raw: {} });
+    connectDevice("usb-2", "Ambit B", { family: "ambit", deviceId: "bb", raw: {} });
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(
+      [
+        { deviceId: "usb-1", targetCellId: "pm" },
+        { deviceId: "usb-2", targetCellId: "pa" },
+      ],
+      ["pa"],
+    );
+    // A dispatcher matches several paths at once: no single ACTIVE chip.
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith(undefined);
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(1);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1); // earliest target "pm"
+  });
+
+  it("groups devices on the same path onto one target with nothing consumed", () => {
+    connectDevice("usb-1", "MultispeQ A", { family: "multispeq", deviceId: "aa", raw: {} });
+    connectDevice("usb-2", "MultispeQ B", { family: "multispeq", deviceId: "bb", raw: {} });
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(
+      [
+        { deviceId: "usb-1", targetCellId: "pm" },
+        { deviceId: "usb-2", targetCellId: "pm" },
+      ],
+      [],
+    );
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
+  it("skips a device matching no path; the rest still dispatch", () => {
+    connectDevice("usb-1", "Ambit A", { family: "ambit", deviceId: "aa", raw: {} });
+    connectDevice("usb-2", "Mystery", { family: "ambyte", deviceId: "bb", raw: {} });
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith([{ deviceId: "usb-1", targetCellId: "pa" }], []);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2); // "pa" is the only target
+  });
+
+  it("falls back to family multispeq while the identity handshake is pending", () => {
+    connectDevice("usb-1", "MultispeQ A", undefined);
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith([{ deviceId: "usb-1", targetCellId: "pm" }], []);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
+  it("clears the plan and falls through sequentially when no device matches", () => {
+    connectDevice("usb-1", "Mystery", { family: "ambyte", deviceId: "aa", raw: {} });
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(undefined, []);
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(1);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1); // sequential, not a dispatch jump
+  });
+
+  it("clears the plan and falls through when no device is connected", () => {
+    familyFixture();
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(undefined, []);
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith(undefined);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
+  it("skips a device whose matched path targets a non-measurement cell", () => {
+    connectDevice("usb-1", "MultispeQ A", { family: "multispeq", deviceId: "aa", raw: {} });
+    flowState.cells = [
+      qCell("q1"),
+      branch("b1", [path("pms", [cond("$device", "eq", "multispeq", "family")], "q1")], undefined),
+    ];
+    flowState.flowNodes = [plainFlowNode("q1"), branchFlowNode("b1"), plainFlowNode("after")];
+    flowState.currentFlowStep = 1;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(undefined, []);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
+  });
+
+  it("dispatches command-cell targets too", () => {
+    connectDevice("usb-1", "MultispeQ A", { family: "multispeq", deviceId: "aa", raw: {} });
+    flowState.cells = [
+      branch(
+        "b1",
+        [path("pms", [cond("$device", "eq", "multispeq", "family")], "cmd1")],
+        undefined,
+      ),
+      cCell("cmd1"),
+    ];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      measurementFlowNode("cmd1", ""),
+      plainFlowNode("after"),
+    ];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(
+      [{ deviceId: "usb-1", targetCellId: "cmd1" }],
+      [],
+    );
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
+  it("leaves non-device branches untouched (no plan writes)", () => {
+    mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
+    flowState.cells = [
+      qCell("q1"),
+      branch("b1", [path("pa", [cond("q1", "eq", "yes")], "tgt"), path("pdef", [])], "pdef"),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("y"), plainFlowNode("tgt")];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetDevicePlan).not.toHaveBeenCalled();
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
   });
 });

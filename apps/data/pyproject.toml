@@ -1,26 +1,114 @@
-[tool.poetry]
+[project]
 name = "openjii-data"
 version = "0.1.0"
 description = "Databricks notebooks and Python packages for OpenJII"
-authors = ["openJII Team"]
-readme = "README.md"
-package-mode = false
+authors = [{ name = "openJII Team" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "ambyte",
+    "data-repair",
+    "enrich",
+    "openjii",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pandas = "^2.0.0"
-numpy = "^1.24.0"
-scipy = "^1.10.0"
-requests = "^2.31.0"
-ambyte = { path = "src/lib/ambyte", develop = true }
-enrich = { path = "src/lib/enrich", develop = true }
-openjii = { path = "src/lib/openjii", develop = true }
-data_repair = { path = "src/lib/data_repair", develop = true }
+[dependency-groups]
+dev = [
+    "build>=1.2",
+    "chispa>=0.10",
+    "pyright>=1.1.385",
+    "pyarrow>=10.0",
+    "pyspark>=3.5,<4",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "responses>=0.25",
+    "ruff>=0.7",
+]
 
-[tool.poetry.group.dev.dependencies]
-build = "^1.0.0"
-wheel = "^0.46.2"
+[tool.uv]
+package = false
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv.workspace]
+members = [
+    "src/lib/ambyte",
+    "src/lib/data_repair",
+    "src/lib/enrich",
+    "src/lib/openjii",
+]
+
+[tool.uv.sources]
+ambyte = { workspace = true }
+data-repair = { workspace = true }
+enrich = { workspace = true }
+openjii = { workspace = true }
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = [
+    "src/notebooks",
+    "src/pipelines",
+    "src/tasks",
+    ".databricks",
+    "**/dist",
+    "**/build",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    "E501",  # line length: existing code is wide; format handles new code
+    "B008",  # function calls in default args (Spark UDFs do this)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.pyright]
+include = ["src/lib", "tests"]
+exclude = [
+    "**/dist",
+    "**/build",
+    "**/*.egg-info",
+    "src/pipelines",
+    "src/tasks",
+    "src/notebooks",
+    ".databricks",
+]
+typeCheckingMode = "basic"
+pythonVersion = "3.10"
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+reportPrivateImportUsage = false
+# PySpark's typeshed stubs declare builder/DataFrame access via classproperty
+# and overloaded UDFs in ways pyright can't always resolve. Downgrade so the
+# checker still flags genuine type mistakes in our own code.
+reportAttributeAccessIssue = "warning"
+reportCallIssue = "warning"
+reportArgumentType = "warning"
+reportReturnType = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "spark: tests that require a local Spark session (slow startup)",
+]
+
+[tool.coverage.run]
+source = ["src/lib"]
+branch = true
+omit = ["**/tests/**"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

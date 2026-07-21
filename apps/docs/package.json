@@ -37,6 +37,7 @@
     "@docusaurus/types": "^3.10.0",
     "@open-jii/release-tools": "workspace:*",
     "@types/js-yaml": "^4.0.9",
+    "@types/react": "catalog:react19",
     "@types/swagger-ui-react": "^5.18.0",
     "typescript": "catalog:"
   },
@@ -53,6 +54,6 @@
     ]
   },
   "engines": {
-    "node": ">=22.0"
+    "node": ">=24.0"
   }
 }

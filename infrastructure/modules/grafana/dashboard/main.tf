@@ -454,6 +454,93 @@ resource "grafana_rule_group" "cloudfront_errors" {
   }
 }
 
+# Site Availability Alerts (active Route53 health check probe)
+resource "grafana_rule_group" "site_availability" {
+  count = var.enable_site_availability_alert ? 1 : 0
+
+  provider           = grafana.amg
+  name               = "Site Availability"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  rule {
+    name      = "Site Down - Health Check Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = "us-east-1"
+        namespace  = "AWS/Route53"
+        metricName = "HealthCheckStatus"
+        statistic  = "Minimum"
+        period     = "60"
+        dimensions = {
+          HealthCheckId = var.route53_health_check_id
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "1m"
+
+    annotations = {
+      description = "Route53 health check reports the site is unreachable"
+      summary     = "Site is down: active health check failing"
+    }
+    labels = {
+      severity = "critical"
+      service  = "frontend"
+    }
+  }
+}
+
 # Lambda Alerts (using CloudWatch fill for missing data)
 resource "grafana_rule_group" "lambda_health" {
   provider         = grafana.amg

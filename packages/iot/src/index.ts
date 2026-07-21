@@ -84,6 +84,35 @@ export {
   GENERIC_SERIAL_DEFAULTS,
   GENERIC_FRAMING,
 } from "./driver/generic/config";
+export { GenericCommandConnector } from "./driver/generic/command-connector";
+export type {
+  GenericCommandConnectorConfig,
+  GenericCommandConnectorEvents,
+} from "./driver/generic/command-connector";
+
+// ── Ambit driver (text console, command/response) ───
+export { AmbitDriver } from "./driver/ambit/driver";
+export type { AmbitDriverConfig } from "./driver/ambit/config";
+export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
+export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
+export type {
+  AmbitParReading,
+  AmbitTempReading,
+  AmbitStreamEvents,
+} from "./driver/ambit/interface";
+
+// ── MiniPAR driver (LINE + JSON protocol modes) ─────
+export { MiniParDriver } from "./driver/minipar/driver";
+export type { MiniParDriverConfig } from "./driver/minipar/config";
+export { MINIPAR_SERIAL_DEFAULTS, MINIPAR_FRAMING } from "./driver/minipar/config";
+export { MINIPAR_COMMANDS } from "./driver/minipar/commands";
+export type { MiniParMeasurementEnvelope, MiniParStreamEvents } from "./driver/minipar/interface";
+
+// ── Device identity ─────────────────────────────────
+export type { DeviceIdentity, SensorFamily } from "./core/families";
+export { SENSOR_FAMILIES, isSensorFamily } from "./core/families";
+export type { IdentifiedDevice, IdentifyDeviceOptions } from "./core/identify-device";
+export { identifyDevice, createConnectorForFamily } from "./core/identify-device";
 
 // ── Logger (public DI contract) ─────────────────────
 export type { Logger } from "./utils/logger/logger";

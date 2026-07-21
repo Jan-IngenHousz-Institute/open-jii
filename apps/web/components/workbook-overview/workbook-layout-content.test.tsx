@@ -52,6 +52,13 @@ describe("WorkbookLayoutContent", () => {
     expect(screen.getByTestId("children")).toBeInTheDocument();
   });
 
+  it("displays the workbook description", () => {
+    renderContent({ description: "Measures photosynthetic efficiency" });
+
+    expect(screen.getByText("Measures photosynthetic efficiency")).toBeInTheDocument();
+    expect(screen.getByText("workbooks.descriptionTitle")).toBeInTheDocument();
+  });
+
   it("lets the creator rename the workbook by clicking the title", async () => {
     const user = userEvent.setup();
     const updateSpy = server.mount(contract.workbooks.updateWorkbook, {

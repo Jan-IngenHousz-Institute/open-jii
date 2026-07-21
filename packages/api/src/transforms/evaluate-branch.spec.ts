@@ -4,8 +4,10 @@ import type { BranchCell, WorkbookCell } from "../domains/workbook/workbook-cell
 import {
   evaluateBranch,
   evaluatePathConditions,
+  isDeviceScopedBranch,
   resolveConditionValue,
   validateBranchCell,
+  validateDeviceBranch,
 } from "./evaluate-branch";
 
 function makeOutputCell(id: string, producedBy: string, data: unknown): WorkbookCell {
@@ -501,5 +503,161 @@ describe("validateBranchCell", () => {
     });
     const errors = validateBranchCell(cell);
     expect(errors[0]).toMatch(/^Unnamed path/);
+  });
+});
+
+describe("$device runtime source", () => {
+  const device = {
+    family: "multispeq",
+    id: "aa:bb:cc:dd",
+    name: "MultispeQ",
+    firmwareVersion: "2.311",
+    index: 0,
+  };
+
+  function deviceBranch(overrides?: Partial<BranchCell>): BranchCell {
+    return makeBranchCell({
+      id: "b1",
+      paths: [
+        {
+          id: "p1",
+          label: "MultispeQ path",
+          color: "",
+          gotoCellId: "prot1",
+          conditions: [
+            {
+              id: "c1",
+              sourceCellId: "$device",
+              field: "family",
+              operator: "eq",
+              value: "multispeq",
+            },
+          ],
+        },
+        {
+          id: "p2",
+          label: "Fallback",
+          color: "",
+          gotoCellId: "cmd1",
+          conditions: [
+            {
+              id: "c2",
+              sourceCellId: "$device",
+              field: "family",
+              operator: "neq",
+              value: "multispeq",
+            },
+          ],
+        },
+      ],
+      defaultPathId: "p2",
+      ...overrides,
+    });
+  }
+
+  it("resolves $device fields from the runtime context", () => {
+    expect(resolveConditionValue([], "$device", "family", { device })).toBe("multispeq");
+    expect(resolveConditionValue([], "$device", "id", { device })).toBe("aa:bb:cc:dd");
+    expect(resolveConditionValue([], "$device", "index", { device })).toBe(0);
+    expect(resolveConditionValue([], "$device", "firmwareVersion", { device })).toBe("2.311");
+  });
+
+  it("returns undefined for $device without runtime context or for unknown fields", () => {
+    expect(resolveConditionValue([], "$device", "family")).toBeUndefined();
+    expect(resolveConditionValue([], "$device", "family", {})).toBeUndefined();
+    expect(resolveConditionValue([], "$device", "nope", { device })).toBeUndefined();
+  });
+
+  it("routes by $device.family and falls to default without a device", () => {
+    const cell = deviceBranch();
+    expect(evaluateBranch(cell, [], { device })?.id).toBe("p1");
+    expect(evaluateBranch(cell, [], { device: { ...device, family: "ambit" } })?.id).toBe("p2");
+    expect(evaluateBranch(cell, [])?.id).toBe("p2");
+  });
+
+  it("compares $device.index numerically", () => {
+    const cell = makeBranchCell({
+      id: "b1",
+      paths: [
+        {
+          id: "p1",
+          label: "later devices",
+          color: "",
+          conditions: [
+            { id: "c1", sourceCellId: "$device", field: "index", operator: "gte", value: "2" },
+          ],
+        },
+      ],
+    });
+    expect(evaluateBranch(cell, [], { device: { ...device, index: 3 } })?.id).toBe("p1");
+    expect(evaluateBranch(cell, [], { device: { ...device, index: 1 } })).toBeUndefined();
+  });
+
+  it("scopes regular output sources to the runtime device", () => {
+    const output: WorkbookCell = {
+      id: "out-1",
+      type: "output",
+      isCollapsed: false,
+      producedBy: "p1",
+      data: { value: 1 },
+      deviceResults: [
+        { deviceId: "host-a", data: { value: 10 } },
+        { deviceId: "host-b", data: { value: 20 } },
+      ],
+    };
+    const producer = { id: "p1", type: "protocol", isCollapsed: false } as WorkbookCell;
+    expect(resolveConditionValue([producer, output], "p1", "value", { device })).toBe(1);
+    expect(
+      resolveConditionValue([producer, output], "p1", "value", {
+        device,
+        deviceId: "host-b",
+      }),
+    ).toBe(20);
+
+    const cells: WorkbookCell[] = [makeQuestionCell("q1", "42")];
+    expect(resolveConditionValue(cells, "q1", "ignored", { device })).toBe("42");
+  });
+
+  it("detects device-scoped branches", () => {
+    expect(isDeviceScopedBranch(deviceBranch())).toBe(true);
+    const plain = makeBranchCell({
+      id: "b2",
+      paths: [
+        {
+          id: "p1",
+          label: "",
+          color: "",
+          conditions: [{ id: "c1", sourceCellId: "q1", field: "x", operator: "eq", value: "1" }],
+        },
+      ],
+    });
+    expect(isDeviceScopedBranch(plain)).toBe(false);
+  });
+
+  it("validateDeviceBranch requires protocol/command jump targets on every path", () => {
+    const cells: WorkbookCell[] = [
+      { id: "prot1", type: "protocol", isCollapsed: false } as WorkbookCell,
+      makeQuestionCell("q1", "x"),
+    ];
+
+    const missingTarget = deviceBranch();
+    missingTarget.paths[1].gotoCellId = undefined;
+    const errors = validateDeviceBranch(missingTarget, cells);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/Fallback: device-scoped paths must jump/);
+
+    const wrongTarget = deviceBranch();
+    wrongTarget.paths[1].gotoCellId = "q1";
+    expect(validateDeviceBranch(wrongTarget, cells)[0]).toMatch(
+      /jump target must be a protocol or command cell/,
+    );
+
+    const okBranch = deviceBranch();
+    okBranch.paths[1].gotoCellId = "prot1";
+    okBranch.paths[0].gotoCellId = "prot1";
+    expect(validateDeviceBranch(okBranch, cells)).toHaveLength(0);
+
+    const plain = makeBranchCell({ id: "b3", paths: [] });
+    expect(validateDeviceBranch(plain, cells)).toHaveLength(0);
   });
 });

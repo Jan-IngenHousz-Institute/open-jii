@@ -1,5 +1,5 @@
 {
-  "id": "3414b190-40d6-4533-b295-f524e666baad",
+  "id": "4d8f238f-e4d5-4fd6-8921-40e1f4c8aa8a",
   "prevId": "6b6ee61f-d305-4cf7-9974-6c53b49cf54e",
   "version": "7",
   "dialect": "postgresql",
@@ -795,12 +795,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -865,19 +859,6 @@
             "id"
           ],
           "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "experiments_organization_id_organizations_id_fk": {
-          "name": "experiments_organization_id_organizations_id_fk",
-          "tableFrom": "experiments",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1118,20 +1099,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'private'"
-        },
         "created_by": {
           "name": "created_by",
           "type": "uuid",
@@ -1168,37 +1135,9 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "iot_devices_organization_id_idx": {
-          "name": "iot_devices_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
-        "iot_devices_organization_id_organizations_id_fk": {
-          "name": "iot_devices_organization_id_organizations_id_fk",
-          "tableFrom": "iot_devices",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "iot_devices_created_by_users_id_fk": {
           "name": "iot_devices_created_by_users_id_fk",
           "tableFrom": "iot_devices",
@@ -1294,20 +1233,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'public'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1359,19 +1284,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "macros_organization_id_organizations_id_fk": {
-          "name": "macros_organization_id_organizations_id_fk",
-          "tableFrom": "macros",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1676,14 +1588,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "base_permission": {
-          "name": "base_permission",
-          "type": "org_base_permission",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'read'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1941,20 +1845,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'public'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2006,19 +1896,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "protocols_organization_id_organizations_id_fk": {
-          "name": "protocols_organization_id_organizations_id_fk",
-          "tableFrom": "protocols",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -2079,169 +1956,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.resource_grants": {
-      "name": "resource_grants",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "resource_type": {
-          "name": "resource_type",
-          "type": "resource_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "resource_id": {
-          "name": "resource_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grantee_type": {
-          "name": "grantee_type",
-          "type": "grantee_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grantee_id": {
-          "name": "grantee_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'member'"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        }
-      },
-      "indexes": {
-        "resource_grants_unique": {
-          "name": "resource_grants_unique",
-          "columns": [
-            {
-              "expression": "resource_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "resource_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "grantee_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "grantee_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "resource_grants_resource_idx": {
-          "name": "resource_grants_resource_idx",
-          "columns": [
-            {
-              "expression": "resource_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "resource_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "resource_grants_grantee_idx": {
-          "name": "resource_grants_grantee_idx",
-          "columns": [
-            {
-              "expression": "grantee_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "grantee_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "resource_grants_created_by_users_id_fk": {
-          "name": "resource_grants_created_by_users_id_fk",
-          "tableFrom": "resource_grants",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2841,20 +2555,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'public'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2922,19 +2622,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "workbooks_organization_id_organizations_id_fk": {
-          "name": "workbooks_organization_id_organizations_id_fk",
-          "tableFrom": "workbooks",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -3024,15 +2711,6 @@
         "public"
       ]
     },
-    "public.grantee_type": {
-      "name": "grantee_type",
-      "schema": "public",
-      "values": [
-        "user",
-        "organization",
-        "team"
-      ]
-    },
     "public.invitation_resource_type": {
       "name": "invitation_resource_type",
       "schema": "public",
@@ -3069,15 +2747,6 @@
         "javascript"
       ]
     },
-    "public.org_base_permission": {
-      "name": "org_base_permission",
-      "schema": "public",
-      "values": [
-        "none",
-        "read",
-        "admin"
-      ]
-    },
     "public.organization_type": {
       "name": "organization_type",
       "schema": "public",
@@ -3089,17 +2758,6 @@
         "university"
       ]
     },
-    "public.resource_type": {
-      "name": "resource_type",
-      "schema": "public",
-      "values": [
-        "experiment",
-        "macro",
-        "protocol",
-        "workbook",
-        "device"
-      ]
-    },
     "public.sensor_family": {
       "name": "sensor_family",
       "schema": "public",
@@ -3107,15 +2765,8 @@
         "multispeq",
         "ambyte",
         "minipar",
-        "generic"
-      ]
-    },
-    "public.visibility": {
-      "name": "visibility",
-      "schema": "public",
-      "values": [
-        "private",
-        "public"
+        "generic",
+        "ambit"
       ]
     }
   },

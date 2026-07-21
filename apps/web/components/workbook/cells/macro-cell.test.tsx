@@ -412,9 +412,13 @@ describe("MacroCellComponent", () => {
         isPending: false,
       } as ReturnType<typeof useSession>);
       server.mount(contract.macros.getMacro, { body: baseMacro });
+      // Hold the save response until the language rerender below has landed,
+      // so the "concurrent" update is guaranteed to be in flight.
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => (releaseSave = resolve));
       server.mount(contract.macros.updateMacro, {
         body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
-        delay: 100,
+        unblock: saveGate,
       });
       const onUpdate = vi.fn();
 
@@ -437,6 +441,7 @@ describe("MacroCellComponent", () => {
           onDelete={vi.fn()}
         />,
       );
+      releaseSave();
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalled());
       const updated = onUpdate.mock.lastCall?.[0] as MacroCell;

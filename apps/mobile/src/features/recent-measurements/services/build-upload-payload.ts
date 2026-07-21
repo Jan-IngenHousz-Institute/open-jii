@@ -18,6 +18,10 @@ export interface BuildUploadPayloadArgs {
   commentText?: string;
   /** One uuid per multi-device round (see CONTEXT.md: Workbook run). */
   workbookRunId?: string;
+  /** Immutable workbook version that owns the macro snapshot. */
+  workbookVersionId?: string;
+  /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
+  macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
 }
 
@@ -32,6 +36,8 @@ export function buildUploadPayload({
   questions,
   commentText,
   workbookRunId,
+  workbookVersionId,
+  macroContext,
   fallbackDeviceId,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
@@ -60,6 +66,8 @@ export function buildUploadPayload({
       ? { device_id: fallbackDeviceId }
       : {}),
     ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
+    ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.

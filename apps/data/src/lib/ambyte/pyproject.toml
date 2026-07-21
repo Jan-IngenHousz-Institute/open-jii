@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ambyte"
+version = "0.1.0"
+description = "Ambyte trace file processing for openJII Databricks pipelines"
+authors = [{ name = "openJII Team" }]
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ambyte"]

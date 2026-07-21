@@ -18,17 +18,20 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   const requestIdRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
 
-  const runPythonMacro = useCallback(async (code: string, json: object): Promise<MacroOutput> => {
-    const requestId = `py-${++requestIdRef.current}`;
-    return new Promise<MacroOutput>((resolve, reject) => {
-      pendingRef.current.set(requestId, { resolve, reject });
-      const payload = { requestId, code, json };
-      const msg = JSON.stringify(payload);
-      webViewRef.current?.injectJavaScript(
-        `window.postMessage(${JSON.stringify(msg)}, '*'); true;`,
-      );
-    });
-  }, []);
+  const runPythonMacro = useCallback(
+    async (code: string, json: object, ctx: Record<string, unknown> = {}): Promise<MacroOutput> => {
+      const requestId = `py-${++requestIdRef.current}`;
+      return new Promise<MacroOutput>((resolve, reject) => {
+        pendingRef.current.set(requestId, { resolve, reject });
+        const payload = { requestId, code, json, ctx };
+        const msg = JSON.stringify(payload);
+        webViewRef.current?.injectJavaScript(
+          `window.postMessage(${JSON.stringify(msg)}, '*'); true;`,
+        );
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     registerPythonMacroRunner(runPythonMacro);

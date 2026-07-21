@@ -70,7 +70,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Detect Affected Packages
         id: apps
