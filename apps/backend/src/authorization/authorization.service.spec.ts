@@ -255,4 +255,35 @@ describe("AuthorizationService.can", () => {
     });
     expect(update.allow).toBe(false);
   });
+
+  describe("isOrgMember", () => {
+    it("returns true for a member of the organization", async () => {
+      const { orgId, memberId } = await makeOrgWithMember("org-member@example.com");
+
+      await expect(authz.isOrgMember(memberId, orgId)).resolves.toBe(true);
+    });
+
+    it("returns false for a user who is not a member of the organization", async () => {
+      const { orgId } = await makeOrgWithMember("member@example.com");
+      const outsider = await testApp.createTestUser({ email: "outsider@example.com" });
+
+      await expect(authz.isOrgMember(outsider, orgId)).resolves.toBe(false);
+    });
+  });
+
+  describe("getOwnership", () => {
+    it("returns the owning org and visibility for an existing resource", async () => {
+      const orgId = await ensurePersonalOrganization(testApp.database, { id: ownerId });
+      const macro = await makeMacro({ organizationId: orgId, visibility: "private" });
+
+      await expect(authz.getOwnership("macro", macro.id)).resolves.toEqual({
+        organizationId: orgId,
+        visibility: "private",
+      });
+    });
+
+    it("returns null for a resource that does not exist", async () => {
+      await expect(authz.getOwnership("macro", crypto.randomUUID())).resolves.toBeNull();
+    });
+  });
 });
