@@ -36,81 +36,73 @@ export class AttachWorkbookUseCase {
     workbookId: string,
     userId: string,
   ): Promise<Result<AttachWorkbookResult>> {
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
-        if (!experiment) {
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
 
-        if (!isAdmin) {
-          return failure(AppError.forbidden("Only admins can attach workbooks to experiments"));
-        }
+      const workbookResult = await this.workbookRepository.findById(workbookId);
+      if (workbookResult.isFailure()) return workbookResult;
+      if (!workbookResult.value) {
+        return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
+      }
 
-        const workbookResult = await this.workbookRepository.findById(workbookId);
-        if (workbookResult.isFailure()) return workbookResult;
-        if (!workbookResult.value) {
-          return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
-        }
+      // Pin to the latest version when nothing's drifted; otherwise mint a
+      // new version so the experiment captures the current cells.
+      const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
+      if (latestResult.isFailure()) return latestResult;
+      const latest = latestResult.value;
 
-        // Pin to the latest version when nothing's drifted; otherwise mint a
-        // new version so the experiment captures the current cells.
-        const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
-        if (latestResult.isFailure()) return latestResult;
-        const latest = latestResult.value;
+      const upgradableResult = await this.isWorkbookUpgradableUseCase.execute(workbookResult.value);
+      if (upgradableResult.isFailure()) return upgradableResult;
 
-        const upgradableResult = await this.isWorkbookUpgradableUseCase.execute(
-          workbookResult.value,
+      let version: WorkbookVersionDto;
+      if (latest && !upgradableResult.value) {
+        version = latest;
+      } else {
+        const versionResult = await this.publishVersionUseCase.execute(workbookId, userId);
+        if (versionResult.isFailure()) return versionResult;
+        version = versionResult.value;
+      }
+
+      if (version.workbookId !== workbookId) {
+        return failure(
+          AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),
         );
-        if (upgradableResult.isFailure()) return upgradableResult;
+      }
 
-        let version: WorkbookVersionDto;
-        if (latest && !upgradableResult.value) {
-          version = latest;
-        } else {
-          const versionResult = await this.publishVersionUseCase.execute(workbookId, userId);
-          if (versionResult.isFailure()) return versionResult;
-          version = versionResult.value;
-        }
+      const updateResult = await this.experimentRepository.update(experimentId, {
+        workbookId,
+        workbookVersionId: version.id,
+      });
 
-        if (version.workbookId !== workbookId) {
-          return failure(
-            AppError.notFound(`No valid workbook version found for workbook ${workbookId}`),
-          );
-        }
+      if (updateResult.isFailure()) {
+        return updateResult;
+      }
 
-        const updateResult = await this.experimentRepository.update(experimentId, {
-          workbookId,
-          workbookVersionId: version.id,
-        });
+      // Materialise a flow row from the version's cells; mobile still reads from `flows`.
+      const flowGraph = cellsToFlowGraph(version.cells);
+      const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
+      if (flowResult.isFailure()) {
+        return flowResult;
+      }
 
-        if (updateResult.isFailure()) {
-          return updateResult;
-        }
+      this.logger.log({
+        msg: "Workbook attached to experiment",
+        operation: "attachWorkbook",
+        experimentId,
+        workbookId,
+        workbookVersionId: version.id,
+        version: version.version,
+      });
 
-        // Materialise a flow row from the version's cells; mobile still reads from `flows`.
-        const flowGraph = cellsToFlowGraph(version.cells);
-        const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
-        if (flowResult.isFailure()) {
-          return flowResult;
-        }
-
-        this.logger.log({
-          msg: "Workbook attached to experiment",
-          operation: "attachWorkbook",
-          experimentId,
-          workbookId,
-          workbookVersionId: version.id,
-          version: version.version,
-        });
-
-        return success({
-          workbookId,
-          workbookVersionId: version.id,
-          version: version.version,
-        });
-      },
-    );
+      return success({
+        workbookId,
+        workbookVersionId: version.id,
+        version: version.version,
+      });
+    });
   }
 }

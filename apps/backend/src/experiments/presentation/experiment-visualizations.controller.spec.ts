@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
@@ -74,6 +75,7 @@ const createMockVisualizationDto = (
 describe("ExperimentVisualizationsController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let readableExperimentId: string;
   let listExperimentVisualizationsUseCase: ListExperimentVisualizationsUseCase;
   let createExperimentVisualizationUseCase: CreateExperimentVisualizationUseCase;
   let getExperimentVisualizationUseCase: GetExperimentVisualizationUseCase;
@@ -87,6 +89,11 @@ describe("ExperimentVisualizationsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Readable experiment",
+      userId: testUserId,
+    });
+    readableExperimentId = experiment.id;
 
     // Get use case instances for mocking
     listExperimentVisualizationsUseCase = testApp.module.get(ListExperimentVisualizationsUseCase);
@@ -107,7 +114,7 @@ describe("ExperimentVisualizationsController", () => {
   describe("listVisualizations", () => {
     it("should successfully list experiment visualizations", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const mockVisualizations: ExperimentVisualizationDto[] = [
         createMockVisualizationDto(experimentId, testUserId, {
           name: "Test Visualization 1",
@@ -146,7 +153,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle errors when listing visualizations", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const errorMessage = "Experiment not found";
 
       vi.spyOn(listExperimentVisualizationsUseCase, "execute").mockResolvedValue(
@@ -171,7 +178,7 @@ describe("ExperimentVisualizationsController", () => {
   describe("createVisualization", () => {
     it("should successfully create a visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationData = createTestVisualizationData({
         name: "New Visualization",
       });
@@ -208,7 +215,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle validation errors when creating visualization", async () => {
       // Arrive
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const invalidData = {
         // Missing required name field
         chartFamily: "basic",
@@ -240,7 +247,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle use case errors when creating visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationData = createTestVisualizationData({
         name: "Test Visualization",
       });
@@ -269,7 +276,7 @@ describe("ExperimentVisualizationsController", () => {
   describe("getVisualization", () => {
     it("should successfully get a visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
 
       const mockVisualization = createMockVisualizationDto(experimentId, testUserId, {
@@ -302,7 +309,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle not found errors when getting visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
       const errorMessage = "Visualization not found";
 
@@ -329,7 +336,7 @@ describe("ExperimentVisualizationsController", () => {
   describe("updateVisualization", () => {
     it("should successfully update a visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
 
       const updateData = createTestVisualizationData({
@@ -368,7 +375,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle errors when updating visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
 
       const updateData = createTestVisualizationData({
@@ -402,7 +409,7 @@ describe("ExperimentVisualizationsController", () => {
   describe("deleteVisualization", () => {
     it("should successfully delete a visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
 
       vi.spyOn(deleteExperimentVisualizationUseCase, "execute").mockResolvedValue(
@@ -423,7 +430,7 @@ describe("ExperimentVisualizationsController", () => {
 
     it("should handle errors when deleting visualization", async () => {
       // Arrange
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const visualizationId = faker.string.uuid();
       const errorMessage = "Visualization not found";
 
@@ -444,6 +451,88 @@ describe("ExperimentVisualizationsController", () => {
         .expect((response) => {
           expect(response.body).toHaveProperty("message", errorMessage);
         });
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "list visualizations",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "create visualization",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.createExperimentVisualization, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send(createTestVisualizationData()),
+      },
+      {
+        name: "get visualization",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+                id: experimentId,
+                visualizationId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "update visualization",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, {
+                id: experimentId,
+                visualizationId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId)
+            .send(createTestVisualizationData()),
+      },
+      {
+        name: "delete visualization",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.experiments.deleteExperimentVisualization, {
+                id: experimentId,
+                visualizationId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(readableExperimentId, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: readableExperimentId,
+        action,
+      });
     });
   });
 });

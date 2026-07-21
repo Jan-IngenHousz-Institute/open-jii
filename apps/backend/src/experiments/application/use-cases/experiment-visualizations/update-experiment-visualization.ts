@@ -49,100 +49,73 @@ export class UpdateExperimentVisualizationUseCase {
         return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
       }
 
-      // Check if experiment exists and if user has access
-      const accessResult = await this.experimentRepository.checkAccess(
-        visualization.experimentId,
-        userId,
-      );
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // The experiment is still loaded to enforce the archived-state domain rule.
+      const experimentResult = await this.experimentRepository.findOne(visualization.experimentId);
 
-      return accessResult.chain(
-        async ({
-          experiment,
-          hasArchiveAccess,
-          isAdmin,
-        }: {
-          experiment: ExperimentDto | null;
-          hasAccess: boolean;
-          hasArchiveAccess: boolean;
-          isAdmin: boolean;
-        }) => {
-          if (!experiment) {
-            this.logger.warn({
-              msg: "Visualization belongs to non-existent experiment",
-              operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(
-              AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
-            );
-          }
-
-          if (!hasArchiveAccess) {
-            this.logger.warn({
-              msg: "User does not have access to experiment",
-              operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
-
-          // Check if user can modify this visualization
-          if (visualization.createdBy !== userId && !isAdmin) {
-            this.logger.warn({
-              msg: "User does not have permission to modify visualization",
-              operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(
-              AppError.forbidden("You do not have permission to modify this visualization"),
-            );
-          }
-
-          this.logger.debug({
-            msg: "Updating visualization in repository",
+      return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+        if (!experiment) {
+          this.logger.warn({
+            msg: "Visualization belongs to non-existent experiment",
             operation: "updateExperimentVisualization",
             experimentId: visualization.experimentId,
             visualizationId,
             userId,
           });
-          // Update the visualization
-          const updateResult = await this.experimentVisualizationRepository.update(
-            visualizationId,
-            data,
+          return failure(
+            AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
           );
+        }
 
-          return updateResult.chain((updatedVisualizations: ExperimentVisualizationDto[]) => {
-            if (updatedVisualizations.length === 0) {
-              this.logger.error({
-                msg: "Failed to update visualization",
-                errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
-                operation: "updateExperimentVisualization",
-                experimentId: visualization.experimentId,
-                visualizationId,
-                userId,
-              });
-              return failure(AppError.internal("Failed to update visualization"));
-            }
+        if (experiment.status === "archived") {
+          this.logger.warn({
+            msg: "Attempt to update visualization in an archived experiment",
+            operation: "updateExperimentVisualization",
+            experimentId: visualization.experimentId,
+            visualizationId,
+            userId,
+          });
+          return failure(AppError.forbidden("Cannot modify an archived experiment"));
+        }
 
-            const updatedVisualization = updatedVisualizations[0];
-            this.logger.log({
-              msg: "Successfully updated visualization",
+        this.logger.debug({
+          msg: "Updating visualization in repository",
+          operation: "updateExperimentVisualization",
+          experimentId: visualization.experimentId,
+          visualizationId,
+          userId,
+        });
+        // Update the visualization
+        const updateResult = await this.experimentVisualizationRepository.update(
+          visualizationId,
+          data,
+        );
+
+        return updateResult.chain((updatedVisualizations: ExperimentVisualizationDto[]) => {
+          if (updatedVisualizations.length === 0) {
+            this.logger.error({
+              msg: "Failed to update visualization",
+              errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
               operation: "updateExperimentVisualization",
               experimentId: visualization.experimentId,
               visualizationId,
               userId,
-              status: "success",
             });
-            return success(updatedVisualization);
+            return failure(AppError.internal("Failed to update visualization"));
+          }
+
+          const updatedVisualization = updatedVisualizations[0];
+          this.logger.log({
+            msg: "Successfully updated visualization",
+            operation: "updateExperimentVisualization",
+            experimentId: visualization.experimentId,
+            visualizationId,
+            userId,
+            status: "success",
           });
-        },
-      );
+          return success(updatedVisualization);
+        });
+      });
     });
   }
 }

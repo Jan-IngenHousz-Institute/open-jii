@@ -1,12 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
+import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
   eq,
   experiments,
+  iotDevices,
   macros,
   organizationMembers,
-  organizations,
   protocols,
   resourceGrants,
   teamMembers,
@@ -14,9 +16,6 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 import type { ResourceType } from "@repo/database";
-
-import { basePermissionCan, roleCan } from "./abilities";
-import type { ResourceAction } from "./abilities";
 
 export interface AccessRequest {
   resourceType: ResourceType;
@@ -29,7 +28,6 @@ export interface AccessDecision {
   /** Machine-readable reason: why access was granted or denied. */
   reason:
     | "org-role"
-    | "org-base-permission"
     | "resource-grant:user"
     | "resource-grant:team"
     | "resource-grant:org"
@@ -46,8 +44,9 @@ export interface ResourceOwnership {
 
 /**
  * Single authorization entry point for org-scoped, per-resource access control.
- * Resolution order (first match wins): owning-org role → org base permission →
- * per-resource grants (user → team → org) → public+read. No platform-admin tier.
+ * Resolution order (first match wins): owning-org role (Better Auth access-control
+ * matrix) → per-resource grants (user → team → org) → public+read. No
+ * platform-admin tier.
  */
 @Injectable()
 export class AuthorizationService {
@@ -60,17 +59,14 @@ export class AuthorizationService {
       return { allow: false, reason: "not-found" };
     }
 
-    // 2. Owning-org membership. Owners/admins always have full access; plain
-    //    members get the org's configurable base permission (none/read/admin).
-    //    A denial here falls through to explicit grants below (which override).
+    // 2. Owning-org membership. The user's role in the owning org is evaluated
+    //    against the Better Auth access-control matrix (owner/admin → full
+    //    control, member → read). A denial here falls through to explicit
+    //    grants below, which can raise access but never lower it.
     if (ownership.organizationId) {
       const memberRows = await this.db
-        .select({
-          role: organizationMembers.role,
-          basePermission: organizations.basePermission,
-        })
+        .select({ role: organizationMembers.role })
         .from(organizationMembers)
-        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
         .where(
           and(
             eq(organizationMembers.organizationId, ownership.organizationId),
@@ -79,13 +75,9 @@ export class AuthorizationService {
         )
         .limit(1);
       if (memberRows.length > 0) {
-        const { role, basePermission } = memberRows[0];
-        // owner/admin → full control (roleCan grants "manage" only to them).
-        if (roleCan(role, "manage")) {
+        const { role } = memberRows[0];
+        if (orgRoleCan(role, req.resourceType, req.action)) {
           return { allow: true, reason: "org-role", role };
-        }
-        if (basePermissionCan(basePermission, req.action)) {
-          return { allow: true, reason: "org-base-permission", role };
         }
       }
     }
@@ -105,7 +97,7 @@ export class AuthorizationService {
         ),
       );
     for (const g of userGrants) {
-      if (roleCan(g.role, req.action)) {
+      if (grantRoleCan(g.role, req.resourceType, req.action)) {
         return { allow: true, reason: "resource-grant:user", role: g.role };
       }
     }
@@ -123,7 +115,7 @@ export class AuthorizationService {
         ),
       );
     for (const g of teamGrants) {
-      if (roleCan(g.role, req.action)) {
+      if (grantRoleCan(g.role, req.resourceType, req.action)) {
         return { allow: true, reason: "resource-grant:team", role: g.role };
       }
     }
@@ -144,7 +136,7 @@ export class AuthorizationService {
         ),
       );
     for (const g of orgGrants) {
-      if (roleCan(g.role, req.action)) {
+      if (grantRoleCan(g.role, req.resourceType, req.action)) {
         return { allow: true, reason: "resource-grant:org", role: g.role };
       }
     }
@@ -157,6 +149,25 @@ export class AuthorizationService {
     return { allow: false, reason: "forbidden" };
   }
 
+  /**
+   * Whether the user is a member (any role) of the given organization. Gates
+   * creating a resource into a specific org; the default create path targets the
+   * user's personal org, where they are always the owner.
+   */
+  async isOrgMember(userId: string, organizationId: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ userId: organizationMembers.userId })
+      .from(organizationMembers)
+      .where(
+        and(
+          eq(organizationMembers.organizationId, organizationId),
+          eq(organizationMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
   /** Public accessor for a resource's owning org + visibility (drives sharing UI). */
   getOwnership(resourceType: ResourceType, resourceId: string): Promise<ResourceOwnership | null> {
     return this.loadOwnership(resourceType, resourceId);
@@ -167,8 +178,8 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
-    // Experiments/macros/protocols/workbooks are org-scoped this phase; "device"
-    // (sensors) is not yet wired for org ownership, so treat it as not-found.
+    // Every shareable resource type (experiment/macro/protocol/workbook/device)
+    // is org-scoped and resolvable to its owning org + visibility here.
     const table =
       resourceType === "experiment"
         ? experiments
@@ -178,10 +189,7 @@ export class AuthorizationService {
             ? protocols
             : resourceType === "workbook"
               ? workbooks
-              : null;
-    if (!table) {
-      return null;
-    }
+              : iotDevices;
     const rows = await this.db
       .select({ organizationId: table.organizationId, visibility: table.visibility })
       .from(table)

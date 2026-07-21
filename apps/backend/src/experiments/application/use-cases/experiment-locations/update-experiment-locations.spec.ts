@@ -204,35 +204,6 @@ describe("UpdateExperimentLocationsUseCase", () => {
     expect(parseFloat(location.longitude)).toBeCloseTo(13.987654321, 8);
   });
 
-  it("should handle user access errors when user has no permission", async () => {
-    // Create a test user who will NOT have access
-    const anotherUserId = await testApp.createTestUser({});
-
-    // Create an experiment with testUserId (who becomes the creator/admin)
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const locationsToUpdate: CreateLocationDto[] = [
-      {
-        experimentId: experiment.id,
-        name: "Unauthorized Location Update",
-        latitude: 52.52,
-        longitude: 13.405,
-      },
-    ];
-
-    // Try to update locations as anotherUserId (who doesn't have access)
-    const result = await useCase.execute(experiment.id, locationsToUpdate, anotherUserId);
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    // Implementation changed to return a more specific forbidden message
-    expect(result.error.message).toContain("You do not have access to this experiment");
-  });
-
   it("should forbid any user from updating locations of archived experiments", async () => {
     // Create an archived experiment
     const { experiment } = await testApp.createExperiment({
@@ -240,15 +211,10 @@ describe("UpdateExperimentLocationsUseCase", () => {
       userId: testUserId,
     });
 
-    // Mock experimentRepository.checkAccess to return archived experiment
+    // Return an archived experiment so the use-case's domain rule is exercised.
     const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...experiment, status: "archived" },
-        hasAccess: true,
-        hasArchiveAccess: false,
-        isAdmin: true,
-      }),
+    vi.spyOn(experimentRepository, "findOne").mockResolvedValue(
+      success({ ...experiment, status: "archived" }),
     );
 
     const locationsToUpdate: CreateLocationDto[] = [
@@ -264,7 +230,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
-    expect(result.error.message).toContain("You do not have access to this experiment");
+    expect(result.error.message).toContain("Cannot modify an archived experiment");
   });
 
   it("should not affect locations of other experiments", async () => {

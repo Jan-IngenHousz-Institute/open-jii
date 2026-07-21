@@ -64,30 +64,6 @@ describe("UpdateExperimentMemberRoleUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return FORBIDDEN error if user is not an admin", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Update Test Experiment",
-      userId: testUserId,
-    });
-
-    // Create a non-admin user
-    const nonAdminId = await testApp.createTestUser({
-      email: "nonadmin@example.com",
-    });
-    const memberId = await testApp.createTestUser({
-      email: "member@example.com",
-    });
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
-    // Try to update member role as a non-admin user
-    const result = await useCase.execute(experiment.id, memberId, "admin", nonAdminId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should return FORBIDDEN when attempting to update member roles in an archived experiment", async () => {
     // Create an experiment and archive it
     const { experiment } = await testApp.createExperiment({

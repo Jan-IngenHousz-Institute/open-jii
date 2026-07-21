@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -9,10 +8,7 @@ import { MacroRepository } from "../../../core/repositories/macro.repository";
 export class DeleteMacroUseCase {
   private readonly logger = new Logger(DeleteMacroUseCase.name);
 
-  constructor(
-    private readonly macroRepository: MacroRepository,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(private readonly macroRepository: MacroRepository) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log({
@@ -37,22 +33,6 @@ export class DeleteMacroUseCase {
         userId,
       });
       return failure(AppError.notFound("Macro not found"));
-    }
-
-    const decision = await this.authz.can(userId, {
-      resourceType: "macro",
-      resourceId: id,
-      action: "manage",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized macro deletion attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "deleteMacro",
-        macroId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("You cannot delete this macro"));
     }
 
     const deleteResult = await this.macroRepository.delete(id);

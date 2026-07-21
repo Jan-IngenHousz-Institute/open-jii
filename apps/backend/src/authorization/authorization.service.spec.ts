@@ -1,3 +1,4 @@
+import type { ResourceAction } from "@repo/auth/access";
 import {
   ensurePersonalOrganization,
   grantResource,
@@ -9,13 +10,13 @@ import {
 } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
-import type { ResourceAction } from "./abilities";
 import { AuthorizationService } from "./authorization.service";
 
 /**
  * End-to-end tests for the org-scoped access resolution (can()), against a real
- * DB. Exercises the documented precedence: owning-org role → base permission →
- * per-resource grant (user → team → org) → public+read → deny.
+ * DB. Exercises the documented precedence: owning-org role (Better Auth access
+ * matrix: owner/admin → full, member → read) → per-resource grant
+ * (user → team → org) → public+read → deny.
  */
 describe("AuthorizationService.can", () => {
   const testApp = TestHarness.App;
@@ -63,14 +64,13 @@ describe("AuthorizationService.can", () => {
     return macro;
   }
 
-  /** Insert a shared org with a chosen base permission + a plain member. */
-  async function makeOrgWithMember(basePermission: "none" | "read" | "admin", memberEmail: string) {
+  /** Insert a shared org + a plain member of it. */
+  async function makeOrgWithMember(memberEmail: string) {
     const [org] = await testApp.database
       .insert(organizations)
       .values({
         name: `Org ${crypto.randomUUID()}`,
         slug: `org-${crypto.randomUUID()}`,
-        basePermission,
       })
       .returning();
     const memberId = await testApp.createTestUser({ email: memberEmail });
@@ -123,8 +123,8 @@ describe("AuthorizationService.can", () => {
     expect(update).toMatchObject({ allow: false, reason: "forbidden" });
   });
 
-  it("applies a 'read' base permission to a plain member (read only)", async () => {
-    const { orgId, memberId } = await makeOrgWithMember("read", "member-read@example.com");
+  it("gives a plain org member read-only access to the org's resources", async () => {
+    const { orgId, memberId } = await makeOrgWithMember("member-read@example.com");
     const macro = await makeMacro({ organizationId: orgId, visibility: "private" });
 
     const read = await authz.can(memberId, {
@@ -132,7 +132,7 @@ describe("AuthorizationService.can", () => {
       resourceId: macro.id,
       action: "read",
     });
-    expect(read).toMatchObject({ allow: true, reason: "org-base-permission" });
+    expect(read).toMatchObject({ allow: true, reason: "org-role", role: "member" });
 
     const update = await authz.can(memberId, {
       resourceType: "macro",
@@ -142,19 +142,19 @@ describe("AuthorizationService.can", () => {
     expect(update.allow).toBe(false);
   });
 
-  it("gives a plain member nothing under base permission 'none', but a user grant overrides it", async () => {
-    const { orgId, memberId } = await makeOrgWithMember("none", "member-none@example.com");
+  it("lets a user grant raise a member above their read-only org role", async () => {
+    const { orgId, memberId } = await makeOrgWithMember("member-grant@example.com");
     const macro = await makeMacro({ organizationId: orgId, visibility: "private" });
 
-    // Base permission none → no implicit access.
+    // Member's org role does not permit update.
     const before = await authz.can(memberId, {
       resourceType: "macro",
       resourceId: macro.id,
-      action: "read",
+      action: "update",
     });
-    expect(before).toMatchObject({ allow: false, reason: "forbidden" });
+    expect(before.allow).toBe(false);
 
-    // A direct user grant (admin) raises the member above the base permission.
+    // A direct user grant (admin) raises the member above their org role.
     await grantResource(testApp.database, {
       resourceType: "macro",
       resourceId: macro.id,
@@ -170,13 +170,23 @@ describe("AuthorizationService.can", () => {
     expect(after).toMatchObject({ allow: true, reason: "resource-grant:user", role: "admin" });
   });
 
+  it("denies a stranger on a private resource with no grant", async () => {
+    const orgId = await ensurePersonalOrganization(testApp.database, { id: ownerId });
+    const macro = await makeMacro({ organizationId: orgId, visibility: "private" });
+    const stranger = await testApp.createTestUser({ email: "nobody@example.com" });
+
+    const decision = await authz.can(stranger, {
+      resourceType: "macro",
+      resourceId: macro.id,
+      action: "read",
+    });
+    expect(decision).toMatchObject({ allow: false, reason: "forbidden" });
+  });
+
   it("honors a team grant for a user who belongs to the grantee team", async () => {
     const ownerOrgId = await ensurePersonalOrganization(testApp.database, { id: ownerId });
     const macro = await makeMacro({ organizationId: ownerOrgId, visibility: "private" });
-    const { orgId: granteeOrgId, memberId } = await makeOrgWithMember(
-      "none",
-      "team-grant@example.com",
-    );
+    const { orgId: granteeOrgId, memberId } = await makeOrgWithMember("team-grant@example.com");
     const [team] = await testApp.database
       .insert(teams)
       .values({ name: "Imaging", organizationId: granteeOrgId })
@@ -216,7 +226,7 @@ describe("AuthorizationService.can", () => {
 
     const [orgB] = await testApp.database
       .insert(organizations)
-      .values({ name: "Org B", slug: `org-b-${crypto.randomUUID()}`, basePermission: "none" })
+      .values({ name: "Org B", slug: `org-b-${crypto.randomUUID()}` })
       .returning();
     const outsider = await testApp.createTestUser({ email: "org-grant@example.com" });
     await testApp.database

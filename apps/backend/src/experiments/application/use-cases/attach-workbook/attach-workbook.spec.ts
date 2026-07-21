@@ -8,7 +8,6 @@ describe("AttachWorkbookUseCase", () => {
   let useCase: AttachWorkbookUseCase;
   let flowRepo: FlowRepository;
   let adminUserId: string;
-  let memberUserId: string;
   let experimentId: string;
   let workbookId: string;
 
@@ -19,7 +18,6 @@ describe("AttachWorkbookUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     adminUserId = await testApp.createTestUser({});
-    memberUserId = await testApp.createTestUser({ email: "member@test.com" });
     useCase = testApp.module.get(AttachWorkbookUseCase);
     flowRepo = testApp.module.get(FlowRepository);
 
@@ -28,8 +26,6 @@ describe("AttachWorkbookUseCase", () => {
       userId: adminUserId,
     });
     experimentId = experiment.id;
-
-    await testApp.addExperimentMember(experimentId, memberUserId, "member");
 
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
@@ -63,12 +59,6 @@ describe("AttachWorkbookUseCase", () => {
     );
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
-  });
-
-  it("returns failure when user is not admin", async () => {
-    const result = await useCase.execute(experimentId, workbookId, memberUserId);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
   });
 
   it("returns failure when workbook not found", async () => {

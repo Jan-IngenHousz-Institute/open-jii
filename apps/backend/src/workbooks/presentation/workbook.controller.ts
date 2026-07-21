@@ -5,6 +5,8 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -31,13 +33,14 @@ export class WorkbookController {
     private readonly getWorkbookVersionUseCase: GetWorkbookVersionUseCase,
   ) {}
 
+  @CanCreateInOrg()
   @Implement(workbookContract.createWorkbook)
   createWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.createWorkbook).handler(async ({ input }) => {
       const result = await this.createWorkbookUseCase.execute(
         input as CreateWorkbookDto,
         session.user.id,
-        session.session.activeOrganizationId ?? null,
+        input.organizationId ?? null,
       );
 
       if (result.isSuccess()) {
@@ -48,10 +51,11 @@ export class WorkbookController {
     });
   }
 
+  @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbook)
-  getWorkbook(@Session() session: UserSession) {
+  getWorkbook() {
     return implement(workbookContract.getWorkbook).handler(async ({ input }) => {
-      const result = await this.getWorkbookUseCase.execute(input.id, session.user.id);
+      const result = await this.getWorkbookUseCase.execute(input.id);
 
       if (isSuccess(result)) {
         return formatDates(result.value);
@@ -78,6 +82,7 @@ export class WorkbookController {
     });
   }
 
+  @CanAccess({ resource: "workbook", action: "update" })
   @Implement(workbookContract.updateWorkbook)
   updateWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.updateWorkbook).handler(async ({ input }) => {
@@ -96,6 +101,7 @@ export class WorkbookController {
     });
   }
 
+  @CanAccess({ resource: "workbook", action: "manage" })
   @Implement(workbookContract.deleteWorkbook)
   deleteWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.deleteWorkbook).handler(async ({ input }) => {
@@ -109,6 +115,7 @@ export class WorkbookController {
     });
   }
 
+  @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.listWorkbookVersions)
   listWorkbookVersions() {
     return implement(workbookContract.listWorkbookVersions).handler(async ({ input }) => {
@@ -122,6 +129,7 @@ export class WorkbookController {
     });
   }
 
+  @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbookVersion)
   getWorkbookVersion() {
     return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {

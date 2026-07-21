@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { Readable } from "stream";
 import { expect } from "vitest";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
@@ -13,6 +14,7 @@ import { ListExportsUseCase } from "../application/use-cases/experiment-data-exp
 describe("ExperimentDataExportsController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let readableExperimentId: string;
   let initiateExportUseCase: InitiateExportUseCase;
   let listExportsUseCase: ListExportsUseCase;
   let downloadExportUseCase: DownloadExportUseCase;
@@ -24,6 +26,11 @@ describe("ExperimentDataExportsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Readable experiment",
+      userId: testUserId,
+    });
+    readableExperimentId = experiment.id;
     initiateExportUseCase = testApp.module.get(InitiateExportUseCase);
     listExportsUseCase = testApp.module.get(ListExportsUseCase);
     downloadExportUseCase = testApp.module.get(DownloadExportUseCase);
@@ -39,7 +46,7 @@ describe("ExperimentDataExportsController", () => {
 
   describe("initiateExport", () => {
     it("should return 201 when export is initiated successfully", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
 
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(success({ status: "pending" }));
 
@@ -58,7 +65,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 404 when experiment not found", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Experiment not found")),
       );
@@ -71,7 +78,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 403 when access denied", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(initiateExportUseCase, "execute").mockResolvedValue(
         failure(AppError.forbidden("Access denied")),
       );
@@ -86,7 +93,7 @@ describe("ExperimentDataExportsController", () => {
 
   describe("listExports", () => {
     it("should return 200 with exports list, stripping fields outside the contract", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const exportRecord = {
         exportId: faker.string.uuid(),
         experimentId,
@@ -117,7 +124,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 404 when experiment not found", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Experiment not found")),
       );
@@ -129,7 +136,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 403 when access denied", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
         failure(AppError.forbidden("Access denied")),
       );
@@ -143,7 +150,7 @@ describe("ExperimentDataExportsController", () => {
 
   describe("downloadExport", () => {
     it("should return 200 streaming the export file", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const exportId = faker.string.uuid();
       const fileContents = "col1,col2\n1,2\n";
 
@@ -165,7 +172,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 404 when export not found", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const exportId = faker.string.uuid();
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Export not found")),
@@ -178,7 +185,7 @@ describe("ExperimentDataExportsController", () => {
     });
 
     it("should return 500 when download fails", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const exportId = faker.string.uuid();
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
         failure(AppError.internal("Download failed")),
@@ -188,6 +195,43 @@ describe("ExperimentDataExportsController", () => {
         .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
         .withAuth(testUserId)
         .expect(500);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "initiate export",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(`/api/v1/experiments/${experimentId}/data/exports`)
+            .withAuth(userId)
+            .send({ tableName: "raw_data", format: "csv" }),
+      },
+      {
+        name: "list exports",
+        request: (experimentId: string, userId: string) =>
+          testApp.get(`/api/v1/experiments/${experimentId}/data/exports`).withAuth(userId),
+      },
+      {
+        name: "download export",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(`/api/v1/experiments/${experimentId}/data/exports/${faker.string.uuid()}`)
+            .withAuth(userId),
+      },
+    ])("requires read access to $name", async ({ request }) => {
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(readableExperimentId, unrelatedUserId).expect(403);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: readableExperimentId,
+        action: "read",
+      });
     });
   });
 });

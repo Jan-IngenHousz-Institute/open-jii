@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentMetadataContract } from "@repo/api/domains/experiment/metadata/experiment-metadata.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/create-experiment-metadata";
@@ -23,6 +24,7 @@ export class ExperimentMetadataController {
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentMetadataContract.listExperimentMetadata)
   listExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.listExperimentMetadata).handler(
@@ -36,6 +38,7 @@ export class ExperimentMetadataController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentMetadataContract.createExperimentMetadata)
   createExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.createExperimentMetadata).handler(
@@ -54,6 +57,7 @@ export class ExperimentMetadataController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentMetadataContract.updateExperimentMetadata)
   updateExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.updateExperimentMetadata).handler(
@@ -73,6 +77,7 @@ export class ExperimentMetadataController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentMetadataContract.deleteExperimentMetadata)
   deleteExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.deleteExperimentMetadata).handler(

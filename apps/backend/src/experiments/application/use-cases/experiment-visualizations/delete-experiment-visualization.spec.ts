@@ -4,7 +4,6 @@ import { assertFailure, assertSuccess, failure, success } from "../../../../comm
 import { TestHarness } from "../../../../test/test-harness";
 import type { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { DeleteExperimentVisualizationUseCase } from "./delete-experiment-visualization";
 
 describe("DeleteExperimentVisualizationUseCase", () => {
@@ -12,7 +11,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
   let testUserId: string;
   let useCase: DeleteExperimentVisualizationUseCase;
   let experimentVisualizationRepository: ExperimentVisualizationRepository;
-  let experimentRepository: ExperimentRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -23,7 +21,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(DeleteExperimentVisualizationUseCase);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
-    experimentRepository = testApp.module.get(ExperimentRepository);
   });
 
   afterEach(() => {
@@ -59,15 +56,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
         success(mockVisualization),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
       );
 
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
@@ -126,15 +114,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         success(differentUserVisualization),
       );
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
 
       // Act
@@ -171,15 +150,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         success(mockVisualization),
       );
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(
         failure({
           message: "Database error",
@@ -199,15 +169,11 @@ describe("DeleteExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when visualization belongs to non-existent experiment", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
       // Arrange
+      const nonExistentExperimentId = faker.string.uuid();
       const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId: experiment.id,
+        experimentId: nonExistentExperimentId,
         name: "Test Visualization",
         description: null,
         chartFamily: "basic",
@@ -223,67 +189,13 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         success(mockVisualization),
       );
 
-      // Mock experiment access to return null experiment (experiment doesn't exist)
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: null,
-          hasAccess: false,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
       // Act
       const result = await useCase.execute(visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toBe(`Experiment with ID ${experiment.id} not found`);
-    });
-
-    it("should fail when user does not have access to experiment", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
-      );
-
-      // Mock experiment access to return experiment but no access
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, createdBy: "another-user-id" },
-          hasAccess: false,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(visualizationId, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have access to this experiment");
+      expect(result.error.message).toBe(`Experiment with ID ${nonExistentExperimentId} not found`);
     });
 
     it("should allow any experiment member to delete visualization even if not creator", async () => {
@@ -310,16 +222,6 @@ describe("DeleteExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
         success(mockVisualization),
-      );
-
-      // Mock experiment access with regular member privileges (not admin)
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false, // Not an admin, just a regular member
-        }),
       );
 
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
@@ -350,6 +252,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       // Create an archived experiment
       const { experiment } = await testApp.createExperiment({
         name: "Archived Experiment",
+        status: "archived",
         userId: testUserId,
       });
 
@@ -371,23 +274,13 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         success(mockVisualization),
       );
 
-      // Mock experimentRepository.checkAccess to return archived experiment
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, status: "archived" },
-          hasAccess: true,
-          hasArchiveAccess: false,
-          isAdmin: true,
-        }),
-      );
-
       // Act
       const result = await useCase.execute(visualizationId, testUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("You do not have access to this experiment");
+      expect(result.error.message).toContain("Cannot modify an archived experiment");
     });
   });
 });

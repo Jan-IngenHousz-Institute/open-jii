@@ -72,22 +72,21 @@ describe("IotDeviceRepository", () => {
     expect(result.value).toHaveLength(2);
   });
 
-  it("returns null from findByIdForOwner for a missing device", async () => {
-    const result = await repository.findByIdForOwner(faker.string.uuid(), userId);
+  it("returns null from findById for a missing device", async () => {
+    const result = await repository.findById(faker.string.uuid());
 
     assertSuccess(result);
     expect(result.value).toBeNull();
   });
 
-  it("does not return another owner's device", async () => {
+  it("findById is not owner-scoped (authorization is enforced by the @CanAccess guard)", async () => {
     const created = await repository.create(buildDto(), userId);
     assertSuccess(created);
-    const otherUser = await testApp.createTestUser({});
 
-    const result = await repository.findByIdForOwner(created.value[0].id, otherUser);
+    const result = await repository.findById(created.value[0].id);
 
     assertSuccess(result);
-    expect(result.value).toBeNull();
+    expect(result.value?.id).toBe(created.value[0].id);
   });
 
   it("finds a device by serial number", async () => {
@@ -126,7 +125,7 @@ describe("IotDeviceRepository", () => {
     const created = await repository.create(buildDto(), userId);
     assertSuccess(created);
 
-    const del = await repository.delete(created.value[0].id, userId);
+    const del = await repository.delete(created.value[0].id);
 
     assertSuccess(del);
     const rows = await testApp.database

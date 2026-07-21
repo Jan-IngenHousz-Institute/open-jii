@@ -39,82 +39,68 @@ export class DeleteExperimentVisualizationUseCase {
         return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
       }
 
-      // Check if experiment exists and if user has access
-      const accessResult = await this.experimentRepository.checkAccess(
-        visualization.experimentId,
-        userId,
-      );
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // The experiment is still loaded to enforce the archived-state domain rule.
+      const experimentResult = await this.experimentRepository.findOne(visualization.experimentId);
 
-      return accessResult.chain(
-        async ({
-          experiment,
-          hasArchiveAccess,
-        }: {
-          experiment: ExperimentDto | null;
-          hasAccess: boolean;
-          hasArchiveAccess: boolean;
-        }) => {
-          if (!experiment) {
-            this.logger.warn({
-              msg: "Visualization belongs to non-existent experiment",
-              operation: "deleteExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(
-              AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
-            );
-          }
-
-          if (!hasArchiveAccess) {
-            this.logger.warn({
-              msg: "User does not have access to experiment",
-              operation: "deleteExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-            });
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
-
-          // Any experiment member can delete visualizations
-          // No need to check if user is creator or admin, as long as they have access to the experiment
-
-          this.logger.debug({
-            msg: "Deleting visualization from repository",
+      return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+        if (!experiment) {
+          this.logger.warn({
+            msg: "Visualization belongs to non-existent experiment",
             operation: "deleteExperimentVisualization",
             experimentId: visualization.experimentId,
             visualizationId,
             userId,
           });
-          // Delete the visualization
-          const deleteResult = await this.experimentVisualizationRepository.delete(visualizationId);
+          return failure(
+            AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
+          );
+        }
 
-          if (deleteResult.isFailure()) {
-            this.logger.error({
-              msg: "Failed to delete visualization",
-              errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_DELETE_FAILED,
-              operation: "deleteExperimentVisualization",
-              experimentId: visualization.experimentId,
-              visualizationId,
-              userId,
-              error: deleteResult.error.message,
-            });
-            return failure(AppError.internal("Failed to delete visualization"));
-          }
-
-          this.logger.log({
-            msg: "Successfully deleted visualization",
+        if (experiment.status === "archived") {
+          this.logger.warn({
+            msg: "Attempt to delete visualization in an archived experiment",
             operation: "deleteExperimentVisualization",
             experimentId: visualization.experimentId,
             visualizationId,
             userId,
-            status: "success",
           });
-          return success(undefined);
-        },
-      );
+          return failure(AppError.forbidden("Cannot modify an archived experiment"));
+        }
+
+        this.logger.debug({
+          msg: "Deleting visualization from repository",
+          operation: "deleteExperimentVisualization",
+          experimentId: visualization.experimentId,
+          visualizationId,
+          userId,
+        });
+        // Delete the visualization
+        const deleteResult = await this.experimentVisualizationRepository.delete(visualizationId);
+
+        if (deleteResult.isFailure()) {
+          this.logger.error({
+            msg: "Failed to delete visualization",
+            errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_DELETE_FAILED,
+            operation: "deleteExperimentVisualization",
+            experimentId: visualization.experimentId,
+            visualizationId,
+            userId,
+            error: deleteResult.error.message,
+          });
+          return failure(AppError.internal("Failed to delete visualization"));
+        }
+
+        this.logger.log({
+          msg: "Successfully deleted visualization",
+          operation: "deleteExperimentVisualization",
+          experimentId: visualization.experimentId,
+          visualizationId,
+          userId,
+          status: "success",
+        });
+        return success(undefined);
+      });
     });
   }
 }

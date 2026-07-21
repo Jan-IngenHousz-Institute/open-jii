@@ -15,51 +15,46 @@ export class DetachWorkbookUseCase {
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentDto>> {
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
-        if (!experiment) {
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      if (!experiment.workbookId) {
+        return failure(AppError.badRequest("Experiment does not have an attached workbook"));
+      }
+
+      // Clear workbookId but keep workbookVersionId for historical reference
+      const updateResult = await this.experimentRepository.update(experimentId, {
+        workbookId: null,
+      });
+
+      if (updateResult.isFailure()) {
+        return updateResult;
+      }
+
+      // Drop the materialised flow row so mobile stops seeing a graph for an experiment with no workbook.
+      const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
+      if (flowDeleteResult.isFailure()) {
+        return flowDeleteResult;
+      }
+
+      this.logger.log({
+        msg: "Workbook detached from experiment",
+        operation: "detachWorkbook",
+        experimentId,
+        userId,
+        previousWorkbookId: experiment.workbookId,
+      });
+
+      return updateResult.chain((experiments: ExperimentDto[]) => {
+        if (experiments.length === 0) {
+          return failure(AppError.internal("Failed to detach workbook"));
         }
-
-        if (!isAdmin) {
-          return failure(AppError.forbidden("Only admins can detach workbooks from experiments"));
-        }
-
-        if (!experiment.workbookId) {
-          return failure(AppError.badRequest("Experiment does not have an attached workbook"));
-        }
-
-        // Clear workbookId but keep workbookVersionId for historical reference
-        const updateResult = await this.experimentRepository.update(experimentId, {
-          workbookId: null,
-        });
-
-        if (updateResult.isFailure()) {
-          return updateResult;
-        }
-
-        // Drop the materialised flow row so mobile stops seeing a graph for an experiment with no workbook.
-        const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
-        if (flowDeleteResult.isFailure()) {
-          return flowDeleteResult;
-        }
-
-        this.logger.log({
-          msg: "Workbook detached from experiment",
-          operation: "detachWorkbook",
-          experimentId,
-          previousWorkbookId: experiment.workbookId,
-        });
-
-        return updateResult.chain((experiments: ExperimentDto[]) => {
-          if (experiments.length === 0) {
-            return failure(AppError.internal("Failed to detach workbook"));
-          }
-          return success(experiments[0]);
-        });
-      },
-    );
+        return success(experiments[0]);
+      });
+    });
   }
 }

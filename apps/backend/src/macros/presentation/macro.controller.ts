@@ -6,6 +6,8 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { macroContract } from "@repo/api/domains/macro/macro.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -39,13 +41,14 @@ export class MacroController {
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
   ) {}
 
+  @CanCreateInOrg()
   @Implement(macroContract.createMacro)
   createMacro(@Session() session: UserSession) {
     return implement(macroContract.createMacro).handler(async ({ input }) => {
       const result = await this.createMacroUseCase.execute(
         input,
         session.user.id,
-        session.session.activeOrganizationId ?? null,
+        input.organizationId ?? null,
       );
 
       if (result.isSuccess()) {
@@ -55,6 +58,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.getMacro)
   getMacro() {
     return implement(macroContract.getMacro).handler(async ({ input }) => {
@@ -82,6 +86,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "update" })
   @Implement(macroContract.updateMacro)
   updateMacro(@Session() session: UserSession) {
     return implement(macroContract.updateMacro).handler(async ({ input }) => {
@@ -106,6 +111,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "manage" })
   @Implement(macroContract.deleteMacro)
   deleteMacro(@Session() session: UserSession) {
     return implement(macroContract.deleteMacro).handler(async ({ input }) => {
@@ -130,6 +136,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.listCompatibleProtocols)
   listCompatibleProtocols() {
     return implement(macroContract.listCompatibleProtocols).handler(async ({ input }) => {
@@ -141,6 +148,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "update" })
   @Implement(macroContract.addCompatibleProtocols)
   addCompatibleProtocols(@Session() session: UserSession) {
     return implement(macroContract.addCompatibleProtocols).handler(async ({ input }) => {
@@ -156,6 +164,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "update" })
   @Implement(macroContract.removeCompatibleProtocol)
   removeCompatibleProtocol(@Session() session: UserSession) {
     return implement(macroContract.removeCompatibleProtocol).handler(async ({ input }) => {

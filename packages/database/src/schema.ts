@@ -685,10 +685,22 @@ export const iotDevices = pgTable(
     status: deviceStatusEnum("status").default("pending").notNull(),
     certificateId: text("certificate_id"),
     certificateArn: text("certificate_arn"),
+    // Org-scoped access control. RESTRICT (not cascade, unlike other resources):
+    // a device owns a live AWS IoT Thing + certificate, so deleting its org must
+    // not silently orphan those — devices must first be removed via
+    // DeleteIotDeviceUseCase (which tears down the AWS resources).
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    // Devices are owner-private by default (not a public catalog like macros).
+    visibility: visibilityEnum("visibility").default("private").notNull(),
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
     ...timestamps,
   },
-  (t) => [index("iot_devices_created_by_idx").on(t.createdBy)],
+  (t) => [
+    index("iot_devices_created_by_idx").on(t.createdBy),
+    index("iot_devices_organization_id_idx").on(t.organizationId),
+  ],
 );

@@ -1,6 +1,14 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers, inArray, users, profiles } from "@repo/database";
+import {
+  and,
+  eq,
+  experimentMembers,
+  inArray,
+  resourceGrants,
+  users,
+  profiles,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -64,6 +72,13 @@ export class ExperimentMemberRepository {
           role: m.role,
         })),
       );
+
+      // Mirror membership into resource_grants so can() authorizes members
+      // (admin -> full control, member -> read). experiment_members itself
+      // remains only the contributor layer (measurements/annotations).
+      for (const m of members) {
+        await this.upsertMemberGrant(experimentId, m.userId, m.role);
+      }
 
       const userIds = members.map((m) => m.userId);
 
@@ -129,6 +144,18 @@ export class ExperimentMemberRepository {
           ),
         );
 
+      // Revoke the mirrored resource grant so access is removed via can().
+      await this.database
+        .delete(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, userId),
+          ),
+        );
+
       // Explicitly return void
       return undefined;
     });
@@ -190,6 +217,9 @@ export class ExperimentMemberRepository {
           ),
         );
 
+      // Keep the mirrored resource grant in sync with the new role.
+      await this.upsertMemberGrant(experimentId, userId, role);
+
       const result = await this.database
         .select({
           experimentId: experimentMembers.experimentId,
@@ -216,5 +246,37 @@ export class ExperimentMemberRepository {
 
       return result[0];
     });
+  }
+
+  /**
+   * Upsert the resource grant that mirrors an experiment membership. Experiment
+   * admins get an "admin" grant (full control via can()); members get a
+   * "member" grant (read-only). This keeps resource_grants the single
+   * authorization source while experiment_members stays the contributor layer.
+   */
+  private async upsertMemberGrant(
+    experimentId: string,
+    userId: string,
+    role: ExperimentMemberRole | undefined,
+  ): Promise<void> {
+    const grantRole = role === "admin" ? "admin" : "member";
+    await this.database
+      .insert(resourceGrants)
+      .values({
+        resourceType: "experiment",
+        resourceId: experimentId,
+        granteeType: "user",
+        granteeId: userId,
+        role: grantRole,
+      })
+      .onConflictDoUpdate({
+        target: [
+          resourceGrants.resourceType,
+          resourceGrants.resourceId,
+          resourceGrants.granteeType,
+          resourceGrants.granteeId,
+        ],
+        set: { role: grantRole },
+      });
   }
 }

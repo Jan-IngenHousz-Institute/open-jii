@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto, UpdateProtocolDto } from "../../../core/models/protocol.model";
@@ -10,10 +9,7 @@ import { ProtocolRepository } from "../../../core/repositories/protocol.reposito
 export class UpdateProtocolUseCase {
   private readonly logger = new Logger(UpdateProtocolUseCase.name);
 
-  constructor(
-    private readonly protocolRepository: ProtocolRepository,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(private readonly protocolRepository: ProtocolRepository) {}
 
   async execute(
     id: string,
@@ -24,6 +20,7 @@ export class UpdateProtocolUseCase {
       msg: "Updating protocol",
       operation: "updateProtocol",
       protocolId: id,
+      userId,
     });
 
     // Check if protocol exists
@@ -42,22 +39,6 @@ export class UpdateProtocolUseCase {
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
-    }
-
-    const decision = await this.authz.can(userId, {
-      resourceType: "protocol",
-      resourceId: id,
-      action: "update",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized protocol update attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "updateProtocol",
-        protocolId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("You cannot update this protocol"));
     }
 
     // Protocol exists, now update it

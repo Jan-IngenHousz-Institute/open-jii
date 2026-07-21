@@ -27,44 +27,25 @@ export class ListExportsUseCase {
       msg: "Listing exports",
       operation: "listExports",
       experimentId,
+      userId,
       tableName: query.tableName,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-
-    if (accessResult.isFailure()) {
-      this.logger.warn({
-        msg: "Failed to check access for experiment",
-        operation: "listExports",
-        experimentId,
-      });
-      return failure(AppError.internal("Failed to verify experiment access"));
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
     }
-
-    const { experiment, hasAccess } = accessResult.value;
-
-    if (!experiment) {
+    if (!experimentResult.value) {
       this.logger.warn({
-        msg: "Experiment not found",
+        msg: "Attempt to list exports of non-existent experiment",
         errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-        operation: "listExports",
-        experimentId,
-      });
-      return failure(AppError.notFound("Experiment not found"));
-    }
-
-    if (!hasAccess && experiment.visibility !== "public") {
-      this.logger.warn({
-        msg: "Access denied to experiment",
-        errorCode: ErrorCodes.FORBIDDEN,
         operation: "listExports",
         experimentId,
         userId,
       });
-      return failure(AppError.forbidden("Access denied to this experiment"));
+      return failure(AppError.notFound("Experiment not found"));
     }
 
-    // Get all exports (active and completed) from repository
     const exportsResult = await this.exportsRepository.listExports({
       experimentId,
       tableName: query.tableName,
@@ -75,6 +56,7 @@ export class ListExportsUseCase {
         msg: "Failed to list exports",
         operation: "listExports",
         experimentId,
+        userId,
         tableName: query.tableName,
         error: exportsResult.error.message,
       });
@@ -91,6 +73,7 @@ export class ListExportsUseCase {
       msg: "Exports listed successfully",
       operation: "listExports",
       experimentId,
+      userId,
       tableName: query.tableName,
       activeCount,
       completedCount,

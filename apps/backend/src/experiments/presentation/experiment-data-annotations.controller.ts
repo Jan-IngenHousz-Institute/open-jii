@@ -6,6 +6,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { experimentDataAnnotationsContract } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.contract";
 import type { ExperimentAddAnnotationsBulkBody } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
+import { CanContributeToExperiment } from "../../authorization/can-contribute-to-experiment.guard";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/add-annotations/add-annotations";
 import { DeleteAnnotationsUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotations/delete-annotations";
@@ -21,6 +22,7 @@ export class ExperimentDataAnnotationsController {
     private readonly deleteAnnotationsUseCase: DeleteAnnotationsUseCase,
   ) {}
 
+  @CanContributeToExperiment()
   @Implement(experimentDataAnnotationsContract.addAnnotation)
   addAnnotation(@Session() session: UserSession) {
     return implement(experimentDataAnnotationsContract.addAnnotation).handler(async ({ input }) => {
@@ -38,6 +40,7 @@ export class ExperimentDataAnnotationsController {
     });
   }
 
+  @CanContributeToExperiment()
   @Implement(experimentDataAnnotationsContract.addAnnotationsBulk)
   addAnnotationsBulk(@Session() session: UserSession) {
     return implement(experimentDataAnnotationsContract.addAnnotationsBulk).handler(
@@ -52,6 +55,7 @@ export class ExperimentDataAnnotationsController {
     );
   }
 
+  @CanContributeToExperiment()
   @Implement(experimentDataAnnotationsContract.updateAnnotation)
   updateAnnotation(@Session() session: UserSession) {
     return implement(experimentDataAnnotationsContract.updateAnnotation).handler(
@@ -71,6 +75,7 @@ export class ExperimentDataAnnotationsController {
     );
   }
 
+  @CanContributeToExperiment()
   @Implement(experimentDataAnnotationsContract.deleteAnnotation)
   deleteAnnotation(@Session() session: UserSession) {
     return implement(experimentDataAnnotationsContract.deleteAnnotation).handler(
@@ -88,6 +93,7 @@ export class ExperimentDataAnnotationsController {
     );
   }
 
+  @CanContributeToExperiment()
   @Implement(experimentDataAnnotationsContract.deleteAnnotationsBulk)
   deleteAnnotationBulk(@Session() session: UserSession) {
     return implement(experimentDataAnnotationsContract.deleteAnnotationsBulk).handler(

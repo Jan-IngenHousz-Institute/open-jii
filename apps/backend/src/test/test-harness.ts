@@ -25,6 +25,7 @@ import {
   profiles,
   protocols,
   organizations,
+  organizationMembers,
   flows,
   macros,
   workbooks,
@@ -208,9 +209,10 @@ export class TestHarness {
     // Macros reference users, so delete macros before users
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
-    await this.database.delete(organizations).execute();
-    // IoT devices reference users, delete before users
+    // IoT devices reference organizations with a RESTRICT FK (AWS-safety, no
+    // cascade), so they must be deleted before organizations.
     await this.database.delete(iotDevices).execute();
+    await this.database.delete(organizations).execute();
     // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
     await this.database.delete(accounts).execute();
@@ -409,7 +411,45 @@ export class TestHarness {
       })
       .returning();
 
+    // Mirror the membership into resource_grants (admin -> admin, member ->
+    // member), exactly as the production ExperimentMemberRepository does, so
+    // can()-based authorization (isAdmin) resolves for test-seeded members.
+    await this.database
+      .insert(resourceGrants)
+      .values({
+        resourceType: "experiment",
+        resourceId: experimentId,
+        granteeType: "user",
+        granteeId: userId,
+        role: role === "admin" ? "admin" : "member",
+      })
+      .onConflictDoNothing();
+
     return membership;
+  }
+
+  public async addOrganizationMember(
+    organizationId: string,
+    userId: string,
+    role: "owner" | "admin" | "member" = "member",
+  ) {
+    const [membership] = await this.database
+      .insert(organizationMembers)
+      .values({ organizationId, userId, role })
+      .returning();
+
+    return membership;
+  }
+
+  public async addResourceGrant(data: {
+    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device";
+    resourceId: string;
+    granteeType: "user" | "team" | "organization";
+    granteeId: string;
+    role: "owner" | "admin" | "member" | "viewer";
+  }) {
+    const [grant] = await this.database.insert(resourceGrants).values(data).returning();
+    return grant;
   }
 
   /**
@@ -480,6 +520,9 @@ export class TestHarness {
   }) {
     const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
     const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
+    // Own the device with the creator's personal org (creator = owner member) so
+    // the @CanAccess guard authorizes the creator, mirroring register-on-create.
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [device] = await this.database
       .insert(iotDevices)
       .values({
@@ -492,6 +535,7 @@ export class TestHarness {
         certificateId: data.certificateId ?? null,
         certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return device;

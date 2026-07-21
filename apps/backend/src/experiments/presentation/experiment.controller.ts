@@ -6,6 +6,8 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentContract } from "@repo/api/domains/experiment/experiment.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -33,18 +35,20 @@ export class ExperimentController {
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
   ) {}
 
+  @CanCreateInOrg()
   @Implement(experimentContract.createExperiment)
   createExperiment(@Session() session: UserSession) {
     return implement(experimentContract.createExperiment).handler(async ({ input }) => {
+      const { organizationId, ...rest } = input;
       const transformedBody = {
-        ...input,
-        embargoUntil: input.embargoUntil ? new Date(input.embargoUntil) : undefined,
+        ...rest,
+        embargoUntil: rest.embargoUntil ? new Date(rest.embargoUntil) : undefined,
       };
 
       const result = await this.createExperimentUseCase.execute(
         transformedBody,
         session.user.id,
-        session.session.activeOrganizationId ?? null,
+        organizationId ?? null,
       );
 
       if (result.isSuccess()) {
@@ -70,6 +74,7 @@ export class ExperimentController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentContract.getExperiment)
   getExperiment(@Session() session: UserSession) {
     return implement(experimentContract.getExperiment).handler(async ({ input }) => {
@@ -81,6 +86,7 @@ export class ExperimentController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentContract.getExperimentAccess)
   getExperimentAccess(@Session() session: UserSession) {
     return implement(experimentContract.getExperimentAccess).handler(async ({ input }) => {
@@ -95,19 +101,16 @@ export class ExperimentController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "update" })
   @Implement(experimentContract.updateExperiment)
-  updateExperiment(@Session() session: UserSession) {
+  updateExperiment() {
     return implement(experimentContract.updateExperiment).handler(async ({ input }) => {
       const { id, ...body } = input;
       const transformedBody = {
         ...body,
         embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
       };
-      const result = await this.updateExperimentUseCase.execute(
-        id,
-        transformedBody,
-        session.user.id,
-      );
+      const result = await this.updateExperimentUseCase.execute(id, transformedBody);
       if (result.isSuccess()) {
         return formatDates(result.value);
       }
@@ -115,6 +118,7 @@ export class ExperimentController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentContract.deleteExperiment)
   deleteExperiment(@Session() session: UserSession) {
     return implement(experimentContract.deleteExperiment).handler(async ({ input }) => {
@@ -131,7 +135,7 @@ export class ExperimentController {
         );
       }
 
-      const result = await this.deleteExperimentUseCase.execute(input.id, session.user.id);
+      const result = await this.deleteExperimentUseCase.execute(input.id);
       if (result.isSuccess()) {
         return undefined;
       }

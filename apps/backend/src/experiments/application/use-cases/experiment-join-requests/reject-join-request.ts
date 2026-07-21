@@ -34,105 +34,89 @@ export class RejectJoinRequestUseCase {
       userId: currentUserId,
     });
 
-    const accessCheckResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      currentUserId,
-    );
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessCheckResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
-      }) => {
-        if (!experiment) {
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasArchiveAccess) {
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+      if (experiment.status === "archived") {
+        return failure(AppError.forbidden("You do not have access to this experiment"));
+      }
 
-        const requestResult = await this.joinRequestRepository.findById(requestId);
-        if (requestResult.isFailure()) {
-          return failure(AppError.internal("Failed to load join request"));
-        }
-        const existing = requestResult.value;
-        if (existing?.experimentId !== experimentId) {
-          return failure(AppError.notFound(`Join request ${requestId} not found`));
-        }
-        if (existing.status !== "pending") {
-          return failure(
-            AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT),
-          );
-        }
+      const requestResult = await this.joinRequestRepository.findById(requestId);
+      if (requestResult.isFailure()) {
+        return failure(AppError.internal("Failed to load join request"));
+      }
+      const existing = requestResult.value;
+      if (existing?.experimentId !== experimentId) {
+        return failure(AppError.notFound(`Join request ${requestId} not found`));
+      }
+      if (existing.status !== "pending") {
+        return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
+      }
 
-        // If the requester was added while this request was pending, surface that
-        // to the admin and avoid sending a confusing rejection email to a member.
-        const memberRoleResult = await this.memberRepository.getMemberRole(
-          experimentId,
-          existing.user.id,
-        );
-        if (memberRoleResult.isFailure()) {
-          return failure(AppError.internal("Failed to check requester membership"));
-        }
-        if (memberRoleResult.value) {
-          const cancelResult = await this.joinRequestRepository.markDecided(
-            requestId,
-            "cancelled",
-            currentUserId,
-          );
-          if (cancelResult.isFailure()) {
-            return failure(AppError.internal("Failed to close stale join request"));
-          }
-
-          return failure(
-            AppError.conflict(
-              "The user is already a member of the experiment",
-              ErrorCodes.CONFLICT,
-            ),
-          );
-        }
-
-        const rejectResult = await this.joinRequestRepository.markDecided(
+      // If the requester was added while this request was pending, surface that
+      // to the admin and avoid sending a confusing rejection email to a member.
+      const memberRoleResult = await this.memberRepository.getMemberRole(
+        experimentId,
+        existing.user.id,
+      );
+      if (memberRoleResult.isFailure()) {
+        return failure(AppError.internal("Failed to check requester membership"));
+      }
+      if (memberRoleResult.value) {
+        const cancelResult = await this.joinRequestRepository.markDecided(
           requestId,
-          "rejected",
+          "cancelled",
           currentUserId,
         );
-        if (rejectResult.isFailure()) {
+        if (cancelResult.isFailure()) {
+          return failure(AppError.internal("Failed to close stale join request"));
+        }
+
+        return failure(
+          AppError.conflict("The user is already a member of the experiment", ErrorCodes.CONFLICT),
+        );
+      }
+
+      const rejectResult = await this.joinRequestRepository.markDecided(
+        requestId,
+        "rejected",
+        currentUserId,
+      );
+      if (rejectResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to reject join request",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "reject-join-request",
+          experimentId,
+          requestId,
+          error: rejectResult.error,
+        });
+        return failure(AppError.internal("Failed to reject join request"));
+      }
+
+      const rejected = rejectResult.value;
+      if (rejected.user.email) {
+        const emailResult = await this.emailPort.sendJoinRequestRejectedNotification(
+          experimentId,
+          experiment.name,
+          rejected.user.email,
+        );
+        if (emailResult.isFailure()) {
           this.logger.error({
-            msg: "Failed to reject join request",
+            msg: "Failed to send rejection email; request was still rejected",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "reject-join-request",
             experimentId,
             requestId,
-            error: rejectResult.error,
+            email: rejected.user.email,
           });
-          return failure(AppError.internal("Failed to reject join request"));
         }
+      }
 
-        const rejected = rejectResult.value;
-        if (rejected.user.email) {
-          const emailResult = await this.emailPort.sendJoinRequestRejectedNotification(
-            experimentId,
-            experiment.name,
-            rejected.user.email,
-          );
-          if (emailResult.isFailure()) {
-            this.logger.error({
-              msg: "Failed to send rejection email; request was still rejected",
-              errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-              operation: "reject-join-request",
-              experimentId,
-              requestId,
-              email: rejected.user.email,
-            });
-          }
-        }
-
-        return success(rejected);
-      },
-    );
+      return success(rejected);
+    });
   }
 }

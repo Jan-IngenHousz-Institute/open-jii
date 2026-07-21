@@ -44,13 +44,6 @@ describe("GetIotDeviceUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 404 for another user's device", async () => {
-    const otherUser = await testApp.createTestUser({});
-    const device = await testApp.createIotDevice({ createdBy: otherUser });
-
-    const result = await useCase.execute(device.id, userId);
-
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(404);
-  });
+  // Non-owner access is denied by the @CanAccess guard (device/read), covered in
+  // authorization.service.spec + the controller spec — not by the use-case.
 });

@@ -59,14 +59,6 @@ describe("UpdateWorkbookUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 403 when non-owner tries to update", async () => {
-    const otherUser = await testApp.createTestUser({});
-    const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
-    const result = await useCase.execute(workbook.id, { name: "Hacked" }, otherUser);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-  });
-
   it("preserves fields not included in the update", async () => {
     const workbook = await testApp.createWorkbook({
       name: "WB",

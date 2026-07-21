@@ -34,116 +34,100 @@ export class ApproveJoinRequestUseCase {
       userId: currentUserId,
     });
 
-    const accessCheckResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      currentUserId,
-    );
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessCheckResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
-      }) => {
-        if (!experiment) {
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasArchiveAccess) {
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+      if (experiment.status === "archived") {
+        return failure(AppError.forbidden("You do not have access to this experiment"));
+      }
 
-        const requestResult = await this.joinRequestRepository.findById(requestId);
-        if (requestResult.isFailure()) {
-          return failure(AppError.internal("Failed to load join request"));
-        }
-        const existing = requestResult.value;
-        if (existing?.experimentId !== experimentId) {
-          return failure(AppError.notFound(`Join request ${requestId} not found`));
-        }
-        if (existing.status !== "pending") {
-          return failure(
-            AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT),
-          );
-        }
-        // If the requester was added while this request was pending, surface that
-        // to the admin and avoid sending a confusing duplicate membership email.
-        const memberRoleResult = await this.memberRepository.getMemberRole(
-          experimentId,
-          existing.user.id,
-        );
-        if (memberRoleResult.isFailure()) {
-          return failure(AppError.internal("Failed to check requester membership"));
-        }
-        if (memberRoleResult.value) {
-          const cancelResult = await this.joinRequestRepository.markDecided(
-            requestId,
-            "cancelled",
-            currentUserId,
-          );
-          if (cancelResult.isFailure()) {
-            return failure(AppError.internal("Failed to close stale join request"));
-          }
-
-          return failure(
-            AppError.conflict(
-              "The user is already a member of the experiment",
-              ErrorCodes.CONFLICT,
-            ),
-          );
-        }
-
-        const approveResult = await this.joinRequestRepository.approve(
+      const requestResult = await this.joinRequestRepository.findById(requestId);
+      if (requestResult.isFailure()) {
+        return failure(AppError.internal("Failed to load join request"));
+      }
+      const existing = requestResult.value;
+      if (existing?.experimentId !== experimentId) {
+        return failure(AppError.notFound(`Join request ${requestId} not found`));
+      }
+      if (existing.status !== "pending") {
+        return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
+      }
+      // If the requester was added while this request was pending, surface that
+      // to the admin and avoid sending a confusing duplicate membership email.
+      const memberRoleResult = await this.memberRepository.getMemberRole(
+        experimentId,
+        existing.user.id,
+      );
+      if (memberRoleResult.isFailure()) {
+        return failure(AppError.internal("Failed to check requester membership"));
+      }
+      if (memberRoleResult.value) {
+        const cancelResult = await this.joinRequestRepository.markDecided(
           requestId,
-          existing.user.id,
-          experimentId,
+          "cancelled",
           currentUserId,
         );
-        if (approveResult.isFailure()) {
+        if (cancelResult.isFailure()) {
+          return failure(AppError.internal("Failed to close stale join request"));
+        }
+
+        return failure(
+          AppError.conflict("The user is already a member of the experiment", ErrorCodes.CONFLICT),
+        );
+      }
+
+      const approveResult = await this.joinRequestRepository.approve(
+        requestId,
+        existing.user.id,
+        experimentId,
+        currentUserId,
+      );
+      if (approveResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to approve join request",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "approve-join-request",
+          experimentId,
+          requestId,
+          error: approveResult.error,
+        });
+        return failure(AppError.internal("Failed to approve join request"));
+      }
+
+      const approved = approveResult.value;
+
+      // Send the same membership-change email used by direct invites/adds
+      if (approved.user.email) {
+        const actorProfileResult =
+          await this.memberRepository.findUserFullNameFromProfile(currentUserId);
+        const actor =
+          actorProfileResult.isSuccess() && actorProfileResult.value
+            ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
+            : "An openJII admin";
+
+        const emailResult = await this.emailPort.sendAddedUserNotification(
+          experimentId,
+          experiment.name,
+          actor,
+          "member",
+          approved.user.email,
+        );
+        if (emailResult.isFailure()) {
           this.logger.error({
-            msg: "Failed to approve join request",
+            msg: "Failed to send membership-change email after approval",
             errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
             operation: "approve-join-request",
             experimentId,
             requestId,
-            error: approveResult.error,
+            email: approved.user.email,
           });
-          return failure(AppError.internal("Failed to approve join request"));
         }
+      }
 
-        const approved = approveResult.value;
-
-        // Send the same membership-change email used by direct invites/adds
-        if (approved.user.email) {
-          const actorProfileResult =
-            await this.memberRepository.findUserFullNameFromProfile(currentUserId);
-          const actor =
-            actorProfileResult.isSuccess() && actorProfileResult.value
-              ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
-              : "An openJII admin";
-
-          const emailResult = await this.emailPort.sendAddedUserNotification(
-            experimentId,
-            experiment.name,
-            actor,
-            "member",
-            approved.user.email,
-          );
-          if (emailResult.isFailure()) {
-            this.logger.error({
-              msg: "Failed to send membership-change email after approval",
-              errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-              operation: "approve-join-request",
-              experimentId,
-              requestId,
-              email: approved.user.email,
-            });
-          }
-        }
-
-        return success(approved);
-      },
-    );
+      return success(approved);
+    });
   }
 }

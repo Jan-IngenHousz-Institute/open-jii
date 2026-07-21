@@ -97,25 +97,7 @@ describe("DeleteMacroUseCase", () => {
     assertFailure(result);
   });
 
-  it("should return forbidden error when user is not the creator", async () => {
-    const macroData: CreateMacroDto = {
-      name: "Someone Else's Macro",
-      description: "Created by another user",
-      language: "python",
-      code: "cHl0aG9uIGNvZGU=",
-    };
-
-    const createResult = await macroRepository.create(macroData, testUserId);
-    assertSuccess(createResult);
-    const createdMacro = createResult.value[0];
-
-    const anotherUserId = await testApp.createTestUser({ email: "another@example.com" });
-
-    const result = await useCase.execute(createdMacro.id, anotherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toBe("You cannot delete this macro");
-  });
+  // Authorization (creator/org/grant checks) now lives in the @CanAccess route
+  // guard and is covered by authorization.service.spec + the guard spec; the
+  // use-case itself is pure business logic.
 });

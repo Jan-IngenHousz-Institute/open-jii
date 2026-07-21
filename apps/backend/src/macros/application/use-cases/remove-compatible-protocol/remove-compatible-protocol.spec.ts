@@ -50,27 +50,6 @@ describe("RemoveCompatibleProtocolUseCase", () => {
     expect(result.isSuccess()).toBe(true);
   });
 
-  it("should return FORBIDDEN when called by a non-creator", async () => {
-    const macro = await testApp.createMacro({
-      name: "Forbidden Remove Macro",
-      createdBy: testUserId,
-    });
-
-    const otherUserId = await testApp.createTestUser({ email: "other-remove@example.com" });
-
-    const protocol = await testApp.createProtocol({
-      name: `forbidden-remove-protocol-${faker.string.alphanumeric(6)}`,
-      createdBy: testUserId,
-    });
-
-    await macroProtocolRepository.addProtocols(macro.id, [protocol.id]);
-
-    const result = await useCase.execute(macro.id, protocol.id, otherUserId);
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should return NOT_FOUND for unknown macroId", async () => {
     const nonExistentMacroId = faker.string.uuid();
     const fakeProtocolId = faker.string.uuid();

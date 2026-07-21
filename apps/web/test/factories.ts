@@ -744,6 +744,8 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
     certificateId: null,
     certificateArn: null,
     createdBy: crypto.randomUUID(),
+    organizationId: null,
+    visibility: "private",
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,

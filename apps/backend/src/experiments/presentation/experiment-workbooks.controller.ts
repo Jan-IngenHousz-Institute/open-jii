@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentWorkbooksContract } from "@repo/api/domains/experiment/workbooks/experiment-workbooks.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/attach-workbook";
@@ -23,6 +24,7 @@ export class ExperimentWorkbooksController {
     private readonly setWorkbookVersionUseCase: SetWorkbookVersionUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentWorkbooksContract.attachWorkbook)
   attachWorkbook(@Session() session: UserSession) {
     return implement(experimentWorkbooksContract.attachWorkbook).handler(async ({ input }) => {
@@ -38,6 +40,7 @@ export class ExperimentWorkbooksController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentWorkbooksContract.detachWorkbook)
   detachWorkbook(@Session() session: UserSession) {
     return implement(experimentWorkbooksContract.detachWorkbook).handler(async ({ input }) => {
@@ -49,6 +52,7 @@ export class ExperimentWorkbooksController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentWorkbooksContract.upgradeWorkbookVersion)
   upgradeWorkbookVersion(@Session() session: UserSession) {
     return implement(experimentWorkbooksContract.upgradeWorkbookVersion).handler(
@@ -62,6 +66,7 @@ export class ExperimentWorkbooksController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentWorkbooksContract.setWorkbookVersion)
   setWorkbookVersion(@Session() session: UserSession) {
     return implement(experimentWorkbooksContract.setWorkbookVersion).handler(async ({ input }) => {

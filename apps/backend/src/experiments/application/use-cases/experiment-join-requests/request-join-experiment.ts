@@ -34,13 +34,7 @@ export class RequestJoinExperimentUseCase {
     const accessCheckResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessCheckResult.chain(
-      async ({
-        experiment,
-        hasAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-      }) => {
+      async ({ experiment, isMember }: { experiment: ExperimentDto | null; isMember: boolean }) => {
         if (!experiment) {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
@@ -55,7 +49,7 @@ export class RequestJoinExperimentUseCase {
           return failure(AppError.forbidden("This experiment is not open to join requests"));
         }
 
-        if (hasAccess) {
+        if (isMember) {
           return failure(
             AppError.conflict("You are already a member of this experiment", ErrorCodes.CONFLICT),
           );

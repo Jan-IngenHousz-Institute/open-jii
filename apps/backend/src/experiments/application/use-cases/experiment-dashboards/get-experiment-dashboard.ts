@@ -3,7 +3,6 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDashboardDto } from "../../../core/models/experiment-dashboards.model";
-import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentDashboardRepository } from "../../../core/repositories/experiment-dashboard.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -29,90 +28,71 @@ export class GetExperimentDashboardUseCase {
       userId,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
+    }
+    if (!experimentResult.value) {
+      this.logger.warn({
+        msg: "Attempt to get dashboard of non-existent experiment",
+        errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+        operation: "getExperimentDashboard",
+        experimentId,
+        dashboardId,
+        userId,
+      });
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Attempt to get dashboard of non-existent experiment",
-            operation: "getExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
+    const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
 
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User does not have access to experiment dashboard",
-            operation: "getExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    if (dashboardResult.isFailure()) {
+      this.logger.error({
+        msg: "Failed to retrieve dashboard for experiment",
+        errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_LIST_FAILED,
+        operation: "getExperimentDashboard",
+        experimentId,
+        dashboardId,
+        userId,
+        error: dashboardResult.error.message,
+      });
+      return failure(AppError.internal("Failed to retrieve experiment dashboard"));
+    }
 
-        const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
+    const dashboard = dashboardResult.value;
 
-        if (dashboardResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to retrieve dashboard for experiment",
-            errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_LIST_FAILED,
-            operation: "getExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-            error: dashboardResult.error.message,
-          });
-          return failure(AppError.internal("Failed to retrieve experiment dashboard"));
-        }
+    if (!dashboard) {
+      this.logger.warn({
+        msg: "Dashboard not found",
+        operation: "getExperimentDashboard",
+        experimentId,
+        dashboardId,
+        userId,
+      });
+      return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
+    }
 
-        const dashboard = dashboardResult.value;
+    if (dashboard.experimentId !== experimentId) {
+      this.logger.warn({
+        msg: "Dashboard does not belong to experiment",
+        operation: "getExperimentDashboard",
+        experimentId,
+        dashboardId,
+        userId,
+      });
+      return failure(
+        AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
+      );
+    }
 
-        if (!dashboard) {
-          this.logger.warn({
-            msg: "Dashboard not found",
-            operation: "getExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
-        }
+    this.logger.debug({
+      msg: "Retrieved dashboard for experiment",
+      operation: "getExperimentDashboard",
+      experimentId,
+      dashboardId,
+      userId,
+    });
 
-        if (dashboard.experimentId !== experimentId) {
-          this.logger.warn({
-            msg: "Dashboard does not belong to experiment",
-            operation: "getExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(
-            AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
-          );
-        }
-
-        this.logger.debug({
-          msg: "Retrieved dashboard for experiment",
-          operation: "getExperimentDashboard",
-          experimentId,
-          dashboardId,
-          userId,
-        });
-
-        return success(dashboard);
-      },
-    );
+    return success(dashboard);
   }
 }

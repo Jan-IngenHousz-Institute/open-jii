@@ -316,6 +316,11 @@ export const zCreateExperimentBodyBase = z.object({
   description: z.string().optional().describe("Optional description of the experiment"),
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  organizationId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Optional owning organization; defaults to the creator's personal org"),
   embargoUntil: z
     .string()
     .datetime()

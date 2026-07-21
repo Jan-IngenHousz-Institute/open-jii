@@ -37,6 +37,8 @@ export const zIotDevice = z.object({
   certificateId: z.string().nullable(),
   certificateArn: z.string().nullable(),
   createdBy: z.string().uuid(),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -47,6 +49,9 @@ export const zRegisterIotDeviceBody = z.object({
   serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
   deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
+  // Optional target organization to register the device into; defaults to the
+  // creator's personal org. The caller must be a member of the given organization.
+  organizationId: z.string().uuid().optional(),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;

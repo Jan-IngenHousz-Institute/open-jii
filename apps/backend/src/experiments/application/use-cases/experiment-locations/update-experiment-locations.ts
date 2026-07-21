@@ -32,72 +32,67 @@ export class UpdateExperimentLocationsUseCase {
       locationCount: locationsData.length,
     });
 
-    // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // Check if the experiment exists
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "updateExperimentLocations",
-            experimentId,
-          });
-          return failure(AppError.notFound("Experiment not found"));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "User attempted to update locations without permission",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "updateExperimentLocations",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        // Add experimentId to each location DTO
-        const locationsWithExperimentId = locationsData.map((location) => ({
-          ...location,
-          experimentId,
-        }));
-
-        // Replace all existing locations with new ones
-        const replaceResult = await this.locationRepository.replaceExperimentLocations(
-          experimentId,
-          locationsWithExperimentId,
-        );
-
-        if (replaceResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to update locations for experiment",
-            errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_UPDATE_FAILED,
-            operation: "updateExperimentLocations",
-            experimentId,
-            error: replaceResult.error,
-          });
-          return failure(
-            AppError.badRequest(`Failed to update locations: ${replaceResult.error.message}`),
-          );
-        }
-
-        this.logger.log({
-          msg: "Experiment locations updated successfully",
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
           operation: "updateExperimentLocations",
           experimentId,
-          locationCount: replaceResult.value.length,
-          status: "success",
         });
-        return success(replaceResult.value);
-      },
-    );
+        return failure(AppError.notFound("Experiment not found"));
+      }
+
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // Archived experiments are read-only — a domain rule describing which
+      // operations are legal, not who may perform them.
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to update locations of an archived experiment",
+          errorCode: ErrorCodes.FORBIDDEN,
+          operation: "updateExperimentLocations",
+          experimentId,
+          userId,
+        });
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      // Add experimentId to each location DTO
+      const locationsWithExperimentId = locationsData.map((location) => ({
+        ...location,
+        experimentId,
+      }));
+
+      // Replace all existing locations with new ones
+      const replaceResult = await this.locationRepository.replaceExperimentLocations(
+        experimentId,
+        locationsWithExperimentId,
+      );
+
+      if (replaceResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to update locations for experiment",
+          errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_UPDATE_FAILED,
+          operation: "updateExperimentLocations",
+          experimentId,
+          error: replaceResult.error,
+        });
+        return failure(
+          AppError.badRequest(`Failed to update locations: ${replaceResult.error.message}`),
+        );
+      }
+
+      this.logger.log({
+        msg: "Experiment locations updated successfully",
+        operation: "updateExperimentLocations",
+        experimentId,
+        locationCount: replaceResult.value.length,
+        status: "success",
+      });
+      return success(replaceResult.value);
+    });
   }
 }

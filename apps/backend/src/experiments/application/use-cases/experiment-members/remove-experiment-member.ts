@@ -35,13 +35,7 @@ export class RemoveExperimentMemberUseCase {
     );
 
     return accessCheckResult.chain(
-      async ({
-        experiment,
-        hasAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-      }) => {
+      async ({ experiment, isMember }: { experiment: ExperimentDto | null; isMember: boolean }) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Attempt to remove member from non-existent experiment",
@@ -61,7 +55,7 @@ export class RemoveExperimentMemberUseCase {
           return failure(AppError.forbidden("Cannot remove members from archived experiments"));
         }
 
-        if (!hasAccess) {
+        if (!isMember) {
           this.logger.warn({
             msg: "User is not a member of experiment",
             operation: "remove-experiment-member",

@@ -1,5 +1,5 @@
 {
-  "id": "ae25586e-09aa-4ab1-a414-b22106bc0cb8",
+  "id": "3414b190-40d6-4533-b295-f524e666baad",
   "prevId": "6b6ee61f-d305-4cf7-9974-6c53b49cf54e",
   "version": "7",
   "dialect": "postgresql",
@@ -1118,6 +1118,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "visibility",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'private'"
+        },
         "created_by": {
           "name": "created_by",
           "type": "uuid",
@@ -1154,9 +1168,37 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "iot_devices_organization_id_idx": {
+          "name": "iot_devices_organization_id_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
+        "iot_devices_organization_id_organizations_id_fk": {
+          "name": "iot_devices_organization_id_organizations_id_fk",
+          "tableFrom": "iot_devices",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
         "iot_devices_created_by_users_id_fk": {
           "name": "iot_devices_created_by_users_id_fk",
           "tableFrom": "iot_devices",

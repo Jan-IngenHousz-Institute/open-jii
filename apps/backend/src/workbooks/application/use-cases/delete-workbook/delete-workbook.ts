@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
@@ -9,10 +8,7 @@ import { WorkbookRepository } from "../../../core/repositories/workbook.reposito
 export class DeleteWorkbookUseCase {
   private readonly logger = new Logger(DeleteWorkbookUseCase.name);
 
-  constructor(
-    private readonly workbookRepository: WorkbookRepository,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(private readonly workbookRepository: WorkbookRepository) {}
 
   async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log({
@@ -37,22 +33,6 @@ export class DeleteWorkbookUseCase {
         userId,
       });
       return failure(AppError.notFound("Workbook not found"));
-    }
-
-    const decision = await this.authz.can(userId, {
-      resourceType: "workbook",
-      resourceId: id,
-      action: "manage",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized workbook deletion attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "deleteWorkbook",
-        workbookId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("You cannot delete this workbook"));
     }
 
     const deleteResult = await this.workbookRepository.delete(id);

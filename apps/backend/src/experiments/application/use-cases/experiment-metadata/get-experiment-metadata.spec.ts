@@ -70,33 +70,6 @@ describe("GetExperimentMetadataUseCase", () => {
     expect(result.value).toEqual([]);
   });
 
-  it("should return NOT_FOUND if experiment does not exist", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
-
-    const result = await useCase.execute(nonExistentId, testUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("NOT_FOUND");
-  });
-
-  it("should return FORBIDDEN if user has no access and experiment is private", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Metadata Test",
-      userId: testUserId,
-      visibility: "private",
-    });
-
-    const otherUserId = await testApp.createTestUser({});
-
-    const result = await useCase.execute(experiment.id, otherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("You do not have access to this experiment");
-  });
-
   it("should allow access to public experiment metadata for non-members", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Public Metadata Test",

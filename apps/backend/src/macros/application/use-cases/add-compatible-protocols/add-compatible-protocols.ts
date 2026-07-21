@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { MacroProtocolDto } from "../../../core/models/macro-protocol.model";
@@ -14,7 +13,6 @@ export class AddCompatibleProtocolsUseCase {
   constructor(
     private readonly macroRepository: MacroRepository,
     private readonly macroProtocolRepository: MacroProtocolRepository,
-    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -37,23 +35,6 @@ export class AddCompatibleProtocolsUseCase {
     }
     if (!macroResult.value) {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
-    }
-
-    // Managing compatible protocols is an update to the macro.
-    const decision = await this.authz.can(currentUserId, {
-      resourceType: "macro",
-      resourceId: macroId,
-      action: "update",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized attempt to add compatible protocols",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "addCompatibleProtocols",
-        macroId,
-        userId: currentUserId,
-      });
-      return failure(AppError.forbidden("You cannot manage compatible protocols for this macro"));
     }
 
     // Validate that all protocols exist

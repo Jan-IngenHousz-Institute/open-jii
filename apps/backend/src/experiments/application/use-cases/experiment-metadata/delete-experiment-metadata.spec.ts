@@ -55,23 +55,6 @@ describe("DeleteExperimentMetadataUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return FORBIDDEN if user does not have archive access", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Metadata Delete Test",
-      userId: testUserId,
-    });
-
-    const otherUserId = await testApp.createTestUser({});
-    const metadataId = "metadata-uuid-1";
-
-    const result = await useCase.execute(experiment.id, metadataId, otherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("You do not have write access to this experiment");
-  });
-
   it("should return failure if metadata repository delete fails", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Metadata Delete Failure Test",

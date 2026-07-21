@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentLocationsContract } from "@repo/api/domains/experiment/locations/experiment-locations.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/add-experiment-locations";
@@ -54,6 +55,7 @@ export class ExperimentLocationsController {
     };
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentLocationsContract.getExperimentLocations)
   getLocations(@Session() session: UserSession) {
     return implement(experimentLocationsContract.getExperimentLocations).handler(
@@ -67,6 +69,7 @@ export class ExperimentLocationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentLocationsContract.addExperimentLocations)
   addLocations(@Session() session: UserSession) {
     return implement(experimentLocationsContract.addExperimentLocations).handler(
@@ -89,6 +92,7 @@ export class ExperimentLocationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentLocationsContract.updateExperimentLocations)
   updateLocations(@Session() session: UserSession) {
     return implement(experimentLocationsContract.updateExperimentLocations).handler(

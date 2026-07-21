@@ -7,6 +7,8 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -138,6 +140,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.getProtocol)
   getProtocol() {
     return implement(protocolContract.getProtocol).handler(async ({ input }) => {
@@ -156,6 +159,7 @@ export class ProtocolController {
     });
   }
 
+  @CanCreateInOrg()
   @Implement(protocolContract.createProtocol)
   createProtocol(@Session() session: UserSession) {
     return implement(protocolContract.createProtocol).handler(async ({ input }) => {
@@ -179,7 +183,7 @@ export class ProtocolController {
       const result = await this.createProtocolUseCase.execute(
         createDto,
         session.user.id,
-        session.session.activeOrganizationId ?? null,
+        input.organizationId ?? null,
       );
 
       if (result.isSuccess()) {
@@ -202,6 +206,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.updateProtocol)
   updateProtocol(@Session() session: UserSession) {
     return implement(protocolContract.updateProtocol).handler(async ({ input }) => {
@@ -247,6 +252,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "manage" })
   @Implement(protocolContract.deleteProtocol)
   deleteProtocol(@Session() session: UserSession) {
     return implement(protocolContract.deleteProtocol).handler(async ({ input }) => {
@@ -280,6 +286,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.listCompatibleMacros)
   listCompatibleMacros() {
     return implement(protocolContract.listCompatibleMacros).handler(async ({ input }) => {
@@ -293,6 +300,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.addCompatibleMacros)
   addCompatibleMacros(@Session() session: UserSession) {
     return implement(protocolContract.addCompatibleMacros).handler(async ({ input }) => {
@@ -310,6 +318,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.removeCompatibleMacro)
   removeCompatibleMacro(@Session() session: UserSession) {
     return implement(protocolContract.removeCompatibleMacro).handler(async ({ input }) => {

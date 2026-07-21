@@ -57,7 +57,7 @@ describe("RotateIotCredentialsUseCase", () => {
     assertSuccess(created);
     const device = created.value[0];
     if (status === "active") {
-      await repo.update(device.id, userId, {
+      await repo.update(device.id, {
         status: "active",
         certificateId: "cert-old",
         certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
@@ -82,7 +82,7 @@ describe("RotateIotCredentialsUseCase", () => {
     expect(result.value).toEqual(NEW_CERT);
     expect(retireSpy).toHaveBeenCalledWith("cert-old", "REVOKED");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(NEW_CERT.certificateId);
@@ -106,7 +106,7 @@ describe("RotateIotCredentialsUseCase", () => {
     const result = await useCase.execute(device.id, userId);
 
     assertFailure(result);
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe("cert-old");
@@ -120,9 +120,7 @@ describe("RotateIotCredentialsUseCase", () => {
   });
 
   it("propagates a repository lookup failure", async () => {
-    vi.spyOn(repo, "findByIdForOwner").mockResolvedValue(
-      failure(AppError.internal("db unavailable")),
-    );
+    vi.spyOn(repo, "findById").mockResolvedValue(failure(AppError.internal("db unavailable")));
 
     const result = await useCase.execute("11111111-1111-4111-8111-111111111111", userId);
 
@@ -145,7 +143,7 @@ describe("RotateIotCredentialsUseCase", () => {
     assertFailure(result);
     expect(revokeSpy).toHaveBeenCalledWith(NEW_CERT.certificateId, "REVOKED");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe("cert-old");
@@ -171,7 +169,7 @@ describe("RotateIotCredentialsUseCase", () => {
     expect(detachSpy).toHaveBeenCalledWith(device.thingName, NEW_CERT.certificateArn);
     expect(revokeSpy).toHaveBeenCalledWith(NEW_CERT.certificateId, "REVOKED");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe("cert-old");
@@ -194,7 +192,7 @@ describe("RotateIotCredentialsUseCase", () => {
     assertSuccess(result);
     expect(result.value).toEqual(NEW_CERT);
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(NEW_CERT.certificateId);

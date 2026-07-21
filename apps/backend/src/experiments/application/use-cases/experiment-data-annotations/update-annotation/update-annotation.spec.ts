@@ -164,46 +164,12 @@ describe("UpdateAnnotation", () => {
       },
     };
 
-    // Act
     const result = await useCase.execute(nonExistentId, annotationId, updateData, testUserId);
 
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
+    expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
-  });
-
-  it("should return forbidden error when user does not have access to private experiment", async () => {
-    // Create experiment with another user
-    const otherUserId = await testApp.createTestUser({
-      email: "other@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      description: "Private experiment",
-      status: "active",
-      visibility: "private",
-      userId: otherUserId,
-    });
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated text",
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should handle repository updateAnnotation failure", async () => {
@@ -243,40 +209,5 @@ describe("UpdateAnnotation", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to update annotation");
-  });
-
-  it("should allow updating annotations in public experiments", async () => {
-    // Create a public experiment with another user
-    const otherUserId = await testApp.createTestUser({
-      email: "other@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Public Experiment",
-      description: "Public experiment",
-      status: "active",
-      visibility: "public",
-      userId: otherUserId,
-    });
-
-    // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "updateAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
-
-    const annotationId = "test-annotation-id";
-    const updateData: ExperimentUpdateAnnotationBody = {
-      content: {
-        type: "comment",
-        text: "Updated text",
-      },
-    };
-
-    // Act - testUserId (not owner) should be able to update in public experiment
-    const result = await useCase.execute(experiment.id, annotationId, updateData, testUserId);
-
-    // Assert - should succeed
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.rowsAffected).toBe(1);
   });
 });

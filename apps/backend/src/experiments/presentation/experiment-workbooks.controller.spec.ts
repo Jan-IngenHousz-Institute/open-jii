@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { AttachWorkbookUseCase } from "../application/use-cases/attach-workbook/attach-workbook";
@@ -13,6 +14,7 @@ import { UpgradeWorkbookVersionUseCase } from "../application/use-cases/upgrade-
 describe("ExperimentWorkbooksController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let manageableExperimentId: string;
   let attachUseCase: AttachWorkbookUseCase;
   let detachUseCase: DetachWorkbookUseCase;
   let upgradeUseCase: UpgradeWorkbookVersionUseCase;
@@ -25,6 +27,11 @@ describe("ExperimentWorkbooksController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Manageable experiment",
+      userId: testUserId,
+    });
+    manageableExperimentId = experiment.id;
 
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     detachUseCase = testApp.module.get(DetachWorkbookUseCase);
@@ -50,7 +57,7 @@ describe("ExperimentWorkbooksController", () => {
         success({ workbookId, workbookVersionId: versionId, version: 1 }),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       const response = await testApp
         .post(path)
@@ -66,13 +73,13 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 400 for invalid body (missing workbookId)", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 without auth", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
@@ -82,17 +89,21 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 403 when user lacks admin access", async () => {
-      vi.spyOn(attachUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only admins can attach workbooks")),
-      );
+      const ownerId = await testApp.createTestUser({ email: "other-owner@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Another owner's experiment",
+        userId: ownerId,
+      });
+      const executeSpy = vi.spyOn(attachUseCase, "execute");
 
-      const expId = faker.string.uuid();
+      const expId = experiment.id;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
         .withAuth(testUserId)
         .send({ workbookId: faker.string.uuid() })
         .expect(StatusCodes.FORBIDDEN);
+      expect(executeSpy).not.toHaveBeenCalled();
     });
 
     it("should return 404 when experiment or workbook not found", async () => {
@@ -100,7 +111,7 @@ describe("ExperimentWorkbooksController", () => {
         failure(AppError.notFound("Experiment not found")),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       await testApp
         .post(path)
@@ -130,7 +141,7 @@ describe("ExperimentWorkbooksController", () => {
         } as any),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
 
@@ -138,7 +149,7 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 401 without auth", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       await testApp.post(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
@@ -148,7 +159,7 @@ describe("ExperimentWorkbooksController", () => {
         failure(AppError.badRequest("No workbook attached")),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
       await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
@@ -162,7 +173,7 @@ describe("ExperimentWorkbooksController", () => {
         success({ workbookId, workbookVersionId: versionId, version: 2 }),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
@@ -176,7 +187,7 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 401 without auth", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
@@ -188,7 +199,7 @@ describe("ExperimentWorkbooksController", () => {
         failure(AppError.badRequest("No workbook attached")),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
@@ -204,7 +215,7 @@ describe("ExperimentWorkbooksController", () => {
         success({ workbookId, workbookVersionId: versionId, version: 1 }),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       const response = await testApp
         .post(path)
@@ -220,13 +231,13 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 400 for invalid body (missing versionId)", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 400 for a non-uuid versionId", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       await testApp
         .post(path)
@@ -236,7 +247,7 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 401 without auth", async () => {
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       await testApp
         .post(path)
@@ -246,17 +257,21 @@ describe("ExperimentWorkbooksController", () => {
     });
 
     it("should return 403 when user lacks admin access", async () => {
-      vi.spyOn(setVersionUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only admins can change the workbook version")),
-      );
+      const ownerId = await testApp.createTestUser({ email: "version-owner@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Another owner's versioned experiment",
+        userId: ownerId,
+      });
+      const executeSpy = vi.spyOn(setVersionUseCase, "execute");
 
-      const expId = faker.string.uuid();
+      const expId = experiment.id;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       await testApp
         .post(path)
         .withAuth(testUserId)
         .send({ versionId: faker.string.uuid() })
         .expect(StatusCodes.FORBIDDEN);
+      expect(executeSpy).not.toHaveBeenCalled();
     });
 
     it("should return 404 when the target version is not found", async () => {
@@ -264,13 +279,80 @@ describe("ExperimentWorkbooksController", () => {
         failure(AppError.notFound("Workbook version not found")),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, { id: expId });
       await testApp
         .post(path)
         .withAuth(testUserId)
         .send({ versionId: faker.string.uuid() })
         .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "attach workbook",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.attachWorkbook, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ workbookId: faker.string.uuid() }),
+      },
+      {
+        name: "detach workbook",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.detachWorkbook, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "upgrade workbook version",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "set workbook version",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.setWorkbookVersion, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ versionId: faker.string.uuid() }),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(manageableExperimentId, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: manageableExperimentId,
+        action,
+      });
     });
   });
 });

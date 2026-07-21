@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
@@ -10,16 +9,14 @@ import { ProtocolRepository } from "../../../core/repositories/protocol.reposito
 export class DeleteProtocolUseCase {
   private readonly logger = new Logger(DeleteProtocolUseCase.name);
 
-  constructor(
-    private readonly protocolRepository: ProtocolRepository,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(private readonly protocolRepository: ProtocolRepository) {}
 
   async execute(id: string, userId: string): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Deleting protocol",
       operation: "deleteProtocol",
       protocolId: id,
+      userId,
     });
 
     // Check if protocol exists
@@ -38,22 +35,6 @@ export class DeleteProtocolUseCase {
         protocolId: id,
       });
       return failure(AppError.notFound(`Protocol not found`));
-    }
-
-    const decision = await this.authz.can(userId, {
-      resourceType: "protocol",
-      resourceId: id,
-      action: "manage",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized protocol delete attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "deleteProtocol",
-        protocolId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("You cannot delete this protocol"));
     }
 
     // Protocol exists, now delete it

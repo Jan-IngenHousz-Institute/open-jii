@@ -6,6 +6,7 @@ import { contract } from "@repo/api/contract";
 import type { MacroProtocolList } from "@repo/api/domains/macro/macro.schema";
 import { protocols } from "@repo/database";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
@@ -48,6 +49,13 @@ describe("MacroController", () => {
     listMacrosUseCase = testApp.module.get(ListMacrosUseCase);
     updateMacroUseCase = testApp.module.get(UpdateMacroUseCase);
     deleteMacroUseCase = testApp.module.get(DeleteMacroUseCase);
+    // Authorization is enforced by the @CanAccess route guard against the real
+    // DB; these controller tests mock the use-cases with synthetic ids, so allow
+    // the guard here. Guard behavior itself is covered by authorization.service.spec.
+    vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
+      allow: true,
+      reason: "org-role",
+    });
   });
 
   afterEach(() => {
@@ -461,25 +469,6 @@ describe("MacroController", () => {
         .send({ name: "Updated Name" })
         .expect(StatusCodes.UNAUTHORIZED);
     });
-
-    it("should handle forbidden when user is not the creator", async () => {
-      // Arrange
-      const macroId = faker.string.uuid();
-      const updateData = {
-        name: "Trying to Update",
-      };
-
-      vi.spyOn(updateMacroUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only the macro creator can update this macro")),
-      );
-
-      // Act & Assert
-      await testApp
-        .put(testApp.resolveOrpcPath(contract.macros.updateMacro, { id: macroId }))
-        .withAuth(testUserId)
-        .send(updateData)
-        .expect(StatusCodes.FORBIDDEN);
-    });
   });
 
   describe("executeMacro", () => {
@@ -645,20 +634,6 @@ describe("MacroController", () => {
         .delete(testApp.resolveOrpcPath(contract.macros.deleteMacro, { id: faker.string.uuid() }))
         .expect(StatusCodes.UNAUTHORIZED);
     });
-
-    it("should handle forbidden when user is not the creator", async () => {
-      // Arrange
-      const macroId = faker.string.uuid();
-      vi.spyOn(deleteMacroUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only the macro creator can delete this macro")),
-      );
-
-      // Act & Assert
-      await testApp
-        .delete(testApp.resolveOrpcPath(contract.macros.deleteMacro, { id: macroId }))
-        .withAuth(testUserId)
-        .expect(StatusCodes.FORBIDDEN);
-    });
   });
 
   describe("authentication and authorization", () => {
@@ -692,6 +667,96 @@ describe("MacroController", () => {
         .post(testApp.resolveOrpcPath(contract.macros.executeMacro, { id: macroId }))
         .send({ data: {} })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("authorization", () => {
+    // Each guarded route must delegate to AuthorizationService.can() with the
+    // resource/action declared by its @CanAccess decorator, and turn a denial
+    // into a 403. Mocking can() to deny pins the {resource, action} wiring, so a
+    // missing or wrong-action decorator fails here.
+    it.each([
+      {
+        name: "get macro",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp.get(testApp.resolveOrpcPath(contract.macros.getMacro, { id })).withAuth(userId),
+      },
+      {
+        name: "update macro",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .put(testApp.resolveOrpcPath(contract.macros.updateMacro, { id }))
+            .withAuth(userId)
+            .send({ name: "Blocked update" }),
+      },
+      {
+        name: "delete macro",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(testApp.resolveOrpcPath(contract.macros.deleteMacro, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "list compatible protocols",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.macros.listCompatibleProtocols, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "add compatible protocols",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.macros.addCompatibleProtocols, { id }))
+            .withAuth(userId)
+            .send({ protocolIds: [faker.string.uuid()] }),
+      },
+      {
+        name: "remove compatible protocol",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.macros.removeCompatibleProtocol, {
+                id,
+                protocolId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const canSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "can")
+        .mockResolvedValue({ allow: false, reason: "forbidden" });
+      const macroId = faker.string.uuid();
+
+      await request(macroId, testUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "macro",
+        resourceId: macroId,
+        action,
+      });
+    });
+
+    it("returns 403 when creating a macro in an organization the caller is not a member of", async () => {
+      const organizationId = faker.string.uuid();
+      const isOrgMemberSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
+        .mockResolvedValue(false);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.macros.createMacro))
+        .withAuth(testUserId)
+        .send({ name: "Org macro", language: "python", code: btoa("print('x')"), organizationId })
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
     });
   });
 });

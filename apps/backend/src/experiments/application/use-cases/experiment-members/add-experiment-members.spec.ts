@@ -93,33 +93,6 @@ describe("AddExperimentMembersUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return FORBIDDEN error if user is not an admin", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Batch Test Experiment",
-      userId: testUserId,
-    });
-
-    // Create a non-admin user
-    const nonAdminId = await testApp.createTestUser({
-      email: "nonadmin-batch@example.com",
-    });
-    const memberId = await testApp.createTestUser({
-      email: "member-batch@example.com",
-    });
-
-    // Try to add members as a non-admin user
-    const result = await useCase.execute(
-      experiment.id,
-      [{ userId: memberId, role: "member" }],
-      nonAdminId,
-    );
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should return FORBIDDEN when attempting to add members to an archived experiment", async () => {
     // Create an experiment and archive it
     const { experiment } = await testApp.createExperiment({

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UpdateWorkbookDto, WorkbookDto } from "../../../core/models/workbook.model";
@@ -10,10 +9,7 @@ import { WorkbookRepository } from "../../../core/repositories/workbook.reposito
 export class UpdateWorkbookUseCase {
   private readonly logger = new Logger(UpdateWorkbookUseCase.name);
 
-  constructor(
-    private readonly workbookRepository: WorkbookRepository,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(private readonly workbookRepository: WorkbookRepository) {}
 
   async execute(id: string, data: UpdateWorkbookDto, userId: string): Promise<Result<WorkbookDto>> {
     this.logger.log({
@@ -39,22 +35,6 @@ export class UpdateWorkbookUseCase {
         userId,
       });
       return failure(AppError.notFound(`Workbook with ID ${id} not found`));
-    }
-
-    const decision = await this.authz.can(userId, {
-      resourceType: "workbook",
-      resourceId: id,
-      action: "update",
-    });
-    if (!decision.allow) {
-      this.logger.warn({
-        msg: "Unauthorized workbook update attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "updateWorkbook",
-        workbookId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("You cannot update this workbook"));
     }
 
     const updateResult = await this.workbookRepository.update(id, data);
