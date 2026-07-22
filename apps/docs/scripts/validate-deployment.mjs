@@ -132,13 +132,14 @@ async function exportedRoutes(exportRoot) {
 }
 
 function decodeHtmlAttribute(value) {
+  // "&amp;" must decode last so "&amp;quot;" yields the literal "&quot;".
   return value
-    .replaceAll("&amp;", "&")
     .replaceAll("&quot;", '"')
     .replaceAll("&#39;", "'")
     .replaceAll("&apos;", "'")
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
-    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)));
+    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replaceAll("&amp;", "&");
 }
 
 function internalTargets(html, pageUrl, origin) {
@@ -405,7 +406,8 @@ async function discoverWebDeepLinks() {
   const hardCoded = [];
   for (const file of await productionWebFiles()) {
     const source = await readFile(file, "utf8");
-    if (!source.includes("NEXT_PUBLIC_DOCS_URL") && !source.includes("docs.openjii.org")) continue;
+    const hardCodedMatches = [...source.matchAll(/https:\/\/docs\.openjii\.org[^\s"'`)\]}]*/g)];
+    if (!source.includes("NEXT_PUBLIC_DOCS_URL") && hardCodedMatches.length === 0) continue;
     const relative = path.relative(repoRoot, file).split(path.sep).join("/");
 
     for (const match of source.matchAll(/\$\{env\.NEXT_PUBLIC_DOCS_URL\}([^`$\s"'<>)]*)/g)) {
@@ -420,7 +422,7 @@ async function discoverWebDeepLinks() {
       if (!paths.has("/")) paths.set("/", []);
       paths.get("/").push(relative);
     }
-    for (const match of source.matchAll(/https:\/\/docs\.openjii\.org[^\s"'`)\]}]*/g)) {
+    for (const match of hardCodedMatches) {
       hardCoded.push(`${relative}: ${match[0]}`);
     }
   }
