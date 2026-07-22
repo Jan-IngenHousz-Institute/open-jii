@@ -49,6 +49,9 @@ def raw_imported_data():
         StructField("macro_filename", StringType(), True),
         StructField("macro_name", StringType(), True),
         StructField("questions", StringType(), True),
+        # Null for parquet written before per-measurement location transfer.
+        StructField("latitude", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
     ])
 
     df = (
