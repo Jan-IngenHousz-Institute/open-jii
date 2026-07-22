@@ -16,7 +16,9 @@ jobs:
   backend:
     name: Docker Build (Backend)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'backend')
+    # Dependabot lockfile bumps don't mark deployable apps as affected; run the
+    # full build anyway so the bump's blast radius is actually exercised.
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'dependabot[bot]' || contains(fromJSON(inputs.affected-apps), 'backend')
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/docker-build-check
@@ -29,7 +31,7 @@ jobs:
   database:
     name: Docker Build (Database Migrations)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), '@repo/database')
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'dependabot[bot]' || contains(fromJSON(inputs.affected-apps), '@repo/database')
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/docker-build-check
@@ -41,7 +43,7 @@ jobs:
   macro-sandbox:
     name: Docker Build (Macro Sandbox - ${{ matrix.language }})
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'macro-sandbox')
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'dependabot[bot]' || contains(fromJSON(inputs.affected-apps), 'macro-sandbox')
     strategy:
       fail-fast: false
       matrix:
@@ -59,7 +61,7 @@ jobs:
   web-opennext:
     name: OpenNext Build (Web)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'web')
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'dependabot[bot]' || contains(fromJSON(inputs.affected-apps), 'web')
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/opennext-build
@@ -70,7 +72,7 @@ jobs:
   mobile:
     name: Expo Prebuild Check (Mobile)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON(inputs.affected-apps), 'mobile')
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'dependabot[bot]' || contains(fromJSON(inputs.affected-apps), 'mobile')
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-nodejs-pnpm
