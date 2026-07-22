@@ -64,6 +64,18 @@ vulnerabilities:
       ReDoS via a crafted value. Sandbox has no outbound HTTP, so
       no attacker-controlled response reaches axios.
     expired_at: 2026-07-12
+  - id: GHSA-gcfj-64vw-6mp9
+    statement: >-
+      Node HTTP adapter can reuse an inherited proxy after interceptor
+      config changes it. Sandbox has no outbound HTTP and no proxy
+      configuration, so no request ever reaches the adapter's proxy logic.
+
+  # brace-expansion in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
+  - id: CVE-2026-13149
+    statement: >-
+      ReDoS via exponential-time complexity. Bundled inside @aws-sdk's own
+      dependency tree, not invoked by sandbox code; sandbox has no outbound
+      HTTP and no IAM creds, so no attacker-controlled string ever reaches it.
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
