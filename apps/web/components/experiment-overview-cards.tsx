@@ -11,9 +11,11 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 export function ExperimentOverviewCards({
   experiments,
   archived = false,
+  showGetStartedHelp = false,
 }: {
   experiments: Experiment[] | undefined;
   archived?: boolean;
+  showGetStartedHelp?: boolean;
 }) {
   const { t } = useTranslation("experiments");
 
@@ -31,9 +33,11 @@ export function ExperimentOverviewCards({
     return (
       <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
         {t("experiments.noExperiments")}
-        <div className="mt-2">
-          <DocsHelpLink path="/guide/get-started/quick-start" />
-        </div>
+        {showGetStartedHelp && (
+          <div className="mt-2">
+            <DocsHelpLink path="/guide/get-started/quick-start" />
+          </div>
+        )}
       </div>
     );
   }

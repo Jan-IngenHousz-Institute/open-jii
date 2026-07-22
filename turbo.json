@@ -23,7 +23,8 @@
         "DB_NAME",
         "DB_CREDENTIALS",
         "DOCS_INDEXABLE",
-        "DOCS_BASE_URL"
+        "DOCS_BASE_URL",
+        "PLATFORM_BASE_URL"
       ]
     },
     "lint": {

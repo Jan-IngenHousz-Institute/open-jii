@@ -48,6 +48,7 @@ import { cn } from "@repo/ui/lib/utils";
 interface WorkbookListProps {
   workbooks: Workbook[] | undefined;
   isLoading?: boolean;
+  showEmptyHelp?: boolean;
 }
 
 const HEADER_BG = "bg-[#F6F8FA]";
@@ -55,7 +56,7 @@ const TABLE_BORDER = "border-[#CDD5DB]";
 const TEXT_STRONG = "text-[#011111]";
 const TEXT_MUTED = "text-[#68737B]";
 
-export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
+export function WorkbookList({ workbooks, isLoading, showEmptyHelp = false }: WorkbookListProps) {
   const { t } = useTranslation("workbook");
 
   const sorted = useMemo(
@@ -76,9 +77,11 @@ export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
         )}
       >
         {t("workbooks.noWorkbooks")}
-        <div className="mt-2">
-          <DocsHelpLink path="/guide/experiments/workbooks" />
-        </div>
+        {showEmptyHelp && (
+          <div className="mt-2">
+            <DocsHelpLink path="/guide/experiments/workbooks" />
+          </div>
+        )}
       </div>
     );
   }

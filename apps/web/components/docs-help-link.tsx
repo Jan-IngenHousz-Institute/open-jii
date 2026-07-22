@@ -17,15 +17,17 @@ interface DocsHelpLinkProps {
 }
 
 // Small contextual link to a documentation page. Resolves the docs base URL for
-// the current environment and opens in a new tab, so high-friction platform
-// surfaces just pass a doc path.
+// the current environment, opens in a new tab, and announces that to assistive
+// technology, so high-friction platform surfaces just pass a doc path.
 export function DocsHelpLink({ path, label, iconOnly = false, className }: DocsHelpLinkProps) {
   const { t } = useTranslation("common");
   const href = `${env.NEXT_PUBLIC_DOCS_URL}${path}`;
   const text = label ?? t("docsHelp.learnHow");
+  const newTabHint = t("docsHelp.opensNewTab");
 
   if (iconOnly) {
-    const accessibleName = typeof text === "string" ? text : undefined;
+    const base = typeof text === "string" ? text : t("docsHelp.learnHow");
+    const accessibleName = `${base} (${newTabHint})`;
     return (
       <a
         href={href}
@@ -49,6 +51,7 @@ export function DocsHelpLink({ path, label, iconOnly = false, className }: DocsH
     >
       {text}
       <ExternalLink className="size-3.5" aria-hidden />
+      <span className="sr-only"> ({newTabHint})</span>
     </a>
   );
 }

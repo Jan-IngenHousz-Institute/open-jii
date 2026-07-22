@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { DocsHelpLink } from "~/components/docs-help-link";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
@@ -52,6 +53,11 @@ export default function ExperimentVisualizationsList({
     return (
       <div className="rounded-lg border border-dashed border-[#CDD5DB] p-10 text-center text-sm text-[#68737B]">
         {t("ui.messages.noVisualizations")}
+        {!isArchived && (
+          <div className="mt-2">
+            <DocsHelpLink path="/guide/data-analysis/viewing-data" />
+          </div>
+        )}
       </div>
     );
   }

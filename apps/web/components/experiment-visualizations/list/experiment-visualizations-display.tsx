@@ -1,6 +1,5 @@
 "use client";
 
-import { DocsHelpLink } from "@/components/docs-help-link";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -89,9 +88,6 @@ export default function ExperimentVisualizationsDisplay({
                 <Button variant="muted">{t("selector.createVisualization")}</Button>
               </Link>
             )}
-            <div className="mt-3">
-              <DocsHelpLink path="/guide/data-analysis/viewing-data" />
-            </div>
           </CardContent>
         </Card>
       </div>

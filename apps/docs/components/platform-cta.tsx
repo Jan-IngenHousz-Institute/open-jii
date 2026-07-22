@@ -18,7 +18,8 @@ export function PlatformCta({ path, children }: PlatformCtaProps) {
       className="bg-fd-primary text-fd-primary-foreground my-6 inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold no-underline transition-opacity hover:opacity-90"
     >
       {children}
-      <ArrowUpRight className="size-4" />
+      <ArrowUpRight className="size-4" aria-hidden />
+      <span className="sr-only"> (opens in a new tab)</span>
     </PlatformLink>
   );
 }
