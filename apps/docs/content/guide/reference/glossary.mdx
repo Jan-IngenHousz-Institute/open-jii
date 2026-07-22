@@ -3,7 +3,7 @@ title: "Glossary"
 description: "Canonical openJII terms for experiments, hardware, workflows, and data."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
 ### Admin
 
@@ -13,10 +13,16 @@ workbooks, data uploads, analysis configuration, and archiving. **Admin** and
 
 ### Ambyte
 
-The current user-facing name for the continuous-sensor family. Its enum/API value
-is `ambyte`. “Ambit” is not the current interface label. Ambyte ingestion and IoT
-registration exist; local protocol execution and device monitoring are marked
-Coming Soon.
+The MQTT gateway and ingestion family for autonomous sensors. Its enum/API value
+is `ambyte`. Ambyte ingestion and IoT registration exist; local connection and
+device monitoring are not the current workflow.
+
+### Ambit
+
+A leaf sensor in the `ambit` family, distinct from the Ambyte gateway. The web
+workbook host can identify it over USB serial and send direct command cells for
+calibration or spot readings. Full Ambit measurements run through its Ambyte
+gateway rather than a direct protocol cell.
 
 ### Bronze, Silver, Gold
 
@@ -67,8 +73,8 @@ flow, macro output is reviewed with each device's measurement before acceptance.
 ### Measurement
 
 One timestamped result associated with an experiment and protocol, optionally
-including question answers, annotations, macro output, device identity, and a
-multi-device workbook-run ID.
+including question answers, annotations, macro output, device identity,
+latitude and longitude, and a multi-device workbook-run ID.
 
 ### Member
 
@@ -102,7 +108,7 @@ annotations, and export or migration context.
 
 In researcher-facing copy, autonomous hardware that records observations over
 time with little interaction after setup. In technical UI, **sensor family** is
-also the shared enum for MultispeQ, Ambyte, MiniPAR, and generic hardware.
+also the shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic hardware.
 
 ### Visibility
 

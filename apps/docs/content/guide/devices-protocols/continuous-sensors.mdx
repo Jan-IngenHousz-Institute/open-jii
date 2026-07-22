@@ -1,19 +1,19 @@
 ---
-title: "Continuous sensors (Ambyte)"
-description: "Understand current Ambyte ingestion support and its limits."
+title: "Continuous sensors"
+description: "Distinguish Ambyte ingestion from locally connected Ambit and MiniPAR sensors."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
-The canonical openJII product label is **Ambyte**. In source and API values it is
-spelled `ambyte`. Older planning material also says “Ambit”; the current
-interface, ingestion code, and sensor-family enum do not use that as the product
-label.
+**Ambyte**, **Ambit**, and **MiniPAR** are different families. Ambyte (`ambyte`)
+is the MQTT gateway and ingestion family. Ambit (`ambit`) is a leaf sensor that
+normally measures through an Ambyte gateway. MiniPAR (`minipar`) is a separate
+locally operated sensor.
 
 Ambyte represents autonomous sensor hardware that records observations over
 time. This differs from a handheld MultispeQ, where a person starts each reading.
 
-## What you can do now
+## Bring in Ambyte data
 
 - Register Ambyte as an IoT device from **Devices** using its physical identifier.
 - Issue device credentials from the registered device's **Credentials** tab.
@@ -21,11 +21,22 @@ time. This differs from a handheld MultispeQ, where a person starts each reading
   `Ambyte_N/[1-4]/*.txt` folder layout and processes the data asynchronously.
 - View the resulting table after the processing pipeline has materialized it.
 
+## Connect Ambit or MiniPAR locally
+
+The web workbook host can identify Ambit and MiniPAR devices over USB serial and
+select the matching driver automatically. MiniPAR can run a protocol cell and
+return a measurement envelope. A direct Ambit session supports command cells for
+calibration and spot readings; it does not run protocol cells because full Ambit
+measurements go through the Ambyte gateway.
+
+If the family selected in the workbook toolbar differs from the identification
+handshake, the host shows a mismatch notice and uses the identified family.
+
 ## Current limits
 
-Ambyte is an ingestion family, but the protocol editor marks it **Coming Soon**
-for local protocol execution. The registered-device **Monitoring** and
-**Onboarding** tabs are also marked **Coming Soon**. Do not plan a field workflow
+Ambyte remains an MQTT and folder-ingestion family rather than a locally
+connected workbook device. The registered-device **Monitoring** and
+**Onboarding** tabs are marked **Coming Soon**. Do not plan a field workflow
 around a live monitoring dashboard until that workflow has been confirmed on the
 deployed platform.
 

@@ -3,7 +3,7 @@ title: "Project transfers"
 description: "Request migration of a PhotosynQ project into openJII."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
 The **Request Project Transfer** workflow brings a project from **PhotosynQ**
 into openJII. It does not transfer ownership of an existing openJII experiment
@@ -38,7 +38,8 @@ Review the migrated experiment rather than assuming perfect equivalence:
 - compare row counts and source identifiers;
 - check experiment description, members, locations, and visibility;
 - verify protocol, macro, workbook, and question mappings;
-- inspect a sample of raw and processed values;
+- inspect a sample of raw and processed values; legacy per-measurement latitude
+  and longitude are preserved when present;
 - record the source system and migration date in metadata.
 
 If anything is missing or inconsistent, use

@@ -3,7 +3,7 @@ title: "Devices & Protocols"
 description: "Choose the hardware and measurement recipe that fit your field work."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
 In openJII, the hardware collects a reading and a **protocol** tells that hardware
 how to collect it. Choose both before field work so everyone in your experiment
@@ -14,17 +14,19 @@ uses the same method.
 - Use a [MultispeQ](/guide/devices-protocols/multispeq) for handheld,
   protocol-guided measurements taken by a person.
 - Read [Continuous sensors](/guide/devices-protocols/continuous-sensors) if you
-  are bringing Ambyte data into openJII. Ambyte is supported as an ingestion
-  family, but local protocol execution is currently marked **Coming Soon**.
+  are bringing Ambyte data into openJII or connecting an Ambit or MiniPAR to the
+  web workbook host. Ambyte is an ingestion family; Ambit and MiniPAR are
+  distinct locally identifiable families.
 - Use [Protocols](/guide/devices-protocols/protocols) to choose an existing
   measurement recipe, create one, or fork someone else's recipe before editing.
 - Use [Multi-device measurements](/guide/devices-protocols/multi-device) when
-  several MultispeQs should run the same protocol in parallel.
+  several connected devices should run one shared cell or be routed to
+  family-specific protocol or command cells.
 
 <Callout type="info">
   openJII uses **device** for handheld hardware that a person operates and **sensor** for autonomous
   hardware that sends observations over time. The interface also uses **sensor family** as the
-  shared technical category for MultispeQ, Ambyte, MiniPAR, and generic hardware.
+  shared technical category for MultispeQ, Ambyte, Ambit, MiniPAR, and generic hardware.
 </Callout>
 
 ## Prepare before leaving connectivity

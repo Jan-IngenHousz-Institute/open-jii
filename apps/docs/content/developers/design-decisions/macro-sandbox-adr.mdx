@@ -3,7 +3,7 @@ title: "ADR: Execute macros in isolated language sandboxes"
 description: "Why openJII moved Python, JavaScript, and R macro execution out of Databricks workers and into isolated Lambda runtimes."
 ---
 
-{/* verified: code@12a361a74966 2026-07-20 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
 # ADR: Execute macros in isolated language sandboxes
 
@@ -58,6 +58,20 @@ The durable boundaries are:
 
 In-process Databricks macro execution through the former `multispeq` executors
 and workspace macro files is superseded and removed from the current pipeline.
+
+### Workbook runtime context
+
+Workbook runners keep the nearest upstream output in the existing `data`/`json`
+argument and pass every completed upstream question, protocol, command, and macro
+under its canonical name in the optional read-only `context`/`ctx` object.
+Multi-device runs select the output for the current connection and inject that
+device as `ctx.$device`. The web runner permits an empty `data` object when
+upstream `ctx` values exist, so answer-driven macros do not require a preceding
+protocol measurement.
+
+`packages/api/src/transforms/build-cell-namespace.ts` constructs the namespace;
+`packages/api/src/domains/macro/macro.schema.ts` defines the execution contract;
+and the sandbox wrappers freeze `ctx` before user code receives it.
 
 ## Consequences
 

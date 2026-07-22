@@ -3,7 +3,7 @@ title: "Taking measurements in the field"
 description: "Follow an experiment workbook from selection through accepted result."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@c12fe0855 2026-07-22 */}
 
 The app runs the **pinned workbook version** attached to an experiment. That
 workbook determines which instructions, questions, protocols, branches, and
@@ -51,6 +51,12 @@ not represent a MultispeQ protocol run or show final submission._
 - For several wired devices, the result review is per device. See
   [Multi-device measurements](/guide/devices-protocols/multi-device).
 
-The app records a synchronized timestamp and timezone. Although location access
-may be requested, current code uses it to determine timezone rather than attach
-GPS coordinates to the measurement.
+The app records a synchronized timestamp and timezone. If foreground location
+permission is already granted, it also makes a best-effort attempt to add
+latitude and longitude to each upload, including questions-only submissions.
+The permission prompt explains that measurement location is stored.
+
+The app uses one location fix for a multi-device round: a last-known fix no more
+than 60 seconds old, or a fresh balanced-accuracy fix with a 10-second limit. It
+does not prompt during the measurement, and a missing permission, timeout, or
+location error never blocks saving or upload.
