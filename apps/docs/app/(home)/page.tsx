@@ -50,8 +50,17 @@ export default function HomePage() {
       <Image
         src="/img/openjii-logo-horizontal.svg"
         alt="openJII"
-        width={137}
-        height={64}
+        width={171}
+        height={80}
+        className="block dark:hidden"
+        priority
+      />
+      <Image
+        src="/img/openjii-logo-horizontal-dark.svg"
+        alt="openJII"
+        width={275}
+        height={80}
+        className="hidden dark:block"
         priority
       />
       <h1 className="text-fd-foreground mt-8 max-w-3xl text-center text-4xl font-bold sm:text-5xl">

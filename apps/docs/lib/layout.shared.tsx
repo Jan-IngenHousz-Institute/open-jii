@@ -18,8 +18,17 @@ export function baseOptions(): BaseLayoutProps {
           <Image
             src="/img/openjii-logo-horizontal.svg"
             alt="openJII"
-            width={68}
-            height={32}
+            width={85}
+            height={40}
+            className="block dark:hidden"
+            priority
+          />
+          <Image
+            src="/img/openjii-logo-horizontal-dark.svg"
+            alt="openJII"
+            width={138}
+            height={40}
+            className="hidden dark:block"
             priority
           />
           <span className="text-fd-muted-foreground text-sm font-medium">Docs</span>

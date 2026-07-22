@@ -3,13 +3,13 @@ title: "Writing macros"
 description: "Read measurements and workbook context, then return analysis-ready values."
 ---
 
-{/* verified: code@e76bf12ab 2026-07-22 */}
+{/* verified: code@5bec21dc9 2026-07-22 */}
 
-A macro is code that transforms a measurement or earlier workbook values into a
-JSON object. openJII stores Python, JavaScript, and R macros. On the web, the
-backend runs each language in its own isolated Lambda sandbox. The mobile field
-flow runs JavaScript locally and Python in Pyodide; it does not currently
-dispatch R macros.
+A macro is a **data-processing script**: it turns a measurement or earlier
+workbook values into a JSON object of named results. openJII stores Python,
+JavaScript, and R macros. On the web, the backend runs each language in its own
+isolated Lambda sandbox. The mobile field flow runs JavaScript locally and
+Python in Pyodide; it does not currently dispatch R macros.
 
 Open **Macros** and select **New macro** to choose a language, write the code,
 and optionally associate compatible protocols. You can also create or select a
@@ -109,6 +109,52 @@ return {
 R macros receive `json`, `ctx`, and an `output` environment in the web sandbox;
 return an R list. Use the web workbook runner to test R macros because the
 mobile runner currently selects only JavaScript or Python.
+
+## Runtimes and available libraries
+
+Where a macro runs decides which libraries you can rely on. The web sandboxes
+ship scientific libraries and a shared helper library; the mobile Python runtime
+is deliberately minimal.
+
+| Runtime                      | Language          | Libraries available                                                             |
+| ---------------------------- | ----------------- | ------------------------------------------------------------------------------- |
+| Web sandbox (backend Lambda) | Python 3.12       | `numpy` (`np`), `pandas` (`pd`), `scipy`, plus the openJII helper library       |
+| Web sandbox (backend Lambda) | JavaScript (Node) | The openJII helper library (no npm packages; no `Date`, `require`, or `eval`)   |
+| Web sandbox (backend Lambda) | R                 | Base R and `jsonlite`, plus the openJII helper library                          |
+| Mobile app (Pyodide)         | Python            | Python standard library only: no `numpy`/`pandas`/`scipy` and no helper library |
+
+Write mobile-run Python macros against the standard library only. If a macro
+needs `numpy`, `pandas`, `scipy`, or the helper functions below, keep it on the
+web workbook runner.
+
+## Helper utilities
+
+In every **web** runtime (Python, JavaScript, R) openJII injects a shared helper
+library, callable directly by name. It mirrors the PhotosynQ macro helpers so
+existing analysis code ports over. The main families:
+
+- **Arrays**: `ArrayNth`, `ArrayRange`, `ArrayZip`, `ArrayUnZip`.
+- **Statistics**: `MathMEAN`, `MathMEDIAN`, `MathMIN`, `MathMAX`, `MathSUM`,
+  `MathSTDEV`, `MathSTDEVS`, `MathSTDERR`, `MathVARIANCE`, `MathROUND`,
+  `MathLN`, `MathLOG`.
+- **Regressions**: `MathLINREG`, `MathPOLYREG`, `MathMULTREG`, `MathEXPINVREG`.
+- **Protocol lookup**: `GetIndexByLabel`, `GetLabelLookup`, `GetProtocolByLabel`
+  to pull values out of a measurement by its protocol label.
+- **Domain**: `TransformTrace`, `calcSunAngle`.
+- **Messages**: `info`, `warning`, `danger` to attach notes to a result.
+
+```python
+readings = json["readings"]
+
+return {
+    "mean": MathMEAN(readings),
+    "stdev": MathSTDEV(readings),
+    "fit": MathLINREG(ArrayRange(1, len(readings) + 1), readings),
+}
+```
+
+These helpers are not available in the mobile Pyodide runtime; use plain Python
+there.
 
 ## Treat `ctx` as read-only
 
