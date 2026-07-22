@@ -120,4 +120,36 @@ describe("WorkbookOverviewPage", () => {
     await waitFor(() => expect(screen.queryByText("common.loading")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /markdown/i })).not.toBeInTheDocument();
   });
+  it("forks the workbook from the detail page and posts forkedFrom", async () => {
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
+    });
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: "wb-1", name: "Source WB", cells: [] }),
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "workbooks.actions.fork" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName", forkedFrom: "wb-1" });
+  });
+
+  it("shows the fork button to viewers who are not the creator", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "someone-else" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: "wb-1", createdBy: "user-1", cells: [] }),
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "workbooks.actions.fork" }),
+    ).toBeInTheDocument();
+  });
 });

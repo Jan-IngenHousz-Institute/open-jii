@@ -3,7 +3,7 @@ title: "Working with workbooks"
 description: "Attach a versioned field workflow to an experiment and review upgrades safely."
 ---
 
-{/* verified: code@c12fe0855 2026-07-22 */}
+{/* verified: code@147e5cf48 2026-07-22 */}
 
 A **workbook** is the data-collection design an experiment runs. Its ordered
 cells can contain instructions, questions, protocols, device commands, analysis
@@ -59,6 +59,12 @@ Python and JavaScript examples using `json`, `ctx`, and `ctx.$device`.
 The workbook owner edits the live draft. Workbooks autosave, and publishing
 creates a newer version. If a protocol or macro belongs to someone else, fork it
 before editing so the workbook points to your copy.
+
+You can also fork a **whole workbook**: open it and select **Fork** to create
+your own editable copy of all its cells, then attach that copy to your
+experiment and adjust it. This is the recommended way to start from a
+[baseline workbook](/guide/devices-protocols/writing-protocols#recommended-starting-points)
+someone else published.
 
 An experiment continues to use its pinned version until an admin changes it. A
 newer version produces an update indicator. Before upgrading, open the review:

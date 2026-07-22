@@ -3,7 +3,7 @@ title: "MultispeQ (handheld)"
 description: "Connect a MultispeQ and use it for protocol-guided field measurements."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@147e5cf48 2026-07-22 */}
 
 A **MultispeQ** is handheld measurement hardware operated by a person. openJII
 sends a selected MultispeQ protocol to the device, receives the raw response,
@@ -12,10 +12,15 @@ and can run the workbook's analysis macro before you accept the result.
 Use it when your method calls for measurements at chosen plants, leaves, or time
 points rather than an unattended data stream.
 
-## Connect on mobile
+## Connect a device
 
-1. Turn on the MultispeQ. If it is not discoverable, hold its button for about
-   three seconds.
+The connection flow below is not MultispeQ-specific: any supported instrument
+connects through the same **Devices** sheet, whether it is attached by USB cable
+or discovered over Bluetooth, and both kinds appear in the same device list.
+MultispeQ is simply the most common case.
+
+1. Turn on the device. A MultispeQ that is not discoverable becomes so when you
+   hold its button for about three seconds.
 2. In the openJII mobile app, open **Devices** from the device chip.
 3. Allow Bluetooth access when Android asks.
 4. Select **Scan**, then **Pair** beside the intended device.

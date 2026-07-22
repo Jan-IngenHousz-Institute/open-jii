@@ -3,7 +3,7 @@ title: "Writing protocols"
 description: "Create, validate, and test a device measurement recipe before field use."
 ---
 
-{/* verified: code@5bec21dc9 2026-07-22 */}
+{/* verified: code@147e5cf48 2026-07-22 */}
 
 A protocol is the JSON measurement recipe that openJII sends to connected
 hardware. For MultispeQ, it is a JSON array in the MultispeQ protocol format.
@@ -110,9 +110,16 @@ sample handling, or whether the output supports the intended inference.
 
 ## Recommended starting points
 
-{/* NEEDS-LIVE-CHECK: fill with the recommended prod workbook names + links once Dominik has prepared them */}
+If you have a MultispeQ, do not start from an empty workbook. Fork one of the
+recommended baseline workbooks, which pair a reviewed MultispeQ protocol with
+its matching analysis macro:
 
-Recommended production workbooks are being prepared with a baseline MultispeQ
-protocol and matching analysis macro. Until those names are listed here, start
-from a reviewed workbook used by your research team and confirm its protocol,
-macro, hardware family, and expected outputs before forking it.
+- [Recommended MultispeQ baseline workbook 1](https://openjii.org/en-US/platform/workbooks/1156d46f-acb5-4bd2-914a-636a6b66e95e)
+- [Recommended MultispeQ baseline workbook 2](https://openjii.org/en-US/platform/workbooks/25a05d48-1996-4953-af08-a4ba80bf360c)
+
+{/* NEEDS-LIVE-CHECK: replace the generic link labels above with the workbooks' real names from prod. */}
+
+The flow: open the workbook, select **Fork** to create your own editable copy,
+attach that copy to your experiment, then add the questions, instructions,
+branches, or extra analysis your study needs. Your fork keeps the working
+protocol and macro pairing while everything you add stays yours to change.
