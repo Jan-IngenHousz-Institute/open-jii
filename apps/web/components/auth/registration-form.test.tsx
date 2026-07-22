@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { ORPCError } from "@orpc/client";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -217,6 +218,31 @@ describe("RegistrationForm", () => {
       expect(pushMock).toHaveBeenCalledWith("/dashboard");
       expect(toastMock).toHaveBeenCalledWith({
         description: "registration.newsletterOptInError",
+      });
+    });
+  });
+
+  it("shows forgotten-email guidance when the subscription is rejected as forgotten", async () => {
+    mockSubscribeNewsletter.mockRejectedValueOnce(
+      new ORPCError("BAD_REQUEST", {
+        status: 400,
+        message: "forgotten",
+        data: { code: "MAILCHIMP_FORGOTTEN_EMAIL" },
+      }),
+    );
+    render(<RegistrationForm {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Forgotten");
+    await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+      expect(toastMock).toHaveBeenCalledWith({
+        description: "registration.newsletterForgottenEmail",
       });
     });
   });

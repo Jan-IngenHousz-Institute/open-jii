@@ -46,7 +46,7 @@ export class MailchimpAdapter implements NewsletterPort {
         await this.applyCommunityClassification(email);
         return success(undefined);
       } catch (error) {
-        return this.toFailure(error, ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED, "subscribePending");
+        return this.toFailure(error, this.subscribeFailureCode(error), "subscribePending");
       }
     }
 
@@ -54,7 +54,7 @@ export class MailchimpAdapter implements NewsletterPort {
       await this.upsertMember(email, "pending");
       return success(undefined);
     } catch (error) {
-      return this.toFailure(error, ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED, "subscribePending");
+      return this.toFailure(error, this.subscribeFailureCode(error), "subscribePending");
     }
   }
 
@@ -79,12 +79,12 @@ export class MailchimpAdapter implements NewsletterPort {
         } catch (fallbackError) {
           return this.toFailure(
             fallbackError,
-            ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED,
+            this.subscribeFailureCode(fallbackError),
             "subscribeDirect",
           );
         }
       }
-      return this.toFailure(error, ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED, "subscribeDirect");
+      return this.toFailure(error, this.subscribeFailureCode(error), "subscribeDirect");
     }
   }
 
@@ -247,6 +247,28 @@ export class MailchimpAdapter implements NewsletterPort {
     return /compliance/i.test(`${data?.title ?? ""} ${data?.detail ?? ""}`);
   }
 
+  // A permanently deleted ("forgotten", GDPR-erased) address is suppressed by
+  // Mailchimp: every API re-add (subscribed or pending) returns 400 with a
+  // "Forgotten Email Not Subscribed" title. Detect it so the failure is legible
+  // instead of a generic bad request.
+  private isForgottenEmailError(error: unknown): boolean {
+    if (!isAxiosError(error) || error.response?.status !== 400) {
+      return false;
+    }
+    const data = error.response.data as { title?: string; detail?: string } | undefined;
+    return /forgotten email|permanently deleted|cannot be re-imported/i.test(
+      `${data?.title ?? ""} ${data?.detail ?? ""}`,
+    );
+  }
+
+  // Subscribe paths share one failure code, upgraded to the forgotten-email code
+  // when the provider reports the address as permanently deleted.
+  private subscribeFailureCode(error: unknown): ErrorCodes {
+    return this.isForgottenEmailError(error)
+      ? ErrorCodes.MAILCHIMP_FORGOTTEN_EMAIL
+      : ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED;
+  }
+
   private notConfigured(operation: string): Result<never> {
     this.logger.warn({
       msg: "Mailchimp is not configured; newsletter operation unavailable",
@@ -265,6 +287,9 @@ export class MailchimpAdapter implements NewsletterPort {
       operation,
       error: getAxiosErrorMessage(error),
     });
-    return failure(apiErrorMapper(error, "Mailchimp"));
+    // Preserve the operation-specific domain error code so callers/clients can
+    // branch on it, while keeping the mapped HTTP status/message/details.
+    const mapped = apiErrorMapper(error, "Mailchimp");
+    return failure(new AppError(mapped.message, errorCode, mapped.statusCode, mapped.details));
   }
 }

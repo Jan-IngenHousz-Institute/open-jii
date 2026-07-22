@@ -1,6 +1,7 @@
 import type { HttpService } from "@nestjs/axios";
 import { createHash } from "crypto";
 
+import { ErrorCodes } from "../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../utils/fp-utils";
 import type { MailchimpConfigService } from "./config/config.service";
 import type { MailchimpCommunityKind } from "./config/config.types";
@@ -61,6 +62,15 @@ function buildAdapter(kind: MailchimpCommunityKind = "group", isConfigured = tru
 function axiosError(status: number, data: unknown) {
   return { isAxiosError: true, message: `HTTP ${status}`, response: { status, data } };
 }
+
+// Shape Mailchimp returns after an address was permanently deleted ("forgotten").
+const forgottenEmailError = () =>
+  axiosError(400, {
+    title: "Forgotten Email Not Subscribed",
+    detail:
+      "person@example.com was permanently deleted and cannot be re-imported. " +
+      "The contact must re-subscribe to get back on the list.",
+  });
 
 describe("MailchimpAdapter", () => {
   describe("subscribePending", () => {
@@ -220,6 +230,17 @@ describe("MailchimpAdapter", () => {
 
       assertFailure(result);
     });
+
+    it("surfaces the forgotten-email code when the pending upsert is rejected", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.get.mockRejectedValue(axiosError(404, { title: "Resource Not Found" }));
+      axiosRef.put.mockRejectedValue(forgottenEmailError());
+
+      const result = await adapter.subscribePending(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_FORGOTTEN_EMAIL);
+    });
   });
 
   describe("subscribeDirect", () => {
@@ -277,6 +298,62 @@ describe("MailchimpAdapter", () => {
 
       assertFailure(result);
       expect(axiosRef.put).toHaveBeenCalledTimes(1);
+    });
+
+    it("surfaces the forgotten-email code without a pending fallback", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.put.mockRejectedValue(forgottenEmailError());
+
+      const result = await adapter.subscribeDirect(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_FORGOTTEN_EMAIL);
+      // The forgotten-email 400 is not a compliance state, so no pending retry.
+      expect(axiosRef.put).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("domain error-code propagation", () => {
+    it("carries the operation code and the mapped HTTP status through toFailure", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.put.mockRejectedValue(axiosError(500, { detail: "server error" }));
+
+      const result = await adapter.subscribeDirect(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_SUBSCRIBE_FAILED);
+      expect(result.error.statusCode).toBe(500);
+      expect(result.error.message).toContain("Mailchimp");
+    });
+
+    it("maps getStatus failures to the status code", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.get.mockRejectedValue(axiosError(500, { detail: "boom" }));
+
+      const result = await adapter.getStatus(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_STATUS_FAILED);
+    });
+
+    it("maps unsubscribe failures to the unsubscribe code", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.patch.mockRejectedValue(axiosError(500, { detail: "boom" }));
+
+      const result = await adapter.unsubscribe(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_UNSUBSCRIBE_FAILED);
+    });
+
+    it("maps deleteMember failures to the delete code", async () => {
+      const { adapter, axiosRef } = buildAdapter("group");
+      axiosRef.post.mockRejectedValue(axiosError(500, { detail: "boom" }));
+
+      const result = await adapter.deleteMember(EMAIL);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.MAILCHIMP_DELETE_FAILED);
     });
   });
 

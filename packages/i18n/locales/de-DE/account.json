@@ -48,7 +48,8 @@
       "retry": "Erneut versuchen",
       "retrying": "Erneuter Versuch…",
       "updating": "Ihr Newsletter-Abonnement wird aktualisiert…",
-      "updateError": "Ihr Newsletter-Abonnement konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+      "updateError": "Ihr Newsletter-Abonnement konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "forgottenEmailError": "Diese E-Mail-Adresse wurde auf Ihren früheren Wunsch aus unserem Newsletter entfernt und kann nicht automatisch wieder hinzugefügt werden. Bitte wenden Sie sich an den Support, wenn Sie sich erneut anmelden möchten."
     },
     "status": {
       "active": "Konto aktiv",

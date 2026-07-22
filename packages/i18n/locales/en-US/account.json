@@ -48,7 +48,8 @@
       "retry": "Try again",
       "retrying": "Trying again…",
       "updating": "Updating your newsletter subscription…",
-      "updateError": "We couldn't update your newsletter subscription. Please try again."
+      "updateError": "We couldn't update your newsletter subscription. Please try again.",
+      "forgottenEmailError": "This email was removed from our newsletter at your earlier request and can't be re-added automatically. Please contact support if you'd like to subscribe again."
     },
     "status": {
       "active": "Account active",

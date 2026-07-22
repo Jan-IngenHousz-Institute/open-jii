@@ -48,7 +48,8 @@
       "retry": "Opnieuw proberen",
       "retrying": "Opnieuw proberen…",
       "updating": "Je nieuwsbriefabonnement wordt bijgewerkt…",
-      "updateError": "Je nieuwsbriefabonnement kon niet worden bijgewerkt. Probeer het opnieuw."
+      "updateError": "Je nieuwsbriefabonnement kon niet worden bijgewerkt. Probeer het opnieuw.",
+      "forgottenEmailError": "Dit e-mailadres is op je eerdere verzoek uit onze nieuwsbrief verwijderd en kan niet automatisch opnieuw worden toegevoegd. Neem contact op met support als je je opnieuw wilt aanmelden."
     },
     "status": {
       "active": "Account actief",

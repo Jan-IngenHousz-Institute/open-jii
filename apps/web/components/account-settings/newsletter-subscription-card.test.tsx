@@ -61,6 +61,35 @@ describe("<NewsletterSubscriptionCard />", () => {
     await waitFor(() => expect(request.called).toBe(true));
   });
 
+  it("shows forgotten-email guidance when the direct subscribe is rejected as forgotten", async () => {
+    server.mount(contract.newsletter.getStatus, { body: { status: "none" } });
+    server.mount(contract.newsletter.subscribeDirect, {
+      status: 400,
+      body: { code: "MAILCHIMP_FORGOTTEN_EMAIL", message: "forgotten", statusCode: 400 },
+    });
+    const user = userEvent.setup();
+    render(<NewsletterSubscriptionCard />);
+
+    await user.click(await screen.findByRole("switch"));
+
+    expect(
+      await screen.findByText("settings.NewsletterSubscriptionCard.forgottenEmailError"),
+    ).toBeVisible();
+  });
+
+  it("keeps the generic update error for other subscribe failures", async () => {
+    server.mount(contract.newsletter.getStatus, { body: { status: "none" } });
+    server.mount(contract.newsletter.subscribeDirect, { status: 500 });
+    const user = userEvent.setup();
+    render(<NewsletterSubscriptionCard />);
+
+    await user.click(await screen.findByRole("switch"));
+
+    expect(
+      await screen.findByText("settings.NewsletterSubscriptionCard.updateError"),
+    ).toBeVisible();
+  });
+
   it("unsubscribes through the authenticated delete route", async () => {
     server.mount(contract.newsletter.getStatus, { body: { status: "subscribed" } });
     const request = server.mount(contract.newsletter.unsubscribe, {

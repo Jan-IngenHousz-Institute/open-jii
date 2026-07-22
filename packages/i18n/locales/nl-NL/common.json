@@ -225,7 +225,8 @@
   },
   "registration": {
     "newsletterOptIn": "Ik wil graag de openJII-nieuwsbrief ontvangen",
-    "newsletterOptInError": "Aanmelden voor de nieuwsbrief is mislukt. Je kunt je later aanmelden via de accountinstellingen."
+    "newsletterOptInError": "Aanmelden voor de nieuwsbrief is mislukt. Je kunt je later aanmelden via de accountinstellingen.",
+    "newsletterForgottenEmail": "Dit e-mailadres is op je eerdere verzoek uit onze nieuwsbrief verwijderd en kan niet automatisch opnieuw worden toegevoegd. Neem contact op met support als je je opnieuw wilt aanmelden."
   },
   "signout": {
     "title": "Uitloggen",

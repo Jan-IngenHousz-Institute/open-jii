@@ -12,6 +12,7 @@ import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { orpc } from "~/lib/orpc";
+import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -113,8 +114,13 @@ export function RegistrationForm({
     }
 
     if (newsletterOptIn) {
-      void subscribeNewsletter.mutateAsync(undefined).catch(() => {
-        toast({ description: t("registration.newsletterOptInError") });
+      void subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
+        const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
+        toast({
+          description: isForgottenEmail
+            ? t("registration.newsletterForgottenEmail")
+            : t("registration.newsletterOptInError"),
+        });
       });
     }
 

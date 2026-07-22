@@ -62,6 +62,7 @@ export enum ErrorCodes {
   // Location: src/common/modules/mailchimp/
   MAILCHIMP_NOT_CONFIGURED = "MAILCHIMP_NOT_CONFIGURED", // Newsletter provider not configured on this environment
   MAILCHIMP_SUBSCRIBE_FAILED = "MAILCHIMP_SUBSCRIBE_FAILED", // Subscribe/upsert member failed
+  MAILCHIMP_FORGOTTEN_EMAIL = "MAILCHIMP_FORGOTTEN_EMAIL", // Address was permanently deleted (GDPR erasure) and cannot be re-added via the API
   MAILCHIMP_UNSUBSCRIBE_FAILED = "MAILCHIMP_UNSUBSCRIBE_FAILED", // Unsubscribe member failed
   MAILCHIMP_STATUS_FAILED = "MAILCHIMP_STATUS_FAILED", // Member status lookup failed
   MAILCHIMP_DELETE_FAILED = "MAILCHIMP_DELETE_FAILED", // Permanent member delete failed

@@ -3,6 +3,7 @@
 import { useNewsletterStatus } from "@/hooks/newsletter/useNewsletterStatus/useNewsletterStatus";
 import { useSubscribeNewsletter } from "@/hooks/newsletter/useSubscribeNewsletter/useSubscribeNewsletter";
 import { useUnsubscribeNewsletter } from "@/hooks/newsletter/useUnsubscribeNewsletter/useUnsubscribeNewsletter";
+import { parseApiError } from "@/util/apiError";
 import { AlertCircle, Loader2, Mail } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
@@ -23,6 +24,9 @@ export function NewsletterSubscriptionCard() {
   const unsubscribe = useUnsubscribeNewsletter();
   const isUpdating = subscribe.isPending || unsubscribe.isPending;
   const mutationFailed = subscribe.isError || unsubscribe.isError;
+  // The forgotten-email case can only arise on the subscribe path (Mailchimp
+  // suppresses a permanently deleted address); unsubscribe never hits it.
+  const isForgottenEmail = parseApiError(subscribe.error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
 
   const handleCheckedChange = (checked: boolean) => {
     subscribe.reset();
@@ -103,7 +107,11 @@ export function NewsletterSubscriptionCard() {
 
         {mutationFailed && (
           <p className="text-destructive text-sm" role="alert">
-            {t("settings.NewsletterSubscriptionCard.updateError")}
+            {t(
+              isForgottenEmail
+                ? "settings.NewsletterSubscriptionCard.forgottenEmailError"
+                : "settings.NewsletterSubscriptionCard.updateError",
+            )}
           </p>
         )}
         {isUpdating && (

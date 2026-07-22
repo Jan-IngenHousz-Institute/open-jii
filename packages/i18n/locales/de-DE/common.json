@@ -329,6 +329,7 @@
     "acceptTermsError": "Sie müssen die allgemeinen Geschäftsbedingungen akzeptieren",
     "newsletterOptIn": "Ich möchte den openJII-Newsletter erhalten",
     "newsletterOptInError": "Die Newsletter-Anmeldung ist fehlgeschlagen. Sie können sich später in den Kontoeinstellungen anmelden.",
+    "newsletterForgottenEmail": "Diese E-Mail-Adresse wurde auf Ihren früheren Wunsch aus unserem Newsletter entfernt und kann nicht automatisch wieder hinzugefügt werden. Bitte wenden Sie sich an den Support, wenn Sie sich erneut anmelden möchten.",
     "register": "Registrieren",
     "successMessage": "Registrierung erfolgreich",
     "signOutTitle": "Abmelden",
