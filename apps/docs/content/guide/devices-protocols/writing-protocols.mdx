@@ -114,10 +114,19 @@ If you have a MultispeQ, do not start from an empty workbook. Fork one of the
 recommended baseline workbooks, which pair a reviewed MultispeQ protocol with
 its matching analysis macro:
 
-- [Photosynthesis RIDES 2.1](https://openjii.org/en-US/platform/workbooks/1156d46f-acb5-4bd2-914a-636a6b66e95e)
-  based on the standard PhotosynQ protocol for broad photosynthesis phenotyping.
-- [UNZA_PIRK_DIRK_LightPotential_14](https://openjii.org/en-US/platform/workbooks/25a05d48-1996-4953-af08-a4ba80bf360c)
-  for PIRK/DIRK light-potential measurements.
+- **[Photosynthesis RIDES 2.1](https://openjii.org/en-US/platform/workbooks/1156d46f-acb5-4bd2-914a-636a6b66e95e)**
+  is a broad, general-purpose phenotyping protocol. In one clamp of under about
+  15 seconds it captures chlorophyll fluorescence parameters (Phi2, PhiNPQ,
+  PhiNO, NPQt, qL, LEF), relative chlorophyll (SPAD), proton motive force and
+  ATP synthase activity, PSI/P700 parameters, several absorbance bands, and leaf
+  and environmental context (thickness, angle, temperature, PAR, humidity,
+  pressure). It supports MultispeQ V1 and V2 on firmware 2.34 and higher. Start
+  here if you are not sure which to pick.
+- **[UNZA_PIRK_DIRK_LightPotential_14](https://openjii.org/en-US/platform/workbooks/25a05d48-1996-4953-af08-a4ba80bf360c)**
+  is a focused "light potential" protocol. It measures a leaf at both ambient
+  and high light so you can compare photosynthetic performance across the two
+  and estimate the spare linear-electron-flow capacity the leaf still holds in
+  reserve. Choose it when reserve capacity under increased light is the question.
 
 The flow: open the workbook, select **Fork** to create your own editable copy,
 attach that copy to your experiment, then add the questions, instructions,
