@@ -1,0 +1,134 @@
+---
+title: "Writing protocols"
+description: "Create, validate, and test a device measurement recipe before field use."
+---
+
+{/* verified: code@147e5cf48 2026-07-22 */}
+
+A protocol is the JSON measurement recipe that openJII sends to connected
+hardware. For MultispeQ, it is a JSON array in the MultispeQ protocol format.
+The protocol controls the instrument; the surrounding workbook controls the
+research flow, questions, branches, commands, and analysis.
+
+Start by forking a protocol that already matches your instrument and method.
+That preserves working hardware settings and makes your changes reviewable. See
+[Protocols: choosing & adjusting](/guide/devices-protocols/protocols) for the
+ownership and fork-to-edit model.
+
+<Callout type="info">
+  New to the MultispeQ protocol format? The commands, pulses, and parameters come from PhotosynQ's
+  MultispeQ documentation. See [PhotosynQ Support](https://help.photosynq.com) for the full
+  instruction set and deeper protocol questions.
+</Callout>
+
+## Create or edit a protocol
+
+For the full authoring flow, open **Protocols**, select **New protocol**, and
+complete the Details, Code & test, and Review steps. Choose the intended sensor
+family before entering the JSON. If you own an existing protocol, open its page
+and edit the code there.
+
+You can also create or select a protocol while adding a **Protocol** cell to a
+workbook. A protocol created from the cell starts empty; open its editor and add
+the code before trying to run it.
+
+The editor checks JSON syntax and the MultispeQ-oriented protocol schema. It
+marks fields such as invalid pins, intensities, and malformed pulse arrays. A
+deployment can show schema findings as warnings rather than blocking the save,
+so a clean editor is not proof that the method is scientifically or physically
+safe.
+
+## Read the JSON shape
+
+This small example shows the structure the openJII validator and MultispeQ
+driver recognize. It is an orientation example, not a field-ready measurement:
+
+```json
+[
+  {
+    "v_arrays": [],
+    "set_repeats": 1,
+    "_protocol_set_": [
+      {
+        "label": "Example pulse block",
+        "pulses": [10],
+        "pulse_distance": [1000]
+      }
+    ]
+  }
+]
+```
+
+- The outer array contains one or more protocol entries.
+- `_protocol_set_` groups the measurement blocks executed within an entry.
+- `pulses` gives the pulse count for each block; `pulse_distance` supplies the
+  corresponding interval in microseconds.
+- `set_repeats` repeats the whole set. A block can also use
+  `protocol_repeats` to repeat its own pulse train.
+- `v_arrays` holds reusable value sequences. References such as `#l0` and
+  `@s0` let a set repeat over the length or successive values of an array.
+
+These fields interact with light pins, detector pins, intensities, averaging,
+pre-illumination, and clamp prompts. Treat an established protocol for the same
+hardware as the deeper reference: fork it, change one controlled parameter at a
+time, and compare its output and run time with the original.
+
+<Callout type="warn">
+  Pulse timing, light intensity, detector choice, repeats, and pre-illumination can change both the
+  result and the stress placed on a sample. Do not turn the structure example above into a field
+  method without an instrument-appropriate protocol and scientific review.
+</Callout>
+
+## Target the right device family
+
+| Connected family | Protocol-cell behavior                                                                                                                                                      |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MultispeQ        | Receives the protocol JSON array directly and returns a measurement response.                                                                                               |
+| MiniPAR          | Accepts JSON protocol arrays or objects and returns a footer-framed measurement envelope.                                                                                   |
+| Ambit            | Rejects protocol JSON over a direct connection. Use command cells for operations such as `hello`, `get_par`, and `set_spec`; full measurements use the Ambyte gateway path. |
+
+Generic drivers use a separate load, run, and retrieve sequence. Do not assume a
+MultispeQ field has the same meaning on another family merely because the JSON
+can be stored.
+
+## Validate on connected hardware
+
+1. Save the protocol with the correct sensor family.
+2. In the Code & test step, connect the exact hardware model intended for the
+   study.
+3. Run the protocol and inspect the raw response, duration, prompts, warnings,
+   and device state.
+4. Add the protocol to a workbook with its intended
+   [analysis macro](/guide/devices-protocols/writing-macros).
+5. Run the complete workbook on every supported device family and, for
+   multi-device work, on more than one physical device.
+6. Publish a workbook version and record the tested protocol version with the
+   method.
+
+Browser validation cannot verify firmware behavior, calibration, wiring,
+sample handling, or whether the output supports the intended inference.
+
+## Recommended starting points
+
+If you have a MultispeQ, do not start from an empty workbook. Fork one of the
+recommended baseline workbooks, which pair a reviewed MultispeQ protocol with
+its matching analysis macro:
+
+- **[Photosynthesis RIDES 2.1](https://openjii.org/en-US/platform/workbooks/1156d46f-acb5-4bd2-914a-636a6b66e95e)**
+  is a broad, general-purpose phenotyping protocol. In one clamp of under about
+  15 seconds it captures chlorophyll fluorescence parameters (Phi2, PhiNPQ,
+  PhiNO, NPQt, qL, LEF), relative chlorophyll (SPAD), proton motive force and
+  ATP synthase activity, PSI/P700 parameters, several absorbance bands, and leaf
+  and environmental context (thickness, angle, temperature, PAR, humidity,
+  pressure). It supports MultispeQ V1 and V2 on firmware 2.34 and higher. Start
+  here if you are not sure which to pick.
+- **[UNZA_PIRK_DIRK_LightPotential_14](https://openjii.org/en-US/platform/workbooks/25a05d48-1996-4953-af08-a4ba80bf360c)**
+  is a focused "light potential" protocol. It measures a leaf at both ambient
+  and high light so you can compare photosynthetic performance across the two
+  and estimate the spare linear-electron-flow capacity the leaf still holds in
+  reserve. Choose it when reserve capacity under increased light is the question.
+
+The flow: open the workbook, select **Fork** to create your own editable copy,
+attach that copy to your experiment, then add the questions, instructions,
+branches, or extra analysis your study needs. Your fork keeps the working
+protocol and macro pairing while everything you add stays yours to change.
