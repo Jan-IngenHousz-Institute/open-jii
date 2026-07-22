@@ -12,5 +12,7 @@ type PlatformLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
 // URL for the current environment. Registered globally in mdx-components.tsx so
 // content can use <PlatformLink path="..."> without importing anything.
 export function PlatformLink({ path, ...props }: PlatformLinkProps) {
-  return <Link href={platformUrl(path)} {...props} />;
+  // Cross-origin by construction (platform vs docs host), so open in a new tab
+  // explicitly rather than relying on Fumadocs' external-link detection.
+  return <Link href={platformUrl(path)} target="_blank" rel="noopener noreferrer" {...props} />;
 }

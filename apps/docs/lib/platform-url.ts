@@ -1,7 +1,10 @@
 // Base URL of the openJII web platform the docs link out to. Resolved per
 // deployment environment (see PLATFORM_BASE_URL in deploy-docs.yml), mirroring
 // DOCS_BASE_URL in ./site-url so dev docs link to the dev platform, prod to prod.
-export const PLATFORM_URL = process.env.PLATFORM_BASE_URL ?? "https://openjii.org";
+export const PLATFORM_URL = (process.env.PLATFORM_BASE_URL ?? "https://openjii.org").replace(
+  /\/+$/,
+  "",
+);
 
 export type PlatformEnv = "prod" | "dev";
 
