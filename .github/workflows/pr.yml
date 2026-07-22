@@ -163,7 +163,7 @@ jobs:
         if: steps.changed.outputs.changed == 'true'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Regenerate specs and check for drift
         if: steps.changed.outputs.changed == 'true'
