@@ -308,7 +308,7 @@ module "contentful_secrets" {
 module "mailchimp_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-mailchimp-secrets-${var.environment}"
+  name        = "openjii-newsletter-secrets-${var.environment}"
   description = "Mailchimp API secrets for the openJII backend service"
 
   secret_string = jsonencode({
