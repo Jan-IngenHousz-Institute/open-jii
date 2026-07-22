@@ -50,6 +50,11 @@
                     "type": "string",
                     "description": "Experiment visibility setting"
                   },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional owning organization; defaults to the creator's personal org"
+                  },
                   "embargoUntil": {
                     "type": "string",
                     "format": "date-time",
@@ -232,6 +237,17 @@
                         }
                       ]
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -386,6 +402,7 @@
                     "anonymizeContributors",
                     "workbookId",
                     "workbookVersionId",
+                    "organizationId",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -501,6 +518,17 @@
                         ]
                       },
                       "workbookVersionId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationId": {
                         "anyOf": [
                           {
                             "type": "string",
@@ -665,6 +693,7 @@
                       "anonymizeContributors",
                       "workbookId",
                       "workbookVersionId",
+                      "organizationId",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -752,6 +781,17 @@
                       ]
                     },
                     "workbookVersionId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -916,6 +956,7 @@
                     "anonymizeContributors",
                     "workbookId",
                     "workbookVersionId",
+                    "organizationId",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -1103,6 +1144,17 @@
                         }
                       ]
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -1257,6 +1309,7 @@
                     "anonymizeContributors",
                     "workbookId",
                     "workbookVersionId",
+                    "organizationId",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -1380,6 +1433,17 @@
                           ]
                         },
                         "workbookVersionId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "organizationId": {
                           "anyOf": [
                             {
                               "type": "string",
@@ -1544,6 +1608,7 @@
                         "anonymizeContributors",
                         "workbookId",
                         "workbookVersionId",
+                        "organizationId",
                         "createdBy",
                         "createdAt",
                         "updatedAt"
@@ -6232,6 +6297,17 @@
                         }
                       ]
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -6385,6 +6461,7 @@
                     "embargoUntil",
                     "workbookId",
                     "workbookVersionId",
+                    "organizationId",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -13105,6 +13182,24 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -13125,6 +13220,8 @@
                       "certificateId",
                       "certificateArn",
                       "createdBy",
+                      "organizationId",
+                      "visibility",
                       "createdAt",
                       "updatedAt"
                     ]
@@ -13165,6 +13262,10 @@
                     ],
                     "type": "string",
                     "description": "IotDevice class, maps to the ingest topic sensorType"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
                   }
                 },
                 "required": [
@@ -13249,6 +13350,24 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -13269,6 +13388,8 @@
                     "certificateId",
                     "certificateArn",
                     "createdBy",
+                    "organizationId",
+                    "visibility",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -13368,6 +13489,24 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -13388,6 +13527,8 @@
                     "certificateId",
                     "certificateArn",
                     "createdBy",
+                    "organizationId",
+                    "visibility",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -13572,6 +13713,24 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -13592,6 +13751,8 @@
                     "certificateId",
                     "certificateArn",
                     "createdBy",
+                    "organizationId",
+                    "visibility",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -13771,6 +13932,24 @@
                       "updatedAt": {
                         "type": "string",
                         "format": "date-time"
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -13782,7 +13961,9 @@
                       "code",
                       "createdBy",
                       "createdAt",
-                      "updatedAt"
+                      "updatedAt",
+                      "organizationId",
+                      "visibility"
                     ]
                   }
                 }
@@ -13821,6 +14002,10 @@
                     "minLength": 1
                   },
                   "forkedFrom": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "organizationId": {
                     "type": "string",
                     "format": "uuid"
                   }
@@ -13908,6 +14093,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -13919,7 +14122,9 @@
                     "code",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -14016,6 +14221,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -14027,7 +14250,9 @@
                     "code",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -14153,6 +14378,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -14164,7 +14407,9 @@
                     "code",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -14875,6 +15120,24 @@
                       "updatedAt": {
                         "type": "string",
                         "format": "date-time"
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -14886,7 +15149,9 @@
                       "sortOrder",
                       "createdBy",
                       "createdAt",
-                      "updatedAt"
+                      "updatedAt",
+                      "organizationId",
+                      "visibility"
                     ]
                   }
                 }
@@ -14930,6 +15195,10 @@
                     "type": "string"
                   },
                   "forkedFrom": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "organizationId": {
                     "type": "string",
                     "format": "uuid"
                   }
@@ -15020,6 +15289,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -15031,7 +15318,9 @@
                     "sortOrder",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -15131,6 +15420,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -15142,7 +15449,9 @@
                     "sortOrder",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -15277,6 +15586,24 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -15288,7 +15615,9 @@
                     "sortOrder",
                     "createdBy",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "organizationId",
+                    "visibility"
                   ]
                 }
               }
@@ -17196,6 +17525,24 @@
                         "type": "object",
                         "additionalProperties": {}
                       },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
@@ -17236,6 +17583,8 @@
                       "description",
                       "cells",
                       "metadata",
+                      "organizationId",
+                      "visibility",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -17731,6 +18080,10 @@
                     "additionalProperties": {}
                   },
                   "forkedFrom": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "organizationId": {
                     "type": "string",
                     "format": "uuid"
                   }
@@ -18233,6 +18586,24 @@
                       "type": "object",
                       "additionalProperties": {}
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -18273,6 +18644,8 @@
                     "description",
                     "cells",
                     "metadata",
+                    "organizationId",
+                    "visibility",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -18789,6 +19162,24 @@
                       "type": "object",
                       "additionalProperties": {}
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -18829,6 +19220,8 @@
                     "description",
                     "cells",
                     "metadata",
+                    "organizationId",
+                    "visibility",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -19829,6 +20222,24 @@
                       "type": "object",
                       "additionalProperties": {}
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -19869,6 +20280,8 @@
                     "description",
                     "cells",
                     "metadata",
+                    "organizationId",
+                    "visibility",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
