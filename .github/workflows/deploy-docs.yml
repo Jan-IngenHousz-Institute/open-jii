@@ -64,6 +64,10 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Build Documentation Site
+        env:
+          # Only production is crawlable; dev/staging keep robots.txt Disallow.
+          DOCS_INDEXABLE: ${{ inputs.environment == 'prod' && 'true' || 'false' }}
+          DOCS_BASE_URL: ${{ inputs.environment == 'prod' && 'https://docs.openjii.org' || format('https://docs.{0}.openjii.org', inputs.environment) }}
         run: |
           echo "Building documentation site (Fumadocs / Next.js static export)..."
           pnpm run build --filter=docs

@@ -21,7 +21,9 @@
         "DB_HOST",
         "DB_PORT",
         "DB_NAME",
-        "DB_CREDENTIALS"
+        "DB_CREDENTIALS",
+        "DOCS_INDEXABLE",
+        "DOCS_BASE_URL"
       ]
     },
     "lint": {
