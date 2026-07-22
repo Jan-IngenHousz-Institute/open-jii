@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import { Readable } from "stream";
 
+import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success } from "../../../common/utils/fp-utils";
 import type { ExportMetadata } from "../models/experiment-data-exports.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
@@ -88,33 +89,7 @@ export class ExperimentDataExportsRepository {
       return completedResult;
     }
 
-    // Map database columns (snake_case) to domain model (camelCase)
-    const columnMapping: Record<string, string> = {
-      export_id: "exportId",
-      experiment_id: "experimentId",
-      table_name: "tableName",
-      format: "format",
-      status: "status",
-      file_path: "filePath",
-      row_count: "rowCount",
-      file_size: "fileSize",
-      created_by: "createdBy",
-      created_at: "createdAt",
-      completed_at: "completedAt",
-      job_run_id: "jobRunId",
-    };
-
-    const schemaData = completedResult.value;
-    const completedExports: ExportMetadata[] = schemaData.rows.map((row) => {
-      const exportRecord: Record<string, any> = {};
-      schemaData.columns.forEach((col, index) => {
-        const mappedKey = columnMapping[col.name];
-        if (mappedKey) {
-          exportRecord[mappedKey] = row[index];
-        }
-      });
-      return exportRecord as ExportMetadata;
-    });
+    const completedExports = this.mapCompletedRows(completedResult.value);
 
     // Get active exports from job runs
     const activeResult = await this.databricksPort.getActiveExports(experimentId, tableName);
@@ -172,6 +147,89 @@ export class ExperimentDataExportsRepository {
     });
 
     return success(allExports);
+  }
+
+  private mapCompletedRows(schemaData: SchemaData): ExportMetadata[] {
+    const idx = (name: string): number =>
+      schemaData.columns.findIndex((column) => column.name === name);
+    const exportIdIdx = idx("export_id");
+    const experimentIdIdx = idx("experiment_id");
+    const tableNameIdx = idx("table_name");
+    const formatIdx = idx("format");
+    const statusIdx = idx("status");
+    const filePathIdx = idx("file_path");
+    const rowCountIdx = idx("row_count");
+    const fileSizeIdx = idx("file_size");
+    const createdByIdx = idx("created_by");
+    const createdAtIdx = idx("created_at");
+    const completedAtIdx = idx("completed_at");
+    const jobRunIdIdx = idx("job_run_id");
+
+    const emptyToNull = (value: string | null | undefined): string | null => {
+      const normalized = value?.trim();
+      if (!normalized) {
+        return null;
+      }
+      return normalized;
+    };
+
+    const normalizeTimestamp = (value: string | null | undefined): string | null => {
+      const normalized = emptyToNull(value);
+      if (!normalized) {
+        return null;
+      }
+
+      // Databricks SQL timestamps have no offset. Treat export metadata as UTC
+      // so the conversion is deterministic and satisfies the API contract.
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)) {
+        return `${normalized.replace(" ", "T")}Z`;
+      }
+
+      return normalized;
+    };
+
+    const parseIntegerOrNull = (
+      value: string | null | undefined,
+      field: "row_count" | "file_size" | "job_run_id",
+      exportId: string | null,
+    ): number | null => {
+      const normalized = emptyToNull(value);
+      if (!normalized) {
+        return null;
+      }
+
+      const parsed = Number(normalized);
+      if (/^-?\d+$/.test(normalized) && Number.isSafeInteger(parsed)) {
+        return parsed;
+      }
+
+      this.logger.warn({
+        msg: "Ignoring invalid integer in completed export metadata",
+        operation: "mapCompletedRows",
+        exportId,
+        field,
+      });
+      return null;
+    };
+
+    return schemaData.rows.map((row) => {
+      const exportId = emptyToNull(row[exportIdIdx]);
+
+      return {
+        exportId,
+        experimentId: row[experimentIdIdx] ?? "",
+        tableName: row[tableNameIdx] ?? "",
+        format: (row[formatIdx] ?? "") as ExportMetadata["format"],
+        status: (row[statusIdx] ?? "") as ExportMetadata["status"],
+        filePath: emptyToNull(row[filePathIdx]),
+        rowCount: parseIntegerOrNull(row[rowCountIdx], "row_count", exportId),
+        fileSize: parseIntegerOrNull(row[fileSizeIdx], "file_size", exportId),
+        createdBy: row[createdByIdx] ?? "",
+        createdAt: normalizeTimestamp(row[createdAtIdx]) ?? "",
+        completedAt: normalizeTimestamp(row[completedAtIdx]),
+        jobRunId: parseIntegerOrNull(row[jobRunIdIdx], "job_run_id", exportId),
+      };
+    });
   }
 
   /**
