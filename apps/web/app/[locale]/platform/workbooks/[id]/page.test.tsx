@@ -121,12 +121,22 @@ describe("WorkbookOverviewPage", () => {
     expect(screen.queryByRole("button", { name: /markdown/i })).not.toBeInTheDocument();
   });
   it("forks the workbook from the detail page and posts forkedFrom", async () => {
+    const sourceCells = [
+      createMarkdownCell({ id: "source-cell", content: "<p>Source instructions</p>" }),
+    ];
+    const sourceMetadata = { crop: "maize", trialYear: 2026 };
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
     });
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", name: "Source WB", cells: [] }),
+      body: createWorkbook({
+        id: "wb-1",
+        name: "Distinctive field workbook",
+        description: "A workbook description that must survive forking.",
+        cells: sourceCells,
+        metadata: sourceMetadata,
+      }),
     });
     const user = userEvent.setup();
     renderPage();
@@ -134,7 +144,13 @@ describe("WorkbookOverviewPage", () => {
     await user.click(await screen.findByRole("button", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName", forkedFrom: "wb-1" });
+    expect(spy.body).toEqual({
+      name: "Fork of Distinctive field workbook",
+      description: "A workbook description that must survive forking.",
+      cells: sourceCells,
+      metadata: sourceMetadata,
+      forkedFrom: "wb-1",
+    });
   });
 
   it("shows the fork button to viewers who are not the creator", async () => {

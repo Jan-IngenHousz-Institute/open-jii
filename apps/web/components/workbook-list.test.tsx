@@ -96,7 +96,7 @@ describe("WorkbookList row actions", () => {
     await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
+    expect(spy.body).toMatchObject({ name: "Fork of Source WB" });
   });
 
   it("shows an error toast when duplicate fails", async () => {

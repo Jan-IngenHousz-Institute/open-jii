@@ -20,8 +20,8 @@ export default function NotFound() {
         <h1 className="text-fd-foreground mt-2 text-3xl font-bold sm:text-4xl">Page not found</h1>
         <p className="text-fd-muted-foreground mt-4 max-w-md">
           That page moved or never existed. Try the search (press{" "}
-          <kbd className="bg-fd-muted rounded border px-1.5 py-0.5 text-xs">⌘ K</kbd>) or pick a
-          starting point below.
+          <kbd className="bg-fd-muted rounded border px-1.5 py-0.5 text-xs">⌘/Ctrl K</kbd>) or pick
+          a starting point below.
         </p>
 
         <div className="mt-10 grid w-full max-w-2xl gap-4 sm:grid-cols-3">
