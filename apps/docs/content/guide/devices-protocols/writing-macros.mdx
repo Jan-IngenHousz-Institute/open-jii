@@ -1,0 +1,145 @@
+---
+title: "Writing macros"
+description: "Read measurements and workbook context, then return analysis-ready values."
+---
+
+{/* verified: code@e76bf12ab 2026-07-22 */}
+
+A macro is code that transforms a measurement or earlier workbook values into a
+JSON object. openJII stores Python, JavaScript, and R macros. On the web, the
+backend runs each language in its own isolated Lambda sandbox. The mobile field
+flow runs JavaScript locally and Python in Pyodide; it does not currently
+dispatch R macros.
+
+Open **Macros** and select **New macro** to choose a language, write the code,
+and optionally associate compatible protocols. You can also create or select a
+macro while adding a **Macro** cell to a workbook. Put the macro after the values
+it needs, then run the workbook with representative data.
+
+## Know the macro inputs
+
+| Name         | What the macro receives                                                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `json`       | The triggering measurement: normally the nearest preceding output, scoped to the device whose macro is running. A non-empty array is unwrapped to its first object by the web wrappers.                           |
+| `ctx`        | Completed upstream questions, protocols, commands, and macros keyed by canonical workbook name. Names are lowercased, punctuation becomes underscores, and duplicate names resolve to the nearest upstream value. |
+| Return value | A JSON-serializable object: a Python dictionary, JavaScript object, or R list. Its keys become the macro output available to later cells and data processing.                                                     |
+
+Question values use an `{ answer: ... }` object. Named protocol, command, and
+macro entries contain their output object. Only upstream cells are included;
+the macro cannot read itself or a later cell. The host passes `ctx` itself to
+macro code; there is no `ctx.byId` API.
+
+## Start with the triggering measurement in Python
+
+The variable is named `json`, but in Python it is the measurement dictionary,
+not the standard-library module:
+
+```python
+readings = json["readings"]
+mean_reading = sum(readings) / len(readings)
+
+return {
+    "mean_reading": mean_reading,
+    "reading_count": len(readings),
+}
+```
+
+Use keys that are stable in the selected protocol's output. Return a dictionary
+even for one value so downstream cells and exported tables have named fields.
+
+## Read earlier workbook values with `ctx`
+
+Name the producing cells **Baseline** and **Stress**. Their canonical keys are
+`baseline` and `stress`:
+
+```python
+baseline = ctx["baseline"]["value"]
+stress = ctx["stress"]["value"]
+device = ctx.get("$device", {})
+
+return {
+    "change_from_baseline": stress - baseline,
+    "device_id": device.get("id"),
+}
+```
+
+For a question named **Treatment group**, read
+`ctx["treatment_group"]["answer"]`. Names beginning with a number gain a
+`question_` prefix; choose simple, unique cell names rather than depending on
+that fallback.
+
+In multi-device runs, each macro invocation receives the upstream results for
+that same device. `ctx["$device"]` can contain `family`, `id`, `name`,
+`firmwareVersion`, `batteryPercent`, and zero-based `index` when the host knows
+them. Keep the device ID in the output when it is useful for auditing, but do
+not use the connection index as a permanent device identifier.
+
+## Run from context only
+
+The web workbook runner can execute a macro with no preceding measurement when
+at least one upstream `ctx` value exists. In that case, `json` is an empty
+dictionary. An answer-driven Python macro can therefore be as small as:
+
+```python
+treatment = ctx["treatment_group"]["answer"]
+
+return {
+    "treatment": treatment,
+    "is_control": treatment == "control",
+}
+```
+
+This ctx-only execution is a web workbook capability. Test the full mobile flow
+separately before relying on it during field work.
+
+## JavaScript equivalent
+
+JavaScript receives the same `json` and `ctx` contract:
+
+```javascript
+const baseline = ctx.baseline.value;
+const current = json.value;
+
+return {
+  change_from_baseline: current - baseline,
+  device_id: ctx.$device?.id ?? null,
+};
+```
+
+R macros receive `json`, `ctx`, and an `output` environment in the web sandbox;
+return an R list. Use the web workbook runner to test R macros because the
+mobile runner currently selects only JavaScript or Python.
+
+## Treat `ctx` as read-only
+
+The host constructs `ctx` from shared upstream state, so never assign into it.
+Enforcement differs by runtime:
+
+- Web Python recursively converts dictionaries to `MappingProxyType` and lists
+  to tuples.
+- Web JavaScript deep-clones and recursively freezes `ctx`.
+- Web R locks the `ctx` binding; R's copy-on-modify behavior isolates nested
+  changes for each item.
+- Mobile JavaScript structured-clones and recursively freezes `ctx`.
+- Mobile Pyodide currently receives a JSON-deserialized Python dictionary. It
+  is not frozen, so the read-only contract depends on macro discipline there.
+
+The triggering `json` measurement is separate from `ctx`. Do not mutate either
+input; create and return a new result object.
+
+## Test before publishing
+
+1. Use a saved measurement with the same keys and nesting the protocol will
+   produce.
+2. Test missing, empty, and boundary values explicitly.
+3. Add the macro after its producers in a workbook and check every canonical
+   `ctx` name.
+4. For multi-device work, confirm each result uses the matching device's
+   measurement and identity.
+5. Confirm the returned object contains only JSON-serializable values.
+6. Run on both web and mobile if the workbook will be used in both places.
+
+For the measurement recipe that feeds a macro, continue with
+[Writing protocols](/guide/devices-protocols/writing-protocols). For the
+security and infrastructure rationale, see
+[ADR: Execute macros in isolated language sandboxes](/developers/design-decisions/macro-sandbox-adr).
