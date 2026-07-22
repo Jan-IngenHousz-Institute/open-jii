@@ -1,5 +1,6 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { env } from "~/env";
 
 import { NavigationMobileNavItem } from "./navigation-mobile-nav-item";
 
@@ -27,7 +28,7 @@ describe("NavigationMobileNavItem", () => {
     const item = {
       titleKey: "navigation.support",
       namespace: "navigation",
-      url: (_locale: string) => "https://docs.openjii.org",
+      url: (_locale: string) => env.NEXT_PUBLIC_DOCS_URL,
       icon: "LifeBuoy",
       external: true,
     } as const;
@@ -35,7 +36,7 @@ describe("NavigationMobileNavItem", () => {
     render(<NavigationMobileNavItem item={item} locale={locale} onItemClick={mockOnItemClick} />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "https://docs.openjii.org");
+    expect(link).toHaveAttribute("href", env.NEXT_PUBLIC_DOCS_URL);
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText("navigation.support")).toBeInTheDocument();

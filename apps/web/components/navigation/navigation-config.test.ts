@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { env } from "~/env";
 
 import { mainNavigation, userNavigation, iconMap } from "./navigation-config";
 
@@ -67,7 +68,7 @@ describe("navigation-config", () => {
     });
 
     it("generates support URL (external)", () => {
-      expect(userNavigation.support.url(locale)).toBe("https://docs.openjii.org");
+      expect(userNavigation.support.url(locale)).toBe(env.NEXT_PUBLIC_DOCS_URL);
       expect(userNavigation.support.external).toBe(true);
     });
 

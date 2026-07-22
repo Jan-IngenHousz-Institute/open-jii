@@ -1,0 +1,45 @@
+---
+title: "Advanced: Databricks notebooks"
+description: "Place notebook analysis in the data pipeline without promising self-service access."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+openJII uses Databricks in its ingestion and processing architecture. Researchers
+with advanced work may also collaborate through notebooks, but the current web
+interface has no self-service **Open notebook** or **Request Databricks access**
+control.
+
+Start with a normal [dataset export](/guide/data-analysis/exporting-data) when the
+work fits in local R, Python, Julia, or a statistics package. That route is
+portable and keeps the analysis environment under your control.
+
+## When a notebook collaboration may help
+
+- the dataset is too large for a practical local export;
+- analysis needs raw or intermediate pipeline data not exposed as a convenient
+  table;
+- a team needs a shared, reproducible compute environment;
+- platform engineers must add or validate a reusable transformation.
+
+Before asking for help, prepare the experiment ID, dataset/table name, scientific
+question, required columns, expected output, collaborators, and any data-access
+constraints. Send that context through [Getting help](/guide/reference/getting-help).
+
+{/* NEEDS-LIVE-CHECK: confirm whether researcher Databricks access is offered, who approves it, and the supported request channel before adding entitlement or turnaround promises. */}
+
+## The medallion terms
+
+- **Bronze** preserves source records close to their ingested form.
+- **Silver** validates and standardizes data for reliable reuse.
+- **Gold** presents analysis-oriented tables or aggregates.
+
+These names describe pipeline responsibilities, not a guarantee that every
+researcher can browse each internal layer. For the technical design, see
+[Architecture & Pipeline](/developers/architecture) and
+[Medallion layers](/developers/architecture/medallion-layers).
+
+<Callout type="warn">
+  Never place credentials, private device keys, or data outside your approved access scope in a
+  notebook or support request.
+</Callout>

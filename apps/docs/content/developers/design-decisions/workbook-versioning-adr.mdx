@@ -1,0 +1,125 @@
+---
+title: "ADR: Pin experiments to workbook snapshots"
+description: "Why workbook authoring stays mutable while experiments run immutable published versions with explicit upgrade and rollback."
+---
+
+{/* verified: code@12a361a74966 2026-07-20 */}
+
+# ADR: Pin experiments to workbook snapshots
+
+**Date:** 2026-05-06  
+**Status:** Accepted
+
+## Context
+
+Researchers need to edit reusable, notebook-style workflows while experiments
+need a reproducible definition of what was run. A workbook contains ordered
+protocol, macro, question, branch, command, markdown, and output cells. Protocol
+and macro records are shared and mutable, so resolving those records live can
+change an experiment even when its workbook cell list has not changed.
+
+The previous experiment-protocol association and flow-only representation did
+not provide one published object that could be reviewed, upgraded, restored,
+and used offline. The mobile application still consumes a materialized flow,
+which must remain derived from the version selected by the experiment.
+
+## Decision
+
+Separate mutable workbook authoring from immutable experiment execution.
+
+The durable boundaries are:
+
+1. **A workbook is the live draft.** The `workbooks` row contains the editable
+   cells and metadata. Edits and shared protocol/macro changes can make its
+   latest published form out of date, but do not silently repin experiments.
+2. **A workbook version is an immutable publication.** `workbook_versions`
+   stores numbered cell and metadata snapshots, unique by `(workbook_id, version)`.
+   Publication also snapshots referenced protocol code and family
+   plus macro code in `entity_snapshots`.
+3. **An experiment pins an exact version.** `workbook_id` identifies the live
+   workbook and `workbook_version_id` identifies the version used for execution
+   and historical display. Rendering a pinned design uses its entity snapshots
+   rather than refetching live protocol or macro code.
+4. **Attach and upgrade are explicit publication boundaries.** If the live
+   design and referenced entity code have not drifted, attach/upgrade reuses the
+   latest version. Otherwise it publishes a new version and repins the
+   experiment. Runtime-only output fields do not count as design drift.
+5. **Rollback and roll-forward repin existing versions.** An experiment admin
+   may select any existing version belonging to that workbook. This does not
+   publish a duplicate version.
+6. **The materialized flow follows the pin.** Attach, upgrade, and repin derive
+   the experiment flow from the selected version for mobile consumption. Repin
+   updates the flow before changing the experiment pointer so a failed flow
+   write does not leave a new pin with the old flow.
+7. **Detach preserves history.** Detaching clears the active `workbook_id` and
+   removes the materialized flow, but retains `workbook_version_id` as the
+   historical reference.
+8. **Upgrade review is advisory but blocking on known structural errors.** The
+   web review shows cell and entity-code changes and checks missing references,
+   dangling branches, mixed sensor families, and macros without upstream input.
+   It cannot prove macro logic, protocol output compatibility, device behavior,
+   or scientific validity.
+
+The experiment-protocol association and live-entity rendering mechanisms are
+superseded. Shared protocols and macros remain mutable for authoring, but the
+experiment execution boundary is their published snapshot.
+
+## Consequences
+
+### Benefits
+
+- Editing a workbook or shared entity does not retroactively alter an
+  experiment's pinned method.
+- Version history makes upgrades, rollback, and roll-forward explicit and
+  reviewable.
+- Entity snapshots make a published version self-contained enough for pinned
+  web rendering and offline mobile flow hydration.
+- One version can be reused by multiple experiments when no design or entity
+  drift exists.
+- Keeping the materialized flow derived from the version preserves mobile
+  compatibility while making the workbook version authoritative.
+
+### Trade-offs and risks
+
+- Cells, metadata, and referenced entity code are duplicated in JSON snapshots,
+  increasing storage and migration responsibility.
+- Shared entity edits affect every live workbook that references the entity and
+  can make several workbooks upgradable at once, even though their pinned
+  experiment versions remain frozen.
+- The version and materialized flow are two stored representations that must be
+  updated together on attach, upgrade, repin, and detach.
+- Structural validation is not an execution test. A clean review cannot
+  guarantee that a macro is scientifically correct or that hardware will run
+  the workflow.
+- A rollback changes the active method for future runs; it does not rewrite
+  measurements already collected under another version.
+
+## Alternatives considered
+
+- **Resolve protocol and macro records live from pinned cells.** Rejected after
+  it allowed experiment pages and offline flows to drift to newer shared code.
+  Published entity snapshots are the execution source instead.
+- **Publish on every attach or upgrade.** Rejected because unchanged designs
+  would create meaningless versions. The latest version is reused when the
+  design and referenced entity code have not drifted.
+- **Publish a new version to roll back.** Rejected because history already
+  contains the desired immutable version. Repinning preserves the distinction
+  between publication and selection.
+- **Keep the experiment-protocol association and flow graph as the primary
+  design.** Superseded because it cannot represent the full ordered workbook or
+  provide one reviewable publication boundary.
+
+## Follow-up
+
+- Keep snapshot schemas backward compatible; older versions may lack fields
+  added by later publishers and must degrade safely.
+- Keep workbook-version, experiment-pin, and materialized-flow tests together
+  when changing lifecycle behavior.
+- Record why an active field experiment is upgraded or restored, and run a
+  representative hardware flow before mixing methods in one study.
+- Expand validation only when it can remain honest about the difference between
+  structural compatibility and successful execution.
+
+See [Working with workbooks](/guide/experiments/workbooks) for the researcher
+workflow and [Working offline & syncing](/guide/measuring/offline-sync) for how
+the pinned version reaches the mobile app.

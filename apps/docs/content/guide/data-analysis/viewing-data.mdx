@@ -1,0 +1,46 @@
+---
+title: "Viewing your data"
+description: "Inspect, filter, annotate, and visualize an experiment's processed tables."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Open an experiment and select **Data**. Each processed dataset appears as a tab
+with its display name and row count.
+
+## Inspect a table
+
+- Select a dataset tab to change tables.
+- Select a column heading to sort ascending or descending.
+- Use filter chips to narrow rows by one or more columns.
+- Change the rows per page or move through pages.
+- Expand structured values when a cell cannot be read comfortably inline.
+- Select rows to add or remove comments and quality annotations.
+
+Numeric columns can open a quick table chart. This is useful for checking a
+distribution while cleaning data; it is not a saved analysis.
+
+{/* NEEDS-LIVE-CHECK: confirm representative MultispeQ and Ambyte tables, filter operators, raw-trace visibility, and the processing delay from mobile sync to visible row. */}
+![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
+
+![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.png)
+
+## Build a saved visualization
+
+Open the experiment's **Analysis** area and choose **Visualizations**. An admin
+can create a visualization, select a data table and columns, choose a chart type,
+and configure its style. Saved visualizations can also be placed on experiment
+dashboards.
+
+The current interface supports many chart families, but a chart is only as sound
+as its data configuration. Check units, missing values, grouping, contributor
+anonymization, and the protocol version before interpreting a pattern.
+
+<Callout type="warn">
+  Cross-experiment comparison and easy bulk exploration of raw fluorescence traces are known
+  research needs, but they are not established as first-class workflows on this branch. Do not
+  describe the in-app view as replacing a complete statistical analysis.
+</Callout>
+
+For R, Python, or another statistics tool, continue with
+[Exporting data](/guide/data-analysis/exporting-data).

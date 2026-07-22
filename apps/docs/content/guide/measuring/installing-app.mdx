@@ -1,0 +1,49 @@
+---
+title: "Installing the mobile app"
+description: "Install openJII on Android and sign in for field work."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+The production mobile release is distributed for **Android** through Google Play.
+
+1. Open the [openJII listing on Google Play](https://play.google.com/store/apps/details?id=com.openjii.app).
+2. Install or update **openJII**.
+3. Open the app while connected to the internet.
+4. Sign in with email, GitHub, or ORCID.
+
+![The openJII Android home screen, signed into the dev testing environment](/img/mobile/app-home.png)
+
+_Captured with production app 2.16.1 (build 160). The yellow **DEV** badge
+identifies the required dev environment._
+
+{/* NEEDS-LIVE-CHECK: the unauthenticated public URL resolves as "openJII", but this capture account sees "openJII (Internal Beta)" in Google Play. Capture the public listing from a non-tester account and confirm supported Android versions and permission order before publication. */}
+{/* MEDIA-WAIVER: the signed-in Google Play screenshot was rejected because it showed the Internal Beta warning and account-linked device names. */}
+
+## Sign in by email
+
+Enter the email address on your openJII account. The app sends a six-digit code;
+you can read that code on another device and type it into the field phone. No
+password is required.
+
+GitHub and ORCID sign-in leave the app briefly and return through the `openjii`
+app link after authentication.
+
+## Prepare offline access
+
+Your first sign-in requires connectivity. After sign-in, the app caches your
+member experiments and each experiment's pinned workbook version. Before going
+offline:
+
+- wait until the experiment shows **Offline ready**;
+- connect and test the device;
+- confirm that the experiment has a workbook and protocol;
+- keep the app signed in.
+
+If an experiment or workbook changes later, reconnect and open the app so it can
+refresh the cache. See [Working offline & syncing](/guide/measuring/offline-sync).
+
+<Callout type="warn">
+  Do not rely on an old minimum-device specification copied from earlier docs. Check the current
+  Google Play compatibility message for the actual field phone.
+</Callout>

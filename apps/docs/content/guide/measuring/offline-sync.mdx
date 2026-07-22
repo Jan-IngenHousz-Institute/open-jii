@@ -1,0 +1,54 @@
+---
+title: "Working offline & syncing"
+description: "Cache field flows, save readings locally, and recover failed uploads."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+openJII saves an accepted mobile measurement to local SQLite before attempting a
+cloud upload. Loss of connectivity therefore does not have to stop data
+collection, provided the experiment flow was cached first.
+
+## Before going offline
+
+1. Sign in while online; a first login cannot be completed offline.
+2. Let the app cache your member experiments and their pinned workbook versions.
+3. Choose each field experiment and confirm **Offline ready**.
+4. Run one complete test flow with the intended device.
+
+An experiment without an attached workbook version cannot become offline ready.
+New experiments and workbook updates need a later online refresh.
+
+![An experiment selected with the Offline ready badge](/img/mobile/offline-ready.png)
+
+The badge applies to the selected cached flow. It does not mean a new or changed
+workbook has already been refreshed.
+
+## What happens to a saved reading
+
+- **Queued** means the reading is saved locally and waiting for upload.
+- **Uploading** means the outbox is attempting delivery.
+- **Synced** means the broker acknowledged the upload.
+- **Failed** means the retry attempts were exhausted; the reading remains local
+  for another attempt.
+
+The outbox pauses while offline and resumes on reconnect. It also rechecks queued
+and failed rows when the app returns to the foreground. Uploads are acknowledged
+one measurement at a time, including measurements from a multi-device round.
+
+![The Recent screen showing one synced demo measurement and no unsynced rows](/img/mobile/sync-state.png)
+
+{/* NEEDS-LIVE-CHECK: test cold start without connectivity, a full offline flow, reconnect, broker acknowledgement, failed-row recovery, and the web processing delay. */}
+{/* MEDIA-PARTIAL: Offline ready and a real synced row are captured. A queued/failed row and network transition remain for the full offline test. Current authenticated screens do not expose the planned persistent offline banner. */}
+
+## Recover safely
+
+Open **Recent** and filter to **Unsynced**. Use the upload action for one row or
+the cloud action to upload all unsynced rows. Do not delete a local reading until
+it is synced or exported.
+
+The mobile **Export measurements** action creates JSON, but the current
+implementation selects failed and synced rows rather than every in-flight queued
+row. Treat it as a recovery aid, not a substitute for confirming sync. Dataset
+exports from the web platform use the formats described in
+[Exporting data](/guide/data-analysis/exporting-data).

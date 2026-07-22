@@ -10,6 +10,20 @@ locals {
   has_custom_domain = var.custom_domain != "" && var.certificate_arn != ""
 }
 
+# Optional viewer-request function: legacy 301 redirect map + clean-URL rewrite
+# to static-export .html objects. Enabled per-distribution via a variable so
+# other module consumers keep the default (no function) behavior.
+resource "aws_cloudfront_function" "redirects" {
+  count   = var.enable_redirect_function ? 1 : 0
+  name    = "${var.bucket_name}-redirects"
+  runtime = "cloudfront-js-2.0"
+  comment = "Legacy redirect map + clean-URL rewrite for ${var.bucket_name}"
+  publish = true
+  code = templatefile("${path.module}/redirect-function.js.tftpl", {
+    redirect_map_json = jsonencode(var.redirect_map)
+  })
+}
+
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
     domain_name = format("%s.s3.%s.amazonaws.com", var.bucket_name, var.aws_region)
@@ -36,21 +50,39 @@ resource "aws_cloudfront_distribution" "cdn" {
         forward = "none"
       }
     }
+
+    # Attach the redirect/rewrite function on the viewer-request event when enabled.
+    dynamic "function_association" {
+      for_each = var.enable_redirect_function ? [1] : []
+      content {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.redirects[0].arn
+      }
+    }
   }
 
-  # Custom error pages for client-side routing (SPA/Docusaurus support)
-  custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
+  # SPA/client-side-routing behavior: map missing keys to /index.html with 200.
+  # Kept as the default so existing module consumers are unaffected.
+  dynamic "custom_error_response" {
+    for_each = var.enable_spa_error_response ? [403, 404] : []
+    content {
+      error_code            = custom_error_response.value
+      response_code         = 200
+      response_page_path    = "/index.html"
+      error_caching_min_ttl = 10
+    }
   }
 
-  custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
+  # Real 404 for statically-exported sites: S3 OAC returns 403 for missing keys,
+  # so map both 403 and 404 to the exported 404.html served with HTTP 404.
+  dynamic "custom_error_response" {
+    for_each = var.enable_spa_error_response ? [] : [403, 404]
+    content {
+      error_code            = custom_error_response.value
+      response_code         = 404
+      response_page_path    = "/404.html"
+      error_caching_min_ttl = 10
+    }
   }
 
   restrictions {

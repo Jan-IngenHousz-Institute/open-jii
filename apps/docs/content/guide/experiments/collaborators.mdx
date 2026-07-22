@@ -1,0 +1,72 @@
+---
+title: "Adding collaborators & roles"
+description: "Invite people to your experiment as members or admins, understand what each role can do, and handle requests to join."
+---
+
+{/* verified: code@12a361a74 2026-07-19 */}
+
+Experiments are meant to be shared. You can invite collaborators, give each of
+them a role, and manage everyone from one place.
+
+## The two roles
+
+Within an experiment, each person has one of two roles:
+
+- **Admin** — sets up and owns the experiment. Admins can change its settings,
+  manage collaborators, and do everything a member can.
+- **Member** — contributes to the experiment: takes measurements with the mobile
+  app, and adds comments. This is usually the person in the field.
+
+An experiment can have several admins. Public experiments can be viewed by anyone,
+even people who are not members.
+
+### What each role can do
+
+| Action                                                   | Member | Admin |
+| :------------------------------------------------------- | :----: | :---: |
+| See the experiment, its data and visualizations          |   ✓    |   ✓   |
+| Take measurements with the mobile app                    |   ✓    |   ✓   |
+| Add comments and flags                                   |   ✓    |   ✓   |
+| Edit experiment settings (name, description, visibility) |   –    |   ✓   |
+| Upload data and metadata on the web                      |   –    |   ✓   |
+| Create and edit visualizations                           |   –    |   ✓   |
+| Add or remove collaborators and change their roles       |   –    |   ✓   |
+| Archive the experiment                                   |   –    |   ✓   |
+
+![The Collaborators tab with member roles and the Invite button](/img/guide/web/collaborators.png)
+
+## Invite a collaborator
+
+Open your experiment and go to the **Collaborators** tab, then select **Invite**.
+There are two ways to add someone, both from the same search field:
+
+- **Add an existing user** — search by name or email and select them. They get
+  access immediately with the role you choose.
+- **Invite someone by email** — enter an email address that is not yet on openJII
+  and choose **Send invite by email**. They receive an email, and they join the
+  experiment automatically once they create an account.
+
+Choose the role (**Member** or **Admin**) as you invite. New collaborators are
+members by default.
+
+The Collaborators tab groups people into three sub-tabs:
+
+- **Members** — people who already have access.
+- **Invited** — pending email invitations. Admins can **Revoke** one before it is
+  accepted.
+- **Requests** — pending requests to join (see below).
+
+## Requests to join a public experiment
+
+Anyone viewing a **public** experiment they are not part of can select **Request
+to join**, with an optional message. Admins see these under the **Requests**
+sub-tab and can **Approve** or **Reject** them. Approved people join as members.
+
+## Changing roles and removing people
+
+Admins can change a collaborator's role or remove them from the **Members**
+sub-tab. A member can also remove themselves with **Leave**.
+
+<Callout type="info">
+  An experiment always needs at least one admin. You cannot remove or demote the last admin.
+</Callout>

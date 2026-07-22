@@ -98,7 +98,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             {t("experimentData.noData")}
           </p>
           <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/installing-app`}
             target="_blank"
             rel="noopener noreferrer"
           >
