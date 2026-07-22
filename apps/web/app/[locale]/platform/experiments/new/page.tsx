@@ -1,3 +1,4 @@
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
@@ -24,6 +25,9 @@ export default async function NewExperimentPage({ params }: NewExperimentPagePro
       <div>
         <h3 className="text-lg font-medium">{t("experiments.newExperiment")}</h3>
         <p className="text-muted-foreground text-sm">{t("newExperiment.description")}</p>
+        <div className="mt-2">
+          <DocsHelpLink path="/guide/experiments/creating" />
+        </div>
       </div>
       <NewExperimentForm />
     </PageContainer>

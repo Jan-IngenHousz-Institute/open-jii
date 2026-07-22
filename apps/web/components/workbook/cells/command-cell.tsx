@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy, Terminal } from "lucide-react";
 import { useMemo } from "react";
@@ -108,6 +109,11 @@ export function CommandCellComponent({
       readOnly={readOnly}
       headerActions={
         <div className="flex items-center gap-1">
+          <DocsHelpLink
+            iconOnly
+            path="/guide/devices-protocols/commands"
+            className="h-7 w-7 justify-center"
+          />
           {!readOnly ? (
             <Select value={format} onValueChange={(v) => update({ format: v as CommandFormat })}>
               <SelectTrigger className="h-7 w-[90px] text-xs" aria-label="Command format">

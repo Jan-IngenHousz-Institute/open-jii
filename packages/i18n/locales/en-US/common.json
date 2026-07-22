@@ -1,4 +1,7 @@
 {
+  "docsHelp": {
+    "learnHow": "Learn how"
+  },
   "common": {
     "logo": "Jan IngenHousz Institute",
     "protocolLabel": "Protocol",

@@ -1,3 +1,4 @@
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
@@ -30,6 +31,9 @@ export function ExperimentOverviewCards({
     return (
       <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
         {t("experiments.noExperiments")}
+        <div className="mt-2">
+          <DocsHelpLink path="/guide/get-started/quick-start" />
+        </div>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
@@ -308,6 +309,11 @@ export function ProtocolCellComponent({
       }
       headerActions={
         <div className="flex items-center gap-1">
+          <DocsHelpLink
+            iconOnly
+            path="/guide/devices-protocols/writing-protocols"
+            className="h-7 w-7 justify-center"
+          />
           <Button
             asChild
             variant="ghost"

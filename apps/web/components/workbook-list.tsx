@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
@@ -75,6 +76,9 @@ export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
         )}
       >
         {t("workbooks.noWorkbooks")}
+        <div className="mt-2">
+          <DocsHelpLink path="/guide/experiments/workbooks" />
+        </div>
       </div>
     );
   }
