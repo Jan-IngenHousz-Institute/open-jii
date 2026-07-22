@@ -12606,7 +12606,8 @@
                           "multispeq",
                           "ambyte",
                           "minipar",
-                          "generic"
+                          "generic",
+                          "ambit"
                         ],
                         "type": "string"
                       },
@@ -12981,7 +12982,8 @@
                               "multispeq",
                               "ambyte",
                               "minipar",
-                              "generic"
+                              "generic",
+                              "ambit"
                             ],
                             "type": "string"
                           },
@@ -13065,7 +13067,8 @@
                           "multispeq",
                           "ambyte",
                           "minipar",
-                          "generic"
+                          "generic",
+                          "ambit"
                         ],
                         "type": "string"
                       },
@@ -13157,7 +13160,8 @@
                       "multispeq",
                       "ambyte",
                       "minipar",
-                      "generic"
+                      "generic",
+                      "ambit"
                     ],
                     "type": "string",
                     "description": "IotDevice class, maps to the ingest topic sensorType"
@@ -13207,7 +13211,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -13325,7 +13330,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -13528,7 +13534,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -14446,6 +14453,10 @@
                       }
                     ]
                   },
+                  "context": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
                   "timeout": {
                     "type": "integer",
                     "minimum": 1,
@@ -14533,6 +14544,14 @@
                               }
                             }
                           ]
+                        },
+                        "workbook_version_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "context": {
+                          "type": "object",
+                          "additionalProperties": {}
                         }
                       },
                       "required": [
@@ -14680,7 +14699,8 @@
                           "multispeq",
                           "ambyte",
                           "minipar",
-                          "generic"
+                          "generic",
+                          "ambit"
                         ],
                         "type": "string"
                       },
@@ -14768,7 +14788,8 @@
                       "multispeq",
                       "ambyte",
                       "minipar",
-                      "generic"
+                      "generic",
+                      "ambit"
                     ],
                     "type": "string"
                   },
@@ -14823,7 +14844,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -14933,7 +14955,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -15031,7 +15054,8 @@
                       "multispeq",
                       "ambyte",
                       "minipar",
-                      "generic"
+                      "generic",
+                      "ambit"
                     ],
                     "type": "string"
                   }
@@ -15077,7 +15101,8 @@
                         "multispeq",
                         "ambyte",
                         "minipar",
-                        "generic"
+                        "generic",
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -16974,6 +16999,19 @@
                                       "deviceLabel": {
                                         "type": "string"
                                       },
+                                      "family": {
+                                        "enum": [
+                                          "multispeq",
+                                          "ambyte",
+                                          "minipar",
+                                          "generic",
+                                          "ambit"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "deviceName": {
+                                        "type": "string"
+                                      },
                                       "data": {},
                                       "error": {
                                         "type": "string"
@@ -17495,6 +17533,19 @@
                                   "deviceLabel": {
                                     "type": "string"
                                   },
+                                  "family": {
+                                    "enum": [
+                                      "multispeq",
+                                      "ambyte",
+                                      "minipar",
+                                      "generic",
+                                      "ambit"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "deviceName": {
+                                    "type": "string"
+                                  },
                                   "data": {},
                                   "error": {
                                     "type": "string"
@@ -17983,6 +18034,19 @@
                                       "type": "string"
                                     },
                                     "deviceLabel": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "deviceName": {
                                       "type": "string"
                                     },
                                     "data": {},
@@ -18528,6 +18592,19 @@
                                     "deviceLabel": {
                                       "type": "string"
                                     },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "deviceName": {
+                                      "type": "string"
+                                    },
                                     "data": {},
                                     "error": {
                                       "type": "string"
@@ -19059,6 +19136,19 @@
                                   "deviceLabel": {
                                     "type": "string"
                                   },
+                                  "family": {
+                                    "enum": [
+                                      "multispeq",
+                                      "ambyte",
+                                      "minipar",
+                                      "generic",
+                                      "ambit"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "deviceName": {
+                                    "type": "string"
+                                  },
                                   "data": {},
                                   "error": {
                                     "type": "string"
@@ -19540,6 +19630,19 @@
                                       "type": "string"
                                     },
                                     "deviceLabel": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "deviceName": {
                                       "type": "string"
                                     },
                                     "data": {},
@@ -20182,6 +20285,19 @@
                                     "deviceLabel": {
                                       "type": "string"
                                     },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "deviceName": {
+                                      "type": "string"
+                                    },
                                     "data": {},
                                     "error": {
                                       "type": "string"
@@ -20244,7 +20360,8 @@
                                   "multispeq",
                                   "ambyte",
                                   "minipar",
-                                  "generic"
+                                  "generic",
+                                  "ambit"
                                 ],
                                 "type": "string"
                               }
