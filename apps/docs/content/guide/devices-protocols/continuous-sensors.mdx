@@ -1,22 +1,45 @@
 ---
 title: "Continuous sensors"
-description: "Distinguish Ambyte ingestion from locally connected Ambit and MiniPAR sensors."
+description: "Stream autonomous sensor data into openJII over MQTT, with Ambyte as JII's own edge gateway."
 ---
 
-{/* verified: code@c12fe0855 2026-07-22 */}
+{/* verified: code@147e5cf48 2026-07-22 */}
 
-**Ambyte**, **Ambit**, and **MiniPAR** are different families. Ambyte (`ambyte`)
-is the MQTT gateway and ingestion family. Ambit (`ambit`) is a leaf sensor that
-normally measures through an Ambyte gateway. MiniPAR (`minipar`) is a separate
-locally operated sensor.
+A continuous sensor records observations over time without a person starting
+each reading, unlike a handheld MultispeQ. Bringing that data into openJII is a
+**generic MQTT capability**: any autonomous device can publish measurements to
+the platform's IoT endpoint once it is registered and holds credentials.
 
-Ambyte represents autonomous sensor hardware that records observations over
-time. This differs from a handheld MultispeQ, where a person starts each reading.
+**Ambyte** is JII's own edge device built on exactly this capability: a field
+gateway that connects JII's leaf sensors, such as the **Ambit**, and publishes
+their observations to the platform over MQTT.
+
+## Register the device and issue credentials
+
+Registration and credentials are the same for any continuous sensor:
+
+1. Open **Devices** and register the device using its physical identifier.
+2. Issue device credentials (certificates) from the registered device's
+   **Credentials** tab.
+3. Install the credentials on the device or its gateway so it can authenticate
+   against the platform's MQTT endpoint.
+
+<Callout type="warn">
+  Device credentials include private key material that is shown once. Store it securely and never
+  paste it into an issue, screenshot, or shared document.
+</Callout>
+
+## Where the data goes
+
+A registered device publishes its measurements over MQTT; the platform routes
+them through the ingestion pipeline into the experiment's data tables. The topic
+structure, message schema, and connection details are developer material: see
+[Data ingestion](/developers/architecture/data-ingestion) in the Developers tab
+and the [MQTT API reference](/api/mqtt).
 
 ## Bring in Ambyte data
 
-- Register Ambyte as an IoT device from **Devices** using its physical identifier.
-- Issue device credentials from the registered device's **Credentials** tab.
+- Register the Ambyte from **Devices** and issue its credentials as above.
 - Upload an Ambyte folder to an experiment data table. The uploader expects an
   `Ambyte_N/[1-4]/*.txt` folder layout and processes the data asynchronously.
 - View the resulting table after the processing pipeline has materialized it.
@@ -44,11 +67,6 @@ deployed platform.
 ![A populated Ambyte experiment data table after ingestion](/img/guide/web/ambyte-data.png)
 
 {/* MEDIA-PARTIAL: the authenticated non-mutating pass verified the populated Ambyte table. It intentionally omits device credentials and Coming Soon monitoring or onboarding panels. */}
-
-<Callout type="warn">
-  Device credentials include private key material that is shown once. Store it securely and never
-  paste it into an issue, screenshot, or shared document.
-</Callout>
 
 For analysis after ingestion, continue with
 [Viewing your data](/guide/data-analysis/viewing-data).
