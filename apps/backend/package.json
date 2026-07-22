@@ -35,6 +35,7 @@
     "@nestjs/core": "^11.1.18",
     "@nestjs/platform-express": "^11.1.18",
     "@nestjs/schedule": "^6.1.1",
+    "@nestjs/throttler": "^6.5.0",
     "@orpc/client": "catalog:orpc",
     "@orpc/contract": "catalog:orpc",
     "@orpc/nest": "catalog:orpc",

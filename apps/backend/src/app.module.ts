@@ -15,12 +15,14 @@ import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
+import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
+import { NewsletterModule } from "./newsletter/newsletter.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
 import { UserModule } from "./users/user.module";
@@ -30,7 +32,14 @@ import { WorkbookModule } from "./workbooks/workbook.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, databricksConfig, awsConfig, emailConfig, analyticsConfig],
+      load: [
+        databaseConfig,
+        databricksConfig,
+        awsConfig,
+        emailConfig,
+        mailchimpConfig,
+        analyticsConfig,
+      ],
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -49,6 +58,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     ExperimentModule,
     IotModule,
     MacroModule,
+    NewsletterModule,
     ProtocolModule,
     SearchModule,
     UserModule,

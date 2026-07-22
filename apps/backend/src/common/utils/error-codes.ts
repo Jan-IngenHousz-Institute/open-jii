@@ -24,6 +24,7 @@ export enum ErrorCodes {
   DATABRICKS_CONFIG_INVALID = "DATABRICKS_CONFIG_INVALID", // Databricks config specific
   AWS_CONFIG_INVALID = "AWS_CONFIG_INVALID", // AWS config specific
   EMAIL_CONFIG_INVALID = "EMAIL_CONFIG_INVALID", // Email config specific
+  MAILCHIMP_CONFIG_INVALID = "MAILCHIMP_CONFIG_INVALID", // Mailchimp config specific
   ANALYTICS_CONFIG_INVALID = "ANALYTICS_CONFIG_INVALID", // Analytics config specific
 
   // ==================== Databricks Operations ====================
@@ -56,6 +57,15 @@ export enum ErrorCodes {
   // ==================== Email Operations ====================
   // Location: src/common/modules/email/
   EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", // Email sending failed
+
+  // ==================== Mailchimp / Newsletter ====================
+  // Location: src/common/modules/mailchimp/
+  MAILCHIMP_NOT_CONFIGURED = "MAILCHIMP_NOT_CONFIGURED", // Newsletter provider not configured on this environment
+  MAILCHIMP_SUBSCRIBE_FAILED = "MAILCHIMP_SUBSCRIBE_FAILED", // Subscribe/upsert member failed
+  MAILCHIMP_FORGOTTEN_EMAIL = "MAILCHIMP_FORGOTTEN_EMAIL", // Address was permanently deleted (GDPR erasure) and cannot be re-added via the API
+  MAILCHIMP_UNSUBSCRIBE_FAILED = "MAILCHIMP_UNSUBSCRIBE_FAILED", // Unsubscribe member failed
+  MAILCHIMP_STATUS_FAILED = "MAILCHIMP_STATUS_FAILED", // Member status lookup failed
+  MAILCHIMP_DELETE_FAILED = "MAILCHIMP_DELETE_FAILED", // Permanent member delete failed
 
   // ==================== Analytics & Feature Flags ====================
   // Location: src/common/modules/analytics/

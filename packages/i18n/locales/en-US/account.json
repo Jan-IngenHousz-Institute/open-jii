@@ -36,6 +36,21 @@
       "institutionPlaceholder": "Enter your institution or organization",
       "emptyInstitution": "No institution added"
     },
+    "NewsletterSubscriptionCard": {
+      "title": "Newsletter",
+      "description": "Manage your subscription to the openJII community newsletter.",
+      "toggleLabel": "Community newsletter",
+      "subscribed": "You are subscribed to the community newsletter.",
+      "pending": "Confirmation email sent. Check your inbox to finish subscribing.",
+      "unsubscribed": "Subscribe to receive community news and updates.",
+      "loading": "Checking your newsletter subscription…",
+      "error": "We couldn't load your newsletter subscription. Your other settings are still available.",
+      "retry": "Try again",
+      "retrying": "Trying again…",
+      "updating": "Updating your newsletter subscription…",
+      "updateError": "We couldn't update your newsletter subscription. Please try again.",
+      "forgottenEmailError": "This email was removed from our newsletter at your earlier request and can't be re-added automatically. Please contact support if you'd like to subscribe again."
+    },
     "status": {
       "active": "Account active",
       "deactivated": "Account deactivated"

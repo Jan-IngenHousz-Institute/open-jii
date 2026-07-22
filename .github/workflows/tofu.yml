@@ -67,6 +67,12 @@ jobs:
       TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
       TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
       TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
@@ -139,6 +145,12 @@ jobs:
       TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
       TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
       TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}

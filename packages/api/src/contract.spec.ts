@@ -53,6 +53,7 @@ describe("orpc contract surface", () => {
       "health",
       "iot",
       "macros",
+      "newsletter",
       "protocols",
       "search",
       "users",
