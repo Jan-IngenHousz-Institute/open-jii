@@ -48,9 +48,9 @@ export default function HomePage() {
   return (
     <main className="flex flex-1 flex-col items-center px-4 py-16">
       <Image
-        src="/img/openjii-logo-horizontal.png"
+        src="/img/openjii-logo-horizontal.svg"
         alt="openJII"
-        width={218}
+        width={137}
         height={64}
         priority
       />

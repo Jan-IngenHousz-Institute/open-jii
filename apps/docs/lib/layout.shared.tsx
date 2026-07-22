@@ -16,9 +16,9 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <>
           <Image
-            src="/img/openjii-logo-horizontal.png"
+            src="/img/openjii-logo-horizontal.svg"
             alt="openJII"
-            width={109}
+            width={68}
             height={32}
             priority
           />

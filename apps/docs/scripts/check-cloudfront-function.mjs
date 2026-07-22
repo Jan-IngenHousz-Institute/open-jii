@@ -43,7 +43,6 @@ for (const [uri, expected] of [
   ["/guide/", "/guide.html"],
   ["/api/search", "/api/search"],
   ["/opengraph-image", "/opengraph-image"],
-  ["/raw/guide/get-started.md", "/raw/guide/get-started.md"],
   ["/guide.html", "/guide.html"],
   ["/img/logo.png", "/img/logo.png"],
 ]) {

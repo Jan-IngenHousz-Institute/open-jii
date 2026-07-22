@@ -1,0 +1,46 @@
+---
+title: "Device commands"
+description: "Send a single raw instruction straight to a connected instrument."
+---
+
+{/* verified: code@5bec21dc9 2026-07-22 */}
+
+A **command** is a single instruction sent directly to a connected instrument,
+without the structure of a full protocol. Where a [protocol](/guide/devices-protocols/protocols)
+is a measurement recipe that returns scientific data, a command is a quick
+direct message: check the battery, read the firmware version, wake the device,
+or send one low-level instruction while setting up.
+
+## What a command cell holds
+
+A command cell carries one instruction in one of three formats:
+
+- **String** — a raw console command such as `hello` (the instrument replies
+  when it is ready) or `battery` (charge as a percent). This is the common case
+  for MultispeQ.
+- **JSON** — a structured instruction for instruments that accept it.
+- **YAML** — the same, written in YAML.
+
+The content is sent to the connected device as-is, so it must be a valid
+instruction for that instrument. A command cell is separate from a protocol
+cell: older mobile apps that only understand protocol cells simply skip command
+cells and keep working.
+
+## When to use a command instead of a protocol
+
+- Confirm a device is connected and responding (`hello`).
+- Read device state such as battery or firmware during setup.
+- Send a calibration or spot-reading instruction that a driver supports
+  directly, where a full protocol is unnecessary.
+
+For an actual measurement that produces analysis-ready data, use a protocol. See
+[Writing protocols](/guide/devices-protocols/writing-protocols) to author one,
+and [Multi-device measurements](/guide/devices-protocols/multi-device) for how a
+command cell can be routed to a specific connected device.
+
+<Callout type="info">
+  MultispeQ console commands (like `hello`, `battery`, `reset`) come from the PhotosynQ MultispeQ
+  documentation. See [PhotosynQ Support](https://help.photosynq.com) for the full instruction set.
+</Callout>
+
+{/* NEEDS-LIVE-CHECK: confirm the command-cell authoring UI (where format is chosen and how a run result is shown) on the current build. */}

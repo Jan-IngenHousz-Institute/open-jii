@@ -3,7 +3,7 @@ title: "Writing protocols"
 description: "Create, validate, and test a device measurement recipe before field use."
 ---
 
-{/* verified: code@e76bf12ab 2026-07-22 */}
+{/* verified: code@5bec21dc9 2026-07-22 */}
 
 A protocol is the JSON measurement recipe that openJII sends to connected
 hardware. For MultispeQ, it is a JSON array in the MultispeQ protocol format.
@@ -14,6 +14,12 @@ Start by forking a protocol that already matches your instrument and method.
 That preserves working hardware settings and makes your changes reviewable. See
 [Protocols: choosing & adjusting](/guide/devices-protocols/protocols) for the
 ownership and fork-to-edit model.
+
+<Callout type="info">
+  New to the MultispeQ protocol format? The commands, pulses, and parameters come from PhotosynQ's
+  MultispeQ documentation. See [PhotosynQ Support](https://help.photosynq.com) for the full
+  instruction set and deeper protocol questions.
+</Callout>
 
 ## Create or edit a protocol
 

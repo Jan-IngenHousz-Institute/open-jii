@@ -7,6 +7,7 @@
     "protocols",
     "writing-protocols",
     "writing-macros",
+    "commands",
     "multi-device"
   ]
 }

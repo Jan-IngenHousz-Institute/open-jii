@@ -3,7 +3,7 @@ title: "Devices & Protocols"
 description: "Choose the hardware and measurement recipe that fit your field work."
 ---
 
-{/* verified: code@c12fe0855 2026-07-22 */}
+{/* verified: code@5bec21dc9 2026-07-22 */}
 
 In openJII, the hardware collects a reading and a **protocol** tells that hardware
 how to collect it. Choose both before field work so everyone in your experiment
@@ -19,9 +19,18 @@ uses the same method.
   distinct locally identifiable families.
 - Use [Protocols](/guide/devices-protocols/protocols) to choose an existing
   measurement recipe, create one, or fork someone else's recipe before editing.
+- Use [Device commands](/guide/devices-protocols/commands) to send a single raw
+  instruction (such as `hello` or `battery`) straight to a connected instrument.
 - Use [Multi-device measurements](/guide/devices-protocols/multi-device) when
   several connected devices should run one shared cell or be routed to
   family-specific protocol or command cells.
+
+<Callout type="info">
+  Beyond the named families, openJII can technically talk to any instrument that speaks a line-based
+  serial protocol, whether over USB serial or Bluetooth Low Energy (BLE). The **generic** device
+  family covers both transports; the named families add device-specific identification and drivers
+  on top.
+</Callout>
 
 <Callout type="info">
   openJII uses **device** for handheld hardware that a person operates and **sensor** for autonomous

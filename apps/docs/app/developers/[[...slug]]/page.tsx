@@ -31,7 +31,6 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
       <DocsDescription>{page.data.description}</DocsDescription>
       <div className="flex flex-row items-center gap-2 border-b pb-4">
         <ViewOptionsPopover
-          markdownUrl={`/raw/${page.slugs.join("/")}.md`}
           githubUrl={`https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${githubPath}`}
         />
       </div>
