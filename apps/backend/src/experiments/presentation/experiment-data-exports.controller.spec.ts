@@ -101,11 +101,11 @@ describe("ExperimentDataExportsController", () => {
         format: "csv" as const,
         status: "completed" as const,
         filePath: "/path/to/file.csv",
-        rowCount: 500,
-        fileSize: 25000,
+        rowCount: 2500,
+        fileSize: 1048576,
         createdBy: testUserId,
-        createdAt: "2026-01-01T00:00:00Z",
-        completedAt: "2026-01-01T00:05:00Z",
+        createdAt: "2026-07-18T09:55:01.123456Z",
+        completedAt: "2026-07-18T09:59:55.892636Z",
       };
 
       vi.spyOn(listExportsUseCase, "execute").mockResolvedValue(
