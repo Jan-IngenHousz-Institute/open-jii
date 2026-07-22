@@ -26,7 +26,7 @@ export function baseOptions(): BaseLayoutProps {
           <Image
             src="/img/openjii-logo-horizontal-dark.svg"
             alt="openJII"
-            width={138}
+            width={85}
             height={40}
             className="hidden dark:block"
             priority

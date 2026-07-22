@@ -58,7 +58,7 @@ export default function HomePage() {
       <Image
         src="/img/openjii-logo-horizontal-dark.svg"
         alt="openJII"
-        width={275}
+        width={171}
         height={80}
         className="hidden dark:block"
         priority
