@@ -208,12 +208,14 @@ jobs:
     needs: detect
     # Always invoke for Dependabot so the per-job dependabot gates in
     # production-checks.yml can run the full builds, even when a lockfile bump
-    # marks no app as affected.
-    if: needs.detect.outputs.has_affected_apps == 'true' || github.actor == 'dependabot[bot]'
+    # marks no app as affected. Key off the PR author (stable across re-runs),
+    # not github.actor (drifts to a human on re-run / push / edit).
+    if: needs.detect.outputs.has_affected_apps == 'true' || github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/production-checks.yml
     secrets: inherit
     with:
       affected-apps: ${{ needs.detect.outputs.affected_apps || '[]' }}
+      is-dependabot: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
 
   release_preview:
     name: Release Preview (dry run)
