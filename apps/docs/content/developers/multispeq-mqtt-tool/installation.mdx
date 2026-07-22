@@ -1,0 +1,56 @@
+---
+title: "Installation"
+description: "Install the Python MMI package and verify its mmi entry point."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+## Prerequisites
+
+- Git and Python. The repository setup script selects Python 3.12 through pyenv, so 3.12 is the verified development version.
+- A MultispeQ supported by the [`JII-MultispeQ`](https://github.com/Jan-IngenHousz-Institute/JII-MultispeQ) dependency.
+- Environment-specific AWS IoT endpoint, client certificate, private key, root CA, and an IoT policy that permits the intended topic.
+- A serial port compatible with the current implementation. See the hard-coded-port limitation below.
+
+Keep private keys outside the repository and restrict their filesystem permissions.
+
+## Install directly from GitHub
+
+Use an isolated virtual environment:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "git+https://github.com/Jan-IngenHousz-Institute/open-jii.git#subdirectory=apps/tools/multispeq_mqtt_interface"
+```
+
+On PowerShell, activate with `.venv\Scripts\Activate.ps1`.
+
+## Editable contributor install
+
+```bash
+git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
+cd open-jii/apps/tools/multispeq_mqtt_interface
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+```
+
+`setup.py` installs `pyyaml`, `awsiotsdk`, `awscrt`, and `jii_multispeq`, and registers the `mmi` console entry point.
+
+## Verify
+
+```bash
+mmi
+```
+
+The interactive `MultispeQ >` prompt confirms the entry point is available. Type `exit` to close it.
+
+The nested tool also exposes `pnpm --dir apps/tools/multispeq_mqtt_interface setup`, which runs `pyenv local 3.12 && pip install .`; use it only when pyenv is installed and you intentionally want a non-editable install in the active Python environment.
+
+## Serial-port limitation
+
+The CLI can enumerate ports through `DeviceManager.get_ports()`, but the selection prompt is currently disabled. Measurement commands use `/dev/cu.usbmodem42949672951` directly. On another machine, update the code before expecting `connect_device`, `publish`, or `continuous_publish` to reach the device. Do not treat the successful installation of `mmi` as proof that a device can be opened.
+
+Next, set the environment described in [Usage](/developers/multispeq-mqtt-tool/usage).

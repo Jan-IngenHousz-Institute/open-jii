@@ -1,0 +1,78 @@
+---
+title: "API reference"
+description: "Current MMI commands, environment variables, and Python module boundaries."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+This is the reference for the Python development tool at `apps/tools/multispeq_mqtt_interface`, not the platform MQTT schema. For channels and messages use the generated [MQTT API reference](/api/mqtt).
+
+## Console entry point
+
+`setup.py` registers:
+
+```text
+mmi = multispeq_mqtt_interface.main:main
+```
+
+The entry point starts `IoTMqttCli`, a Python `cmd.Cmd` loop.
+
+## Commands
+
+| Command              | Shortcut       | Method                                |
+| -------------------- | -------------- | ------------------------------------- |
+| `connect`            | `c`            | `CommandHandler.connect()`            |
+| `disconnect`         | `d`            | `CommandHandler.disconnect()`         |
+| `ping`               | `p`            | `CommandHandler.test_connection()`    |
+| `publish`            | `m`            | `CommandHandler.publish()`            |
+| `continuous_publish` | `k`            | `CommandHandler.continuous_publish()` |
+| `status`             | `s`            | `CommandHandler.status()`             |
+| `config`             | `f`            | `CommandHandler.display_config()`     |
+| `set_topic`          | `t`            | `CommandHandler.set_topic_params()`   |
+| `connect_device`     | `v`            | `CommandHandler.connect_device()`     |
+| `set_plant`          | none           | `CommandHandler.set_plant_data()`     |
+| `help`               | `h`            | inherited command help                |
+| `clear`              | none           | clear terminal and redraw intro       |
+| `exit` / `quit`      | `q` for `exit` | disconnect and terminate process      |
+
+The `publish` method accepts a text argument through `cmd.Cmd`, but the implementation does not parse or use it as a payload.
+
+## Environment variables
+
+| Name                           | Parsed as                       | Default                                                 |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------- |
+| `AWS_IOT_ENDPOINT`             | string                          | repository-coded development endpoint                   |
+| `AWS_IOT_PORT`                 | integer                         | `8883`                                                  |
+| `AWS_IOT_CERT_FILEPATH`        | path                            | `None`                                                  |
+| `AWS_IOT_PRIVATE_KEY_FILEPATH` | path                            | `None`                                                  |
+| `AWS_IOT_CA_FILEPATH`          | path                            | `None`                                                  |
+| `AWS_IOT_CLIENT_ID`            | string                          | `test-<uuid>`                                           |
+| `AWS_IOT_TOPIC`                | string                          | experiment ingestion template with `cli_test_sensor_id` |
+| `AWS_IOT_KEEP_ALIVE`           | integer seconds                 | `30`                                                    |
+| `AWS_IOT_CLEAN_SESSION`        | case-insensitive boolean string | `False`                                                 |
+| `AWS_IOT_PROXY_HOST`           | string                          | `None`                                                  |
+| `AWS_IOT_PROXY_PORT`           | integer                         | `0`                                                     |
+
+`AWS_REGION`, `LOG_LEVEL`, and automatic `.env` loading appeared in older docs but are not consumed by current code.
+
+## Python modules
+
+| Module               | Public responsibility                                                      |
+| -------------------- | -------------------------------------------------------------------------- |
+| `main.py`            | Process entry and top-level error handling.                                |
+| `cli/interface.py`   | Command loop, shortcuts, and help.                                         |
+| `cli/commands.py`    | Workflow orchestration and in-memory state.                                |
+| `cli/prompts.py`     | Experiment/protocol, certificate, port, and plant prompts.                 |
+| `utils/config.py`    | Environment parsing, display, path/endpoint validation, topic update.      |
+| `mqtt/connection.py` | AWS IoT mTLS connection lifecycle and callbacks.                           |
+| `mqtt/client.py`     | JSON serialization, QoS 1 publish, and endpoint ping.                      |
+| `device/device.py`   | JII-MultispeQ port, connection, SPAD measurement, analysis, and dump file. |
+
+## Return behavior
+
+- `MQTTConnection.connect()` returns `True`/`False` after waiting up to ten seconds.
+- `MQTTConnection.disconnect()` returns `True`/`False` after waiting up to three seconds.
+- `MQTTClient.publish()` returns `True` after the SDK publish future resolves, otherwise `None` on handled error.
+- `DeviceManager.measure_and_analyze()` returns analyzed data or `None` after printing a caught device error.
+
+These are internal development APIs without compatibility guarantees. Prefer the interactive tool unless you are contributing to it, and cover behavior changes with tests before treating them as stable automation interfaces.

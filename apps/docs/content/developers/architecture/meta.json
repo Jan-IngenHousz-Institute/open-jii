@@ -1,0 +1,4 @@
+{
+  "title": "Architecture & Pipeline",
+  "pages": ["index", "data-ingestion", "time-synchronization", "medallion-layers"]
+}

@@ -1,0 +1,86 @@
+---
+title: "Contributing"
+description: "Set up the openJII monorepo, make focused changes, and submit a verified pull request."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Contributions to code and documentation are welcome. Work in the public [open-jii repository](https://github.com/Jan-IngenHousz-Institute/open-jii) and follow the [Code of Conduct](https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main/CODE_OF_CONDUCT.md).
+
+Security vulnerabilities must be reported through the [security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security), not a public issue.
+
+## Before writing code
+
+- Search [existing issues](https://github.com/Jan-IngenHousz-Institute/open-jii/issues) before reporting a bug.
+- For a new feature or architectural change, open an issue first and explain the use case and scope.
+- Keep pull requests focused. Include tests for changed behavior and update documentation when contracts or workflows change.
+
+## Local setup
+
+Prerequisites are Node.js 22 (`.nvmrc`), Corepack/pnpm, and Docker for services used by the selected app. Work in `apps/data` additionally requires [uv](https://docs.astral.sh/uv/).
+
+```bash
+git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
+cd open-jii
+nvm use
+corepack enable
+pnpm install
+```
+
+Copy the environment example for the application you are running and obtain development secrets through the project team's normal secure channel. Never commit `.env` files or real certificates.
+
+Common commands from the repository root:
+
+```bash
+pnpm dev                 # run workspace development tasks
+pnpm dev:fb              # backend + web only
+pnpm build               # build all workspaces
+pnpm lint                # lint workspaces
+pnpm test                # run workspace tests
+pnpm format:check        # verify repository formatting
+```
+
+Use a workspace filter for a faster feedback loop:
+
+```bash
+pnpm --filter web check-types
+pnpm --filter web test:run
+pnpm --filter docs build
+pnpm --filter data test
+```
+
+Package scripts are authoritative. Check the relevant `package.json` before copying a command from an issue or old document; some workspaces use `check-types`, while the mobile package also retains `typecheck`.
+
+## Repository map
+
+- `apps/web`, `apps/mobile`, `apps/backend`: product clients and API implementation.
+- `apps/data`: Databricks bundle, pipelines, tasks, and Python libraries.
+- `apps/docs`: Fumadocs content and generated API references.
+- `apps/macro-sandbox`: isolated macro execution runtimes.
+- `apps/tools`: development utilities, including the MultispeQ MQTT interface.
+- `packages/*`: shared API, auth, CMS, database, IoT, email, UI, i18n, and analytics code.
+- `tooling/*`: shared lint, test, TypeScript, Tailwind, and release configuration.
+- `infrastructure/*`: OpenTofu modules and environment compositions.
+
+Read [Architecture & Pipeline](/developers/architecture) before changing boundaries between these areas. Contract changes should update the generated [REST](/api/rest) or [MQTT](/api/mqtt) reference in the same pull request.
+
+## Pull-request checklist
+
+1. Branch from the current default branch and make the smallest coherent change.
+2. Add or update tests that fail without the change.
+3. Run the relevant filtered build, lint, type check, and tests.
+4. Run `pnpm format:check` or format the files you touched.
+5. Describe the problem, solution, verification, and any migration or operational risk in the pull request.
+6. Link the issue when one exists and call out infrastructure, schema, generated-spec, or environment changes explicitly.
+
+Do not apply shared infrastructure or production migrations from a feature branch. Let the reviewed CI/deployment process handle environment changes.
+
+## Documentation changes
+
+Documentation source is MDX under `apps/docs/content`. Keep researcher tasks in the Guide, system/integration detail in Developers, and contract fields in the generated API references. Run:
+
+```bash
+pnpm --filter docs build
+```
+
+The static build catches invalid MDX and unresolved routes that ordinary prose review can miss.

@@ -1,0 +1,66 @@
+---
+title: "Working with workbooks"
+description: "Attach a versioned field workflow to an experiment and review upgrades safely."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+A **workbook** is the data-collection design an experiment runs. Its ordered
+cells can contain instructions, questions, protocols, device commands, analysis
+macros, branches, markdown notes, and generated outputs.
+
+<video controls width="100%" poster="/img/workbooks/ux-sidebar.png" preload="metadata">
+  <source src="/img/workbooks/workbook-ux-improvements.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+## Attach a workbook
+
+You can choose a workbook in the **Details** step when creating an experiment.
+For an existing experiment, open its **Design** tab:
+
+1. select or search for the workbook;
+2. attach it to the experiment;
+3. confirm the pinned version shown beside its name;
+4. test the full flow on the mobile app.
+
+Attaching a workbook publishes its current cells as a numbered version and pins
+the experiment to that immutable snapshot. The pinned snapshot includes the
+referenced protocol and macro code, so later edits do not silently change what
+the experiment is collecting.
+
+![An experiment Design tab with its linked workbook, pinned version, and field-flow cells](/img/guide/web/workbook-design.png)
+
+![Workbook version history with the current and earlier published versions](/img/guide/web/workbook-version-history.png)
+
+## Edit and publish changes
+
+The workbook owner edits the live draft. Workbooks autosave, and publishing
+creates a newer version. If a protocol or macro belongs to someone else, fork it
+before editing so the workbook points to your copy.
+
+An experiment continues to use its pinned version until an admin changes it. A
+newer version produces an update indicator. Before upgrading, open the review:
+
+- compare added, removed, and changed cells;
+- review protocol and macro code changes;
+- resolve missing references or mixed sensor families;
+- run a representative field test.
+
+The version history can also repin an older or newer published version. Treat
+that as a methods change and record why it was made.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/versioning-demo.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+{/* NEEDS-LIVE-CHECK: attach, publish, upgrade, restore, and offline-cache a workbook on dev; confirm which actions are owner-only versus experiment-admin-only. */}
+
+<Callout type="warn">
+  Never upgrade a running field experiment only because an update is available. Review the diff and
+  decide whether mixing versions is acceptable for the study.
+</Callout>
+
+For protocol choice and safe adaptation, see
+[Protocols: choosing & adjusting](/guide/devices-protocols/protocols).

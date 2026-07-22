@@ -35,7 +35,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
             "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
           }
           secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/report-issue`}
+          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
           buttonLabel={t("dashboard.transferBannerButton")}
           buttonHref={`/${locale}/platform/transfer-request`}
           locale={locale}

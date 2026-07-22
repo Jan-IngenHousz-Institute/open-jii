@@ -126,6 +126,57 @@ jobs:
           fi
           echo "ok — no theme.isDark ternaries found"
 
+  docs_spec_drift:
+    name: Docs API Spec Drift Check
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect docs-relevant spec changes
+        id: changed
+        shell: bash
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          if git diff --name-only "$BASE_SHA" HEAD -- \
+              package.json \
+              pnpm-lock.yaml \
+              pnpm-workspace.yaml \
+              packages/api/ \
+              asyncapi.yaml \
+              apps/docs/package.json \
+              apps/docs/openapi.json \
+              apps/docs/public/asyncapi.yaml | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ API/spec changes detected"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No API/spec changes detected"
+          fi
+
+      - name: Setup Node.js and pnpm
+        if: steps.changed.outputs.changed == 'true'
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Regenerate specs and check for drift
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          pnpm --filter @repo/api generate:openapi
+          node apps/docs/scripts/sync-specs.mjs
+          if ! git diff --exit-code -- apps/docs/openapi.json apps/docs/public/asyncapi.yaml; then
+            echo "::error::Committed API spec copies are stale. Run 'pnpm --filter docs sync-specs' and commit apps/docs/openapi.json + apps/docs/public/asyncapi.yaml."
+            exit 1
+          fi
+          echo "ok — API spec copies are up to date"
+
   build_lint_test:
     name: Build, Lint, & Test
     needs: detect
@@ -178,6 +229,16 @@ jobs:
           done
           echo "Running: $CHECK_CMD"
           eval "$CHECK_CMD"
+
+      - name: Validate Documentation Static Export
+        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'docs')
+        shell: bash
+        run: |
+          pnpm --filter docs check-media-tooling
+          pnpm --filter docs check-links
+          pnpm --filter docs check-routing
+          pnpm --filter docs check-deploy-workflow
+          pnpm --filter docs validate:local
 
       - name: Test Packages
         uses: ./.github/actions/test-packages

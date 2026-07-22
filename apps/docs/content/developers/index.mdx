@@ -1,0 +1,29 @@
+---
+title: "Developers"
+description: "Architecture, data pipelines, integration contracts, tools, and contribution guides for openJII."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+openJII is an open-source platform for collecting, processing, and sharing plant-science measurements. This section is for people who operate the platform, integrate devices, or contribute code.
+
+## Choose a starting point
+
+- [Architecture & Pipeline](/developers/architecture) explains the monorepo, runtime services, MQTT ingestion, and Databricks lakehouse.
+- [Design Decisions](/developers/design-decisions) preserves the project's ADRs, proposal, and authoring templates as historical records.
+- [MultispeQ MQTT Tool](/developers/multispeq-mqtt-tool) covers the development CLI that publishes MultispeQ readings to AWS IoT Core.
+- [Extending the Platform](/developers/extending) covers CMS-managed alerts, the mobile force-update gate, and transactional emails.
+- [Contributing](/developers/contributing) provides a verified local-development and pull-request workflow.
+
+## Contract references
+
+Use the generated references when implementing integrations:
+
+- [REST API reference](/api/rest) is generated from the oRPC contract in `packages/api`.
+- [MQTT API reference](/api/mqtt) is generated from the repository's canonical `asyncapi.yaml`.
+
+The generated references are the contract source of truth. Explanatory pages in this section focus on system behavior and operational context.
+
+## Repository
+
+The platform is developed in the [Jan IngenHousz Institute open-jii repository](https://github.com/Jan-IngenHousz-Institute/open-jii). Security issues must follow the repository's [security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security) rather than a public issue.

@@ -2026,6 +2026,11 @@ module "docs_cloudfront" {
   custom_domain   = module.route53.docs_domain
   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
 
+  # Fumadocs static export: legacy 301 redirects + clean-URL rewrite + real 404.
+  enable_redirect_function  = true
+  enable_spa_error_response = false
+  redirect_map              = jsondecode(file("${path.module}/../../../apps/docs/redirects.json"))
+
   # TODO: Add tags, logging configuration
 }
 

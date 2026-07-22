@@ -1,0 +1,13 @@
+{
+  "title": "Guide",
+  "pages": [
+    "index",
+    "get-started",
+    "experiments",
+    "devices-protocols",
+    "measuring",
+    "data-analysis",
+    "sharing",
+    "reference"
+  ]
+}

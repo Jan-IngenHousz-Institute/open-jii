@@ -1,0 +1,42 @@
+---
+title: "Medallion layers"
+description: "The current Bronze, Silver, Gold, and enriched-view model in the centrum schema."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+The current data platform uses one central Unity Catalog schema, `centrum`. This replaces the per-experiment schema model described in the project's 2025 historical ADRs. Experiment isolation is now expressed through experiment identifiers, experiment-facing tables, access checks, and filtered queries rather than a separate Databricks schema for every experiment.
+
+## Layers
+
+| Layer          | Current tables                                                                                                                                                                                          | Responsibility                                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Bronze         | `raw_data`, `raw_imported_data`, `raw_uploaded_data`                                                                                                                                                    | Preserve source events and source-specific metadata with minimal transformation.                                                      |
+| Silver         | `clean_data`                                                                                                                                                                                            | Parse and normalize records, decompress samples, validate timestamps, unify MQTT/import/upload sources, and retain provenance fields. |
+| Gold           | `experiment_raw_data`, `experiment_device_data`, `experiment_devices`, `experiment_macro_data`, `experiment_uploaded_data`, `experiment_contributors`, `experiment_status`, `experiment_table_metadata` | Produce experiment-oriented facts, device and contributor summaries, macro output, upload data, status, and query metadata.           |
+| Enriched views | `enriched_experiment_raw_data`, `enriched_experiment_macro_data`, `enriched_experiment_uploaded_data`                                                                                                   | Join display and user context for application-facing reads without duplicating it into every raw record.                              |
+
+The exact deployed names are configured through `apps/data/src/lib/openjii/openjii/centrum/runtime.py`; the pipeline definitions live under `apps/data/src/pipelines/centrum/`.
+
+## Bronze: preserve provenance
+
+`raw_data` reads the Kinesis stream and retains broker/stream metadata such as the authenticated MQTT client ID, sequence number, shard, arrival time, and ingestion time. The parsed event remains close to what arrived. Imported transfer files and web-uploaded datasets use separate Bronze tables because their provenance and schemas differ.
+
+## Silver: normalize once
+
+`clean_data` turns source records into a common representation. It decompresses `sample` when `_sample_encoding` is `gzip+base64`, validates timestamps, normalizes device and user fields, parses macros/questions/annotations, and unions supported non-MQTT sources. Invalid timestamps are dropped by a DLT expectation; other expectations retain observability without silently inventing values.
+
+## Gold: serve experiment tasks
+
+Gold tables answer application questions without repeatedly unpacking raw JSON. They separate raw measurement rows, device summaries, macro results, uploaded data, contributors, and status. `experiment_table_metadata` caches table schema and row-count information used by pagination and table discovery.
+
+Flexible result shapes use Databricks VARIANT values where the protocol or macro output cannot be represented by one rigid relational schema. Stable identifiers remain separate from display labels so renaming a macro does not change the table identity.
+
+## Why the layers matter
+
+- Bronze retains evidence needed for replay and investigation.
+- Silver centralizes compatibility and data-quality logic.
+- Gold makes common reads predictable and economical.
+- Enriched views keep user-facing joins consistent.
+
+The layers are data-quality stages, not public authorization boundaries. Product access is still enforced by the backend and its experiment membership/visibility rules. See [Data ingestion](/developers/architecture/data-ingestion) for how events enter Bronze.

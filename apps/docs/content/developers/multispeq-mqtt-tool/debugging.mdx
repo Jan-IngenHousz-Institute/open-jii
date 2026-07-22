@@ -1,0 +1,89 @@
+---
+title: "Debugging"
+description: "Diagnose MMI installation, certificate, serial-device, topic, and publish failures."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Start by separating four boundaries: Python installation, serial device access, MQTT authentication, and downstream ingestion. A success in one boundary does not prove the next.
+
+## Installation and entry point
+
+```bash
+which mmi
+python -m pip show multispeq_mqtt_interface
+python -c "import multispeq_mqtt_interface; print(multispeq_mqtt_interface.__file__)"
+```
+
+If `mmi` is missing, activate the virtual environment used for installation or reinstall with `python -m pip install -e .` from the tool directory. The `jii_multispeq` dependency is fetched from GitHub, so installation also needs Git and network access.
+
+## Configuration validation
+
+Inside the CLI, run `config` and verify the endpoint, port, client ID, topic, and certificate paths. Never paste private-key contents into logs or issues.
+
+MMI's validator currently checks only:
+
+- certificate, private-key, and CA paths are present and exist;
+- the endpoint is non-empty and contains a dot.
+
+It does not validate certificate expiry, private-key matching, IoT policy scope, or topic shape before connecting.
+
+Inspect certificate metadata without exposing the key:
+
+```bash
+openssl x509 -in device-certificate.pem.crt -noout -subject -issuer -dates
+openssl x509 -in device-certificate.pem.crt -noout -modulus | openssl sha256
+openssl rsa -in device-private.pem.key -noout -modulus | openssl sha256
+```
+
+The two modulus hashes should match. Restrict key permissions, for example `chmod 600 device-private.pem.key` on Unix-like systems.
+
+## Connection failures
+
+| Symptom                                        | Check                                                                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `Certificate file not found`                   | The `connect` prompt builds exact filenames from certificate ID and directory; compare those constructed names with disk.                 |
+| connection timeout/error                       | Endpoint and port, outbound TCP 8883, proxy settings, CA chain, and device certificate activation in the correct AWS account/environment. |
+| authorization / access denied while publishing | AWS IoT policy must allow this client to publish the exact experiment topic.                                                              |
+| `ping` fails but MQTT works                    | `ping` is ICMP and can be blocked independently; it is not an MQTT protocol check.                                                        |
+| frequent interruption/resume                   | Network/proxy stability, keep-alive value, clean-session choice, and duplicate client IDs.                                                |
+
+You can test whether a TLS socket is reachable without authenticating the client:
+
+```bash
+openssl s_client -connect "$AWS_IOT_ENDPOINT:8883" -CAfile "$AWS_IOT_CA_FILEPATH"
+```
+
+This does not prove the client certificate or IoT policy is authorized.
+
+## Device failures
+
+The most common portability issue is the current hard-coded port `/dev/cu.usbmodem42949672951`. `connect_device`, `publish`, and `continuous_publish` use it directly even though a port-enumeration helper exists. Verify the OS sees the device and change the implementation for the local port before debugging MQTT.
+
+Also check:
+
+- cable supports data, not power only;
+- no other process owns the serial port;
+- the user has serial-device permission;
+- the MultispeQ firmware responds to the JII-MultispeQ library;
+- the fixed single-SPAD protocol is supported by the connected device.
+
+`DeviceManager.measure_and_analyze()` catches measurement exceptions and returns no data. The CLI then prints `No data to publish`; inspect the earlier `Error: ...` line for the underlying device failure.
+
+## Publish and downstream failures
+
+The Python client serializes the payload with `json.dumps` and publishes at QoS 1. It prints the topic, payload size, and confirmation path. A successful return proves AWS IoT acknowledged the publish, not that a Gold table is already updated.
+
+If publish is acknowledged but data is absent downstream:
+
+1. compare the topic with the [MQTT contract](/api/mqtt);
+2. confirm the IoT rule for that channel is enabled;
+3. inspect Kinesis and IoT rule metrics/logging;
+4. inspect `centrum.raw_data` and pipeline quality events before Gold tables;
+5. correlate the MQTT client ID, topic, and publish time without sharing credentials.
+
+## Logging limitation
+
+Earlier docs described `--debug` and `LOG_LEVEL`; neither is implemented by the current CLI. Diagnostic output is emitted with `print`. Do not rely on an undocumented flag or environment variable to enable more detail.
+
+When reporting a non-security bug, include OS/Python version, command, redacted endpoint suffix, topic structure with identifiers anonymized, exact error, and whether the failure occurs before device measurement, MQTT connect, PUBACK, or downstream processing.

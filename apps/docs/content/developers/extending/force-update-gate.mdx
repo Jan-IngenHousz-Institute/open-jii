@@ -1,0 +1,47 @@
+---
+title: "Force-update gate"
+description: "Operating the CMS-managed minimum-version gate for the native mobile app."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+The force-update gate is a full-screen, non-dismissible mobile state for native builds below a configured minimum version. Use it only when compatibility or safety requires users to install a newer store build. The web app has no equivalent because it is served at the deployed version.
+
+## Contentful entry
+
+The app reads the most recently published `PageForceUpdate` entry.
+
+| Field            | Behavior                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `internalName`   | Editor label.                                                                       |
+| `title` / `body` | Gate copy.                                                                          |
+| `updateCta`      | `ComponentButton` label and store URL. Without a URL the update button is disabled. |
+| `minVersion`     | Minimum allowed native version, preferably `MAJOR.MINOR.PATCH`.                     |
+| `effectiveAt`    | Optional start time for a coordinated rollout.                                      |
+| `active`         | Master switch. `false` allows every version.                                        |
+
+## Decision rule
+
+A production build is gated only when all conditions are true:
+
+1. `active` is true;
+2. `effectiveAt` is absent or has passed; and
+3. `expo-application` reports a native application version lower than `minVersion`.
+
+The comparator accepts one to three numeric segments, pads missing segments with zero, and ignores `-prerelease` or `+build` suffixes. An unparseable current or minimum version fails open instead of locking users out. Local `__DEV__` builds are always allowed.
+
+## Cache, resume, and offline behavior
+
+The query is stale after five minutes and is checked on mount and app foreground. Its garbage-collection time is infinite so the last successful gate can remain in the persisted React Query cache. A network failure therefore keeps the prior decision instead of automatically unlocking a device that was already gated.
+
+An over-the-air JavaScript update does not change `nativeApplicationVersion`; only a new native store build can satisfy a higher minimum native version.
+
+## Safe operating procedure
+
+1. Confirm the target store build is available to the intended audience.
+2. Publish the entry with `active: false` and verify its copy, URL, and semantic version.
+3. Set `effectiveAt` if the rollout needs a future start.
+4. Activate the entry and test one below-minimum and one allowed build.
+5. Use `active: false` as the immediate rollback.
+
+Implementation lives under `apps/mobile/src/features/force-update/`; the CMS query is `packages/cms/src/lib/graphql/pageForceUpdate.graphql`.

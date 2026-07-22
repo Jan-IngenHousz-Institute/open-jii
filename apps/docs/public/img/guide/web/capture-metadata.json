@@ -1,0 +1,485 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "asset": "ambyte-data.png",
+      "sha256": "290ec75cf51e5796d5e675afe20425a1383d29c8be13ca5d1d0041f64f30d6ed",
+      "script": "apps/web/e2e/docs_media/capture_live_sensor_data.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/data",
+      "captured_at": "2026-07-19T22:06:08.542156+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.341159+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Ambyte-on-Air Data tab is populated with current rows and no Coming Soon monitoring panel or precise location data.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": [
+        "Registered Ambyte experiment produced a populated data table on dev; no Coming Soon panel captured."
+      ]
+    },
+    {
+      "asset": "charts-filters.png",
+      "sha256": "ea1647a8225bfad3971c36a6b8ad305feb747ce121f412e829532a0983cab221",
+      "script": "apps/web/e2e/docs_media/capture_charts_filters.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/analysis/visualizations/<visualization-id>",
+      "captured_at": "2026-07-19T22:14:55.544643+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.206412+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Saved non-location Line Demo visualization is fully rendered with chart controls and series; internal data-source identifier redacted.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": [
+        "No accessible demo Data table exposed a quick-chart sparkline; a saved Analysis visualization was observed and captured instead."
+      ]
+    },
+    {
+      "asset": "collaborators.png",
+      "sha256": "179a3b1f56beee2c62d1d52ffd89aa59f0d35797149e8191f30a071fdf730668",
+      "script": "apps/web/e2e/docs_media/capture_members_roles.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/collaborators",
+      "captured_at": "2026-07-19T22:05:28.655479+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.797417+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Collaborators view shows Invite, member tabs, and Admin role; account email redacted and testing-account authorization confirmed.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": [
+        "Collaborators list, admin/member roles, and invite affordance observed on dev."
+      ]
+    },
+    {
+      "asset": "create-experiment-details.png",
+      "sha256": "06b5677838f26b0bb6e66fb63eacc1793d1829bed8f66c1a6681a1f5d2278b23",
+      "script": "apps/web/e2e/docs_media/capture_create_experiment.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/new",
+      "captured_at": "2026-07-19T22:06:59.051992+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.666662+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Blank Details step shows the observed four-step wizard, name, description, and workbook picker; no account or experiment data entered.",
+      "redactions": [],
+      "live_checks_observed": ["Four-step create wizard Details screen observed on dev."]
+    },
+    {
+      "asset": "create-experiment-entry.png",
+      "sha256": "de671a0e4e80b16797f233d60a8100dbc7e16207eafbc410e197baf7a8597917",
+      "script": "apps/web/e2e/docs_media/capture_create_experiment.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments",
+      "captured_at": "2026-07-19T22:06:58.803891+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.590492+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Experiments entry view with Create Experiment action and three curated demo cards; no mutation performed.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": []
+    },
+    {
+      "asset": "dashboard.png",
+      "sha256": "5865196e34e5329c4ceb1f43825d70b57aa0d1b0fa3b58496cdbfdd9afddd7be",
+      "script": "apps/web/e2e/docs_media/capture_dashboard.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform",
+      "captured_at": "2026-07-19T22:05:04.365736+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.456732+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Authenticated dashboard with three curated demo experiments; testing-account avatar hidden; no error, loading, feature-flag, or Coming Soon state.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": ["Authenticated dashboard and experiment cards observed on dev."]
+    },
+    {
+      "asset": "data-first-measurement.png",
+      "sha256": "53f4bab2863dceec922b5fa7cc6378fb426fa9e8464a4d57c218be887e01c714",
+      "script": "apps/web/e2e/docs_media/capture_charts_filters.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/data",
+      "captured_at": "2026-07-19T22:14:49.355134+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.134715+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Populated representative Data tab shows dataset tabs, Add filter, default sorted column, rows, and pagination; internal identifiers redacted.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": ["Representative populated measurement table observed on dev."]
+    },
+    {
+      "asset": "experiments-list.png",
+      "sha256": "de671a0e4e80b16797f233d60a8100dbc7e16207eafbc410e197baf7a8597917",
+      "script": "apps/web/e2e/docs_media/capture_experiments_list.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments",
+      "captured_at": "2026-07-19T22:06:55.018141+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.524430+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Search and member-filter controls with three curated demo experiment cards; account avatar hidden and scratch cards excluded from the focused capture.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": ["Search/filter controls and experiment cards observed on dev."]
+    },
+    {
+      "asset": "export-dialog.png",
+      "sha256": "7fe0277a9261b1054bebdebfa76624461e488b189bec440dfca9401caf7e5928",
+      "script": "apps/web/e2e/docs_media/capture_export_dialog.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/data",
+      "captured_at": "2026-07-19T22:11:26.546869+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.275573+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Export Dataset dialog fully loaded with anonymization option and CSV, NDJSON, JSON Array, Parquet, and Excel menu; no export created.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": [
+        "Export format selection and contributor anonymization control observed on dev; no export created."
+      ]
+    },
+    {
+      "asset": "login-signup.png",
+      "sha256": "dc600c0f2f0250ad2ad8f98af2fe1f7b4a39ea9195273fa03b32ea9dfcf9f5da",
+      "script": "apps/web/e2e/docs_media/capture_auth.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/login",
+      "captured_at": "2026-07-19T21:37:19.091373+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T21:37:29.265197+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Public dev auth screen only; email and OTP fields are empty, no account data is visible, cookie banner dismissed, stable background selected, and GitHub/ORCID/email methods match the verified Guide copy.",
+      "redactions": [],
+      "live_checks_observed": ["Dev login offers email, GitHub, and ORCID."]
+    },
+    {
+      "asset": "metadata-import.png",
+      "sha256": "e5439f57da401fd7ab8071f2e3a27f37589da9fe8fe5327d68b59282582e9507",
+      "script": "apps/web/e2e/docs_media/capture_metadata.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/data",
+      "captured_at": "2026-07-19T22:09:38.970513+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.865514+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Synthetic two-row metadata preview with plot_id visibly marked as identifier; no metadata saved to the experiment.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": ["Metadata CSV preview and identifier mapping UI observed on dev."]
+    },
+    {
+      "asset": "project-transfer-history.png",
+      "sha256": "00c412d527f1f3d7f9cade1b9744f1825346ccbef2053b7658d71228b7da1b1e",
+      "script": "apps/web/e2e/docs_media/capture_project_transfer.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/transfer-request/history",
+      "captured_at": "2026-07-19T22:16:10.332257+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.001541+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Previous Requests view shows observed Completed statuses and dates; project identifiers and URLs hidden.",
+      "redactions": ["project identifiers and URLs hidden"],
+      "live_checks_observed": [
+        "Previous Requests view and its current status labels/empty state observed on dev."
+      ]
+    },
+    {
+      "asset": "project-transfer.png",
+      "sha256": "d46b78598a1a9c252328049b6b7b79b850fcb5a1def1ed480dbee225d74b916c",
+      "script": "apps/web/e2e/docs_media/capture_project_transfer.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/transfer-request",
+      "captured_at": "2026-07-19T22:16:08.819022+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.930715+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Blank PhotosynQ transfer request form with consent and turnaround copy; no request submitted.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": [
+        "PhotosynQ project-transfer request form observed on dev; no request submitted."
+      ]
+    },
+    {
+      "asset": "protocol-fork.png",
+      "sha256": "61e4313102c5ec1bc9e956dc7ff54a12ee3d3d8e3b68f9e515c4f5617182b9d0",
+      "script": "apps/web/e2e/docs_media/capture_protocols.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/design",
+      "captured_at": "2026-07-19T22:16:05.638459+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.478594+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Read-only Measurement Node visibly shows Fork it to edit and the Fork to edit tooltip; the action was not invoked.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Protocol cell Fork to edit affordance observed on dev; no fork was created."
+      ]
+    },
+    {
+      "asset": "protocol-picker.png",
+      "sha256": "ff278c57663539775432ae5fa38725d88af6e5077a9cd9c6e61d7ee83f9469c9",
+      "script": "apps/web/e2e/docs_media/capture_protocols.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/design",
+      "captured_at": "2026-07-19T22:16:04.979253+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.412297+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Searchable protocol picker shows names, creators, and sensor-family badges; no protocol selected or created.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden",
+        "visible UUID identifiers replaced with [id hidden]"
+      ],
+      "live_checks_observed": ["Picker shows protocol name, creator, and sensor family on dev."]
+    },
+    {
+      "asset": "quick-start-web.webm",
+      "sha256": "0d91293cb78ff47d984569a7af11412ff15cb2f49c4f77b0008fc7c71954d312",
+      "script": "apps/web/e2e/docs_media/capture_quick_start.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<new-experiment-id>",
+      "captured_at": "2026-07-20T07:01:02.343524+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-20T07:05:58.941782+00:00",
+      "reviewer": "docs-media-pass",
+      "review_notes": "Full timeline inspected: Create Experiment entry, explicit Workbook None state, four-step review, and success toast are coherent. Account avatar and unrelated lower experiment cards are blurred; no credentials, OTPs, identifiers, precise locations, Coming Soon state, or misleading measurement-ready claim is visible.",
+      "redactions": [
+        "testing-account avatar region blurred throughout recording",
+        "unrelated lower experiment cards blurred before creation"
+      ],
+      "live_checks_observed": [
+        "Create Experiment flow completed on dev with one explicitly approved demo mutation.",
+        "Workbook None was selected because this account had no selectable workbook; the created experiment is not measurement-ready."
+      ],
+      "created_dev_experiment": {
+        "name": "Docs quick start demo",
+        "route": "/en-US/platform/experiments/<new-experiment-id>",
+        "count": 1,
+        "workbook": "None",
+        "measurement_ready": false,
+        "readiness_note": "No workbook was selectable for this account in the create wizard; attach a suitable workbook before protocol-guided measurement."
+      }
+    },
+    {
+      "asset": "report-issue.png",
+      "sha256": "5865196e34e5329c4ceb1f43825d70b57aa0d1b0fa3b58496cdbfdd9afddd7be",
+      "script": "apps/web/e2e/docs_media/capture_report_issue.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform",
+      "captured_at": "2026-07-19T22:05:41.070049+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.067752+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Authenticated dashboard clearly shows the in-product Report bug entry; testing-account avatar hidden.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": ["In-product Report bug link observed on dev."]
+    },
+    {
+      "asset": "visibility-embargo.png",
+      "sha256": "683a40e380c52016c0836a95703d5c8e04f2235cf3b7cdbec5226e091b3b0a46",
+      "script": "apps/web/e2e/docs_media/capture_visibility_embargo.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/new#members-visibility",
+      "captured_at": "2026-07-19T22:05:17.796792+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:35.732252+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Unsaved synthetic preview shows private visibility, embargo date, helper copy, and public-transition timing; no experiment submitted.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": [
+        "Private selection, embargo date, and publication helper copy observed on dev."
+      ]
+    },
+    {
+      "asset": "workbook-design.png",
+      "sha256": "3193287fa03cfd66d391eee6c2b4bebeb40a7ab35a1346c9478febe33872bf42",
+      "script": "apps/web/e2e/docs_media/capture_workbooks.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/design",
+      "captured_at": "2026-07-19T22:06:24.601343+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.551412+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Design tab shows the linked MultispeQ workbook, pinned version badge, version-history control, and workbook blocks; no edit made.",
+      "redactions": [
+        "visible email addresses replaced with [email hidden]",
+        "testing-account avatar hidden"
+      ],
+      "live_checks_observed": ["Linked workbook and pinned version badge observed on dev."]
+    },
+    {
+      "asset": "workbook-version-history.png",
+      "sha256": "65cfb138af7ae347e5e1b80be4b09e765dd2c8dc89babeb37b05a25a2479d15a",
+      "script": "apps/web/e2e/docs_media/capture_workbooks.py",
+      "environment": "dev.openjii.org",
+      "route": "/en-US/platform/experiments/<experiment-id>/design",
+      "captured_at": "2026-07-19T22:06:24.744628+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-07-19T22:17:36.617102+00:00",
+      "reviewer": "ticket-06-media-pass",
+      "review_notes": "Version history shows current v2 and earlier v1 with restore control; no restore or mutation performed.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Version history and current pinned version observed on dev; no restore performed."
+      ]
+    }
+  ]
+}

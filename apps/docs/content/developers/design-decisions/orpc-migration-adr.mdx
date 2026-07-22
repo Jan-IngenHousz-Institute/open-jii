@@ -1,0 +1,114 @@
+---
+title: "ADR: Replace ts-rest with oRPC"
+description: "Why openJII migrated its typed API stack to oRPC while preserving the deployed REST surface."
+---
+
+{/* verified: code@12a361a74966 2026-07-20 */}
+
+# ADR: Replace ts-rest with oRPC
+
+**Date:** 2026-07-16  
+**Status:** Accepted
+
+## Context
+
+The API contract, NestJS backend, web application, and mobile application used
+ts-rest as their shared transport and typing layer. The migration was an
+opportunity to organize contracts by domain, make declared output schemas
+enforceable at runtime, and generate OpenAPI from the same source used by the
+clients and handlers.
+
+The platform could not require a coordinated backend, web, and mobile release.
+Installed mobile builds and cached web assets using the old ts-rest client had
+to continue calling the same HTTP methods and paths and receiving compatible
+success and error bodies.
+
+## Decision
+
+Replace ts-rest end to end with oRPC while preserving the existing REST wire
+surface.
+
+The durable boundaries are:
+
+1. **The contract package is authoritative.** `@repo/api` groups Zod schemas and
+   oRPC contracts by domain and aggregates them in `contract.ts`. Procedures
+   declare their HTTP method, `/api/v1` path, input, output, and success status.
+2. **Backend handlers implement those contracts.** NestJS registers the oRPC
+   module and controllers bind procedures with `@Implement` and `implement`.
+   Application failures are translated to `ORPCError`; internal details are not
+   exposed in production.
+3. **Outputs are validated at runtime.** Declared output schemas describe what
+   handlers must actually return. A mismatch is an implementation defect, not a
+   type-only discrepancy that clients must absorb.
+4. **Web and mobile share the same contract.** Both use an OpenAPI link and
+   generated oRPC clients. TanStack Query integration remains the query/mutation
+   boundary; each application supplies its own cookie, timeout, and session
+   refresh behavior.
+5. **The HTTP surface remains compatible.** Existing method/path pairs and
+   response shapes are preserved so clients built with ts-rest can continue to
+   use a backend running oRPC. The library migration is not permission to rename
+   routes or redesign payloads.
+6. **OpenAPI is generated from the oRPC contract.** `@orpc/openapi` and the Zod
+   converter generate the REST specification consumed by the documentation
+   build.
+7. **Native streaming endpoints may remain outside oRPC.** The multipart data
+   upload endpoint stays a NestJS streaming route so files can be piped without
+   buffering them into a typed RPC body. Its form fields still use shared Zod
+   schemas, and its route compatibility remains part of the public HTTP surface.
+
+ts-rest contracts, backend adapters, and generated clients are superseded and
+have been removed from the current implementation.
+
+## Consequences
+
+### Benefits
+
+- Contract, server, web, mobile, and generated OpenAPI use one domain-organized
+  source of truth.
+- Runtime output validation exposes server/contract drift close to the handler
+  that caused it.
+- Typed clients and TanStack Query options are generated without duplicating
+  route strings across applications.
+- Preserving the REST surface decouples backend deployment from mobile and web
+  rollout timing.
+
+### Trade-offs and risks
+
+- Output validation can turn previously tolerated response drift into a runtime
+  failure; contract changes require server fixtures and real HTTP tests.
+- Compatibility is broader than TypeScript assignability. Status codes, error
+  envelopes, omitted fields, and raw JSON serialization must remain stable for
+  older clients.
+- The web and mobile clients share contract semantics but still need separate
+  transport behavior for browser cookies and mobile refresh/timeout handling.
+- Streaming multipart upload is an explicit exception, so route/schema drift for
+  that endpoint is not prevented by the aggregate oRPC router alone.
+- The API stack is coupled to oRPC's contract, NestJS, OpenAPI, and TanStack
+  adapters and must upgrade them as a compatible set.
+
+## Alternatives considered
+
+- **Keep ts-rest.** Rejected because it would retain the previous contract and
+  generation stack without runtime output enforcement, and would leave the
+  intended domain reorganization as parallel migration work.
+- **Use the migration to introduce a new HTTP API.** Rejected because installed
+  clients must work without a coordinated release. The transport library may
+  change; the deployed REST contract may not change accidentally with it.
+- **Force multipart uploads through the RPC contract.** Rejected because the
+  current endpoint deliberately streams files to Databricks. Buffering the body
+  to fit an RPC procedure would weaken that operational boundary.
+
+## Follow-up
+
+- Keep procedure-surface tests that reject malformed paths and duplicate
+  method/path pairs.
+- Regenerate and drift-check the committed OpenAPI document whenever contracts
+  change.
+- Test compatibility-sensitive endpoints over real HTTP, including error
+  serialization and the native multipart exception.
+- Treat any route or response change needed by future clients as a separately
+  versioned API decision.
+
+Use the generated [REST API reference](/api/rest) for the current public
+contract and [Architecture & Pipeline](/developers/architecture) for surrounding
+system boundaries.

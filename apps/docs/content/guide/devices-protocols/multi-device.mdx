@@ -1,0 +1,47 @@
+---
+title: "Multi-device measurements"
+description: "Run one protocol on several wired MultispeQs in parallel."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Multi-device measurement runs the **same protocol** on every connected device in
+parallel. Each device still produces an independent measurement and upload; a
+shared `workbook_run_id` lets later analysis identify readings from the same
+round.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/multi-device-demo.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+The recording uses the web workbook host with mock devices. The mobile field flow
+uses the same per-device outcome model.
+
+## Set up a mobile round
+
+1. Connect several MultispeQs by USB. A powered USB hub is recommended.
+2. Open **Devices** and confirm the connected-device count.
+3. Start an experiment whose workbook contains the intended protocol.
+4. Start the measurement. The app runs the protocol on all connected devices.
+5. Review the results per device before accepting them.
+
+Bluetooth Classic remains single-device, and the app does not mix a Bluetooth
+device into a wired multi-device setup.
+
+## Handle partial failure
+
+If some devices fail, successful readings are retained. You can retry only the
+failed devices or continue with the successful results. Already-successful
+devices are not scanned again during that retry.
+
+After acceptance, each reading is saved and queued separately. Offline retries
+therefore behave like ordinary single-device uploads; the shared run ID is
+correlation, not a batched upload.
+
+{/* NEEDS-LIVE-CHECK: run a real multi-device mobile round through a powered USB hub, including one partial failure, retry, offline save, and eventual sync. */}
+{/* MEDIA-WAIVER: no wired MultispeQs or powered hub were connected during capture. The mock-device web recording above is retained and explicitly labelled; mobile hardware success is not simulated. */}
+
+Current limits: all devices in a round use one protocol, battery display tracks
+the first connected device, and workbook runs performed on the web are test runs
+rather than uploaded experiment measurements.

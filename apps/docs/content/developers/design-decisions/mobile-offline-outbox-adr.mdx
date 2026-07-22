@@ -1,0 +1,131 @@
+---
+title: "ADR: Use an offline-first mobile outbox"
+description: "Why the mobile app saves measurements to SQLite before QoS 1 MQTT delivery and resumes from durable state."
+---
+
+{/* verified: code@12a361a74966 2026-07-20 */}
+
+# ADR: Use an offline-first mobile outbox
+
+**Date:** 2026-05-26  
+**Status:** Accepted
+
+## Context
+
+Field measurements are often taken with intermittent or absent connectivity.
+Losing the application process, changing network state, or dropping an MQTT
+connection must not discard a measurement that the researcher already accepted.
+The application also needs pinned workbook, protocol, and macro content before
+going offline; authentication and newly changed content cannot be fetched for
+the first time without a network.
+
+The earlier upload path spread persistence, MQTT connection handling, retry,
+and UI state across hooks and AsyncStorage entries. Treating uncertain network
+state as online also caused avoidable credential and publish attempts while the
+device was offline.
+
+## Decision
+
+Use an offline-first measurement flow with a transactional outbox backed by the
+mobile SQLite database.
+
+The durable boundaries are:
+
+1. **Cache execution content before field work.** While online, the app caches
+   the experiment and its pinned workbook version. Protocol and macro code are
+   hydrated from that version's entity snapshots, not fetched live during an
+   offline flow.
+2. **Persist before enqueue.** Accepted measurements and question-only records
+   are written to SQLite with their MQTT topic, compressed payload, display
+   metadata, and `pending` status before the outbox is asked to upload them. A
+   local-save failure is surfaced; the flow must not report a durable success
+   when no row exists.
+3. **SQLite is the delivery source of truth.** Durable statuses are `pending`,
+   `failed`, and `successful`. There is no database `uploading` status; in-flight
+   scheduling is process-local and can be rebuilt from pending/failed rows.
+4. **One outbox owns scheduling and retry.** The app composition root creates one
+   transport and one outbox. The outbox queues row IDs, rereads payloads from
+   SQLite, bounds concurrency, retries retryable transport errors with the
+   configured backoff, and marks exhausted or terminal attempts `failed`.
+5. **One transport owns MQTT session behavior.** It lazily establishes a
+   Cognito-signed MQTT-over-WebSocket session, publishes at QoS 1, resolves a
+   publish only on PUBACK, rejects disconnects/timeouts, and closes the session
+   after an idle interval. It does not implement its own retry loop.
+6. **Offline means paused.** The outbox uses the application's TanStack Query
+   `onlineManager` as the connectivity source. It stops while offline and
+   resumes on reconnect instead of interpreting an unknown network state as
+   online.
+7. **Durable work is rehydrated.** Pending and failed rows are rediscovered on
+   cold construction and when the app returns to the foreground. Reconnect also
+   resumes the queue and refreshes cacheable offline content.
+8. **Delivery is at least once.** PUBACK proves broker receipt, not completion of
+   downstream Kinesis or Databricks processing. A crash after PUBACK but before
+   the SQLite status update can republish the row. The payload carries the local
+   row UUID as `_client_id` for correlation; downstream consumers must tolerate
+   repeat delivery.
+
+The former distributed auto-upload hooks, AsyncStorage measurement queue, and
+transport-coupled retry behavior are superseded. AsyncStorage is read only as a
+legacy migration source for old failed/successful entries.
+
+## Consequences
+
+### Benefits
+
+- A saved measurement survives process death, loss of connectivity, foreground
+  changes, and MQTT session recreation.
+- Researchers can continue a previously cached pinned workflow without live
+  protocol or macro lookups.
+- Persistence, retry, transport, and UI progress have explicit ownership and can
+  be tested with injected fakes.
+- QoS 1 plus a durable pending row gives a clear handoff: local until PUBACK,
+  then broker-acknowledged.
+- Failed rows remain inspectable and retryable instead of disappearing with an
+  in-memory promise or queue.
+
+### Trade-offs and risks
+
+- At-least-once delivery permits duplicates around the PUBACK/status-write crash
+  window; consumers cannot assume exactly-once ingestion.
+- "Successful" means broker-acknowledged, not visible in the Gold tables. The
+  asynchronous pipeline can still be delayed or fail later.
+- Cached execution content can become stale. The offline-ready state applies to
+  the pinned version that was cached, not to later workbook edits or repins.
+- SQLite schema and persisted flow-store changes require migrations that
+  preserve paused field work and unsynced rows.
+- Queue concurrency and retries can create a reconnect burst, so transport,
+  credential, broker, and UI behavior need load-aware limits.
+- The app cannot perform a first login, discover a new experiment, or download a
+  newly pinned version entirely offline.
+
+## Alternatives considered
+
+- **Publish first and save only on failure.** Rejected because a process crash,
+  network ambiguity, or broker timeout could lose the only durable copy of an
+  accepted measurement.
+- **Keep the queue only in memory.** Rejected because process death and app
+  restart would erase work and make recovery depend on UI state.
+- **Use AsyncStorage entries as the long-term queue.** Superseded by the indexed,
+  migratable SQLite table and explicit status lifecycle. Legacy entries are
+  migrated on access.
+- **Let the MQTT transport reconnect and retry independently.** Rejected because
+  persistence and retry decisions belong with the outbox. The transport reports
+  typed delivery failures; the outbox decides whether and when to retry.
+- **Drive offline state directly from an indeterminate platform network value.**
+  Rejected after unknown connectivity was treated as online and caused noisy,
+  doomed credential and publish attempts.
+
+## Follow-up
+
+- Test cold start, process restart, reconnect, foreground rehydration, PUBACK
+  loss windows, and failed-row recovery on real devices.
+- Preserve SQLite rows across schema migrations and preserve versioned flow-store
+  wire formats across application updates.
+- Monitor end-to-end time from local save through broker acknowledgement and
+  downstream lakehouse visibility as separate stages.
+- Keep user-facing copy precise about queued, uploading, broker-acknowledged,
+  failed, and processed states.
+
+See [Working offline & syncing](/guide/measuring/offline-sync), [Data
+ingestion](/developers/architecture/data-ingestion), and the generated [MQTT API
+reference](/api/mqtt).
