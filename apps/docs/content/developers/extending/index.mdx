@@ -1,0 +1,16 @@
+---
+title: "Extending the Platform"
+description: "Verified extension points for communications and CMS-managed runtime notices."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+openJII keeps some operational content outside application releases so maintainers can update messaging safely and quickly:
+
+- [Transactional emails](/developers/extending/transactional-emails) combine React Email renderers with Contentful-managed copy and code fallbacks.
+- [Alert banners](/developers/extending/alert-banners) publish scheduled, audience-specific notices to web and mobile.
+- [Force-update gate](/developers/extending/force-update-gate) can block obsolete native mobile builds when a breaking change requires an update.
+
+These are code-backed integration points, not arbitrary plugin systems. Schema changes in Contentful must be reflected in GraphQL documents and regenerated CMS types; code should continue to fail safely when CMS content or connectivity is unavailable.
+
+For product/API extensions, start with the [REST contract](/api/rest), [MQTT contract](/api/mqtt), and [Contributing](/developers/contributing) workflow.

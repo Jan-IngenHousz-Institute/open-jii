@@ -75,5 +75,9 @@ sensor_schema = StructType(
         # One uuid per multi-device workbook run; the round's rows share it.
         # Nullable: absent on single-device uploads and all older payloads.
         StructField("workbook_run_id", StringType(), True),
+        # GPS fix at measurement time; absent on older payloads and when the
+        # app had no location permission or fix.
+        StructField("latitude", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
     ]
 )

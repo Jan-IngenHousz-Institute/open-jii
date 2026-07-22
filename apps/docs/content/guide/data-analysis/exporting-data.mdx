@@ -1,0 +1,46 @@
+---
+title: "Exporting data"
+description: "Create and download a processed experiment-table export."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Web exports are created per experiment **dataset**, not as one automatic archive
+of every table. Choose the table that contains the measurements you need.
+
+## Create an export
+
+1. Open the experiment's **Data** tab and select a dataset.
+2. Open **Export Dataset** from the table actions.
+3. If needed, choose whether to anonymize contributors for this export. This can
+   override the experiment's stored setting.
+4. Select a format:
+   - **CSV** for spreadsheets and broad compatibility;
+   - **NDJSON** for streaming one JSON object per line;
+   - **JSON Array** for a single JSON collection;
+   - **Parquet** for typed, columnar analysis in Python, R, or lakehouse tools;
+   - **Excel** for an `.xlsx` workbook.
+5. Create the export. It is queued and prepared in the background.
+6. Return to the export list and download it when its status is **Completed**.
+
+The list keeps previous exports and shows their format, creation time, status,
+row count, and size when those values are available.
+
+{/* NEEDS-LIVE-CHECK: create and download all five formats from a representative dataset; compare row counts, contributor anonymization, nested/raw values, and export-vs-table values. */}
+![The Export Dataset dialog with all five formats and the contributor-anonymization option](/img/guide/web/export-dialog.png)
+
+{/* MEDIA-PARTIAL: the format and anonymization controls were observed without creating an export. Completed downloads remain covered by the live-check above. */}
+
+## Before analysis
+
+- Keep the experiment ID, table name, export time, workbook version, and protocol
+  context with the downloaded file.
+- Check row counts and missing values before transforming data.
+- Confirm how nested values and raw traces are represented in your chosen format.
+- Prefer Parquet when types and large columnar datasets matter; prefer CSV only
+  when flattening and spreadsheet compatibility are acceptable.
+
+<Callout type="info">
+  Export creation is asynchronous. The top-bar activity area can track an export during the current
+  browser session, while the dataset's export list remains the place to revisit its status.
+</Callout>

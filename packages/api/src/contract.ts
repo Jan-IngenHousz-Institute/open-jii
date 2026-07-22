@@ -16,6 +16,7 @@ import { experimentWorkbooksContract } from "./domains/experiment/workbooks/expe
 import { healthContract } from "./domains/health/health.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
+import { newsletterContract } from "./domains/newsletter/newsletter.contract";
 import { protocolContract } from "./domains/protocol/protocol.contract";
 import { searchContract } from "./domains/search/search.contract";
 import { userContract } from "./domains/user/user.contract";
@@ -46,6 +47,7 @@ export const contract = {
   health: healthContract,
   iot: iotContract,
   macros: macroContract,
+  newsletter: newsletterContract,
   protocols: protocolContract,
   search: searchContract,
   users: userContract,

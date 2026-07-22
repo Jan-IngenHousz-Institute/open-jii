@@ -305,6 +305,30 @@ module "contentful_secrets" {
   }
 }
 
+module "mailchimp_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-mailchimp-secrets-${var.environment}"
+  description = "Mailchimp API secrets for the openJII backend service"
+
+  secret_string = jsonencode({
+    MAILCHIMP_API_KEY        = var.mailchimp_api_key
+    MAILCHIMP_SERVER_PREFIX  = var.mailchimp_server_prefix
+    MAILCHIMP_AUDIENCE_ID    = var.mailchimp_audience_id
+    MAILCHIMP_COMMUNITY_KIND = var.mailchimp_community_kind
+    MAILCHIMP_COMMUNITY_ID   = var.mailchimp_community_id
+    MAILCHIMP_COMMUNITY_NAME = var.mailchimp_community_name
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "mailchimp"
+  }
+}
+
 # NOTE: SES creates DKIM TXT records in the prod Route53 zone.
 # This is gated behind var.enable_ses_cutover to prevent drill runs from
 # overwriting prod DKIM records and disrupting live transactional email.
@@ -514,6 +538,12 @@ module "backend_ecs" {
     { name = "DB_CREDENTIALS", valueFrom = module.aurora_db.master_user_secret_arn },
     { name = "EMAIL_SERVER", valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::" },
     { name = "EMAIL_FROM", valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_FROM::" },
+    { name = "MAILCHIMP_API_KEY", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_API_KEY::" },
+    { name = "MAILCHIMP_SERVER_PREFIX", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_SERVER_PREFIX::" },
+    { name = "MAILCHIMP_AUDIENCE_ID", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_AUDIENCE_ID::" },
+    { name = "MAILCHIMP_COMMUNITY_KIND", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_KIND::" },
+    { name = "MAILCHIMP_COMMUNITY_ID", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_ID::" },
+    { name = "MAILCHIMP_COMMUNITY_NAME", valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_NAME::" },
   ]
 
   environment_variables = [
@@ -659,6 +689,11 @@ module "docs_cloudfront" {
   certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
   custom_domain   = module.route53.docs_domain
   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
+
+  # Fumadocs static export: legacy 301 redirects + clean-URL rewrite + real 404.
+  enable_redirect_function  = true
+  enable_spa_error_response = false
+  redirect_map              = jsondecode(file("${path.module}/../../../apps/docs/redirects.json"))
 }
 
 module "opennext" {

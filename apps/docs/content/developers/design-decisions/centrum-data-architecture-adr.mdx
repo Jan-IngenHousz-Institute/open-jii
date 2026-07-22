@@ -1,0 +1,114 @@
+---
+title: "ADR: Consolidate experiment data in centrum"
+description: "Why openJII replaced per-experiment schemas and pipelines with one central, experiment-keyed lakehouse model."
+---
+
+{/* verified: code@12a361a74966 2026-07-20 */}
+
+# ADR: Consolidate experiment data in `centrum`
+
+**Date:** 2026-02-10  
+**Status:** Accepted
+
+## Context
+
+The 2025 data governance and ingestion ADRs proposed a central medallion
+pipeline followed by a separate schema and second medallion pipeline for every
+experiment. That design made a Databricks schema and a provisioned pipeline part
+of an experiment's lifecycle. It also duplicated common transformations and
+required orchestration, status tracking, and recovery for a growing set of
+near-identical pipelines.
+
+The application primarily needs a consistent set of experiment-facing tables:
+raw measurements, device summaries, macro outputs, uploaded data, and the
+metadata required to discover and query those tables. Flexible protocol,
+question, and macro results also do not fit one fixed relational shape.
+
+## Decision
+
+Use one central Unity Catalog schema, `centrum`, and represent experiment
+boundaries with `experiment_id` in shared physical tables.
+
+The durable boundaries are:
+
+1. **One central pipeline.** Source records enter central Bronze tables, are
+   normalized once in Silver, and are projected into shared Gold tables and
+   enriched views. The pipeline is split into modules under
+   `apps/data/src/pipelines/centrum/`, but those modules form one logical
+   pipeline rather than one deployment per experiment.
+2. **Experiment-oriented Gold data.** `experiment_raw_data`,
+   `experiment_device_data`, `experiment_macro_data`, and
+   `experiment_uploaded_data` keep stable experiment and entity identifiers.
+   Application reads select the shared physical table and filter it by the
+   authorized experiment.
+3. **Flexible values stay flexible.** Measurement samples, question maps, macro
+   outputs, uploaded rows, and custom metadata use Databricks VARIANT where the
+   shape is data-dependent. Stable identifiers and operational fields remain
+   ordinary columns.
+4. **Metadata is materialized centrally.** `experiment_table_metadata` stores
+   per-experiment table identifiers, types, display names, row counts, and
+   inferred VARIANT schemas. The backend uses it for table discovery and query
+   construction instead of listing or inspecting per-experiment schemas.
+5. **Provisioning is not an experiment state.** Creating an experiment does not
+   create a Databricks schema or pipeline, and the application does not expose
+   provisioning/provisioning-failed lifecycle states for this purpose.
+6. **Authorization stays outside the lakehouse layout.** A shared schema is not
+   a public access boundary. Backend membership and visibility checks authorize
+   the experiment before its repositories construct experiment-filtered SQL.
+
+This decision supersedes the per-experiment schemas, dual medallion pipelines,
+and experiment-pipeline provisioning described in [Data governance model
+ADR](/developers/design-decisions/data-governance-adr) and [Data ingestion
+architecture ADR](/developers/design-decisions/data-ingestion-adr). Those pages
+remain historical records.
+
+## Consequences
+
+### Benefits
+
+- Common parsing, validation, enrichment, and repair logic runs once.
+- New experiments become active without Databricks provisioning or webhook
+  coordination.
+- Shared Gold tables give the backend a stable query surface while VARIANT
+  preserves protocol- and macro-specific result shapes.
+- Central metadata avoids repeated table discovery and schema inference on
+  normal application reads.
+- Splitting the pipeline into source/layer modules improves maintainability
+  without reintroducing per-experiment deployments.
+
+### Trade-offs and risks
+
+- Logical isolation now depends on correct authorization and mandatory
+  `experiment_id` filters; the schema name itself no longer prevents a
+  cross-experiment query.
+- A defective shared transformation has a wider blast radius than a defective
+  experiment-only pipeline.
+- VARIANT values require schema inference and careful SQL projection, and may
+  defer shape errors that a rigid table schema would catch earlier.
+- Central tables, streaming checkpoints, and non-resettable Bronze data require
+  deliberate migrations and repair paths when ingestion formats evolve.
+- Researchers who need experiment-specific scientific transformations must add
+  explicit downstream analysis rather than modifying a private copy of the
+  platform pipeline.
+
+## Alternatives considered
+
+- **Keep the 2025 dual-schema, dual-medallion design.** Rejected because it
+  duplicates data and processing, makes every experiment depend on provisioning
+  and orchestration, and increases operational work as experiment count grows.
+- **Keep Databricks job-based experiment provisioning.** Rejected with the
+  per-experiment pipeline model because creating an application record should
+  not wait for a separate schema/pipeline deployment and provisioning webhook.
+
+## Follow-up
+
+- Treat any backend query that reaches central experiment data without an
+  authorization check and experiment filter as a security defect.
+- Keep table constants, pipeline definitions, backend configuration, and
+  `experiment_table_metadata` semantics aligned when adding a table type.
+- Preserve the historical ADRs, but label their per-experiment mechanisms as
+  superseded wherever they are indexed or referenced.
+
+For the current implementation, see [Medallion
+layers](/developers/architecture/medallion-layers) and [Data
+ingestion](/developers/architecture/data-ingestion).

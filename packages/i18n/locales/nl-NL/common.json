@@ -223,6 +223,11 @@
     "errorGoHome": "Naar Homepage",
     "errorSupport": "Als dit probleem aanhoudt, neem dan contact op met ons ondersteuningsteam."
   },
+  "registration": {
+    "newsletterOptIn": "Ik wil graag de openJII-nieuwsbrief ontvangen",
+    "newsletterOptInError": "Aanmelden voor de nieuwsbrief is mislukt. Je kunt je later aanmelden via de accountinstellingen.",
+    "newsletterForgottenEmail": "Dit e-mailadres is op je eerdere verzoek uit onze nieuwsbrief verwijderd en kan niet automatisch opnieuw worden toegevoegd. Neem contact op met support als je je opnieuw wilt aanmelden."
+  },
   "signout": {
     "title": "Uitloggen",
     "description": "Weet je zeker dat je wilt uitloggen van je account?",

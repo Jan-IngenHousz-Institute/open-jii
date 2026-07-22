@@ -68,6 +68,8 @@ def enriched_experiment_macro_data():
             macro_data.date,
             contributors.user.alias("contributor"),
             devices.device.alias("device"),
+            macro_data.latitude,
+            macro_data.longitude,
             macro_data.macro_id,
             macro_data.macro_name,
             macro_data.macro_filename,

@@ -1,0 +1,116 @@
+---
+title: "Quick start: your first measurement"
+description: "The end-to-end happy path: create an experiment on the web, take one MultispeQ measurement on the mobile app, and see it appear in your data."
+---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
+{/* verified: code@12a361a74 2026-07-19 */}
+
+This is the shortest path from a brand-new account to your first measurement. You
+create an experiment on the web, take a measurement in the field with the mobile
+app, and watch it show up in your data.
+
+{/* NEEDS-LIVE-CHECK: run this end to end on a new account + current mobile build + real MultispeQ to confirm the measured duration and that these are the minimum steps. */}
+You can expect it to take around ten minutes.
+
+## Before you start
+
+You will need:
+
+- An **openJII account** (see [Create your account](/guide/get-started/create-account)).
+- An **Android phone** (Android 7.0 or newer, at least 2 GB of RAM).
+- A **MultispeQ** handheld device.
+
+## Step by step
+
+<Steps>
+<Step>
+### Create an experiment
+
+On the web platform, open **Experiments** and select **Create Experiment**. Give
+it a **Name**, and add a short **Description** if you like.
+
+{/* verified-live: dev.openjii.org 2026-07-20 — the authorized capture account had no selectable workbooks in the create wizard, and creation succeeded with Workbook: None. */}
+The workbook is optional for creating the experiment shell. In the observed dev
+account, the picker offered only **None**. Step through the wizard and select
+**Create Experiment**.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/guide/web/quick-start-web.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+<Callout type="warn">
+  An experiment created with **Workbook: None** is not ready for protocol-guided measurement. Before
+  continuing on mobile, an admin must attach a suitable workbook containing the intended protocol.
+  If the workbook picker is empty, ask the workbook owner or platform team to make the correct
+  published workbook available to your account.
+</Callout>
+
+</Step>
+
+<Step>
+### Install the mobile app and sign in
+
+On your Android phone, install the **openJII** app from the Google Play Store.
+Open it and sign in with the **same account** you use on the web.
+
+{/* NEEDS-LIVE-CHECK: confirm current app store listing/name and the sign-in screen on the shipping build. */}
+
+</Step>
+
+<Step>
+### Connect your MultispeQ
+
+Turn on your MultispeQ and connect it to the app over **Bluetooth**.
+
+![The Devices sheet before a MultispeQ is paired](/img/mobile/device-pairing.png)
+
+The current app opens a **Devices** sheet with **Scan** and an
+**Allow Bluetooth scanning** action. With no instrument connected it also
+prompts you to hold the MultispeQ button for three seconds.
+
+{/* NEEDS-LIVE-CHECK: confirm the exact pairing flow and screen labels on the current mobile build. */}
+{/* MEDIA-PARTIAL: the setup state is captured; a connected-device still requires a physical MultispeQ. */}
+
+</Step>
+
+<Step>
+### Take a measurement
+
+Pick your experiment from the list, then follow the on-screen steps. The app
+guides you through the protocol, answering any questions and taking the reading.
+When it finishes, you see a preview of the result.
+
+{/* NEEDS-LIVE-CHECK: confirm the measurement flow screens and that a single measurement completes as described on the current build. */}
+{/* MEDIA-WAIVER: no physical MultispeQ was connected during capture, so a protocol-guided hardware result was not simulated. The questions-only production-app excerpt lives on Taking measurements in the field. */}
+
+</Step>
+
+<Step>
+### Sync and view your data
+
+Upload the measurement from the app. If you are offline, the app stores it and
+syncs automatically once you are back online.
+
+Back on the web platform, open your experiment and go to the **Data** tab. Your
+measurement appears there.
+
+{/* NEEDS-LIVE-CHECK: confirm how soon a synced measurement appears in the web Data tab (processing interval). */}
+![A populated experiment Data tab after measurements have been processed](/img/guide/web/data-first-measurement.png)
+
+</Step>
+</Steps>
+
+<Callout type="info">
+  The mobile app is **offline-first**: after you sign in, your experiments are cached so you can
+  measure with no connectivity and sync later.
+</Callout>
+
+## Where to go next
+
+- Add context to your data with [metadata](/guide/experiments/metadata).
+- Learn more about [devices and protocols](/guide/devices-protocols).
+- [Invite collaborators](/guide/experiments/collaborators) to your experiment.
+- [View and export your data](/guide/data-analysis).

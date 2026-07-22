@@ -1,4 +1,5 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import { draftMode } from "next/headers";
 import React from "react";
 import { auth } from "~/app/actions/auth";
@@ -34,7 +35,14 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
       <div className="mx-auto flex w-full max-w-7xl justify-center">
         <main className="flex min-h-screen w-full flex-col px-2">{children}</main>
       </div>
-      {footerData && <HomeFooter footerData={footerData} preview={preview} locale={locale} />}
+      {footerData && (
+        <HomeFooter
+          footerData={footerData}
+          preview={preview}
+          locale={locale}
+          newsletterSlot={<NewsletterSubscribeForm />}
+        />
+      )}
       <Toaster />
     </>
   );

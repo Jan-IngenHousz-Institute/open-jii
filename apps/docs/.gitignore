@@ -1,0 +1,7 @@
+/.next/
+/out/
+/.source/
+/.turbo/
+/.cache/
+/.capture/
+next-env.d.ts

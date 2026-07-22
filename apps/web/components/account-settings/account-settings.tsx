@@ -13,6 +13,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { ErrorDisplay } from "../error-display";
 import { AccountIdentityCard } from "./account-identity-card";
 import { DangerZoneCard } from "./danger-zone/danger-zone-card";
+import { NewsletterSubscriptionCard } from "./newsletter-subscription-card";
 import { ProfileInformationCard } from "./profile-information-card";
 
 export function AccountSettings({ session }: { session: Session | null }) {
@@ -123,6 +124,7 @@ function AccountSettingsContent({
         isPending={isPending}
       />
       <ProfileInformationCard profile={profile} onSaveBio={saveBio} isPending={isPending} />
+      <NewsletterSubscriptionCard />
       <DangerZoneCard profile={profile} userId={userId} />
     </div>
   );

@@ -1,41 +1,51 @@
-# Website
+# openJII Docs
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+The openJII documentation site, built with [Fumadocs](https://fumadocs.dev/) (framework mode) on Next.js and exported as a static site.
 
-### Installation
+Content lives in `content/` as MDX, organized into two tabs backed by fumadocs-mdx root folders:
 
-```
-$ yarn
-```
+- `content/guide/**` — researcher-facing guide (`/guide/*`)
+- `content/developers/**` — developer reference (`/developers/*`)
 
-### Local Development
+The API Reference tab (`/api/*`) is generated from the platform's OpenAPI and AsyncAPI specs (added in a later ticket).
 
-```
-$ yarn start
-```
-
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-### Build
+## Local development
 
 ```
-$ yarn build
+pnpm dev --filter=docs
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+Serves on http://localhost:3010.
 
-### Deployment
-
-Using SSH:
+## Build
 
 ```
-$ USE_SSH=true yarn deploy
+pnpm run build --filter=docs
 ```
 
-Not using SSH:
+Produces a static export in `out/` (`next.config.mjs` sets `output: "export"`). Built-in Orama search is precomputed at build time and served from `out/api/search`.
 
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
+## Local static-export validation
+
+The checked-in local server mirrors the CloudFront viewer-request behavior: legacy redirects return 301, clean page URLs resolve to flat `.html` objects, `/api/search` remains an extensionless static index, and missing routes serve `404.html` with HTTP 404.
+
+```sh
+pnpm --filter docs serve
+pnpm --filter docs validate:deployment -- --base-url http://127.0.0.1:3010
 ```
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+For a one-command local gate with an ephemeral port:
+
+```sh
+pnpm --filter docs validate:local
+```
+
+The gate uses the local `out/` directory as the authoritative route inventory, crawls every exported HTML page and its internal targets over HTTP, checks all `redirects.json` entries and destinations, verifies the real 404, checks meaningful REST/MQTT markers, runs sampled Orama searches, and derives web-app docs deep links from production source before checking their destinations.
+
+Run the same gate against a deployed origin after building the exact ref being validated:
+
+```sh
+pnpm --filter docs validate:deployment -- --base-url https://docs.dev.openjii.org
+```
+
+For recovery after a failed deployment, follow the copyable [rollback runbook](./ROLLBACK.md). The deployment summary prints the exact GitHub artifact name to download.

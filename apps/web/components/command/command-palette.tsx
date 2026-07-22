@@ -10,6 +10,7 @@ import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { HelpCircle, Keyboard, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { env } from "~/env";
 
 import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
 import { useTranslation } from "@repo/i18n";
@@ -165,7 +166,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         icon: HelpCircle,
         run: () => {
           setOpen(false);
-          window.open("https://docs.openjii.org", "_blank", "noopener,noreferrer");
+          window.open(env.NEXT_PUBLIC_DOCS_URL, "_blank", "noopener,noreferrer");
         },
       },
     ],

@@ -1,0 +1,14 @@
+{
+  "footer": {
+    "title": "Abonnieren Sie unseren Newsletter",
+    "description": "Neuigkeiten aus der openJII-Community, direkt in Ihr Postfach. Jederzeit abbestellbar.",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "sie@beispiel.de",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "submit": "Abonnieren",
+    "submitting": "Wird abonniert…",
+    "successTitle": "Fast geschafft!",
+    "successMessage": "Bitte prüfen Sie Ihr Postfach, um Ihr Abonnement zu bestätigen.",
+    "errorMessage": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal."
+  }
+}

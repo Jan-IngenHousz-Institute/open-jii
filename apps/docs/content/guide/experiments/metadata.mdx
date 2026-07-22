@@ -1,0 +1,89 @@
+---
+title: "Adding metadata"
+description: "Attach context such as genotype, treatment, or planting date to your measurements so you can filter, compare, and analyze your data."
+---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
+{/* verified: code@12a361a74 2026-07-19 */}
+
+Sensor data alone tells you _what_ was measured, but not _why_ or _under which
+conditions_. **Metadata** fills that gap: it is the context you attach to your
+measurements, such as the plant, the treatment, or the growing conditions.
+
+## Why metadata matters
+
+- **Compare and group** — line up genotypes, treatments (for example stress vs.
+  control), or time points side by side.
+- **Enable analysis** — most statistics need at least one grouping variable. With
+  metadata you can compare groups, fit models, and make meaningful plots.
+- **Support open, FAIR data** — rich context makes your data findable and reusable
+  by others.
+
+## What to capture
+
+There is no fixed list, add whatever is relevant to your study. Common examples:
+
+| Column         | Purpose                              | Example values                     |
+| :------------- | :----------------------------------- | :--------------------------------- |
+| `plant_id`     | Unique identifier per plant or plot  | `P001`, `P002`, `A-12`             |
+| `genotype`     | Genetic background or cultivar       | `Col-0`, `Ler`, `Nipponbare`       |
+| `treatment`    | Experimental condition               | `control`, `drought`, `high-light` |
+| `block`        | Field or greenhouse block            | `B1`, `B2`                         |
+| `sowing_date`  | Date the plant was sown              | `2025-03-15`                       |
+| `harvest_date` | Date of harvest or final measurement | `2025-06-20`                       |
+
+## How it works
+
+You add metadata as a small table. openJII joins it to your measurements using a
+shared **identifier column**, for example a `plant_id` that matches an answer
+recorded during measurement. The metadata columns then appear alongside your
+sensor readings in the **Data** tab and in every export.
+
+## Add metadata
+
+Metadata is added after your experiment exists, on its **Data** tab.
+
+<Steps>
+<Step>
+### Open the import dialog
+
+Open your experiment, go to the **Data** tab, and select **Upload Metadata** (it
+reads **Edit Metadata** once metadata already exists). The **Import Metadata**
+dialog opens.
+
+</Step>
+
+<Step>
+### Bring in your table
+
+Add your data one of two ways:
+
+- **Upload File** — a CSV, TSV, or Excel file (`.xlsx`, `.xls`).
+- **Paste from Clipboard** — copy a range from a spreadsheet and paste it in.
+
+</Step>
+
+<Step>
+### Choose the identifier column
+
+Mark the column whose values match an answer recorded during measurement (for
+example `plant_id`). This is how openJII joins the metadata to the right rows.
+
+</Step>
+
+<Step>
+### Save
+
+Select **Save Metadata**. Your columns appear in the Data tab and in exports on
+the next processing interval.
+
+</Step>
+</Steps>
+
+![The Import Metadata dialog previewing a synthetic table with plot_id selected as the identifier](/img/guide/web/metadata-import.png)
+
+<Callout type="info">
+  Make sure identifier values match exactly. If the app records `P001`, use `P001` in your metadata,
+  not `p001` or `Plant 001`. You can re-upload at any time to replace the current metadata.
+</Callout>

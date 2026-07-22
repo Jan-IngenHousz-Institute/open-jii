@@ -153,6 +153,8 @@ def experiment_raw_data():
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
+            "latitude",
+            "longitude",
             "data",
             "output_data",
             "date",

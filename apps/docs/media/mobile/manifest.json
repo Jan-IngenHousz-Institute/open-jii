@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "captureContext": {
+    "captureStartedOn": "2026-07-19",
+    "lastRecapturedOn": "2026-07-20",
+    "applicationId": "com.openjii.app",
+    "appVersion": "2.16.1",
+    "appVersionCode": 160,
+    "environment": "dev",
+    "environmentConfirmation": "Human-confirmed; DEV badge visible in the production app",
+    "deviceModel": "NX789J",
+    "androidVersion": "15",
+    "displayPixels": "1216x2688",
+    "captureMethod": "adb exec-out screencap / adb shell screenrecord; ffmpeg metadata stripping and compression"
+  },
+  "review": {
+    "status": "passed-for-listed-assets",
+    "notes": [
+      "No credentials, tokens, precise locations, private datasets, or expanded notification content are visible.",
+      "The visible first name belongs to the user's dev testing account and was explicitly approved for publication.",
+      "The public Google Play URL was verified, but the signed-in phone showed the account-specific Internal Beta listing and linked device names; that screenshot was rejected.",
+      "The Offline ready picker was recaptured with the visible Classroom search filter so only the meaningful demo experiment appears; no experiment data was renamed, deleted, or modified."
+    ]
+  },
+  "assets": [
+    {
+      "path": "/img/mobile/app-home.png",
+      "kind": "screenshot",
+      "sha256": "6497f46f2ff07a799f5c337b74fec2fc390d28a1b8a913dabf38f8f932692f8e",
+      "disposition": "published",
+      "scope": "Authenticated app home; no measurements were present at capture time"
+    },
+    {
+      "path": "/img/mobile/device-pairing.png",
+      "kind": "screenshot",
+      "sha256": "d0116a0ad7cee7914d64e7a289aeb8dc754c6480e7673247b8d8306dc667e97e",
+      "disposition": "published",
+      "scope": "Devices sheet with Bluetooth scanning disabled and no MultispeQ connected"
+    },
+    {
+      "path": "/img/mobile/offline-ready.png",
+      "kind": "screenshot",
+      "sha256": "c18b636d7dd7b589c394736a00a2af2f9778479516c360540ab6239bf7c9623a",
+      "disposition": "published",
+      "recapturedOn": "2026-07-20",
+      "scope": "Experiment picker filtered to the clean Classroom demo with Offline ready state"
+    },
+    {
+      "path": "/img/mobile/sync-state.png",
+      "kind": "screenshot",
+      "sha256": "c8759b5b10f940bdf17e6a457c0a62ca941666613e3214741283f43e0a52b0c2",
+      "disposition": "published",
+      "scope": "Recent screen with one synced questions-only demo measurement and zero unsynced rows"
+    },
+    {
+      "path": "/img/mobile/measurement-question.png",
+      "kind": "screenshot",
+      "sha256": "caa7127d49ff0a8d910e9e340555837abbdf502f9b00c69de42fe354a06cc315",
+      "disposition": "published",
+      "scope": "Questions-only flow, required single-choice step"
+    },
+    {
+      "path": "/img/mobile/measurement-review.png",
+      "kind": "screenshot",
+      "sha256": "930bc364fade213fa6ab4ff59fe8117d18cbc66e56ac2309d53f3640e4a36bb3",
+      "disposition": "published",
+      "scope": "Questions-only review screen before submission"
+    },
+    {
+      "path": "/img/mobile/question-flow.webm",
+      "kind": "recording",
+      "sha256": "0501541323247f09ecec9abf0dce880000adbd65945405a631c46067ffafa9d5",
+      "disposition": "published",
+      "scope": "Trimmed questions-only flow excerpt; excludes the dev experiment list and does not show final submission or MultispeQ hardware"
+    }
+  ],
+  "unmetCaptures": [
+    "Connected MultispeQ pairing with battery and firmware state",
+    "Protocol-guided MultispeQ measurement through result analysis",
+    "Wired USB multi-device round, partial failure, retry, offline save, and sync",
+    "Public Play Store screenshot from a non-tester account",
+    "True offline network transition with a queued row; the current app exposes Offline ready and sync counters but no persistent authenticated-home offline banner"
+  ]
+}

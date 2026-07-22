@@ -27,6 +27,7 @@ function Wrapper({
       lastName: "",
       email: "",
       acceptedTerms: false,
+      newsletterOptIn: false,
       otp: "",
       ...defaultValues,
     },
@@ -67,10 +68,13 @@ describe("RegistrationFields", () => {
     expect(screen.getByText("registration.emailDescription")).toBeInTheDocument();
   });
 
-  it("renders terms checkbox unchecked by default", () => {
+  it("renders terms and newsletter checkboxes unchecked by default", () => {
     render(<Wrapper />);
 
-    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "registration.acceptTerms" })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }),
+    ).not.toBeChecked();
   });
 
   it("renders terms and conditions trigger", () => {
@@ -79,6 +83,15 @@ describe("RegistrationFields", () => {
     const trigger = screen.getByText("auth.terms");
     expect(trigger).toBeInTheDocument();
     expect(trigger.closest("button")).toHaveClass("cursor-pointer", "underline");
+  });
+
+  it("allows opting in by clicking the newsletter consent wording", async () => {
+    const user = userEvent.setup();
+    render(<Wrapper />);
+
+    await user.click(screen.getByText("registration.newsletterOptIn"));
+
+    expect(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" })).toBeChecked();
   });
 
   it("opens terms dialog when trigger is clicked", async () => {
@@ -98,7 +111,8 @@ describe("RegistrationFields", () => {
 
     expect(screen.getByLabelText("registration.firstName")).toBeDisabled();
     expect(screen.getByLabelText("registration.lastName")).toBeDisabled();
-    expect(screen.getByRole("checkbox")).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "registration.acceptTerms" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" })).toBeDisabled();
   });
 
   it("reflects default values in inputs", () => {

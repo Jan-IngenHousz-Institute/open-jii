@@ -1,0 +1,40 @@
+---
+title: "Alert banners"
+description: "Publishing scheduled CMS alerts to the web and mobile apps."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Alert banners are Contentful-managed notices shown in the web and mobile apps without an application deploy. The GraphQL query returns only active entries whose audience and schedule match the request.
+
+## Content fields
+
+| Field               | Behavior                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `internalName`      | Stable dismissal key; the Contentful entry ID is the fallback. Change the key only when a previously dismissed notice must be shown again. |
+| `title`             | Banner headline.                                                                                                                           |
+| `body`              | Short Rich Text message.                                                                                                                   |
+| `type`              | Icon category: `info`, `degraded_service`, `maintenance`, or `new_feature`.                                                                |
+| `severity`          | Visual priority: `critical`, `warning`, or `info`.                                                                                         |
+| `dismissible`       | Whether the close action is rendered.                                                                                                      |
+| `link`              | Optional `ComponentButton` call to action.                                                                                                 |
+| `audience`          | `web`, `mobile`, or `both`.                                                                                                                |
+| `startAt` / `endAt` | Required start and optional exclusive end of the display window.                                                                           |
+| `active`            | Immediate kill switch.                                                                                                                     |
+
+Visible alerts are sorted `critical` → `warning` → `info`. Web dismissals are stored in `localStorage`; mobile dismissals are held in the persisted dismissed-alerts store.
+
+## Caching and preview
+
+- The web server caches published alert queries for 300 seconds per locale. Contentful preview mode fetches through the preview client without that shared cache.
+- Mobile React Query uses a five-minute stale and garbage-collection window and refetches on mount.
+- Both surfaces filter by audience and current time in `packages/cms/src/lib/graphql/componentAlerts.graphql`.
+- Fetch failures degrade to no banner; an optional operational notice must not take down the product surface.
+
+Allow up to five minutes for a published change to reach every cached client. Preview in the web surface before scheduling a critical notice.
+
+## Implementation map
+
+- shared query and rendering: `packages/cms/src/features/alert/` and `packages/cms/src/lib/graphql/componentAlerts.graphql`
+- web fetch/cache: `apps/web/components/alerts-bar.tsx`
+- mobile fetch/cache: `apps/mobile/src/features/alerts/`

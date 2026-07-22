@@ -3,6 +3,7 @@ import { toast } from "sonner-native";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
+import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 import {
@@ -42,6 +43,8 @@ export function useQuestionsUpload() {
     }) => {
       const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
 
+      const location = await getMeasurementLocation();
+
       const payload = {
         questions,
         macros: null,
@@ -50,6 +53,7 @@ export function useQuestionsUpload() {
         timezone,
         user_id: userId,
         annotations: buildAnnotations(commentText, flagType),
+        ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };
 
       const measurement = {

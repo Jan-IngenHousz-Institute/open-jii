@@ -24,6 +24,7 @@ graph TD;
 | -------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `aws_cloudfront_origin_access_control` | Creates a CloudFront Origin Access Control (OAC) to sign requests to the S3 origin | [CloudFront OAC](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_origin_access_control) |
 | `aws_cloudfront_distribution`          | Creates a CloudFront distribution using OAC for secure access                      | [CloudFront Distribution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution) |
+| `aws_cloudfront_function` (optional)   | Viewer-request function: legacy 301 redirect map + clean-URL rewrite (opt-in)      | [CloudFront Function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_function)         |
 
 ## ⚙️ Usage
 
@@ -38,11 +39,14 @@ module "cloudfront" {
 
 ## 🔑 Inputs
 
-| Name                | Description                                                        | Type   | Default        | Required |
-| ------------------- | ------------------------------------------------------------------ | ------ | -------------- | :------: |
-| bucket_name         | The name of the S3 bucket used as the CloudFront origin.           | string | n/a            |   Yes    |
-| default_root_object | The default root object served by CloudFront (e.g., `index.html`). | string | "index.html"   |    No    |
-| aws_region          | The AWS region for deployment.                                     | string | "eu-central-1" |    No    |
+| Name                      | Description                                                                                                          | Type        | Default      | Required |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ | :------: |
+| bucket_name               | The name of the S3 bucket used as the CloudFront origin.                                                             | string      | n/a          |   Yes    |
+| default_root_object       | The default root object served by CloudFront (e.g., `index.html`).                                                   | string      | "index.html" |    No    |
+| aws_region                | The AWS region for deployment.                                                                                       | string      | n/a          |   Yes    |
+| enable_redirect_function  | Attach a viewer-request function that 301-redirects legacy paths and rewrites clean URLs to static-export `.html`.   | bool        | false        |    No    |
+| redirect_map              | Old-path → new-path 301 map templated into the function (only used when `enable_redirect_function` is true).         | map(string) | {}           |    No    |
+| enable_spa_error_response | `true` serves 403/404 as `/index.html` (200) for SPA routing; `false` serves the exported `/404.html` with HTTP 404. | bool        | true         |    No    |
 
 ## 📤 Outputs
 

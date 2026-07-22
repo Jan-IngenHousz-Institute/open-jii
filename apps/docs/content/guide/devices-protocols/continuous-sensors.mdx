@@ -1,0 +1,54 @@
+---
+title: "Continuous sensors"
+description: "Distinguish Ambyte ingestion from locally connected Ambit and MiniPAR sensors."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+**Ambyte**, **Ambit**, and **MiniPAR** are different families. Ambyte (`ambyte`)
+is the MQTT gateway and ingestion family. Ambit (`ambit`) is a leaf sensor that
+normally measures through an Ambyte gateway. MiniPAR (`minipar`) is a separate
+locally operated sensor.
+
+Ambyte represents autonomous sensor hardware that records observations over
+time. This differs from a handheld MultispeQ, where a person starts each reading.
+
+## Bring in Ambyte data
+
+- Register Ambyte as an IoT device from **Devices** using its physical identifier.
+- Issue device credentials from the registered device's **Credentials** tab.
+- Upload an Ambyte folder to an experiment data table. The uploader expects an
+  `Ambyte_N/[1-4]/*.txt` folder layout and processes the data asynchronously.
+- View the resulting table after the processing pipeline has materialized it.
+
+## Connect Ambit or MiniPAR locally
+
+The web workbook host can identify Ambit and MiniPAR devices over USB serial and
+select the matching driver automatically. MiniPAR can run a protocol cell and
+return a measurement envelope. A direct Ambit session supports command cells for
+calibration and spot readings; it does not run protocol cells because full Ambit
+measurements go through the Ambyte gateway.
+
+If the family selected in the workbook toolbar differs from the identification
+handshake, the host shows a mismatch notice and uses the identified family.
+
+## Current limits
+
+Ambyte remains an MQTT and folder-ingestion family rather than a locally
+connected workbook device. The registered-device **Monitoring** and
+**Onboarding** tabs are marked **Coming Soon**. Do not plan a field workflow
+around a live monitoring dashboard until that workflow has been confirmed on the
+deployed platform.
+
+{/* NEEDS-LIVE-CHECK: register a production-equivalent Ambyte, ingest a representative folder, record processing latency, and confirm which data table appears. */}
+![A populated Ambyte experiment data table after ingestion](/img/guide/web/ambyte-data.png)
+
+{/* MEDIA-PARTIAL: the authenticated non-mutating pass verified the populated Ambyte table. It intentionally omits device credentials and Coming Soon monitoring or onboarding panels. */}
+
+<Callout type="warn">
+  Device credentials include private key material that is shown once. Store it securely and never
+  paste it into an issue, screenshot, or shared document.
+</Callout>
+
+For analysis after ingestion, continue with
+[Viewing your data](/guide/data-analysis/viewing-data).

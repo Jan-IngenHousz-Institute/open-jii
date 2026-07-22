@@ -1,0 +1,11 @@
+{
+  "title": "Developers",
+  "pages": [
+    "index",
+    "architecture",
+    "design-decisions",
+    "multispeq-mqtt-tool",
+    "extending",
+    "contributing"
+  ]
+}

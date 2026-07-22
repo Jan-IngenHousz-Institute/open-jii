@@ -1,0 +1,17 @@
+{
+  "title": "Design Decisions",
+  "pages": [
+    "index",
+    "centrum-data-architecture-adr",
+    "orpc-migration-adr",
+    "workbook-versioning-adr",
+    "macro-sandbox-adr",
+    "mobile-offline-outbox-adr",
+    "fumadocs-migration-adr",
+    "mqtt-topic-proposal",
+    "data-governance-adr",
+    "data-ingestion-adr",
+    "proposal-template",
+    "adr-template"
+  ]
+}

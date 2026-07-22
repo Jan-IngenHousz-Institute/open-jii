@@ -1,0 +1,129 @@
+---
+title: "ADR: Execute macros in isolated language sandboxes"
+description: "Why openJII moved Python, JavaScript, and R macro execution out of Databricks workers and into isolated Lambda runtimes."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+# ADR: Execute macros in isolated language sandboxes
+
+**Date:** 2026-04-09  
+**Status:** Accepted
+
+## Context
+
+openJII macros are user-authored Python, JavaScript, or R programs that process
+measurement data. The earlier data pipeline loaded macro files and executed them
+inside Databricks workers through language-specific in-process libraries. That
+put untrusted code, helper dependencies, and data transformation in the same
+runtime and security boundary as the lakehouse pipeline.
+
+Macro execution needs language-specific dependencies and bounded resources,
+must report per-item failures without losing an entire batch, and must not give
+user code ambient access to AWS credentials, the internet, the backend database,
+or the Databricks worker environment.
+
+## Decision
+
+Execute macros through a backend-mediated sandbox service using one
+container-based AWS Lambda runtime per supported language.
+
+The durable boundaries are:
+
+1. **The backend owns script lookup and dispatch.** Callers submit macro IDs and
+   data. The backend loads the current script and language from its repository,
+   groups batch items by macro, chooses the language Lambda, invokes it
+   synchronously, and validates the returned envelope.
+2. **Each language has an isolated runtime.** Python, JavaScript, and R use
+   separate container images, handlers, wrappers, and compatible helper
+   libraries under `apps/macro-sandbox`.
+3. **User code runs in a subprocess with a reduced environment.** The handler
+   validates the request and starts a wrapper subprocess without AWS credentials.
+   Handler and per-item time limits, input/item limits, and output limits bound
+   execution and allow item-level errors to be returned explicitly.
+4. **Infrastructure applies defense in depth.** Sandbox functions run in
+   isolated subnets without an internet gateway or NAT. Their security group
+   permits HTTPS only to dedicated VPC endpoints, and their execution role has
+   only the runtime permissions it needs plus explicit denies for dangerous AWS
+   services. Flow logs, rejected-traffic metrics, logs, and Lambda metrics make
+   failures and attempted egress observable.
+5. **The data pipeline calls the sandbox through the backend.** The central Gold
+   macro table uses a pandas UDF that sends signed batches to the backend macro
+   webhook. It sends identifiers and measurement data; it does not load or run
+   macro source on the Spark worker.
+6. **Failures are data, not silent success.** Missing macros, invocation errors,
+   timeouts, malformed sandbox responses, and item execution failures become
+   explicit per-item error results. A failing macro does not require arbitrary
+   code to escape into the pipeline process.
+
+In-process Databricks macro execution through the former `multispeq` executors
+and workspace macro files is superseded and removed from the current pipeline.
+
+### Workbook runtime context
+
+Workbook runners keep the nearest upstream output in the existing `data`/`json`
+argument and pass every completed upstream question, protocol, command, and macro
+under its canonical name in the optional read-only `context`/`ctx` object.
+Multi-device runs select the output for the current connection and inject that
+device as `ctx.$device`. The web runner permits an empty `data` object when
+upstream `ctx` values exist, so answer-driven macros do not require a preceding
+protocol measurement.
+
+`packages/api/src/transforms/build-cell-namespace.ts` constructs the namespace;
+`packages/api/src/domains/macro/macro.schema.ts` defines the execution contract;
+and the sandbox wrappers freeze `ctx` before user code receives it.
+
+## Consequences
+
+### Benefits
+
+- User code is separated from Databricks, backend ECS, and other language
+  runtimes by process, Lambda, IAM, and network boundaries.
+- Python, JavaScript, and R dependencies can evolve in separate images while
+  preserving one backend execution contract.
+- Batch grouping reduces invocation overhead and retains item-level success and
+  failure information.
+- Time, item, output, memory, concurrency, and network limits bound resource use
+  more explicitly than in-process execution.
+- Security tests, flow logs, rejected-traffic metrics, and runtime metrics make
+  the sandbox boundary inspectable.
+
+### Trade-offs and risks
+
+- Lambda startup and backend round trips add latency to macro processing.
+- The data pipeline now depends on the signed backend webhook and backend-to-
+  Lambda connectivity; an outage can produce macro error rows while raw data
+  continues through earlier layers.
+- Helper libraries must remain behaviorally compatible across three languages;
+  equivalent macro names do not guarantee identical numeric behavior.
+- Sandbox limits reject or time out workloads that might have completed in an
+  unrestricted worker.
+- Isolation reduces risk but does not make arbitrary code harmless. Runtime
+  images, wrappers, IAM denies, VPC routes, dependencies, and decompression/output
+  limits remain security-sensitive code.
+
+## Alternatives considered
+
+- **Continue executing macros in Databricks workers.** Rejected because
+  untrusted code would share the pipeline runtime and credentials boundary, and
+  each worker would carry multiple language engines and helper libraries.
+- **Keep macro files in the Databricks workspace and invoke local executors.**
+  Rejected with the in-process model because script distribution and execution
+  would remain coupled to the data deployment rather than the backend's macro
+  records and sandbox contract.
+
+## Follow-up
+
+- Keep sandbox images patched and scan both base images and language
+  dependencies before deployment.
+- Retain security escape tests and representative scientific macro tests for all
+  supported runtimes.
+- Alert on invocation errors, throttles, duration, and rejected VPC traffic, and
+  investigate changes in those signals as security or capacity events.
+- Treat a new language as a new isolated runtime with its own image, wrapper,
+  limits, tests, and infrastructure configuration.
+
+See [Medallion layers](/developers/architecture/medallion-layers) for where macro
+results enter the central model and [Working with
+workbooks](/guide/experiments/workbooks) for how macro code is published into an
+experiment version.

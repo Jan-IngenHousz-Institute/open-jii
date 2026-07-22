@@ -1,0 +1,121 @@
+---
+title: "ADR: Replace Docusaurus with Fumadocs"
+description: "Why openJII replaced its Docusaurus site with a statically exported Fumadocs application."
+---
+
+{/* verified: implementation worktree 2026-07-20 */}
+
+# ADR: Replace Docusaurus with Fumadocs
+
+**Date:** 2026-07-20  
+**Status:** Accepted
+
+## Context
+
+The previous documentation site used Docusaurus and was deployed as static files
+to the openJII documentation S3 bucket behind CloudFront. That hosting model was
+reliable, but the documentation itself had become difficult to use and maintain:
+
+- researcher workflows, developer material, and API references shared one long
+  navigation tree;
+- many pages were placeholders or no longer matched the product;
+- site search was not configured;
+- REST and MQTT references were maintained through separate custom pages and
+  copied specification files that could drift from their sources;
+- product links depended on old `/docs/*` routes that could not simply disappear.
+
+Researchers are the primary documentation audience. The replacement needed a
+clear task-oriented Guide while retaining substantial developer records and API
+references. It also needed to keep the existing static AWS hosting model, support
+a dev-first cutover, and provide a safe rollback for the unversioned S3 bucket.
+
+## Decision
+
+Replace the Docusaurus implementation in `apps/docs` with Fumadocs in framework
+mode on Next.js.
+
+The replacement has these architectural boundaries:
+
+1. **Keep the workspace and hosting boundary.** The app remains the `docs`
+   workspace package and produces a Next.js static export in `apps/docs/out`.
+   The existing S3 and CloudFront deployment model remains; the docs do not add
+   an OpenNext/Lambda runtime.
+2. **Separate audiences at the route level.** The site uses three root sections:
+   `/guide` for researchers, `/developers` for contributors and maintainers, and
+   `/api` for generated REST and MQTT references.
+3. **Use local MDX with static search.** Fumadocs MDX is the content source. A
+   build-time Orama index provides client-side search without a hosted search
+   service or server search endpoint.
+4. **Generate API references from canonical contracts.** The REST reference is
+   regenerated from `packages/api`; the MQTT reference uses the root
+   `asyncapi.yaml`. CI fails when committed copies drift. Both references render
+   into the static build.
+5. **Preserve old links at the edge.** A version-controlled redirect manifest is
+   compiled into a CloudFront viewer-request function. It returns permanent
+   redirects for legacy routes, maps clean URLs to the static export's `.html`
+   objects, preserves the extensionless search index, and allows a real 404
+   response instead of rewriting unknown paths to the home page.
+6. **Cut over dev first.** The same validation gate checks internal links,
+   redirects, 404 behavior, API content, search, and product deep links locally
+   and after deployment. Each destructive S3 sync first creates a fail-closed
+   rollback artifact. Production remains gated on a green dev deployment.
+7. **Keep editorial content in its existing system.** Blog posts and release
+   notes remain in Contentful and the web app; the docs link to them rather than
+   creating a second publishing workflow.
+
+## Consequences
+
+### Benefits
+
+- Researchers and developers get separate, shorter navigation paths.
+- Search, MDX components, and page-tree generation are part of the docs app
+  without adding an external service.
+- API documentation is tied to the contracts that generate it, reducing drift.
+- Static hosting preserves the existing low-operational-overhead deployment
+  model.
+- Legacy inbound links have explicit, testable destinations.
+- A real 404 and a deployment gate make broken routes visible instead of hiding
+  them behind a successful home-page response.
+
+### Trade-offs and risks
+
+- Static export rules constrain dynamic Next.js features. Search and API pages
+  must work without a server runtime.
+- Clean-URL behavior is coupled to the emitted file layout. Enabling
+  `trailingSlash` later requires a corresponding CloudFront rewrite change.
+- The redirect table and CloudFront Function have a platform size limit and must
+  be tested as the legacy map grows.
+- The REST playground remains disabled unless the backend explicitly permits the
+  documentation origin through CORS.
+- Media and product instructions still require periodic recapture and live
+  verification; changing the framework does not make content self-maintaining.
+- A framework migration changes many files at once, so dev-first deployment and
+  rollback verification are mandatory rather than optional release hygiene.
+
+## Alternatives considered
+
+- **Keep Docusaurus and rewrite only the content.** Rejected because it would
+  leave the mixed audience tree, unconfigured search, and bespoke API integration
+  as continuing maintenance work.
+- **Run Docusaurus and Fumadocs in parallel for an extended migration.** Rejected
+  because a small team would need to maintain two sites and decide which one was
+  authoritative. A dev-first replacement provides the safety boundary without a
+  long-lived split.
+- **Deploy the docs with OpenNext.** Rejected because the site is fundamentally
+  static and does not justify a Lambda runtime, cold starts, or additional
+  operational infrastructure.
+- **Use Algolia DocSearch.** Rejected because the current corpus does not require
+  an external crawler/account; static Orama search is sufficient and build-tested.
+- **Move the Contentful blog into the docs app.** Rejected because it would change
+  the editorial workflow and duplicate the web app's localized public-content
+  responsibilities.
+
+## Follow-up
+
+- Revisit static hosting only if a documented requirement genuinely needs a
+  server runtime.
+- Keep the redirect manifest and deployment gate in the same changesets as route
+  changes.
+- Continue claim-by-claim product verification and recapture media when the UI
+  changes.
+- Add API-key documentation only after the API-key feature is merged and shipped.

@@ -1,0 +1,58 @@
+---
+title: "Transactional emails"
+description: "Adding Contentful-backed React Email messages with typed render functions and fallbacks."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Transactional email rendering lives in `packages/transactional`. Most message copy comes from a Contentful `ComponentEmail` entry; render functions interpolate variables and return HTML plus preview text. Critical flows also have code fallbacks under `src/emails/fallbacks` so missing CMS content does not prevent delivery.
+
+## Add an email
+
+### 1. Create the Contentful entry
+
+Create and publish a `ComponentEmail` entry with:
+
+| Field          | Purpose                                                                     |
+| -------------- | --------------------------------------------------------------------------- |
+| `internalName` | Stable unique key used by code, for example `my-new-email`.                 |
+| `preview`      | Inbox preview text; may contain `{{variableName}}` placeholders.            |
+| `content`      | Rich Text body; embedded `ComponentButton` entries provide calls to action. |
+
+Unresolved placeholders remain visible as `{{variableName}}`, which makes missing inputs detectable during preview rather than silently deleting content.
+
+### 2. Register the key and renderer
+
+1. Add the `internalName` literal to `CmsEmailType` in `packages/transactional/src/lib/contentful.ts`.
+2. Add a typed render function under `packages/transactional/src/render/`.
+3. Add a React Email fallback under `src/emails/fallbacks/` when the flow must work without Contentful.
+4. Export the renderer in `packages/transactional/package.json`.
+5. Call it from the relevant backend/auth service and pass every interpolation variable explicitly.
+
+Follow an existing pair such as `render/join-request-submitted.ts` plus its fallback rather than importing Contentful directly into business logic.
+
+### 3. Preview locally
+
+Create `packages/transactional/.env` with the Contentful variables required by `@repo/cms`, then run from the repository root:
+
+```bash
+pnpm --filter @repo/transactional test:render
+```
+
+The script writes example HTML to `packages/transactional/dist/email-previews/`. It currently renders the OTP, added-user, transfer-complete, and transfer-request examples; add a representative call when a new renderer should join that regression set.
+
+For interactive template work, the package also provides:
+
+```bash
+pnpm --filter @repo/transactional dev
+```
+
+This starts MailCatcher through the package's Docker Compose file and the React Email development server.
+
+## Verification checklist
+
+- CMS key exactly matches the `CmsEmailType` literal.
+- Renderer has a deterministic fallback when the delivery flow is critical.
+- All variables are represented in both CMS copy and fallback copy.
+- Links use the correct environment base URL.
+- `pnpm --filter @repo/transactional build` and `test:render` succeed.

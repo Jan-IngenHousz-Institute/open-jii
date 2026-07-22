@@ -1,15 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
+import { orpc } from "~/lib/orpc";
+import { parseApiError } from "~/util/apiError";
 
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -25,6 +28,7 @@ export interface Registration {
   lastName?: string;
   email?: string;
   acceptedTerms?: boolean;
+  newsletterOptIn?: boolean;
   otp?: string;
 }
 
@@ -44,10 +48,12 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
   const updateUser = useUpdateUser();
   const sendOtpRegistration = useSignInEmail();
   const verifyOtpRegistration = useVerifyEmail();
+  const subscribeNewsletter = useMutation(orpc.newsletter.subscribeDirect.mutationOptions());
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
   const needsEmailVerification = !isValidEmailCheck;
@@ -59,6 +65,7 @@ export function RegistrationForm({
       lastName: z.string().optional(),
       email: z.string().optional(),
       acceptedTerms: z.boolean().optional(),
+      newsletterOptIn: z.boolean().optional(),
       otp: z.string().optional(),
     })
     .superRefine((data, ctx) => {
@@ -92,11 +99,12 @@ export function RegistrationForm({
       lastName: "",
       email: "",
       acceptedTerms: false,
+      newsletterOptIn: false,
       otp: "",
     },
   });
 
-  const completeRegistration = async () => {
+  const completeRegistration = async (newsletterOptIn = false) => {
     const res = await updateUser.mutateAsync({ registered: true });
 
     if (res.error) {
@@ -105,12 +113,23 @@ export function RegistrationForm({
       return;
     }
 
+    if (newsletterOptIn) {
+      void subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
+        const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
+        toast({
+          description: isForgottenEmail
+            ? t("registration.newsletterForgottenEmail")
+            : t("registration.newsletterOptInError"),
+        });
+      });
+    }
+
     toast({ description: t("registration.successMessage") });
     router.push(callbackUrl ?? "/platform");
   };
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
-    onSuccess: completeRegistration,
+    onSuccess: () => completeRegistration(newsletterOptInRef.current),
   });
 
   useEffect(() => {
@@ -167,6 +186,7 @@ export function RegistrationForm({
         }
       }
 
+      newsletterOptInRef.current = data.newsletterOptIn === true;
       await createUserProfile({
         firstName: data.firstName ?? "",
         lastName: data.lastName ?? "",

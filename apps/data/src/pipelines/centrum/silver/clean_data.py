@@ -62,6 +62,9 @@ def clean_data():
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))
+        # GPS fix at measurement time; null on older payloads / no permission.
+        .withColumn("latitude", F.col("parsed_data.latitude"))
+        .withColumn("longitude", F.col("parsed_data.longitude"))
         # NOTE: timestamp === normalized UTC timestamp. timezone is the IANA name (e.g. "Europe/Amsterdam").
         # Together they are the source of truth: all local-time representations are derived from these two.
         .withColumn("timezone", F.col("parsed_data.timezone"))
@@ -192,6 +195,8 @@ def clean_data():
         "workbook_run_id",
         "workbook_version_id",
         "macro_context",
+        "latitude",
+        "longitude",
         "timestamp",
         "date",
         "hour",
@@ -264,6 +269,8 @@ def clean_data():
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
+            "latitude",
+            "longitude",
             "timestamp",
             "date",
             "hour",

@@ -1,0 +1,45 @@
+---
+title: "Visibility & embargo"
+description: "Choose public access now or a time-limited private embargo."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+New experiments are **Public** by default. Choose **Private** during creation
+when the data needs a temporary embargo.
+
+## Public
+
+A public experiment can be viewed beyond its member list. Once an experiment is
+public, the interface warns that it cannot be changed back to private.
+
+## Private under embargo
+
+A private experiment requires an embargo end date:
+
+- the date must be tomorrow or later;
+- it must be no more than 365 days from today;
+- the create flow suggests a date 90 days ahead when none is set;
+- an automated backend job checks expired embargoes daily at midnight UTC and
+  changes them to public.
+
+Because the job runs daily, treat the embargo date as the end of a protected
+period rather than a promise of publication at a precise local minute.
+
+## Set or review visibility
+
+1. During experiment creation, open **Members & Visibility**.
+2. Choose **Public** or **Private**.
+3. For Private, set the embargo end date and read the calculated public date.
+4. Review the setting before selecting **Create Experiment**.
+
+An admin can later review visibility in experiment settings. Moving from private
+to public is presented as irreversible.
+
+{/* NEEDS-LIVE-CHECK: create a private dev experiment, verify timezone/date copy, test the settings transition, and observe the scheduled publication behavior in a safe test. */}
+![The Members and Visibility step with Private selected and an unsaved embargo date](/img/guide/web/visibility-embargo.png)
+
+<Callout type="warn">
+  Before making data public, check descriptions, metadata, contributor identity, annotations, and
+  exports. Visibility is an access setting, not a publication review workflow.
+</Callout>
