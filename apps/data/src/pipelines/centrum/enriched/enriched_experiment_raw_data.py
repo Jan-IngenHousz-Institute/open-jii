@@ -72,6 +72,8 @@ def enriched_experiment_raw_data():
             devices.device.alias("device"),
             raw_data.protocol_id,
             raw_data.workbook_run_id,
+            raw_data.latitude,
+            raw_data.longitude,
             raw_data.data,
             raw_data.processed_timestamp
         )

@@ -6,6 +6,7 @@ import { buildUploadPayload } from "~/features/recent-measurements/services/buil
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
+import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -111,6 +112,9 @@ export function useMeasurementUpload() {
       // published on ITS protocol's topic when the round was heterogeneous.
       const workbookRunId = results.length > 1 ? uuidv4() : undefined;
 
+      // One fix per round: all devices measured at the same physical spot.
+      const location = await getMeasurementLocation();
+
       const savedIds: string[] = [];
       let lastStorageError: unknown;
 
@@ -132,6 +136,7 @@ export function useMeasurementUpload() {
           workbookVersionId,
           macroContext,
           fallbackDeviceId: device?.id,
+          location,
         });
 
         const measurement = {

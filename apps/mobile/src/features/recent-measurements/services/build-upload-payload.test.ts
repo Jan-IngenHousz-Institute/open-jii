@@ -278,3 +278,44 @@ describe("workbook run correlation", () => {
     expect(withNeither).not.toHaveProperty("device_id");
   });
 });
+
+describe("measurement location", () => {
+  it("stamps latitude/longitude when a location is given", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      location: { latitude: 52.0907, longitude: 5.1214 },
+    });
+
+    expect(payload.latitude).toBe(52.0907);
+    expect(payload.longitude).toBe(5.1214);
+  });
+
+  it("omits latitude/longitude when location is null or absent", () => {
+    const withNull = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      location: null,
+    });
+    expect(withNull).not.toHaveProperty("latitude");
+    expect(withNull).not.toHaveProperty("longitude");
+
+    const withAbsent = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+    });
+    expect(withAbsent).not.toHaveProperty("latitude");
+    expect(withAbsent).not.toHaveProperty("longitude");
+  });
+
+  it("wins over caller-supplied coordinates in rawMeasurement", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001", latitude: 1, longitude: 2 },
+      location: { latitude: 52.0907, longitude: 5.1214 },
+    });
+
+    expect(payload.latitude).toBe(52.0907);
+    expect(payload.longitude).toBe(5.1214);
+  });
+});
