@@ -1,11 +1,11 @@
 ---
 title: "Device commands"
-description: "Send a single raw instruction straight to a connected instrument."
+description: "Send a single raw instruction straight to a connected device."
 ---
 
 {/* verified: code@5bec21dc9 2026-07-22 */}
 
-A **command** is a single instruction sent directly to a connected instrument,
+A **command** is a single instruction sent directly to a connected device,
 without the structure of a full protocol. Where a [protocol](/guide/devices-protocols/protocols)
 is a measurement recipe that returns scientific data, a command is a quick
 direct message: check the battery, read the firmware version, wake the device,
@@ -17,14 +17,14 @@ or send one low-level instruction while setting up.
 
 A command cell carries one instruction in one of three formats:
 
-- **String** — a raw console command such as `hello` (the instrument replies
+- **String** — a raw console command such as `hello` (the device replies
   when it is ready) or `battery` (charge as a percent). This is the common case
   for MultispeQ.
-- **JSON** — a structured instruction for instruments that accept it.
+- **JSON** — a structured instruction for devices that accept it.
 - **YAML** — the same, written in YAML.
 
 The content is sent to the connected device as-is, so it must be a valid
-instruction for that instrument. A command cell is separate from a protocol
+instruction for that device. A command cell is separate from a protocol
 cell: older mobile apps that only understand protocol cells simply skip command
 cells and keep working.
 

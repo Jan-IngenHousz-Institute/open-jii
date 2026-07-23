@@ -7,10 +7,10 @@ description: "Create, validate, and test a device measurement recipe before fiel
 
 A protocol is the JSON measurement recipe that openJII sends to connected
 hardware. For MultispeQ, it is a JSON array in the MultispeQ protocol format.
-The protocol controls the instrument; the surrounding workbook controls the
+The protocol controls the device; the surrounding workbook controls the
 research flow, questions, branches, commands, and analysis.
 
-Start by forking a protocol that already matches your instrument and method.
+Start by forking a protocol that already matches your device and method.
 That preserves working hardware settings and makes your changes reviewable. See
 [Protocols: choosing & adjusting](/guide/devices-protocols/protocols) for the
 ownership and fork-to-edit model.
@@ -78,7 +78,7 @@ time, and compare its output and run time with the original.
 <Callout type="warn">
   Pulse timing, light intensity, detector choice, repeats, and pre-illumination can change both the
   result and the stress placed on a sample. Do not turn the structure example above into a field
-  method without an instrument-appropriate protocol and scientific review.
+  method without a device-appropriate protocol and scientific review.
 </Callout>
 
 ## Target the right device family

@@ -15,18 +15,18 @@ uses the same method.
   protocol-guided measurements taken by a person.
 - Read [Continuous sensors](/guide/devices-protocols/continuous-sensors) if you
   are bringing Ambyte data into openJII or connecting an Ambit or MiniPAR to the
-  web workbook host. Ambyte is an ingestion family; Ambit and MiniPAR are
-  distinct locally identifiable families.
+  web workbook host. Ambyte is a gateway and ingestion family; Ambit and MiniPAR
+  are distinct measurement-device families.
 - Use [Protocols](/guide/devices-protocols/protocols) to choose an existing
   measurement recipe, create one, or fork someone else's recipe before editing.
 - Use [Device commands](/guide/devices-protocols/commands) to send a single raw
-  instruction (such as `hello` or `battery`) straight to a connected instrument.
+  instruction (such as `hello` or `battery`) straight to a connected device.
 - Use [Multi-device measurements](/guide/devices-protocols/multi-device) when
   several connected devices should run one shared cell or be routed to
   family-specific protocol or command cells.
 
 <Callout type="info">
-  Beyond the named families, openJII can technically talk to any instrument that speaks a line-based
+  Beyond the named families, openJII can technically talk to any device that speaks a line-based
   serial protocol, whether over USB serial or Bluetooth Low Energy (BLE). The **generic** device
   family covers both transports; the named families add device-specific identification and drivers
   on top.

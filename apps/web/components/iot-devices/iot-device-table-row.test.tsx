@@ -1,7 +1,8 @@
 import { createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { useRouter } from "next/navigation";
+import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
@@ -56,6 +57,18 @@ describe("IotDeviceTableRow", () => {
     expect(screen.getByRole("link", { name: "Field gateway" })).toBeInTheDocument();
     expect(screen.getByText("iot.deviceIdentity.role.gateway")).toBeInTheDocument();
     expect(screen.queryByText("iot.deviceIdentity.role.measurementDevice")).not.toBeInTheDocument();
+  });
+
+  it("keeps link clicks from also triggering row navigation", async () => {
+    const router = vi.mocked(useRouter)();
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ name: "Field gateway", deviceType: "ambyte" }));
+
+    const link = screen.getByRole("link", { name: "Field gateway" });
+    link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    await user.click(link);
+
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("deletes the device and toasts on confirm", async () => {

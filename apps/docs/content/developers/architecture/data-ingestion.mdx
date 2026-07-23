@@ -86,8 +86,8 @@ meaning:
 | `v1`              | Topic schema version.                               | Lets a future payload or path change ship as `v2` without breaking `v1` publishers. |
 | `{experimentId}`  | Unique identifier of the experiment.                | Routes each measurement to its experiment's data tables.                            |
 | `{sensorType}`    | Sensor family (for example `multispeq`, `ambit`).   | Selects family-specific parsing and normalization downstream.                       |
-| `{sensorVersion}` | Sensor firmware or hardware revision.               | Preserved as provenance so results can be traced to instrument behavior.            |
-| `{sensorId}`      | Unique identifier of the physical sensor.           | Attributes readings to one instrument across sessions.                              |
+| `{sensorVersion}` | Device firmware or hardware revision.               | Preserved as provenance so results can be traced to device behavior.                |
+| `{sensorId}`      | Unique identifier of the physical device.           | Attributes readings to one device across sessions.                                  |
 | `{protocolId}`    | Identifier of the sampling or measurement protocol. | Records which method produced the reading.                                          |
 
 The exact channel parameters and message schema are maintained in the [MQTT API reference](/api/mqtt). Do not copy the deployed broker endpoint from examples: obtain environment-specific connection details and credentials through the supported application flow. For MQTT topic fundamentals, wildcards, and naming best practices, [HiveMQ's MQTT Essentials on topics](https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/) is a good primer.

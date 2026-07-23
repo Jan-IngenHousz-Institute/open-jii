@@ -58,6 +58,20 @@ describe("DeviceStatusCard", () => {
       expect(screen.getByText("MultispeQ V2")).toBeInTheDocument();
     });
 
+    it("shows product context below a reported device name", () => {
+      render(
+        <DeviceStatusCard
+          {...defaultProps}
+          isConnected={true}
+          sensorFamily="multispeq"
+          deviceInfo={{ device_name: "Plot probe" }}
+        />,
+      );
+
+      expect(screen.getByText("Plot probe")).toBeInTheDocument();
+      expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    });
+
     it("displays unknown device when name is not available", () => {
       const deviceInfo = {
         device_version: "2.0.5",

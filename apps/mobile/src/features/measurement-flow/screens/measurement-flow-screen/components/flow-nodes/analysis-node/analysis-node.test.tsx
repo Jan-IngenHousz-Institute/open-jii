@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { AnalysisContent, FlowNode } from "~/shared/measurements/flow-node";
+import type { Device } from "~/shared/types/device";
 
 import { AnalysisNode } from "./analysis-node";
 
@@ -21,6 +22,7 @@ const {
   getSyncedUtcISO,
   getSyncedLocalISO,
   getTimeSyncState,
+  scannerExecutors,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
   macroResultProps: vi.fn(),
@@ -32,6 +34,9 @@ const {
   getSyncedUtcISO: vi.fn(),
   getSyncedLocalISO: vi.fn(),
   getTimeSyncState: vi.fn(),
+  scannerExecutors: {
+    current: new Map<string, { device: Device; identity: undefined }>(),
+  },
 }));
 
 vi.mock("~/features/experiments/hooks/use-experiments", () => ({
@@ -51,8 +56,11 @@ vi.mock("~/shared/time/time-sync", () => ({
 }));
 // $device ctx reads the connected-device registry; empty here (no device).
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: (selector: (s: { executors: Map<string, unknown> }) => unknown) =>
-    selector({ executors: new Map() }),
+  useScannerCommandExecutorStore: (
+    selector: (s: {
+      executors: ReadonlyMap<string, { device: Device; identity: undefined }>;
+    }) => unknown,
+  ) => selector({ executors: scannerExecutors.current }),
 }));
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
@@ -125,6 +133,7 @@ beforeEach(() => {
   getSyncedUtcISO.mockReturnValue("2026-04-20T10:00:00.000Z");
   getSyncedLocalISO.mockReturnValue("2026-04-20T12:00:00.000+02:00");
   getTimeSyncState.mockReturnValue({ timezone: "Europe/Amsterdam" });
+  scannerExecutors.current = new Map();
 });
 
 describe("AnalysisNode experiment name", () => {
@@ -162,6 +171,30 @@ describe("AnalysisNode experiment name", () => {
 });
 
 describe("AnalysisNode macro output", () => {
+  it("builds legacy single-result device context from the connected executor", () => {
+    scannerExecutors.current = new Map([
+      [
+        "legacy-1",
+        {
+          device: { type: "bluetooth-classic", id: "legacy-1", name: "Plot probe" },
+          identity: undefined,
+        },
+      ],
+    ]);
+    useMeasurementFlowStore.setState({ scanResult: { sample: [{ phi2: 0.8 }] } });
+
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+
+    expect(macroResultProps.mock.calls.at(-1)?.[0]?.ctx).toMatchObject({
+      $device: {
+        family: "multispeq",
+        id: "legacy-1",
+        name: "Plot probe",
+        index: 0,
+      },
+    });
+  });
+
   it("persists the primary output once and ignores empty or identical callbacks", () => {
     useMeasurementFlowStore.setState({ cellOutputs: {} });
     render(<AnalysisNode content={CONTENT} nodeId="m1" />);

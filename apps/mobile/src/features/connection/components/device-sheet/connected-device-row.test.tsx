@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { Device } from "~/shared/types/device";
@@ -63,5 +63,25 @@ describe("ConnectedDeviceRow identity hierarchy", () => {
     expect(screen.getByText("Unknown device")).toBeTruthy();
     expect(screen.queryByText("MultispeQ")).toBeNull();
     expect(screen.getByText(/ID AA:BB:CC:DD:EE:FF/)).toBeTruthy();
+  });
+
+  it("passes the selected device to the disconnect handler", () => {
+    const onDisconnect = vi.fn();
+    render(<ConnectedDeviceRow device={device} onDisconnect={onDisconnect} />);
+
+    fireEvent.press(screen.getByText("Disconnect"));
+
+    expect(onDisconnect).toHaveBeenCalledWith(device);
+  });
+
+  it("labels an unmetered USB connection as cable", () => {
+    render(
+      <ConnectedDeviceRow
+        device={{ type: "usb", id: "USB-42", name: "Field unit" }}
+        onDisconnect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Connected via cable/)).toBeTruthy();
   });
 });

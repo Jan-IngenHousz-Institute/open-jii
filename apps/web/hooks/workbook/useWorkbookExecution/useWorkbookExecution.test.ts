@@ -96,6 +96,35 @@ describe("useWorkbookExecution", () => {
     __resetProtocolCodeRegistry();
   });
 
+  it("exposes role-neutral presentation metadata for every connected device", () => {
+    mockConnections = [
+      {
+        ...mockConnection("connection-1", "Device #2"),
+        ordinal: 2,
+        family: "ambit",
+        identity: {
+          family: "ambit",
+          name: "Canopy probe",
+          deviceId: "AMB-42",
+          raw: {},
+        },
+      },
+    ];
+
+    const { result } = renderExecution([]);
+
+    expect(result.current.connectedDevices).toEqual([
+      {
+        id: "connection-1",
+        label: "Device #2",
+        ordinal: 2,
+        family: "ambit",
+        name: "Canopy probe",
+        stableId: "AMB-42",
+      },
+    ]);
+  });
+
   it("clearOutputs removes all output cells", () => {
     const proto = createProtocolCell();
     const output = createOutputCell({ producedBy: proto.id });
@@ -536,7 +565,19 @@ describe("useWorkbookExecution", () => {
         id: "proto-base",
         payload: { protocolId: crypto.randomUUID(), version: 1, name: "Baseline" },
       });
-      const output = createOutputCell({ producedBy: "proto-base", data: { value: 0.8 } });
+      const output = createOutputCell({
+        producedBy: "proto-base",
+        data: { value: 0.8 },
+        deviceResults: [
+          {
+            deviceId: "dev-1",
+            deviceLabel: "Device #1",
+            family: "multispeq",
+            deviceName: "Plot probe",
+            data: { value: 0.8 },
+          },
+        ],
+      });
       const question = createQuestionCell({
         id: "q-note",
         name: "Note",
@@ -558,12 +599,22 @@ describe("useWorkbookExecution", () => {
         }),
       );
 
-      const { result } = renderExecution([proto, output, question, macro]);
+      const { result, onCellsChange } = renderExecution([proto, output, question, macro]);
       await act(() => result.current.runCell(macro.id));
 
       expect(capturedContext?.baseline).toEqual({ value: 0.8 });
       expect(capturedContext?.note).toEqual({ answer: "ok" });
       expect(capturedContext?.$device).toMatchObject({ family: "multispeq", index: 0 });
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, macro.id)?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "Device #1",
+          family: "multispeq",
+          deviceName: "Plot probe",
+          data: { done: true },
+        },
+      ]);
     });
 
     it("runs a ctx-only macro without a preceding measurement", async () => {
@@ -734,6 +785,15 @@ describe("useWorkbookExecution", () => {
       const output = createOutputCell({
         producedBy: proto.id,
         data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "dev-1",
+            deviceLabel: "AMB-42",
+            family: "ambit",
+            deviceName: "Canopy probe",
+            data: { value: 1 },
+          },
+        ],
       });
       const macro = createMacroCell();
 
@@ -752,6 +812,38 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const macroOutput = findOutput(updated, macro.id);
       expect(macroOutput?.messages).toContain("Division by zero");
+      expect(macroOutput?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "AMB-42",
+          family: "ambit",
+          deviceName: "Canopy probe",
+          error: "Division by zero",
+        },
+      ]);
+    });
+
+    it("does not invent device identity when an unscoped macro fails", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({ producedBy: proto.id, data: { value: 1 } });
+      const macro = createMacroCell();
+
+      server.mount(contract.macros.executeMacro, {
+        body: {
+          macro_id: macro.payload.macroId,
+          success: false,
+          error: "Division by zero",
+        },
+      });
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const macroOutput = findOutput(updated, macro.id);
+      expect(macroOutput?.messages).toContain("Division by zero");
+      expect(macroOutput?.deviceResults).toBeUndefined();
     });
   });
 

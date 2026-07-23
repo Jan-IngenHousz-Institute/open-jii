@@ -16,14 +16,18 @@ import { contract } from "@repo/api/contract";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
 
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
-  useIotBrowserSupport: () => ({
+const browserSupport = vi.hoisted(() => ({
+  current: {
     bluetooth: true,
     serial: true,
     any: true,
-    bluetoothReason: null,
-    serialReason: null,
-  }),
+    bluetoothReason: null as "browser" | "device" | null,
+    serialReason: null as "browser" | "device" | null,
+  },
+}));
+
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => browserSupport.current,
 }));
 
 const protocolCell = createProtocolCell({
@@ -66,6 +70,16 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
     props: defaultProps,
   };
 }
+
+beforeEach(() => {
+  browserSupport.current = {
+    bluetooth: true,
+    serial: true,
+    any: true,
+    bluetoothReason: null,
+    serialReason: null,
+  };
+});
 
 describe("WorkbookHeader", () => {
   it("calls onConnect when user clicks the Connect button", async () => {
@@ -176,6 +190,34 @@ describe("WorkbookHeader", () => {
 
     await user.click(screen.getAllByRole("combobox")[1]);
     expect(screen.getByRole("option", { name: "Bluetooth Low Energy (BLE)" })).toBeInTheDocument();
+  });
+
+  it("disables Web Bluetooth for a Bluetooth-Classic-only device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "multispeq" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
+  });
+
+  it("disables Web Bluetooth for a serial-only measurement device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "ambit" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
   });
 
   it("shows 'Connecting...' while connecting", () => {
