@@ -107,14 +107,15 @@ pnpm install
 ```bash
 pnpm dev:fb       # Run just the web app + backend (most common)
 pnpm dev          # Run all development servers
-pnpm db:setup     # Start local Postgres and run migrations
+pnpm db:setup     # First-time setup: start Postgres and reset + migrate the DB (wipes existing local data)
+pnpm db:migrate   # Apply pending migrations (non-destructive)
 pnpm db:studio    # Browse the database with Drizzle Studio
 
 pnpm lint         # Check code style
 pnpm typecheck    # Type-check all packages
 pnpm test         # Run tests
 pnpm format       # Format with Prettier
-pnpm build        # Build all apps
+pnpm build        # Build all apps and packages
 ```
 
 API documentation is generated from the oRPC contract (`pnpm --filter @repo/api generate:openapi`) and rendered in the docs site's API reference.

@@ -5,7 +5,7 @@ The openJII API — a [NestJS](https://nestjs.com) application exposing a contra
 ## Architecture
 
 - **API contract** — endpoints are defined in `@repo/api` (oRPC + Zod) and implemented here with `@orpc/nest`. The OpenAPI spec is generated from the same contract and rendered in the docs site's API reference.
-- **Auth** — [Better Auth](https://better-auth.com) via `@repo/auth` (sessions, API keys, passkeys).
+- **Auth** — [Better Auth](https://better-auth.com) via `@repo/auth` (email OTP sign-in, sessions, organizations, optional OAuth providers).
 - **Database** — Postgres with Drizzle ORM; schema and migrations live in `@repo/database`.
 - **AWS integrations** — IoT Core (device provisioning and MQTT), S3 (uploads and exports), Lambda (macro-sandbox execution), Cognito, and Location.
 - **Analytics & email** — PostHog via `@repo/analytics`, transactional email via `@repo/transactional`.
@@ -15,7 +15,7 @@ The openJII API — a [NestJS](https://nestjs.com) application exposing a contra
 Run from the repo root:
 
 ```bash
-pnpm db:setup              # local Postgres + migrations (once)
+pnpm db:setup              # first-time DB setup (destructive: resets local data)
 pnpm dev:fb                # backend + web together
 # or just this app:
 pnpm --filter backend dev

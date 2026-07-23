@@ -17,7 +17,7 @@ Data fetching uses the oRPC client against the backend's contract (`@repo/api`) 
 Run from the repo root:
 
 ```bash
-pnpm db:setup          # local Postgres + migrations (once)
+pnpm db:setup          # first-time DB setup (destructive: resets local data)
 pnpm dev:fb            # web + backend together
 # or just this app:
 pnpm --filter web dev
@@ -45,5 +45,5 @@ The app is built with [OpenNext](https://opennext.js.org) (`pnpm --filter web bu
 ## Documentation
 
 - [Maintenance Page](./docs/MAINTENANCE_PAGE.md) — how public pages degrade when Contentful is unavailable
-- [PostHog Integration](./docs/POSTHOG.md) — feature flags and analytics setup
+- [Analytics & feature flags](../../packages/analytics/README.md) — PostHog setup via `@repo/analytics`
 - [Platform docs](https://docs.openjii.org) — researcher and developer documentation

@@ -33,7 +33,7 @@ nvm use
 corepack enable
 pnpm install
 
-pnpm db:setup     # start local Postgres and run migrations
+pnpm db:setup     # first-time setup: start Postgres, reset + migrate the DB (wipes local data)
 pnpm dev:fb       # run web + backend (or `pnpm dev` for everything)
 ```
 
