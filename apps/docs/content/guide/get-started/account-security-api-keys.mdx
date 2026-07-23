@@ -3,7 +3,7 @@ title: "Account security & API keys"
 description: "Use remembered sign-in methods, passkeys, and personal API keys to access openJII securely."
 ---
 
-{/* verified: code@8bd9fbd05262 2026-07-23 */}
+{/* verified: code@50a852783b4d 2026-07-23 */}
 
 Your account page (**Profile menu → Account**) is organised into three tabs:
 **General**, **Security**, and **API keys**.
@@ -38,6 +38,10 @@ The passkey option is hidden when the browser does not support WebAuthn.
 After signing in without a passkey, the platform offers to create one on the
 spot:
 
+The invitation appears at most once per browser session. If you select **Not
+now** three times, that browser stops showing the invitation; you can still
+create a passkey from **Account → Security**.
+
 ![Invitation to create a passkey right after signing in.](/img/guide/web/account-security/passkey-prompt.gif)
 
 You can also create one any time from **Account → Security**:
@@ -51,6 +55,8 @@ You can also create one any time from **Account → Security**:
 You can rename or delete a passkey at any time from the same table. Deleting a
 passkey does not sign you out; it only removes that sign-in method. Keep another
 working sign-in method until you have tested the passkey on the devices you use.
+The table also shows when each passkey was added and whether its authenticator
+reported it as **Synced** or **Device-bound**.
 
 ### Sign in with a passkey
 
