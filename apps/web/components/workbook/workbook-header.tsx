@@ -3,19 +3,19 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
-import {
-  SENSOR_FAMILY_OPTIONS,
-  getSensorFamilyBadgeColor,
-  getSensorFamilyLabel,
-} from "@/util/sensor-family";
+import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 import { mockDevicesEnabled } from "~/lib/iot/mock-devices";
+import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
+import { getDeviceTransportSupport } from "@repo/iot";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,14 @@ interface WorkbookHeaderProps {
   cells: WorkbookCell[];
   isConnected: boolean;
   isConnecting: boolean;
-  connectedDevices: { id: string; label: string; family?: SensorFamily }[];
+  connectedDevices: {
+    id: string;
+    label: string;
+    family?: SensorFamily;
+    name?: string;
+    stableId?: string;
+    ordinal?: number;
+  }[];
   sensorFamily: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
   connectionType: WorkbookConnectionType;
@@ -116,12 +123,35 @@ export function WorkbookHeader({
   isSticky,
   readOnly = false,
 }: WorkbookHeaderProps) {
+  const { t } = useTranslation("iot");
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLgTablet = useIsLgTablet();
   const compact = isMobile || isTablet || isLgTablet;
 
   const browserSupport = useIotBrowserSupport(sensorFamily);
+  const deviceTransportSupport = getDeviceTransportSupport(sensorFamilyToDeviceType(sensorFamily));
+  const bluetoothClassicOnly =
+    deviceTransportSupport.supportsBluetoothClassic && !deviceTransportSupport.supportsBLE;
+  const presentedDevices = connectedDevices.map((device) => {
+    const presentation = presentDevice({
+      name: device.name ?? (device.family ? undefined : device.label),
+      family: device.family,
+      id: device.stableId,
+    });
+    const primary = resolveDevicePrimaryLabel(presentation, t);
+    const ordinal = device.ordinal != null ? `Device #${device.ordinal}` : null;
+    const identitySecondary =
+      presentation.id ?? ordinal ?? (device.label !== primary ? device.label : null);
+    const secondaryParts = [
+      presentation.provenance === "name" ? presentation.productName : null,
+      identitySecondary,
+    ]
+      .filter((value): value is string => value != null && value !== primary)
+      .filter((value, index, values) => values.indexOf(value) === index);
+    const secondary = secondaryParts.length > 0 ? secondaryParts.join(" · ") : null;
+    return { ...device, primary, secondary };
+  });
   // Resolved after mount: depends on window.location, so rendering it on the
   // server would cause a hydration mismatch.
   const [showMockDevices, setShowMockDevices] = useState(false);
@@ -142,7 +172,9 @@ export function WorkbookHeader({
         : "This device does not support serial."
       : browserSupport.bluetoothReason === "browser"
         ? "Your browser does not support Web Bluetooth. Use Chrome or Edge."
-        : "This device does not support Bluetooth.";
+        : bluetoothClassicOnly
+          ? "This device uses Bluetooth Classic, which Web Bluetooth cannot access. Connect over USB/serial instead."
+          : "This device does not support Bluetooth Low Energy (BLE).";
 
   const handleExportJSON = useCallback(() => {
     const workbook = {
@@ -272,9 +304,9 @@ export function WorkbookHeader({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="serial">Serial</SelectItem>
+              <SelectItem value="serial">USB/serial</SelectItem>
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
-                Bluetooth
+                Bluetooth Low Energy (BLE)
               </SelectItem>
               {showMockDevices && <SelectItem value="mock">Mock</SelectItem>}
             </SelectContent>
@@ -334,30 +366,31 @@ export function WorkbookHeader({
                 data-testid="device-menu-trigger"
               >
                 <span className="truncate">
-                  {connectedDevices.length > 1
-                    ? `${connectedDevices.length} devices`
-                    : (connectedDevices[0]?.label ?? "Connected")}
+                  {presentedDevices.length > 1
+                    ? `${presentedDevices.length} devices`
+                    : (presentedDevices[0]?.primary ?? "Connected")}
                 </span>
+                {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
+                  <span className="hidden truncate text-[11px] text-[#68737B] xl:inline">
+                    · {presentedDevices[0].secondary}
+                  </span>
+                )}
                 <ChevronDown className="size-3 shrink-0" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {connectedDevices.map((device) => (
+              {presentedDevices.map((device) => (
                 <DropdownMenuItem
                   key={device.id}
                   data-testid="device-menu-item"
-                  aria-label={`Disconnect ${device.label}`}
+                  aria-label={`Disconnect ${device.primary}`}
                   className="flex items-center justify-between gap-4"
                   onSelect={() => onDisconnectDevice?.(device.id)}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <span>{device.label}</span>
-                    {device.family && (
-                      <span
-                        className={`rounded px-1 py-0.5 text-[10px] font-medium text-white ${getSensorFamilyBadgeColor(device.family)}`}
-                      >
-                        {getSensorFamilyLabel(device.family)}
-                      </span>
+                  <span className="flex flex-col">
+                    <span>{device.primary}</span>
+                    {device.secondary && device.secondary !== device.primary && (
+                      <span className="text-[10px] text-[#68737B]">{device.secondary}</span>
                     )}
                   </span>
                   <span className="text-[11px] text-[#68737B]">Disconnect</span>

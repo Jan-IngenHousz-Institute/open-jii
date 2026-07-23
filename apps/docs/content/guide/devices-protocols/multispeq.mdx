@@ -14,23 +14,23 @@ points rather than an unattended data stream.
 
 ## Connect a device
 
-Supported instruments appear together in the **Devices** sheet, but Bluetooth
-and USB setup follow different paths. MultispeQ is the most common case.
+Supported devices appear together in the **Devices** sheet, but Bluetooth and
+USB setup follow different paths. MultispeQ is the most common case.
 
-### Bluetooth Classic
+### Bluetooth
 
 1. Turn on the device. To make a MultispeQ discoverable, hold its button for
    about three seconds.
 2. In the openJII mobile app, open **Devices** from the device chip.
 3. Allow Bluetooth access when Android asks.
-4. Select **Scan**, then **Pair** beside the intended device.
+4. Select **Scan**, then **Connect** beside the intended device.
 5. Check that the sheet shows the device as connected.
 
 ### USB cable
 
 1. Connect the device to the Android phone with a supported USB cable or
    adapter. Use a powered USB hub when connecting several devices.
-2. Open **Devices** from the device chip and select **Pair** beside the wired
+2. Open **Devices** from the device chip and select **Connect** beside the wired
    device.
 3. Approve Android's USB permission request when it appears.
 4. Check that the sheet shows the device as connected.
@@ -38,14 +38,16 @@ and USB setup follow different paths. MultispeQ is the most common case.
 The primary connected device can also show battery level and firmware version
 when those values are available.
 
-The mobile app supports Bluetooth Classic and wired USB connections. A Bluetooth
-setup holds one device; a wired setup can accumulate several devices through a
-USB hub.
+The mobile app connects over Bluetooth and wired USB. A Bluetooth connection
+holds one device; a wired setup can accumulate several devices through a USB hub.
 
-![The mobile Devices sheet before pairing a MultispeQ](/img/mobile/device-pairing.png)
+On the web, a MultispeQ connects over USB/serial only. Its wireless link is
+Bluetooth Classic (BR/EDR), which the browser's Web Bluetooth API cannot reach.
 
-{/* NEEDS-LIVE-CHECK: confirm the pairing labels, the three-second discoverability action, and battery/firmware display on the current production Android build with a real MultispeQ. */}
-{/* MEDIA-PARTIAL: the Devices/Scan/discoverability state is captured; paired connection type, battery, and firmware require hardware. */}
+![The mobile Devices sheet before connecting a MultispeQ](/img/mobile/device-pairing.png)
+
+{/* NEEDS-LIVE-CHECK: confirm the connection labels, the three-second discoverability action, and battery/firmware display on the current production Android build with a real MultispeQ. */}
+{/* MEDIA-PARTIAL: the Devices/Scan/discoverability state is captured; connection type, battery, and firmware require hardware. */}
 {/* MEDIA: SHOT — the current supported MultispeQ hardware model. */}
 
 ## Before the first field session
@@ -60,6 +62,6 @@ USB hub.
 If several devices should run together, see
 [Multi-device measurements](/guide/devices-protocols/multi-device).
 
-For instrument calibration or hardware-specific service, use the instrument
+For device calibration or hardware-specific service, use the device
 manufacturer's support material; openJII controls the measurement workflow and
-data handling, not the instrument's calibration procedure.
+data handling, not the device's calibration procedure.

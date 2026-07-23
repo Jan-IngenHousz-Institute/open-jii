@@ -3,6 +3,7 @@ import { CircleCheckBig } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobile-runtime-support";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
@@ -118,9 +119,13 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       const identity =
         entry?.identity ??
         (device
-          ? { family: "multispeq", name: device.name, deviceId: device.id }
+          ? { family: MOBILE_PRE_IDENTITY_FAMILY, name: device.name, deviceId: device.id }
           : entry
-            ? { family: "multispeq", name: entry.device.name, deviceId: entry.device.id }
+            ? {
+                family: MOBILE_PRE_IDENTITY_FAMILY,
+                name: entry.device.name,
+                deviceId: entry.device.id,
+              }
             : undefined);
       const selfIndex = hydratedCells.findIndex((c) => c.id === nodeId);
       return buildCellNamespace(hydratedCells, selfIndex >= 0 ? selfIndex : undefined, {

@@ -1,3 +1,4 @@
+import { DEVICE_PROFILES } from "@repo/api/domains/device/device-profile";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
@@ -7,40 +8,36 @@ export interface SensorFamilyOption {
   disabled: boolean;
 }
 
-/**
- * Display labels for each sensor family.
- * Keyed by the values defined in `zSensorFamily` from @repo/api.
- */
-const SENSOR_FAMILY_LABELS: Record<SensorFamily, string> = {
-  generic: "Generic",
-  multispeq: "MultispeQ",
-  ambyte: "Ambyte",
-  minipar: "MiniPAR",
-  ambit: "Ambit",
-};
+/** Display label for the generic family, which has no product name. */
+const GENERIC_LABEL = "Generic";
 
 /**
- * Families that are not available for local connection (Ambyte is an
- * MQTT-only gateway; its data arrives via ingest, never a local port).
+ * Families not offered as a local-connection target in this authoring selector.
+ * Ambyte is presented as a gateway; its measurement data arrives via ingest.
+ * (Web protocol testing separately preserves a generic-driver compatibility
+ * path for existing Ambyte-family protocols.)
  */
 const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte"]);
 
 /**
  * Selectable sensor family options derived from the API enum.
  * Adding a new value to `zSensorFamily` automatically surfaces it here;
- * just add its label to `SENSOR_FAMILY_LABELS` and optionally disable it.
+ * its label comes from the shared product profile, so only the disable set may
+ * need attention.
  */
 export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options.map((value) => ({
   value,
-  label: SENSOR_FAMILY_LABELS[value],
+  label: getSensorFamilyLabel(value),
   disabled: DISABLED_FAMILIES.has(value),
 }));
 
 /**
- * Get the display label for a sensor family value.
+ * Get the display label for a sensor family value. The canonical product
+ * spelling comes from the shared `@repo/api` profile; `generic` has no product
+ * name and falls back to a neutral label.
  */
 export function getSensorFamilyLabel(family: SensorFamily): string {
-  return SENSOR_FAMILY_LABELS[family];
+  return DEVICE_PROFILES[family].productName ?? GENERIC_LABEL;
 }
 
 /**

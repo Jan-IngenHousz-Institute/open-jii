@@ -58,8 +58,8 @@
       [
         "./plugins/with-bluetooth-classic",
         {
-          "peripheralUsageDescription": "openJII uses Bluetooth to connect to MultispeQ measurement devices.",
-          "alwaysUsageDescription": "openJII uses Bluetooth to connect to MultispeQ measurement devices."
+          "peripheralUsageDescription": "openJII uses Bluetooth to connect to nearby measurement devices.",
+          "alwaysUsageDescription": "openJII uses Bluetooth to connect to nearby measurement devices."
         }
       ],
       "expo-router",

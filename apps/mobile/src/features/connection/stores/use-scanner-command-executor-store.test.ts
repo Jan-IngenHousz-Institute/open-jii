@@ -1,21 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type {
-  CommandProgress,
-  IMultispeqCommandExecutor,
-} from "~/features/connection/services/multispeq-communication/driver-command-executor";
+  DeviceCommandExecutor,
+  DeviceCommandProgress,
+} from "~/features/connection/services/device-command-executor";
 import type { Device } from "~/shared/types/device";
 
 import { useScannerCommandExecutorStore } from "./use-scanner-command-executor-store";
 
 // Replace the executor factory so the store never touches react-native or BT.
-const createMultispeqCommandExecutor = vi.fn();
-vi.mock(
-  "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor",
-  () => ({
-    createMultispeqCommandExecutor: (device: Device | undefined) =>
-      createMultispeqCommandExecutor(device),
-  }),
-);
+const createDeviceCommandExecutor = vi.fn();
+vi.mock("~/features/connection/services/device-connection-manager/device-connection", () => ({
+  createDeviceCommandExecutor: (device: Device | undefined) => createDeviceCommandExecutor(device),
+}));
 
 interface ExecuteCall {
   command: string | object;
@@ -23,20 +19,20 @@ interface ExecuteCall {
   reject: (err: Error) => void;
 }
 
-interface ControllableExecutor extends IMultispeqCommandExecutor {
+interface ControllableExecutor extends DeviceCommandExecutor {
   /** All execute() calls in the order they were issued. */
   calls: ExecuteCall[];
   destroyCalls: () => number;
   cancelCalls: () => number;
   /** Push a progress event to the currently subscribed listener (if any). */
-  emitProgress: (progress: CommandProgress) => void;
+  emitProgress: (progress: DeviceCommandProgress) => void;
 }
 
 function createControllableExecutor(): ControllableExecutor {
   const calls: ExecuteCall[] = [];
   let destroyed = 0;
   let cancelled = 0;
-  let progressListener: ((progress: CommandProgress) => void) | undefined;
+  let progressListener: ((progress: DeviceCommandProgress) => void) | undefined;
 
   return {
     calls,
@@ -77,14 +73,14 @@ const USB_DEVICE_B: Device = { type: "usb", name: "MultispeQ B", id: "usb-b" };
 
 async function attachExecutor(): Promise<ControllableExecutor> {
   const exec = createControllableExecutor();
-  createMultispeqCommandExecutor.mockResolvedValueOnce(exec);
+  createDeviceCommandExecutor.mockResolvedValueOnce(exec);
   await useScannerCommandExecutorStore.getState().setDevice(FAKE_DEVICE);
   return exec;
 }
 
 async function addExecutorFor(device: Device): Promise<ControllableExecutor> {
   const exec = createControllableExecutor();
-  createMultispeqCommandExecutor.mockResolvedValueOnce(exec);
+  createDeviceCommandExecutor.mockResolvedValueOnce(exec);
   await useScannerCommandExecutorStore.getState().addDevice(device);
   return exec;
 }
@@ -106,7 +102,7 @@ function resetStore() {
 
 describe("useScannerCommandExecutorStore", () => {
   beforeEach(() => {
-    createMultispeqCommandExecutor.mockReset();
+    createDeviceCommandExecutor.mockReset();
     resetStore();
   });
 
@@ -144,7 +140,7 @@ describe("useScannerCommandExecutorStore", () => {
       expect(mid.estimatedMs).toBeGreaterThan(0);
 
       // The executor's progress is mirrored into the store verbatim.
-      const progress: CommandProgress = {
+      const progress: DeviceCommandProgress = {
         phase: "receiving",
         chunks: 3,
         bytes: 120,
@@ -402,7 +398,7 @@ describe("useScannerCommandExecutorStore", () => {
     });
 
     it("addDevice records the error when the executor factory throws", async () => {
-      createMultispeqCommandExecutor.mockRejectedValueOnce(new Error("no permission"));
+      createDeviceCommandExecutor.mockRejectedValueOnce(new Error("no permission"));
 
       await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
 
@@ -412,11 +408,46 @@ describe("useScannerCommandExecutorStore", () => {
     });
 
     it("addDevice is a no-op when the factory yields no executor", async () => {
-      createMultispeqCommandExecutor.mockResolvedValueOnce(undefined);
+      createDeviceCommandExecutor.mockResolvedValueOnce(undefined);
 
       await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
 
       expect(useScannerCommandExecutorStore.getState().executors.size).toBe(0);
+    });
+
+    it("patches the best-effort identity onto the connected device entry", async () => {
+      const exec = createControllableExecutor();
+      exec.getIdentity = vi.fn().mockResolvedValue({
+        family: "multispeq",
+        name: "Plot probe",
+        deviceId: "SN-42",
+        raw: {},
+      });
+      createDeviceCommandExecutor.mockResolvedValueOnce(exec);
+
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+      await vi.waitFor(() => {
+        expect(useScannerCommandExecutorStore.getState().executors.get("usb-a")?.identity).toEqual({
+          family: "multispeq",
+          name: "Plot probe",
+          deviceId: "SN-42",
+          raw: {},
+        });
+      });
+    });
+
+    it("keeps the device connected with neutral fallback data when identity fails", async () => {
+      const exec = createControllableExecutor();
+      exec.getIdentity = vi.fn().mockRejectedValue(new Error("identity timeout"));
+      createDeviceCommandExecutor.mockResolvedValueOnce(exec);
+
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+      await vi.waitFor(() => {
+        const entry = useScannerCommandExecutorStore.getState().executors.get("usb-a");
+        expect(entry?.identity).toBeUndefined();
+        expect(entry?.device).toEqual(USB_DEVICE_A);
+      });
+      expect(useScannerCommandExecutorStore.getState().error).toBeUndefined();
     });
 
     it("removeDevice and cancelCommandOn ignore unknown device ids", async () => {
@@ -445,7 +476,7 @@ describe("useScannerCommandExecutorStore", () => {
     });
 
     it("setDevice records the error when the executor factory throws", async () => {
-      createMultispeqCommandExecutor.mockRejectedValueOnce(new Error("bluetooth off"));
+      createDeviceCommandExecutor.mockRejectedValueOnce(new Error("bluetooth off"));
 
       await useScannerCommandExecutorStore.getState().setDevice(FAKE_DEVICE);
 
@@ -492,7 +523,7 @@ describe("useScannerCommandExecutorStore", () => {
       const execB = await addExecutorFor(USB_DEVICE_B);
 
       const execBt = createControllableExecutor();
-      createMultispeqCommandExecutor.mockResolvedValueOnce(execBt);
+      createDeviceCommandExecutor.mockResolvedValueOnce(execBt);
       await useScannerCommandExecutorStore.getState().setDevice(FAKE_DEVICE);
 
       expect(execA.destroyCalls()).toBe(1);

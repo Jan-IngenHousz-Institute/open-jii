@@ -53,7 +53,7 @@ function mockMeasurement(index: number): Record<string, unknown> {
     device_battery: 80 + index,
     device_version: "2.0-mock",
     // Fluorescence pair varies per device so a downstream Phi2 macro yields a
-    // visibly different value for each sensor.
+    // visibly different value for each device.
     Fm_prime: 1400 + index * 50,
     Fs: 400 + index * 40,
     sample: [

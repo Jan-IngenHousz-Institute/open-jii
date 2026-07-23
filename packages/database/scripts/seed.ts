@@ -154,7 +154,7 @@ async function main() {
     {
       name: "[Seed] Chlorophyll Fluorescence v1",
       description:
-        "Measures chlorophyll fluorescence using the MultispeQ sensor to assess photosynthetic efficiency and Phi2 quantum yield.",
+        "Measures chlorophyll fluorescence using the MultispeQ device to assess photosynthetic efficiency and Phi2 quantum yield.",
       family: "multispeq",
       code: [{ _protocol_set: [{ label: "Phi2", pulses: [20, 50, 20] }] }],
       sortOrder: 1,
@@ -202,7 +202,7 @@ async function main() {
     {
       name: "[Seed] Soil Moisture Probe",
       description:
-        "Ambyte-based soil moisture and temperature measurement at configurable depth intervals.",
+        "Reads soil moisture and temperature sensors through an Ambyte gateway at configurable depth intervals.",
       family: "ambyte",
       code: [{ _protocol_set: [{ label: "SoilMoisture", interval: 5, depth_cm: 15 }] }],
       sortOrder: 1,
@@ -210,7 +210,7 @@ async function main() {
     {
       name: "[Seed] Ambient Light & Temperature",
       description:
-        "Reads ambient PAR, UV index, and air temperature using an Ambyte environmental sensor array.",
+        "Reads ambient PAR, UV index, and air temperature sensors through an Ambyte gateway.",
       family: "ambyte",
       code: [{ _protocol_set: [{ label: "AmbientEnv", sample_rate: 10 }] }],
       sortOrder: 2,
@@ -531,10 +531,10 @@ async function main() {
           {
             id: "n2",
             type: "instruction",
-            name: "Position Sensor",
+            name: "Position Device",
             isStart: false,
             content: {
-              text: "Clamp the sensor on the third fully expanded leaf from the top of the plant.",
+              text: "Clamp the device on the third fully expanded leaf from the top of the plant.",
             },
           },
           {
@@ -595,7 +595,7 @@ async function main() {
             type: "instruction",
             name: "Take Measurement",
             isStart: false,
-            content: { text: "Place sensor on the youngest fully expanded trifoliate leaf." },
+            content: { text: "Place the device on the youngest fully expanded trifoliate leaf." },
           },
         ],
         edges: [

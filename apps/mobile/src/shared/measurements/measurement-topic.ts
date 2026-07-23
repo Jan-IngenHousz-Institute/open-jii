@@ -1,10 +1,10 @@
 import { getEnvVar } from "~/shared/stores/environment-store";
 
-// Sentinel protocolId for question-only uploads (no MultispeQ sample).
+// Sentinel protocolId for question-only uploads (no device sample).
 // Routed by an AWS IoT rule like any real protocol — see CONTEXT.md "Topic".
 export const QUESTIONS_PROTOCOL_ID = "questions";
 
-export function getMultispeqMqttTopic({
+export function getMeasurementMqttTopic({
   experimentId,
   protocolId,
 }: {

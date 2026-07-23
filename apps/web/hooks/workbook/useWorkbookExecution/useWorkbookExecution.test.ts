@@ -21,6 +21,7 @@ import {
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
+import type { IotDeviceConnection } from "../../iot/useIotConnections/useIotConnections";
 import { useWorkbookExecution } from "./useWorkbookExecution";
 
 const mockExecuteProtocol = vi.fn();
@@ -29,16 +30,16 @@ const mockConnect = vi.fn();
 const mockDisconnect = vi.fn();
 
 // One entry per connected device; single-entry = legacy single-device runs.
-function mockConnection(id: string, label: string) {
+function mockConnection(id: string, label: string): IotDeviceConnection {
   return {
     id,
     label,
     family: "multispeq" as const,
     identity: { family: "multispeq" as const, name: label, raw: {} },
-    driver: {},
+    driver: {} as IotDeviceConnection["driver"],
   };
 }
-let mockConnections: ReturnType<typeof mockConnection>[] = [];
+let mockConnections: IotDeviceConnection[] = [];
 
 vi.mock("~/hooks/iot/useIotConnections/useIotConnections", () => ({
   useIotConnections: () => ({
@@ -93,6 +94,35 @@ describe("useWorkbookExecution", () => {
     mockConnect.mockReset();
     mockDisconnect.mockReset();
     __resetProtocolCodeRegistry();
+  });
+
+  it("exposes role-neutral presentation metadata for every connected device", () => {
+    mockConnections = [
+      {
+        ...mockConnection("connection-1", "Device #2"),
+        ordinal: 2,
+        family: "ambit",
+        identity: {
+          family: "ambit",
+          name: "Canopy probe",
+          deviceId: "AMB-42",
+          raw: {},
+        },
+      },
+    ];
+
+    const { result } = renderExecution([]);
+
+    expect(result.current.connectedDevices).toEqual([
+      {
+        id: "connection-1",
+        label: "Device #2",
+        ordinal: 2,
+        family: "ambit",
+        name: "Canopy probe",
+        stableId: "AMB-42",
+      },
+    ]);
   });
 
   it("clearOutputs removes all output cells", () => {
@@ -213,10 +243,12 @@ describe("useWorkbookExecution", () => {
         },
         { deviceId: "dev-4", ...identified("Mock MultispeQ 4"), data: { device_id: "mock-4" } },
       ]);
-      expect(outputCell?.messages).toEqual(["Mock MultispeQ 3: Mock device failure (simulated)"]);
+      expect(outputCell?.messages).toEqual([
+        "Mock MultispeQ 3 · MultispeQ: Mock device failure (simulated)",
+      ]);
     });
 
-    it("keeps the classic single-device output shape when one device is connected", async () => {
+    it("keeps the primary single-device data shape and retains its identity", async () => {
       const proto = createProtocolCell();
       const protocol = createProtocol({
         id: proto.payload.protocolId,
@@ -232,8 +264,51 @@ describe("useWorkbookExecution", () => {
 
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const outputCell = findOutput(updated);
-      expect(outputCell?.deviceResults).toBeUndefined();
+      expect(outputCell?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "Device #1",
+          deviceName: "Device #1",
+          family: "multispeq",
+          data: { measurement: 42 },
+        },
+      ]);
       expect(outputCell?.messages).toEqual([]);
+    });
+
+    it("retains a stable hardware id for an unnamed single-device result", async () => {
+      const proto = createProtocolCell();
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockConnections = [
+        {
+          ...mockConnection("connection-1", "Device #1"),
+          ordinal: 1,
+          identity: {
+            family: "multispeq",
+            deviceId: "MSQ-42",
+            raw: {},
+          },
+        },
+      ];
+      mockExecuteProtocol.mockResolvedValue({ measurement: 42 });
+
+      const { result, onCellsChange } = renderExecution([proto]);
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated)?.deviceResults).toEqual([
+        {
+          deviceId: "connection-1",
+          deviceLabel: "MSQ-42",
+          deviceName: undefined,
+          family: "multispeq",
+          data: { measurement: 42 },
+        },
+      ]);
     });
 
     it("errors the cell when every device fails", async () => {
@@ -258,8 +333,48 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.data).toBeUndefined();
       expect(outputCell?.deviceResults).toHaveLength(2);
       expect(outputCell?.messages).toEqual([
-        "Mock MultispeQ 1: device not open",
-        "Mock MultispeQ 2: device not open",
+        "Mock MultispeQ 1 · MultispeQ: device not open",
+        "Mock MultispeQ 2 · MultispeQ: device not open",
+      ]);
+    });
+
+    it("disambiguates named and unnamed same-family failures with product and stable/ordinal context", async () => {
+      const proto = createProtocolCell();
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockConnections = [
+        {
+          ...mockConnection("connection-1", "Canopy sensor"),
+          ordinal: 1,
+          family: "ambit",
+          identity: {
+            family: "ambit",
+            name: "Canopy sensor",
+            deviceId: "AMB-42",
+            raw: {},
+          },
+        },
+        {
+          ...mockConnection("connection-2", "Device #2"),
+          ordinal: 2,
+          family: "ambit",
+          identity: { family: "ambit", raw: {} },
+        },
+      ];
+      mockExecuteProtocol
+        .mockRejectedValueOnce(new Error("named device failed"))
+        .mockRejectedValueOnce(new Error("unnamed device failed"));
+
+      const { result, onCellsChange } = renderExecution([proto]);
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated)?.messages).toEqual([
+        "Canopy sensor · Ambit · AMB-42: named device failed",
+        "Ambit · Device #2: unnamed device failed",
       ]);
     });
 
@@ -450,7 +565,19 @@ describe("useWorkbookExecution", () => {
         id: "proto-base",
         payload: { protocolId: crypto.randomUUID(), version: 1, name: "Baseline" },
       });
-      const output = createOutputCell({ producedBy: "proto-base", data: { value: 0.8 } });
+      const output = createOutputCell({
+        producedBy: "proto-base",
+        data: { value: 0.8 },
+        deviceResults: [
+          {
+            deviceId: "dev-1",
+            deviceLabel: "Device #1",
+            family: "multispeq",
+            deviceName: "Plot probe",
+            data: { value: 0.8 },
+          },
+        ],
+      });
       const question = createQuestionCell({
         id: "q-note",
         name: "Note",
@@ -472,12 +599,22 @@ describe("useWorkbookExecution", () => {
         }),
       );
 
-      const { result } = renderExecution([proto, output, question, macro]);
+      const { result, onCellsChange } = renderExecution([proto, output, question, macro]);
       await act(() => result.current.runCell(macro.id));
 
       expect(capturedContext?.baseline).toEqual({ value: 0.8 });
       expect(capturedContext?.note).toEqual({ answer: "ok" });
       expect(capturedContext?.$device).toMatchObject({ family: "multispeq", index: 0 });
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, macro.id)?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "Device #1",
+          family: "multispeq",
+          deviceName: "Plot probe",
+          data: { done: true },
+        },
+      ]);
     });
 
     it("runs a ctx-only macro without a preceding measurement", async () => {
@@ -648,6 +785,15 @@ describe("useWorkbookExecution", () => {
       const output = createOutputCell({
         producedBy: proto.id,
         data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "dev-1",
+            deviceLabel: "AMB-42",
+            family: "ambit",
+            deviceName: "Canopy probe",
+            data: { value: 1 },
+          },
+        ],
       });
       const macro = createMacroCell();
 
@@ -666,6 +812,38 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const macroOutput = findOutput(updated, macro.id);
       expect(macroOutput?.messages).toContain("Division by zero");
+      expect(macroOutput?.deviceResults).toEqual([
+        {
+          deviceId: "dev-1",
+          deviceLabel: "AMB-42",
+          family: "ambit",
+          deviceName: "Canopy probe",
+          error: "Division by zero",
+        },
+      ]);
+    });
+
+    it("does not invent device identity when an unscoped macro fails", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({ producedBy: proto.id, data: { value: 1 } });
+      const macro = createMacroCell();
+
+      server.mount(contract.macros.executeMacro, {
+        body: {
+          macro_id: macro.payload.macroId,
+          success: false,
+          error: "Division by zero",
+        },
+      });
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+
+      await act(() => result.current.runCell(macro.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const macroOutput = findOutput(updated, macro.id);
+      expect(macroOutput?.messages).toContain("Division by zero");
+      expect(macroOutput?.deviceResults).toBeUndefined();
     });
   });
 
@@ -818,8 +996,8 @@ describe("useWorkbookExecution", () => {
         mockConnection("dev-1", "MultispeQ A"),
         {
           ...mockConnection("dev-2", "Ambit B"),
-          family: "ambit" as never,
-          identity: { family: "ambit" as never, name: "Ambit B", raw: {} },
+          family: "ambit",
+          identity: { family: "ambit", name: "Ambit B", raw: {} },
         },
       ];
       const protocol = createProtocol();
@@ -850,8 +1028,8 @@ describe("useWorkbookExecution", () => {
         mockConnection("dev-1", "MultispeQ A"),
         {
           ...mockConnection("dev-2", "Ambit B"),
-          family: "ambit" as never,
-          identity: { family: "ambit" as never, name: "Ambit B", raw: {} },
+          family: "ambit",
+          identity: { family: "ambit", name: "Ambit B", raw: {} },
         },
       ];
       const protocol = createProtocol();

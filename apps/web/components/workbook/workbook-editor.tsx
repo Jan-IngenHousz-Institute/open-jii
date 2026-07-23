@@ -51,7 +51,14 @@ interface WorkbookEditorProps {
   executionStates?: Record<string, CellExecutionState>;
   isConnected?: boolean;
   isConnecting?: boolean;
-  connectedDevices?: { id: string; label: string }[];
+  connectedDevices?: {
+    id: string;
+    label: string;
+    family?: SensorFamily;
+    name?: string;
+    stableId?: string;
+    ordinal?: number;
+  }[];
   sensorFamily?: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
   connectionType?: WorkbookConnectionType;

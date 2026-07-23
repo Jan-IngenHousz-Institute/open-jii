@@ -1,3 +1,9 @@
+import type {
+  DeviceCommandExecuteOptions,
+  DeviceCommandExecutor,
+  DeviceCommandProgress,
+  DeviceCommandProgressListener,
+} from "~/features/connection/services/device-command-executor";
 import type { LogFields } from "~/shared/observability/logger";
 import { createLogger } from "~/shared/observability/logger";
 import type { Trace } from "~/shared/observability/trace";
@@ -9,60 +15,6 @@ import { MultispeqDriver } from "@repo/iot";
 const log = createLogger("multispeq");
 
 let commandSeq = 0;
-
-export interface ExecuteOptions {
-  /** Override the response timeout (ms) for this command. */
-  timeoutMs?: number;
-  /**
-   * Background/maintenance command (e.g. battery polling). The store keeps
-   * these off the measurement-facing UI state so they never reset the elapsed
-   * timer / estimate or surface their timeout as a measurement error. No effect
-   * on the driver itself.
-   */
-  background?: boolean;
-}
-
-/**
- * Live progress of an in-flight command. A MultispeQ runs a protocol silently
- * and returns ONE response at the end, so `rx chunk`s are fragments of that
- * final burst, so `chunks`/`bytes` climb while the reply transfers, not during
- * the measurement itself. The measuring phase is conveyed by elapsed time
- * against an estimate (see the UI), not by this stream. Hence there is
- * deliberately no chunk-silence watchdog: silence is normal mid-measurement.
- */
-export interface CommandProgress {
-  /** "sent" once the command is on the wire; "receiving" as the reply streams in. */
-  phase: "sent" | "receiving";
-  /** rx fragments seen so far (final-response transfer). */
-  chunks: number;
-  /** total characters received so far. */
-  bytes: number;
-  /** ms since the command was sent. */
-  elapsedMs: number;
-  /** Epoch ms of the most recent tx/rx event; drives a "last signal Xs ago" readout. */
-  lastEventAt: number;
-}
-
-export type CommandProgressListener = (progress: CommandProgress) => void;
-
-export interface IMultispeqCommandExecutor {
-  execute(command: string | object, options?: ExecuteOptions): Promise<string | object>;
-  /** Abort the in-flight command (sends `-1+` and rejects it as cancelled). */
-  cancel(): Promise<void>;
-  /**
-   * Structured device identity (name, id, firmware, battery) via the driver's
-   * identification handshake. Bypasses progress/trace plumbing like a
-   * background command; safe to fire right after connect.
-   */
-  getIdentity(): Promise<DeviceIdentity>;
-  /**
-   * Subscribe to live progress of the in-flight command. Returns an
-   * unsubscribe function. Emissions are throttled so a chatty transfer can't
-   * flood the React Native bridge.
-   */
-  onProgress(listener: CommandProgressListener): () => void;
-  destroy(): Promise<void>;
-}
 
 /** Minimum gap (ms) between throttled "receiving" emissions. */
 const PROGRESS_THROTTLE_MS = 100;
@@ -87,7 +39,7 @@ const HEARTBEAT_MS = 15_000;
  * long measurement produces a single fat entry (tx, rx summary, timings)
  * instead of hundreds of per-chunk debug lines.
  */
-class DriverCommandExecutor implements IMultispeqCommandExecutor {
+export class MultispeqCommandExecutor implements DeviceCommandExecutor {
   private readonly driver: MultispeqDriver;
   /**
    * Resolves once the driver has been initialized. `initialize()` is currently
@@ -105,7 +57,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
 
   // Live-progress state for the in-flight command. `bytes`/`cmdStartedAt` are
   // reset on each `tx`; `lastEmitAt` throttles "receiving" emissions.
-  private readonly progressListeners = new Set<CommandProgressListener>();
+  private readonly progressListeners = new Set<DeviceCommandProgressListener>();
   private bytes = 0;
   private cmdStartedAt = 0;
   private lastEmitAt = 0;
@@ -185,12 +137,12 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
    * Notify progress listeners. "receiving" emissions are throttled to
    * PROGRESS_THROTTLE_MS; "sent" and the final "rx complete" pass `force`.
    */
-  private emitProgress(phase: CommandProgress["phase"], force: boolean): void {
+  private emitProgress(phase: DeviceCommandProgress["phase"], force: boolean): void {
     if (this.progressListeners.size === 0) return;
     const now = Date.now();
     if (!force && now - this.lastEmitAt < PROGRESS_THROTTLE_MS) return;
     this.lastEmitAt = now;
-    const progress: CommandProgress = {
+    const progress: DeviceCommandProgress = {
       phase,
       chunks: this.chunkCount,
       bytes: this.bytes,
@@ -206,14 +158,17 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
     });
   }
 
-  onProgress(listener: CommandProgressListener): () => void {
+  onProgress(listener: DeviceCommandProgressListener): () => void {
     this.progressListeners.add(listener);
     return () => {
       this.progressListeners.delete(listener);
     };
   }
 
-  async execute(command: string | object, options?: ExecuteOptions): Promise<string | object> {
+  async execute(
+    command: string | object,
+    options?: DeviceCommandExecuteOptions,
+  ): Promise<string | object> {
     // Hand trace ownership over serially (see `commandTail`). The chain must
     // survive a failed command, so both branches continue to the next run.
     const run = this.commandTail.then(
@@ -229,7 +184,7 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
 
   private async runCommand(
     command: string | object,
-    options?: ExecuteOptions,
+    options?: DeviceCommandExecuteOptions,
   ): Promise<string | object> {
     // Ensure the driver finished initializing before sending anything.
     await this.initPromise;
@@ -280,8 +235,8 @@ class DriverCommandExecutor implements IMultispeqCommandExecutor {
 }
 
 /** Build a command executor backed by the shared driver over the given transport. */
-export function createDriverCommandExecutor(
+export function createMultispeqCommandExecutor(
   transport: ITransportAdapter,
-): IMultispeqCommandExecutor {
-  return new DriverCommandExecutor(transport);
+): DeviceCommandExecutor {
+  return new MultispeqCommandExecutor(transport);
 }

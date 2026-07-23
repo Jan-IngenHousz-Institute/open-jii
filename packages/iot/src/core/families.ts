@@ -2,8 +2,10 @@
  * Sensor families identifiable over a local (serial/BLE) connection. Kept in
  * sync by hand with `zSensorFamily` in @repo/api (schemas/protocol.schema.ts)
  * and the `sensor_family` pg enum in @repo/database; @repo/iot stays
- * dependency-free, so the list is duplicated rather than imported. "ambyte"
- * is deliberately absent: it is an MQTT-only gateway, never connected locally.
+ * dependency-free, so the list is duplicated rather than imported. "ambyte" is
+ * absent because @repo/iot has no Ambyte-specific family identity or driver; the
+ * web host may still route the API `ambyte` family through `GenericDeviceDriver`.
+ * This documents ownership, not driver enablement.
  */
 export const SENSOR_FAMILIES = ["multispeq", "ambit", "minipar", "generic"] as const;
 

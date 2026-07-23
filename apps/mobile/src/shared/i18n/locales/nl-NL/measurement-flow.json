@@ -30,13 +30,13 @@
     "noDescription": "Geen beschrijving beschikbaar",
     "startFlow": "Meting starten",
     "startNamedFlow": "{{label}} meten",
-    "sensorBannerTitle": "Deze meting heeft een sensor nodig",
-    "sensorBannerBody": "Verbind een MultispeQ om metingen vast te leggen.",
-    "sensorBannerAction": "Verbinden",
+    "deviceBannerTitle": "Deze meting heeft een apparaat nodig",
+    "deviceBannerBody": "Verbind een meetapparaat om metingen vast te leggen.",
+    "deviceBannerAction": "Verbinden",
     "tag": {
-      "sensorRequired": "Sensor vereist",
+      "deviceRequired": "Apparaat vereist",
       "questionsOnly": "Alleen vragen",
-      "sensorAndQuestions": "Sensor + vragen"
+      "deviceAndQuestions": "Apparaat + vragen"
     },
     "meta": {
       "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
@@ -133,7 +133,7 @@
     "running": "Bezig…",
     "continue": "Doorgaan",
     "toast": {
-      "notConnected": "Geen verbinding met sensor",
+      "notConnected": "Geen apparaat verbonden",
       "error": "Opdracht mislukt"
     }
   },
@@ -162,11 +162,11 @@
       "elapsed": "{{elapsed}} verstreken",
       "elapsedOfEstimate": "{{elapsed}} van ~{{estimate}}",
       "expected": "~{{estimate}} verwacht",
-      "interactionTitle": "Volg het instrument",
+      "interactionTitle": "Volg het apparaat",
       "interactionHint": "Dit protocol pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen."
     },
     "toast": {
-      "notConnected": "Geen verbinding met sensor",
+      "notConnected": "Geen apparaat verbonden",
       "noProtocol": "Geen protocol geselecteerd",
       "protocolUnavailable": "Protocol niet beschikbaar, maak verbinding met internet en probeer opnieuw",
       "deviceDisconnected": "Apparaat losgekoppeld, maak opnieuw verbinding en probeer het opnieuw",

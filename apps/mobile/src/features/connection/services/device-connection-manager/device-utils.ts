@@ -40,7 +40,7 @@ export function serialDeviceToDevice(d: {
   productId: number;
 }): Device {
   const isMultispeq = d.vendorId === MULTISPEQ_VENDOR_ID && d.productId === MULTISPEQ_PRODUCT_ID;
-  // Suffix the Android deviceId: identical sensors on a hub would otherwise
+  // Suffix the Android deviceId: identical devices on a hub would otherwise
   // render as indistinguishable rows in the device sheet and scan progress.
   const base = isMultispeq
     ? "MultispeQ"

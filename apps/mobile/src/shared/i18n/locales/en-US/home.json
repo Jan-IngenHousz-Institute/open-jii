@@ -22,12 +22,13 @@
     "action": "Choose experiment"
   },
   "device": {
-    "connectedSub": "Battery {{battery}}%",
-    "connectedSubWithFirmware": "Battery {{battery}}% · Firmware {{firmware}}",
+    "battery": "Battery {{battery}}%",
+    "connectedViaBluetooth": "Connected via Bluetooth",
+    "connectedViaCable": "Connected via cable",
     "disconnectedTitle": "No device connected",
-    "disconnectedSub": "Connect a MultispeQ to start measuring",
+    "disconnectedSub": "Connect a device to start measuring",
     "reconnectTitle": "Reconnect {{name}}",
-    "reconnectSub": "Tap to reconnect your last MultispeQ"
+    "reconnectSub": "Tap to reconnect your last device"
   },
   "recent": {
     "sectionTitle": "Recent measurements",

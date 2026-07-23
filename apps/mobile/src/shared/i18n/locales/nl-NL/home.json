@@ -22,12 +22,13 @@
     "action": "Kies experiment"
   },
   "device": {
-    "connectedSub": "Batterij {{battery}}%",
-    "connectedSubWithFirmware": "Batterij {{battery}}% · Firmware {{firmware}}",
+    "battery": "Batterij {{battery}}%",
+    "connectedViaBluetooth": "Verbonden via Bluetooth",
+    "connectedViaCable": "Verbonden via kabel",
     "disconnectedTitle": "Geen apparaat verbonden",
-    "disconnectedSub": "Verbind een MultispeQ om te beginnen met meten",
+    "disconnectedSub": "Verbind een apparaat om te beginnen met meten",
     "reconnectTitle": "Verbind {{name}} opnieuw",
-    "reconnectSub": "Tik om je laatste MultispeQ opnieuw te verbinden"
+    "reconnectSub": "Tik om je laatste apparaat opnieuw te verbinden"
   },
   "recent": {
     "sectionTitle": "Recente metingen",

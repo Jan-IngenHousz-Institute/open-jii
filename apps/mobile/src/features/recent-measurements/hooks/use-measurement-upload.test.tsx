@@ -19,7 +19,7 @@ vi.mock("~/shared/composition/upload", () => ({
 }));
 // Keeps the environment store out; the template shape is all that matters.
 vi.mock("~/shared/measurements/measurement-topic", () => ({
-  getMultispeqMqttTopic: ({
+  getMeasurementMqttTopic: ({
     experimentId,
     protocolId,
   }: {
