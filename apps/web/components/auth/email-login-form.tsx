@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { cancelPasskeyCeremony } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -84,6 +85,7 @@ export function EmailLoginForm({
       .catch(() => undefined);
     return () => {
       cancelled = true;
+      cancelPasskeyCeremony();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
@@ -123,6 +125,9 @@ export function EmailLoginForm({
         return;
       }
 
+      // The user chose the OTP path, so end conditional WebAuthn before the
+      // browser can carry its credential picker into the platform route.
+      cancelPasskeyCeremony();
       setEmail(data.email);
       setShowOTPInput(true);
       onShowOTPChange?.(true);

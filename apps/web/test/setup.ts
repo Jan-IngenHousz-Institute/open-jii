@@ -207,6 +207,7 @@ vi.mock("~/app/actions/revalidate", () => ({
 }));
 
 vi.mock("@repo/auth/client", () => ({
+  cancelPasskeyCeremony: vi.fn(),
   authClient: {
     signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
     emailOtp: {

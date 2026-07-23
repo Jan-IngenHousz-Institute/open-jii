@@ -12,6 +12,8 @@ import {
   profiles,
   users,
   accounts,
+  apiKeys,
+  passkeys,
   sessions,
   // authenticators table removed - Better Auth uses accounts table
   experiments,
@@ -224,7 +226,10 @@ export class UserRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
-        // 1. Delete OAuth accounts and sessions
+        // 1. Revoke every credential and browser session. The user row is kept
+        //    for referential integrity, so its credential FKs never cascade.
+        await tx.delete(apiKeys).where(eq(apiKeys.referenceId, id));
+        await tx.delete(passkeys).where(eq(passkeys.userId, id));
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
 

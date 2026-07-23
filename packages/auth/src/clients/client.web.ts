@@ -1,5 +1,6 @@
 import { apiKeyClient } from "@better-auth/api-key/client";
 import { passkeyClient } from "@better-auth/passkey/client";
+import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
   emailOTPClient,
   genericOAuthClient,
@@ -28,5 +29,10 @@ export const authClient = createAuthClient({
 
 // Export useSession hook from Better Auth React
 export const { useSession } = authClient;
+
+/** Cancel an active WebAuthn ceremony before client-side navigation changes context. */
+export function cancelPasskeyCeremony() {
+  WebAuthnAbortService.cancelCeremony();
+}
 
 export type AuthClient = typeof authClient;
