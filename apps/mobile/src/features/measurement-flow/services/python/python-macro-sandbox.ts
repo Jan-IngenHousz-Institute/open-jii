@@ -1,16 +1,8 @@
 /**
- * Inline HTML for a hidden WebView that runs Python macros via Pyodide.
- * Listens for postMessage({ requestId, code, json, ctx }), wraps code in a function
- * that receives json and ctx, runs it, and posts back { requestId, result } or { requestId, error }.
+ * Inline listener for the hidden WebView that runs Python macros via Pyodide.
+ * Exported separately so tests can execute the same source without parsing HTML.
  */
-export const pythonMacroSandboxHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"/><title>Python Macro</title></head>
-<body>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
-<script>
-(function() {
+export const pythonMacroSandboxScript = `(function() {
   var pyodideReady = false;
   var pending = [];
 
@@ -82,7 +74,21 @@ export const pythonMacroSandboxHtml = `
     });
     pending.length = 0;
   });
-})();
+})();`;
+
+/**
+ * Inline HTML for a hidden WebView that runs Python macros via Pyodide.
+ * Listens for postMessage({ requestId, code, json, ctx }), wraps code in a function
+ * that receives json and ctx, runs it, and posts back { requestId, result } or { requestId, error }.
+ */
+export const pythonMacroSandboxHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/><title>Python Macro</title></head>
+<body>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+<script>
+${pythonMacroSandboxScript}
 </script>
 </body>
 </html>

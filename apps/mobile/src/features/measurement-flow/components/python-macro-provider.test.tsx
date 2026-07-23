@@ -2,7 +2,10 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 import { Text } from "react-native";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pythonMacroSandboxHtml } from "~/features/measurement-flow/services/python/python-macro-sandbox";
+import {
+  pythonMacroSandboxHtml,
+  pythonMacroSandboxScript,
+} from "~/features/measurement-flow/services/python/python-macro-sandbox";
 import {
   getPythonMacroRunner,
   registerPythonMacroRunner,
@@ -30,15 +33,6 @@ vi.mock("~/shared/observability/logger", () => ({
     error: () => undefined,
   }),
 }));
-
-function inlineSandboxScript(): string {
-  const scripts = Array.from(
-    pythonMacroSandboxHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi),
-  );
-  const source = scripts.at(-1)?.[1];
-  if (!source) throw new Error("Python sandbox inline script not found");
-  return source;
-}
 
 function providerMessageFromInjection(source: string): string {
   const prefix = "window.postMessage(";
@@ -86,7 +80,7 @@ function bootSandbox(onMessage: (data: string) => void) {
     "ReactNativeWebView",
     "loadPyodide",
     "pyodide",
-    inlineSandboxScript(),
+    pythonMacroSandboxScript,
   );
   start(windowStub, nativeBridge, () => Promise.resolve(pyodide), pyodide);
 
@@ -106,6 +100,10 @@ afterEach(() => {
 });
 
 describe("PythonMacroProvider falsy input boundary", () => {
+  it("embeds the exported listener in the WebView HTML", () => {
+    expect(pythonMacroSandboxHtml).toContain(`<script>\n${pythonMacroSandboxScript}\n</script>`);
+  });
+
   it.each([
     ["zero", 0],
     ["false", false],
