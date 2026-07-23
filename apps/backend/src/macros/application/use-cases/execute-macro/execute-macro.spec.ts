@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 
 import {
   assertFailure,
@@ -273,11 +274,11 @@ describe("ExecuteMacroUseCase", () => {
 
       const findScriptSpy = vi.spyOn(macroRepository, "findScriptById");
 
-      // First call — should hit repository (which handles caching internally)
+      // First call: should hit repository (which handles caching internally)
       await useCase.execute(macro.id, { data: {} });
       expect(findScriptSpy).toHaveBeenCalledTimes(1);
 
-      // Second call — repository called again, but internal cache serves the data
+      // Second call: repository called again, but internal cache serves the data
       await useCase.execute(macro.id, { data: {} });
       expect(findScriptSpy).toHaveBeenCalledTimes(2);
     });
@@ -304,6 +305,147 @@ describe("ExecuteMacroUseCase", () => {
       await useCase.execute(macro.id, { data: {} });
 
       expect(findScriptSpy).toHaveBeenCalledWith(macro.id);
+    });
+  });
+
+  describe("canonical input normalization", () => {
+    function mockOkLambda() {
+      return vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: [{ id: "single", success: true, output: { ok: true } }],
+          },
+        }),
+      );
+    }
+
+    it("unwraps a { sample: [measurement] } envelope and marks the event canonical", async () => {
+      const macro = await createTestMacro();
+      const measurement = { phi2: 0.8, trace_1: [1, 2, 3] };
+      const invokeSpy = mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      await useCase.execute(macro.id, { data: { sample: [measurement] } });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          input_contract: "canonical-measurement-v1",
+          items: [expect.objectContaining({ id: "single", data: measurement })],
+        }),
+      );
+    });
+
+    it("unwraps a top-level array to its first element", async () => {
+      const macro = await createTestMacro();
+      const measurement = { phi2: 0.5 };
+      const invokeSpy = mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      await useCase.execute(macro.id, { data: [measurement, { phi2: 0.1 }] });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [expect.objectContaining({ data: measurement })],
+        }),
+      );
+    });
+
+    it("passes a direct measurement object through unchanged", async () => {
+      const macro = await createTestMacro();
+      const measurement = { phi2: 0.9, note: "direct" };
+      const invokeSpy = mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      await useCase.execute(macro.id, { data: measurement });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [expect.objectContaining({ data: measurement })],
+        }),
+      );
+    });
+
+    it("supports a scalar first element from a top-level array", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      await useCase.execute(macro.id, { data: [42, 43] });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [expect.objectContaining({ data: 42 })],
+        }),
+      );
+    });
+
+    it("returns an empty-envelope failure without invoking Lambda for { sample: [] }", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockOkLambda();
+      const getFnSpy = vi
+        .spyOn(lambdaPort, "getFunctionNameForLanguage")
+        .mockReturnValue("test-fn");
+
+      const result = await useCase.execute(macro.id, { data: { sample: [] } });
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(false);
+      expect(result.value.error).toContain("empty-envelope");
+      expect(invokeSpy).not.toHaveBeenCalled();
+      expect(getFnSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty-envelope failure without invoking Lambda for a top-level []", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockOkLambda();
+      const getFnSpy = vi
+        .spyOn(lambdaPort, "getFunctionNameForLanguage")
+        .mockReturnValue("test-fn");
+
+      const result = await useCase.execute(macro.id, { data: [] });
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(false);
+      expect(result.value.error).toContain("empty-envelope");
+      expect(invokeSpy).not.toHaveBeenCalled();
+      expect(getFnSpy).not.toHaveBeenCalled();
+    });
+
+    it("logs a content-free warning when additional entries are discarded", async () => {
+      const macro = await createTestMacro();
+      const warnSpy = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const measurement = { phi2: 0.8, secretField: "do-not-log" };
+      await useCase.execute(macro.id, {
+        data: { sample: [measurement, { phi2: 0.1 }, { phi2: 0.2 }] },
+      });
+
+      const warnCall = warnSpy.mock.calls.find(
+        ([arg]) =>
+          typeof arg === "object" &&
+          arg !== null &&
+          (arg as { warning?: string }).warning === "additional-items-discarded",
+      );
+      expect(warnCall).toBeDefined();
+      expect(warnCall?.[0]).toMatchObject({
+        warning: "additional-items-discarded",
+        source: "sample-envelope",
+        sourceCount: 3,
+        discardedCount: 2,
+        macroId: macro.id,
+      });
+
+      const serialized = JSON.stringify(warnSpy.mock.calls);
+      expect(serialized).not.toContain("secretField");
+      expect(serialized).not.toContain("phi2");
     });
   });
 });

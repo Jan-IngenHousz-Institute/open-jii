@@ -450,7 +450,8 @@ describe("useWorkbookExecution", () => {
         id: "proto-base",
         payload: { protocolId: crypto.randomUUID(), version: 1, name: "Baseline" },
       });
-      const output = createOutputCell({ producedBy: "proto-base", data: { value: 0.8 } });
+      const raw = { sample: [{ value: 0.8 }] };
+      const output = createOutputCell({ producedBy: "proto-base", data: raw });
       const question = createQuestionCell({
         id: "q-note",
         name: "Note",
@@ -459,11 +460,10 @@ describe("useWorkbookExecution", () => {
       });
       const macro = createMacroCell();
 
-      let capturedContext: Record<string, unknown> | undefined;
+      let capturedBody: { data?: unknown; context?: Record<string, unknown> } | undefined;
       server.use(
         http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
-          const body = (await request.json()) as { context?: Record<string, unknown> };
-          capturedContext = body.context;
+          capturedBody = (await request.json()) as typeof capturedBody;
           return HttpResponse.json({
             macro_id: macro.payload.macroId,
             success: true,
@@ -475,9 +475,10 @@ describe("useWorkbookExecution", () => {
       const { result } = renderExecution([proto, output, question, macro]);
       await act(() => result.current.runCell(macro.id));
 
-      expect(capturedContext?.baseline).toEqual({ value: 0.8 });
-      expect(capturedContext?.note).toEqual({ answer: "ok" });
-      expect(capturedContext?.$device).toMatchObject({ family: "multispeq", index: 0 });
+      expect(capturedBody?.data).toEqual(raw);
+      expect(capturedBody?.context?.baseline).toEqual({ value: 0.8 });
+      expect(capturedBody?.context?.note).toEqual({ answer: "ok" });
+      expect(capturedBody?.context?.$device).toMatchObject({ family: "multispeq", index: 0 });
     });
 
     it("runs a ctx-only macro without a preceding measurement", async () => {
@@ -510,6 +511,36 @@ describe("useWorkbookExecution", () => {
       expect(findOutput(updated, macro.id)?.data).toEqual({ threshold: 42 });
     });
 
+    it("fails an empty envelope through the macro error path without invoking the macro", async () => {
+      const proto = createProtocolCell();
+      const output = createOutputCell({
+        producedBy: proto.id,
+        data: { sample: [] },
+      });
+      const macro = createMacroCell();
+      const executeRequest = vi.fn();
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, () => {
+          executeRequest();
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { shouldNotRun: true },
+          });
+        }),
+      );
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(executeRequest).not.toHaveBeenCalled();
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, macro.id)?.messages).toEqual([
+        expect.stringContaining("empty-envelope"),
+      ]);
+      expect(output.data).toEqual({ sample: [] });
+    });
+
     it("scopes each per-device macro run's ctx to that device's results", async () => {
       const proto = createProtocolCell({
         id: "proto-scan",
@@ -517,10 +548,18 @@ describe("useWorkbookExecution", () => {
       });
       const output = createOutputCell({
         producedBy: "proto-scan",
-        data: { device_id: "mock-1" },
+        data: { sample: [{ device_id: "mock-1" }] },
         deviceResults: [
-          { deviceId: "dev-1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1" } },
-          { deviceId: "dev-2", deviceLabel: "Mock MultispeQ 2", data: { device_id: "mock-2" } },
+          {
+            deviceId: "dev-1",
+            deviceLabel: "Mock MultispeQ 1",
+            data: { sample: [{ device_id: "mock-1" }] },
+          },
+          {
+            deviceId: "dev-2",
+            deviceLabel: "Mock MultispeQ 2",
+            data: { sample: [{ device_id: "mock-2" }] },
+          },
         ],
       });
       const macro = createMacroCell();
@@ -608,6 +647,57 @@ describe("useWorkbookExecution", () => {
       ]);
       expect(macroOutput?.messages).toEqual([
         "Mock MultispeQ 3: No measurement data from this device",
+      ]);
+    });
+
+    it("fails only an empty-envelope device and still runs valid device inputs", async () => {
+      const proto = createProtocolCell({
+        id: "proto-scan",
+        payload: { protocolId: crypto.randomUUID(), version: 1, name: "Scan" },
+      });
+      const empty = { sample: [] };
+      const valid = { sample: [{ phi2: 0.8 }] };
+      const output = createOutputCell({
+        producedBy: proto.id,
+        data: empty,
+        deviceResults: [
+          { deviceId: "dev-empty", deviceLabel: "Empty device", data: empty },
+          { deviceId: "dev-valid", deviceLabel: "Valid device", data: valid },
+        ],
+      });
+      const macro = createMacroCell();
+      const requests: { data?: unknown; context?: Record<string, unknown> }[] = [];
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          requests.push(
+            (await request.json()) as { data?: unknown; context?: Record<string, unknown> },
+          );
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { analyzed: true },
+          });
+        }),
+      );
+
+      const { result, onCellsChange } = renderExecution([proto, output, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(requests).toEqual([{ data: valid, context: { scan: { phi2: 0.8 } } }]);
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const macroOutput = findOutput(updated, macro.id);
+      expect(macroOutput?.data).toEqual({ analyzed: true });
+      expect(macroOutput?.deviceResults).toEqual([
+        {
+          deviceId: "dev-empty",
+          deviceLabel: "Empty device",
+          error: "Output data normalization failed: empty-envelope",
+        },
+        {
+          deviceId: "dev-valid",
+          deviceLabel: "Valid device",
+          data: { analyzed: true },
+        },
       ]);
     });
 
@@ -771,6 +861,55 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.messages).toEqual(
         expect.arrayContaining([expect.stringContaining("Yes path")]),
       );
+    });
+
+    it("fails an empty upstream envelope instead of silently taking another branch", async () => {
+      const proto = createProtocolCell({ id: "proto-empty" });
+      const output = createOutputCell({ producedBy: proto.id, data: { sample: [] } });
+      const branch = createBranchCell({
+        id: "branch-empty",
+        paths: [
+          {
+            id: "path-measured",
+            label: "Measured",
+            color: "#22c55e",
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: proto.id,
+                field: "phi2",
+                operator: "gt",
+                value: "0.5",
+              },
+            ],
+          },
+          {
+            id: "path-default",
+            label: "Default",
+            color: "#0ea5e9",
+            conditions: [
+              {
+                id: "cond-2",
+                sourceCellId: proto.id,
+                field: "phi2",
+                operator: "lte",
+                value: "0.5",
+              },
+            ],
+          },
+        ],
+        defaultPathId: "path-default",
+      });
+
+      const { result, onCellsChange } = renderExecution([proto, output, branch]);
+      await act(() => result.current.runCell(branch.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, branch.id)?.messages).toEqual([
+        expect.stringContaining("empty-envelope"),
+      ]);
+      expect(updated.find((cell) => cell.id === branch.id)).not.toHaveProperty("evaluatedPathId");
+      expect(output.data).toEqual({ sample: [] });
     });
 
     function deviceBranch(targets: { multispeq: string; other: string }) {

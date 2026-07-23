@@ -7,6 +7,24 @@ import { gunzipSync } from "zlib";
 
 const INVOKE_PATH = "/2015-03-31/functions/function/invocations";
 
+// Private backend-to-sandbox event marker versioning the canonical data contract.
+export const INPUT_CONTRACT = "canonical-measurement-v1";
+
+/**
+ * Normalize the contract marker on an outbound payload: an undefined marker
+ * defaults to the canonical value (exercises marked events); an explicit null
+ * omits the marker entirely (exercises unmarked events). Shared so callers do
+ * not construct a parallel marker path.
+ */
+export function applyInputContract<T extends { input_contract?: string | null }>(payload: T): T {
+  if (payload.input_contract === undefined) {
+    payload.input_contract = INPUT_CONTRACT;
+  } else if (payload.input_contract === null) {
+    delete payload.input_contract;
+  }
+  return payload;
+}
+
 /** Port mapping per language (from .env.test, falling back to dev defaults) */
 export const PORTS: Record<string, number> = {
   python: Number(process.env.PYTHON_PORT ?? 9001),
@@ -38,6 +56,9 @@ export interface TestCase {
   timeout: number;
   protocol_id: string;
   expect: TestExpectation;
+  // Contract marker sent to the handler. Undefined -> defaults to the canonical
+  // marker (exercises marked events); explicit null -> sent unmarked.
+  input_contract?: string | null;
 }
 
 /** A single result item returned by the Lambda. */
@@ -76,7 +97,10 @@ export async function invokeLambda(
   testCase: TestCase,
   options?: { timeoutMs?: number },
 ): Promise<{ response: LambdaResponse; status: number; durationMs: number }> {
-  const { name: _, language, expect: _expect, ...payload } = testCase;
+  const { name: _, language, expect: _expect, ...rest } = testCase;
+
+  // Exercise marked events by default; a test may send null to omit the marker.
+  const payload = applyInputContract(rest);
 
   // Decrypt script
   const aesKey = Buffer.from(process.env.MACRO_SB_TEST_KEY ?? "", "base64");

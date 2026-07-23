@@ -22,7 +22,10 @@ import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { CommentModal } from "~/shared/ui/measurement/comment-modal";
 import { MeasurementQuestionsModal } from "~/shared/ui/measurement/measurement-questions-modal";
 
-import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
+import {
+  buildCellNamespace,
+  isOutputDataNormalizationError,
+} from "@repo/api/transforms/build-cell-namespace";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
 
 import { hydrateCells } from "../utils/hydrate-cells";
@@ -111,7 +114,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
 
   // One device-scoped ctx per rendered result, including that device's
   // upstream measurement and `$device` identity.
-  const macroCtxs = useMemo<Record<string, unknown>[]>(() => {
+  const macroContexts = useMemo<{ ctx: Record<string, unknown>; inputError?: Error }[]>(() => {
     const entries = Array.from(executors.values());
     return results.map(({ device }, index) => {
       const entry = device ? executors.get(device.id) : entries[index];
@@ -123,12 +126,28 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
             ? { family: "multispeq", name: entry.device.name, deviceId: entry.device.id }
             : undefined);
       const selfIndex = hydratedCells.findIndex((c) => c.id === nodeId);
-      return buildCellNamespace(hydratedCells, selfIndex >= 0 ? selfIndex : undefined, {
-        deviceId: device?.id,
-        device: identity ? toDeviceContext(identity, index) : undefined,
-      }).ctx;
+      try {
+        const namespace = buildCellNamespace(
+          hydratedCells,
+          selfIndex >= 0 ? selfIndex : undefined,
+          {
+            deviceId: device?.id,
+            device: identity ? toDeviceContext(identity, index) : undefined,
+          },
+        );
+        return { ctx: namespace.ctx };
+      } catch (error) {
+        if (!isOutputDataNormalizationError(error)) throw error;
+        log.error("macro context normalization failed", {
+          error: error.code,
+          source: error.source,
+          device_id: device?.id,
+        });
+        return { ctx: {}, inputError: error };
+      }
     });
   }, [executors, results, hydratedCells, nodeId]);
+  const macroCtxs = macroContexts.map(({ ctx }) => ctx);
 
   // Persist the Primary device's macro output so downstream branches/macros can
   // read it. Compare-before-set: the store write rebuilds ctx and re-runs this
@@ -270,7 +289,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
                 isLoading={false}
                 macroId={content.macroId}
                 scanResult={result}
-                ctx={macroCtxs[index]}
+                ctx={macroContexts[index]?.ctx}
+                inputError={macroContexts[index]?.inputError}
                 onProcessed={index === 0 ? handleProcessed : undefined}
                 onCommentPress={() => setCommentModalVisible(true)}
               />
@@ -282,7 +302,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
             isLoading={false}
             macroId={content.macroId}
             scanResult={scanResult}
-            ctx={macroCtxs[0]}
+            ctx={macroContexts[0]?.ctx}
+            inputError={macroContexts[0]?.inputError}
             onProcessed={handleProcessed}
             onCommentPress={() => setCommentModalVisible(true)}
           />

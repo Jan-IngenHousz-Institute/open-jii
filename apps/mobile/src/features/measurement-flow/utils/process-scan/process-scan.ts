@@ -2,6 +2,8 @@ import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
 import { createLogger } from "~/shared/observability/logger";
 
+import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
+
 import mathLibResource from "./math.lib.js.txt";
 import { getPythonMacroRunner } from "./python-macro-runner";
 
@@ -38,7 +40,7 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-async function executeMacro(code: string, json: object, ctx: object): Promise<MacroOutput> {
+async function executeMacro(code: string, json: unknown, ctx: object): Promise<MacroOutput> {
   const mathLibSource = await mathLibSourcePromise;
   // Wrap the macro in an IIFE that receives `json` (nearest input) and `ctx`
   // (upstream outputs by name), isolating its scope from mathLib internals.
@@ -61,59 +63,93 @@ export interface MacroInput {
   language?: string;
 }
 
+export class MacroInputNormalizationError extends Error {
+  constructor(
+    public readonly code: "empty-envelope" | "non-canonical-input",
+    public readonly source: "sample-envelope" | "top-level-array",
+  ) {
+    super(`Macro input rejected: ${code}`);
+    this.name = "MacroInputNormalizationError";
+  }
+}
+
+function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+// The shared normalizer deliberately unwraps one level. Local runners enforce
+// its postcondition so nested residue can never become user-code input.
+function isRecognizedEnvelope(value: unknown): boolean {
+  if (Array.isArray(value)) return true;
+  return (
+    isPlainJsonObject(value) &&
+    Object.prototype.hasOwnProperty.call(value, "sample") &&
+    (Array.isArray(value.sample) || isPlainJsonObject(value.sample))
+  );
+}
+
 export async function applyMacro(
-  result: object,
+  result: unknown,
   macro: MacroInput | string,
   ctx: Record<string, unknown> = {},
 ): Promise<MacroOutput[]> {
-  if (!("sample" in result)) {
-    throw new Error("Result does not contain sample data");
+  const normalized = normalizeMacroInput(result);
+  if (!normalized.ok) {
+    log.error("input normalization failed", {
+      error: normalized.error,
+      source: normalized.source,
+      sourceCount: normalized.sourceCount,
+    });
+    throw new MacroInputNormalizationError(normalized.error, normalized.source);
   }
 
-  const { sample } = result;
-
-  if (!sample) {
-    throw new Error("Sample data is missing");
+  if (isRecognizedEnvelope(normalized.value)) {
+    log.error("input normalization left envelope residue", {
+      error: "non-canonical-input",
+      source: normalized.source,
+    });
+    const source = Array.isArray(normalized.value) ? "top-level-array" : "sample-envelope";
+    throw new MacroInputNormalizationError("non-canonical-input", source);
   }
 
-  const samples = Array.isArray(sample) ? sample : [sample];
+  if (normalized.warning) {
+    log.warn("input normalization warning", {
+      warning: normalized.warning,
+      source: normalized.source,
+      sourceCount: normalized.sourceCount,
+      discardedCount: normalized.discardedCount,
+    });
+  }
 
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
   const code = atob(macroInput.code);
   const language = (macroInput.language ?? "javascript").toLowerCase();
 
-  log.debug("apply", { language, samples: samples.length, code_bytes: code.length });
+  log.debug("apply", { language, source: normalized.source, code_bytes: code.length });
 
   if (language === "python") {
     const runPython = getPythonMacroRunner();
     if (!runPython) {
       throw new Error("Python macro runner not ready. Ensure PythonMacroProvider is mounted.");
     }
-    const outputs: MacroOutput[] = [];
-    for (let i = 0; i < samples.length; i++) {
-      const sample = samples[i];
-      try {
-        const out = await runPython(code, structuredClone(sample), ctx);
-        log.debug("(Python) sample ok", { i });
-        outputs.push(out);
-      } catch (err) {
-        log.error("(Python) sample failed", { i, err: (err as Error)?.message });
-        throw err;
-      }
-    }
-    return outputs;
-  }
-
-  const outputs: MacroOutput[] = [];
-  for (let i = 0; i < samples.length; i++) {
     try {
-      const out = await executeMacro(code, samples[i], ctx);
-      outputs.push(out);
+      const out = await runPython(code, structuredClone(normalized.value), ctx);
+      log.debug("(Python) measurement ok");
+      return [out];
     } catch (err) {
-      log.error("(JS) sample failed", { i, err: (err as Error)?.message });
+      log.error("(Python) measurement failed", { err: (err as Error)?.message });
       throw err;
     }
   }
-  return outputs;
+
+  try {
+    const out = await executeMacro(code, normalized.value, ctx);
+    return [out];
+  } catch (err) {
+    log.error("(JS) measurement failed", { err: (err as Error)?.message });
+    throw err;
+  }
 }
