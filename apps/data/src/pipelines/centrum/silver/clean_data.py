@@ -2,7 +2,7 @@
 # DBTITLE 1,Silver Layer - Clean Data
 # Silver: clean and standardize sensor data, decompress samples, parse macros /
 # questions / annotations, apply legacy macro-id remap, and union with imported
-# data.
+# data. Large-IoT payloads land via a separate append flow into the same table.
 
 # COMMAND ----------
 import dlt
@@ -10,7 +10,11 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType
 
 from openjii import decompress_sample
-from openjii.centrum import RAW_IMPORTED_DATA_TABLE, question_schema
+from openjii.centrum import (
+    RAW_IMPORTED_DATA_TABLE,
+    RAW_LARGE_DATA_TABLE,
+    question_schema,
+)
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
@@ -19,7 +23,7 @@ from openjii.centrum.runtime import (
 
 # COMMAND ----------
 
-@dlt.table(
+dlt.create_streaming_table(
     name=SILVER_TABLE,
     comment="Silver layer: Cleaned and standardized sensor data",
     table_properties={
@@ -28,10 +32,24 @@ from openjii.centrum.runtime import (
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true"
-    }
+    },
+    expect_all={"valid_device_id": "device_id IS NOT NULL"},
+    expect_all_or_drop={"valid_timestamp": "timestamp IS NOT NULL"},
 )
-@dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect("valid_device_id", "device_id IS NOT NULL")
+
+
+def _remap_macro_id(id_col):
+    """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
+    result = id_col
+    for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
+        result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
+    return result
+
+
+# The flow keeps the name "clean_data" so the original two-source streaming
+# checkpoint stays valid; large-IoT arrives via a separate append flow below,
+# added without a full refresh.
+@dlt.append_flow(target=SILVER_TABLE, name="clean_data")
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
@@ -77,13 +95,6 @@ def clean_data():
             F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
         )
     )
-
-    def _remap_macro_id(id_col):
-        """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
-        result = id_col
-        for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
-            result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
-        return result
 
     df = df.withColumn(
         "macros",
@@ -282,3 +293,110 @@ def clean_data():
 
     # Union bronze-sourced data with imported data
     return bronze_clean.unionByName(imported_clean)
+
+# COMMAND ----------
+
+# Large IoT payloads (>128 KB) uploaded to S3 via pre-signed URL. Same payload
+# shape as the MQTT/Kinesis path minus the topic envelope. A separate append
+# flow so the source can be added without a full refresh of clean_data.
+@dlt.append_flow(target=SILVER_TABLE, name="clean_data_large_iot")
+def clean_data_large_iot():
+    """Silver append flow: clean and standardize large-IoT payloads."""
+    large_iot_df = dlt.read_stream(RAW_LARGE_DATA_TABLE)
+
+    large_iot_clean = (
+        large_iot_df
+        .withColumn(
+            "sample",
+            decompress_sample(F.col("sample"), F.col("_sample_encoding"))
+        )
+        .withColumn(
+            "macros",
+            F.when(
+                F.col("macros").isNotNull(),
+                F.transform(
+                    F.col("macros"),
+                    lambda m: F.struct(
+                        _remap_macro_id(m["id"]).alias("id"),
+                        m["name"].alias("name"),
+                        m["filename"].alias("filename")
+                    )
+                )
+            ).otherwise(F.array())
+        )
+        .withColumn("questions", F.coalesce(F.col("questions"), F.array()))
+        .withColumn("annotations", F.coalesce(F.col("annotations"), F.array()))
+        .withColumn("processed_timestamp", F.current_timestamp())
+        .withColumn("date", F.to_date("timestamp"))
+        .withColumn("hour", F.hour("timestamp"))
+        .withColumn(
+            "ingest_latency_ms",
+            F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
+        )
+        .withColumn(
+            "id",
+            F.abs(
+                F.hash(
+                    F.col("experiment_id"),
+                    F.col("device_id"),
+                    F.col("timestamp"),
+                    F.col("sample"),
+                )
+            )
+        )
+        # Same annotation ID/timestamp population as the bronze path: mobile
+        # payloads carry only type/content.
+        .withColumn(
+            "annotations",
+            F.expr("""
+                transform(annotations, a -> struct(
+                    coalesce(a.id, uuid()) as id,
+                    coalesce(a.rowId, cast(id as string)) as rowId,
+                    a.type as type,
+                    a.content as content,
+                    a.createdBy as createdBy,
+                    a.createdByName as createdByName,
+                    coalesce(a.createdAt, current_timestamp()) as createdAt,
+                    coalesce(a.updatedAt, current_timestamp()) as updatedAt
+                ))
+            """)
+        )
+        .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
+        # No MQTT topic, so no protocol to extract.
+        .withColumn("protocol_id", F.lit(None).cast("string"))
+        # Pre-signed S3 uploads never touch the broker, so there is no
+        # clientid()-derived identity. The payload's device_id is self-reported
+        # and must not be promoted to the trusted client_id.
+        .withColumn("client_id", F.lit(None).cast("string"))
+        .select(
+            "id",
+            "device_id",
+            "client_id",
+            "device_name",
+            "device_version",
+            "device_battery",
+            "device_firmware",
+            "sample",
+            "output",
+            "macros",
+            "questions",
+            "annotations",
+            "user_id",
+            "timezone",
+            "experiment_id",
+            "protocol_id",
+            "workbook_run_id",
+            "workbook_version_id",
+            "macro_context",
+            "latitude",
+            "longitude",
+            "timestamp",
+            "date",
+            "hour",
+            "ingest_latency_ms",
+            "processed_timestamp",
+            "skip_macro_processing"
+        )
+    )
+
+    return large_iot_clean

@@ -18,7 +18,7 @@ _spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
 
 
 def _required(key: str) -> str:
-    """Read a required Spark conf key. Raise loudly if it isn't configured —
+    """Read a required Spark conf key. Raise loudly if it isn't configured:
     the pipeline cannot run without these and an unset value silently
     coalescing to None would surface as confusing errors deep inside DLT."""
     value = _spark.conf.get(key, None)
@@ -45,6 +45,9 @@ KINESIS_STREAM_NAME: str = _required("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH: str = _required("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME: str = _required("SERVICE_CREDENTIAL_NAME")
 MONITORING_SLACK_CHANNEL: str = _required("MONITORING_SLACK_CHANNEL")
+
+# S3 prefix holding large IoT payloads (>128 KB) uploaded via pre-signed URL.
+LARGE_IOT_S3_PATH: str = _required("LARGE_IOT_S3_PATH")
 
 # Path to the legacy-macro-id-to-UUID map JSON in the centrum data-legacy volume.
 # Some early data was published before macros had UUIDs; the silver layer

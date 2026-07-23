@@ -29,6 +29,7 @@ ENRICHED_UPLOADED_DATA_VIEW = "enriched_experiment_uploaded_data"
 # Streaming bronze (non-Kinesis sources)
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
 RAW_UPLOADED_DATA_TABLE = "raw_uploaded_data"
+RAW_LARGE_DATA_TABLE = "raw_large_data"
 
 # DLT mirrors of backend-managed tables
 ANNOTATIONS_SOURCE_TABLE = "experiment_annotations_source"
