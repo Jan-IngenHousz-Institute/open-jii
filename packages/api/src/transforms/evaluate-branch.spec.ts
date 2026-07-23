@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 
 import type { BranchCell, WorkbookCell } from "../domains/workbook/workbook-cells.schema";
@@ -9,6 +11,33 @@ import {
   validateBranchCell,
   validateDeviceBranch,
 } from "./evaluate-branch";
+import type { NormalizeMacroInputResult } from "./normalize-macro-input";
+
+interface NormalizationFixture {
+  cases: {
+    name: string;
+    input: unknown;
+    expected: NormalizeMacroInputResult;
+  }[];
+}
+
+const normalizationFixtures = JSON.parse(
+  readFileSync(resolve(__dirname, "../../fixtures/macro-input-normalization.json"), "utf8"),
+) as NormalizationFixture;
+const branchFixtureCases = normalizationFixtures.cases.flatMap(({ name, input, expected }) => {
+  if (
+    !expected.ok ||
+    expected.value === null ||
+    typeof expected.value !== "object" ||
+    Array.isArray(expected.value)
+  ) {
+    return [];
+  }
+  const value = (expected.value as Record<string, unknown>).value;
+  return typeof value === "number" || typeof value === "string"
+    ? [{ name, input, expectedValue: value }]
+    : [];
+});
 
 function makeOutputCell(id: string, producedBy: string, data: unknown): WorkbookCell {
   return {
@@ -87,6 +116,53 @@ describe("resolveConditionValue", () => {
     ];
     expect(resolveConditionValue(cells, "p1", "phi2")).toBe(0.75);
     expect(resolveConditionValue(cells, "p1", "spad")).toBe(30);
+  });
+
+  it("reads fields from the reserved sample envelope", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+      },
+      makeOutputCell("o1", "p1", { sample: [{ phi2: 0.8 }] }),
+    ];
+
+    expect(resolveConditionValue(cells, "p1", "phi2")).toBe(0.8);
+  });
+
+  it.each(branchFixtureCases)(
+    "reads the canonical value field for shared fixture $name",
+    ({ input, expectedValue }) => {
+      const cells: WorkbookCell[] = [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        },
+        makeOutputCell("o1", "p1", input),
+      ];
+
+      expect(resolveConditionValue(cells, "p1", "value")).toBe(expectedValue);
+    },
+  );
+
+  it("propagates an empty-envelope resolver failure", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+      },
+      makeOutputCell("o1", "p1", { sample: [] }),
+    ];
+
+    expect(() => resolveConditionValue(cells, "p1", "phi2")).toThrowError(
+      expect.objectContaining({ code: "empty-envelope", source: "sample-envelope" }),
+    );
   });
 
   it("returns undefined if output has no data", () => {

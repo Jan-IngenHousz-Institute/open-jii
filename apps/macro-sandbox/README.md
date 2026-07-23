@@ -52,8 +52,14 @@ The per-item timeout prevents a single bad item from consuming the entire handle
 
 ```jsonc
 {
+  // Private backend-to-sandbox contract marker. Versions the event schema; it is
+  // never stored on a macro or Workbook snapshot.
+  "input_contract": "canonical-measurement-v1",
   "script": "<base64-encoded script>",
   "items": [
+    // `data` is one canonical measurement supplied by the backend. It is not a
+    // { sample: [...] } envelope or a top-level array; the backend normalizer
+    // (packages/api normalizeMacroInput) has already projected it.
     { "id": "sample-1", "data": { "trace_1": [45.2, 46.8, 44.1] } },
     { "id": "sample-2", "data": { "trace_1": [38.1, 39.5, 37.8] } },
   ],
@@ -61,6 +67,40 @@ The per-item timeout prevents a single bad item from consuming the entire handle
   "protocol_id": "proto-123",
 }
 ```
+
+### Contract guard
+
+Each handler runs a boundary guard (`lib/guards/guard.{js,py,R}`) that validates
+`input_contract` and classifies every item's `data` as a postcondition check. It
+does not re-shape values; the backend owns the single shaping algorithm.
+
+| Item `data`                                             | Classification           | Item error (enforce)  |
+| ------------------------------------------------------- | ------------------------ | --------------------- |
+| direct object/scalar, `{}`, object with scalar `sample` | `canonical`              | none                  |
+| `[]`, `{ "sample": [] }`                                | `empty-envelope`         | `empty-envelope`      |
+| `[m, ...]`, `{ "sample": [m] }`, `{ "sample": {} }`     | `non-canonical-envelope` | `non-canonical-input` |
+
+Modes are selected by the `MACRO_GUARD_MODE` env var:
+
+- **`shadow`** (default): classify and log content-free telemetry to stderr, but
+  run every item exactly as before. No functional change.
+- **`enforce`**: a missing/unsupported marker fails the whole invocation
+  (`unsupported-input-contract`); each non-canonical item fails on its own
+  (`{ id, success: false, error }`) while valid siblings still run, results
+  merged back in request order.
+
+Shadow telemetry is a single stderr line, e.g.
+`[guard] {"event":"macro-guard","mode":"shadow","markerPresent":true,"markerValid":true,"counts":{},...}`.
+It carries bounded facts only (marker presence/validity, counts, item IDs) and
+never the caller-supplied marker value, measurement contents, or macro source.
+The R runtime bootstrap forwards handler stderr to the Lambda log stream on every
+invocation so this line is visible in R as well as Python and JavaScript.
+
+The three guards are held to one serialized conformance corpus
+(`test/conformance/corpus.json`) so Python, JavaScript, and R produce identical
+item IDs, order, classifications, and error codes. The R guard inspects the raw
+JSON container kind before `jsonlite` simplification so `{}` and `[]` are
+distinguished.
 
 ### Response
 
@@ -92,6 +132,10 @@ apps/macro-sandbox/
 │       ├── entry.sh
 │       └── handler.R
 ├── lib/
+│   ├── guards/                 # Canonical-measurement contract guards
+│   │   ├── guard.js
+│   │   ├── guard.py
+│   │   └── guard.R
 │   ├── helpers/                # Domain-specific helper libraries
 │   │   ├── helpers.js
 │   │   ├── helpers.py
@@ -101,7 +145,9 @@ apps/macro-sandbox/
 │       ├── wrapper.py
 │       └── wrapper.R
 └── test/
-    ├── event.json              # Sample invoke payload
+    ├── event.json              # Sample invoke payload (marked)
+    ├── event.unmarked.json     # Sample invoke payload without the marker
+    ├── conformance/            # Cross-language guard conformance corpus
     ├── data/                   # Test case data files
     │   ├── samples.json
     │   ├── intensive.json
@@ -172,6 +218,14 @@ curl -XPOST http://localhost:9001/2015-03-31/functions/function/invocations \
 ```
 
 ## Testing
+
+Guard conformance runs without Docker: it drives the real per-language guard code
+against `test/conformance/corpus.json` and asserts identical decisions across
+Python, JavaScript, and R.
+
+```sh
+pnpm test:unit
+```
 
 Integration tests spin up all three containers on isolated ports (9011–9013), run test suites against each language, then tear down.
 

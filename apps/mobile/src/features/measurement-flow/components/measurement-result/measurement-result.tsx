@@ -20,6 +20,8 @@ interface MeasurementResultProps {
   macro: any;
   /** Upstream cell outputs the macro reads as `ctx.<name>` (flow context only). */
   ctx?: Record<string, unknown>;
+  /** Prevents execution when an upstream output could not be normalized. */
+  inputError?: Error;
   /** Called with the macro outputs once computed, so a flow can persist them. */
   onProcessed?: (outputs: MacroOutput[]) => void;
   /** When set, shows a Comment row that calls this on press */
@@ -30,6 +32,7 @@ export function MeasurementResult({
   rawMeasurement,
   macro,
   ctx,
+  inputError,
   onProcessed,
   onCommentPress,
 }: MeasurementResultProps) {
@@ -55,8 +58,18 @@ export function MeasurementResult({
     networkMode: "always",
     // ctx enters the key as a stable serialization so a changed upstream
     // output recomputes, while an identical rebuild does not.
-    queryKey: ["measurement-result", rawMeasurement, macro, ctx ? JSON.stringify(ctx) : undefined],
-    queryFn: () => applyMacro(rawMeasurement, macro, ctx ?? {}),
+    queryKey: [
+      "measurement-result",
+      rawMeasurement,
+      macro,
+      ctx ? JSON.stringify(ctx) : undefined,
+      inputError?.name,
+      inputError?.message,
+    ],
+    queryFn: () => {
+      if (inputError) throw inputError;
+      return applyMacro(rawMeasurement, macro, ctx ?? {});
+    },
   });
 
   // Surface the computed outputs so a flow can persist them (cellOutputs) for

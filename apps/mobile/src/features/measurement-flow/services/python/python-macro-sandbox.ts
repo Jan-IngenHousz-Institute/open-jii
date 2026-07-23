@@ -56,7 +56,8 @@ export const pythonMacroSandboxHtml = `
       var payload = typeof data === 'string' ? JSON.parse(data) : data;
       if (!payload || payload.requestId === undefined || payload.code === undefined) return;
       if (pyodideReady) {
-        runMacro(payload.requestId, payload.code, payload.json || {}, payload.ctx || {});
+        var macroJson = Object.prototype.hasOwnProperty.call(payload, 'json') ? payload.json : {};
+        runMacro(payload.requestId, payload.code, macroJson, payload.ctx || {});
       } else {
         pending.push(payload);
       }
@@ -69,7 +70,10 @@ export const pythonMacroSandboxHtml = `
     window.pyodide = pyodide;
     pyodideReady = true;
     send({ type: 'ready' });
-    pending.forEach(function(p) { runMacro(p.requestId, p.code, p.json || {}, p.ctx || {}); });
+    pending.forEach(function(p) {
+      var macroJson = Object.prototype.hasOwnProperty.call(p, 'json') ? p.json : {};
+      runMacro(p.requestId, p.code, macroJson, p.ctx || {});
+    });
     pending.length = 0;
   }).catch(function(err) {
     send({ type: 'error', message: err.message || String(err) });

@@ -3,8 +3,18 @@ import base64
 import gzip
 import subprocess
 import os
+import sys
 import shutil
 import tempfile
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "guards"))
+from guard import guard_batch, partition_items, merge_results  # noqa: E402
+
+
+def _guard_mode():
+    # Shadow (default) classifies + logs only; enforce rejects non-canonical
+    # items. Shadow keeps execution unchanged for Ticket 02.
+    return "enforce" if os.environ.get("MACRO_GUARD_MODE") == "enforce" else "shadow"
 
 
 # AWS Lambda sync responses are capped at 6 MB. Compress every response so
@@ -76,6 +86,18 @@ def _execute(event):
 
     timeout = max(DEFAULT_TIMEOUT, min(int(event.get("timeout", DEFAULT_TIMEOUT)), MAX_TIMEOUT))
 
+    # Contract guard. Shadow classifies + logs; execution is unchanged.
+    mode = _guard_mode()
+    guard = guard_batch({"input_contract": event.get("input_contract"), "items": items}, mode)
+    print("[guard] " + json.dumps(guard["telemetry"]), file=sys.stderr)
+
+    exec_items = items
+    invalid_results = []
+    if mode == "enforce":
+        if not guard["markerValid"]:
+            return {"status": "error", "results": [], "errors": [guard["markerError"]]}
+        exec_items, invalid_results = partition_items(items, guard["decisions"])
+
     # Write to temp files
     tmpdir = tempfile.mkdtemp(prefix="macro_", dir="/tmp")
     try:
@@ -93,7 +115,7 @@ def _execute(event):
             "w",
             opener=lambda path, flags: os.open(path, flags, 0o600),
         ) as f:
-            json.dump(items, f)
+            json.dump(exec_items, f)
 
         # Run wrapper in a subprocess with a stripped environment.
         result = subprocess.run(
@@ -118,13 +140,22 @@ def _execute(event):
             }
         if stdout:
             try:
-                return json.loads(stdout)
+                parsed = json.loads(stdout)
             except json.JSONDecodeError:
                 return {
                     "status": "error",
                     "results": [],
                     "errors": ["Wrapper returned invalid JSON"],
                 }
+            # Reassemble pre-failed items with wrapper results in request order.
+            if mode == "enforce" and parsed.get("status") == "success":
+                return {
+                    "status": "success",
+                    "results": merge_results(
+                        guard["decisions"], parsed.get("results", []), invalid_results
+                    ),
+                }
+            return parsed
         else:
             return {
                 "status": "error",

@@ -1,0 +1,248 @@
+{
+  "corpusVersion": 1,
+  "inputContract": "canonical-measurement-v1",
+  "vocabulary": {
+    "classifications": ["canonical", "empty-envelope", "non-canonical-envelope"],
+    "errors": ["empty-envelope", "non-canonical-input"],
+    "markerError": "unsupported-input-contract"
+  },
+  "cases": [
+    {
+      "name": "direct object",
+      "dataJson": "{\"phi2\":0.8}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "direct empty object",
+      "dataJson": "{}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "direct scalar string",
+      "dataJson": "\"device-ready\"",
+      "classification": "canonical",
+      "error": null
+    },
+    { "name": "direct null", "dataJson": "null", "classification": "canonical", "error": null },
+    { "name": "direct number", "dataJson": "42", "classification": "canonical", "error": null },
+    {
+      "name": "nested sample lookalike",
+      "dataJson": "{\"reading\":{\"sample\":[{\"v\":2}]}}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "scalar sample property is direct",
+      "dataJson": "{\"sample\":3,\"unit\":\"count\"}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "null sample property is direct",
+      "dataJson": "{\"sample\":null}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "string sample property is direct",
+      "dataJson": "{\"sample\":\"x\"}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "sample key text only in a value",
+      "dataJson": "{\"desc\":\"sample: [0]\"}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "object sample envelope residue",
+      "dataJson": "{\"sample\":{\"v\":4},\"transport\":\"legacy\"}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "empty object sample residue",
+      "dataJson": "{\"sample\":{}}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "single sample array residue",
+      "dataJson": "{\"sample\":[{\"v\":5}]}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "multiple sample array residue",
+      "dataJson": "{\"sample\":[{\"v\":6},{\"v\":7}]}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "empty sample array envelope",
+      "dataJson": "{\"sample\":[]}",
+      "classification": "empty-envelope",
+      "error": "empty-envelope"
+    },
+    {
+      "name": "sample after a brace-bearing string value",
+      "dataJson": "{\"note\":\"has } brace\",\"sample\":[{\"v\":1}]}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "single top-level array residue",
+      "dataJson": "[{\"v\":9}]",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "multiple top-level array residue",
+      "dataJson": "[{\"v\":10},{\"v\":11}]",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "scalar top-level array residue",
+      "dataJson": "[12,13]",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "empty top-level array envelope",
+      "dataJson": "[]",
+      "classification": "empty-envelope",
+      "error": "empty-envelope"
+    },
+    {
+      "name": "nested double sample residue",
+      "dataJson": "{\"sample\":[{\"sample\":[{\"v\":14}]}]}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "nested double top-level array residue",
+      "dataJson": "[[{\"v\":15}]]",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "unicode-escaped empty sample key",
+      "dataJson": "{\"\\u0073ample\":[]}",
+      "classification": "empty-envelope",
+      "error": "empty-envelope"
+    },
+    {
+      "name": "unicode-escaped sample array residue",
+      "dataJson": "{\"\\u0073ample\":[{\"v\":1}]}",
+      "classification": "non-canonical-envelope",
+      "error": "non-canonical-input"
+    },
+    {
+      "name": "escaped key decodes to a different name",
+      "dataJson": "{\"\\u0073ampleX\":[]}",
+      "classification": "canonical",
+      "error": null
+    },
+    {
+      "name": "escaped string value with quotes and braces before real sample",
+      "dataJson": "{\"note\":\"say \\\"sample\\\": [1] }\",\"sample\":[]}",
+      "classification": "empty-envelope",
+      "error": "empty-envelope"
+    }
+  ],
+  "markerCases": [
+    {
+      "name": "canonical marker",
+      "inputContract": "canonical-measurement-v1",
+      "markerValid": true
+    },
+    { "name": "missing marker", "inputContract": null, "markerValid": false },
+    {
+      "name": "unsupported marker",
+      "inputContract": "canonical-measurement-v2",
+      "markerValid": false
+    },
+    { "name": "empty marker", "inputContract": "", "markerValid": false }
+  ],
+  "batches": [
+    {
+      "name": "mixed valid and invalid batch preserves order",
+      "inputContract": "canonical-measurement-v1",
+      "items": [
+        { "id": "a-canonical", "dataJson": "{\"phi2\":0.8}" },
+        { "id": "b-sample-array", "dataJson": "{\"sample\":[{\"v\":5}]}" },
+        { "id": "c-empty-object", "dataJson": "{}" },
+        { "id": "d-empty-sample", "dataJson": "{\"sample\":[]}" },
+        { "id": "e-top-array", "dataJson": "[{\"v\":9}]" },
+        { "id": "f-empty-top-array", "dataJson": "[]" },
+        { "id": "g-canonical", "dataJson": "{\"spad\":41.2}" }
+      ],
+      "expected": {
+        "markerValid": true,
+        "decisions": [
+          { "id": "a-canonical", "classification": "canonical", "error": null },
+          {
+            "id": "b-sample-array",
+            "classification": "non-canonical-envelope",
+            "error": "non-canonical-input"
+          },
+          { "id": "c-empty-object", "classification": "canonical", "error": null },
+          { "id": "d-empty-sample", "classification": "empty-envelope", "error": "empty-envelope" },
+          {
+            "id": "e-top-array",
+            "classification": "non-canonical-envelope",
+            "error": "non-canonical-input"
+          },
+          {
+            "id": "f-empty-top-array",
+            "classification": "empty-envelope",
+            "error": "empty-envelope"
+          },
+          { "id": "g-canonical", "classification": "canonical", "error": null }
+        ]
+      }
+    },
+    {
+      "name": "unmarked batch is invalid marker",
+      "inputContract": null,
+      "items": [{ "id": "a", "dataJson": "{\"phi2\":0.8}" }],
+      "expected": {
+        "markerValid": false,
+        "decisions": [{ "id": "a", "classification": "canonical", "error": null }]
+      }
+    }
+  ],
+  "enforceBatches": [
+    {
+      "name": "duplicate and empty ids round-trip positionally",
+      "inputContract": "canonical-measurement-v1",
+      "items": [
+        { "id": "dup", "dataJson": "{\"phi2\":0.8}" },
+        { "id": "dup", "dataJson": "{\"sample\":[{\"v\":1}]}" },
+        { "id": "", "dataJson": "{\"spad\":41.2}" },
+        { "id": "", "dataJson": "[]" },
+        { "id": "x", "dataJson": "{\"sample\":[]}" }
+      ],
+      "expected": {
+        "markerValid": true,
+        "merged": [
+          { "id": "dup", "success": true, "error": null },
+          { "id": "dup", "success": false, "error": "non-canonical-input" },
+          { "id": "", "success": true, "error": null },
+          { "id": "", "success": false, "error": "empty-envelope" },
+          { "id": "x", "success": false, "error": "empty-envelope" }
+        ]
+      }
+    },
+    {
+      "name": "unsupported marker fails the whole invocation",
+      "inputContract": "canonical-measurement-v9",
+      "items": [{ "id": "a", "dataJson": "{\"phi2\":0.8}" }],
+      "expected": { "markerValid": false, "markerError": "unsupported-input-contract" }
+    }
+  ]
+}

@@ -19,7 +19,11 @@ export function PythonMacroProvider({ children }: { children: React.ReactNode })
   const webViewRef = useRef<WebView>(null);
 
   const runPythonMacro = useCallback(
-    async (code: string, json: object, ctx: Record<string, unknown> = {}): Promise<MacroOutput> => {
+    async (
+      code: string,
+      json: unknown,
+      ctx: Record<string, unknown> = {},
+    ): Promise<MacroOutput> => {
       const requestId = `py-${++requestIdRef.current}`;
       return new Promise<MacroOutput>((resolve, reject) => {
         pendingRef.current.set(requestId, { resolve, reject });

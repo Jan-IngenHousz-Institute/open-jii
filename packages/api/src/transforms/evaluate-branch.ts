@@ -107,7 +107,7 @@ export function resolveConditionValue(
   const data = resolveOutputData(cells, sourceCellId, runtime?.deviceId);
   if (data == null) return undefined;
 
-  const val = data[field];
+  const val = (data as Record<string, unknown>)[field];
   if (typeof val === "number") return val;
   if (typeof val === "string") return val;
   return val != null ? JSON.stringify(val) : undefined;
