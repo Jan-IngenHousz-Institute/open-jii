@@ -24,71 +24,56 @@ export class DeleteExperimentMetadataUseCase {
       userId,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        hasArchiveAccess: boolean;
-        isAdmin: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found for metadata deletion",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "deleteExperimentMetadata",
-            experimentId,
-            metadataId,
-            userId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "Unauthorized metadata deletion attempt",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "deleteExperimentMetadata",
-            experimentId,
-            metadataId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have write access to this experiment"));
-        }
-
-        const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(
-          metadataId,
-          experimentId,
-        );
-
-        if (deleteResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to delete experiment metadata",
-            errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
-            operation: "deleteExperimentMetadata",
-            experimentId,
-            metadataId,
-            userId,
-            error: deleteResult.error.message,
-          });
-          return failure(AppError.internal("Failed to delete metadata"));
-        }
-
-        this.logger.log({
-          msg: "Experiment metadata deleted successfully",
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found for metadata deletion",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
           operation: "deleteExperimentMetadata",
           experimentId,
           metadataId,
           userId,
-          status: "success",
         });
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
 
-        return success(undefined);
-      },
-    );
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // Archived-state handling remains here because it is a domain rule
+      // describing which writes are legal, not who may write.
+      if (experiment.status === "archived") {
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(
+        metadataId,
+        experimentId,
+      );
+
+      if (deleteResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to delete experiment metadata",
+          errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
+          operation: "deleteExperimentMetadata",
+          experimentId,
+          metadataId,
+          userId,
+          error: deleteResult.error.message,
+        });
+        return failure(AppError.internal("Failed to delete metadata"));
+      }
+
+      this.logger.log({
+        msg: "Experiment metadata deleted successfully",
+        operation: "deleteExperimentMetadata",
+        experimentId,
+        metadataId,
+        userId,
+        status: "success",
+      });
+
+      return success(undefined);
+    });
   }
 }

@@ -25,6 +25,7 @@ import {
   profiles,
   protocols,
   organizations,
+  organizationMembers,
   flows,
   macros,
   workbooks,
@@ -33,6 +34,8 @@ import {
   experimentDashboards,
   experimentVisualizations,
   experimentJoinRequests,
+  resourceGrants,
+  ensurePersonalOrganization,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -186,6 +189,9 @@ export class TestHarness {
     }
 
     // Clean up test data in correct order (respecting foreign key constraints)
+    // resource_grants is polymorphic (no FK to org/resource), so it is not
+    // cleared by cascade — delete it explicitly to keep tests isolated.
+    await this.database.delete(resourceGrants).execute();
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentJoinRequests).execute();
@@ -203,9 +209,10 @@ export class TestHarness {
     // Macros reference users, so delete macros before users
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
-    await this.database.delete(organizations).execute();
-    // IoT devices reference users, delete before users
+    // IoT devices reference organizations with a RESTRICT FK (AWS-safety, no
+    // cascade), so they must be deleted before organizations.
     await this.database.delete(iotDevices).execute();
+    await this.database.delete(organizations).execute();
     // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
     await this.database.delete(accounts).execute();
@@ -368,6 +375,7 @@ export class TestHarness {
     visibility?: "private" | "public";
     embargoUntil?: Date;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.userId });
     const [experiment] = await this.database
       .insert(experiments)
       .values({
@@ -377,6 +385,7 @@ export class TestHarness {
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
+        organizationId,
       })
       .returning();
 
@@ -402,7 +411,45 @@ export class TestHarness {
       })
       .returning();
 
+    // Mirror the membership into resource_grants (admin -> admin, member ->
+    // member), exactly as the production ExperimentMemberRepository does, so
+    // can()-based authorization (isAdmin) resolves for test-seeded members.
+    await this.database
+      .insert(resourceGrants)
+      .values({
+        resourceType: "experiment",
+        resourceId: experimentId,
+        granteeType: "user",
+        granteeId: userId,
+        role: role === "admin" ? "admin" : "member",
+      })
+      .onConflictDoNothing();
+
     return membership;
+  }
+
+  public async addOrganizationMember(
+    organizationId: string,
+    userId: string,
+    role: "owner" | "admin" | "member" = "member",
+  ) {
+    const [membership] = await this.database
+      .insert(organizationMembers)
+      .values({ organizationId, userId, role })
+      .returning();
+
+    return membership;
+  }
+
+  public async addResourceGrant(data: {
+    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device";
+    resourceId: string;
+    granteeType: "user" | "team" | "organization";
+    granteeId: string;
+    role: "owner" | "admin" | "member" | "viewer";
+  }) {
+    const [grant] = await this.database.insert(resourceGrants).values(data).returning();
+    return grant;
   }
 
   /**
@@ -443,6 +490,7 @@ export class TestHarness {
     family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [protocol] = await this.database
       .insert(protocols)
       .values({
@@ -451,6 +499,7 @@ export class TestHarness {
         code: data.code ?? [{}],
         family: data.family ?? "multispeq",
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return protocol;
@@ -471,6 +520,9 @@ export class TestHarness {
   }) {
     const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
     const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
+    // Own the device with the creator's personal org (creator = owner member) so
+    // the @CanAccess guard authorizes the creator, mirroring register-on-create.
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [device] = await this.database
       .insert(iotDevices)
       .values({
@@ -483,6 +535,7 @@ export class TestHarness {
         certificateId: data.certificateId ?? null,
         certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return device;
@@ -499,6 +552,7 @@ export class TestHarness {
     createdBy: string;
   }) {
     const macroId = crypto.randomUUID();
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [macro] = await this.database
       .insert(macros)
       .values({
@@ -509,6 +563,7 @@ export class TestHarness {
         language: data.language ?? "python",
         code: data.code ?? btoa("print('hello')"),
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return macro;
@@ -521,6 +576,7 @@ export class TestHarness {
     metadata?: Record<string, unknown>;
     createdBy: string;
   }) {
+    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
     const [workbook] = await this.database
       .insert(workbooks)
       .values({
@@ -529,6 +585,7 @@ export class TestHarness {
         cells: data.cells ?? [],
         metadata: data.metadata ?? {},
         createdBy: data.createdBy,
+        organizationId,
       })
       .returning();
     return workbook;

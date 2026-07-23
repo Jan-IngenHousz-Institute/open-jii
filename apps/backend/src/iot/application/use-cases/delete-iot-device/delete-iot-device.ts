@@ -23,7 +23,7 @@ export class DeleteIotDeviceUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
+    const deviceResult = await this.deviceRepository.findById(deviceId);
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
@@ -55,7 +55,7 @@ export class DeleteIotDeviceUseCase {
       return failure(deleteThingResult.error);
     }
 
-    const deleteResult = await this.deviceRepository.delete(deviceId, userId);
+    const deleteResult = await this.deviceRepository.delete(deviceId);
     if (deleteResult.isFailure()) {
       return failure(deleteResult.error);
     }

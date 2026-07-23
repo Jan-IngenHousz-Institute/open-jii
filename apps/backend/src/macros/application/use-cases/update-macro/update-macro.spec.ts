@@ -198,30 +198,7 @@ describe("UpdateMacroUseCase", () => {
     expect(result.error.message).toBe("Failed to update macro");
   });
 
-  it("should return forbidden error when user is not the creator", async () => {
-    const macroData: CreateMacroDto = {
-      name: "Someone Else's Macro",
-      description: "Created by another user",
-      language: "python",
-      code: "cHl0aG9uIGNvZGU=",
-    };
-
-    const createResult = await macroRepository.create(macroData, testUserId);
-    assertSuccess(createResult);
-    const createdMacro = createResult.value[0];
-
-    const anotherUserId = await testApp.createTestUser({ email: "another@example.com" });
-
-    const updateData = {
-      name: "Trying to Update",
-      description: "This should fail",
-    };
-
-    const result = await useCase.execute(createdMacro.id, updateData, anotherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toBe("Only the macro creator can update this macro");
-  });
+  // Authorization (non-creator/non-admin denial) is enforced by the
+  // `@CanAccess` route guard, not the use-case; it is covered in
+  // macro.controller.spec.ts and authorization.service.spec.ts.
 });

@@ -44,7 +44,7 @@ describe("UpdateExperimentUseCase", () => {
     };
 
     // Execute the update
-    const result = await useCase.execute(experiment.id, updateData, testUserId);
+    const result = await useCase.execute(experiment.id, updateData);
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -77,7 +77,7 @@ describe("UpdateExperimentUseCase", () => {
       name: "Updated Name Only",
     };
 
-    const result = await useCase.execute(experiment.id, partialUpdate, testUserId);
+    const result = await useCase.execute(experiment.id, partialUpdate);
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -95,32 +95,11 @@ describe("UpdateExperimentUseCase", () => {
     });
   });
 
-  it("should return FORBIDDEN error if user is not a member", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Access Control Test",
-      userId: testUserId,
-    });
-
-    // Create another user who is not a member
-    const otherUserId = await testApp.createTestUser({});
-
-    const updateData = { name: "Updated Name" };
-
-    // Try to update as non-member
-    const result = await useCase.execute(experiment.id, updateData, otherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("You do not have access to this experiment");
-  });
-
   it("should return NOT_FOUND error if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const updateData = { name: "Won't Update" };
 
-    const result = await useCase.execute(nonExistentId, updateData, testUserId);
+    const result = await useCase.execute(nonExistentId, updateData);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
@@ -128,73 +107,31 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
   });
 
-  it("should return FORBIDDEN error if non-admin attempts to archive an experiment", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Archive Forbidden",
-      userId: testUserId,
-    });
-    const memberId = await testApp.createTestUser({});
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
-    const updateData = { status: "archived" as const };
-    const result = await useCase.execute(experiment.id, updateData, memberId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("You do not have access to this experiment");
-  });
-
-  it("should allow admin to archive an experiment", async () => {
+  it("should allow archiving an active experiment", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Archive Allowed",
       userId: testUserId,
     });
 
     const updateData = { status: "archived" as const };
-    const result = await useCase.execute(experiment.id, updateData, testUserId);
+    const result = await useCase.execute(experiment.id, updateData);
 
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.status).toBe("archived");
   });
 
-  it("should return FORBIDDEN error if non-admin attempts to update an archived experiment", async () => {
-    // Create experiment and archive by admin
-    const { experiment } = await testApp.createExperiment({
-      name: "Archived Update Test",
-      userId: testUserId,
-    });
-    await useCase.execute(experiment.id, { status: "archived" as const }, testUserId);
-
-    // Add member and attempt update
-    const memberId = await testApp.createTestUser({});
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
-    const updateData = { name: "Should Not Update" };
-    const result = await useCase.execute(experiment.id, updateData, memberId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("You do not have access to this");
-  });
-
-  it("should allow admin to update only the status of an archived experiment", async () => {
+  it("should allow updating only the status of an archived experiment", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Archived Admin Update",
       userId: testUserId,
     });
 
     // Archive
-    await useCase.execute(experiment.id, { status: "archived" as const }, testUserId);
+    await useCase.execute(experiment.id, { status: "archived" as const });
 
     // Try updating non-status field (should fail)
-    const forbiddenResult = await useCase.execute(
-      experiment.id,
-      { name: "Not Allowed" },
-      testUserId,
-    );
+    const forbiddenResult = await useCase.execute(experiment.id, { name: "Not Allowed" });
     expect(forbiddenResult.isSuccess()).toBe(false);
     assertFailure(forbiddenResult);
     expect(forbiddenResult.error.code).toBe("FORBIDDEN");
@@ -203,11 +140,7 @@ describe("UpdateExperimentUseCase", () => {
     );
 
     // Now test valid status update
-    const reopenResult = await useCase.execute(
-      experiment.id,
-      { status: "active" as const },
-      testUserId,
-    );
+    const reopenResult = await useCase.execute(experiment.id, { status: "active" as const });
     expect(reopenResult.isSuccess()).toBe(true);
     assertSuccess(reopenResult);
     expect(reopenResult.value.status).toBe("active");

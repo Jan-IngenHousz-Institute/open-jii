@@ -35,19 +35,6 @@ export class DeleteMacroUseCase {
       return failure(AppError.notFound("Macro not found"));
     }
 
-    const macro = macroResult.value;
-
-    if (macro.createdBy !== userId) {
-      this.logger.warn({
-        msg: "Unauthorized macro deletion attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "deleteMacro",
-        macroId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("Only the macro creator can delete this macro"));
-    }
-
     const deleteResult = await this.macroRepository.delete(id);
 
     if (deleteResult.isFailure()) {

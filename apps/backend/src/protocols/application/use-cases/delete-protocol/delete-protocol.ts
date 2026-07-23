@@ -11,11 +11,12 @@ export class DeleteProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(id: string): Promise<Result<ProtocolDto>> {
+  async execute(id: string, userId: string): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Deleting protocol",
       operation: "deleteProtocol",
       protocolId: id,
+      userId,
     });
 
     // Check if protocol exists

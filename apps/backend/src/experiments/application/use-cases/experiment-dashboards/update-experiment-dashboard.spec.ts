@@ -299,37 +299,6 @@ describe("UpdateExperimentDashboardUseCase", () => {
       expect(updateSpy).not.toHaveBeenCalled();
     });
 
-    it("should fail when user does not have archive access", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      vi.spyOn(experimentDashboardRepository, "findById").mockResolvedValue(
-        success(buildDashboard(experiment.id)),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      const result = await useCase.execute(
-        experiment.id,
-        dashboardId,
-        mockUpdateRequest,
-        testUserId,
-      );
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have access to this experiment");
-    });
-
     it("should fail when repository update returns empty array", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
@@ -408,13 +377,8 @@ describe("UpdateExperimentDashboardUseCase", () => {
         success(buildDashboard(experiment.id)),
       );
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, status: "archived" },
-          hasAccess: true,
-          hasArchiveAccess: false,
-          isAdmin: true,
-        }),
+      vi.spyOn(experimentRepository, "findOne").mockResolvedValue(
+        success({ ...experiment, status: "archived" }),
       );
 
       const result = await useCase.execute(
@@ -426,7 +390,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("You do not have access to this experiment");
+      expect(result.error.message).toContain("Cannot modify an archived experiment");
     });
   });
 });

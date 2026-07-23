@@ -159,17 +159,6 @@ describe("GetExperimentLocationsUseCase", () => {
     expect(locations1.length).toBe(3);
   });
 
-  it("should handle database errors gracefully", async () => {
-    // Use a non-existent but valid UUID experiment ID
-    const nonExistentId = "12345678-1234-1234-1234-123456789012";
-
-    const result = await useCase.execute(nonExistentId, testUserId);
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.message).toContain("Experiment not found");
-  });
-
   it("should not return locations from other experiments", async () => {
     // Create two experiments
     const { experiment: experiment1 } = await testApp.createExperiment({
@@ -214,19 +203,6 @@ describe("GetExperimentLocationsUseCase", () => {
     assertSuccess(result2);
     expect(result2.value.length).toBe(1);
     expect(result2.value[0].name).toBe("Experiment 2 Location");
-  });
-
-  it("should handle experiment access check failures with invalid experiment ID", async () => {
-    // Arrange - use an invalid UUID format that might cause database errors
-    const invalidExperimentId = "invalid-experiment-id-format";
-
-    // Act
-    const result = await useCase.execute(invalidExperimentId, testUserId);
-
-    // Assert
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.message).toContain("Experiment not found");
   });
 
   it("should handle repository errors when fetching locations fails", async () => {

@@ -4,14 +4,12 @@ import { assertFailure, assertSuccess, failure, success } from "../../../../comm
 import { TestHarness } from "../../../../test/test-harness";
 import type { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { ListExperimentVisualizationsUseCase } from "./list-experiment-visualizations";
 
 describe("ListExperimentVisualizationsUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: ListExperimentVisualizationsUseCase;
-  let experimentRepository: ExperimentRepository;
   let experimentVisualizationRepository: ExperimentVisualizationRepository;
 
   beforeAll(async () => {
@@ -22,7 +20,6 @@ describe("ListExperimentVisualizationsUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(ListExperimentVisualizationsUseCase);
-    experimentRepository = testApp.module.get(ExperimentRepository);
     experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
   });
 
@@ -83,15 +80,6 @@ describe("ListExperimentVisualizationsUseCase", () => {
         },
       ];
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          isAdmin: true,
-          hasArchiveAccess: true,
-        }),
-      );
-
       vi.spyOn(experimentVisualizationRepository, "listVisualizations").mockResolvedValue(
         success(mockVisualizations),
       );
@@ -124,15 +112,6 @@ describe("ListExperimentVisualizationsUseCase", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
-
       vi.spyOn(experimentVisualizationRepository, "listVisualizations").mockResolvedValue(
         success([]),
       );
@@ -148,50 +127,13 @@ describe("ListExperimentVisualizationsUseCase", () => {
     });
 
     it("should fail when experiment does not exist", async () => {
-      // Arrange
       const nonExistentExperimentId = faker.string.uuid();
 
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: null,
-          hasAccess: false,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
       const result = await useCase.execute(nonExistentExperimentId, testUserId);
 
-      // Assert
-      expect(result.isSuccess()).toBe(false);
+      expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toBe(`Experiment with ID ${nonExistentExperimentId} not found`);
-    });
-
-    it("should fail when user does not have access to the experiment", async () => {
-      // Arrange
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: false,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experiment.id, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have access to this experiment");
     });
 
     it("should fail when repository throws an error", async () => {
@@ -200,15 +142,6 @@ describe("ListExperimentVisualizationsUseCase", () => {
         name: "Test Experiment",
         userId: testUserId,
       });
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: true,
-        }),
-      );
 
       vi.spyOn(experimentVisualizationRepository, "listVisualizations").mockResolvedValue(
         failure({

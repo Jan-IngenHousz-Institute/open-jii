@@ -72,32 +72,6 @@ describe("AddCompatibleMacrosUseCase", () => {
     expect(macroIds).toContain(macro2.id);
   });
 
-  it("should return FORBIDDEN when called by a non-creator", async () => {
-    const protocol = await testApp.createProtocol({
-      name: "Forbidden Macros Protocol",
-      createdBy: testUserId,
-    });
-
-    const otherUserId = await testApp.createTestUser({ email: "other@example.com" });
-
-    const [macro] = await testApp.database
-      .insert(macros)
-      .values({
-        name: `forbidden-macro-${faker.string.alphanumeric(6)}`,
-        filename: `macro_${faker.string.alphanumeric(8)}`,
-        description: "test",
-        language: "python",
-        code: btoa("print('hello')"),
-        createdBy: testUserId,
-      })
-      .returning();
-
-    const result = await useCase.execute(protocol.id, [macro.id], otherUserId);
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should return NOT_FOUND for unknown protocolId", async () => {
     const nonExistentProtocolId = faker.string.uuid();
 

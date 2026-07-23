@@ -1,15 +1,13 @@
 import { flows } from "@repo/database";
 
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UpdateFlowUseCase } from "./update-flow";
 
 describe("UpdateFlowUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: UpdateFlowUseCase;
   let ownerId: string;
-  let memberId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -18,7 +16,6 @@ describe("UpdateFlowUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     ownerId = await testApp.createTestUser({});
-    memberId = await testApp.createTestUser({});
     useCase = testApp.module.get(UpdateFlowUseCase);
   });
 
@@ -39,19 +36,6 @@ describe("UpdateFlowUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
-  });
-
-  it("returns 403 if user is not a member of experiment", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // memberId is NOT added as a member
-    const result = await useCase.execute(
-      experiment.id,
-      memberId,
-      testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
-    );
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
   });
 
   it("returns 404 when no existing flow to update", async () => {
@@ -89,6 +73,7 @@ describe("UpdateFlowUseCase", () => {
     const { experiment } = await testApp.createExperiment({
       name: "Archived Exp Update",
       userId: ownerId,
+      status: "archived",
     });
 
     // Create an existing flow directly in DB
@@ -97,17 +82,6 @@ describe("UpdateFlowUseCase", () => {
       experimentId: experiment.id,
       graph,
     });
-
-    // Mock checkAccess to simulate archived experiment — no archive access for anyone
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...experiment, status: "archived" },
-        hasAccess: true,
-        hasArchiveAccess: false,
-        isAdmin: true,
-      }),
-    );
 
     const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
       ...graph,
@@ -119,6 +93,6 @@ describe("UpdateFlowUseCase", () => {
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toContain("You do not have access to this experiment");
+    expect(result.error.message).toContain("Cannot modify an archived experiment");
   });
 });

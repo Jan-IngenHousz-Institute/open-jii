@@ -15,6 +15,8 @@ export const zProtocol = z.object({
   forkedFrom: z.string().uuid().nullish(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
 });
 export const zProtocolList = z.array(zProtocol);
 
@@ -41,6 +43,9 @@ export const zCreateProtocolRequestBody = z.object({
   family: zSensorFamily,
   // Set when this protocol is a fork (copy) of another, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
+  // Optional target organization to create into; defaults to the creator's
+  // personal org. The caller must be a member of the given organization.
+  organizationId: z.string().uuid().optional(),
 });
 
 export const zUpdateProtocolRequestBody = z.object({

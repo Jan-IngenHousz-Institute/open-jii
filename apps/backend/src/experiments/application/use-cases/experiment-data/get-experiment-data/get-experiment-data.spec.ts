@@ -9,7 +9,6 @@ import {
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
-import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
 describe("GetExperimentDataUseCase", () => {
@@ -17,7 +16,6 @@ describe("GetExperimentDataUseCase", () => {
   let testUserId: string;
   let useCase: GetExperimentDataUseCase;
   let experimentDataRepository: ExperimentDataRepository;
-  let experimentRepository: ExperimentRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -29,7 +27,6 @@ describe("GetExperimentDataUseCase", () => {
 
     useCase = testApp.module.get(GetExperimentDataUseCase);
     experimentDataRepository = testApp.module.get(ExperimentDataRepository);
-    experimentRepository = testApp.module.get(ExperimentRepository);
   });
 
   afterEach(() => {
@@ -209,27 +206,6 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.message).toContain(nonExistentId);
   });
 
-  it("should return forbidden error when user does not have access to private experiment", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "another@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "bronze_data",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("do not have access");
-  });
-
   it("should allow access to public experiment even if user is not a member", async () => {
     const anotherUserId = await testApp.createTestUser({
       email: "another@example.com",
@@ -290,25 +266,6 @@ describe("GetExperimentDataUseCase", () => {
 
     vi.spyOn(experimentDataRepository, "getTableData").mockResolvedValue(
       failure(AppError.internal("Failed to fetch table data")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "bronze_data",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-  });
-
-  it("should handle checkAccess failure", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test Experiment",
-      userId: testUserId,
-    });
-
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      failure(AppError.internal("Database connection failed")),
     );
 
     const result = await useCase.execute(experiment.id, testUserId, {

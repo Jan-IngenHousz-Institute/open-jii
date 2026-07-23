@@ -78,22 +78,6 @@ describe("UpdateExperimentMetadataUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return FORBIDDEN if user does not have archive access", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Metadata Update Test",
-      userId: testUserId,
-    });
-
-    const otherUserId = await testApp.createTestUser({});
-
-    const result = await useCase.execute(experiment.id, metadataId, sampleUpdate, otherUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("You do not have write access to this experiment");
-  });
-
   it("should propagate repository failure on update", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Metadata Update Failure Test",

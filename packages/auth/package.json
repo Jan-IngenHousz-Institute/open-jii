@@ -6,6 +6,10 @@
       "types": "./src/server.ts",
       "default": "./dist/server.js"
     },
+    "./access": {
+      "types": "./src/access.ts",
+      "default": "./dist/access.js"
+    },
     "./client": {
       "types": "./src/clients/client.web.ts",
       "default": "./dist/clients/client.web.js"

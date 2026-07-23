@@ -54,7 +54,7 @@ describe("RevokeIotCredentialsUseCase", () => {
     assertSuccess(created);
     const device = created.value[0];
     if (withCert) {
-      await repo.update(device.id, userId, {
+      await repo.update(device.id, {
         status: "active",
         certificateId: "cert-abc",
         certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-abc",
@@ -96,9 +96,7 @@ describe("RevokeIotCredentialsUseCase", () => {
   });
 
   it("propagates a repository lookup failure", async () => {
-    vi.spyOn(repo, "findByIdForOwner").mockResolvedValue(
-      failure(AppError.internal("db unavailable")),
-    );
+    vi.spyOn(repo, "findById").mockResolvedValue(failure(AppError.internal("db unavailable")));
 
     const result = await useCase.execute("11111111-1111-4111-8111-111111111111", userId);
 
@@ -117,7 +115,7 @@ describe("RevokeIotCredentialsUseCase", () => {
     assertFailure(result);
     expect(result.error.message).toBe("revoke failed");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe("cert-abc");

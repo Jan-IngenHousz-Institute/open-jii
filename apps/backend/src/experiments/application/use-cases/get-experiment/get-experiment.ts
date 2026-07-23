@@ -19,48 +19,30 @@ export class GetExperimentUseCase {
       userId,
     });
 
-    // Check if experiment exists and user has access
-    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
+    // Read authorization (owning-org role / grant / public) is enforced by the
+    // `@CanAccess({ resource: "experiment", action: "read" })` route guard.
+    const experimentResult = await this.experimentRepository.findOne(id);
 
-    return accessCheckResult.chain(
-      ({ experiment, hasAccess }: { experiment: ExperimentDto | null; hasAccess: boolean }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "getExperiment",
-            experimentId: id,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${id} not found`));
-        }
-
-        // Allow access if user is a member OR if experiment is public
-        const isPublic = experiment.visibility === "public";
-        if (!(hasAccess || isPublic)) {
-          this.logger.warn({
-            msg: "User does not have access to private experiment",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "getExperiment",
-            experimentId: id,
-            userId,
-          });
-          return failure(
-            AppError.forbidden("You do not have permission to access this experiment"),
-          );
-        }
-
-        this.logger.debug({
-          msg: "Experiment retrieved successfully",
+    return experimentResult.chain((experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
           operation: "getExperiment",
           experimentId: id,
-          userId,
-          isPublic,
-          hasAccess,
-          status: "success",
         });
+        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+      }
 
-        return success(experiment);
-      },
-    );
+      this.logger.debug({
+        msg: "Experiment retrieved successfully",
+        operation: "getExperiment",
+        experimentId: id,
+        userId,
+        status: "success",
+      });
+
+      return success(experiment);
+    });
   }
 }

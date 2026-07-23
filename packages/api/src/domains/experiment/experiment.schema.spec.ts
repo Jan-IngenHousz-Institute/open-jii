@@ -83,6 +83,7 @@ describe("Experiment Schema", () => {
     const baseExperiment = {
       id: uuidA,
       name: "Exp 1",
+      organizationId: null,
       description: "desc",
       status: "active",
       visibility: "private",
@@ -132,6 +133,7 @@ describe("Experiment Schema", () => {
       const exp = {
         id: uuidA,
         name: "E1",
+        organizationId: null,
         description: null,
         status: "active",
         visibility: "public",

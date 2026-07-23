@@ -3,7 +3,6 @@ import { Readable } from "stream";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
  * Use case for downloading a completed export by export ID
@@ -13,10 +12,7 @@ import { ExperimentRepository } from "../../../core/repositories/experiment.repo
 export class DownloadExportUseCase {
   private readonly logger = new Logger(DownloadExportUseCase.name);
 
-  constructor(
-    private readonly experimentRepository: ExperimentRepository,
-    private readonly exportsRepository: ExperimentDataExportsRepository,
-  ) {}
+  constructor(private readonly exportsRepository: ExperimentDataExportsRepository) {}
 
   async execute(
     experimentId: string,

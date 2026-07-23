@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
@@ -41,8 +42,13 @@ describe("WorkbookController", () => {
     deleteWorkbookUseCase = testApp.module.get(DeleteWorkbookUseCase);
     listWorkbookVersionsUseCase = testApp.module.get(ListWorkbookVersionsUseCase);
     getWorkbookVersionUseCase = testApp.module.get(GetWorkbookVersionUseCase);
-
-    vi.restoreAllMocks();
+    // Authorization is enforced by the @CanAccess route guard against the real
+    // DB; these controller tests mock the use-cases with synthetic ids, so allow
+    // the guard here. Guard behavior itself is covered by authorization.service.spec.
+    vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
+      allow: true,
+      reason: "org-role",
+    });
   });
 
   afterEach(() => {
@@ -59,6 +65,8 @@ describe("WorkbookController", () => {
     description: "A test workbook",
     cells: [],
     metadata: {},
+    organizationId: null,
+    visibility: "public",
     createdBy: testUserId,
     createdByName: faker.person.fullName(),
     createdAt: new Date(),
@@ -182,10 +190,13 @@ describe("WorkbookController", () => {
 
   describe("updateWorkbook", () => {
     it("should update a workbook", async () => {
-      const mock = mockWorkbook({ name: "Updated Name" });
+      // Create a real workbook owned by the caller so the @CanAccess guard
+      // (which resolves ownership from the DB) authorizes the request.
+      const workbook = await testApp.createWorkbook({ name: "Original", createdBy: testUserId });
+      const mock = mockWorkbook({ id: workbook.id, name: "Updated Name" });
       vi.spyOn(updateWorkbookUseCase, "execute").mockResolvedValue(success(mock));
 
-      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id: mock.id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id: workbook.id });
       const response = await testApp
         .patch(path)
         .withAuth(testUserId)
@@ -193,20 +204,6 @@ describe("WorkbookController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({ name: "Updated Name" });
-    });
-
-    it("should return 403 for non-owner update", async () => {
-      vi.spyOn(updateWorkbookUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only the workbook creator can update this workbook")),
-      );
-
-      const id = faker.string.uuid();
-      const path = testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id });
-      await testApp
-        .patch(path)
-        .withAuth(testUserId)
-        .send({ name: "Nope" })
-        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("should return 404 for non-existent workbook", async () => {
@@ -226,21 +223,13 @@ describe("WorkbookController", () => {
 
   describe("deleteWorkbook", () => {
     it("should delete a workbook", async () => {
+      // Create a real workbook owned by the caller so the @CanAccess guard
+      // (which resolves ownership from the DB) authorizes the request.
+      const workbook = await testApp.createWorkbook({ name: "WB", createdBy: testUserId });
       vi.spyOn(deleteWorkbookUseCase, "execute").mockResolvedValue(success(undefined));
 
-      const id = faker.string.uuid();
-      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id });
+      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id: workbook.id });
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
-    });
-
-    it("should return 403 for non-owner deletion", async () => {
-      vi.spyOn(deleteWorkbookUseCase, "execute").mockResolvedValue(
-        failure(AppError.forbidden("Only the workbook creator can delete this workbook")),
-      );
-
-      const id = faker.string.uuid();
-      const path = testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id });
-      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.FORBIDDEN);
     });
 
     it("should return 404 for non-existent workbook", async () => {
@@ -345,6 +334,91 @@ describe("WorkbookController", () => {
         versionId: faker.string.uuid(),
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("authorization", () => {
+    // Each guarded route must delegate to AuthorizationService.can() with the
+    // resource/action declared by its @CanAccess decorator, and turn a denial
+    // into a 403. Mocking can() to deny keeps this independent of the guard's
+    // internal DB logic (covered by authorization.service.spec) and pins the
+    // {resource, action} wiring, so a missing or wrong-action decorator fails
+    // here.
+    it.each([
+      {
+        name: "get workbook",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.workbooks.getWorkbook, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "update workbook",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.workbooks.updateWorkbook, { id }))
+            .withAuth(userId)
+            .send({ name: "Blocked update" }),
+      },
+      {
+        name: "delete workbook",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "list workbook versions",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbookVersions, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "get workbook version",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+                id,
+                versionId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const canSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "can")
+        .mockResolvedValue({ allow: false, reason: "forbidden" });
+      const workbookId = faker.string.uuid();
+
+      await request(workbookId, testUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "workbook",
+        resourceId: workbookId,
+        action,
+      });
+    });
+
+    it("returns 403 when creating a workbook in an organization the caller is not a member of", async () => {
+      const organizationId = faker.string.uuid();
+      const isOrgMemberSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
+        .mockResolvedValue(false);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.workbooks.createWorkbook))
+        .withAuth(testUserId)
+        .send({ name: "Org workbook", organizationId })
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
     });
   });
 });

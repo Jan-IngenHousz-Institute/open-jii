@@ -1,3 +1,5 @@
+import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { LocationRepository } from "../../../../experiments/core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
@@ -58,6 +60,41 @@ describe("CreateExperimentUseCase", () => {
       visibility: experimentData.visibility,
       createdBy: testUserId,
     });
+  });
+
+  it("should assign the target organization to the experiment", async () => {
+    const [targetOrganization] = await testApp.database
+      .insert(organizations)
+      .values({ name: "Target Experiment Organization", slug: `target-${testUserId}` })
+      .returning();
+    await testApp.database.insert(organizationMembers).values({
+      organizationId: targetOrganization.id,
+      userId: testUserId,
+      role: "owner",
+    });
+
+    const result = await useCase.execute(
+      { name: "Target Organization Experiment" },
+      testUserId,
+      targetOrganization.id,
+    );
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(targetOrganization.id);
+  });
+
+  it("should fall back to the creator's personal organization when no target is provided", async () => {
+    const result = await useCase.execute(
+      { name: "Personal Organization Experiment" },
+      testUserId,
+      null,
+    );
+    const personalOrganizationId = await ensurePersonalOrganization(testApp.database, {
+      id: testUserId,
+    });
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(personalOrganizationId);
   });
 
   it("should add the creating user as an admin member", async () => {

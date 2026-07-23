@@ -36,115 +36,99 @@ export class UpdateExperimentMemberRoleUseCase {
       userId: currentUserId,
     });
 
-    const accessCheckResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      currentUserId,
-    );
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessCheckResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
-        if (!experiment) {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
+          operation: "update-experiment-member-role",
+          experimentId,
+        });
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Experiment is archived",
+          operation: "update-experiment-member-role",
+          experimentId,
+        });
+        return failure(AppError.forbidden("Cannot update member roles in archived experiments"));
+      }
+
+      // Don't promote a deactivated ("Unknown") account to admin, it can't act as one
+      if (newRole === "admin") {
+        const targetProfileResult = await this.userRepository.findUserProfile(memberId);
+        if (targetProfileResult.isFailure()) return targetProfileResult;
+        const targetProfile = targetProfileResult.value;
+        if (!targetProfile || targetProfile.activated === false) {
           this.logger.warn({
-            msg: "Experiment not found",
+            msg: "User attempted to promote a deactivated account to admin",
             operation: "update-experiment-member-role",
             experimentId,
+            memberId,
+            userId: currentUserId,
           });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+          return failure(AppError.badRequest("Cannot make a deactivated account an admin"));
         }
+      }
 
-        if (experiment.status === "archived") {
-          this.logger.warn({
-            msg: "Experiment is archived",
-            operation: "update-experiment-member-role",
-            experimentId,
-          });
-          return failure(AppError.forbidden("Cannot update member roles in archived experiments"));
-        }
+      // Prevent demoting the last admin
+      if (newRole !== "admin") {
+        const adminCountResult = await this.experimentMemberRepository.getAdminCount(experimentId);
 
-        if (!isAdmin) {
+        if (adminCountResult.isFailure()) return adminCountResult;
+        const adminCount = adminCountResult.value;
+
+        if (adminCount <= 1) {
           this.logger.warn({
-            msg: "User attempted to update member roles without admin privileges",
+            msg: "User attempted to demote last admin in experiment",
             operation: "update-experiment-member-role",
             experimentId,
             userId: currentUserId,
           });
-          return failure(AppError.forbidden("Only admins can update member roles"));
+          return failure(AppError.badRequest("Cannot demote the last admin of the experiment"));
         }
+      }
 
-        // Don't promote a deactivated ("Unknown") account to admin, it can't act as one
-        if (newRole === "admin") {
-          const targetProfileResult = await this.userRepository.findUserProfile(memberId);
-          if (targetProfileResult.isFailure()) return targetProfileResult;
-          const targetProfile = targetProfileResult.value;
-          if (!targetProfile || targetProfile.activated === false) {
-            this.logger.warn({
-              msg: "User attempted to promote a deactivated account to admin",
-              operation: "update-experiment-member-role",
-              experimentId,
-              memberId,
-              userId: currentUserId,
-            });
-            return failure(AppError.badRequest("Cannot make a deactivated account an admin"));
-          }
-        }
+      // Proceed with update
+      this.logger.debug({
+        msg: "Updating member role in experiment",
+        operation: "update-experiment-member-role",
+        experimentId,
+        memberId,
+        newRole,
+      });
 
-        // Prevent demoting the last admin
-        if (newRole !== "admin") {
-          const adminCountResult =
-            await this.experimentMemberRepository.getAdminCount(experimentId);
+      const updateResult = await this.experimentMemberRepository.updateMemberRole(
+        experimentId,
+        memberId,
+        newRole,
+      );
 
-          if (adminCountResult.isFailure()) return adminCountResult;
-          const adminCount = adminCountResult.value;
-
-          if (adminCount <= 1) {
-            this.logger.warn({
-              msg: "User attempted to demote last admin in experiment",
-              operation: "update-experiment-member-role",
-              experimentId,
-              userId: currentUserId,
-            });
-            return failure(AppError.badRequest("Cannot demote the last admin of the experiment"));
-          }
-        }
-
-        // Proceed with update
-        this.logger.debug({
-          msg: "Updating member role in experiment",
+      if (updateResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to update member in experiment",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
           operation: "update-experiment-member-role",
           experimentId,
           memberId,
-          newRole,
+          error: updateResult.error,
         });
+        return failure(AppError.internal("Failed to update member role"));
+      }
 
-        const updateResult = await this.experimentMemberRepository.updateMemberRole(
-          experimentId,
-          memberId,
-          newRole,
-        );
+      this.logger.log({
+        msg: "Successfully updated member role in experiment",
+        operation: "update-experiment-member-role",
+        experimentId,
+        memberId,
+        newRole,
+        status: "success",
+      });
 
-        if (updateResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to update member in experiment",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "update-experiment-member-role",
-            experimentId,
-            memberId,
-            error: updateResult.error,
-          });
-          return failure(AppError.internal("Failed to update member role"));
-        }
-
-        this.logger.log({
-          msg: "Successfully updated member role in experiment",
-          operation: "update-experiment-member-role",
-          experimentId,
-          memberId,
-          newRole,
-          status: "success",
-        });
-
-        return updateResult;
-      },
-    );
+      return updateResult;
+    });
   }
 }

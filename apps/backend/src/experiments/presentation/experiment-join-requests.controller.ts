@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentJoinRequestsContract } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -47,6 +48,7 @@ export class ExperimentJoinRequestsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentJoinRequestsContract.listJoinRequests)
   listJoinRequests(@Session() session: UserSession) {
     return implement(experimentJoinRequestsContract.listJoinRequests).handler(async ({ input }) => {
@@ -79,6 +81,7 @@ export class ExperimentJoinRequestsController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentJoinRequestsContract.approveJoinRequest)
   approveJoinRequest(@Session() session: UserSession) {
     return implement(experimentJoinRequestsContract.approveJoinRequest).handler(
@@ -98,6 +101,7 @@ export class ExperimentJoinRequestsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentJoinRequestsContract.rejectJoinRequest)
   rejectJoinRequest(@Session() session: UserSession) {
     return implement(experimentJoinRequestsContract.rejectJoinRequest).handler(

@@ -32,18 +32,6 @@ export class RemoveCompatibleProtocolUseCase {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
     }
 
-    // Check ownership
-    if (macroResult.value.createdBy !== currentUserId) {
-      this.logger.warn({
-        msg: "Unauthorized attempt to remove compatible protocol",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "removeCompatibleProtocol",
-        macroId,
-        userId: currentUserId,
-      });
-      return failure(AppError.forbidden("Only the macro creator can manage compatible protocols"));
-    }
-
     const removeResult = await this.macroProtocolRepository.removeProtocol(macroId, protocolId);
     if (removeResult.isFailure()) {
       this.logger.error({

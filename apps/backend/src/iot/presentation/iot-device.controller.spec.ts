@@ -1,9 +1,11 @@
+import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { IotDevice, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -169,12 +171,12 @@ describe("IotDeviceController", () => {
       expect(response.body.id).toBe(device.id);
     });
 
-    it("returns 404 for another user's device", async () => {
+    it("returns 403 for another user's private device", async () => {
       const otherUser = await testApp.createTestUser({});
       const device = await testApp.createIotDevice({ createdBy: otherUser });
       const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
 
-      await testApp.get(path).withAuth(userId).expect(StatusCodes.NOT_FOUND);
+      await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
     });
 
     it("deletes the user's device (204)", async () => {
@@ -184,12 +186,12 @@ describe("IotDeviceController", () => {
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.NO_CONTENT);
     });
 
-    it("returns 404 when deleting another user's device", async () => {
+    it("returns 403 when deleting another user's private device", async () => {
       const otherUser = await testApp.createTestUser({});
       const device = await testApp.createIotDevice({ createdBy: otherUser });
       const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
-      await testApp.delete(path).withAuth(userId).expect(StatusCodes.NOT_FOUND);
+      await testApp.delete(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
     });
   });
 
@@ -307,6 +309,86 @@ describe("IotDeviceController", () => {
       });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("authorization", () => {
+    // Each guarded route must delegate to AuthorizationService.can() with the
+    // resource/action declared by its @CanAccess decorator (device id in the
+    // `deviceId` param), and turn a denial into a 403. Mocking can() to deny
+    // pins the {resource, action} wiring, so a missing or wrong-action decorator
+    // fails here.
+    it.each([
+      {
+        name: "get device",
+        action: "read",
+        request: (deviceId: string, uid: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId }))
+            .withAuth(uid),
+      },
+      {
+        name: "delete device",
+        action: "manage",
+        request: (deviceId: string, uid: string) =>
+          testApp
+            .delete(testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId }))
+            .withAuth(uid),
+      },
+      {
+        name: "issue credentials",
+        action: "manage",
+        request: (deviceId: string, uid: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.iot.issueIotCredentials, { deviceId }))
+            .withAuth(uid)
+            .send({}),
+      },
+      {
+        name: "rotate credentials",
+        action: "manage",
+        request: (deviceId: string, uid: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, { deviceId }))
+            .withAuth(uid)
+            .send({}),
+      },
+      {
+        name: "revoke credentials",
+        action: "manage",
+        request: (deviceId: string, uid: string) =>
+          testApp
+            .delete(testApp.resolveOrpcPath(contract.iot.revokeIotCredentials, { deviceId }))
+            .withAuth(uid),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const canSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "can")
+        .mockResolvedValue({ allow: false, reason: "forbidden" });
+      const deviceId = faker.string.uuid();
+
+      await request(deviceId, userId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(userId, {
+        resourceType: "device",
+        resourceId: deviceId,
+        action,
+      });
+    });
+
+    it("returns 403 when registering a device in an organization the caller is not a member of", async () => {
+      const organizationId = faker.string.uuid();
+      const isOrgMemberSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
+        .mockResolvedValue(false);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
+        .withAuth(userId)
+        .send({ ...registerBody, organizationId })
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(isOrgMemberSpy).toHaveBeenCalledWith(userId, organizationId);
     });
   });
 });

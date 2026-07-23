@@ -24,6 +24,7 @@ export const zExperiment = z.object({
   anonymizeContributors: z.boolean(),
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
+  organizationId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
@@ -315,6 +316,11 @@ export const zCreateExperimentBodyBase = z.object({
   description: z.string().optional().describe("Optional description of the experiment"),
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  organizationId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("Optional owning organization; defaults to the creator's personal org"),
   embargoUntil: z
     .string()
     .datetime()

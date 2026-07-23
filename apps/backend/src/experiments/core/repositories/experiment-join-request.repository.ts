@@ -7,6 +7,7 @@ import {
   experimentJoinRequests,
   experimentMembers,
   profiles,
+  resourceGrants,
   users,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -155,6 +156,19 @@ export class ExperimentJoinRequestRepository {
           .values({
             experimentId,
             userId: requesterUserId,
+            role: "member",
+          })
+          .onConflictDoNothing();
+
+        // Mirror the membership into resource_grants so can() authorizes the
+        // new member (read). experiment_members stays the contributor layer.
+        await tx
+          .insert(resourceGrants)
+          .values({
+            resourceType: "experiment",
+            resourceId: experimentId,
+            granteeType: "user",
+            granteeId: requesterUserId,
             role: "member",
           })
           .onConflictDoNothing();

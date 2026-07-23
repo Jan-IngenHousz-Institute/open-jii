@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, inArray, iotDevices } from "@repo/database";
+import { desc, eq, inArray, iotDevices, ensurePersonalOrganization } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -16,11 +16,16 @@ export class IotDeviceRepository {
   async create(
     createIotDeviceDto: CreateIotDeviceDto,
     userId: string,
+    targetOrganizationId?: string | null,
   ): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
+      // Own the device with the requested org, falling back to the creator's
+      // personal org so there is never an org-less device.
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const results = await this.database
         .insert(iotDevices)
-        .values({ ...createIotDeviceDto, createdBy: userId })
+        .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
         .returning();
       return results;
     });
@@ -37,12 +42,14 @@ export class IotDeviceRepository {
     });
   }
 
-  async findByIdForOwner(deviceId: string, userId: string): Promise<Result<IotDeviceDto | null>> {
+  // Loads a device without owner-scoping. Authorization is enforced upstream by
+  // the @CanAccess guard (org role / grant / public), so org-based access works.
+  async findById(deviceId: string): Promise<Result<IotDeviceDto | null>> {
     return tryCatch(async () => {
       const results = await this.database
         .select()
         .from(iotDevices)
-        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, userId)))
+        .where(eq(iotDevices.id, deviceId))
         .limit(1);
       return results.length === 0 ? null : results[0];
     });
@@ -74,26 +81,22 @@ export class IotDeviceRepository {
     });
   }
 
-  async update(
-    deviceId: string,
-    userId: string,
-    patch: UpdateIotDeviceDto,
-  ): Promise<Result<IotDeviceDto | null>> {
+  async update(deviceId: string, patch: UpdateIotDeviceDto): Promise<Result<IotDeviceDto | null>> {
     return tryCatch(async () => {
       const results = await this.database
         .update(iotDevices)
         .set(patch)
-        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, userId)))
+        .where(eq(iotDevices.id, deviceId))
         .returning();
       return results.length === 0 ? null : results[0];
     });
   }
 
-  async delete(deviceId: string, userId: string): Promise<Result<IotDeviceDto[]>> {
+  async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
         .delete(iotDevices)
-        .where(and(eq(iotDevices.id, deviceId), eq(iotDevices.createdBy, userId)))
+        .where(eq(iotDevices.id, deviceId))
         .returning();
       return results;
     });

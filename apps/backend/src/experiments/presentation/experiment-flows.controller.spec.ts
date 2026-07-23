@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentFlowsController", () => {
@@ -175,6 +176,53 @@ describe("ExperimentFlowsController", () => {
         .withAuth(ownerId)
         .send(testApp.sampleFlowGraph({ includeInstruction: true }))
         .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "get flow",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.experiments.getFlow, { id: experimentId }))
+            .withAuth(userId),
+      },
+      {
+        name: "create flow",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.experiments.createFlow, { id: experimentId }))
+            .withAuth(userId)
+            .send(testApp.sampleFlowGraph({ includeInstruction: true })),
+      },
+      {
+        name: "update flow",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .put(testApp.resolveOrpcPath(contract.experiments.updateFlow, { id: experimentId }))
+            .withAuth(userId)
+            .send(testApp.sampleFlowGraph({ includeInstruction: true })),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: ownerId,
+        visibility: "private",
+      });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, memberId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(memberId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action,
+      });
     });
   });
 });

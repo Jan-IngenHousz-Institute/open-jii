@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
@@ -19,6 +20,7 @@ import { UpdateAnnotationUseCase } from "../application/use-cases/experiment-dat
 describe("ExperimentDataAnnotationsController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let experimentId: string;
   let addAnnotationsUseCase: AddAnnotationsUseCase;
   let updateAnnotationUseCase: UpdateAnnotationUseCase;
   let deleteAnnotationsUseCase: DeleteAnnotationsUseCase;
@@ -30,6 +32,11 @@ describe("ExperimentDataAnnotationsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Annotations controller experiment",
+      userId: testUserId,
+    });
+    experimentId = experiment.id;
 
     addAnnotationsUseCase = testApp.module.get(AddAnnotationsUseCase);
     updateAnnotationUseCase = testApp.module.get(UpdateAnnotationUseCase);
@@ -50,7 +57,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -106,7 +113,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 400 if tableName is missing", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -132,7 +139,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 401 when not authenticated", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -155,6 +162,58 @@ describe("ExperimentDataAnnotationsController", () => {
         .send(addAnnotationsData)
         .expect(StatusCodes.UNAUTHORIZED);
     });
+
+    it("should return 404 when the experiment does not exist", async () => {
+      const executeSpy = vi.spyOn(addAnnotationsUseCase, "execute");
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
+        id: "00000000-0000-0000-0000-000000000000",
+      });
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
+        tableName: "data_table_1",
+        rowId: "row_123",
+        annotation: {
+          type: "comment",
+          content: { type: "comment", text: "This is a test comment" },
+        },
+      };
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send(addAnnotationsData)
+        .expect(StatusCodes.NOT_FOUND);
+
+      expect(executeSpy).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 for a non-member even when the experiment is public", async () => {
+      const ownerId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Public annotations experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+      const executeSpy = vi.spyOn(addAnnotationsUseCase, "execute");
+      const path = testApp.resolveOrpcPath(contract.experiments.addAnnotation, {
+        id: experiment.id,
+      });
+      const addAnnotationsData: ExperimentAddAnnotationBody = {
+        tableName: "data_table_1",
+        rowId: "row_123",
+        annotation: {
+          type: "comment",
+          content: { type: "comment", text: "This is a test comment" },
+        },
+      };
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send(addAnnotationsData)
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(executeSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe("addAnnotationsBulk", () => {
@@ -163,7 +222,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -219,7 +278,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 400 if annotation type is unknown", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -246,7 +305,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 401 when not authenticated", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -277,7 +336,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
@@ -329,7 +388,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "wrong-id",
       });
 
@@ -354,7 +413,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
@@ -378,7 +437,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
@@ -391,13 +450,11 @@ describe("ExperimentDataAnnotationsController", () => {
       };
 
       // Send the request
-      const response: SuperTestResponse<ExperimentAnnotationRowsAffected> = await testApp
+      await testApp
         .patch(path)
-        .withAuth(testUserId)
+        .withoutAuth()
         .send(updateAnnotationData)
-        .expect(StatusCodes.OK);
-
-      expect(response.body.rowsAffected).toBe(1);
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -407,7 +464,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
@@ -434,7 +491,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 400 if annotation id is incorrect", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "wrong-id",
       });
 
@@ -445,7 +502,7 @@ describe("ExperimentDataAnnotationsController", () => {
     it("should return 401 when not authenticated", async () => {
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
         annotationId: "9f244bae-22d7-48c1-9459-b02a6846cea8",
       });
 
@@ -460,7 +517,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -508,7 +565,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -530,7 +587,7 @@ describe("ExperimentDataAnnotationsController", () => {
 
       // Construct the path
       const path = testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, {
-        id: "06a9ac24-b888-4a97-a883-16354d2cf63c",
+        id: experimentId,
       });
 
       // Create the request body
@@ -546,6 +603,66 @@ describe("ExperimentDataAnnotationsController", () => {
         .withoutAuth()
         .send(deleteAnnotationsBulkData)
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("contributor authorization", () => {
+    // These routes require experiment MEMBERSHIP (not mere read access),
+    // enforced by @CanContributeToExperiment: a non-member must be rejected even
+    // on a public experiment. `addAnnotation` is covered by the public-experiment
+    // test above; this pins the decorator on the remaining routes so removing any
+    // one of them fails here.
+    it.each([
+      {
+        name: "add annotations (bulk)",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.experiments.addAnnotationsBulk, { id }))
+            .withAuth(userId)
+            .send({}),
+      },
+      {
+        name: "update annotation",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.updateAnnotation, {
+                id,
+                annotationId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId)
+            .send({}),
+      },
+      {
+        name: "delete annotation",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.experiments.deleteAnnotation, {
+                id,
+                annotationId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "delete annotations (bulk)",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.experiments.deleteAnnotationsBulk, { id }))
+            .withAuth(userId)
+            .send({}),
+      },
+    ])("rejects a non-member from $name even on a public experiment", async ({ request }) => {
+      const ownerId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Public annotations authorization experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+
+      await request(experiment.id, testUserId).expect(StatusCodes.FORBIDDEN);
     });
   });
 });

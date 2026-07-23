@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
+import { CanContributeToExperiment } from "../../authorization/can-contribute-to-experiment.guard";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetIotCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
@@ -32,10 +33,11 @@ export class IotController {
     });
   }
 
+  @CanContributeToExperiment({ source: "body", param: "experimentId" })
   @Implement(iotContract.getUploadUrl)
-  getUploadUrl(@Session() session: UserSession) {
+  getUploadUrl() {
     return implement(iotContract.getUploadUrl).handler(async ({ input }) => {
-      const result = await this.getIotUploadUrlUseCase.execute(input.experimentId, session.user.id);
+      const result = await this.getIotUploadUrlUseCase.execute(input.experimentId);
 
       if (result.isSuccess()) {
         return formatDates(result.value);

@@ -11,8 +11,8 @@ export class GetExperimentLocationsUseCase {
   private readonly logger = new Logger(GetExperimentLocationsUseCase.name);
 
   constructor(
-    private readonly locationRepository: LocationRepository,
     private readonly experimentRepository: ExperimentRepository,
+    private readonly locationRepository: LocationRepository,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<LocationDto[]>> {
@@ -23,28 +23,19 @@ export class GetExperimentLocationsUseCase {
       userId,
     });
 
-    // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-    if (accessResult.isFailure()) {
-      this.logger.error({
-        msg: "Failed to check experiment existence",
-        errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_LIST_FAILED,
-        operation: "getExperimentLocations",
-        experimentId,
-        userId,
-        error: accessResult.error.message,
-      });
-      return failure(AppError.notFound("Experiment not found"));
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
     }
-
-    if (!accessResult.value.experiment) {
+    if (!experimentResult.value) {
       this.logger.warn({
-        msg: "Experiment not found",
+        msg: "Attempt to get locations of non-existent experiment",
+        errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
         operation: "getExperimentLocations",
         experimentId,
         userId,
       });
-      return failure(AppError.notFound("Experiment not found"));
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
     const locationsResult = await this.locationRepository.findByExperimentId(experimentId);

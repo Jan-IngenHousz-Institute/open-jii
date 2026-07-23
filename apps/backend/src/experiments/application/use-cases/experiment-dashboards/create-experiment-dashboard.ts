@@ -31,68 +31,61 @@ export class CreateExperimentDashboardUseCase {
       userId,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        hasArchiveAccess: boolean;
-        isAdmin: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Attempt to create dashboard in non-existent experiment",
-            operation: "createExperimentDashboard",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "User does not have access to create dashboard in experiment",
-            operation: "createExperimentDashboard",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        const dashboardResult = await this.experimentDashboardRepository.create(
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Attempt to create dashboard in non-existent experiment",
+          operation: "createExperimentDashboard",
           experimentId,
-          data,
           userId,
-        );
+        });
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
 
-        return dashboardResult.chain((dashboards: ExperimentDashboardDto[]) => {
-          if (dashboards.length === 0) {
-            this.logger.error({
-              msg: "Failed to create dashboard",
-              errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_CREATE_FAILED,
-              operation: "createExperimentDashboard",
-              experimentId,
-              userId,
-            });
-            return failure(AppError.internal("Failed to create dashboard"));
-          }
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // Archived experiments are read-only: this is a domain rule about which
+      // writes are legal, not who may write, so it stays in the use case.
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to create dashboard in archived experiment",
+          operation: "createExperimentDashboard",
+          experimentId,
+          userId,
+        });
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
 
-          const dashboard = dashboards[0];
-          this.logger.log({
-            msg: "Successfully created dashboard for experiment",
+      const dashboardResult = await this.experimentDashboardRepository.create(
+        experimentId,
+        data,
+        userId,
+      );
+
+      return dashboardResult.chain((dashboards: ExperimentDashboardDto[]) => {
+        if (dashboards.length === 0) {
+          this.logger.error({
+            msg: "Failed to create dashboard",
+            errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_CREATE_FAILED,
             operation: "createExperimentDashboard",
             experimentId,
-            dashboardId: dashboard.id,
             userId,
-            status: "success",
           });
-          return success(dashboard);
+          return failure(AppError.internal("Failed to create dashboard"));
+        }
+
+        const dashboard = dashboards[0];
+        this.logger.log({
+          msg: "Successfully created dashboard for experiment",
+          operation: "createExperimentDashboard",
+          experimentId,
+          dashboardId: dashboard.id,
+          userId,
+          status: "success",
         });
-      },
-    );
+        return success(dashboard);
+      });
+    });
   }
 }

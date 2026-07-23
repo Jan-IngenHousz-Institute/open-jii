@@ -24,19 +24,14 @@ export class GetExperimentAccessUseCase {
       userId,
     });
 
-    // Check access and get experiment info
+    // Read access is enforced by the `@CanAccess({ resource: "experiment",
+    // action: "read" })` route guard, so reaching here means the caller can read
+    // the experiment. `checkAccess` is still used to derive `isAdmin`
+    // (= can(manage)); `hasAccess` reflects effective read access.
     const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
     return accessCheckResult.chain(
-      ({
-        experiment,
-        hasAccess,
-        isAdmin,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
-      }) => {
+      ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
@@ -46,32 +41,16 @@ export class GetExperimentAccessUseCase {
           return failure(AppError.notFound(`Experiment with ID ${id} not found`));
         }
 
-        // Allow access if user is a member OR if experiment is public
-        const isPublic = experiment.visibility === "public";
-        if (!hasAccess && !isPublic) {
-          this.logger.warn({
-            msg: "User does not have access to private experiment",
-            operation: "get_access",
-            experimentId: id,
-            userId,
-          });
-          return failure(
-            AppError.forbidden("You do not have permission to access this experiment"),
-          );
-        }
-
         this.logger.debug({
           msg: "Retrieved experiment access",
           operation: "get_access",
           experimentId: id,
-          hasAccess,
           isAdmin,
-          isPublic,
         });
 
         const accessInfo: ExperimentAccessDto = {
           experiment,
-          hasAccess,
+          hasAccess: true,
           isAdmin,
         };
 

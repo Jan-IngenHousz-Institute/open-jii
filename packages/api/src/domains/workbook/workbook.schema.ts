@@ -8,6 +8,8 @@ export const zWorkbook = z.object({
   description: z.string().nullable(),
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
+  organizationId: z.string().uuid().nullable(),
+  visibility: z.enum(["private", "public"]),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   forkedFrom: z.string().uuid().nullish(),
@@ -39,6 +41,9 @@ export const zCreateWorkbookRequestBody = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
   // Set when duplicating an existing workbook, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
+  // Optional target organization to create into; defaults to the creator's
+  // personal org. The caller must be a member of the given organization.
+  organizationId: z.string().uuid().optional(),
 });
 
 export const zUpdateWorkbookRequestBody = z.object({

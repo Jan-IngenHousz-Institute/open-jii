@@ -18,7 +18,7 @@ export class GetIotDeviceUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
+    const deviceResult = await this.deviceRepository.findById(deviceId);
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }

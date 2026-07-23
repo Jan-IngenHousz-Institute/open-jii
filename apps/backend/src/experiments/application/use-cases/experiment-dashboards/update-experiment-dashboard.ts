@@ -33,97 +33,89 @@ export class UpdateExperimentDashboardUseCase {
       userId,
     });
 
-    // Access checked against the URL experimentId BEFORE findById, so a 404
-    // forking on "exists in another experiment" can't leak ids to outsiders.
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // The experiment is loaded (existence + archived state) BEFORE findById so a
+    // 404 forking on "exists in another experiment" can't leak ids to outsiders.
+    // Authorization itself is enforced declaratively by @CanAccess on the route;
+    // the archived rule stays here as a domain rule about which writes are legal.
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        hasArchiveAccess: boolean;
-        isAdmin: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Attempt to update dashboard of non-existent experiment",
-            operation: "updateExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "User does not have access to experiment",
-            operation: "updateExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
-
-        return dashboardResult.chain(async (dashboard: ExperimentDashboardDto | null) => {
-          if (!dashboard) {
-            this.logger.warn({
-              msg: "Attempt to update non-existent dashboard",
-              operation: "updateExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-            });
-            return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
-          }
-
-          if (dashboard.experimentId !== experimentId) {
-            this.logger.warn({
-              msg: "Dashboard does not belong to experiment",
-              operation: "updateExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-            });
-            return failure(
-              AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
-            );
-          }
-
-          const updateResult = await this.experimentDashboardRepository.update(dashboardId, data);
-
-          return updateResult.chain((updatedDashboards: ExperimentDashboardDto[]) => {
-            if (updatedDashboards.length === 0) {
-              this.logger.error({
-                msg: "Failed to update dashboard",
-                errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_UPDATE_FAILED,
-                operation: "updateExperimentDashboard",
-                experimentId,
-                dashboardId,
-                userId,
-              });
-              return failure(AppError.internal("Failed to update dashboard"));
-            }
-
-            const updatedDashboard = updatedDashboards[0];
-            this.logger.log({
-              msg: "Successfully updated dashboard",
-              operation: "updateExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-              status: "success",
-            });
-            return success(updatedDashboard);
-          });
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Attempt to update dashboard of non-existent experiment",
+          operation: "updateExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
         });
-      },
-    );
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to update dashboard of archived experiment",
+          operation: "updateExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
+        });
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
+
+      return dashboardResult.chain(async (dashboard: ExperimentDashboardDto | null) => {
+        if (!dashboard) {
+          this.logger.warn({
+            msg: "Attempt to update non-existent dashboard",
+            operation: "updateExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+          });
+          return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
+        }
+
+        if (dashboard.experimentId !== experimentId) {
+          this.logger.warn({
+            msg: "Dashboard does not belong to experiment",
+            operation: "updateExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+          });
+          return failure(
+            AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
+          );
+        }
+
+        const updateResult = await this.experimentDashboardRepository.update(dashboardId, data);
+
+        return updateResult.chain((updatedDashboards: ExperimentDashboardDto[]) => {
+          if (updatedDashboards.length === 0) {
+            this.logger.error({
+              msg: "Failed to update dashboard",
+              errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_UPDATE_FAILED,
+              operation: "updateExperimentDashboard",
+              experimentId,
+              dashboardId,
+              userId,
+            });
+            return failure(AppError.internal("Failed to update dashboard"));
+          }
+
+          const updatedDashboard = updatedDashboards[0];
+          this.logger.log({
+            msg: "Successfully updated dashboard",
+            operation: "updateExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+            status: "success",
+          });
+          return success(updatedDashboard);
+        });
+      });
+    });
   }
 }

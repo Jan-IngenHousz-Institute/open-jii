@@ -5,6 +5,7 @@ import { contract } from "@repo/api/contract";
 import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
 import { macros } from "@repo/database";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -58,6 +59,27 @@ describe("ProtocolController - createProtocol", () => {
     expect(response.body).toMatchObject({
       message: "A protocol with this name already exists",
     });
+  });
+
+  it("returns 403 when creating a protocol in an organization the caller is not a member of", async () => {
+    const organizationId = faker.string.uuid();
+    const isOrgMemberSpy = vi
+      .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
+      .mockResolvedValue(false);
+
+    await testApp
+      .post(testApp.resolveOrpcPath(contract.protocols.createProtocol))
+      .withAuth(testUserId)
+      .send({
+        name: "Org protocol",
+        description: "x",
+        code: [{ steps: [] }],
+        family: "multispeq",
+        organizationId,
+      })
+      .expect(StatusCodes.FORBIDDEN);
+
+    expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
   });
 });
 
@@ -134,6 +156,83 @@ describe("ProtocolController - read and update endpoints", () => {
       .withAuth(otherUserId)
       .send({ name: "Hijacked" })
       .expect(StatusCodes.FORBIDDEN);
+  });
+
+  describe("authorization", () => {
+    // Each guarded route must delegate to AuthorizationService.can() with the
+    // resource/action declared by its @CanAccess decorator, and turn a denial
+    // into a 403. Mocking can() to deny pins the {resource, action} wiring, so a
+    // missing or wrong-action decorator fails here.
+    it.each([
+      {
+        name: "get protocol",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "update protocol",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.protocols.updateProtocol, { id }))
+            .withAuth(userId)
+            .send({ name: "Blocked update" }),
+      },
+      {
+        name: "delete protocol",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(testApp.resolveOrpcPath(contract.protocols.deleteProtocol, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "list compatible macros",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.protocols.listCompatibleMacros, { id }))
+            .withAuth(userId),
+      },
+      {
+        name: "add compatible macros",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.protocols.addCompatibleMacros, { id }))
+            .withAuth(userId)
+            .send({ macroIds: [faker.string.uuid()] }),
+      },
+      {
+        name: "remove compatible macro",
+        action: "update",
+        request: (id: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.protocols.removeCompatibleMacro, {
+                id,
+                macroId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const canSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "can")
+        .mockResolvedValue({ allow: false, reason: "forbidden" });
+      const protocolId = faker.string.uuid();
+
+      await request(protocolId, testUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "protocol",
+        resourceId: protocolId,
+        action,
+      });
+    });
   });
 });
 

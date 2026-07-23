@@ -125,34 +125,6 @@ describe("AddExperimentLocationsUseCase", () => {
     expect(parseFloat(location.longitude)).toBeCloseTo(13.987654321, 8);
   });
 
-  it("should handle user access errors when user has no permission", async () => {
-    // Create a test user who will NOT have access
-    const anotherUserId = await testApp.createTestUser({});
-
-    // Create an experiment with testUserId (who becomes the creator/admin)
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const locationsToAdd: CreateLocationDto[] = [
-      {
-        experimentId: experiment.id,
-        name: "Unauthorized Location",
-        latitude: 52.52,
-        longitude: 13.405,
-      },
-    ];
-
-    // Try to add locations as anotherUserId (who doesn't have access)
-    const result = await useCase.execute(experiment.id, locationsToAdd, anotherUserId);
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.message).toContain("You do not have access to this experiment");
-  });
-
   it("should forbid any user from adding locations to archived experiments", async () => {
     // Create a test user who will NOT have admin access
     const anotherUserId = await testApp.createTestUser({});
@@ -177,13 +149,13 @@ describe("AddExperimentLocationsUseCase", () => {
     const adminResult = await useCase.execute(experiment.id, locationsToAdd, testUserId);
     expect(adminResult.isFailure()).toBe(true);
     assertFailure(adminResult);
-    expect(adminResult.error.message).toContain("You do not have access to this experiment");
+    expect(adminResult.error.message).toContain("Cannot modify an archived experiment");
 
     // Try to add locations as another non-admin user
     const memberResult = await useCase.execute(experiment.id, locationsToAdd, anotherUserId);
     expect(memberResult.isFailure()).toBe(true);
     assertFailure(memberResult);
-    expect(memberResult.error.message).toContain("You do not have access to this experiment");
+    expect(memberResult.error.message).toContain("Cannot modify an archived experiment");
   });
 
   it("should handle repository errors when creating locations fails", async () => {

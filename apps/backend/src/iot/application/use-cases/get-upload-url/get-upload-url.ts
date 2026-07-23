@@ -15,37 +15,27 @@ export class GetIotUploadUrlUseCase {
     private readonly experimentRepository: ExperimentRepository,
   ) {}
 
-  async execute(experimentId: string, userId: string): Promise<Result<IotUploadUrl>> {
+  async execute(experimentId: string): Promise<Result<IotUploadUrl>> {
     this.logger.log({
       msg: "Generating IoT upload URL",
       operation: "getIotUploadUrl",
       experimentId,
-      userId,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
+    }
+    if (!experimentResult.value) {
+      this.logger.warn({
+        msg: "Experiment not found",
+        operation: "getIotUploadUrl",
+        experimentId,
+      });
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(async ({ experiment, hasAccess }) => {
-      if (!experiment) {
-        this.logger.warn({
-          msg: "Experiment not found",
-          operation: "getIotUploadUrl",
-          experimentId,
-        });
-        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-      }
-
-      if (!hasAccess) {
-        this.logger.warn({
-          msg: "User is not a member of experiment",
-          operation: "getIotUploadUrl",
-          experimentId,
-          userId,
-        });
-        return failure(AppError.forbidden("Only experiment members can upload IoT data"));
-      }
-
-      return this.awsPort.getIotUploadUrl(experimentId);
-    });
+    // Experiment membership is enforced by @CanContributeToExperiment.
+    return this.awsPort.getIotUploadUrl(experimentId);
   }
 }

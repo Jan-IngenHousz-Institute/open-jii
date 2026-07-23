@@ -6,6 +6,8 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -65,12 +67,17 @@ export class IotDeviceController {
     });
   }
 
+  @CanCreateInOrg()
   @Implement(iotContract.registerIotDevice)
   registerIotDevice(@Session() session: UserSession) {
     return implement(iotContract.registerIotDevice).handler(async ({ input }) => {
       if (!(await this.devicesEnabled(session))) this.disabled("registerIotDevice");
 
-      const result = await this.registerIotDeviceUseCase.execute(input, session.user.id);
+      const result = await this.registerIotDeviceUseCase.execute(
+        input,
+        session.user.id,
+        input.organizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         return formatDates(result.value);
@@ -80,6 +87,7 @@ export class IotDeviceController {
     });
   }
 
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotContract.getIotDevice)
   getIotDevice(@Session() session: UserSession) {
     return implement(iotContract.getIotDevice).handler(async ({ input }) => {
@@ -95,6 +103,7 @@ export class IotDeviceController {
     });
   }
 
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
   @Implement(iotContract.deleteIotDevice)
   deleteIotDevice(@Session() session: UserSession) {
     return implement(iotContract.deleteIotDevice).handler(async ({ input }) => {
@@ -110,6 +119,7 @@ export class IotDeviceController {
     });
   }
 
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
   @Implement(iotContract.issueIotCredentials)
   issueIotCredentials(@Session() session: UserSession) {
     return implement(iotContract.issueIotCredentials).handler(async ({ input }) => {
@@ -125,6 +135,7 @@ export class IotDeviceController {
     });
   }
 
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
   @Implement(iotContract.rotateIotCredentials)
   rotateIotCredentials(@Session() session: UserSession) {
     return implement(iotContract.rotateIotCredentials).handler(async ({ input }) => {
@@ -143,6 +154,7 @@ export class IotDeviceController {
     });
   }
 
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
   @Implement(iotContract.revokeIotCredentials)
   revokeIotCredentials(@Session() session: UserSession) {
     return implement(iotContract.revokeIotCredentials).handler(async ({ input }) => {

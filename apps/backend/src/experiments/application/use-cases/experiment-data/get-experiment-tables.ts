@@ -13,7 +13,6 @@ import type {
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../core/models/experiment-data.model";
-import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -50,66 +49,49 @@ export class GetExperimentTablesUseCase {
       userId,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
+    }
+    if (!experimentResult.value) {
+      this.logger.warn({
+        msg: "Experiment not found",
+        errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+        operation: "getExperimentTables",
+        experimentId,
+      });
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(
-      async ({
-        hasAccess,
-        experiment,
-      }: {
-        hasAccess: boolean;
-        experiment: ExperimentDto | null;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "getExperimentTables",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
+    // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
+    // action: "read" })` route guard.
+    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+      includeSchemas: false,
+    });
 
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User attempted to access tables without proper permissions",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "getExperimentTables",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    if (metadataResult.isFailure()) {
+      this.logger.error({
+        msg: "Failed to get experiment table metadata",
+        operation: "getExperimentTables",
+        experimentId,
+        error: metadataResult.error.message,
+      });
+      return failure(AppError.internal("Failed to retrieve table metadata"));
+    }
 
-        const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-          includeSchemas: false,
-        });
+    const staticMetadata = metadataResult.value.filter((m) => m.tableType === "static");
+    const macroMetadata = metadataResult.value.filter((m) => m.tableType === "macro");
+    const uploadMetadata = metadataResult.value.filter((m) => m.tableType === "upload");
 
-        if (metadataResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to get experiment table metadata",
-            operation: "getExperimentTables",
-            experimentId,
-            error: metadataResult.error.message,
-          });
-          return failure(AppError.internal("Failed to retrieve table metadata"));
-        }
+    const macroNamesMap = await this.resolveMacroNames(experimentId, macroMetadata);
 
-        const staticMetadata = metadataResult.value.filter((m) => m.tableType === "static");
-        const macroMetadata = metadataResult.value.filter((m) => m.tableType === "macro");
-        const uploadMetadata = metadataResult.value.filter((m) => m.tableType === "upload");
+    const tables = [
+      ...staticMetadata.map((m) => this.mapStaticTable(m)),
+      ...macroMetadata.map((m) => this.mapMacroTable(m, macroNamesMap)),
+      ...uploadMetadata.map((m) => this.mapUploadTable(m)),
+    ];
 
-        const macroNamesMap = await this.resolveMacroNames(experimentId, macroMetadata);
-
-        const tables = [
-          ...staticMetadata.map((m) => this.mapStaticTable(m)),
-          ...macroMetadata.map((m) => this.mapMacroTable(m, macroNamesMap)),
-          ...uploadMetadata.map((m) => this.mapUploadTable(m)),
-        ];
-
-        return success(tables);
-      },
-    );
+    return success(tables);
   }
 
   private mapStaticTable({

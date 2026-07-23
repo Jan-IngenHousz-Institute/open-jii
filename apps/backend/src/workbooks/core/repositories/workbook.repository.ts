@@ -4,6 +4,7 @@ import {
   and,
   asc,
   desc,
+  ensurePersonalOrganization,
   eq,
   exists,
   experimentMembers,
@@ -62,13 +63,21 @@ export class WorkbookRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async create(data: CreateWorkbookDto, userId: string): Promise<Result<WorkbookDto[]>> {
+  async create(
+    data: CreateWorkbookDto,
+    userId: string,
+    targetOrganizationId?: string | null,
+  ): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
+      // Own the workbook with the requested target org (fallback: the creator's personal org).
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
       const results = await this.database
         .insert(workbooks)
         .values({
           ...data,
           createdBy: userId,
+          organizationId,
         })
         .returning(workbookColumns);
       return results as WorkbookDto[];

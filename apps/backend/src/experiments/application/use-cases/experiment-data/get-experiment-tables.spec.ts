@@ -109,33 +109,6 @@ describe("GetExperimentTablesUseCase", () => {
       });
     });
 
-    it("should return not found error when experiment does not exist", async () => {
-      const nonExistentId = faker.string.uuid();
-
-      const result = await useCase.execute(nonExistentId, testUserId);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.code).toBe("NOT_FOUND");
-      expect(result.error.message).toContain(nonExistentId);
-    });
-
-    it("should return forbidden error when user does not have access to private experiment", async () => {
-      const otherUserId = await testApp.createTestUser({});
-      const { experiment } = await testApp.createExperiment({
-        name: "Private Experiment",
-        userId: otherUserId,
-        visibility: "private",
-      });
-
-      const result = await useCase.execute(experiment.id, testUserId);
-
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.code).toBe("FORBIDDEN");
-      expect(result.error.message).toContain("do not have access");
-    });
-
     it("should allow access to public experiments without membership", async () => {
       const otherUserId = await testApp.createTestUser({});
       const { experiment } = await testApp.createExperiment({
@@ -157,6 +130,17 @@ describe("GetExperimentTablesUseCase", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toHaveLength(1);
+    });
+
+    it("should return not found error when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+
+      const result = await useCase.execute(nonExistentId, testUserId);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.code).toBe("NOT_FOUND");
+      expect(result.error.message).toContain(nonExistentId);
     });
 
     it("should handle getExperimentTableMetadata failure", async () => {

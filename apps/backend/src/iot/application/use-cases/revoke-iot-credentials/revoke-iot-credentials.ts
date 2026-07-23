@@ -25,7 +25,7 @@ export class RevokeIotCredentialsUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
+    const deviceResult = await this.deviceRepository.findById(deviceId);
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
@@ -67,7 +67,7 @@ export class RevokeIotCredentialsUseCase {
       }
     }
 
-    const updateResult = await this.deviceRepository.update(deviceId, userId, {
+    const updateResult = await this.deviceRepository.update(deviceId, {
       status: "revoked",
       certificateId: null,
       certificateArn: null,

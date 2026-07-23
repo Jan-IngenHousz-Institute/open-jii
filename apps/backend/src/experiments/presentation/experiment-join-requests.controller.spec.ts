@@ -10,6 +10,7 @@ import type {
 import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -421,7 +422,7 @@ describe("ExperimentJoinRequestsController", () => {
   });
 
   describe("listJoinRequests", () => {
-    it("returns pending requests to any authenticated user", async () => {
+    it("returns pending requests to admins and rejects other authenticated users", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "List exp",
         userId: adminUserId,
@@ -442,9 +443,64 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.OK);
       expect(listResponse.body).toHaveLength(1);
 
-      // Any user can list, regardless of membership
       const otherUserId = await testApp.createTestUser({ email: "other-list@example.com" });
-      await testApp.get(listPath).withAuth(otherUserId).expect(StatusCodes.OK);
+      await testApp.get(listPath).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "list join requests",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.listJoinRequests, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "approve join request",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
+                id: experimentId,
+                requestId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "reject join request",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
+                id: experimentId,
+                requestId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires manage access to $name", async ({ request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: adminUserId,
+        visibility: "private",
+      });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, requesterUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(requesterUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "manage",
+      });
     });
   });
 });

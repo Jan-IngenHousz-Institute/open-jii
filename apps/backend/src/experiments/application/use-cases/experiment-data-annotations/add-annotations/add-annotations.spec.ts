@@ -115,50 +115,12 @@ describe("AddAnnotations", () => {
       },
     };
 
-    // Act
     const result = await useCase.execute(nonExistentId, newAnnotation, testUserId);
 
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
+    expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
-  });
-
-  it("should return forbidden error when user does not have access to private experiment", async () => {
-    // Create experiment with another user
-    const otherUserId = await testApp.createTestUser({
-      email: "other@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      description: "Private experiment",
-      status: "active",
-      visibility: "private",
-      userId: otherUserId,
-    });
-
-    const newAnnotation: ExperimentAddAnnotationsBulkBody = {
-      tableName: "experiment_data_table",
-      rowIds: ["row1", "row2"],
-      annotation: {
-        type: "comment",
-        content: {
-          type: "comment",
-          text: "This is a test comment",
-        },
-      },
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, newAnnotation, testUserId);
-
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should handle repository storeAnnotations failure", async () => {

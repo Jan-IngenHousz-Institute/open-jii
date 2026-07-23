@@ -67,37 +67,6 @@ describe("ListExperimentMembersUseCase", () => {
     );
   });
 
-  it("should return NOT_FOUND error if experiment does not exist", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
-
-    const result = await useCase.execute(nonExistentId, testUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("NOT_FOUND");
-  });
-
-  it("should return FORBIDDEN error if user has no access to private experiment", async () => {
-    // Create a private experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    // Create a user who is not a member
-    const nonMemberId = await testApp.createTestUser({
-      email: "nonmember@example.com",
-    });
-
-    // Try to list members as non-member
-    const result = await useCase.execute(experiment.id, nonMemberId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should allow any user to list members of a public experiment", async () => {
     // Create a public experiment
     const { experiment, experimentAdmin } = await testApp.createExperiment({
@@ -127,5 +96,13 @@ describe("ListExperimentMembersUseCase", () => {
         id: experimentAdmin.userId,
       }) as Partial<UserDto>,
     });
+  });
+
+  it("should return NOT_FOUND if the experiment does not exist", async () => {
+    const result = await useCase.execute("00000000-0000-0000-0000-000000000000", testUserId);
+
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
   });
 });

@@ -14,7 +14,6 @@ import {
   isFlagContent,
 } from "../../../../core/models/experiment-data-annotation.model";
 import type { CreateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
-import type { ExperimentDto } from "../../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../../core/ports/databricks.port";
 import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
@@ -55,85 +54,67 @@ export class AddAnnotationsUseCase {
       );
     }
 
-    // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
+    }
+    if (!experimentResult.value) {
+      this.logger.warn({
+        msg: "Experiment not found",
+        operation: "addAnnotations",
+        experimentId,
+      });
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(
-      async ({
-        hasAccess,
-        experiment,
-      }: {
-        hasAccess: boolean;
-        experiment: ExperimentDto | null;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            operation: "addAnnotations",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User attempted to access experiment data without proper permissions",
-            operation: "addAnnotations",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    // Experiment membership is enforced by @CanContributeToExperiment.
+    const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
+    if (userProfilesResult.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to fetch user profile",
+        operation: "addAnnotations",
+        userId,
+        experimentId,
+      });
+    }
+    const userProfile = userProfilesResult.isSuccess() ? userProfilesResult.value[0] : null;
+    const userName = userProfile
+      ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
+      : null;
 
-        // Fetch user profile to get full name
-        const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
-        if (userProfilesResult.isFailure()) {
-          this.logger.warn({
-            msg: "Failed to fetch user profile",
-            operation: "addAnnotations",
-            userId,
-            experimentId,
-          });
-        }
-        const userProfile = userProfilesResult.isSuccess() ? userProfilesResult.value[0] : null;
-        const userName = userProfile
-          ? `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || null
-          : null;
+    const newAnnotations = data.rowIds.map((rowId) => {
+      const base: CreateAnnotationDto = {
+        userId,
+        userName,
+        tableName: data.tableName,
+        rowId,
+        type: data.annotation.type,
+      };
 
-        const newAnnotations = data.rowIds.map((rowId) => {
-          const base: CreateAnnotationDto = {
-            userId,
-            userName,
-            tableName: data.tableName,
-            rowId,
-            type: data.annotation.type,
-          };
+      if (isCommentContent(data.annotation.content)) {
+        return { ...base, contentText: data.annotation.content.text };
+      }
 
-          if (isCommentContent(data.annotation.content)) {
-            return { ...base, contentText: data.annotation.content.text };
-          }
+      if (isFlagContent(data.annotation.content)) {
+        return {
+          ...base,
+          flagType: data.annotation.content.flagType,
+          contentText: data.annotation.content.text ?? null,
+        };
+      }
 
-          if (isFlagContent(data.annotation.content)) {
-            return {
-              ...base,
-              flagType: data.annotation.content.flagType,
-              contentText: data.annotation.content.text ?? null,
-            };
-          }
+      return base;
+    });
 
-          return base;
-        });
-
-        const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
-          experimentId,
-          newAnnotations,
-        );
-
-        if (result.isFailure()) {
-          return failure(AppError.internal(result.error.message));
-        }
-
-        return success(result.value);
-      },
+    const result = await this.experimentDataAnnotationsRepository.storeAnnotations(
+      experimentId,
+      newAnnotations,
     );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(result.error.message));
+    }
+
+    return success(result.value);
   }
 }

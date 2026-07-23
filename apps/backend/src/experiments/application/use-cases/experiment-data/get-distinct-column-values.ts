@@ -39,44 +39,29 @@ export class GetDistinctColumnValuesUseCase {
       column: query.column,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
+    // action: "read" })` route guard. The experiment row is still loaded because
+    // the data repository needs it.
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        hasAccess,
-        experiment,
-      }: {
-        hasAccess: boolean;
-        experiment: ExperimentDto | null;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "getDistinctColumnValues",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User attempted to read distinct values without permission",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "getDistinctColumnValues",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        return this.experimentDataRepository.getDistinctColumnValues({
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+          operation: "getDistinctColumnValues",
           experimentId,
-          experiment,
-          tableName: query.tableName,
-          column: query.column,
-          limit: query.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT,
         });
-      },
-    );
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      return this.experimentDataRepository.getDistinctColumnValues({
+        experimentId,
+        experiment,
+        tableName: query.tableName,
+        column: query.column,
+        limit: query.limit ?? DISTINCT_VALUES_DEFAULT_LIMIT,
+      });
+    });
   }
 }

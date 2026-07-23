@@ -7,6 +7,8 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
+import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -138,6 +140,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.getProtocol)
   getProtocol() {
     return implement(protocolContract.getProtocol).handler(async ({ input }) => {
@@ -156,6 +159,7 @@ export class ProtocolController {
     });
   }
 
+  @CanCreateInOrg()
   @Implement(protocolContract.createProtocol)
   createProtocol(@Session() session: UserSession) {
     return implement(protocolContract.createProtocol).handler(async ({ input }) => {
@@ -176,7 +180,11 @@ export class ProtocolController {
         forkedFrom: input.forkedFrom,
       };
 
-      const result = await this.createProtocolUseCase.execute(createDto, session.user.id);
+      const result = await this.createProtocolUseCase.execute(
+        createDto,
+        session.user.id,
+        input.organizationId ?? null,
+      );
 
       if (result.isSuccess()) {
         const protocol = {
@@ -198,23 +206,11 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.updateProtocol)
   updateProtocol(@Session() session: UserSession) {
     return implement(protocolContract.updateProtocol).handler(async ({ input }) => {
       const { id, ...body } = input;
-      const protocolResult = await this.getProtocolUseCase.execute(id);
-
-      if (protocolResult.isFailure()) {
-        return throwOrpcFailure(protocolResult, this.logger);
-      }
-
-      if (protocolResult.value.createdBy !== session.user.id) {
-        return throwOrpcError(
-          AppError.forbidden("Only the protocol creator can update this protocol"),
-          this.logger,
-          "updateProtocol",
-        );
-      }
 
       if (body.code !== undefined) {
         const validationResult = await validateProtocolCode(
@@ -234,7 +230,7 @@ export class ProtocolController {
         family: body.family,
       };
 
-      const result = await this.updateProtocolUseCase.execute(id, updateDto);
+      const result = await this.updateProtocolUseCase.execute(id, updateDto, session.user.id);
 
       if (result.isSuccess()) {
         const protocol = {
@@ -256,6 +252,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "manage" })
   @Implement(protocolContract.deleteProtocol)
   deleteProtocol(@Session() session: UserSession) {
     return implement(protocolContract.deleteProtocol).handler(async ({ input }) => {
@@ -272,21 +269,7 @@ export class ProtocolController {
         );
       }
 
-      const protocolResult = await this.getProtocolUseCase.execute(input.id);
-
-      if (protocolResult.isFailure()) {
-        return throwOrpcFailure(protocolResult, this.logger);
-      }
-
-      if (protocolResult.value.createdBy !== session.user.id) {
-        return throwOrpcError(
-          AppError.forbidden("Only the protocol creator can delete this protocol"),
-          this.logger,
-          "deleteProtocol",
-        );
-      }
-
-      const result = await this.deleteProtocolUseCase.execute(input.id);
+      const result = await this.deleteProtocolUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
         this.logger.log({
@@ -303,6 +286,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.listCompatibleMacros)
   listCompatibleMacros() {
     return implement(protocolContract.listCompatibleMacros).handler(async ({ input }) => {
@@ -316,6 +300,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.addCompatibleMacros)
   addCompatibleMacros(@Session() session: UserSession) {
     return implement(protocolContract.addCompatibleMacros).handler(async ({ input }) => {
@@ -333,6 +318,7 @@ export class ProtocolController {
     });
   }
 
+  @CanAccess({ resource: "protocol", action: "update" })
   @Implement(protocolContract.removeCompatibleMacro)
   removeCompatibleMacro(@Session() session: UserSession) {
     return implement(protocolContract.removeCompatibleMacro).handler(async ({ input }) => {

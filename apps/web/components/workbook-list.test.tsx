@@ -17,6 +17,8 @@ function makeWorkbook(overrides: Partial<Workbook> & Pick<Workbook, "id" | "name
     createdBy: "00000000-0000-0000-0000-0000000000aa",
     createdByName: "Tester",
     forkedFrom: null,
+    organizationId: null,
+    visibility: "public",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,

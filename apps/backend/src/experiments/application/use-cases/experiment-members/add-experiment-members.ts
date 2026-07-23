@@ -35,105 +35,89 @@ export class AddExperimentMembersUseCase {
       memberCount: members.length,
     });
 
-    // Check if the experiment exists and if the user is an admin
-    const accessCheckResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      currentUserId,
-    );
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessCheckResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Attempt to add members to non-existent experiment",
-            operation: "add-experiment-members",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-
-        if (experiment.status === "archived") {
-          this.logger.warn({
-            msg: "Attempt to add members to archived experiment",
-            operation: "add-experiment-members",
-            experimentId,
-            userId: currentUserId,
-          });
-          return failure(AppError.forbidden("Cannot add members to archived experiments"));
-        }
-
-        if (!isAdmin) {
-          this.logger.warn({
-            msg: "User is not admin for experiment",
-            operation: "add-experiment-members",
-            experimentId,
-            userId: currentUserId,
-          });
-          return failure(AppError.forbidden("Only admins can add experiment members"));
-        }
-
-        // Add the members
-        const addMembersResult = await this.experimentMemberRepository.addMembers(
-          experimentId,
-          members,
-        );
-
-        if (addMembersResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to add members to experiment",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "add-experiment-members",
-            experimentId,
-            error: addMembersResult.error,
-          });
-          return failure(AppError.internal("Failed to add experiment members"));
-        }
-
-        this.logger.log({
-          msg: "Successfully added members to experiment",
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Attempt to add members to non-existent experiment",
           operation: "add-experiment-members",
           experimentId,
-          memberCount: members.length,
-          status: "success",
         });
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
 
-        // Send notifications to the added members
-        const actorProfileResult =
-          await this.experimentMemberRepository.findUserFullNameFromProfile(currentUserId);
-
-        if (actorProfileResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to retrieve profile for user",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "add-experiment-members",
-            userId: currentUserId,
-            error: actorProfileResult.error,
-          });
-          return failure(AppError.internal("Failed to retrieve actor profile"));
-        }
-
-        this.logger.log({
-          msg: "Current user id",
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to add members to archived experiment",
           operation: "add-experiment-members",
+          experimentId,
           userId: currentUserId,
         });
-        const actor = actorProfileResult.value
-          ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
-          : "Anonymous User";
-        for (const addedMember of addMembersResult.value) {
-          if (addedMember.user.email) {
-            await this.emailPort.sendAddedUserNotification(
-              experimentId,
-              experiment.name,
-              actor,
-              addedMember.role,
-              addedMember.user.email,
-            );
-          }
-        }
+        return failure(AppError.forbidden("Cannot add members to archived experiments"));
+      }
 
-        return success(addMembersResult.value);
-      },
-    );
+      // Add the members
+      const addMembersResult = await this.experimentMemberRepository.addMembers(
+        experimentId,
+        members,
+      );
+
+      if (addMembersResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to add members to experiment",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "add-experiment-members",
+          experimentId,
+          error: addMembersResult.error,
+        });
+        return failure(AppError.internal("Failed to add experiment members"));
+      }
+
+      this.logger.log({
+        msg: "Successfully added members to experiment",
+        operation: "add-experiment-members",
+        experimentId,
+        memberCount: members.length,
+        status: "success",
+      });
+
+      // Send notifications to the added members
+      const actorProfileResult =
+        await this.experimentMemberRepository.findUserFullNameFromProfile(currentUserId);
+
+      if (actorProfileResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to retrieve profile for user",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "add-experiment-members",
+          userId: currentUserId,
+          error: actorProfileResult.error,
+        });
+        return failure(AppError.internal("Failed to retrieve actor profile"));
+      }
+
+      this.logger.log({
+        msg: "Current user id",
+        operation: "add-experiment-members",
+        userId: currentUserId,
+      });
+      const actor = actorProfileResult.value
+        ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
+        : "Anonymous User";
+      for (const addedMember of addMembersResult.value) {
+        if (addedMember.user.email) {
+          await this.emailPort.sendAddedUserNotification(
+            experimentId,
+            experiment.name,
+            actor,
+            addedMember.role,
+            addedMember.user.email,
+          );
+        }
+      }
+
+      return success(addMembersResult.value);
+    });
   }
 }

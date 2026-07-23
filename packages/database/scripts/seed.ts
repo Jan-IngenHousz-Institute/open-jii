@@ -139,7 +139,7 @@ async function main() {
   });
 
   // Provision the seed user's personal organization (Phase 1 org provisioning).
-  await ensurePersonalOrganization(db, user);
+  const personalOrganizationId = await ensurePersonalOrganization(db, user);
 
   console.log(`  Created user: ${user.id}`);
 
@@ -235,7 +235,13 @@ async function main() {
 
   const createdProtocols = await db
     .insert(protocols)
-    .values(protocolData.map((p) => ({ ...p, createdBy: user.id })))
+    .values(
+      protocolData.map((p) => ({
+        ...p,
+        createdBy: user.id,
+        organizationId: personalOrganizationId,
+      })),
+    )
     .returning();
 
   console.log(`  Created ${createdProtocols.length} protocols`);
@@ -355,6 +361,7 @@ async function main() {
         code: m.code,
         sortOrder: m.sortOrder ?? null,
         createdBy: user.id,
+        organizationId: personalOrganizationId,
       })
       .returning();
     createdMacros.push(macro);
@@ -462,6 +469,7 @@ async function main() {
         ...(id ? { id } : {}),
         ...rest,
         createdBy: user.id,
+        organizationId: personalOrganizationId,
         embargoUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       })
       .returning();
