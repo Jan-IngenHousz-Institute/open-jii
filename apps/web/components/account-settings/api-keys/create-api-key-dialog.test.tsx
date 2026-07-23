@@ -52,6 +52,31 @@ describe("CreateApiKeyDialog", () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it("keeps the key visible and shows an error when clipboard access fails", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByPlaceholderText("apiKeys.namePlaceholder"), "CI key");
+    await user.click(screen.getByRole("button", { name: "apiKeys.createConfirm" }));
+
+    expect(await screen.findByText("jii_abc123")).toBeInTheDocument();
+
+    const writeText = vi.fn().mockRejectedValue(new Error("Clipboard permission denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    await user.click(screen.getByRole("button", { name: "apiKeys.copy" }));
+
+    expect(writeText).toHaveBeenCalledWith("jii_abc123");
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "apiKeys.copyError",
+        variant: "destructive",
+      }),
+    );
+    expect(screen.getByText("jii_abc123")).toBeInTheDocument();
+  });
+
   it("closes and resets after the created key is dismissed", async () => {
     const user = await openDialog();
 

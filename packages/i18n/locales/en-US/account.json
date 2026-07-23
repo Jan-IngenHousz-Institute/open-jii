@@ -160,6 +160,7 @@
     "createdTitle": "API key created",
     "createdWarning": "Copy this key now. For security reasons it will not be shown again.",
     "copy": "Copy key",
+    "copyError": "Could not copy the API key. Select and copy it manually.",
     "done": "Done",
     "neverUsed": "never",
     "revoke": "Revoke",
