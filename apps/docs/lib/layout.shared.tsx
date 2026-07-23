@@ -1,11 +1,16 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import Image from "next/image";
 
+import { PLATFORM_URL } from "./platform-url";
+
 export const GITHUB_OWNER = "Jan-IngenHousz-Institute";
 export const GITHUB_REPO = "open-jii";
 export const GITHUB_BRANCH = "main";
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
-export const PLATFORM_URL = "https://openjii.org";
+
+// Re-exported so existing "@/lib/layout.shared" importers keep working; the
+// value is environment-resolved in ./platform-url.
+export { PLATFORM_URL };
 
 // Docs MDX lives here relative to repo root; used for "Edit on GitHub" links.
 export const DOCS_CONTENT_ROOT = "apps/docs/content";

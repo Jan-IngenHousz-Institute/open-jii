@@ -96,7 +96,7 @@ describe("MacroCellComponent", () => {
     renderMacroCell();
 
     await waitFor(() => {
-      const link = screen.getByRole("link");
+      const link = screen.getByRole("link", { name: /open macro in new tab/i });
       expect(link).toHaveAttribute("href", "/platform/macros/macro-1");
     });
   });

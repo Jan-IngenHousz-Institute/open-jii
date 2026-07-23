@@ -68,6 +68,10 @@ jobs:
           # Only production is crawlable; dev/staging keep robots.txt Disallow.
           DOCS_INDEXABLE: ${{ inputs.environment == 'prod' && 'true' || 'false' }}
           DOCS_BASE_URL: ${{ inputs.environment == 'prod' && 'https://docs.openjii.org' || format('https://docs.{0}.openjii.org', inputs.environment) }}
+          # Docs-to-platform links resolve to the platform of the same environment
+          # (prod docs -> prod platform, non-prod docs -> dev platform). Matches
+          # the web build's own prod-vs-dev origin split in opennext-build.
+          PLATFORM_BASE_URL: ${{ inputs.environment == 'prod' && 'https://openjii.org' || 'https://dev.openjii.org' }}
         run: |
           echo "Building documentation site (Fumadocs / Next.js static export)..."
           pnpm run build --filter=docs

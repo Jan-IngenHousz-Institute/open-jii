@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useAddCompatibleProtocol } from "@/hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -131,6 +132,7 @@ export function NewMacroForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <DocsHelpLink path="/guide/devices-protocols/writing-macros" />
         {/* Details row: name/description + language + compatible protocols */}
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
           <div className="flex-1">
@@ -202,7 +204,7 @@ export function NewMacroForm() {
           </div>
         </div>
 
-        {/* Code Editor — full width */}
+        {/* Code editor (full width) */}
         {isLoadingUserProfile ? (
           <div className="space-y-2">
             <Skeleton className="h-5 w-40" />

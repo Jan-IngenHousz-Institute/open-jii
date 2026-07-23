@@ -5,16 +5,20 @@ import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
 import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
+import { useLocale } from "@/hooks/useLocale";
+import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
-import { BookOpen } from "lucide-react";
+import { BookOpen, GitFork, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { parseApiError } from "~/util/apiError";
 
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -35,6 +39,21 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
     isError: isVersionsError,
   } = useWorkbookVersions(id);
   const autosave = useAutosaveStatus();
+  const router = useRouter();
+  const locale = useLocale();
+  const { mutate: createWorkbook, isPending: isForking } = useWorkbookCreate({
+    onSuccess: (created) => router.push(`/${locale}/platform/workbooks/${created.id}`),
+  });
+
+  const handleFork = () => {
+    createWorkbook({
+      name: t("workbooks.duplicateName", { name: workbook.name }),
+      description: workbook.description ?? undefined,
+      cells: workbook.cells,
+      metadata: workbook.metadata,
+      forkedFrom: workbook.id,
+    });
+  };
 
   // Versions are returned newest-first; the live page is the draft, so the
   // latest published version is the meaningful number to surface here.
@@ -134,6 +153,17 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
               </Link>
             </div>
           ) : null}
+
+          <div className="ml-auto self-center">
+            <Button variant="outline" size="sm" onClick={handleFork} disabled={isForking}>
+              {isForking ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <GitFork className="mr-2 h-4 w-4" />
+              )}
+              {t("workbooks.actions.fork")}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useAddCompatibleMacro } from "@/hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useLocale } from "@/hooks/useLocale";
@@ -219,6 +220,9 @@ export function NewProtocolForm() {
 
   return (
     <>
+      <div className="mb-4">
+        <DocsHelpLink path="/guide/devices-protocols/writing-protocols" />
+      </div>
       <div onChange={handleFormChange} onInput={handleFormChange}>
         <WizardForm<CreateProtocolRequestBody>
           steps={steps}

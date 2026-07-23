@@ -121,7 +121,7 @@ describe("ProtocolCellComponent", () => {
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
-    const link = screen.getByRole("link");
+    const link = screen.getByRole("link", { name: /open protocol in new tab/i });
     expect(link).toHaveAttribute("href", "/platform/protocols/p1");
   });
 
