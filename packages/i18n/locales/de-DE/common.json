@@ -315,7 +315,10 @@
     "errorDescription": "Bei der Authentifizierung ist ein Fehler aufgetreten.",
     "errorTryAgain": "Erneut versuchen",
     "errorGoHome": "Zur Startseite",
-    "errorSupport": "Wenn dieses Problem weiterhin besteht, kontaktieren Sie bitte unser Support-Team."
+    "errorSupport": "Wenn dieses Problem weiterhin besteht, kontaktieren Sie bitte unser Support-Team.",
+    "loginWith-passkey": "Mit Passkey anmelden",
+    "lastUsed": "Zuletzt verwendet",
+    "passkeyError": "Passkey-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut."
   },
   "registration": {
     "title": "Registrierung",

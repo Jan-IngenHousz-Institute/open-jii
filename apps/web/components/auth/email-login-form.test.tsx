@@ -1,7 +1,7 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { authClient } from "@repo/auth/client";
+import { authClient, cancelPasskeyCeremony } from "@repo/auth/client";
 
 import { EmailLoginForm } from "./email-login-form";
 
@@ -91,6 +91,114 @@ describe("EmailLoginForm", () => {
     expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
   });
 
+  it("skips conditional passkey sign-in when WebAuthn is unavailable", async () => {
+    expect(window.PublicKeyCredential).toBeUndefined();
+    render(<EmailLoginForm {...defaultProps} />);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument(),
+    );
+    expect(authClient.signIn.passkey).not.toHaveBeenCalled();
+  });
+
+  it("signs in and redirects when conditional passkey autofill is picked", async () => {
+    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.resolve(true) },
+      configurable: true,
+    });
+    try {
+      const { router } = render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(authClient.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }),
+      );
+      await waitFor(() => expect(router.push).toHaveBeenCalledWith("/platform"));
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
+  it("cancels conditional passkey sign-in when the user continues with email OTP", async () => {
+    vi.mocked(authClient.signIn.passkey).mockImplementation(() => new Promise(() => undefined));
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.resolve(true) },
+      configurable: true,
+    });
+    try {
+      render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(authClient.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }),
+      );
+
+      await submitEmail();
+
+      expect(cancelPasskeyCeremony).toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
+  it("cancels conditional passkey sign-in when the login form unmounts", async () => {
+    vi.mocked(authClient.signIn.passkey).mockImplementation(() => new Promise(() => undefined));
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.resolve(true) },
+      configurable: true,
+    });
+    try {
+      const { unmount } = render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(authClient.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }),
+      );
+
+      unmount();
+
+      expect(cancelPasskeyCeremony).toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
+  it("does not redirect when conditional mediation is unsupported", async () => {
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.resolve(false) },
+      configurable: true,
+    });
+    try {
+      render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument(),
+      );
+      expect(authClient.signIn.passkey).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
+  it("ignores rejected conditional mediation availability checks", async () => {
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.reject(new Error("unavailable")) },
+      configurable: true,
+    });
+    try {
+      render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument(),
+      );
+      expect(authClient.signIn.passkey).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
+  it("shows the last used badge when email was the last method", () => {
+    render(<EmailLoginForm {...defaultProps} isLastUsed />);
+    expect(screen.getByText("auth.lastUsed")).toHaveClass("pointer-events-none");
+  });
+
+  it("hides the last used badge by default", () => {
+    render(<EmailLoginForm {...defaultProps} />);
+    expect(screen.queryByText("auth.lastUsed")).not.toBeInTheDocument();
+  });
+
   it("shows OTP form after successful email submission", async () => {
     render(<EmailLoginForm {...defaultProps} />);
     await submitEmail();
@@ -161,6 +269,16 @@ describe("EmailLoginForm", () => {
     await user.type(screen.getByPlaceholderText("auth.emailPlaceholder"), "test@example.com");
     await user.click(screen.getByText("auth.continueWithEmail"));
     await waitFor(() => expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalled());
+    expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a field error when the email request throws", async () => {
+    vi.mocked(authClient.emailOtp.sendVerificationOtp).mockRejectedValue(new Error("network"));
+    const user = userEvent.setup();
+    render(<EmailLoginForm {...defaultProps} />);
+    await user.type(screen.getByPlaceholderText("auth.emailPlaceholder"), "test@example.com");
+    await user.click(screen.getByText("auth.continueWithEmail"));
+    await waitFor(() => expect(screen.getByText("auth.emailSendError")).toBeInTheDocument());
     expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
   });
 

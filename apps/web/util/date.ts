@@ -16,6 +16,33 @@ export function formatDate(dateString: string): string {
   }).format(date);
 }
 
+const MINUTE = 60_000;
+const HOUR = 3_600_000;
+const DAY = 86_400_000;
+
+export function formatRelativeTime(value: Date | string, locale: string, now = Date.now()): string {
+  const date = new Date(value);
+  const diff = date.getTime() - now;
+  const abs = Math.abs(diff);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (abs < HOUR) return rtf.format(Math.round(diff / MINUTE), "minute");
+  if (abs < DAY) return rtf.format(Math.round(diff / HOUR), "hour");
+  if (abs < 30 * DAY) return rtf.format(Math.round(diff / DAY), "day");
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+}
+
+export function formatShortDate(value: Date | string, locale: string): string {
+  return new Date(value).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function daysUntil(value: Date | string, now = Date.now()): number {
+  return Math.ceil((new Date(value).getTime() - now) / DAY);
+}
+
 export function parseIsoDate(raw: unknown): Date | undefined {
   if (typeof raw !== "string" || raw === "") {
     return undefined;

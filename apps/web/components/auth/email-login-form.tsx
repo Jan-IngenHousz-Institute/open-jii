@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { cancelPasskeyCeremony } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -21,7 +22,9 @@ import { Input } from "@repo/ui/components/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/components/input-otp";
 
 import { useSignInEmail } from "../../hooks/auth/useSignInEmail/useSignInEmail";
+import { useSignInPasskey } from "../../hooks/auth/useSignInPasskey/useSignInPasskey";
 import { useVerifyEmail } from "../../hooks/auth/useVerifyEmail/useVerifyEmail";
+import { LastUsedBadge } from "./last-used-badge";
 
 const REGEXP_ONLY_DIGITS_PATTERN = "^[0-9]+$";
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -31,9 +34,15 @@ interface EmailLoginFormProps {
   callbackUrl: string | undefined;
   locale: string;
   onShowOTPChange?: (showOTP: boolean) => void;
+  isLastUsed?: boolean;
 }
 
-export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLoginFormProps) {
+export function EmailLoginForm({
+  callbackUrl,
+  locale,
+  onShowOTPChange,
+  isLastUsed,
+}: EmailLoginFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const [showOTPInput, setShowOTPInput] = useState(false);
@@ -42,6 +51,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
 
   const signInEmailMutation = useSignInEmail();
   const verifyEmailMutation = useVerifyEmail();
+  const signInPasskeyMutation = useSignInPasskey();
   const isPending = signInEmailMutation.isPending || verifyEmailMutation.isPending;
 
   useEffect(() => {
@@ -50,6 +60,35 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
       return () => clearTimeout(timer);
     }
   }, [countdown]);
+
+  // Conditional UI: preload passkeys so the browser can offer them in the
+  // email field's autofill (autocomplete="... webauthn"). Resolves only if
+  // the user picks a passkey; expected to reject when ignored or aborted.
+  useEffect(() => {
+    // Typed as optional: older browsers lack the WebAuthn API entirely.
+    const publicKeyCredential = (
+      window as {
+        PublicKeyCredential?: { isConditionalMediationAvailable?: () => Promise<boolean> };
+      }
+    ).PublicKeyCredential;
+    const availability = publicKeyCredential?.isConditionalMediationAvailable?.();
+    if (!availability) return;
+    let cancelled = false;
+    void availability
+      .then((supported) => {
+        if (!supported || cancelled) return;
+        signInPasskeyMutation
+          .mutateAsync({ autoFill: true })
+          .then(() => router.push(callbackUrl ?? "/platform"))
+          .catch(() => undefined);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      cancelPasskeyCeremony();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
 
   const emailSchema = z.object({
     email: z.string().min(1, t("auth.emailRequired")).email(t("auth.emailInvalid")),
@@ -86,6 +125,9 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
         return;
       }
 
+      // The user chose the OTP path, so end conditional WebAuthn before the
+      // browser can carry its credential picker into the platform route.
+      cancelPasskeyCeremony();
       setEmail(data.email);
       setShowOTPInput(true);
       onShowOTPChange?.(true);
@@ -224,6 +266,7 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
               <FormControl>
                 <Input
                   type="email"
+                  autoComplete="username webauthn"
                   placeholder={t("auth.emailPlaceholder")}
                   disabled={isPending}
                   className="h-12 rounded-xl"
@@ -235,21 +278,24 @@ export function EmailLoginForm({ callbackUrl, locale, onShowOTPChange }: EmailLo
           )}
         />
 
-        <Button
-          type="submit"
-          variant="default"
-          className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark mt-4 h-12 w-full rounded-xl"
-          disabled={isPending || (!emailForm.formState.isValid && emailForm.formState.isDirty)}
-        >
-          {isPending ? (
-            <>
-              <Loader2 data-testid="loader" className="mr-2 h-4 w-4 animate-spin" />
-              {t("auth.sendingEmail")}
-            </>
-          ) : (
-            t("auth.continueWithEmail")
-          )}
-        </Button>
+        <div className="relative mt-4">
+          <Button
+            type="submit"
+            variant="default"
+            className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
+            disabled={isPending || (!emailForm.formState.isValid && emailForm.formState.isDirty)}
+          >
+            {isPending ? (
+              <>
+                <Loader2 data-testid="loader" className="mr-2 h-4 w-4 animate-spin" />
+                {t("auth.sendingEmail")}
+              </>
+            ) : (
+              t("auth.continueWithEmail")
+            )}
+          </Button>
+          {isLastUsed && <LastUsedBadge />}
+        </div>
       </form>
     </Form>
   );

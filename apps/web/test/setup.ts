@@ -113,9 +113,11 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      key === "workbooks.duplicateName" && typeof options?.name === "string"
-        ? `Fork of ${options.name}`
-        : key,
+      key === "signInMethods.passkeysCount" && typeof options?.count === "number"
+        ? `${key}:${options.count}`
+        : key === "workbooks.duplicateName" && typeof options?.name === "string"
+          ? `Fork of ${options.name}`
+          : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   defaultLocale: "en-US",
@@ -205,6 +207,7 @@ vi.mock("~/app/actions/revalidate", () => ({
 }));
 
 vi.mock("@repo/auth/client", () => ({
+  cancelPasskeyCeremony: vi.fn(),
   authClient: {
     signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
     emailOtp: {
@@ -214,7 +217,22 @@ vi.mock("@repo/auth/client", () => ({
       emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
       social: vi.fn().mockResolvedValue({ data: null, error: null }),
       oauth2: vi.fn().mockResolvedValue({ data: null, error: null }),
+      passkey: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
+    apiKey: {
+      list: vi.fn().mockResolvedValue({ data: { apiKeys: [], total: 0 }, error: null }),
+      create: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    passkey: {
+      listUserPasskeys: vi.fn().mockResolvedValue({ data: [], error: null }),
+      addPasskey: vi.fn().mockResolvedValue({ data: null, error: null }),
+      updatePasskey: vi.fn().mockResolvedValue({ data: null, error: null }),
+      deletePasskey: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+    getLastUsedLoginMethod: vi.fn(() => null),
+    isLastUsedLoginMethod: vi.fn(() => false),
+    clearLastUsedLoginMethod: vi.fn(),
     updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
     getSession: vi.fn().mockResolvedValue({ data: null, error: null }),
   },

@@ -4,6 +4,8 @@ import {
   users,
   profiles,
   accounts,
+  apiKeys,
+  passkeys,
   sessions,
   experimentMembers,
   organizations,
@@ -602,6 +604,39 @@ describe("UserRepository", () => {
         .from(experimentMembers)
         .where(eq(experimentMembers.userId, userToDeleteId));
       expect(memberships.length).toBe(0);
+    });
+
+    it("revokes API keys and passkeys when soft-deleting a user", async () => {
+      const userToDeleteId = await testApp.createTestUser({
+        name: "Credential Owner",
+        email: "credential-owner@example.com",
+      });
+      await testApp.database.insert(apiKeys).values({
+        name: "Automation",
+        key: "hashed-api-key",
+        referenceId: userToDeleteId,
+      });
+      await testApp.database.insert(passkeys).values({
+        name: "Work laptop",
+        publicKey: "public-key",
+        userId: userToDeleteId,
+        credentialID: faker.string.uuid(),
+        deviceType: "singleDevice",
+      });
+
+      const result = await repository.delete(userToDeleteId);
+      expect(result.isSuccess()).toBe(true);
+
+      const remainingApiKeys = await testApp.database
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.referenceId, userToDeleteId));
+      const remainingPasskeys = await testApp.database
+        .select()
+        .from(passkeys)
+        .where(eq(passkeys.userId, userToDeleteId));
+      expect(remainingApiKeys).toHaveLength(0);
+      expect(remainingPasskeys).toHaveLength(0);
     });
 
     it("anonymizes the personal organization name so it no longer embeds PII", async () => {

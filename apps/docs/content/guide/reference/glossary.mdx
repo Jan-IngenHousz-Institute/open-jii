@@ -1,9 +1,16 @@
 ---
 title: "Glossary"
-description: "Canonical openJII terms for experiments, hardware, workflows, and data."
+description: "Canonical openJII terms for accounts, experiments, hardware, workflows, and data."
 ---
 
-{/* verified: code@c12fe0855 2026-07-22 */}
+{/* verified: code@50a852783b4d 2026-07-23 */}
+
+### API key
+
+A secret personal credential for scripts that call the REST API through the
+`x-api-key` header. It acts as the user who created it, is shown once, and can
+be expired or revoked. It is different from the internal `x-api-key-id` plus
+HMAC headers used by trusted service webhooks.
 
 ### Admin
 
@@ -97,6 +104,13 @@ other non-measurement variables relevant to the study.
 
 Handheld hardware used for protocol-guided optical measurements. The mobile app
 connects over Bluetooth or USB; multi-device mobile work uses wired USB.
+
+### Passkey
+
+A phishing-resistant sign-in credential protected by a device screen lock,
+password manager, or hardware security key. A passkey is an additional way to
+sign in to an existing account; removing one does not end browser sessions or
+remove other sign-in methods.
 
 ### Protocol
 

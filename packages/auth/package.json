@@ -30,10 +30,15 @@
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/api-key": "1.6.23",
     "@better-auth/expo": "1.6.23",
+    "@better-auth/passkey": "1.6.23",
+    "@simplewebauthn/browser": "13.3.0",
     "@repo/database": "workspace:*",
     "@repo/transactional": "workspace:*",
     "better-auth": "1.6.23",
@@ -42,10 +47,13 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
+    "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
   }
 }

@@ -1,13 +1,16 @@
+import { apiKey } from "@better-auth/api-key";
 import { expo } from "@better-auth/expo";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth, organization } from "better-auth/plugins";
+import { emailOTP, genericOAuth, lastLoginMethod, organization } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { ac, roles } from "./access";
+import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
 import { orcidProvider } from "./providers/orcid";
 
@@ -15,6 +18,11 @@ const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
 const cookieDomain = process.env.COOKIE_DOMAIN;
+
+// WebAuthn rpID must be a registrable suffix of the WEB origin's hostname
+// (ceremonies run on the web app, not on baseURL which is the backend).
+// Subdomain deployments share COOKIE_DOMAIN; dev falls back to "localhost".
+const passkeyRpId = cookieDomain?.replace(/^\./, "") ?? new URL(clientUrl).hostname;
 
 // Configure custom OAuth providers (ORCID via genericOAuth plugin)
 const customOAuthProviders: ReturnType<typeof orcidProvider>[] = [];
@@ -47,6 +55,8 @@ export const auth = betterAuth({
       invitation: schema.organizationInvitations,
       team: schema.teams,
       teamMember: schema.teamMembers,
+      apikey: schema.apiKeys,
+      passkey: schema.passkeys,
     },
   }),
   secret: process.env.AUTH_SECRET,
@@ -182,6 +192,39 @@ export const auth = betterAuth({
           }),
         ]
       : []),
+    // Personal API keys: a valid x-api-key header authenticates REST
+    // requests as the owning user (mocked session, no activeOrganizationId).
+    apiKey({
+      defaultPrefix: "jii_",
+      requireName: true,
+      keyExpiration: {
+        defaultExpiresIn: null,
+        minExpiresIn: 1,
+        maxExpiresIn: 365,
+      },
+      // Plugin default is 10 requests/day per key.
+      rateLimit: {
+        enabled: true,
+        timeWindow: 60 * 1000,
+        maxRequests: 100,
+      },
+      customAPIKeyGetter: getApiKeyForSessionCheck,
+      enableSessionForAPIKeys: true,
+    }),
+    passkey({
+      rpID: passkeyRpId,
+      rpName: "openJII",
+      origin: clientUrl,
+    }),
+    lastLoginMethod({
+      customResolveMethod: (ctx) => {
+        if (ctx.path.startsWith("/oauth2/callback/")) return ctx.path.split("/oauth2/callback/")[1];
+        if (ctx.path.startsWith("/callback/")) return ctx.path.split("/callback/")[1];
+        if (ctx.path === "/sign-in/email-otp") return "email";
+        if (ctx.path === "/passkey/verify-authentication") return "passkey";
+        return null;
+      },
+    }),
   ],
   // Configure built-in social providers
   socialProviders: {

@@ -457,7 +457,10 @@
     "errorTryAgain": "Try Again",
     "errorGoHome": "Go to Homepage",
     "errorSupport": "If this problem persists, please contact support.",
-    "checkEmail": "Check your email for a verification code"
+    "checkEmail": "Check your email for a verification code",
+    "loginWith-passkey": "Sign in with a passkey",
+    "lastUsed": "Last used",
+    "passkeyError": "Passkey sign-in failed. Please try again."
   },
   "registration": {
     "title": "Registration",

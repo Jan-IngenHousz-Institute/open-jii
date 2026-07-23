@@ -1,0 +1,244 @@
+---
+title: "Identity & access management"
+description: "Authentication methods, sessions, API keys, organization-scoped authorization, rollout state, and the north-star access model."
+---
+
+{/* verified: auth PR@50a852783, IAM Phase 2@5944bbcec, north-star branch@0f453383f 2026-07-23 */}
+
+openJII separates three concerns that are easy to conflate:
+
+1. **Identity** answers which account is acting.
+2. **Authentication** proves that identity with an email code, OAuth provider,
+   passkey, browser session, or personal API key.
+3. **Authorization** decides what that account may do to an organization-owned
+   resource.
+
+An authentication method never creates a second permission model. A browser
+session and an API key for the same user reach the same authorization service
+and receive the same resource decision.
+
+## Rollout state
+
+This architecture is landing in phases. Read the rows independently: later
+rows build on earlier ones, but an item in the north-star row is not a shipped
+product promise.
+
+| State                            | What exists                                                                                                                                                                                   | User-visible effect                                                                                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **IAM Phase 1**                  | Better Auth organizations, invitations, and teams; every account is provisioned an owner-only personal organization; browser sessions receive an active organization.                         | Existing resource access stayed unchanged. The personal organization is the ownership anchor for later phases.                                                   |
+| **Authentication PR**            | Passkey registration and sign-in, remembered last-used method, personal API-key lifecycle, and API-key-to-session bridging for REST requests.                                                 | People can manage passkeys and API keys under Account. Scripts can authenticate as their owning user.                                                            |
+| **IAM Phase 2 on latest `main`** | One shared access matrix, organization ownership on experiments/protocols/macros/workbooks/devices, polymorphic resource grants, one authorization service, and declarative Nest guards.      | Deliberately no access-policy change yet: personal organizations have one owner, current collaborators retain access, and public resources remain readable.      |
+| **North-star branch**            | Shared organization directory and profiles, membership and invitations, teams, user/team/organization grants, outside collaborators, email invitations, and per-resource Collaborators views. | **Not shipped from `main`.** This is the intended end state being exercised on `feature/ojd-1638-iam-org-access-control`; details may still change before merge. |
+
+## Authentication paths
+
+### Interactive browser sessions
+
+The web client uses the shared Better Auth server in `packages/auth`.
+Interactive sign-in supports:
+
+- a six-digit email one-time code;
+- GitHub;
+- ORCID when configured; and
+- a passkey on browsers with WebAuthn support.
+
+The last-login-method plugin records the successful method in a browser cookie.
+The login page uses it only to show a **Last used** hint; it is not an account
+setting or an authorization signal.
+
+Browser sessions use a 30-day sliding lifetime. Activity renews the session at
+most once per day, and the cookie cache is valid for one day. After roughly 30
+days without activity, the user must authenticate again.
+
+Passkey ceremonies run on the web origin. The relying-party ID is derived from
+the shared cookie domain in deployed environments and falls back to the web
+hostname in local development. Passkeys can be created, renamed, and deleted;
+deleting one does not invalidate other sessions or sign-in methods.
+
+### Personal API keys
+
+A personal API key is a non-browser credential for REST clients:
+
+```http
+x-api-key: jii_...
+```
+
+The key:
+
+- is shown once, then stored as a hash;
+- must have a name and may expire after up to 365 days or have no expiration;
+- is independently rate-limited to 100 requests per minute by default;
+- records its prefix, creation time, last request, and expiration for the
+  account UI; and
+- can be revoked immediately.
+
+Keys are deliberately **not** accepted by Better Auth account-management
+routes. The custom key reader returns a key only for the internal
+`/get-session` check performed by the Nest authentication guard. Better Auth
+then supplies a mocked session for that request, allowing ordinary protected
+REST handlers to identify the user without allowing the key to create other
+keys, register passkeys, or change organization settings through auth routes.
+
+The mocked API-key session has no active organization. That is intentional:
+authorization resolves the target resource's owning organization and the
+user's membership from the database instead of trusting a client-selected
+organization in the credential.
+
+<Callout type="warn">
+  API keys currently have no independent scopes. A key acts as its owner and receives whatever that
+  user is allowed to do. Treat it like a password, use an expiration where practical, and revoke it
+  immediately if it leaks.
+</Callout>
+
+## Organization-scoped authorization
+
+IAM Phase 2 makes authorization a shared, explainable backend decision. The
+Better Auth access matrix in `packages/auth/src/access.ts` is the source of
+truth for these resource types:
+
+- experiment;
+- protocol;
+- macro;
+- workbook; and
+- device.
+
+The common actions are `read`, `update`, `share`, and `manage`. Organization
+owners and admins receive all four. In Phase 2, members receive `read`; the
+schema reserves a configurable organization base permission for the north-star
+model, but Phase 2 does not expose that setting yet.
+
+### One decision point
+
+`AuthorizationService.can(userId, request)` resolves access in this order:
+
+```text
+resource exists and ownership loads
+  -> role in the resource's owning organization
+  -> direct user grant
+  -> grant to one of the user's teams
+  -> grant to one of the user's organizations
+  -> public visibility for read actions only
+  -> deny
+```
+
+Each allowed decision records its reason (`org-role`, a grant tier, or
+`public`); denials distinguish `not-found` from `forbidden`. A grant is
+additive: if an organization member's role does not cover an action, evaluation
+continues so a more specific grant can raise their access.
+
+Grant roles use the same matrix: `owner` and `admin` allow all resource actions;
+`member` and `viewer` are read-only. A public resource only adds read access—it
+never grants update, sharing, or management rights.
+
+### Declarative guard boundary
+
+Controllers declare policy instead of reproducing membership checks:
+
+- `@CanAccess({ resource, action })` authorizes an existing resource;
+- `@CanCreateInOrg()` checks organization membership before a resource exists;
+  and
+- `@CanContributeToExperiment()` keeps data contribution stricter than generic
+  read access.
+
+The global authentication guard first populates `request.session`. Resource
+guards then use only its user ID and delegate to the authorization service.
+Malformed resource IDs fail as `400`, missing resources as `404`, and denied
+actions as `403`.
+
+### Ownership and migration
+
+Phase 2 adds an `organization_id` and visibility to each resource type plus a
+single `resource_grants` table whose grantee is a user, team, or organization.
+The migration:
+
+- assigns existing resources to their creator's deterministic personal
+  organization;
+- mirrors experiment memberships into grants without changing their roles;
+- gives creators an admin grant on macros, protocols, workbooks, and devices;
+- keeps experiments, protocols, macros, and workbooks public by default; and
+- keeps devices private by default because they own live AWS IoT credentials
+  and infrastructure.
+
+Organization IDs remain nullable during the transition. A resource whose
+creator has no personal organization stays readable only if public and is not
+editable through the ownership path. Making ownership non-null depends on a
+later deleted-user and orphan-resource policy.
+
+## North-star end state
+
+The long-running IAM branch defines the intended collaboration model. It is the
+direction of travel, not a statement that every screen or rule is available on
+`main` today.
+
+### Organizations become the durable owner
+
+- Every resource ultimately belongs to exactly one personal or shared
+  organization.
+- Personal organizations remain the zero-configuration default for individual
+  work.
+- Shared organizations can represent a lab, project, institution, or community
+  and outlive one user.
+- Public organizations can appear in a directory and accept join requests;
+  private organizations remain invitation-only.
+
+### Membership supplies the common case
+
+- Organization owners and admins manage membership and have full access to the
+  organization's resources.
+- A configurable base permission (`none`, `read`, or `admin`) defines what an
+  ordinary member receives by default.
+- Teams are flat groups of organization members. A team grant changes access
+  for the group without duplicating user grants.
+
+### Grants handle exceptions and cross-organization work
+
+- A resource can be granted directly to a user, a team, or another
+  organization.
+- Per-resource Collaborators views explain direct access separately from access
+  inherited through the owning organization.
+- A person with a resource grant but no membership in the owning organization
+  is labelled an **outside collaborator**.
+- A collaborator can be invited by email before they have an account; accepting
+  the invitation creates the corresponding resource access.
+
+### The boundary stays explicit
+
+- Authentication method does not change permissions.
+- Selecting an active organization changes creation and navigation context; it
+  is not itself proof of access.
+- Public visibility is the final read-only fallback.
+- There is no platform-wide administrator bypass in the target decision chain:
+  ownership role, explicit grants, and public read remain the auditable sources
+  of access.
+
+## Open decisions before the north star can be called complete
+
+- Define transfer, deletion, and recovery rules so resource ownership can
+  become non-null without stranding data.
+- Finalize which roles and base-permission controls are exposed in the product,
+  including how existing experiment `admin`/`member` roles migrate.
+- Decide whether personal API keys need resource scopes, organization
+  restrictions, or separate service-account credentials.
+- Add operational audit history for membership, grants, invitations, API-key
+  use, and authorization denials; decision reason codes are explainable but are
+  not a full audit log.
+- Revalidate list endpoints and background jobs whenever a new resource type or
+  non-HTTP caller is added—the route guard only protects HTTP entry points.
+
+## Implementation map
+
+| Concern                               | Source                                                                        |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| Better Auth server, sessions, plugins | `packages/auth/src/server.ts`                                                 |
+| Browser auth client                   | `packages/auth/src/clients/client.web.ts`                                     |
+| API-key session boundary              | `packages/auth/src/api-key-session.ts`                                        |
+| Shared role/action matrix             | `packages/auth/src/access.ts` on latest `main`                                |
+| Personal organization provisioning    | `packages/database/src/organizations.ts`                                      |
+| Resource ownership and grants         | `packages/database/src/schema.ts`, `packages/database/src/resource-grants.ts` |
+| Central resource decisions            | `apps/backend/src/authorization/authorization.service.ts`                     |
+| Controller policy guards              | `apps/backend/src/authorization/*guard.ts`                                    |
+| Account security UI                   | `apps/web/components/account-settings/`, `apps/web/components/auth/`          |
+
+For the user workflow, read
+[Account security & API keys](/guide/get-started/account-security-api-keys). For
+the generated endpoint contract, use the [REST API reference](/api/rest).

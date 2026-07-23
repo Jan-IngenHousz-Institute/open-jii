@@ -103,6 +103,69 @@ export const rateLimits = pgTable("rate_limits", {
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
 
+// API Keys Table - for the Better Auth api-key plugin. Owner column is
+// referenceId (not userId) in the plugin's model at 1.6.23.
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    configId: text("config_id").notNull().default("default"),
+    name: text("name"),
+    start: text("start"),
+    prefix: text("prefix"),
+    key: text("key").notNull(),
+    referenceId: uuid("reference_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    refillInterval: bigint("refill_interval", { mode: "number" }),
+    refillAmount: integer("refill_amount"),
+    lastRefillAt: timestamp("last_refill_at"),
+    enabled: boolean("enabled").notNull().default(true),
+    rateLimitEnabled: boolean("rate_limit_enabled").notNull().default(true),
+    rateLimitTimeWindow: bigint("rate_limit_time_window", { mode: "number" }),
+    rateLimitMax: integer("rate_limit_max"),
+    requestCount: integer("request_count").notNull().default(0),
+    remaining: integer("remaining"),
+    lastRequest: timestamp("last_request"),
+    expiresAt: timestamp("expires_at"),
+    permissions: text("permissions"),
+    metadata: text("metadata"),
+    ...timestamps,
+  },
+  (t) => [
+    index("api_keys_key_idx").on(t.key),
+    index("api_keys_reference_id_idx").on(t.referenceId),
+    index("api_keys_config_id_idx").on(t.configId),
+  ],
+);
+
+// Passkeys Table - for the Better Auth passkey plugin (WebAuthn credentials).
+// No updatedAt: the plugin model only has createdAt.
+export const passkeys = pgTable(
+  "passkeys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull().default(0),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull().default(false),
+    transports: text("transports"),
+    aaguid: text("aaguid"),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("passkeys_credential_id_uniq").on(t.credentialID),
+    index("passkeys_user_idx").on(t.userId),
+  ],
+);
+
 // Organization Types Enum
 export const organizationTypeEnum = pgEnum("organization_type", [
   "research_institute",
