@@ -3,7 +3,7 @@ title: "Account security & API keys"
 description: "Use remembered sign-in methods, passkeys, and personal API keys to access openJII securely."
 ---
 
-{/* verified: code@50a852783b4d 2026-07-23 */}
+{/* verified: code@05a2b563 2026-07-23 */}
 
 Your account page (**Profile menu → Account**) is organised into three tabs:
 **General**, **Security**, and **API keys**.
@@ -112,6 +112,9 @@ permanent; any script still using the key will receive `401 Unauthorized`.
 Browser sessions stay active while you use the platform and expire after about
 30 days without activity. Revoking an API key stops that key; it does not sign
 out browser sessions or revoke other keys.
+
+Deleting your account revokes its passkeys and API keys, removes linked OAuth
+credentials, and ends all browser sessions before the account is anonymized.
 
 openJII evaluates the same organization and resource permissions after any
 successful sign-in method. For the current IAM rollout and the intended
