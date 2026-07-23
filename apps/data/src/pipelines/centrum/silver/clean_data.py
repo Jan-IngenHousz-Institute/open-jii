@@ -2,7 +2,7 @@
 # DBTITLE 1,Silver Layer - Clean Data
 # Silver: clean and standardize sensor data, decompress samples, parse macros /
 # questions / annotations, apply legacy macro-id remap, and union with imported
-# data.
+# data. Large-IoT payloads land via a separate append flow into the same table.
 
 # COMMAND ----------
 import dlt
@@ -23,7 +23,7 @@ from openjii.centrum.runtime import (
 
 # COMMAND ----------
 
-@dlt.table(
+dlt.create_streaming_table(
     name=SILVER_TABLE,
     comment="Silver layer: Cleaned and standardized sensor data",
     table_properties={
@@ -32,10 +32,24 @@ from openjii.centrum.runtime import (
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableChangeDataFeed": "true"
-    }
+    },
+    expect_all={"valid_device_id": "device_id IS NOT NULL"},
+    expect_all_or_drop={"valid_timestamp": "timestamp IS NOT NULL"},
 )
-@dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect("valid_device_id", "device_id IS NOT NULL")
+
+
+def _remap_macro_id(id_col):
+    """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
+    result = id_col
+    for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
+        result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
+    return result
+
+
+# The flow keeps the name "clean_data" so the original two-source streaming
+# checkpoint stays valid; large-IoT arrives via a separate append flow below,
+# added without a full refresh.
+@dlt.append_flow(target=SILVER_TABLE, name="clean_data")
 def clean_data():
     """Silver layer: Clean and standardize sensor data, including imported data."""
     bronze_df = dlt.read_stream(BRONZE_TABLE)
@@ -81,13 +95,6 @@ def clean_data():
             F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
         )
     )
-
-    def _remap_macro_id(id_col):
-        """Remap legacy macro identifiers to actual UUIDs via chained CASE expression."""
-        result = id_col
-        for legacy_id, actual_id in LEGACY_MACRO_ID_MAP.items():
-            result = F.when(id_col == F.lit(legacy_id), F.lit(actual_id)).otherwise(result)
-        return result
 
     df = df.withColumn(
         "macros",
@@ -284,8 +291,17 @@ def clean_data():
         )
     )
 
-    # Large IoT payloads (>128 KB) uploaded to S3 via pre-signed URL. Same
-    # payload shape as the MQTT/Kinesis path minus the topic envelope.
+    # Union bronze-sourced data with imported data
+    return bronze_clean.unionByName(imported_clean)
+
+# COMMAND ----------
+
+# Large IoT payloads (>128 KB) uploaded to S3 via pre-signed URL. Same payload
+# shape as the MQTT/Kinesis path minus the topic envelope. A separate append
+# flow so the source can be added without a full refresh of clean_data.
+@dlt.append_flow(target=SILVER_TABLE, name="clean_data_large_iot")
+def clean_data_large_iot():
+    """Silver append flow: clean and standardize large-IoT payloads."""
     large_iot_df = dlt.read_stream(RAW_LARGE_DATA_TABLE)
 
     large_iot_clean = (
@@ -383,9 +399,4 @@ def clean_data():
         )
     )
 
-    # Union bronze-sourced data with imported and large-IoT data
-    return (
-        bronze_clean
-        .unionByName(imported_clean)
-        .unionByName(large_iot_clean)
-    )
+    return large_iot_clean
