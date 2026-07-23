@@ -17,6 +17,13 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
   });
 
+  it("shows a docs help link in the empty state when showGetStartedHelp is set", () => {
+    render(<ExperimentOverviewCards experiments={[]} showGetStartedHelp />);
+    expect(screen.getByRole("link").getAttribute("href")).toContain(
+      "/guide/get-started/quick-start",
+    );
+  });
+
   it("renders experiment cards with name and description (no status pill)", () => {
     const exp = createExperiment({
       name: "Photosynthesis Study",

@@ -50,6 +50,11 @@ describe("WorkbookList delete gating (workbook-deletion flag)", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
   });
 
+  it("shows a docs help link in the empty state when showEmptyHelp is set", () => {
+    render(<WorkbookList workbooks={[]} showEmptyHelp />);
+    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
+  });
+
   it("hides Delete for an in-use workbook when the flag is off", async () => {
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[inUse]} />);

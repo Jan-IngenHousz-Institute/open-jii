@@ -166,4 +166,19 @@ describe("WorkbookLayoutContent", () => {
       await screen.findByRole("button", { name: "workbooks.actions.fork" }),
     ).toBeInTheDocument();
   });
+
+  it("disables the Fork button while a fork is in flight", async () => {
+    server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
+      delay: "infinite",
+    });
+    const user = userEvent.setup();
+    renderContent();
+
+    const forkButton = await screen.findByRole("button", { name: "workbooks.actions.fork" });
+    await user.click(forkButton);
+
+    await waitFor(() => expect(forkButton).toBeDisabled());
+  });
 });
