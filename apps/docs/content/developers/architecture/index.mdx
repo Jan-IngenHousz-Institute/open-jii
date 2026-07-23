@@ -56,7 +56,12 @@ The web and mobile clients use contracts from `packages/api`, while the backend 
 
 Measurements do not travel through the transactional backend API. The mobile app stores them locally, publishes them to the experiment ingestion topic, and waits for MQTT QoS 1 acknowledgement. AWS IoT rules forward the message to Kinesis and also archive raw IoT messages to S3. Databricks reads Kinesis into the central `centrum` pipeline.
 
-Read [Data ingestion](/developers/architecture/data-ingestion), [Time synchronization](/developers/architecture/time-synchronization), and [Medallion layers](/developers/architecture/medallion-layers) for the detailed paths. Contract details live in the [REST](/api/rest) and [MQTT](/api/mqtt) references.
+Read [Identity & access management](/developers/architecture/identity-access-management),
+[Data ingestion](/developers/architecture/data-ingestion),
+[Time synchronization](/developers/architecture/time-synchronization), and
+[Medallion layers](/developers/architecture/medallion-layers) for the detailed
+paths. Contract details live in the [REST](/api/rest) and [MQTT](/api/mqtt)
+references.
 
 ## Deployment model
 
