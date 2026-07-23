@@ -78,8 +78,13 @@ export function CreateApiKeyDialog() {
 
   const handleCopy = async () => {
     if (!createdKey) return;
-    await navigator.clipboard.writeText(createdKey);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(createdKey);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+      toast({ description: t("apiKeys.copyError"), variant: "destructive" });
+    }
   };
 
   return (

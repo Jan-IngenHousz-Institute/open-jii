@@ -160,6 +160,7 @@
     "createdTitle": "API-Schlüssel erstellt",
     "createdWarning": "Kopieren Sie den Schlüssel jetzt. Aus Sicherheitsgründen wird er nicht erneut angezeigt.",
     "copy": "Schlüssel kopieren",
+    "copyError": "Der API-Schlüssel konnte nicht kopiert werden. Markieren und kopieren Sie ihn manuell.",
     "done": "Fertig",
     "neverUsed": "nie",
     "revoke": "Widerrufen",
