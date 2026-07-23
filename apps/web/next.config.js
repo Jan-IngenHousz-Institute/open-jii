@@ -19,6 +19,7 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: join(__dirname, "../../"),
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
