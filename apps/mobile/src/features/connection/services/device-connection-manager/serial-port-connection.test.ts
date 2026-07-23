@@ -13,7 +13,7 @@ import {
 
 const openSerialPortConnection = vi.fn();
 vi.mock(
-  "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection",
+  "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection",
   () => ({
     openSerialPortConnection: (deviceId: number) => openSerialPortConnection(deviceId),
   }),

@@ -143,6 +143,54 @@ describe("OutputCellComponent", () => {
       render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
       expect(screen.queryAllByTestId("device-result")).toHaveLength(0);
     });
+
+    it("presents product identity and a stable id for a single-device result", () => {
+      const cell = createOutputCell({
+        data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "connection-1",
+            deviceLabel: "MSQ-42",
+            family: "multispeq",
+            data: { value: 1 },
+          },
+        ],
+      });
+
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      expect(screen.getByTestId("single-device-result")).toBeInTheDocument();
+      expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
+      expect(screen.getByText("MSQ-42")).toBeInTheDocument();
+    });
+
+    it("uses a reported name before product identity in multi-device results", () => {
+      const cell = createOutputCell({
+        data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "connection-1",
+            deviceLabel: "AMB-1",
+            deviceName: "Canopy sensor",
+            family: "ambit",
+            data: { value: 1 },
+          },
+          {
+            deviceId: "connection-2",
+            deviceLabel: "AMB-2",
+            family: "ambit",
+            data: { value: 2 },
+          },
+        ],
+      });
+
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      expect(screen.getByText("Canopy sensor")).toBeInTheDocument();
+      expect(screen.getByText("Ambit · AMB-1")).toBeInTheDocument();
+      expect(screen.getByText("Ambit")).toBeInTheDocument();
+      expect(screen.getByText("AMB-2")).toBeInTheDocument();
+    });
   });
 
   it("shows question answer data when data has an answer field", () => {

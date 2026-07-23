@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import type {
-  CommandProgress,
-  ExecuteOptions,
-  IMultispeqCommandExecutor,
-} from "~/features/connection/services/multispeq-communication/driver-command-executor";
-import { createMultispeqCommandExecutor } from "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor";
+  DeviceCommandExecuteOptions,
+  DeviceCommandExecutor,
+  DeviceCommandProgress,
+} from "~/features/connection/services/device-command-executor";
+import { createDeviceCommandExecutor } from "~/features/connection/services/device-connection-manager/device-connection";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
@@ -15,7 +15,7 @@ const log = createLogger("scanner-executor");
 
 export interface DeviceExecutorEntry {
   device: Device;
-  executor: IMultispeqCommandExecutor;
+  executor: DeviceCommandExecutor;
   /**
    * Identification-handshake result, patched in asynchronously after connect.
    * Undefined while the handshake is in flight or when it failed; consumers
@@ -27,7 +27,7 @@ export interface DeviceExecutorEntry {
   error: Error | undefined;
   commandResponse: string | object | undefined;
   /** Live progress of the entry's in-flight command (final-response transfer). */
-  progress: CommandProgress | undefined;
+  progress: DeviceCommandProgress | undefined;
   /** Epoch ms when the entry's current scan started; drives the elapsed-time UI. */
   scanStartedAt: number | undefined;
   /** Estimated protocol runtime (ms) for the in-flight command, if known. */
@@ -47,12 +47,12 @@ interface ScannerCommandExecutorStore {
   // Legacy single-device mirrors, derived from the entries after every
   // mutation. Primary's values, except isExecuting which is true when ANY
   // device is executing. Removable once all consumers read entries directly.
-  commandExecutor: IMultispeqCommandExecutor | undefined;
+  commandExecutor: DeviceCommandExecutor | undefined;
   commandResponse: string | object | undefined;
   isExecuting: boolean;
   isCancelled: boolean;
   error: Error | undefined;
-  progress: CommandProgress | undefined;
+  progress: DeviceCommandProgress | undefined;
   scanStartedAt: number | undefined;
   estimatedMs: number | undefined;
 
@@ -62,11 +62,11 @@ interface ScannerCommandExecutorStore {
   executeCommandOn: (
     deviceId: string,
     command: string | object,
-    options?: ExecuteOptions,
+    options?: DeviceCommandExecuteOptions,
   ) => Promise<string | object>;
   executeOnAll: (
     command: string | object,
-    options?: ExecuteOptions,
+    options?: DeviceCommandExecuteOptions,
   ) => Promise<DeviceCommandOutcome[]>;
   cancelCommandOn: (deviceId: string) => Promise<void>;
   cancelAll: () => Promise<void>;
@@ -76,7 +76,7 @@ interface ScannerCommandExecutorStore {
   setDevice: (device: Device | undefined) => Promise<void>;
   executeCommand: (
     command: string | object,
-    options?: ExecuteOptions,
+    options?: DeviceCommandExecuteOptions,
   ) => Promise<string | object | undefined>;
   cancelCommand: () => Promise<void>;
   reset: () => void;
@@ -87,7 +87,7 @@ function toError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
 }
 
-function freshEntry(device: Device, executor: IMultispeqCommandExecutor): DeviceExecutorEntry {
+function freshEntry(device: Device, executor: DeviceCommandExecutor): DeviceExecutorEntry {
   return {
     device,
     executor,
@@ -136,7 +136,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
     setEntries(next);
   };
 
-  const destroyExecutor = (executor: IMultispeqCommandExecutor) =>
+  const destroyExecutor = (executor: DeviceCommandExecutor) =>
     executor
       .destroy()
       .catch((e) => log.warn("executor destroy failed", { err: (e as Error)?.message }));
@@ -144,7 +144,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   // Best-effort, fire-and-patch: connect never blocks on identification, and a
   // failed handshake just leaves `identity` undefined ($device branches then
   // fall to their default path).
-  const captureIdentity = (deviceId: string, executor: IMultispeqCommandExecutor) => {
+  const captureIdentity = (deviceId: string, executor: DeviceCommandExecutor) => {
     executor
       .getIdentity()
       .then((identity) => patchEntry(deviceId, { identity }))
@@ -175,7 +175,7 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       }
 
       try {
-        const executor = await createMultispeqCommandExecutor(device);
+        const executor = await createDeviceCommandExecutor(device);
         if (!executor) {
           return;
         }
@@ -315,9 +315,9 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
         }
 
         const next = new Map<string, DeviceExecutorEntry>();
-        let added: { deviceId: string; executor: IMultispeqCommandExecutor } | undefined;
+        let added: { deviceId: string; executor: DeviceCommandExecutor } | undefined;
         if (device) {
-          const executor = await createMultispeqCommandExecutor(device);
+          const executor = await createDeviceCommandExecutor(device);
           if (executor) {
             next.set(device.id, freshEntry(device, executor));
             added = { deviceId: device.id, executor };

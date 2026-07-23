@@ -1,0 +1,40 @@
+import { defineRules } from "../rule.js";
+
+export const databaseRules = defineRules([
+  {
+    id: "database.drizzle-history",
+    surface: "database",
+    category: "keep-generated-history",
+    granularity: "path",
+    paths: ["packages/database/drizzle/**"],
+    disposition: "preserve",
+    target: "frozen Drizzle migration and snapshot history",
+    rationale: "Checked-in migrations and snapshots are immutable historical contracts.",
+    compatibilityBoundary: "persisted database history",
+    coversContents: true,
+  },
+  {
+    id: "database.sensor-family-value",
+    surface: "database",
+    category: "keep-compatibility",
+    granularity: "content-pattern",
+    paths: ["packages/database/src/schema.ts"],
+    pattern: "[\"']multispeq[\"']",
+    caseSensitive: true,
+    disposition: "preserve",
+    target: "multispeq sensor_family value",
+    rationale: "The persisted sensor-family enum value is an external compatibility value.",
+    compatibilityBoundary: "stored sensor_family enum",
+  },
+  {
+    id: "database.seed-fixtures",
+    surface: "database",
+    category: "fixture",
+    granularity: "file",
+    paths: ["packages/database/scripts/seed.ts"],
+    disposition: "fixture-only",
+    target: "intentional product seed data",
+    rationale: "Seed records intentionally exercise the MultiSpeQ family.",
+    compatibilityBoundary: null,
+  },
+]);

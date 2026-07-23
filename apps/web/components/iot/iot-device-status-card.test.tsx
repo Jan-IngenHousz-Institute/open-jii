@@ -66,7 +66,21 @@ describe("DeviceStatusCard", () => {
 
       render(<DeviceStatusCard {...defaultProps} isConnected={true} deviceInfo={deviceInfo} />);
 
-      expect(screen.getByText("iot.protocolRunner.unknownDevice")).toBeInTheDocument();
+      expect(screen.getByText("iot.deviceIdentity.unknown")).toBeInTheDocument();
+    });
+
+    it("uses the known family when connected metadata is unavailable", () => {
+      render(
+        <DeviceStatusCard
+          {...defaultProps}
+          isConnected={true}
+          deviceInfo={null}
+          sensorFamily="multispeq"
+        />,
+      );
+
+      expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
+      expect(screen.queryByText("iot.protocolRunner.wireless")).not.toBeInTheDocument();
     });
 
     it("displays device version when available", () => {
@@ -112,9 +126,9 @@ describe("DeviceStatusCard", () => {
       expect(screen.getByText("iot.protocolRunner.usb")).toBeInTheDocument();
     });
 
-    it("shows pairing message when connecting", () => {
+    it("shows connecting message when connecting", () => {
       render(<DeviceStatusCard {...defaultProps} isConnecting={true} />);
-      expect(screen.getByText("iot.protocolRunner.pairingWithDevice")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.connectingToDevice")).toBeInTheDocument();
     });
   });
 

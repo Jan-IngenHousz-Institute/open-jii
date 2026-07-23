@@ -2,13 +2,14 @@
 
 import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { protocolRequiresInteraction } from "@repo/iot";
+import { DEVICE_TRANSPORT_SUPPORT, protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -41,6 +42,12 @@ export function IotProtocolRunner({
   const isRunningRef = useRef(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
+
+  // A Bluetooth Classic-only device is BLE-incapable, so Web Bluetooth cannot
+  // reach it and the user must be directed to USB/serial. This is derived from
+  // the IoT transport capability flags, not a hard-coded family.
+  const transportCaps = DEVICE_TRANSPORT_SUPPORT[sensorFamilyToDeviceType(sensorFamily)];
+  const bluetoothClassicOnly = transportCaps.supportsBluetoothClassic && !transportCaps.supportsBLE;
 
   // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
@@ -123,6 +130,7 @@ export function IotProtocolRunner({
               connectionType={connectionType}
               onConnectionTypeChange={setConnectionType}
               browserSupport={browserSupport}
+              bluetoothClassicOnly={bluetoothClassicOnly}
             />
           )}
 
@@ -133,6 +141,7 @@ export function IotProtocolRunner({
             error={error}
             deviceInfo={deviceInfo}
             connectionType={connectionType}
+            sensorFamily={sensorFamily}
             onConnect={connect}
             onDisconnect={disconnect}
           />

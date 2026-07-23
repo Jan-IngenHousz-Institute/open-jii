@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
+import type { DeviceCommandProgress } from "~/features/connection/services/device-command-executor";
+import type { SerialPortEvents } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/serial-port-events";
 import { Emitter } from "~/features/connection/utils/emitter";
 
 import { MULTISPEQ_FRAMING } from "@repo/iot";
 
-import type { SerialPortEvents } from "./android-serial-port-connection/serial-port-events";
-import type { CommandProgress } from "./driver-command-executor";
-import { createDriverCommandExecutor } from "./driver-command-executor";
+import { createMultispeqCommandExecutor } from "./multispeq-command-executor";
 import { bluetoothClassicTransport } from "./transports/bluetooth-classic-transport";
 import { serialPortTransport } from "./transports/serial-port-transport";
 
@@ -50,14 +50,14 @@ const LONG_PROTOCOL = [
   },
 ];
 
-describe("createDriverCommandExecutor", () => {
+describe("createMultispeqCommandExecutor", () => {
   it("unwraps a successful CommandResult to raw data", async () => {
     const transport = mockTransport();
     transport.send.mockImplementation(() => {
       setTimeout(() => transport.simulate('{"value":42}ABCD1234\n'), 0);
       return Promise.resolve();
     });
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     await expect(executor.execute("cmd")).resolves.toEqual({ value: 42 });
   });
@@ -68,7 +68,7 @@ describe("createDriverCommandExecutor", () => {
       setTimeout(() => transport.simulate("battery:85\n"), 0);
       return Promise.resolve();
     });
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     await expect(executor.execute("battery")).resolves.toBe("battery:85");
   });
@@ -77,7 +77,7 @@ describe("createDriverCommandExecutor", () => {
     vi.useFakeTimers();
     try {
       const transport = mockTransport(); // never replies
-      const executor = createDriverCommandExecutor(transport);
+      const executor = createMultispeqCommandExecutor(transport);
 
       const settled = executor.execute("cmd").catch((e: Error) => e);
       await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
@@ -93,7 +93,7 @@ describe("createDriverCommandExecutor", () => {
 
   it("cancel() aborts the in-flight command, sends -1+, and rejects as cancelled", async () => {
     const transport = mockTransport(); // never replies on its own
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
     // Let the serialized command reach the driver and register its response
@@ -118,9 +118,9 @@ describe("createDriverCommandExecutor", () => {
       }, 0);
       return Promise.resolve();
     });
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
-    const events: CommandProgress[] = [];
+    const events: DeviceCommandProgress[] = [];
     const off = executor.onProgress((p) => events.push(p));
 
     await executor.execute("cmd");
@@ -146,7 +146,7 @@ describe("createDriverCommandExecutor", () => {
       setTimeout(() => transport.simulate('{"ok":1}ABCD1234\n'), 0);
       return Promise.resolve();
     });
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     // A throwing listener must never break command execution.
     executor.onProgress(() => {
@@ -158,7 +158,7 @@ describe("createDriverCommandExecutor", () => {
 
   it("tears down the underlying driver on destroy()", async () => {
     const transport = mockTransport();
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     await executor.destroy();
 
@@ -171,7 +171,7 @@ describe("createDriverCommandExecutor", () => {
     transport.onStatusChanged.mockImplementation((cb: (connected: boolean) => void) => {
       statusCb = cb;
     });
-    const executor = createDriverCommandExecutor(transport);
+    const executor = createMultispeqCommandExecutor(transport);
 
     const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -205,7 +205,7 @@ describe("bluetoothClassicTransport", () => {
 
   it("re-appends the newline so the driver frames a delimiter-stripped message", async () => {
     const device = mockBtDevice('{"ok":1}ABCD1234'); // no trailing "\n"
-    const executor = createDriverCommandExecutor(
+    const executor = createMultispeqCommandExecutor(
       bluetoothClassicTransport(
         device as unknown as Parameters<typeof bluetoothClassicTransport>[0],
       ),
@@ -326,7 +326,7 @@ describe("serialPortTransport", () => {
       }, 0);
     });
 
-    const executor = createDriverCommandExecutor(serialPortTransport(emitter));
+    const executor = createMultispeqCommandExecutor(serialPortTransport(emitter));
 
     await expect(executor.execute("cmd")).resolves.toEqual({ v: 2 });
   });

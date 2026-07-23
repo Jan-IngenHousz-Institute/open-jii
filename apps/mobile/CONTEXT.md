@@ -8,7 +8,7 @@ Living glossary for the Field Companion (mobile app). Terms used in code, tests,
 
 ### Measurement
 
-A single sample produced by a MultispeQ device for a given experiment + protocol, optionally accompanied by user-answered questions, macro output, and annotations. Persisted locally in SQLite (`shared/db/measurements-storage.ts`) before any cloud upload is attempted.
+A single sample produced by a measurement device for a given experiment + protocol, optionally accompanied by user-answered questions, macro output, and annotations. Persisted locally in SQLite (`shared/db/measurements-storage.ts`) before any cloud upload is attempted.
 
 ### Status
 
@@ -22,7 +22,7 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 ### Topic
 
-The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMultispeqMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no MultispeQ sample).
+The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no device sample).
 
 ### Workbook run
 

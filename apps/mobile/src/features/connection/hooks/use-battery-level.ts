@@ -10,7 +10,7 @@ import { connectionKeys } from "~/features/connection/services/connection-keys";
 const BATTERY_TIMEOUT_MS = 5_000;
 
 /**
- * Battery level of the connected MultispeQ. The react-query cache is the single
+ * Battery level reported by the primary connected device. The react-query cache is the single
  * source: every consumer (header chip, Home device card, device sheet) mounts
  * this hook and shares one fetch per device.
  *

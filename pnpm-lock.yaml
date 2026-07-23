@@ -1008,6 +1008,9 @@ importers:
       '@open-jii/release-tools':
         specifier: workspace:*
         version: link:../../tooling/release
+      '@repo/device-nomenclature':
+        specifier: workspace:*
+        version: link:../../tooling/device-nomenclature
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -1584,6 +1587,39 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  tooling/device-nomenclature:
+    devDependencies:
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@repo/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint
+      '@repo/iot':
+        specifier: workspace:*
+        version: link:../../packages/iot
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.4(jiti@2.7.0)(supports-color@8.1.1)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.5.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: catalog:testing
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
 
   tooling/eslint:
     dependencies:

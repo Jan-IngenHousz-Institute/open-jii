@@ -1,6 +1,11 @@
 import { Bluetooth, Radio, Usb } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+import {
+  mobileDevicePrimaryLabel,
+  mobileDeviceSecondaryParts,
+  presentMobileDevice,
+} from "~/features/connection/services/mobile-device-presentation";
 import { useTranslation } from "~/shared/i18n";
 import type { Device } from "~/shared/types/device";
 import { Button } from "~/shared/ui/Button";
@@ -21,29 +26,25 @@ function signalKey(
   return "signalWeak";
 }
 
-// MultispeQ stickers show the last 4 octets of the MAC, so match that.
-function shortMac(id: string): string {
-  return id.split(/[:-]/).slice(-4).join(":");
-}
-
 interface NearbyDeviceRowProps {
   device: Device;
-  isPairing: boolean;
-  onPair: (device: Device) => void;
+  isConnecting: boolean;
+  onConnect: (device: Device) => void;
   isLast: boolean;
 }
 
-export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDeviceRowProps) {
+export function NearbyDeviceRow({ device, isConnecting, onConnect, isLast }: NearbyDeviceRowProps) {
   const { colors } = useTheme();
   const { t } = useTranslation("connection");
 
   const sigKey = signalKey(device.rssi);
 
-  const macId = device.type === "bluetooth-classic" ? shortMac(device.id) : null;
-  const hasName = device.name.trim().length > 0;
-  const title = hasName ? device.name : (macId ?? t("deviceList.fallbackName"));
-  const subParts: string[] = [];
-  if (hasName && macId) subParts.push(`(${macId})`);
+  const presentation = presentMobileDevice(device);
+  const title = mobileDevicePrimaryLabel(presentation, t("identity.unknownDevice"));
+  const subParts = mobileDeviceSecondaryParts(presentation, {
+    measurementDevice: t("identity.measurementDevice"),
+    identifier: (id) => t("identity.identifier", { id }),
+  });
   if (sigKey) subParts.push(t("deviceList.signal", { strength: t(`deviceList.${sigKey}`) }));
   const subtitle = subParts.join("  ·  ");
 
@@ -67,14 +68,14 @@ export function NearbyDeviceRow({ device, isPairing, onPair, isLast }: NearbyDev
           </Text>
         ) : null}
       </View>
-      {isPairing ? (
+      {isConnecting ? (
         <ActivityIndicator color={colors.jii.darkGreen} />
       ) : (
         <Button
-          title={t("deviceSheet.pair")}
+          title={t("deviceSheet.connect")}
           variant="outline"
           size="sm"
-          onPress={() => onPair(device)}
+          onPress={() => onConnect(device)}
         />
       )}
     </View>

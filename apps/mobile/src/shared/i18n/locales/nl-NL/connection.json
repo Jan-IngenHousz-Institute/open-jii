@@ -2,34 +2,35 @@
   "setup": {
     "title": "Apparaatverbinding",
     "scanButton": "Zoek naar apparaten",
-    "errorDisconnect": "Verbinding verbreken mislukt",
-    "errorConnect": "Verbinden mislukt"
+    "errorDisconnect": "Verbinding met {{name}} verbreken mislukt",
+    "errorConnect": "Verbinden met {{name}} mislukt"
   },
   "connectedDevice": {
     "heading": "Verbonden apparaat",
     "statusConnected": "Verbonden",
-    "disconnectButton": "Verbinding verbreken",
-    "turnOffMultispeQ": "MultispeQ uitschakelen"
+    "disconnectButton": "Verbinding verbreken"
   },
   "deviceList": {
     "scanning": "Apparaten zoeken...",
     "nearbyTitle": "Apparaten in de buurt",
-    "pairedTitle": "Gekoppelde apparaten",
-    "empty": "Geen apparaten gevonden. Probeer opnieuw te zoeken.",
-    "fallbackName": "N.v.t.",
+    "empty": "Geen apparaten gevonden. Controleer de stroom, vindbaarheid of kabel en zoek opnieuw.",
     "signal": "Signaal: {{strength}}",
     "signalStrong": "Sterk",
     "signalMedium": "Gemiddeld",
     "signalWeak": "Zwak"
   },
+  "identity": {
+    "unknownDevice": "Onbekend apparaat",
+    "measurementDevice": "Meetapparaat",
+    "identifier": "ID {{id}}"
+  },
   "deviceSheet": {
     "title": "Apparaten",
-    "currentSubMultispeQ": "MultispeQ · Batterij {{battery}}% · v{{firmware}}",
-    "currentSubMultispeQNoFirmware": "MultispeQ · Batterij {{battery}}%",
+    "battery": "Batterij {{battery}}%",
     "connectedViaCable": "Verbonden via kabel",
     "connectedViaBluetooth": "Verbonden via Bluetooth",
     "noDeviceTitle": "Geen apparaat verbonden",
-    "noDeviceSub": "Koppel een MultispeQ om te beginnen met meten.",
+    "noDeviceSub": "Verbind een apparaat om te beginnen met meten.",
     "reconnectTitle": "Verbind {{name}} opnieuw",
     "reconnectSub": "{{mac}}",
     "disconnect": "Verbinding verbreken",
@@ -37,16 +38,16 @@
     "nearbyTitle": "Apparaten in de buurt",
     "scan": "Zoeken",
     "scanning": "Zoeken…",
-    "pair": "Koppelen",
-    "pairing": "Koppelen…",
+    "connect": "Verbinden",
+    "connecting": "Verbinden…",
     "seeMoreDevices": "Meer apparaten tonen ({{count}})",
-    "helperText": "Vind je je apparaat niet? Houd de knop op de MultispeQ 3 seconden ingedrukt.",
+    "helperText": "Kun je je apparaat niet vinden? Controleer of het is ingeschakeld en vindbaar, of sluit de kabel aan.",
     "allowBluetooth": "Bluetooth-scannen toestaan",
     "permissionHeading": "Bluetooth-scannen staat uit",
-    "permissionExplainer": "Sta Bluetooth toe om MultispeQs in de buurt te vinden.",
+    "permissionExplainer": "Sta Bluetooth toe om meetapparaten in de buurt te vinden.",
     "connectedCount_one": "{{count}} apparaat verbonden",
     "connectedCount_other": "{{count}} apparaten verbonden",
-    "addAnotherHint": "Sluit meer sensoren aan op de hub en koppel ze. Een USB-hub met eigen voeding wordt aanbevolen."
+    "addAnotherHint": "Sluit meer meetapparaten aan via de hub. Een USB-hub met eigen voeding wordt aanbevolen."
   },
   "chip": {
     "connect": "Verbinden",

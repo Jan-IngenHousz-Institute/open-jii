@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
 import type {
   OutputCell as OutputCellType,
@@ -157,6 +158,34 @@ function DataTabs({
   );
 }
 
+function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
+  const { t } = useTranslation("iot");
+  const presentation = presentDevice({
+    // Older saved results only carried `deviceLabel`; treat that as their
+    // legacy display name when no structured family/name exists.
+    name: result.deviceName ?? (result.family ? undefined : result.deviceLabel),
+    family: result.family,
+    id: result.deviceLabel,
+  });
+  const primaryLabel = resolveDevicePrimaryLabel(presentation, t);
+  const secondaryLabel = [
+    presentation.provenance === "name" ? presentation.productName : null,
+    presentation.id,
+  ]
+    .filter((value): value is string => value != null && value !== primaryLabel)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(" · ");
+
+  return (
+    <span className="flex min-w-0 flex-col text-[12px] font-semibold text-[#011111]">
+      <span className="truncate">{primaryLabel}</span>
+      {secondaryLabel.length > 0 && (
+        <span className="truncate font-normal text-[#68737B]">{secondaryLabel}</span>
+      )}
+    </span>
+  );
+}
+
 // One device's slice of a multi-device run: its own tab/chart state, so
 // switching the JSON view on one device doesn't flip the others.
 function DeviceResultBlock({
@@ -195,9 +224,7 @@ function DeviceResultBlock({
         ) : (
           <CheckCircle2 className="size-3.5 text-emerald-500" />
         )}
-        <span className="text-[12px] font-semibold text-[#011111]">
-          {result.deviceLabel ?? result.deviceId}
-        </span>
+        <DeviceResultIdentity result={result} />
       </div>
       {failed ? (
         <div
@@ -369,6 +396,14 @@ export function OutputCellComponent({
                     protocolLoading={protocolLoading}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* A single run keeps its legacy primary data shape while retaining
+                and presenting the same identity metadata as multi-device runs. */}
+            {cell.deviceResults?.length === 1 && (
+              <div data-testid="single-device-result" className="mb-2">
+                <DeviceResultIdentity result={cell.deviceResults[0]} />
               </div>
             )}
 

@@ -17,6 +17,8 @@ export interface IotDeviceConnection {
   id: string;
   /** Device-reported name when the handshake resolved one, else "Device #N". */
   label: string;
+  /** One-based connect order, retained only as secondary disambiguation. */
+  ordinal?: number;
   /**
    * Family resolved by the post-connect identification handshake. The
    * handshake outranks the toolbar selection: what answered the probe is
@@ -107,7 +109,7 @@ export function useIotConnections(sensorFamily: SensorFamily) {
         connectCounterRef.current = index;
         setConnections((prev) => [
           ...prev,
-          { id, label, family, identity: info, driver: connector },
+          { id, label, ordinal: index, family, identity: info, driver: connector },
         ]);
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-empty-function

@@ -14,7 +14,7 @@ export interface ExperimentCardProps {
   description?: string;
   selected: boolean;
   onPress: (id: string) => void;
-  requiresSensor: boolean;
+  requiresDevice: boolean;
   questionsOnly: boolean;
   nodeCount: number;
   durationMin: number;
@@ -31,17 +31,17 @@ const cardSelection = cva("border-2", {
 });
 
 function pickTag(
-  requiresSensor: boolean,
+  requiresDevice: boolean,
   questionsOnly: boolean,
-): { variant: TagVariant; key: "sensorRequired" | "questionsOnly" | "sensorAndQuestions" } | null {
+): { variant: TagVariant; key: "deviceRequired" | "questionsOnly" | "deviceAndQuestions" } | null {
   if (questionsOnly) return { variant: "questions", key: "questionsOnly" };
-  if (requiresSensor) {
+  if (requiresDevice) {
     // "both" when there are also non-measurement nodes (questions/instructions).
-    // The meta hook doesn't separate those, so map a sensor-required flow with
-    // any non-measurement node into "sensor + questions". We can't tell that
-    // here without the node list, so we default to "Sensor required" — the
+    // The meta hook doesn't separate those, so map a device-required flow with
+    // any non-measurement node into "device + questions". We can't tell that
+    // here without the node list, so we default to "Device required" — the
     // distinction is rare in practice and the wording reads fine for both.
-    return { variant: "sensor", key: "sensorRequired" };
+    return { variant: "sensor", key: "deviceRequired" };
   }
   return null;
 }
@@ -52,14 +52,14 @@ export function ExperimentCard({
   description,
   selected,
   onPress,
-  requiresSensor,
+  requiresDevice,
   questionsOnly,
   nodeCount,
   durationMin,
   recentCount = 0,
 }: ExperimentCardProps) {
   const { t } = useTranslation("measurementFlow");
-  const tag = pickTag(requiresSensor, questionsOnly);
+  const tag = pickTag(requiresDevice, questionsOnly);
 
   return (
     <Pressable onPress={() => onPress(id)} accessibilityRole="button" className="active:opacity-60">

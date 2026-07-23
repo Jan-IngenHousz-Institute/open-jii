@@ -1,5 +1,5 @@
-import { openSerialPortConnection } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import type { SerialPortEvents } from "~/features/connection/services/multispeq-communication/android-serial-port-connection/serial-port-events";
+import { openSerialPortConnection } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection";
+import type { SerialPortEvents } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/serial-port-events";
 import { Emitter } from "~/features/connection/utils/emitter";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";

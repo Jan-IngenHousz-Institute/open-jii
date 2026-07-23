@@ -4,8 +4,9 @@
  * LINE mode: a plain string command replies with raw text. Some replies are
  * printed without a trailing newline (hello), so a short RX quiet window
  * completes a reply that never sees one. JSON mode: a protocol array/object
- * is sent in one write and the firmware replies a MultispeQ-shaped envelope
- * terminated by the constant `7A1E3AA1` footer.
+ * is sent in one write and the firmware replies with a JSON envelope of
+ * `device_*` header fields plus a `sample` array, terminated by the constant
+ * `7A1E3AA1` footer.
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";

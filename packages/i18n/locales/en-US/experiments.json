@@ -333,8 +333,8 @@
     },
     "options": {
       "multispeq": {
-        "label": "MultispeQ",
-        "description": "MultispeQ sensor data upload"
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ sensor data upload"
       },
       "ambyte": {
         "label": "Ambyte",
@@ -351,8 +351,8 @@
     },
     "sensorTypes": {
       "multispeq": {
-        "label": "MultispeQ",
-        "description": "MultispeQ sensor data upload (coming soon)",
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ sensor data upload (coming soon)",
         "comingSoon": "Coming Soon"
       },
       "ambyte": {

@@ -1,3 +1,4 @@
+import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobile-runtime-support";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { DeviceExecutorEntry } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { DevicePlanEntry } from "~/features/measurement-flow/domain/flow-transitions";
@@ -20,7 +21,7 @@ const log = createLogger("evaluate-and-route");
 function entryIdentity(entry: DeviceExecutorEntry) {
   return (
     entry.identity ?? {
-      family: "multispeq",
+      family: MOBILE_PRE_IDENTITY_FAMILY,
       name: entry.device.name,
       deviceId: entry.device.id,
     }

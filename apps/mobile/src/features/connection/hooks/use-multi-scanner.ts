@@ -10,10 +10,13 @@ import { useScannerCommandExecutorStore } from "~/features/connection/stores/use
 import type { DeviceCommandOutcome } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
+import type { DeviceIdentity } from "@repo/iot";
+
 export type DeviceScanStatus = "idle" | "scanning" | "done" | "error";
 
 export interface DeviceScanState {
   device: Device;
+  identity?: DeviceIdentity;
   status: DeviceScanStatus;
   error?: Error;
 }
@@ -35,7 +38,7 @@ export interface ScanAssignment {
 /**
  * Multi-scan (see CONTEXT.md): run each assignment's command on its device in
  * parallel (the broadcast form assigns one protocol to every device).
- * Per-device outcomes; one failing sensor doesn't block the others. The round
+ * Per-device outcomes; one failing device doesn't block the others. The round
  * always resolves; failures are data, not exceptions, so the caller keeps
  * successes accumulated across retry rounds and decides between
  * continue-with-successful and retry-failed.
@@ -94,6 +97,7 @@ export function useMultiScanner() {
     () =>
       Array.from(executors.values(), (entry) => ({
         device: entry.device,
+        identity: entry.identity,
         status: entry.isExecuting
           ? "scanning"
           : entry.error

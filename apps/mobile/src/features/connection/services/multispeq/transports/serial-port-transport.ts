@@ -1,8 +1,7 @@
+import type { SerialPortEvents } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/serial-port-events";
 import type { Emitter } from "~/features/connection/utils/emitter";
 
 import type { ITransportAdapter } from "@repo/iot";
-
-import type { SerialPortEvents } from "../android-serial-port-connection/serial-port-events";
 
 /**
  * Wrap the existing USB-serial connection emitter as an `ITransportAdapter` so

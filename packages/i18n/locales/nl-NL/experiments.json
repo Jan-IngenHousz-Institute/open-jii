@@ -210,14 +210,20 @@
   "uploadModal": {
     "title": "Sensorgegevens uploaden",
     "description": "Upload sensorgegevens naar uw experiment voor analyse",
+    "options": {
+      "multispeq": {
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ-sensorgegevens uploaden"
+      }
+    },
     "sensorFamily": {
       "label": "Selecteer sensorfamilie",
       "description": "Kies het type sensorgegevens dat u wilt uploaden"
     },
     "sensorTypes": {
       "multispeq": {
-        "label": "MultispeQ",
-        "description": "MultispeQ sensorgegevens uploaden (binnenkort beschikbaar)",
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ-sensorgegevens uploaden (binnenkort beschikbaar)",
         "comingSoon": "Binnenkort beschikbaar"
       },
       "ambyte": {

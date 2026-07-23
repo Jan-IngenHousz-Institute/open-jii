@@ -7,7 +7,7 @@ import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 import {
-  getMultispeqMqttTopic,
+  getMeasurementMqttTopic,
   QUESTIONS_PROTOCOL_ID,
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -41,7 +41,7 @@ export function useQuestionsUpload() {
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
     }) => {
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
 
       const location = await getMeasurementLocation();
 

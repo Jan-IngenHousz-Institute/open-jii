@@ -8,7 +8,7 @@ export interface MiniParStreamEvents extends Record<string, unknown> {
   bufferOverflow: { discardedBytes: number };
 }
 
-/** JSON-mode measurement envelope (MultispeQ-shaped device header + samples). */
+/** JSON-mode measurement envelope: `device_*` header fields plus a `sample` array. */
 export interface MiniParMeasurementEnvelope {
   device_name?: string;
   device_version?: string;

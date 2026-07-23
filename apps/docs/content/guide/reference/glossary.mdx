@@ -14,8 +14,14 @@ workbooks, data uploads, analysis configuration, and archiving. **Admin** and
 ### Ambyte
 
 The MQTT gateway and ingestion family for autonomous sensors. Its enum/API value
-is `ambyte`. Ambyte ingestion and IoT registration exist; local connection and
-device monitoring are not the current workflow.
+is `ambyte`. Ambyte ingestion and IoT registration exist; mobile local connection
+and device monitoring are not the current workflow. Web protocol testing can run
+the `ambyte` family through the generic device driver over BLE or USB/serial as a
+compatibility path; a dedicated Ambyte BLE integration is planned, not built.
+Legacy `ambyte` rows are not provenance-clean: migration `0037` remapped existing
+`ambit` rows to `ambyte` before migration `0038` re-added `ambit`, so some stored
+`ambyte` data was captured by an Ambit. openJII records this and does not rewrite
+historical rows.
 
 ### Ambit
 

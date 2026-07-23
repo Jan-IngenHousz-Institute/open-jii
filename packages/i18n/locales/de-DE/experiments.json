@@ -291,14 +291,20 @@
   "uploadModal": {
     "title": "Sensordaten hochladen",
     "description": "Laden Sie Sensordaten zur Analyse in Ihr Experiment hoch",
+    "options": {
+      "multispeq": {
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ-Sensordaten hochladen"
+      }
+    },
     "sensorFamily": {
       "label": "Sensorfamilie auswählen",
       "description": "Wählen Sie den Typ der Sensordaten, die Sie hochladen möchten"
     },
     "sensorTypes": {
       "multispeq": {
-        "label": "MultispeQ",
-        "description": "MultispeQ-Sensordaten-Upload (in Kürze)",
+        "label": "MultiSpeQ",
+        "description": "MultiSpeQ-Sensordaten-Upload (in Kürze)",
         "comingSoon": "In Kürze"
       },
       "ambyte": {

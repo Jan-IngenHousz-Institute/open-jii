@@ -91,6 +91,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
@@ -100,6 +102,32 @@ jobs:
       - name: Sherif (workspace dependency lint)
         shell: bash
         run: pnpm lint:ws
+
+      - name: Build device nomenclature guard
+        shell: bash
+        run: pnpm turbo run build --filter=@repo/device-nomenclature
+
+      - name: Device nomenclature inventory (strict mode)
+        shell: bash
+        run: node tooling/device-nomenclature/dist/cli.js --mode strict
+
+      - name: Test device nomenclature invariants
+        shell: bash
+        run: pnpm --filter @repo/device-nomenclature test
+
+      - name: Verify frozen migration history
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+        run: node tooling/device-nomenclature/dist/frozen-history-cli.js --base "$BASE_SHA"
+
+      - name: Upload device nomenclature inventory
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: device-nomenclature-inventory
+          path: tooling/device-nomenclature/reports/inventory.json
+          if-no-files-found: ignore
 
   mobile_styling_guard:
     name: Mobile Styling Guard

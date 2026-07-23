@@ -299,7 +299,7 @@ describe("ProtocolDetailsSidebar", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     renderComponent();
     expect(screen.queryByTestId("select")).not.toBeInTheDocument();
-    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
   });
 
   it("renders Ambyte text when family is ambyte and user is not the creator", () => {
@@ -581,7 +581,7 @@ describe("ProtocolDetailsSidebar", () => {
 
     // Should show plain text family, not a Select
     expect(screen.queryByTestId("select")).not.toBeInTheDocument();
-    expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
 
     // Should not show danger zone
     expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();

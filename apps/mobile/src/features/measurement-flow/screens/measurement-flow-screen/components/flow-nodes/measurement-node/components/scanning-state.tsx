@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import type { DeviceScanState } from "~/features/connection/hooks/use-multi-scanner";
-import type { CommandProgress } from "~/features/connection/services/multispeq-communication/driver-command-executor";
+import type { DeviceCommandProgress } from "~/features/connection/services/device-command-executor";
 import { useTranslation } from "~/shared/i18n";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -13,7 +13,7 @@ interface ScanningStateProps {
   /** Per-device round state; more than one entry switches to the multi-scan list. */
   deviceStates?: DeviceScanState[];
   /** Live transfer progress of the in-flight command, if any. */
-  progress?: CommandProgress;
+  progress?: DeviceCommandProgress;
   /** Epoch ms the scan started, drives the elapsed-time readout. */
   scanStartedAt?: number;
   /** Estimated protocol runtime (ms), if known, sizes the progress bar. */
@@ -38,10 +38,10 @@ function formatDuration(ms: number): string {
  * A MultispeQ executes its protocol SILENTLY and only returns a result at the
  * very end, there is genuinely no mid-measurement device signal to surface.
  * This is confirmed two ways: the PhotosynQ protocol docs describe a single
- * round-trip (protocol in → silent run → one result burst), and our BLE
- * transport only delivers one assembled message (it buffers every notification
- * until `__EOM__`). So a "last signal Xs ago" readout would just be elapsed
- * time wearing a costume, there is nothing real to count.
+ * round-trip (protocol in → silent run → one result burst), and our Bluetooth
+ * Classic (BR/EDR) transport reads an SPP stream that is buffered into one
+ * assembled message until `__EOM__`. So a "last signal Xs ago" readout would
+ * just be elapsed time wearing a costume, there is nothing real to count.
  *
  * The honest progress signal is therefore time: a big, always-ticking elapsed
  * clock shown against the protocol's estimate. The activity line states plainly

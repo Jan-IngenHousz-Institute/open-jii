@@ -134,6 +134,50 @@ describe("WorkbookHeader", () => {
     expect(screen.getByText("MultispeQ v2")).toBeInTheDocument();
   });
 
+  it("uses product-first identity with stable id as secondary context", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Device #1",
+          ordinal: 1,
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Ambit")).toBeInTheDocument();
+    expect(screen.getByText(/AMB-42/)).toBeInTheDocument();
+  });
+
+  it("keeps canonical product and stable id as secondary context for a named device", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Canopy sensor",
+          name: "Canopy sensor",
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Canopy sensor")).toBeInTheDocument();
+    expect(screen.getByText(/Ambit · AMB-42/)).toBeInTheDocument();
+  });
+
+  it("labels the browser wireless option precisely as Bluetooth Low Energy", async () => {
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(screen.getAllByRole("combobox")[1]);
+    expect(screen.getByRole("option", { name: "Bluetooth Low Energy (BLE)" })).toBeInTheDocument();
+  });
+
   it("shows 'Connecting...' while connecting", () => {
     renderHeader({ isConnecting: true });
     expect(screen.getByText("Connecting...")).toBeInTheDocument();
