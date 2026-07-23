@@ -115,7 +115,10 @@ Not all data starts in MQTT:
 
 - external project-transfer Parquet files enter `raw_imported_data` with Auto Loader;
 - web uploads enter `raw_uploaded_data`;
-- both are normalized into the same central model downstream.
+- payloads too large for MQTT (over 128 KB) are uploaded straight to S3 through a backend-issued pre-signed URL (`/api/v1/iot/upload-url`, keyed `large-iot/{experimentId}/{uuid}.json`) and enter `raw_large_data` with Auto Loader directory listing;
+- all are normalized into the same central model downstream.
+
+Because pre-signed uploads never touch the broker, there is no authenticated MQTT client identity: `client_id` stays null and the payload's self-reported `device_id` is not promoted to a trusted identity.
 
 This lets researchers query one experiment-facing model without erasing the source-specific raw layers.
 

@@ -60,20 +60,8 @@ variable "iot_s3_policy_name" {
   type        = string
 }
 
-variable "enable_large_iot_sqs" {
-  description = "Whether to enable SQS-based processing for large IoT payloads"
-  type        = bool
-  default     = false
-}
-
-variable "large_iot_bucket_name" {
-  description = "Name of the dedicated S3 bucket for large IoT payloads (required when enable_large_iot_sqs is true)"
-  type        = string
-  default     = ""
-}
-
 variable "large_iot_bucket_arn" {
-  description = "ARN of the dedicated S3 bucket for large IoT payloads (required when enable_large_iot_sqs is true)"
+  description = "ARN of the dedicated S3 bucket for large IoT payloads (>128 KB)"
   type        = string
   default     = ""
 }

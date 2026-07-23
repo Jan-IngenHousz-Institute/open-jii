@@ -152,9 +152,7 @@ module "iot_core" {
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 
-  enable_large_iot_sqs  = true
-  large_iot_bucket_name = module.large_iot_s3.bucket_id
-  large_iot_bucket_arn  = module.large_iot_s3.bucket_arn
+  large_iot_bucket_arn = module.large_iot_s3.bucket_arn
 }
 
 module "cognito" {
@@ -375,12 +373,11 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name = "open-jii-${var.environment}-metastore-access"
-  role_name       = "open-jii-${var.environment}-uc-access"
-  environment     = var.environment
-  bucket_name     = var.centralized_metastore_bucket_name
-  isolation_mode  = "ISOLATION_MODE_OPEN"
-
+  credential_name        = "open-jii-${var.environment}-metastore-access"
+  role_name              = "open-jii-${var.environment}-uc-access"
+  environment            = var.environment
+  bucket_name            = var.centralized_metastore_bucket_name
+  isolation_mode         = "ISOLATION_MODE_OPEN"
   additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
 
   providers = {
@@ -529,6 +526,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_large_data",
     # silver
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_data",
     # gold
@@ -561,8 +559,6 @@ module "centrum_pipeline" {
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
     "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
-    "LARGE_IOT_SQS_QUEUE_URL"    = module.iot_core.large_iot_sqs_queue_url
-    "LARGE_IOT_INGEST_ENABLED"   = "true"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
@@ -2266,9 +2262,6 @@ module "grafana_dashboard" {
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
-
-  large_iot_notification_queue_name = module.iot_core.large_iot_notification_queue_name
-  large_iot_dlq_name                = module.iot_core.large_iot_dlq_name
 
   enable_site_availability_alert = true
   route53_health_check_id        = module.route53.health_check_id

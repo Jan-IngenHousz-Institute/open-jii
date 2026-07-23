@@ -81,3 +81,35 @@ sensor_schema = StructType(
         StructField("longitude", DoubleType(), True),
     ]
 )
+
+# Schema for large IoT payloads (>128 KB) uploaded directly to S3 via
+# pre-signed URL. Same shape as the MQTT/Kinesis path but without the MQTT
+# topic field, and experiment_id is extracted from the S3 key rather than the
+# message envelope.
+large_iot_schema = StructType(
+    [
+        StructField("device_name", StringType(), True),
+        StructField("device_version", StringType(), True),
+        StructField("device_id", StringType(), True),
+        StructField("device_battery", DoubleType(), True),
+        StructField("device_firmware", StringType(), True),
+        StructField("sample", StringType(), True),
+        StructField("_sample_encoding", StringType(), True),
+        StructField("timestamp", TimestampType(), True),
+        StructField("output", StringType(), True),
+        StructField("questions", ArrayType(question_schema), True),
+        StructField("user_id", StringType(), True),
+        StructField("timezone", StringType(), True),
+        StructField("macros", ArrayType(macro_schema), True),
+        StructField("annotations", ArrayType(annotation_schema), True),
+        StructField("experiment_id", StringType(), True),
+        # Workbook execution metadata; absent on single-device uploads.
+        # macro_context stays a JSON string because its keys are dynamic.
+        StructField("workbook_run_id", StringType(), True),
+        StructField("workbook_version_id", StringType(), True),
+        StructField("macro_context", StringType(), True),
+        # GPS fix at measurement time; absent without permission or fix.
+        StructField("latitude", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
+    ]
+)

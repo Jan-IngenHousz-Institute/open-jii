@@ -31,12 +31,14 @@ from .constants import (
     MACRO_ID_UUID_PATTERN,
     METADATA_SOURCE_TABLE,
     RAW_IMPORTED_DATA_TABLE,
+    RAW_LARGE_DATA_TABLE,
     RAW_UPLOADED_DATA_TABLE,
     SILVER_TABLE_DEFAULT,
 )
 from .schemas import (
     annotation_content_schema,
     annotation_schema,
+    large_iot_schema,
     macro_schema,
     question_schema,
     sensor_schema,
@@ -60,11 +62,13 @@ __all__ = [
     "MACRO_ID_UUID_PATTERN",
     "METADATA_SOURCE_TABLE",
     "RAW_IMPORTED_DATA_TABLE",
+    "RAW_LARGE_DATA_TABLE",
     "RAW_UPLOADED_DATA_TABLE",
     "SILVER_TABLE_DEFAULT",
     # schemas
     "annotation_content_schema",
     "annotation_schema",
+    "large_iot_schema",
     "macro_schema",
     "question_schema",
     "sensor_schema",
