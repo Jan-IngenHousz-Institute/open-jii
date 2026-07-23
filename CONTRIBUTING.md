@@ -1,64 +1,77 @@
-# Contributing to Open JII
+---
+title: "Contributing to openJII"
+date: 2026-07-23
+generated_by: skills-for-architects
+---
 
-[![License](https://img.shields.io/github/license/jii/open-jii)](https://github.com/Jan-IngenHousz-Institute/open-jii)
+# Contributing to openJII
 
-## How to contribute
+[![License](https://img.shields.io/github/license/Jan-IngenHousz-Institute/open-jii)](https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main/LICENSE)
 
-### Did you find a bug?
+Thank you for your interest in contributing! This document covers how to report issues, set up a development environment, and get changes merged.
 
-- **Do not open up a GitHub issue if the bug is a security vulnerability**. Please refer to our security policy [Security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security).
+## Reporting issues
 
-- **Ensure the bug was not already reported** by searching [Issues](https://github.com/Jan-IngenHousz-Institute/open-jii/issues).
+### Bugs
 
-- If you can't find an open issue addressing the problem, [open a new one](https://github.com/Jan-IngenHousz-Institute/open-jii/issues/new). Include:
-  - Clear title and description
-  - As much relevant information as possible
-  - Code sample or test case demonstrating the issue
-  - Version of Open JII you're using
+- **Do not open a GitHub issue if the bug is a security vulnerability.** Please follow our [security policy](https://github.com/Jan-IngenHousz-Institute/open-jii/security) instead.
+- **Search [existing issues](https://github.com/Jan-IngenHousz-Institute/open-jii/issues) first** to avoid duplicates.
+- If none exists, [open a new issue](https://github.com/Jan-IngenHousz-Institute/open-jii/issues/new) with a clear title, steps to reproduce, expected vs actual behavior, and your environment.
 
-### Did you write a patch that fixes a bug?
+### Features
 
-- Open a new GitHub pull request with the patch.
-- Ensure the PR description clearly describes the problem and solution.
-- Include the relevant issue number if applicable.
-- Follow our coding conventions and ensure tests pass.
+- Open an issue to discuss the feature before writing code. Explain the use case and the problem you're solving, and wait for feedback from the core team before starting development.
 
-### Do you intend to add a new feature?
+## Development setup
 
-- First, open an issue to discuss the feature before writing code.
-- Explain the use case and what problem you're trying to solve.
-- Wait for feedback from the core team before starting development.
+Prerequisites: Node.js v24+ (`.nvmrc`), pnpm 11 via corepack, Docker, and [uv](https://docs.astral.sh/uv/) if you work on `apps/data`.
 
-### Want to contribute to the documentation?
+```bash
+git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
+cd open-jii
+nvm use
+corepack enable
+pnpm install
 
-- Documentation improvements are always welcome.
-- Check the existing docs to maintain consistent style and tone.
-- Ensure your changes are clear and helpful to other developers.
+pnpm db:setup     # first-time setup: start Postgres, reset + migrate the DB (wipes local data)
+pnpm dev:fb       # run web + backend (or `pnpm dev` for everything)
+```
 
-## Development Process
+This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layout) for the app/package layout. To work on a single app, use turbo filters, e.g. `pnpm --filter web dev` or `pnpm --filter backend test`.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Making changes
 
-## Code Style Guidelines
+1. Create a branch from `main`.
+2. Make your changes, including tests for new functionality.
+3. Verify locally:
 
-- Follow the existing code style
-- Write clear commit messages
-- Include tests for new features
-- Update documentation as needed
+   ```bash
+   pnpm lint
+   pnpm typecheck
+   pnpm test
+   pnpm format
+   ```
 
-## Testing
+4. Commit using **Conventional Commits** — releases are automated with semantic-release, so commit messages matter:
 
-- Ensure all tests pass before submitting PR
-- Add new tests for new functionality
-- Run `[test command]` to execute the test suite
+   - `feat(web): add experiment archive filter`
+   - `fix(backend): reject expired API keys`
+   - `docs: update contributing guide`
+
+   Common scopes are the app or package name (`web`, `backend`, `mobile`, `data`, `docs`, `ui`, ...).
+
+5. Open a pull request against `main`. Describe the problem and the solution, and link the relevant issue if there is one. CI must pass before review.
+
+## Documentation contributions
+
+Documentation improvements are always welcome:
+
+- The documentation site lives in `apps/docs` (Fumadocs on Next.js); researcher-facing content is under `apps/docs/content/guide`, developer content under `apps/docs/content/developers`.
+- Run it locally with `pnpm --filter docs dev`.
+- Keep the existing style and tone, and check that links and screenshots still match the current UI.
 
 ## Questions?
 
-- Open a GitHub issue for bugs or feature discussions
-- Reach out to the maintainers for other questions
+Open a GitHub issue for bugs or feature discussions, or reach out to the maintainers for anything else.
 
-Thank you for contributing to Open JII! ❤️
+Thank you for contributing to openJII! ❤️

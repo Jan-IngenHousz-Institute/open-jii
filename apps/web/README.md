@@ -1,59 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# openJII Web
 
-## Getting Started
+The openJII web app — the public website (openjii.org) and the authenticated research platform, in one Next.js (App Router) application.
 
-### Prerequisites
+## Structure
 
-1. Copy `.env.example` to `.env.local` and configure environment variables:
+Routes live under `app/[locale]/` (i18n via `@repo/i18n`, en-US and de-DE):
+
+- **Public site** — the homepage and `(info)` pages (about, blog, FAQ, policies, releases). Content is fetched from Contentful through `@repo/cms`; when Contentful is unavailable, pages degrade to a maintenance page.
+- **`(auth)`** — login, registration, and verification pages, backed by Better Auth (`@repo/auth`).
+- **`platform/`** — the authenticated research platform (experiments, workbooks, protocols, macros, devices, account), wrapped in the sidebar/topbar chrome with command palette and keyboard shortcuts.
+
+Data fetching uses the oRPC client against the backend's contract (`@repo/api`) with TanStack Query. UI components come from `@repo/ui` (shadcn/Radix) with the shared Tailwind theme.
+
+## Development
+
+Run from the repo root:
 
 ```bash
-cp .env.example .env.local
+pnpm db:setup          # first-time DB setup (destructive: resets local data)
+pnpm dev:fb            # web + backend together
+# or just this app:
+pnpm --filter web dev
 ```
 
-2. Add your PostHog API key (get it from https://app.posthog.com/project/settings):
+### Environment
+
+Copy `.env.example` to `.env.local` and fill in the values. For analytics/feature flags, set your PostHog key (from the PostHog project settings):
 
 ```bash
 NEXT_PUBLIC_POSTHOG_KEY=phc_YOUR_KEY_HERE
 ```
 
-### Run Development Server
-
-First, run the development server:
+### Testing
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter web test
+pnpm --filter web lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+The app is built with [OpenNext](https://opennext.js.org) (`pnpm --filter web build:opennext`) and deployed to AWS — not Vercel.
 
 ## Documentation
 
-- [Maintenance Page](./docs/MAINTENANCE_PAGE.md) - How public pages degrade to a maintenance page when Contentful is unavailable
-- [PostHog Integration](./docs/POSTHOG.md) - Feature flags and analytics setup
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Maintenance Page](./docs/MAINTENANCE_PAGE.md) — how public pages degrade when Contentful is unavailable
+- [Analytics & feature flags](../../packages/analytics/README.md) — PostHog setup via `@repo/analytics`
+- [Platform docs](https://docs.openjii.org) — researcher and developer documentation

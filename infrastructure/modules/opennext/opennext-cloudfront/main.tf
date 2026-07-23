@@ -269,7 +269,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = aws_cloudfront_cache_policy.cache_policy.id
+    cache_policy_id          = aws_cloudfront_cache_policy.image_cache_policy.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
   }
 
@@ -415,6 +415,37 @@ resource "aws_cloudfront_cache_policy" "cache_policy" {
           "referer",                # Important for auth flows
           "x-action-redirect",      # Needed for redirects in server actions
           "origin"                  # Required for CORS
+        ]
+      }
+    }
+
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
+}
+
+# Cache policy for /_next/image: keys on Accept so the optimizer can serve
+# WebP/AVIF per browser; no cookies, they only fragment the image cache
+resource "aws_cloudfront_cache_policy" "image_cache_policy" {
+  name = "${var.project_name}-image-cache-policy"
+
+  default_ttl = 0
+  max_ttl     = 31536000
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "whitelist"
+
+      headers {
+        items = [
+          "accept",          # Format negotiation (WebP/AVIF)
+          "x-forwarded-host" # Essential for routing
         ]
       }
     }

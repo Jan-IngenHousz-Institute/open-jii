@@ -1,4 +1,11 @@
 {
   "title": "Get Started",
-  "pages": ["index", "quick-start", "create-account", "account-security-api-keys", "key-concepts"]
+  "pages": [
+    "index",
+    "quick-start",
+    "create-account",
+    "account-security-api-keys",
+    "key-concepts",
+    "platform-tour"
+  ]
 }
