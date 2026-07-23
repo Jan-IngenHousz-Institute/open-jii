@@ -10,7 +10,7 @@ openJII is a mobile application developed using [Expo](https://expo.dev/). This 
 
 Make sure you have the following installed:
 
-- [Node.js](https://nodejs.org/) (Recommended: v18+)
+- [Node.js](https://nodejs.org/) (v24+, see the repo `.nvmrc`)
 - [Expo CLI](https://docs.expo.dev/get-started/installation/)
 - [EAS CLI](https://docs.expo.dev/eas-update/intro/) (`npm install -g eas-cli`)
 - Xcode (for iOS development)
