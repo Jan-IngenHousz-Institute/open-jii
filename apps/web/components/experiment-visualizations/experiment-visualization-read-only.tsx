@@ -26,7 +26,7 @@ export default function ExperimentVisualizationReadOnly({ experimentId, visualiz
     isLoading,
     error,
   } = useExperimentVisualization(visualizationId, experimentId);
-  const visualization = visualizationResponse?.body;
+  const visualization = visualizationResponse;
 
   const handleBack = () => {
     router.push(`/${locale}/platform/experiments-archive/${experimentId}`);

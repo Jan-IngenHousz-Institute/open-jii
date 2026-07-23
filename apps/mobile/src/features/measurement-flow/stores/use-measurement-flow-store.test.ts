@@ -31,6 +31,7 @@ function resetStore() {
     iterationCount: 0,
     isFlowFinished: false,
     isQuestionsSubmitPending: false,
+    scanResults: undefined,
     scanResult: undefined,
     isFromOverview: false,
     cells: [],
@@ -38,6 +39,8 @@ function resetStore() {
     lastMatchedPath: undefined,
     branchVisitCounts: {},
     branchReturnStack: [],
+    devicePlan: undefined,
+    consumedNodeIds: [],
   });
 }
 
@@ -81,6 +84,18 @@ describe("useMeasurementFlowStore", () => {
       const payload = { foo: "bar" };
       useMeasurementFlowStore.getState().setScanResult(payload);
       expect(useMeasurementFlowStore.getState().scanResult).toBe(payload);
+    });
+
+    it("setScanResults stores per-device results and mirrors the first into scanResult", () => {
+      const device = { type: "usb", name: "MultispeQ A", id: "usb-a" } as const;
+      const results = [
+        { device, result: { from: "a" } },
+        { device: { ...device, id: "usb-b", name: "MultispeQ B" }, result: { from: "b" } },
+      ];
+      useMeasurementFlowStore.getState().setScanResults(results);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.scanResults).toBe(results);
+      expect(state.scanResult).toEqual({ from: "a" });
     });
 
     it("setFlowNodes resets currentFlowStep to 0", () => {
@@ -228,6 +243,8 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isFlowFinished).toBe(false);
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
     });
 
     it("decrements currentStep when no experiment is selected", () => {
@@ -268,6 +285,7 @@ describe("useMeasurementFlowStore", () => {
         iterationCount: 2,
         isFlowFinished: true,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
         isFromOverview: true,
       });
@@ -281,6 +299,8 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isFlowFinished).toBe(false);
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
+      expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
   });
@@ -291,6 +311,7 @@ describe("useMeasurementFlowStore", () => {
         currentFlowStep: 3,
         iterationCount: 2,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
         isFromOverview: true,
       });
@@ -299,6 +320,8 @@ describe("useMeasurementFlowStore", () => {
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(2);
       expect(state.isQuestionsSubmitPending).toBe(false);
+      expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
       expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
@@ -327,6 +350,7 @@ describe("useMeasurementFlowStore", () => {
         currentFlowStep: 5,
         iterationCount: 1,
         isQuestionsSubmitPending: true,
+        scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
       });
       useMeasurementFlowStore.getState().dismissQuestionsSubmit();
@@ -334,6 +358,8 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(2);
+      expect(state.scanResult).toBeUndefined();
+      expect(state.scanResults).toBeUndefined();
       expect(state.scanResult).toBeUndefined();
     });
   });
@@ -409,12 +435,13 @@ describe("useMeasurementFlowStore", () => {
         },
       ] as never;
 
-      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells);
+      useMeasurementFlowStore.getState().setFlowGraph(nodes, edges, cells, "version-1");
 
       const state = useMeasurementFlowStore.getState();
       expect(state.flowNodes).toEqual(nodes);
       expect(state.edges).toEqual(edges);
       expect(state.cells).toEqual(cells);
+      expect(state.workbookVersionId).toBe("version-1");
       expect(state.currentFlowStep).toBe(0);
       expect(state.branchVisitCounts).toEqual({});
       expect(state.lastMatchedPath).toBeUndefined();
@@ -491,6 +518,60 @@ describe("useMeasurementFlowStore", () => {
       expect(state.lastMatchedPath).toBeUndefined();
       expect(state.branchReturnStack).toEqual([]);
     });
+  });
+
+  describe("device dispatch plan", () => {
+    const plan = [
+      { deviceId: "usb-1", targetCellId: "m1" },
+      { deviceId: "usb-2", targetCellId: "m2" },
+    ];
+
+    it("setDevicePlan stores the plan with its consumed targets", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toEqual(plan);
+      expect(state.consumedNodeIds).toEqual(["m2"]);
+    });
+
+    it("setDevicePlan(undefined) deactivates dispatch entirely", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      useMeasurementFlowStore.getState().setDevicePlan(undefined, []);
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toBeUndefined();
+      expect(state.consumedNodeIds).toEqual([]);
+    });
+
+    it("completeDevicePlan drops the plan but keeps consumed ids for skip-once", () => {
+      useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+      useMeasurementFlowStore.getState().completeDevicePlan();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.devicePlan).toBeUndefined();
+      expect(state.consumedNodeIds).toEqual(["m2"]);
+    });
+
+    it("nextStep skips a consumed target once, then removes it", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        flowNodes: [makeMeasurement("m1"), makeMeasurement("m2"), makeQuestion("q1")],
+        currentFlowStep: 0,
+        consumedNodeIds: ["m2"],
+      });
+      useMeasurementFlowStore.getState().nextStep();
+      const state = useMeasurementFlowStore.getState();
+      expect(state.currentFlowStep).toBe(2);
+      expect(state.consumedNodeIds).toEqual([]);
+    });
+
+    it.each(["startNewIteration", "retryCurrentIteration", "resetFlow"] as const)(
+      "%s clears the plan and consumed targets",
+      (action) => {
+        useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
+        useMeasurementFlowStore.getState()[action]();
+        const state = useMeasurementFlowStore.getState();
+        expect(state.devicePlan).toBeUndefined();
+        expect(state.consumedNodeIds).toEqual([]);
+      },
+    );
   });
 
   describe("branch back navigation", () => {

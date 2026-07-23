@@ -1,0 +1,29 @@
+---
+title: "What's new / changelog"
+description: "Use the public releases feed as the source of truth for shipped changes."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+Read <PlatformLink path="/releases">openJII Releases</PlatformLink> for the public changelog.
+The page lists active release notes newest first and links each note to a stable
+detail page.
+
+The web changelog and the in-app **What's new** feed are backed by the same
+release-note content. This documentation therefore points to the releases page
+instead of maintaining a second hand-written feature history that can drift.
+
+{/* NEEDS-LIVE-CHECK: confirm the unprefixed `/releases` redirect, language selection, and at least one current release note on production. */}
+
+## Use release notes in a study
+
+When a platform change could affect collection or analysis:
+
+1. record the mobile or web version used during the study;
+2. note the measurement dates and relevant release date;
+3. test a representative workflow before rolling an update to all field phones;
+4. preserve protocol, workbook, and analysis versions with the exported data;
+5. report any change in values or behavior with a small reproducible example.
+
+GitHub's repository releases are useful for engineering artifacts and tags, but
+the public web releases page is the researcher-facing source of truth.

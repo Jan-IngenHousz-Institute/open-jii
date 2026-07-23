@@ -3,13 +3,16 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DashboardWidget, RichTextWidget } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentDashboardWidget,
+  ExperimentRichTextWidget,
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { WidgetSlot } from "./widget-slot";
 
-const richTextWidget: RichTextWidget = {
+const richTextWidget: ExperimentRichTextWidget = {
   id: "rt-w1",
   type: "richText",
   layout: { col: 0, row: 0, colSpan: 6, rowSpan: 2 },
@@ -21,7 +24,7 @@ function setup({
   isSelected = false,
   onSelect = vi.fn(),
 }: {
-  widget?: DashboardWidget;
+  widget?: ExperimentDashboardWidget;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
 } = {}) {
@@ -118,7 +121,7 @@ describe("WidgetSlot", () => {
         },
       ],
     });
-    const tableWidget: DashboardWidget = {
+    const tableWidget: ExperimentDashboardWidget = {
       id: "tbl-w1",
       type: "table",
       layout: { col: 0, row: 0, colSpan: 6, rowSpan: 4 },

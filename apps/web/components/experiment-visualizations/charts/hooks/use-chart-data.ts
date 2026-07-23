@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExperimentVisualization } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useDashboardFiltersForTable } from "../../../experiment-dashboards/dashboard-filters-context";

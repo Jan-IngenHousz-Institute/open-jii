@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
@@ -12,7 +13,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useMemo, useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -47,6 +48,7 @@ import { cn } from "@repo/ui/lib/utils";
 interface WorkbookListProps {
   workbooks: Workbook[] | undefined;
   isLoading?: boolean;
+  showEmptyHelp?: boolean;
 }
 
 const HEADER_BG = "bg-[#F6F8FA]";
@@ -54,7 +56,7 @@ const TABLE_BORDER = "border-[#CDD5DB]";
 const TEXT_STRONG = "text-[#011111]";
 const TEXT_MUTED = "text-[#68737B]";
 
-export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
+export function WorkbookList({ workbooks, isLoading, showEmptyHelp = false }: WorkbookListProps) {
   const { t } = useTranslation("workbook");
 
   const sorted = useMemo(
@@ -75,6 +77,11 @@ export function WorkbookList({ workbooks, isLoading }: WorkbookListProps) {
         )}
       >
         {t("workbooks.noWorkbooks")}
+        {showEmptyHelp && (
+          <div className="mt-2">
+            <DocsHelpLink path="/guide/experiments/workbooks" />
+          </div>
+        )}
       </div>
     );
   }
@@ -146,12 +153,12 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
 
   const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
   const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({
-    onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.body.id}`),
+    onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.id}`),
   });
 
   const handleDelete = () => {
     deleteWorkbook(
-      { params: { id: workbook.id } },
+      { id: workbook.id },
       {
         onSuccess: () => {
           toast({ title: t("workbooks.messages.deleteSuccess") });
@@ -164,13 +171,11 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
   const handleDuplicate = () => {
     createWorkbook(
       {
-        body: {
-          name: t("workbooks.duplicateName", { name: workbook.name }),
-          description: workbook.description ?? undefined,
-          cells: workbook.cells,
-          metadata: workbook.metadata,
-          forkedFrom: workbook.id,
-        },
+        name: t("workbooks.duplicateName", { name: workbook.name }),
+        description: workbook.description ?? undefined,
+        cells: workbook.cells,
+        metadata: workbook.metadata,
+        forkedFrom: workbook.id,
       },
       {
         onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),

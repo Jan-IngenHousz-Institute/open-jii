@@ -16,12 +16,10 @@ describe("useExperimentAnnotationAddBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          tableName: "measurements",
-          rowIds: ["row-1", "row-2", "row-3"],
-          annotation: { type: "comment", content: { type: "comment", text: "Bulk note" } },
-        },
+        id: "exp-1",
+        tableName: "measurements",
+        rowIds: ["row-1", "row-2", "row-3"],
+        annotation: { type: "comment", content: { type: "comment", text: "Bulk note" } },
       });
     });
 
@@ -37,12 +35,10 @@ describe("useExperimentAnnotationAddBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-42" },
-        body: {
-          tableName: "results",
-          rowIds: ["row-10", "row-20"],
-          annotation: { type: "flag", content: { type: "flag", flagType: "needs_review" } },
-        },
+        id: "exp-42",
+        tableName: "results",
+        rowIds: ["row-10", "row-20"],
+        annotation: { type: "flag", content: { type: "flag", flagType: "needs_review" } },
       });
     });
 
@@ -63,12 +59,10 @@ describe("useExperimentAnnotationAddBulk", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "exp-1" },
-        body: {
-          tableName: "measurements",
-          rowIds: ["row-1"],
-          annotation: { type: "comment", content: { type: "comment", text: "Test" } },
-        },
+        id: "exp-1",
+        tableName: "measurements",
+        rowIds: ["row-1"],
+        annotation: { type: "comment", content: { type: "comment", text: "Test" } },
       });
     });
 

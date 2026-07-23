@@ -3,7 +3,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   MacroExecutionRequestBody,
   MacroExecutionResponse,
-} from "@repo/api/schemas/macro.schema";
+} from "@repo/api/domains/macro/macro.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
@@ -52,7 +52,7 @@ export class ExecuteMacroUseCase {
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: [{ id: itemId, data: request.data }],
+      items: [{ id: itemId, data: request.data, context: request.context }],
       timeout: request.timeout ?? 30,
     };
 

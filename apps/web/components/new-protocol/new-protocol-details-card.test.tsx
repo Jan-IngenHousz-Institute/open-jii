@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { Form } from "@repo/ui/components/form";
 
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";

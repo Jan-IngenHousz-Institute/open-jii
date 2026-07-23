@@ -18,8 +18,8 @@ describe("useUserInvitationRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { invitationId: "inv-1" },
-        body: { role: "admin" },
+        invitationId: "inv-1",
+        role: "admin",
       });
     });
 
@@ -48,8 +48,8 @@ describe("useUserInvitationRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { invitationId: "inv-1" },
-        body: { role: "admin" },
+        invitationId: "inv-1",
+        role: "admin",
       });
     });
 
@@ -69,8 +69,8 @@ describe("useUserInvitationRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { invitationId: "inv-1" },
-        body: { role: "admin" },
+        invitationId: "inv-1",
+        role: "admin",
       });
     });
 
@@ -89,8 +89,8 @@ describe("useUserInvitationRoleUpdate", () => {
 
     act(() => {
       result.current.mutate({
-        params: { invitationId: "inv-1" },
-        body: { role: "admin" },
+        invitationId: "inv-1",
+        role: "admin",
       });
     });
 

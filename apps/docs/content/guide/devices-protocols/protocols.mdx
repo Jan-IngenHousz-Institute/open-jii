@@ -1,0 +1,53 @@
+---
+title: "Protocols: choosing & adjusting"
+description: "Choose, test, and safely adapt a measurement recipe."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+A **protocol** is the machine-readable measurement recipe sent to a device. It
+contains device-specific steps and parameters; a workbook places that protocol
+inside the wider field flow with instructions, questions, branches, and analysis.
+
+## Choose a protocol
+
+1. Open **Workbooks** and edit the workbook used by your experiment.
+2. Add a **Protocol** cell.
+3. Search by protocol name and inspect its sensor family and creator.
+4. Select the protocol that matches your hardware and method.
+5. Test the workbook before publishing or attaching a new version.
+
+<PlatformCta path="/en-US/platform/protocols">Browse protocols</PlatformCta>
+
+The library can mark curated protocols as preferred, but the researcher remains
+responsible for checking that the recipe matches the study design and hardware.
+
+![The searchable protocol picker with protocol names, creators, and sensor-family badges](/img/guide/web/protocol-picker.png)
+
+## Adjust without overwriting someone else's work
+
+Only a protocol's creator can edit its settings and code. When a workbook uses a
+protocol owned by someone else, use **Fork** in the protocol cell. openJII creates
+an editable copy, records its link to the original, and repoints that workbook
+cell to the copy.
+
+Rename the fork clearly, make the change in its protocol settings, then test it
+with the connected hardware. Changing a protocol you own updates that protocol;
+it is not an experiment-only “dynamic setting.” The current branch has no
+separate bounded-adjustment control that changes parameters only inside one
+experiment.
+
+![The Fork to edit action on a read-only protocol cell](/img/guide/web/protocol-fork.png)
+
+<Callout type="warn">
+  A protocol change can alter the meaning and comparability of future data. Record the reason in the
+  experiment description or metadata, and use workbook versioning to keep the collection flow
+  reviewable.
+</Callout>
+
+Learn how pinned versions protect a running experiment in
+[Working with workbooks](/guide/experiments/workbooks).
+
+Ready to change the JSON itself? Continue with
+[Writing protocols](/guide/devices-protocols/writing-protocols), then pair the
+measurement with a tested [analysis macro](/guide/devices-protocols/writing-macros).

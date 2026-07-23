@@ -137,7 +137,7 @@ if requests.count() == 0:
     dbutils.notebook.exit(json.dumps({"status": "success", "transfers": []}))
 
 # Split: requests whose experiment_id is already populated had their backend call
-# succeed on a previous run — skip the backend for those and re-use stored columns.
+# succeed on a previous run - skip the backend for those and re-use stored columns.
 # Snapshot request_id lists so the mid-notebook MERGE (which writes experiment_id back
 # to the table) doesn't cause the recovery split to pick up newly-updated rows.
 _new_ids = [r["request_id"] for r in requests.filter(F.col("experiment_id").isNull()).select("request_id").collect()]
@@ -257,7 +257,7 @@ def to_json_string(value: str) -> str:
     """Convert a Python repr string (single quotes) to valid JSON (double quotes).
     
     If the parsed result is a single-element list, unwrap it to return just the
-    object — macro output should always be a single JSON object, not an array.
+    object - macro output should always be a single JSON object, not an array.
     """
     if value is None:
         return None
@@ -269,7 +269,7 @@ def to_json_string(value: str) -> str:
             obj = ast.literal_eval(value)
         except Exception:
             return None
-    # Unwrap single-element arrays — macro output is always one object
+    # Unwrap single-element arrays - macro output is always one object
     if isinstance(obj, list) and len(obj) == 1:
         obj = obj[0]
     return json.dumps(obj)
@@ -318,6 +318,8 @@ project_data = (
                 )
             """),
         ).alias("questions"),
+        F.col("m.latitude"),
+        F.col("m.longitude"),
         F.col("tr.request_id").alias("transfer_request_id"),
         F.lit("photosynq").alias("source_platform"),
     )
@@ -453,6 +455,8 @@ enriched = (
         F.col("d.timestamp"),
         F.col("d.date"),
         F.col("d.questions"),
+        F.col("d.latitude"),
+        F.col("d.longitude"),
         F.col("d.transfer_request_id"),
         F.col("d.source_platform"),
     )

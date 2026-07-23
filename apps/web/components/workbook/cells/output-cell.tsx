@@ -15,11 +15,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
 import type {
   OutputCell as OutputCellType,
+  OutputDeviceResult,
   WorkbookCell,
-} from "@repo/api/schemas/workbook-cells.schema";
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
@@ -156,6 +158,113 @@ function DataTabs({
   );
 }
 
+function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
+  const { t } = useTranslation("iot");
+  const presentation = presentDevice({
+    // Older saved results only carried `deviceLabel`; treat that as their
+    // legacy display name when no structured family/name exists.
+    name: result.deviceName ?? (result.family ? undefined : result.deviceLabel),
+    family: result.family,
+    id: result.deviceLabel,
+  });
+  const primaryLabel = resolveDevicePrimaryLabel(presentation, t);
+  const secondaryLabel = [
+    presentation.provenance === "name" ? presentation.productName : null,
+    presentation.id,
+  ]
+    .filter((value): value is string => value != null && value !== primaryLabel)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(" · ");
+
+  return (
+    <span className="flex min-w-0 flex-col text-[12px] font-semibold text-[#011111]">
+      <span className="truncate">{primaryLabel}</span>
+      {secondaryLabel.length > 0 && (
+        <span className="truncate font-normal text-[#68737B]">{secondaryLabel}</span>
+      )}
+    </span>
+  );
+}
+
+// One device's slice of a multi-device run: its own tab/chart state, so
+// switching the JSON view on one device doesn't flip the others.
+function DeviceResultBlock({
+  result,
+  showTimeseries,
+  protocolCode,
+  protocolLoading,
+}: {
+  result: OutputDeviceResult;
+  showTimeseries: boolean;
+  protocolCode?: unknown;
+  protocolLoading?: boolean;
+}) {
+  // Own clipboard state: copying one device's JSON must not flash the
+  // success icon on every other block.
+  const { copy, copied } = useCopyToClipboard();
+  const [activeTab, setActiveTab] = useState("table");
+  const [pinnedChart, setPinnedChart] = useState<{ data: number[]; columnName: string } | null>(
+    null,
+  );
+  const handleChartClick: ChartClickHandler = (data, columnName) => {
+    setPinnedChart((prev) => (prev?.columnName === columnName ? null : { data, columnName }));
+  };
+  const failed = result.error != null;
+
+  return (
+    <div
+      className="rounded-lg border border-[#EDF2F6] p-3"
+      data-testid="device-result"
+      data-device-id={result.deviceId}
+      data-status={failed ? "error" : "ok"}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        {failed ? (
+          <AlertCircle className="size-3.5 text-[#D14343]" />
+        ) : (
+          <CheckCircle2 className="size-3.5 text-emerald-500" />
+        )}
+        <DeviceResultIdentity result={result} />
+      </div>
+      {failed ? (
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2"
+          style={{ background: "rgba(209, 67, 67, 0.06)" }}
+        >
+          <span className="text-[13px] leading-[18px]" style={{ color: "#D14343" }}>
+            {result.error}
+          </span>
+        </div>
+      ) : (
+        <>
+          <DataTabs
+            data={result.data}
+            copy={copy}
+            copied={copied}
+            onChartClick={handleChartClick}
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              if (tab !== "table") setPinnedChart(null);
+            }}
+            showTimeseries={showTimeseries}
+            protocolCode={protocolCode}
+            protocolLoading={protocolLoading}
+          />
+          {pinnedChart && activeTab === "table" && (
+            <ExpandedChart
+              key={pinnedChart.columnName}
+              data={pinnedChart.data}
+              columnName={pinnedChart.columnName}
+              onClose={() => setPinnedChart(null)}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function OutputCellComponent({
   cell,
   onUpdate,
@@ -164,7 +273,8 @@ export function OutputCellComponent({
   allCells,
 }: OutputCellProps) {
   const { t } = useTranslation("workbook");
-  const hasContent = cell.data != null || (cell.messages && cell.messages.length > 0);
+  const hasContent =
+    cell.data != null || (cell.messages?.length ?? 0) > 0 || (cell.deviceResults?.length ?? 0) > 0;
   // Read-only viewers can still collapse the cell for their own view, but their toggle should not
   // mutate persisted state. Keep a local override; fall back to the cell's persisted flag.
   const [localCollapsed, setLocalCollapsed] = useState<boolean | null>(null);
@@ -198,8 +308,8 @@ export function OutputCellComponent({
     sourceProtocolId ?? "",
     !!sourceProtocolId,
   );
-  const protocolFamily = protocolResponse?.body.family;
-  const protocolCode = protocolResponse?.body.code;
+  const protocolFamily = protocolResponse?.family;
+  const protocolCode = protocolResponse?.code;
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
@@ -272,32 +382,59 @@ export function OutputCellComponent({
               </div>
             )}
 
-            {/* Measurement / generic data */}
-            {cell.data != null && !isQuestionAnswer(cell.data) && (
-              <>
-                <DataTabs
-                  data={cell.data}
-                  copy={copy}
-                  copied={copied}
-                  onChartClick={handleChartClick}
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  showTimeseries={showTimeseries}
-                  protocolCode={protocolCode}
-                  protocolLoading={protocolLoading}
-                />
-                {pinnedChart && activeTab === "table" && (
-                  // Plotly reuses its plot div across re-renders; switching columns can leave the
-                  // previous trace on screen. Keying on columnName forces a fresh mount.
-                  <ExpandedChart
-                    key={pinnedChart.columnName}
-                    data={pinnedChart.data}
-                    columnName={pinnedChart.columnName}
-                    onClose={() => setPinnedChart(null)}
+            {/* Per-device results from a multi-device run */}
+            {cell.deviceResults && cell.deviceResults.length > 1 && (
+              <div className="space-y-3" data-testid="device-results">
+                {cell.deviceResults.map((result) => (
+                  <DeviceResultBlock
+                    key={result.deviceId}
+                    result={result}
+                    showTimeseries={
+                      protocolFamily === "multispeq" && isMultispeqOutput(result.data)
+                    }
+                    protocolCode={protocolCode}
+                    protocolLoading={protocolLoading}
                   />
-                )}
-              </>
+                ))}
+              </div>
             )}
+
+            {/* A single run keeps its legacy primary data shape while retaining
+                and presenting the same identity metadata as multi-device runs. */}
+            {cell.deviceResults?.length === 1 && (
+              <div data-testid="single-device-result" className="mb-2">
+                <DeviceResultIdentity result={cell.deviceResults[0]} />
+              </div>
+            )}
+
+            {/* Measurement / generic data */}
+            {!(cell.deviceResults && cell.deviceResults.length > 1) &&
+              cell.data != null &&
+              !isQuestionAnswer(cell.data) && (
+                <>
+                  <DataTabs
+                    data={cell.data}
+                    copy={copy}
+                    copied={copied}
+                    onChartClick={handleChartClick}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    showTimeseries={showTimeseries}
+                    protocolCode={protocolCode}
+                    protocolLoading={protocolLoading}
+                  />
+                  {pinnedChart && activeTab === "table" && (
+                    // Plotly reuses its plot div across re-renders; switching columns can leave the
+                    // previous trace on screen. Keying on columnName forces a fresh mount.
+                    <ExpandedChart
+                      key={pinnedChart.columnName}
+                      data={pinnedChart.data}
+                      columnName={pinnedChart.columnName}
+                      onClose={() => setPinnedChart(null)}
+                    />
+                  )}
+                </>
+              )}
 
             {!hasContent && <p className="py-1 text-xs text-[#CDD5DB]">{t("output.empty")}</p>}
           </>

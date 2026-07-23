@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { IotDevice, IotDeviceList } from "@repo/api/schemas/iot.schema";
+import type { IotDevice, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
@@ -54,28 +54,28 @@ describe("IotDeviceController", () => {
       analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
 
       await testApp
-        .get(contract.iot.listIotDevices.path)
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
         .withAuth(userId)
         .expect(StatusCodes.FORBIDDEN);
       await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
         .expect(StatusCodes.FORBIDDEN);
 
-      const getPath = testApp.resolvePath(contract.iot.getIotDevice.path, {
+      const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
         deviceId: device.id,
       });
       await testApp.get(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
       await testApp.delete(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
 
-      const credentialsPath = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+      const credentialsPath = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
         deviceId: device.id,
       });
       await testApp.post(credentialsPath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
       await testApp.delete(credentialsPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
 
-      const rotatePath = testApp.resolvePath(contract.iot.rotateIotCredentials.path, {
+      const rotatePath = testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, {
         deviceId: device.id,
       });
       await testApp.post(rotatePath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
@@ -85,7 +85,7 @@ describe("IotDeviceController", () => {
   describe("registerIotDevice", () => {
     it("registers a device (201)", async () => {
       const response: SuperTestResponse<IotDevice> = await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
         .expect(StatusCodes.CREATED);
@@ -96,7 +96,7 @@ describe("IotDeviceController", () => {
 
     it("returns 401 when unauthenticated", async () => {
       await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withoutAuth()
         .send(registerBody)
         .expect(StatusCodes.UNAUTHORIZED);
@@ -104,7 +104,7 @@ describe("IotDeviceController", () => {
 
     it("returns 400 for an invalid body", async () => {
       await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send({ name: "missing required fields" })
         .expect(StatusCodes.BAD_REQUEST);
@@ -112,13 +112,13 @@ describe("IotDeviceController", () => {
 
     it("returns 409 for a duplicate serial number", async () => {
       await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
         .expect(StatusCodes.CREATED);
 
       await testApp
-        .post(contract.iot.registerIotDevice.path)
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
         .expect(StatusCodes.CONFLICT);
@@ -130,7 +130,7 @@ describe("IotDeviceController", () => {
       await testApp.createIotDevice({ createdBy: userId });
 
       const response: SuperTestResponse<IotDeviceList> = await testApp
-        .get(contract.iot.listIotDevices.path)
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
@@ -139,7 +139,7 @@ describe("IotDeviceController", () => {
 
     it("returns 401 when unauthenticated", async () => {
       await testApp
-        .get(contract.iot.listIotDevices.path)
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -150,7 +150,7 @@ describe("IotDeviceController", () => {
       );
 
       await testApp
-        .get(contract.iot.listIotDevices.path)
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
         .withAuth(userId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -159,7 +159,7 @@ describe("IotDeviceController", () => {
   describe("getIotDevice / deleteIotDevice", () => {
     it("gets the user's device (200)", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.getIotDevice.path, { deviceId: device.id });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
 
       const response: SuperTestResponse<IotDevice> = await testApp
         .get(path)
@@ -172,14 +172,14 @@ describe("IotDeviceController", () => {
     it("returns 404 for another user's device", async () => {
       const otherUser = await testApp.createTestUser({});
       const device = await testApp.createIotDevice({ createdBy: otherUser });
-      const path = testApp.resolvePath(contract.iot.getIotDevice.path, { deviceId: device.id });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
 
       await testApp.get(path).withAuth(userId).expect(StatusCodes.NOT_FOUND);
     });
 
     it("deletes the user's device (204)", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.deleteIotDevice.path, { deviceId: device.id });
+      const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.NO_CONTENT);
     });
@@ -187,7 +187,7 @@ describe("IotDeviceController", () => {
     it("returns 404 when deleting another user's device", async () => {
       const otherUser = await testApp.createTestUser({});
       const device = await testApp.createIotDevice({ createdBy: otherUser });
-      const path = testApp.resolvePath(contract.iot.deleteIotDevice.path, { deviceId: device.id });
+      const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.NOT_FOUND);
     });
@@ -207,7 +207,7 @@ describe("IotDeviceController", () => {
       vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
       vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
         deviceId: device.id,
       });
 
@@ -230,7 +230,7 @@ describe("IotDeviceController", () => {
         certificateId: "cert-1",
         certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-1",
       });
-      const path = testApp.resolvePath(contract.iot.revokeIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.revokeIotCredentials, {
         deviceId: device.id,
       });
 
@@ -244,7 +244,7 @@ describe("IotDeviceController", () => {
 
     it("returns 401 when unauthenticated", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
         deviceId: device.id,
       });
 
@@ -263,7 +263,7 @@ describe("IotDeviceController", () => {
         certificateId: "cert-old",
         certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
       });
-      const path = testApp.resolvePath(contract.iot.rotateIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, {
         deviceId: device.id,
       });
 
@@ -279,7 +279,7 @@ describe("IotDeviceController", () => {
 
     it("returns 400 when rotating a device that is not active", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.rotateIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, {
         deviceId: device.id,
       });
 
@@ -293,7 +293,7 @@ describe("IotDeviceController", () => {
         certificateId: "cert-live",
         certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-live",
       });
-      const path = testApp.resolvePath(contract.iot.issueIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
         deviceId: device.id,
       });
 
@@ -302,7 +302,7 @@ describe("IotDeviceController", () => {
 
     it("returns 400 when revoking a device without a certificate", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolvePath(contract.iot.revokeIotCredentials.path, {
+      const path = testApp.resolveOrpcPath(contract.iot.revokeIotCredentials, {
         deviceId: device.id,
       });
 

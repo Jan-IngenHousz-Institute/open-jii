@@ -2,13 +2,13 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ErrorResponse } from "@repo/api/schemas/experiment.schema";
 import type {
   UserList,
   UserProfileList,
   User,
   DeletionBlockersResponse,
-} from "@repo/api/schemas/user.schema";
+} from "@repo/api/domains/user/user.schema";
+import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -47,7 +47,7 @@ describe("UserController", () => {
   describe("searchUsers", () => {
     it("should return an empty array if no users match the search", async () => {
       const response: SuperTestResponse<UserList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "nonexistentuser" })
         .expect(StatusCodes.OK);
@@ -67,7 +67,7 @@ describe("UserController", () => {
       });
 
       const response: SuperTestResponse<UserProfileList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -91,7 +91,7 @@ describe("UserController", () => {
       });
 
       const response: SuperTestResponse<UserProfileList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "Alice" })
         .expect(StatusCodes.OK);
@@ -112,7 +112,7 @@ describe("UserController", () => {
       });
 
       const response: SuperTestResponse<UserList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "alice@example.com" })
         .expect(StatusCodes.OK);
@@ -133,7 +133,7 @@ describe("UserController", () => {
       });
 
       const response: SuperTestResponse<UserProfileList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ query: "Alice" })
         .expect(StatusCodes.OK);
@@ -157,7 +157,7 @@ describe("UserController", () => {
 
       // Get first 2 users
       const firstPageResponse: SuperTestResponse<UserProfileList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ limit: 2, offset: 0 })
         .expect(StatusCodes.OK);
@@ -166,7 +166,7 @@ describe("UserController", () => {
 
       // Get next 2 users
       const secondPageResponse: SuperTestResponse<UserProfileList> = await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .query({ limit: 2, offset: 2 })
         .expect(StatusCodes.OK);
@@ -181,7 +181,7 @@ describe("UserController", () => {
 
     it("should return 401 if not authenticated", async () => {
       await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -192,7 +192,7 @@ describe("UserController", () => {
       );
 
       await testApp
-        .get(contract.users.searchUsers.path)
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -203,7 +203,7 @@ describe("UserController", () => {
       const userEmail = faker.internet.email();
       const userId = await testApp.createTestUser({ email: userEmail });
 
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: userId,
       });
 
@@ -220,7 +220,7 @@ describe("UserController", () => {
 
     it("should return 404 if user does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: nonExistentId,
       });
 
@@ -235,7 +235,7 @@ describe("UserController", () => {
 
     it("should return 400 for invalid UUID", async () => {
       const invalidId = "invalid-uuid";
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: invalidId,
       });
 
@@ -243,7 +243,7 @@ describe("UserController", () => {
     });
 
     it("should return 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: testUserId,
       });
 
@@ -254,7 +254,7 @@ describe("UserController", () => {
       const userEmail = faker.internet.email();
       const userId = await testApp.createTestUser({ email: userEmail });
 
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: userId,
       });
 
@@ -276,7 +276,7 @@ describe("UserController", () => {
         email: "other@example.com",
       });
 
-      const path = testApp.resolvePath(contract.users.getUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getUser, {
         id: otherUserId,
       });
 
@@ -296,7 +296,7 @@ describe("UserController", () => {
   describe("createUserProfile", () => {
     it("should successfully create a user profile", async () => {
       const response = await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
         .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.CREATED);
@@ -306,7 +306,7 @@ describe("UserController", () => {
 
     it("should successfully create a user profile with bio", async () => {
       const response = await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
         .send({
           firstName: "Test",
@@ -320,7 +320,7 @@ describe("UserController", () => {
 
     it("should return 400 on invalid input", async () => {
       await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
         .send({ firstName: "Test" }) // Missing required fields
         .expect(StatusCodes.BAD_REQUEST);
@@ -328,7 +328,7 @@ describe("UserController", () => {
 
     it("should return 401 if not authenticated", async () => {
       await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withoutAuth()
         .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.UNAUTHORIZED);
@@ -340,7 +340,7 @@ describe("UserController", () => {
       );
 
       await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(testUserId)
         .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -354,7 +354,7 @@ describe("UserController", () => {
 
       // create profile via API to match real flow
       await testApp
-        .post(contract.users.createUserProfile.path)
+        .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
         .withAuth(userId)
         .send({
           firstName: "Ada",
@@ -363,7 +363,7 @@ describe("UserController", () => {
         })
         .expect(StatusCodes.CREATED);
 
-      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: userId });
+      const path = testApp.resolveOrpcPath(contract.users.getUserProfile, { id: userId });
 
       // Act
       const res = await testApp
@@ -381,7 +381,9 @@ describe("UserController", () => {
 
     it("should return 404 if user profile does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: nonExistentId });
+      const path = testApp.resolveOrpcPath(contract.users.getUserProfile, {
+        id: nonExistentId,
+      });
 
       await testApp
         .get(path)
@@ -393,13 +395,15 @@ describe("UserController", () => {
     });
 
     it("should return 400 for invalid UUID", async () => {
-      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: "invalid-uuid" });
+      const path = testApp.resolveOrpcPath(contract.users.getUserProfile, {
+        id: "invalid-uuid",
+      });
 
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: testUserId });
+      const path = testApp.resolveOrpcPath(contract.users.getUserProfile, { id: testUserId });
 
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
@@ -412,7 +416,7 @@ describe("UserController", () => {
         name: "User ToDelete",
       });
 
-      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
         id: userToDeleteId,
       });
 
@@ -420,7 +424,7 @@ describe("UserController", () => {
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Assert: verify user was soft-deleted (row still exists but PII scrubbed)
-      const getUserPath = testApp.resolvePath(contract.users.getUser.path, {
+      const getUserPath = testApp.resolveOrpcPath(contract.users.getUser, {
         id: userToDeleteId,
       });
 
@@ -439,7 +443,7 @@ describe("UserController", () => {
 
     it("should return 404 when deleting a non-existent user", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
         id: nonExistentId,
       });
 
@@ -453,7 +457,7 @@ describe("UserController", () => {
     });
 
     it("should return 400 for invalid UUID", async () => {
-      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
         id: "invalid-uuid",
       });
 
@@ -465,7 +469,7 @@ describe("UserController", () => {
         email: "delete-without-auth@example.com",
       });
 
-      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+      const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
         id: userToDeleteId,
       });
 
@@ -475,7 +479,7 @@ describe("UserController", () => {
 
   describe("getDeletionBlockers", () => {
     it("returns an empty list when the user administers nothing", async () => {
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
       });
 
@@ -495,7 +499,7 @@ describe("UserController", () => {
       const memberId = await testApp.createTestUser({ email: "member@example.com" });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
       });
 
@@ -514,7 +518,7 @@ describe("UserController", () => {
 
     it("returns 403 when requesting another user's deletion blockers", async () => {
       const otherUserId = await testApp.createTestUser({ email: "someone-else@example.com" });
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: otherUserId,
       });
 
@@ -528,7 +532,7 @@ describe("UserController", () => {
     });
 
     it("returns 400 for an invalid UUID", async () => {
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: "invalid-uuid",
       });
 
@@ -536,7 +540,7 @@ describe("UserController", () => {
     });
 
     it("returns 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
       });
 
@@ -548,7 +552,7 @@ describe("UserController", () => {
         failure(AppError.internal("Database error")),
       );
 
-      const path = testApp.resolvePath(contract.users.getDeletionBlockers.path, {
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
       });
 

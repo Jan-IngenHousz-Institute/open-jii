@@ -1,7 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
-import type { CommandCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { CommandCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { CommandCellComponent } from "./command-cell";
 

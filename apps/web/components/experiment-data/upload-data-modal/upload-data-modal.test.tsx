@@ -1,6 +1,9 @@
 import { createExperimentTable } from "@/test/factories";
+import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
+import { http, HttpResponse } from "msw";
+import { File as NodeFile } from "node:buffer";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,17 +19,50 @@ function setExperimentTables(tables: ReturnType<typeof createExperimentTable>[] 
   server.mount(contract.experiments.getExperimentTables, { body: tables });
 }
 
-function mountUploadCapture() {
-  return server.mount(contract.experiments.uploadData, {
-    body: {
-      uploadId: "u-1",
-      uploadTableId: "11111111-1111-1111-1111-111111111111",
-      uploadTableName: "leaf_traits",
-      runId: 99,
-      files: [{ fileName: "data.csv", filePath: "/Volumes/x" }],
+// `uploadData` is a native multipart endpoint with no oRPC contract entry, so
+// mount it by its literal route and capture the FormData body directly.
+function mountUploadCapture(status = 201) {
+  const calls: { body: FormData }[] = [];
+  const spy = {
+    calls,
+    get called() {
+      return calls.length > 0;
     },
-    status: 201,
-  });
+    get callCount() {
+      return calls.length;
+    },
+  };
+
+  server.use(
+    http.post(`${API_URL}/api/v1/experiments/:id/data/uploads`, async ({ request }) => {
+      // Node 24's undici multipart parser builds entries with the global File
+      // (jsdom's here) then brand-checks its own; parse with Node's File.
+      const JsdomFile = globalThis.File;
+      globalThis.File = NodeFile as unknown as typeof File;
+      try {
+        calls.push({ body: await request.formData() });
+      } finally {
+        globalThis.File = JsdomFile;
+      }
+
+      if (status >= 400) {
+        return HttpResponse.json({ message: "Error" }, { status });
+      }
+
+      return HttpResponse.json(
+        {
+          uploadId: "u-1",
+          uploadTableId: "11111111-1111-1111-1111-111111111111",
+          uploadTableName: "leaf_traits",
+          runId: 99,
+          files: [{ fileName: "data.csv", filePath: "/Volumes/x" }],
+        },
+        { status },
+      );
+    }),
+  );
+
+  return spy;
 }
 
 // The list view is the default; the form lives behind the "New upload" dropdown.
@@ -104,7 +140,7 @@ describe("UploadDataModal", () => {
     await waitFor(() => {
       expect(spy.callCount).toBe(1);
     });
-    const fd = spy.calls[0].body as FormData;
+    const fd = spy.calls[0].body;
     expect(fd.get("sourceKind")).toBe("csv");
     expect(fd.get("targetKind")).toBe("new");
     expect(fd.get("targetName")).toBe("leaf_traits");
@@ -273,7 +309,7 @@ describe("UploadDataModal", () => {
   it("surfaces a submit error message when the upload request fails", async () => {
     setExperimentTables();
     mountEmptyHistory();
-    server.mount(contract.experiments.uploadData, { status: 500 });
+    mountUploadCapture(500);
 
     render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
 

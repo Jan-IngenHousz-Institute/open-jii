@@ -2,34 +2,35 @@
   "setup": {
     "title": "Device connection",
     "scanButton": "Scan for Devices",
-    "errorDisconnect": "Could not disconnect",
-    "errorConnect": "Could not connect"
+    "errorDisconnect": "Could not disconnect {{name}}",
+    "errorConnect": "Could not connect to {{name}}"
   },
   "connectedDevice": {
     "heading": "Connected Device",
     "statusConnected": "Connected",
-    "disconnectButton": "Disconnect",
-    "turnOffMultispeQ": "Turn off MultispeQ"
+    "disconnectButton": "Disconnect"
   },
   "deviceList": {
     "scanning": "Scanning for devices...",
     "nearbyTitle": "Nearby Devices",
-    "pairedTitle": "Paired Devices",
-    "empty": "No devices found. Try scanning again.",
-    "fallbackName": "N/A",
+    "empty": "No devices found. Check power, discoverability, or the cable, then scan again.",
     "signal": "Signal: {{strength}}",
     "signalStrong": "Strong",
     "signalMedium": "Medium",
     "signalWeak": "Weak"
   },
+  "identity": {
+    "unknownDevice": "Unknown device",
+    "measurementDevice": "Measurement device",
+    "identifier": "ID {{id}}"
+  },
   "deviceSheet": {
     "title": "Devices",
-    "currentSubMultispeQ": "MultispeQ · Battery {{battery}}% · v{{firmware}}",
-    "currentSubMultispeQNoFirmware": "MultispeQ · Battery {{battery}}%",
+    "battery": "Battery {{battery}}%",
     "connectedViaCable": "Connected via cable",
     "connectedViaBluetooth": "Connected via Bluetooth",
     "noDeviceTitle": "No device connected",
-    "noDeviceSub": "Pair a MultispeQ to start measuring.",
+    "noDeviceSub": "Connect a device to start measuring.",
     "reconnectTitle": "Reconnect to {{name}}",
     "reconnectSub": "{{mac}}",
     "disconnect": "Disconnect",
@@ -37,13 +38,16 @@
     "nearbyTitle": "Nearby devices",
     "scan": "Scan",
     "scanning": "Scanning…",
-    "pair": "Pair",
-    "pairing": "Pairing…",
+    "connect": "Connect",
+    "connecting": "Connecting…",
     "seeMoreDevices": "See more devices ({{count}})",
-    "helperText": "Can't find your device? Hold the button on the MultispeQ for 3 seconds.",
+    "helperText": "Can't find your device? Check that it is powered on and discoverable, or connect its cable.",
     "allowBluetooth": "Allow Bluetooth scanning",
     "permissionHeading": "Bluetooth scanning is off",
-    "permissionExplainer": "Allow Bluetooth to find nearby MultispeQs."
+    "permissionExplainer": "Allow Bluetooth to find nearby measurement devices.",
+    "connectedCount_one": "{{count}} device connected",
+    "connectedCount_other": "{{count}} devices connected",
+    "addAnotherHint": "Connect more measurement devices through the hub. A powered USB hub is recommended."
   },
   "chip": {
     "connect": "Connect",

@@ -8,9 +8,13 @@ import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
+import { orpc } from "@/lib/orpc";
+import { formatDate } from "@/util/date";
+import { stripHtml } from "@/util/strip-html";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import {
   ArrowUpCircle,
+  BookOpen,
   Check,
   ExternalLink,
   History,
@@ -37,6 +41,7 @@ import {
   AlertDialogTrigger,
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
+import { Card, CardContent } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
@@ -64,13 +69,13 @@ export function LinkedWorkbookCard({
   isWorkbookOwner = false,
 }: LinkedWorkbookCardProps) {
   const { t } = useTranslation("experiments");
-
+  const { t: tWorkbook } = useTranslation("workbook");
   const { data: workbook } = useWorkbook(workbookId, { enabled: !!workbookId });
 
   const { data: versionsData } = useWorkbookVersions(workbookId, {
     enabled: !!workbookId,
   });
-  const versions = versionsData?.body ?? [];
+  const versions = versionsData ?? [];
   const pinnedVersion = versions.find((v) => v.id === workbookVersionId);
   const latestVersion = versions[0];
 
@@ -80,8 +85,12 @@ export function LinkedWorkbookCard({
   // Freeze the upgrade indicator while any workbook read/write is mid-flight
   // (autosave, auto-apply upgrade, refetch); otherwise the recomputed
   // `isUpgradable` flag flips transiently and flashes the banner on and off.
-  const fetchingWorkbook = useIsFetching({ queryKey: ["workbook", workbookId] });
-  const fetchingVersions = useIsFetching({ queryKey: ["workbookVersions", workbookId] });
+  const fetchingWorkbook = useIsFetching({
+    queryKey: orpc.workbooks.getWorkbook.key({ input: { id: workbookId } }),
+  });
+  const fetchingVersions = useIsFetching({
+    queryKey: orpc.workbooks.listWorkbookVersions.key({ input: { id: workbookId } }),
+  });
   const savingWorkbook = useIsMutating({ mutationKey: ["workbook", workbookId, "update"] });
   const upgradingWorkbook = useIsMutating({
     mutationKey: ["experiment", experimentId, "upgradeWorkbook"],
@@ -108,6 +117,7 @@ export function LinkedWorkbookCard({
   const [isRenaming, setIsRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const canRename = hasAccess && isWorkbookOwner;
+  const plainDescription = workbook?.description ? stripHtml(workbook.description) : "";
 
   const startRename = () => {
     setNameDraft(workbook?.name ?? "");
@@ -121,7 +131,7 @@ export function LinkedWorkbookCard({
       return;
     }
     renameWorkbook.mutate(
-      { params: { id: workbookId }, body: { name: next } },
+      { id: workbookId, name: next },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookRenamed") });
@@ -137,7 +147,7 @@ export function LinkedWorkbookCard({
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
     attachWorkbook.mutate(
-      { params: { id: experimentId }, body: { workbookId: selectedWorkbookId } },
+      { id: experimentId, workbookId: selectedWorkbookId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
@@ -155,7 +165,7 @@ export function LinkedWorkbookCard({
 
   const handleDetach = () => {
     detachWorkbook.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookDetached") });
@@ -182,7 +192,7 @@ export function LinkedWorkbookCard({
   const handleUpgrade = useCallback(() => {
     setUpgradeState("upgrading");
     upgradeVersion.mutate(
-      { params: { id: experimentId } },
+      { id: experimentId },
       {
         onSuccess: () => {
           setReviewOpen(false);
@@ -197,13 +207,16 @@ export function LinkedWorkbookCard({
   }, [experimentId, upgradeVersion, t]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 py-1">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+    <Card className="overflow-hidden shadow-none">
+      <CardContent className="pb-6 pt-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <BookOpen className="text-muted-foreground h-5 w-5" />
+            </div>
+            <div className="min-w-0">
               {isRenaming ? (
-                <>
+                <div className="flex items-center gap-1">
                   <Input
                     value={nameDraft}
                     onChange={(e) => setNameDraft(e.target.value)}
@@ -241,90 +254,107 @@ export function LinkedWorkbookCard({
                   >
                     <X className="h-4 w-4" />
                   </Button>
-                </>
+                </div>
               ) : (
                 <>
-                  <NextLink
-                    href={`/${locale}/platform/workbooks/${workbookId}`}
-                    target="_blank"
-                    className="text-foreground truncate text-sm font-semibold hover:underline"
-                  >
-                    {workbook?.name ?? t("flow.title")}
-                    <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
-                  </NextLink>
-                  {pinnedVersion && (
-                    <span className={upgradeState === "success" ? "animate-version-pop" : ""}>
-                      <WorkbookVersionBadge
-                        currentVersion={pinnedVersion.version}
-                        latestVersion={latestVersion.version}
-                        showUpgrade={false}
-                      />
-                    </span>
-                  )}
-                  {pinnedVersion && (
-                    <button
-                      type="button"
-                      onClick={() => setHistoryOpen(true)}
-                      aria-label={t("flow.versionHistory.open")}
-                      title={t("flow.versionHistory.open")}
-                      className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                  <div className="flex items-center gap-1.5">
+                    <NextLink
+                      href={`/${locale}/platform/workbooks/${workbookId}`}
+                      target="_blank"
+                      className="truncate text-sm font-semibold hover:underline"
                     >
-                      <History className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                  {canRename && (
-                    <button
-                      type="button"
-                      onClick={startRename}
-                      aria-label={t("flow.renameWorkbook")}
-                      className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                      {workbook?.name ?? t("flow.title")}
+                      <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
+                    </NextLink>
+                    {canRename && (
+                      <button
+                        type="button"
+                        onClick={startRename}
+                        aria-label={t("flow.renameWorkbook")}
+                        className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {workbook && (
+                      <p className="text-muted-foreground text-xs">
+                        {tWorkbook("workbooks.lastUpdate")}: {formatDate(workbook.updatedAt)}
+                        {workbook.createdByName && <> · {workbook.createdByName}</>}
+                      </p>
+                    )}
+                    {pinnedVersion && (
+                      <span className={upgradeState === "success" ? "animate-version-pop" : ""}>
+                        <WorkbookVersionBadge
+                          currentVersion={pinnedVersion.version}
+                          latestVersion={latestVersion.version}
+                          showUpgrade={false}
+                        />
+                      </span>
+                    )}
+                    {pinnedVersion && (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryOpen(true)}
+                        aria-label={t("flow.versionHistory.open")}
+                        title={t("flow.versionHistory.open")}
+                        className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                      >
+                        <History className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
           </div>
-        </div>
-        {hasAccess && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsChanging(!isChanging)}>
-              {t("flow.changeWorkbook")}
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={detachWorkbook.isPending}>
-                  <Unlink className="mr-1.5 h-4 w-4" />
-                  {t("flow.detach")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("flow.confirmDetachTitle")}</AlertDialogTitle>
-                  <AlertDialogDescription>{t("flow.confirmDetachMessage")}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDetach}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
+          {hasAccess && (
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsChanging(!isChanging)}>
+                {t("flow.changeWorkbook")}
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={detachWorkbook.isPending}>
+                    <Unlink className="mr-1.5 h-4 w-4" />
                     {t("flow.detach")}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("flow.confirmDetachTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("flow.confirmDetachMessage")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDetach}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {t("flow.detach")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </div>
+
+        {plainDescription && (
+          <p className="text-muted-foreground mt-3 line-clamp-2 text-sm">{plainDescription}</p>
         )}
-      </div>
+      </CardContent>
 
       {hasUpgrade && hasAccess && pinnedVersion && upgradeState !== "success" && (
         <div
           className={cn(
             "flex items-center justify-between gap-4 border-t px-4 py-2.5 transition-colors duration-300",
             upgradeState === "upgrading"
-              ? "animate-shimmer bg-gradient-to-r from-[#CCFCD8]/20 via-[#CCFCD8]/50 to-[#CCFCD8]/20 bg-[length:200%_100%]"
+              ? "animate-shimmer bg-linear-to-r bg-size-[200%_100%] from-[#CCFCD8]/20 via-[#CCFCD8]/50 to-[#CCFCD8]/20"
               : "bg-[#CCFCD8]/30",
           )}
         >
@@ -444,6 +474,6 @@ export function LinkedWorkbookCard({
         currentVersionId={workbookVersionId}
         canManage={hasAccess}
       />
-    </div>
+    </Card>
   );
 }

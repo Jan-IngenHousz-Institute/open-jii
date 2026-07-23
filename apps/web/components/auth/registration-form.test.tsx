@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { ORPCError } from "@orpc/client";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -6,6 +7,22 @@ import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
 const pushMock = vi.fn();
+const { mockSubscribeNewsletter, toastMock } = vi.hoisted(() => ({
+  mockSubscribeNewsletter: vi.fn(),
+  toastMock: vi.fn(),
+}));
+
+vi.mock("~/lib/orpc", () => ({
+  orpc: {
+    newsletter: {
+      subscribeDirect: {
+        mutationOptions: () => ({ mutationFn: mockSubscribeNewsletter }),
+      },
+    },
+  },
+}));
+
+vi.mock("@repo/ui/hooks/use-toast", () => ({ toast: toastMock }));
 
 const mockUpdateUserMutate = vi.fn();
 vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
@@ -25,14 +42,14 @@ vi.mock("~/hooks/auth/useVerifyEmail/useVerifyEmail", () => ({
 
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
-  useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
+  useCreateUserProfile: (opts: { onSuccess?: () => Promise<void> | void }) => ({
     mutateAsync: async (args: unknown) => {
       const result = createUserProfileMock(args) as unknown;
       if (result instanceof Promise) {
         await result;
       }
       // simulate success callback
-      await Promise.resolve(opts.onSuccess());
+      if (opts.onSuccess) await Promise.resolve(opts.onSuccess());
       return Promise.resolve();
     },
   }),
@@ -57,6 +74,8 @@ describe("RegistrationForm", () => {
     mockUpdateUserMutate.mockResolvedValue({});
     mockSendOtpMutate.mockResolvedValue({});
     mockVerifyOtpMutate.mockResolvedValue({});
+    createUserProfileMock.mockResolvedValue(undefined);
+    mockSubscribeNewsletter.mockResolvedValue({ status: "subscribed" });
   });
 
   it("renders the registration form with title and description", () => {
@@ -121,12 +140,14 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Jane");
     await user.type(screen.getByLabelText("registration.lastName"), "Doe");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
       expect(createUserProfileMock).toHaveBeenCalledWith({
-        body: { firstName: "Jane", lastName: "Doe", avatarUrl: null },
+        firstName: "Jane",
+        lastName: "Doe",
+        avatarUrl: null,
       });
     });
   });
@@ -138,7 +159,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Bob");
     await user.type(screen.getByLabelText("registration.lastName"), "Builder");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
@@ -148,17 +169,86 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("pushes to default '/' when callbackUrl is undefined", async () => {
-    // Note: RegistrationForm component defaults to /platform if callbackUrl is undefined, not /
-    // let's check code: `router.push(callbackUrl ?? "/platform");`
-    // So if callbackUrl is undefined, it goes to /platform.
-    // The test below expects "/" which contradicts the code I read.
-    // BUT the old test said: `expect(pushMock).toHaveBeenCalledWith("/");`
-    // If I pass termsData but no callbackUrl...
+  it("subscribes to the newsletter when the user opts in", async () => {
+    render(<RegistrationForm {...defaultProps} />);
 
-    // I will pass empty string or undefined and expect /platform or whatever the code does.
-    // My previous read said `router.push(callbackUrl ?? "/platform")`
-    // So expectation should be `/platform`.
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "News");
+    await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(mockSubscribeNewsletter).toHaveBeenCalledTimes(1);
+      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(createUserProfileMock.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSubscribeNewsletter.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("does not call the newsletter endpoint when the user leaves the opt-in unchecked", async () => {
+    render(<RegistrationForm {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "No");
+    await user.type(screen.getByLabelText("registration.lastName"), "Newsletter");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(mockSubscribeNewsletter).not.toHaveBeenCalled();
+  });
+
+  it("completes registration when the newsletter subscription fails", async () => {
+    mockSubscribeNewsletter.mockRejectedValueOnce(new Error("Mailchimp unavailable"));
+    render(<RegistrationForm {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Still");
+    await user.type(screen.getByLabelText("registration.lastName"), "Registered");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+      expect(toastMock).toHaveBeenCalledWith({
+        description: "registration.newsletterOptInError",
+      });
+    });
+  });
+
+  it("shows forgotten-email guidance when the subscription is rejected as forgotten", async () => {
+    mockSubscribeNewsletter.mockRejectedValueOnce(
+      new ORPCError("BAD_REQUEST", {
+        status: 400,
+        message: "forgotten",
+        data: { code: "MAILCHIMP_FORGOTTEN_EMAIL" },
+      }),
+    );
+    render(<RegistrationForm {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Forgotten");
+    await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/dashboard");
+      expect(toastMock).toHaveBeenCalledWith({
+        description: "registration.newsletterForgottenEmail",
+      });
+    });
+  });
+
+  it("pushes to default '/' when callbackUrl is undefined", async () => {
+    // With no callbackUrl the form falls back to `router.push(callbackUrl ?? "/platform")`.
 
     // Let's stick to what the code says.
 
@@ -168,7 +258,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "No");
     await user.type(screen.getByLabelText("registration.lastName"), "Callback");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
@@ -189,7 +279,10 @@ describe("RegistrationForm", () => {
 
     expect(screen.getByLabelText("registration.firstName")).toHaveValue("");
     expect(screen.getByLabelText("registration.lastName")).toHaveValue("");
-    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "registration.acceptTerms" })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }),
+    ).not.toBeChecked();
   });
 
   it("renders the submit button enabled by default", () => {
@@ -231,7 +324,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Test");
     await user.type(screen.getByLabelText("registration.lastName"), "User");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
@@ -253,7 +346,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Error");
     await user.type(screen.getByLabelText("registration.lastName"), "Test");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     expect(submitButton).not.toBeDisabled();
@@ -282,7 +375,7 @@ describe("RegistrationForm", () => {
     await user.type(screen.getByLabelText("registration.firstName"), "Multi");
     await user.type(screen.getByLabelText("registration.lastName"), "Submit");
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     const submitButton = screen.getByRole("button", { name: "registration.register" });
 
     // First click
@@ -304,7 +397,7 @@ describe("RegistrationForm", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "A");
     await user.type(screen.getByLabelText("registration.lastName"), "Smith");
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
@@ -319,7 +412,7 @@ describe("RegistrationForm", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("registration.firstName"), "Alice");
     await user.type(screen.getByLabelText("registration.lastName"), "S");
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {

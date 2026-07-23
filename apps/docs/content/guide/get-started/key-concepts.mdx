@@ -1,0 +1,72 @@
+---
+title: "Key concepts at a glance"
+description: "A plain-language primer on the words you will see across openJII: experiment, protocol, device, sensor, roles, and visibility."
+---
+
+{/* verified: code@12a361a74 2026-07-19 */}
+
+A few words come up again and again in openJII. Here is what each one means, in
+plain language. Each concept links to a fuller page.
+
+## Experiment
+
+An **experiment** is the main way you organize your work. It brings together your
+measurements, the people you work with, and the settings for a single study,
+usually one plant species or one research question.
+
+Everything you collect belongs to an experiment. You can have as many as you need.
+
+[Working with experiments →](/guide/experiments)
+
+## Protocol
+
+A **protocol** is the set of instructions a device follows to take a measurement,
+the measurement steps, timing, and settings. openJII comes with ready-made
+protocols, and you can pick the one that fits your study.
+
+Some protocol settings are adjustable within your experiment. Changing them only
+affects your experiment, never the original protocol.
+
+[Choosing and adjusting protocols →](/guide/devices-protocols)
+
+## Device vs Sensor
+
+openJII makes a small but useful distinction:
+
+<Cards>
+  <Card title="Device">
+    Hardware you operate by hand, one measurement at a time, guided by a protocol. The **MultispeQ**
+    handheld is the main example. You use it with the mobile app in the field.
+  </Card>
+  <Card title="Sensor">
+    Hardware that runs on its own and streams data continuously with little day-to-day input, such
+    as a field sensor that reports through an Ambyte gateway.
+  </Card>
+</Cards>
+
+In short: you _take_ measurements with a device; a sensor _keeps_ measuring on its
+own.
+
+[Devices and sensors →](/guide/devices-protocols)
+
+## Roles
+
+Within an experiment, each person has one of two roles:
+
+- **Admin** — sets up and owns the experiment; can change its settings, manage
+  members, and invite others.
+- **Member** — contributes measurements and comments, typically the person out in
+  the field with the mobile app.
+
+[Collaborators and roles →](/guide/experiments/collaborators)
+
+## Visibility and embargo
+
+openJII is built around open data, so experiments are **public by default**. You
+can instead keep an experiment **private** for a while by setting an **embargo**,
+a date on which it becomes public automatically. The embargo can run up to about
+a year.
+
+[Sharing, visibility, and embargo →](/guide/sharing)
+
+<Callout type="info">Want the full list of terms? See the [glossary](/guide/reference).</Callout>

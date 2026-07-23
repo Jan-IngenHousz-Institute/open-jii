@@ -16,7 +16,7 @@ describe("useMarkWhatsNewSeen", () => {
     const { result } = renderHook(() => useMarkWhatsNewSeen());
 
     act(() => {
-      result.current.mutate({ body: {} });
+      result.current.mutate({});
     });
 
     await waitFor(() => {
@@ -39,7 +39,7 @@ describe("useMarkWhatsNewSeen", () => {
     const { result } = renderHook(() => useMarkWhatsNewSeen(), { queryClient });
 
     act(() => {
-      result.current.mutate({ body: {} });
+      result.current.mutate({});
     });
 
     await waitFor(() => {
@@ -58,7 +58,7 @@ describe("useMarkWhatsNewSeen", () => {
     const { result } = renderHook(() => useMarkWhatsNewSeen(), { queryClient });
 
     act(() => {
-      result.current.mutate({ body: {} });
+      result.current.mutate({});
     });
 
     await waitFor(() => {

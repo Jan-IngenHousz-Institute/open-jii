@@ -1,0 +1,49 @@
+---
+title: "Project transfers"
+description: "Request migration of a PhotosynQ project into openJII."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+The **Request Project Transfer** workflow brings a project from **PhotosynQ**
+into openJII. It does not transfer ownership of an existing openJII experiment
+to another person.
+
+## Submit a request
+
+1. Sign in to the openJII web platform.
+2. Select **Request Project Transfer** from the dashboard or Experiments page.
+3. Enter the **PhotosynQ Project ID**.
+4. Enter the full **PhotosynQ Project URL**.
+5. Confirm that you own the project or have permission to request its transfer.
+6. Submit the request.
+
+<PlatformCta path="/en-US/platform/transfer-request">Open transfer requests</PlatformCta>
+
+The form accepts one source project per request. If several projects must move,
+submit them separately. You can use the **Previous Requests** view to see your
+request history.
+
+The interface states that transfers are handled by the team, may take up to two
+weeks, and produce an email when complete. Treat that duration as operational
+copy to confirm during the live pass, not a guaranteed service level.
+
+{/* NEEDS-LIVE-CHECK: submit a safe transfer request on dev, confirm duplicate handling, status labels, team follow-up, completion email, actual imported entities, and the current turnaround wording. */}
+![The blank Request Project Transfer form](/img/guide/web/project-transfer.png)
+
+![Previous project-transfer requests with source identifiers and URLs hidden](/img/guide/web/project-transfer-history.png)
+
+## After completion
+
+Review the migrated experiment rather than assuming perfect equivalence:
+
+- compare row counts and source identifiers;
+- check experiment description, members, locations, and visibility;
+- verify protocol, macro, workbook, and question mappings;
+- inspect a sample of raw and processed values; legacy per-measurement latitude
+  and longitude are preserved when present;
+- record the source system and migration date in metadata.
+
+If anything is missing or inconsistent, use
+[Getting help / report an issue](/guide/reference/getting-help) and include the
+transfer request plus source project identifiers, but no credentials.

@@ -3,12 +3,18 @@
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
+import {
+  presentDevice,
+  resolveDevicePrimaryLabel,
+  resolveDeviceRoleLabels,
+} from "@/util/device-presentation";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Eye, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { IotDevice } from "@repo/api/schemas/iot.schema";
+import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -44,11 +50,19 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice();
 
   const viewHref = `/${locale}/platform/devices/${device.id}`;
-  const displayName = device.name ?? device.serialNumber;
+  // Registry identity hierarchy: name, then canonical product name, then a
+  // localized unknown-device fallback. The serial stays in its own column.
+  const present = presentDevice({
+    name: device.name,
+    family: device.deviceType,
+    id: device.serialNumber,
+  });
+  const displayName = resolveDevicePrimaryLabel(present, t);
+  const roleLabels = resolveDeviceRoleLabels(present, t);
 
   const handleDelete = () => {
     deleteDevice(
-      { params: { deviceId: device.id } },
+      { deviceId: device.id },
       {
         onSuccess: () => {
           toast({ title: t("iot.devices.remove.success") });
@@ -68,22 +82,27 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
         onClick={() => router.push(viewHref)}
       >
         <TableCell className="px-6 py-3">
-          <Link
-            href={viewHref}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
-              LIST_TEXT_STRONG,
+          <div className="flex flex-col items-start gap-0.5">
+            <Link
+              href={viewHref}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
+                LIST_TEXT_STRONG,
+              )}
+            >
+              {displayName}
+            </Link>
+            {roleLabels.length > 0 && (
+              <span className={cn("text-[11px]", LIST_TEXT_MUTED)}>{roleLabels.join(" · ")}</span>
             )}
-          >
-            {displayName}
-          </Link>
+          </div>
         </TableCell>
         <TableCell className="px-6 py-3">
           <IotDeviceStatusBadge status={device.status} />
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
-          {device.deviceType}
+          {getSensorFamilyLabel(device.deviceType)}
         </TableCell>
         <TableCell className={cn("px-6 py-3 font-mono text-xs", LIST_TEXT_MUTED)}>
           {device.serialNumber}

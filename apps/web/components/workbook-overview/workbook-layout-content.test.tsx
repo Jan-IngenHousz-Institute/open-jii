@@ -1,5 +1,5 @@
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
-import { createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
+import { createMarkdownCell, createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -50,6 +50,13 @@ describe("WorkbookLayoutContent", () => {
   it("renders children content", () => {
     renderContent();
     expect(screen.getByTestId("children")).toBeInTheDocument();
+  });
+
+  it("displays the workbook description", () => {
+    renderContent({ description: "Measures photosynthetic efficiency" });
+
+    expect(screen.getByText("Measures photosynthetic efficiency")).toBeInTheDocument();
+    expect(screen.getByText("workbooks.descriptionTitle")).toBeInTheDocument();
   });
 
   it("lets the creator rename the workbook by clicking the title", async () => {
@@ -116,5 +123,62 @@ describe("WorkbookLayoutContent", () => {
     // The version cell shows "-" rather than wrongly claiming the workbook is a draft.
     expect(await screen.findByText("-")).toBeInTheDocument();
     expect(screen.queryByText("workbooks.draftVersion")).not.toBeInTheDocument();
+  });
+
+  it("forks the workbook and posts forkedFrom", async () => {
+    const sourceCells = [
+      createMarkdownCell({ id: "source-cell", content: "<p>Source instructions</p>" }),
+    ];
+    const sourceMetadata = { crop: "maize", trialYear: 2026 };
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
+    });
+    const user = userEvent.setup();
+    renderContent({
+      name: "Distinctive field workbook",
+      description: "A workbook description that must survive forking.",
+      cells: sourceCells,
+      metadata: sourceMetadata,
+    });
+
+    await user.click(await screen.findByRole("button", { name: "workbooks.actions.fork" }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toEqual({
+      name: "Fork of Distinctive field workbook",
+      description: "A workbook description that must survive forking.",
+      cells: sourceCells,
+      metadata: sourceMetadata,
+      forkedFrom: "wb-1",
+    });
+  });
+
+  it("shows the fork button to viewers who are not the creator", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "someone-else" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+
+    renderContent({ createdBy: "user-1" });
+
+    expect(
+      await screen.findByRole("button", { name: "workbooks.actions.fork" }),
+    ).toBeInTheDocument();
+  });
+
+  it("disables the Fork button while a fork is in flight", async () => {
+    server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
+      delay: "infinite",
+    });
+    const user = userEvent.setup();
+    renderContent();
+
+    const forkButton = await screen.findByRole("button", { name: "workbooks.actions.fork" });
+    await user.click(forkButton);
+
+    await waitFor(() => expect(forkButton).toBeDisabled());
   });
 });

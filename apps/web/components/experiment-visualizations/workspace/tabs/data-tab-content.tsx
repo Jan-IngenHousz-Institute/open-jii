@@ -4,7 +4,8 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { DataColumn, ExperimentTableMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import {
@@ -28,7 +29,7 @@ export interface DataTabContentProps {
   tablesError?: unknown;
   selectedTableName: string;
   onTableChange: (tableName: string) => void;
-  columns: DataColumn[];
+  columns: ExperimentDataColumn[];
   isColumnsLoading: boolean;
   columnsError?: unknown;
 }

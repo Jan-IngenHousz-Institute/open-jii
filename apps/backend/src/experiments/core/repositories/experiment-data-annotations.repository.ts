@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { SafeParseReturnType, z } from "zod";
 
-import { AnnotationRowsAffected } from "@repo/api/schemas/experiment.schema";
+import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
@@ -103,7 +103,7 @@ export class ExperimentDataAnnotationsRepository {
     },
   };
 
-  private getRowsAffectedFromResult(result: SchemaData): AnnotationRowsAffected {
+  private getRowsAffectedFromResult(result: SchemaData): ExperimentAnnotationRowsAffected {
     if (result.rows[0]) {
       const rowsAffectedIndex = result.columns.findIndex((col) => col.name === "num_affected_rows");
       if (rowsAffectedIndex !== -1 && result.rows[0][rowsAffectedIndex]) {
@@ -124,7 +124,7 @@ export class ExperimentDataAnnotationsRepository {
   async storeAnnotations(
     experimentId: string,
     annotations: CreateAnnotationDto[],
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Storing annotations",
       operation: "storeAnnotations",
@@ -212,7 +212,7 @@ export class ExperimentDataAnnotationsRepository {
     experimentId: string,
     annotationId: string,
     updateData: UpdateAnnotationDto,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Updating annotation",
       operation: "updateAnnotation",
@@ -266,7 +266,7 @@ export class ExperimentDataAnnotationsRepository {
   async deleteAnnotation(
     experimentId: string,
     annotationId: string,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Deleting annotation",
       operation: "deleteAnnotation",
@@ -304,7 +304,7 @@ export class ExperimentDataAnnotationsRepository {
     tableName: string,
     rowIds: string[],
     type: string,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Bulk deleting annotations",
       operation: "deleteAnnotationsBulk",

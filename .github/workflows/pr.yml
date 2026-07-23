@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Detect Affected Packages
         id: detect
@@ -76,7 +76,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Prettier Check
         shell: bash
@@ -95,7 +95,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Sherif (workspace dependency lint)
         shell: bash
@@ -126,6 +126,57 @@ jobs:
           fi
           echo "ok — no theme.isDark ternaries found"
 
+  docs_spec_drift:
+    name: Docs API Spec Drift Check
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect docs-relevant spec changes
+        id: changed
+        shell: bash
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          if git diff --name-only "$BASE_SHA" HEAD -- \
+              package.json \
+              pnpm-lock.yaml \
+              pnpm-workspace.yaml \
+              packages/api/ \
+              asyncapi.yaml \
+              apps/docs/package.json \
+              apps/docs/openapi.json \
+              apps/docs/public/asyncapi.yaml | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ API/spec changes detected"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No API/spec changes detected"
+          fi
+
+      - name: Setup Node.js and pnpm
+        if: steps.changed.outputs.changed == 'true'
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+
+      - name: Regenerate specs and check for drift
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          pnpm --filter @repo/api generate:openapi
+          node apps/docs/scripts/sync-specs.mjs
+          if ! git diff --exit-code -- apps/docs/openapi.json apps/docs/public/asyncapi.yaml; then
+            echo "::error::Committed API spec copies are stale. Run 'pnpm --filter docs sync-specs' and commit apps/docs/openapi.json + apps/docs/public/asyncapi.yaml."
+            exit 1
+          fi
+          echo "ok — API spec copies are up to date"
+
   build_lint_test:
     name: Build, Lint, & Test
     needs: detect
@@ -144,7 +195,17 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
+
+      # apps/data builds/lints/tests through uv; only provision it when that app is affected.
+      - name: Setup uv
+        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          enable-cache: true
+          # Only apps/data uses uv. Without this, the cache key scan walks the
+          # whole repo (incl. node_modules) and costs minutes.
+          cache-dependency-glob: "apps/data/uv.lock"
 
       - name: Build Packages
         uses: ./.github/actions/build-packages
@@ -169,6 +230,16 @@ jobs:
           echo "Running: $CHECK_CMD"
           eval "$CHECK_CMD"
 
+      - name: Validate Documentation Static Export
+        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'docs')
+        shell: bash
+        run: |
+          pnpm --filter docs check-media-tooling
+          pnpm --filter docs check-links
+          pnpm --filter docs check-routing
+          pnpm --filter docs check-deploy-workflow
+          pnpm --filter docs validate:local
+
       - name: Test Packages
         uses: ./.github/actions/test-packages
         with:
@@ -181,19 +252,31 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage-reports-${{ github.event.pull_request.head.sha }}
+          # Keep this in sync with the codecov `files` globs so a cache hit on
+          # main uploads the same set a regenerate would (apps + packages + tooling).
           path: |
-            apps/*/coverage/lcov.info
             apps/*/coverage.json
+            apps/*/coverage/lcov.info
+            packages/*/coverage.json
+            packages/*/coverage/lcov.info
+            tooling/*/coverage.json
+            tooling/*/coverage/lcov.info
+          if-no-files-found: ignore
           retention-days: 1
 
   production_checks:
     name: Production Checks
     needs: detect
-    if: needs.detect.outputs.has_affected_apps == 'true'
+    # Always invoke for Dependabot so the per-job dependabot gates in
+    # production-checks.yml can run the full builds, even when a lockfile bump
+    # marks no app as affected. Key off the PR author (stable across re-runs),
+    # not github.actor (drifts to a human on re-run / push / edit).
+    if: needs.detect.outputs.has_affected_apps == 'true' || github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/production-checks.yml
     secrets: inherit
     with:
       affected-apps: ${{ needs.detect.outputs.affected_apps || '[]' }}
+      is-dependabot: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
 
   release_preview:
     name: Release Preview (dry run)
@@ -221,7 +304,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Filter Apps for Release
         id: filter_apps
@@ -314,6 +397,12 @@ jobs:
       TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
       TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
       TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
       TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}

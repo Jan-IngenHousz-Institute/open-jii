@@ -1,8 +1,9 @@
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { Experiment } from "@repo/api/schemas/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -10,9 +11,11 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 export function ExperimentOverviewCards({
   experiments,
   archived = false,
+  showGetStartedHelp = false,
 }: {
   experiments: Experiment[] | undefined;
   archived?: boolean;
+  showGetStartedHelp?: boolean;
 }) {
   const { t } = useTranslation("experiments");
 
@@ -30,6 +33,11 @@ export function ExperimentOverviewCards({
     return (
       <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
         {t("experiments.noExperiments")}
+        {showGetStartedHelp && (
+          <div className="mt-2">
+            <DocsHelpLink path="/guide/get-started/quick-start" />
+          </div>
+        )}
       </div>
     );
   }

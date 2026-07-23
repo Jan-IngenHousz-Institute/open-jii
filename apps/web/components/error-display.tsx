@@ -21,14 +21,9 @@ export function ErrorDisplay({ error, title = "Error" }: ErrorDisplayProps) {
     // Check for standard Error objects
     if (err instanceof Error) return err.message;
 
-    // Check for API error responses
+    // Fall back to a stringified object for any non-Error thrown value.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (typeof err === "object" && err !== null) {
-      // @ts-expect-error - custom error structure
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-      if (err.body?.message) return err.body.message;
-
-      // Try to stringify the object if all else fails
       try {
         return JSON.stringify(err);
       } catch {

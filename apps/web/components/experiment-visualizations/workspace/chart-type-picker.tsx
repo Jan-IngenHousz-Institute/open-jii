@@ -3,7 +3,10 @@
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { ChartFamily, ChartType } from "@repo/api/schemas/experiment.schema";
+import type {
+  ExperimentChartFamily,
+  ExperimentChartType,
+} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
@@ -13,11 +16,11 @@ import { cn } from "@repo/ui/lib/utils";
 import { getChartTypeDef, listChartTypesByFamily } from "../charts/chart-registry";
 import type { ChartTypeDef } from "../charts/types";
 
-const FAMILY_ORDER: ChartFamily[] = ["basic", "statistical", "scientific", "3d"];
+const FAMILY_ORDER: ExperimentChartFamily[] = ["basic", "statistical", "scientific", "3d"];
 
 interface ChartTypePickerProps {
-  value: ChartType;
-  onChange: (type: ChartType) => void;
+  value: ExperimentChartType;
+  onChange: (type: ExperimentChartType) => void;
 }
 
 export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
@@ -28,7 +31,7 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
   const TriggerIcon = current.icon;
   const pickerLabel = t("workspace.charts.pickerLabel");
 
-  const handlePick = (type: ChartType) => {
+  const handlePick = (type: ExperimentChartType) => {
     onChange(type);
     setOpen(false);
   };
@@ -50,9 +53,9 @@ export function ChartTypePicker({ value, onChange }: ChartTypePickerProps) {
 }
 
 interface ChartTypePickerContentProps {
-  /** Highlighted tile + initial family tab. Pass any ChartType (e.g. "line") for create flows. */
-  value: ChartType;
-  onPick: (type: ChartType) => void;
+  /** Highlighted tile + initial family tab. Pass any ExperimentChartType (e.g. "line") for create flows. */
+  value: ExperimentChartType;
+  onPick: (type: ExperimentChartType) => void;
 }
 
 export function ChartTypePickerContent({ value, onPick }: ChartTypePickerContentProps) {
@@ -69,7 +72,7 @@ export function ChartTypePickerContent({ value, onPick }: ChartTypePickerContent
 
   // Radix unmounts PopoverContent on close, so the lazy initializer reruns
   // each open. Avoid a useEffect on `value` here: it snaps mid-browse.
-  const [activeFamily, setActiveFamily] = useState<ChartFamily>(() =>
+  const [activeFamily, setActiveFamily] = useState<ExperimentChartFamily>(() =>
     availableFamilies.includes(current.family) ? current.family : (availableFamilies[0] ?? "basic"),
   );
 
@@ -113,10 +116,10 @@ export function ChartTypePickerContent({ value, onPick }: ChartTypePickerContent
 }
 
 interface FamilyTabProps {
-  family: ChartFamily;
+  family: ExperimentChartFamily;
   label: string;
   isActive: boolean;
-  onSelect: (family: ChartFamily) => void;
+  onSelect: (family: ExperimentChartFamily) => void;
 }
 
 function FamilyTab({ family, label, isActive, onSelect }: FamilyTabProps) {
@@ -143,7 +146,7 @@ interface ChartTypeTileProps {
   def: ChartTypeDef;
   isActive: boolean;
   label: string;
-  onPick: (type: ChartType) => void;
+  onPick: (type: ExperimentChartType) => void;
 }
 
 function ChartTypeTile({ def, isActive, label, onPick }: ChartTypeTileProps) {

@@ -4,18 +4,18 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import type { UploadFormFields } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadFormFields } from "@repo/api/domains/experiment/experiment.schema";
 
 import { UploadTargetPicker } from "./upload-target-picker";
 
 interface HarnessProps {
-  defaults?: Partial<UploadFormFields>;
+  defaults?: Partial<ExperimentUploadFormFields>;
   uploadTables?: ReturnType<typeof createExperimentTable>[];
   disabled?: boolean;
 }
 
 function Harness({ defaults, uploadTables = [], disabled = false }: HarnessProps) {
-  const form = useForm<UploadFormFields>({
+  const form = useForm<ExperimentUploadFormFields>({
     defaultValues: { targetKind: "new", sourceKind: "csv", targetName: "", ...defaults },
   });
   const targetKind = form.watch("targetKind");

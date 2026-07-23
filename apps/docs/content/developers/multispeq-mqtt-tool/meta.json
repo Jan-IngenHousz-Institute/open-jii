@@ -1,0 +1,4 @@
+{
+  "title": "MultispeQ MQTT Tool",
+  "pages": ["index", "installation", "usage", "mqtt-protocol", "debugging", "api-reference"]
+}

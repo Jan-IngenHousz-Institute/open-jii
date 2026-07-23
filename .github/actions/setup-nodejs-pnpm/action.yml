@@ -4,7 +4,7 @@ inputs:
   node-version:
     description: "Node.js version"
     required: true
-    default: "22"
+    default: "24"
   hoisted:
     description: "Use hoisted node linker (required for AWS Lambda deployments)"
     required: false
@@ -22,7 +22,7 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Cache pnpm Store
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}-${{ inputs.hoisted }}
@@ -42,7 +42,6 @@ runs:
       shell: bash
       run: |
         echo "Installing dependencies with hoisted node linker (AWS Lambda compatible)..."
-        # Install dependencies using pnpm with hoisted node linker
-        # This is because AWS lambdas do not support symlinks
-        # Read more at https://pnpm.io/settings#nodelinker
-        pnpm install --node-linker=hoisted --frozen-lockfile
+        # Persisted, not a CLI flag: pnpm 11's verifyDepsBeforeRun would otherwise reinstall symlinked on the next pnpm run
+        pnpm config set --location project node-linker hoisted
+        pnpm install --frozen-lockfile

@@ -8,22 +8,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBatteryLevel } from "~/features/connection/hooks/use-battery-level";
 import {
   useAllDevices,
-  useConnectedDevice,
+  useConnectedDevices,
 } from "~/features/connection/hooks/use-device-connection";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { useDeviceSheetActions } from "~/features/connection/hooks/use-device-sheet-actions";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
 import {
+  mobileDevicePrimaryLabel,
+  presentMobileDevice,
+} from "~/features/connection/services/mobile-device-presentation";
+import {
   hasBluetoothPermission,
   requestBluetoothPermission,
 } from "~/features/connection/services/request-bluetooth-permissions";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
 import { useBottomSheetController } from "~/shared/ui/hooks/use-bottom-sheet-controller";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
+import { ConnectedDeviceRow } from "./connected-device-row";
 import { IconSync } from "./icon-sync";
 import { NearbyDeviceRow } from "./nearby-device-row";
 
@@ -35,7 +41,8 @@ export function DeviceSheet() {
   const { t } = useTranslation("connection");
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible: isOpen });
 
-  const { data: connectedDevice } = useConnectedDevice();
+  const { data: connectedDevices = [] } = useConnectedDevices();
+  const executors = useScannerCommandExecutorStore((s) => s.executors);
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
   const batteryLevel = useBatteryLevel();
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
@@ -50,8 +57,14 @@ export function DeviceSheet() {
       networkMode: "always",
     },
   );
-  const { named, unnamed } = useMemo(() => partitionDevices(nearbyDevices), [nearbyDevices]);
-  // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
+  // Already-connected devices are shown in the connected list above, not as
+  // pairable nearby rows.
+  const availableDevices = useMemo(() => {
+    const connectedIds = new Set(connectedDevices.map((d) => d.id));
+    return nearbyDevices.filter((d) => !connectedIds.has(d.id));
+  }, [nearbyDevices, connectedDevices]);
+  const { named, unnamed } = useMemo(() => partitionDevices(availableDevices), [availableDevices]);
+  // When nothing has a friendly name (common for Bluetooth discovery),
   // show every device directly instead of an empty list above "See more".
   const collapseUnnamed = named.length > 0 && !showAllDevices;
   const visibleDevices = collapseUnnamed ? named : [...named, ...unnamed];
@@ -75,10 +88,17 @@ export function DeviceSheet() {
     if (isOpen && bluetoothPermissionGranted) void refreshDevices();
   }, [isOpen, bluetoothPermissionGranted, refreshDevices]);
 
-  const hasConnected = !!connectedDevice;
-  // Reflect the connection type on the current-device card (cable vs over-the-air).
-  const CurrentDeviceIcon =
-    (connectedDevice ?? lastConnectedDevice)?.type === "usb" ? Usb : Bluetooth;
+  const hasConnected = connectedDevices.length > 0;
+  // USB devices accumulate through a hub; hint that more can be added.
+  const primaryIsWired = hasConnected && connectedDevices[0].type !== "bluetooth-classic";
+  // Reflect the connection type on the reconnect card (cable vs over-the-air).
+  const CurrentDeviceIcon = lastConnectedDevice?.type === "usb" ? Usb : Bluetooth;
+  const reconnectPresentation = lastConnectedDevice
+    ? presentMobileDevice(lastConnectedDevice)
+    : undefined;
+  const reconnectName = reconnectPresentation
+    ? mobileDevicePrimaryLabel(reconnectPresentation, t("identity.unknownDevice"))
+    : undefined;
 
   return (
     <BottomSheetModal
@@ -100,93 +120,80 @@ export function DeviceSheet() {
           </Pressable>
         </View>
 
-        {/* Current device card */}
-        <View
-          className={
-            hasConnected
-              ? "bg-jii-mint-light border-jii-mint rounded-2xl border p-3.5"
-              : "bg-card border-border rounded-2xl border p-3.5"
-          }
-        >
-          <View className="flex-row items-center gap-3">
-            <View
-              className="h-12 w-12 items-center justify-center"
-              style={{
-                borderRadius: 14,
-                backgroundColor: hasConnected ? colors.jii.mint : "rgba(0,0,0,0.04)",
-              }}
-            >
-              <CurrentDeviceIcon
-                size={22}
-                color={hasConnected ? colors.jii.darkGreen : themeColors.inactive}
+        {/* Connected devices */}
+        {hasConnected ? (
+          <View className="gap-2">
+            {connectedDevices.length > 1 ? (
+              <Text
+                className="text-on-surface"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 14 }}
+              >
+                {t("deviceSheet.connectedCount", { count: connectedDevices.length })}
+              </Text>
+            ) : null}
+            {connectedDevices.map((d, i) => (
+              <ConnectedDeviceRow
+                key={d.id}
+                device={d}
+                identity={executors.get(d.id)?.identity}
+                batteryLevel={i === 0 ? (batteryLevel ?? undefined) : undefined}
+                onDisconnect={(dev) => void handleDisconnect(dev)}
               />
-            </View>
-            <View className="min-w-0 flex-1">
-              {hasConnected ? (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {connectedDevice.name}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
-                    {batteryLevel != null
-                      ? t("deviceSheet.currentSubMultispeQNoFirmware", { battery: batteryLevel })
-                      : t(
-                          connectedDevice.type === "usb"
-                            ? "deviceSheet.connectedViaCable"
-                            : "deviceSheet.connectedViaBluetooth",
-                        )}
-                  </Text>
-                </>
-              ) : lastConnectedDevice ? (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {t("deviceSheet.reconnectTitle", { name: lastConnectedDevice.name })}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
-                    {t("deviceSheet.reconnectSub", { mac: lastConnectedDevice.id })}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text
-                    className="text-on-surface"
-                    style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {t("deviceSheet.noDeviceTitle")}
-                  </Text>
-                  <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
-                    {t("deviceSheet.noDeviceSub")}
-                  </Text>
-                </>
-              )}
-            </View>
-            {hasConnected ? (
-              <Button
-                title={t("deviceSheet.disconnect")}
-                variant="ghost"
-                size="sm"
-                onPress={() => void handleDisconnect(connectedDevice)}
-              />
-            ) : lastConnectedDevice ? (
-              <Button
-                title={t("deviceSheet.reconnect")}
-                variant="primary"
-                size="sm"
-                onPress={() => void handleConnect(lastConnectedDevice)}
-                isLoading={connectingDeviceId === lastConnectedDevice.id}
-              />
+            ))}
+            {primaryIsWired ? (
+              <Text className="text-muted-body text-[12px]">{t("deviceSheet.addAnotherHint")}</Text>
             ) : null}
           </View>
-        </View>
+        ) : (
+          <View className="bg-card border-border rounded-2xl border p-3.5">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="h-12 w-12 items-center justify-center"
+                style={{ borderRadius: 14, backgroundColor: "rgba(0,0,0,0.04)" }}
+              >
+                <CurrentDeviceIcon size={22} color={themeColors.inactive} />
+              </View>
+              <View className="min-w-0 flex-1">
+                {lastConnectedDevice ? (
+                  <>
+                    <Text
+                      className="text-on-surface"
+                      style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
+                      numberOfLines={1}
+                    >
+                      {t("deviceSheet.reconnectTitle", { name: reconnectName })}
+                    </Text>
+                    <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
+                      {t("deviceSheet.reconnectSub", { mac: lastConnectedDevice.id })}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text
+                      className="text-on-surface"
+                      style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
+                      numberOfLines={1}
+                    >
+                      {t("deviceSheet.noDeviceTitle")}
+                    </Text>
+                    <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={2}>
+                      {t("deviceSheet.noDeviceSub")}
+                    </Text>
+                  </>
+                )}
+              </View>
+              {lastConnectedDevice ? (
+                <Button
+                  title={t("deviceSheet.reconnect")}
+                  variant="primary"
+                  size="sm"
+                  onPress={() => void handleConnect(lastConnectedDevice)}
+                  isLoading={connectingDeviceId === lastConnectedDevice.id}
+                />
+              ) : null}
+            </View>
+          </View>
+        )}
 
         {/* Nearby devices section */}
         <View className="mt-2 flex-row items-center justify-between">
@@ -245,8 +252,8 @@ export function DeviceSheet() {
                 <NearbyDeviceRow
                   key={d.id}
                   device={d}
-                  isPairing={connectingDeviceId === d.id}
-                  onPair={(dev) => void handleConnect(dev)}
+                  isConnecting={connectingDeviceId === d.id}
+                  onConnect={(dev) => void handleConnect(dev)}
                   isLast={i === visibleDevices.length - 1 && !collapseUnnamed}
                 />
               ))}

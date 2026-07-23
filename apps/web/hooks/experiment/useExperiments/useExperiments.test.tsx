@@ -59,9 +59,9 @@ describe("useExperiments", () => {
     const { result } = renderHook(() => useExperiments({}));
 
     await waitFor(() => {
-      expect(result.current.data?.status).toBe(200);
+      expect(result.current.data).toBeDefined();
     });
-    expect(result.current.data?.body).toHaveLength(2);
+    expect(result.current.data).toHaveLength(2);
   });
 
   it("updates filter and URL", () => {

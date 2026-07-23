@@ -8,7 +8,7 @@ import { ChevronLeft, Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
@@ -37,7 +37,7 @@ export function DashboardLayoutContent({
   const { mode, toggleMode } = useDashboardMode();
 
   const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = accessData?.body.isAdmin ?? false;
+  const canEdit = accessData?.isAdmin ?? false;
   const isEditing = canEdit && mode === "edit";
 
   const name = useWatch({ control: form.control, name: "name" });

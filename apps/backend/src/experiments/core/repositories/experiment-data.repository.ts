@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
-import { isDecimalType, isNumericType } from "@repo/api/utils/column-type-utils";
+import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import type {
   AggregationSpec,

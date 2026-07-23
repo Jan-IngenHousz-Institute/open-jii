@@ -522,7 +522,29 @@ module "centrum_pipeline" {
   catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum_pipeline"
+    # bronze
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_large_data",
+    # silver
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_data",
+    # gold
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_status",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_device_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_devices",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
+    # enriched
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
+    # event hooks
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
   ]
 
   configuration = {
@@ -537,6 +559,8 @@ module "centrum_pipeline" {
     "MONITORING_SLACK_CHANNEL"   = var.slack_channel
     "pipelines.trigger.interval" = "120 seconds"
     "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
   continuous_mode  = true
@@ -1283,6 +1307,32 @@ module "contentful_secrets" {
   }
 }
 
+# Mailchimp secrets
+module "mailchimp_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-mailchimp-secrets-${var.environment}"
+  description = "Mailchimp API secrets for the openJII backend service"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    MAILCHIMP_API_KEY        = var.mailchimp_api_key
+    MAILCHIMP_SERVER_PREFIX  = var.mailchimp_server_prefix
+    MAILCHIMP_AUDIENCE_ID    = var.mailchimp_audience_id
+    MAILCHIMP_COMMUNITY_KIND = var.mailchimp_community_kind
+    MAILCHIMP_COMMUNITY_ID   = var.mailchimp_community_id
+    MAILCHIMP_COMMUNITY_NAME = var.mailchimp_community_name
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "mailchimp"
+  }
+}
+
 # SES Email Service for transactional emails
 module "ses" {
   source = "../../modules/ses"
@@ -1714,6 +1764,30 @@ module "backend_ecs" {
       name      = "CONTENTFUL_ACCESS_TOKEN"
       valueFrom = "${module.contentful_secrets.secret_arn}:CONTENTFUL_ACCESS_TOKEN::"
     },
+    {
+      name      = "MAILCHIMP_API_KEY"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_API_KEY::"
+    },
+    {
+      name      = "MAILCHIMP_SERVER_PREFIX"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_SERVER_PREFIX::"
+    },
+    {
+      name      = "MAILCHIMP_AUDIENCE_ID"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_AUDIENCE_ID::"
+    },
+    {
+      name      = "MAILCHIMP_COMMUNITY_KIND"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_KIND::"
+    },
+    {
+      name      = "MAILCHIMP_COMMUNITY_ID"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_ID::"
+    },
+    {
+      name      = "MAILCHIMP_COMMUNITY_NAME"
+      valueFrom = "${module.mailchimp_secrets.secret_arn}:MAILCHIMP_COMMUNITY_NAME::"
+    },
   ]
 
   # Environment variables for the backend service
@@ -1948,6 +2022,11 @@ module "docs_cloudfront" {
   custom_domain   = module.route53.docs_domain
   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
 
+  # Fumadocs static export: legacy 301 redirects + clean-URL rewrite + real 404.
+  enable_redirect_function  = true
+  enable_spa_error_response = false
+  redirect_map              = jsondecode(file("${path.module}/../../../apps/docs/redirects.json"))
+
   # TODO: Add tags, logging configuration
 }
 
@@ -1983,6 +2062,8 @@ module "route53" {
       hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
     }
   }
+
+  enable_health_check = true
 
   tags = {
     Environment = var.environment
@@ -2181,6 +2262,9 @@ module "grafana_dashboard" {
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
   macro_sandbox_function_names = module.macro_sandbox.function_names
+
+  enable_site_availability_alert = true
+  route53_health_check_id        = module.route53.health_check_id
 
   providers = {
     grafana.amg = grafana.amg

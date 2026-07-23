@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
 import { useForm } from "react-hook-form";
 
-import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api/schemas/macro.schema";
+import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -72,11 +72,9 @@ export function MacroDetailsCard({
     data: UpdateMacroRequestBody & { name: string; language: MacroLanguage },
   ) {
     await updateMacro({
-      params: { id: macroId },
-      body: {
-        ...data,
-        code: encodeBase64(data.code ?? ""),
-      },
+      id: macroId,
+      ...data,
+      code: encodeBase64(data.code ?? ""),
     });
     toast({ description: t("macros.macroUpdated") });
   }

@@ -55,7 +55,7 @@ export function WorkbookVersionHistoryDialog({
 }: WorkbookVersionHistoryDialogProps) {
   const { t } = useTranslation("experiments");
   const { data, isLoading, error } = useWorkbookVersions(workbookId, { enabled: open });
-  const versions = (data?.body ?? []) as VersionSummary[];
+  const versions = (data ?? []) as VersionSummary[];
 
   const setVersion = useSetWorkbookVersion(experimentId);
   const [pending, setPending] = useState<VersionSummary | null>(null);
@@ -67,7 +67,7 @@ export function WorkbookVersionHistoryDialog({
     if (!pending) return;
     const target = pending;
     setVersion.mutate(
-      { params: { id: experimentId }, body: { versionId: target.id } },
+      { id: experimentId, versionId: target.id },
       {
         onSuccess: () => {
           toast({ description: t("flow.versionHistory.restored", { version: target.version }) });

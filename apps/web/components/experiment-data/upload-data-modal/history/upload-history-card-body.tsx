@@ -3,13 +3,13 @@
 import { Calendar, Database, FileText, Files, Rows3 } from "lucide-react";
 import * as React from "react";
 
-import type { UploadMetadata } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 
 import { UPLOAD_STATUS_BORDER_COLOR, UploadStatusBadge } from "./upload-status-badge";
 
 export interface UploadHistoryCardBodyProps extends React.ComponentPropsWithoutRef<"div"> {
-  upload: UploadMetadata;
+  upload: ExperimentUploadMetadata;
   index: number;
 }
 

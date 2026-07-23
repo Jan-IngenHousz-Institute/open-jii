@@ -88,7 +88,7 @@ describe("<ExperimentFlowPage />", () => {
   it("shows notFound text when experiment data or access experiment is missing", async () => {
     server.mount(contract.experiments.getExperiment, { body: archivedExperiment });
     server.mount(contract.experiments.getExperimentAccess, {
-      body: { ...createExperimentAccess(), experiment: null } as never,
+      body: { ...createExperimentAccess(), experiment: null },
     });
     server.mount(contract.experiments.getFlow, { status: 404 });
 

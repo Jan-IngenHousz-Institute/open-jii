@@ -1,12 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import { v4 as uuidv4 } from "uuid";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
+import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
-import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
+import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
@@ -43,6 +45,20 @@ function promptMeasurementFileSave(
   );
 }
 
+interface SharedUploadArgs {
+  timestamp: string;
+  timezone: string;
+  experimentName: string;
+  experimentId: string;
+  protocolId: string;
+  protocolName: string;
+  userId: string;
+  macro: { id: string; name: string; filename: string } | null;
+  questions: AnswerData[];
+  commentText?: string;
+  workbookVersionId?: string;
+}
+
 export function useMeasurementUpload() {
   const { saveMeasurement } = useMeasurements();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -52,7 +68,7 @@ export function useMeasurementUpload() {
     // there's no reason to pause the mutation off-network.
     networkMode: "always",
     mutationFn: async ({
-      rawMeasurement,
+      results,
       timestamp,
       timezone,
       experimentName,
@@ -63,63 +79,111 @@ export function useMeasurementUpload() {
       macro,
       questions,
       commentText,
-    }: {
-      rawMeasurement: any;
-      timestamp: string;
-      timezone: string;
-      experimentName: string;
-      experimentId: string;
-      protocolId: string;
-      protocolName: string;
-      userId: string;
-      macro: { id: string; name: string; filename: string } | null;
-      questions: AnswerData[];
-      commentText?: string;
+      workbookVersionId,
+    }: SharedUploadArgs & {
+      results: {
+        rawMeasurement: any;
+        device?: { id: string; name: string };
+        // Dispatch rounds: the protocol this device actually ran; overrides
+        // the batch-level protocolId/protocolName for this result only.
+        protocolId?: string;
+        protocolName?: string;
+        macroContext?: Record<string, unknown>;
+      }[];
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
       // null === "object"` would otherwise slip a null through to
       // buildUploadPayload() and crash on `"sample" in null`, and a
       // silent success would let the flow advance with nothing saved.
-      if (rawMeasurement === null || typeof rawMeasurement !== "object") {
-        throw new Error(
-          `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
-        );
+      for (const { rawMeasurement } of results) {
+        if (rawMeasurement === null || typeof rawMeasurement !== "object") {
+          throw new Error(
+            `Invalid rawMeasurement: expected object, got ${rawMeasurement === null ? "null" : typeof rawMeasurement}`,
+          );
+        }
+      }
+      if (results.length === 0) {
+        throw new Error("No measurements to upload");
       }
 
-      const measurementData = buildUploadPayload({
-        rawMeasurement,
-        userId,
-        macro,
-        timestamp,
-        timezone,
-        questions,
-        commentText,
-      });
+      // Measurements taken together ARE one run: every multi-device round is
+      // stamped with one shared workbook_run_id. Each row is still its own
+      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run),
+      // published on ITS protocol's topic when the round was heterogeneous.
+      const workbookRunId = results.length > 1 ? uuidv4() : undefined;
 
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId });
-      const measurement = {
-        topic,
-        measurementResult: measurementData,
-        metadata: { experimentName, protocolName, timestamp: measurementData.timestamp },
-      };
+      // One fix per round: all devices measured at the same physical spot.
+      const location = await getMeasurementLocation();
 
-      let savedId: string;
-      try {
-        savedId = await saveMeasurement(measurement, "pending");
-      } catch (storageError) {
-        log.error("Failed to save measurement to local storage", {
-          err: (storageError as Error)?.message,
+      const savedIds: string[] = [];
+      let lastStorageError: unknown;
+
+      for (const result of results) {
+        const { rawMeasurement, device, macroContext } = result;
+        const topic = getMeasurementMqttTopic({
+          experimentId,
+          protocolId: result.protocolId ?? protocolId,
         });
-        promptMeasurementFileSave(t, measurement);
-        // Rethrow so callers awaiting uploadMeasurement(...) can distinguish a
-        // failed local save from success and avoid advancing the flow with
-        // nothing persisted.
-        throw storageError;
+        const measurementData = buildUploadPayload({
+          rawMeasurement,
+          userId,
+          macro,
+          timestamp,
+          timezone,
+          questions,
+          commentText,
+          workbookRunId,
+          workbookVersionId,
+          macroContext,
+          fallbackDeviceId: device?.id,
+          location,
+        });
+
+        const measurement = {
+          topic,
+          measurementResult: measurementData,
+          metadata: {
+            experimentName,
+            protocolName: result.protocolName ?? protocolName,
+            timestamp: measurementData.timestamp,
+          },
+        };
+
+        try {
+          savedIds.push(await saveMeasurement(measurement, "pending"));
+        } catch (storageError) {
+          log.error("Failed to save measurement to local storage", {
+            err: (storageError as Error)?.message,
+          });
+          lastStorageError = storageError;
+          promptMeasurementFileSave(t, measurement);
+          // Keep saving the remaining devices' measurements; one bad row
+          // shouldn't discard the rest of the round.
+        }
       }
 
-      getOutbox().enqueue(savedId);
+      getOutbox().enqueueMany(savedIds);
+
+      // Rethrow when nothing persisted so callers awaiting the upload can
+      // distinguish a failed local save from success and avoid advancing the
+      // flow with nothing saved.
+      if (savedIds.length === 0) {
+        throw lastStorageError instanceof Error
+          ? lastStorageError
+          : new Error("Failed to save measurements");
+      }
     },
   });
 
-  return { isUploading: mutation.isPending, uploadMeasurement: mutation.mutateAsync };
+  return {
+    isUploading: mutation.isPending,
+    uploadMeasurements: mutation.mutateAsync,
+    uploadMeasurement: (args: SharedUploadArgs & { rawMeasurement: any }) => {
+      const { rawMeasurement, ...shared } = args;
+      return mutation.mutateAsync({
+        ...shared,
+        results: [{ rawMeasurement }],
+      });
+    },
+  };
 }

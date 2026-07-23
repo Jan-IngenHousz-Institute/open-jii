@@ -22,7 +22,7 @@ describe("useLocationSearch", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toHaveLength(2);
+    expect(result.current.data).toHaveLength(2);
   });
 
   it("does not fire when query is 2 chars or less", async () => {

@@ -1,15 +1,18 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /**
  * Hook to revoke a pending invitation.
- * Invalidates the experiment-invitations query on success so the list refreshes.
+ * Invalidates the invitations query on success so the list refreshes.
  */
 export const useUserInvitationRevoke = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = useQueryClient();
 
-  return tsr.users.revokeInvitation.useMutation({
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["experiment-invitations"] });
-    },
-  });
+  return useMutation(
+    orpc.users.revokeInvitation.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: orpc.users.listInvitations.key() });
+      },
+    }),
+  );
 };

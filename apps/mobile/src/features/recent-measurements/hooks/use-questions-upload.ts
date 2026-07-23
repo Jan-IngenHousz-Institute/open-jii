@@ -3,15 +3,16 @@ import { toast } from "sonner-native";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
+import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 import {
-  getMultispeqMqttTopic,
+  getMeasurementMqttTopic,
   QUESTIONS_PROTOCOL_ID,
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
-import type { AnnotationFlagType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 const log = createLogger("questions-upload");
 
@@ -38,9 +39,11 @@ export function useQuestionsUpload() {
       userId: string;
       questions: AnswerData[];
       commentText?: string;
-      flagType?: AnnotationFlagType | null;
+      flagType?: ExperimentAnnotationFlagType | null;
     }) => {
-      const topic = getMultispeqMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+
+      const location = await getMeasurementLocation();
 
       const payload = {
         questions,
@@ -50,6 +53,7 @@ export function useQuestionsUpload() {
         timezone,
         user_id: userId,
         annotations: buildAnnotations(commentText, flagType),
+        ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };
 
       const measurement = {

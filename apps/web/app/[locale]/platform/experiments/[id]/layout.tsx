@@ -24,7 +24,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Access check
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
-  const apiBody = accessData?.body;
+  const apiBody = accessData;
   const experiment = apiBody?.experiment;
   const hasAccess = apiBody?.isAdmin;
 

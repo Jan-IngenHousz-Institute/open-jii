@@ -1,4 +1,5 @@
 import { compressSample } from "~/features/recent-measurements/utils/compress-sample";
+import { MeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 
@@ -16,6 +17,15 @@ export interface BuildUploadPayloadArgs {
   timezone: string;
   questions: AnswerData[];
   commentText?: string;
+  /** One uuid per multi-device round (see CONTEXT.md: Workbook run). */
+  workbookRunId?: string;
+  /** Immutable workbook version that owns the macro snapshot. */
+  workbookVersionId?: string;
+  /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
+  macroContext?: Record<string, unknown>;
+  fallbackDeviceId?: string;
+  /** GPS fix at measurement time; null/absent uploads without location. */
+  location?: MeasurementLocation | null;
 }
 
 // Pure: never mutates rawMeasurement or its sample entries. Macro filenames
@@ -28,6 +38,11 @@ export function buildUploadPayload({
   timezone,
   questions,
   commentText,
+  workbookRunId,
+  workbookVersionId,
+  macroContext,
+  fallbackDeviceId,
+  location,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
 
@@ -49,6 +64,15 @@ export function buildUploadPayload({
     ...rawMeasurement,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
+    // The firmware-provided device_id wins; the local USB/BT id is a weak
+    // fallback (Android USB deviceIds are transient across replugs).
+    ...(rawMeasurement.device_id == null && fallbackDeviceId
+      ? { device_id: fallbackDeviceId }
+      : {}),
+    ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
+    ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
+    ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.

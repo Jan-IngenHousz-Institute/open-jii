@@ -6,7 +6,11 @@ import { useTransferExperimentAdmin } from "~/hooks/experiment/useTransferExperi
 import { useDebounce } from "~/hooks/useDebounce";
 import { useUserSearch } from "~/hooks/useUserSearch";
 
-import type { DeletionBlocker, UserMetadata, UserProfile } from "@repo/api/schemas/user.schema";
+import type {
+  DeletionBlocker,
+  UserMetadata,
+  UserProfile,
+} from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -127,7 +131,7 @@ export function DeleteAccountBlockers({
 
   const handleTransfer = () => {
     if (transfers.length === 0 || isPending) return;
-    transferAdmin({ body: { transfers } });
+    transferAdmin({ transfers });
   };
 
   return (
@@ -301,7 +305,7 @@ function TransferUserPicker({
 
   const availableUsers = useMemo<UserProfile[]>(() => {
     if (!isSearching) return [];
-    const results = Array.isArray(data?.body) ? data.body : [];
+    const results = Array.isArray(data) ? data : [];
     return results.filter((user) => user.userId !== excludeUserId);
   }, [isSearching, data, excludeUserId]);
 

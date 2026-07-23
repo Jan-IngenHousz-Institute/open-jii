@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { useIsFocused } from "@react-navigation/native";
 import { useKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { X } from "lucide-react-native";
 import React from "react";

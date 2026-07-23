@@ -1,0 +1,32 @@
+---
+title: "Design Decisions"
+description: "Current and historical architecture decisions, proposals, and authoring templates."
+---
+
+{/* verified: code@12a361a74966 2026-07-20 */}
+
+This section records current architecture decisions and preserves the original design records. Historical records explain what the team decided at the time; they are not automatically a description of the current implementation.
+
+In particular, the accepted 2025 data ADRs describe per-experiment schemas and dual medallion pipelines. Those mechanisms are superseded by the current central `centrum` decision below.
+
+## Current ADRs
+
+- [Consolidate experiment data in centrum](/developers/design-decisions/centrum-data-architecture-adr) — replaces per-experiment schemas, pipelines, and provisioning with central experiment-keyed tables and views.
+- [Replace ts-rest with oRPC](/developers/design-decisions/orpc-migration-adr) — current contract, runtime validation, client, OpenAPI, and REST-compatibility boundary.
+- [Pin experiments to workbook snapshots](/developers/design-decisions/workbook-versioning-adr) — separates mutable authoring from immutable published execution, upgrade, and rollback.
+- [Execute macros in isolated language sandboxes](/developers/design-decisions/macro-sandbox-adr) — current Python, JavaScript, and R execution and security boundary.
+- [Use an offline-first mobile outbox](/developers/design-decisions/mobile-offline-outbox-adr) — current SQLite, retry, MQTT acknowledgement, and offline recovery boundary.
+- [Replace Docusaurus with Fumadocs](/developers/design-decisions/fumadocs-migration-adr) — current decision for the documentation application, static hosting, routing, search, API generation, and cutover safety.
+
+## Historical records and proposals
+
+- [MQTT data-ingestion topic proposal](/developers/design-decisions/mqtt-topic-proposal) — introduced the versioned experiment ingestion topic that remains represented in `asyncapi.yaml`.
+- [Data governance model ADR](/developers/design-decisions/data-governance-adr) — accepted in 2025; its per-experiment schemas and dual medallion model are superseded by the central `centrum` ADR.
+- [Data ingestion architecture ADR](/developers/design-decisions/data-ingestion-adr) — accepted in 2025; its per-experiment pipelines and orchestration are superseded by the central `centrum` ADR.
+
+## Templates
+
+- [Proposal template](/developers/design-decisions/proposal-template)
+- [ADR template](/developers/design-decisions/adr-template)
+
+For current contracts use the generated [REST API reference](/api/rest) and [MQTT API reference](/api/mqtt); for current system boundaries use [Architecture & Pipeline](/developers/architecture).

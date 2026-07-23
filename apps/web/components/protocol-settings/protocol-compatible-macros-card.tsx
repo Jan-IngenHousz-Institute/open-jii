@@ -2,11 +2,13 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { Macro } from "@repo/api/schemas/macro.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -21,7 +23,6 @@ import {
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
-import { tsr } from "../../lib/tsr";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
 const getLanguageDisplay = (language: string) => {
@@ -63,7 +64,7 @@ export function ProtocolCompatibleMacrosCard({
   const locale = useLocale();
 
   const { data: compatibleData, isLoading } = useProtocolCompatibleMacros(protocolId);
-  const compatibleMacros = useMemo(() => compatibleData?.body ?? [], [compatibleData]);
+  const compatibleMacros = useMemo(() => compatibleData ?? [], [compatibleData]);
 
   const { mutateAsync: addMacros, isPending: isAdding } = useAddCompatibleMacro(protocolId);
   const { mutateAsync: removeMacro, isPending: isRemoving } = useRemoveCompatibleMacro(protocolId);
@@ -71,13 +72,12 @@ export function ProtocolCompatibleMacrosCard({
   // Macro search for the add dropdown
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = tsr.macros.listMacros.useQuery({
-    queryData: {
-      query: { search: debouncedMacroSearch || undefined },
-    },
-    queryKey: ["macros", "search", debouncedMacroSearch],
-  });
-  const macroList = macroData?.body;
+  const { data: macroData } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: { search: debouncedMacroSearch || undefined },
+    }),
+  );
+  const macroList = macroData;
 
   const compatibleMacroIds = useMemo(
     () => new Set(compatibleMacros.map((entry) => entry.macro.id)),
@@ -92,15 +92,16 @@ export function ProtocolCompatibleMacrosCard({
 
   const handleAddMacro = async (macroId: string) => {
     await addMacros({
-      params: { id: protocolId },
-      body: { macroIds: [macroId] },
+      id: protocolId,
+      macroIds: [macroId],
     });
     setMacroSearch("");
   };
 
   const handleRemoveMacro = async (macroId: string) => {
     await removeMacro({
-      params: { id: protocolId, macroId },
+      id: protocolId,
+      macroId,
     });
   };
 

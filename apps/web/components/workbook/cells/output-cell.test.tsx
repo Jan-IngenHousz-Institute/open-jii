@@ -58,7 +58,7 @@ vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
   };
 });
 
-// jsdom does not implement navigator.clipboard — provide a minimal stub so
+// jsdom does not implement navigator.clipboard, so provide a minimal stub so
 // useCopyToClipboard resolves instead of throwing. Hoisted so tests can
 // assert payloads and reset between runs (otherwise call counts leak).
 const writeText = vi.fn().mockResolvedValue(undefined);
@@ -91,6 +91,106 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("Error: sensor failed")).toBeInTheDocument();
     expect(screen.getByText("Warning: low battery")).toBeInTheDocument();
     expect(screen.getByText("Measurement started")).toBeInTheDocument();
+  });
+
+  describe("multi-device results", () => {
+    const deviceResults = [
+      { deviceId: "d1", deviceLabel: "Mock MultispeQ 1", data: { device_id: "mock-1", spad: 41 } },
+      {
+        deviceId: "d2",
+        deviceLabel: "Mock MultispeQ 2",
+        error: "Mock device failure (simulated)",
+      },
+      { deviceId: "d3", deviceLabel: "Mock MultispeQ 3", data: { device_id: "mock-3", spad: 44 } },
+    ];
+
+    it("renders one block per device with ok/error status", () => {
+      const cell = createOutputCell({ data: { device_id: "mock-1" }, deviceResults });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      const blocks = screen.getAllByTestId("device-result");
+      expect(blocks).toHaveLength(3);
+      expect(blocks[0]).toHaveAttribute("data-status", "ok");
+      expect(blocks[1]).toHaveAttribute("data-status", "error");
+      expect(screen.getByText("Mock MultispeQ 2")).toBeInTheDocument();
+      expect(screen.getByText("Mock device failure (simulated)")).toBeInTheDocument();
+      // Per-device data renders through the same table view.
+      expect(screen.getByText("41")).toBeInTheDocument();
+      expect(screen.getByText("44")).toBeInTheDocument();
+      // The primary single-device view is suppressed in favour of the blocks.
+      expect(screen.getAllByText("device_id")).toHaveLength(2);
+    });
+
+    it("keeps per-device tab state independent", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({ data: { device_id: "mock-1" }, deviceResults });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      const jsonTabs = screen.getAllByRole("tab", { name: "output.tabJson" });
+      await user.click(jsonTabs[0]);
+
+      // First device shows raw JSON, third still shows its table.
+      expect(screen.getByText(/"spad": 41/)).toBeInTheDocument();
+      expect(screen.queryByText(/"spad": 44/)).not.toBeInTheDocument();
+      expect(screen.getByText("44")).toBeInTheDocument();
+    });
+
+    it("falls back to the label-less device id and counts as content", () => {
+      const cell = createOutputCell({
+        deviceResults: [{ deviceId: "dev-9", data: { v: 1 } }],
+      });
+      // A single entry keeps the classic single view (no blocks)...
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+      expect(screen.queryAllByTestId("device-result")).toHaveLength(0);
+    });
+
+    it("presents product identity and a stable id for a single-device result", () => {
+      const cell = createOutputCell({
+        data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "connection-1",
+            deviceLabel: "MSQ-42",
+            family: "multispeq",
+            data: { value: 1 },
+          },
+        ],
+      });
+
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      expect(screen.getByTestId("single-device-result")).toBeInTheDocument();
+      expect(screen.getByText("MultispeQ")).toBeInTheDocument();
+      expect(screen.getByText("MSQ-42")).toBeInTheDocument();
+    });
+
+    it("uses a reported name before product identity in multi-device results", () => {
+      const cell = createOutputCell({
+        data: { value: 1 },
+        deviceResults: [
+          {
+            deviceId: "connection-1",
+            deviceLabel: "AMB-1",
+            deviceName: "Canopy sensor",
+            family: "ambit",
+            data: { value: 1 },
+          },
+          {
+            deviceId: "connection-2",
+            deviceLabel: "AMB-2",
+            family: "ambit",
+            data: { value: 2 },
+          },
+        ],
+      });
+
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      expect(screen.getByText("Canopy sensor")).toBeInTheDocument();
+      expect(screen.getByText("Ambit · AMB-1")).toBeInTheDocument();
+      expect(screen.getByText("Ambit")).toBeInTheDocument();
+      expect(screen.getByText("AMB-2")).toBeInTheDocument();
+    });
   });
 
   it("shows question answer data when data has an answer field", () => {
@@ -328,7 +428,7 @@ describe("OutputCellComponent", () => {
     render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
     expect(screen.getByText("missing")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
   });
 
   it("renders an empty-array placeholder for empty-array cell values", () => {
@@ -412,7 +512,7 @@ describe("OutputCellComponent", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     // Non-object rows render as em-dash placeholders in every column.
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByText("\u2014").length).toBeGreaterThanOrEqual(4);
   });
 
   describe("Timeseries tab (multispeq)", () => {
@@ -453,7 +553,7 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "ambyte", code: multispeqProtocolCode() } },
+        data: { family: "ambyte", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -474,7 +574,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -493,7 +593,7 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -523,7 +623,7 @@ describe("OutputCellComponent", () => {
       // Family is multispeq so the tab shows; `isLoading: true` triggers the
       // loading branch in OutputCellTimeseries.
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: undefined } },
+        data: { family: "multispeq", code: undefined },
         isLoading: true,
       });
       render(
@@ -543,10 +643,10 @@ describe("OutputCellComponent", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
       // Family is multispeq, isLoading is false, but no protocol code is
-      // available — measurementToTimeseries can't decode. Falls into the
+      // available, so measurementToTimeseries can't decode. Falls into the
       // error branch.
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: undefined } },
+        data: { family: "multispeq", code: undefined },
         isLoading: false,
       });
       render(
@@ -575,7 +675,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: multispeqProtocolCode() } },
+        data: { family: "multispeq", code: multispeqProtocolCode() },
         isLoading: false,
       });
       render(
@@ -594,12 +694,12 @@ describe("OutputCellComponent", () => {
       const user = userEvent.setup();
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
-      // Pick the inner ProtocolJson object directly — pickProtocolJson should
+      // Pick the inner ProtocolJson object directly, since pickProtocolJson should
       // accept it as-is (the code field can be either a 1-element array or
       // the inner dict, depending on how the protocol was saved).
       const inner = multispeqProtocolCode()[0];
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: inner } },
+        data: { family: "multispeq", code: inner },
         isLoading: false,
       });
       render(
@@ -643,7 +743,7 @@ describe("OutputCellComponent", () => {
         producedBy: proto.id,
       });
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code } },
+        data: { family: "multispeq", code },
         isLoading: false,
       });
       render(
@@ -670,7 +770,7 @@ describe("OutputCellComponent", () => {
       // the picker should unwrap it.
       const inner = multispeqProtocolCode()[0];
       useProtocolMock.mockReturnValue({
-        data: { body: { family: "multispeq", code: { protocol_json: inner } } },
+        data: { family: "multispeq", code: { protocol_json: inner } },
         isLoading: false,
       });
       render(

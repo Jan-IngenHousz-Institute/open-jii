@@ -43,7 +43,7 @@ export function ExperimentDelete({ experimentId, experimentName }: ExperimentDel
     try {
       await deleteExperiment(
         {
-          params: { id: experimentId },
+          id: experimentId,
         },
         {
           onSuccess: () => {

@@ -30,10 +30,9 @@ describe("useTransferRequests", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.status).toBe(200);
-    expect(result.current.data?.body).toHaveLength(2);
-    expect(result.current.data?.body[0]?.status).toBe("pending");
-    expect(result.current.data?.body[1]?.status).toBe("completed");
+    expect(result.current.data).toHaveLength(2);
+    expect(result.current.data?.[0]?.status).toBe("pending");
+    expect(result.current.data?.[1]?.status).toBe("completed");
   });
 
   it("returns an empty list when there are no transfer requests", async () => {
@@ -45,7 +44,7 @@ describe("useTransferRequests", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toEqual([]);
+    expect(result.current.data).toEqual([]);
   });
 
   it("exposes an error when the API returns a server error", async () => {
@@ -57,7 +56,7 @@ describe("useTransferRequests", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // ts-rest treats non-2xx as an error on the query
+    // oRPC throws on non-2xx, surfacing as a query error
     expect(result.current.error).not.toBeNull();
   });
 });

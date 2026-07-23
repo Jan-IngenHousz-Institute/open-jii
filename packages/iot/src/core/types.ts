@@ -20,7 +20,7 @@ export type TransportType = "bluetooth-classic" | "ble" | "usb" | "web-bluetooth
 export type TransportCategory = "bluetooth" | "serial";
 
 /** Supported device types */
-export type DeviceType = "multispeq" | "generic";
+export type DeviceType = "multispeq" | "ambit" | "minipar" | "generic";
 
 /** Transport support declaration for a device type */
 export interface DeviceTransportSupport {
@@ -51,6 +51,18 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: true,
+  },
+  // Ambit and MiniPAR are ESP32 measurement devices that expose only a USB-CDC serial
+  // console to hosts (the Ambit's radio talks to its Ambyte gateway, not us).
+  ambit: {
+    supportedTransports: ["serial"],
+    supportsBLE: false,
+    supportsBluetoothClassic: false,
+  },
+  minipar: {
+    supportedTransports: ["serial"],
+    supportsBLE: false,
+    supportsBluetoothClassic: false,
   },
   generic: {
     supportedTransports: ["bluetooth", "serial"],

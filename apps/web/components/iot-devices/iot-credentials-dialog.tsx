@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import type { IssueIotCredentialsResponse } from "@repo/api/schemas/iot.schema";
+import type { IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {

@@ -3,7 +3,7 @@
 import { CircleDot, LayoutGrid, Palette } from "lucide-react";
 import { useMemo } from "react";
 
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 
 import { ColorDimensionShelf } from "../../../../workspace/shelves/color/color-dimension-shelf";
 import { FacetShelf } from "../../../../workspace/shelves/facet-shelf";

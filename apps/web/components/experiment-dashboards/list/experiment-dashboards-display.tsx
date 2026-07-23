@@ -4,7 +4,7 @@ import { useExperimentDashboards } from "@/hooks/experiment/useExperimentDashboa
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { CardTitle } from "@repo/ui/components/card";
@@ -34,7 +34,7 @@ export default function ExperimentDashboardsDisplay({
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
   const { data, isLoading } = useExperimentDashboards({ experimentId });
-  const dashboards = data?.body ?? [];
+  const dashboards = data ?? [];
 
   const basePath = isArchived ? "experiments-archive" : "experiments";
   const dashboardsHref = `/${locale}/platform/${basePath}/${experimentId}/dashboards`;

@@ -1,7 +1,7 @@
 import React from "react";
 import { useExperimentAnnotationDeleteBulk } from "~/hooks/experiment/annotations/useExperimentAnnotationDeleteBulk/useExperimentAnnotationDeleteBulk";
 
-import type { AnnotationType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -19,7 +19,7 @@ export interface DeleteAnnotationsDialogProps {
   experimentId: string;
   tableName: string;
   rowIds: string[];
-  type: AnnotationType;
+  type: ExperimentAnnotationType;
   open: boolean;
   setOpen: (value: React.SetStateAction<boolean>) => void;
   clearSelection: () => void;
@@ -41,8 +41,10 @@ export function DeleteAnnotationsDialog({
 
   async function onDelete() {
     await deleteAnnotationsBulk({
-      params: { id: experimentId },
-      body: { tableName, rowIds, type },
+      id: experimentId,
+      tableName,
+      rowIds,
+      type,
     });
     toast({ description: t(`experimentDataAnnotations.deleted.${type}s`) });
     clearSelection();

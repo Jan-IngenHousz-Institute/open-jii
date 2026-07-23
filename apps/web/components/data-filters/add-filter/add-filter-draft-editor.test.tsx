@@ -3,11 +3,16 @@ import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DataColumn, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { AddFilterDraftEditor } from "./add-filter-draft-editor";
 
-const stringColumn: DataColumn = { name: "label", type_name: "STRING", type_text: "STRING" };
+const stringColumn: ExperimentDataColumn = {
+  name: "label",
+  type_name: "STRING",
+  type_text: "STRING",
+};
 
 function mountDistinct() {
   return server.mount(contract.experiments.getDistinctColumnValues, {
@@ -16,7 +21,7 @@ function mountDistinct() {
 }
 
 interface RenderOptions {
-  draft?: DataFilter;
+  draft?: ExperimentDataFilter;
   onBack?: () => void;
   onCancel?: () => void;
   onApply?: () => void;
@@ -28,7 +33,7 @@ function renderEditor({
   onCancel = vi.fn(),
   onApply = vi.fn(),
 }: RenderOptions = {}) {
-  return renderWithForm<DataFilter>(
+  return renderWithForm<ExperimentDataFilter>(
     () => (
       <AddFilterDraftEditor
         column={stringColumn}

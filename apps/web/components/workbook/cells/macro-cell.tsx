@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
@@ -12,8 +13,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { MacroLanguage } from "@repo/api/schemas/macro.schema";
-import type { MacroCell as MacroCellType } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import type { MacroCell as MacroCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -105,7 +106,7 @@ export function MacroCellComponent({
   const save = useCallback(
     async (code: string) => {
       try {
-        await saveMacro({ params: { id: macroId }, body: { code: encodeBase64(code) } });
+        await saveMacro({ id: macroId, code: encodeBase64(code) });
         onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -134,21 +135,19 @@ export function MacroCellComponent({
     try {
       const suffix = crypto.randomUUID().slice(0, 8);
       const res = await forkMacro({
-        body: {
-          name: `Copy of ${macroData.name}`.slice(0, 246) + ` ${suffix}`,
-          description: macroData.description ?? undefined,
-          language: macroData.language,
-          code: macroData.code,
-          forkedFrom: macroData.id,
-        },
+        name: `Copy of ${macroData.name}`.slice(0, 246) + ` ${suffix}`,
+        description: macroData.description ?? undefined,
+        language: macroData.language,
+        code: macroData.code,
+        forkedFrom: macroData.id,
       });
       onUpdate({
         ...cell,
         payload: {
           ...cell.payload,
-          macroId: res.body.id,
-          language: res.body.language,
-          name: res.body.name,
+          macroId: res.id,
+          language: res.language,
+          name: res.name,
         },
       });
     } catch {
@@ -158,11 +157,9 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      void saveMacro({ params: { id: macroId }, body: { language: lang } }).catch(
-        (err: unknown) => {
-          toast({ description: parseApiError(err)?.message, variant: "destructive" });
-        },
-      );
+      void saveMacro({ id: macroId, language: lang }).catch((err: unknown) => {
+        toast({ description: parseApiError(err)?.message, variant: "destructive" });
+      });
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
     [macroId, saveMacro, cell, onUpdate],
@@ -185,9 +182,9 @@ export function MacroCellComponent({
     async (next: string) => {
       setIsRenaming(true);
       try {
-        const res = await saveMacro({ params: { id: macroId }, body: { name: next } });
+        const res = await saveMacro({ id: macroId, name: next });
         const latest = cellRef.current;
-        onUpdate({ ...latest, payload: { ...latest.payload, name: res.body.name } });
+        onUpdate({ ...latest, payload: { ...latest.payload, name: res.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({
@@ -278,6 +275,11 @@ export function MacroCellComponent({
       }
       headerActions={
         <div className="flex items-center gap-1">
+          <DocsHelpLink
+            iconOnly
+            path="/guide/devices-protocols/writing-macros"
+            className="h-7 w-7 justify-center"
+          />
           <Button
             asChild
             variant="ghost"

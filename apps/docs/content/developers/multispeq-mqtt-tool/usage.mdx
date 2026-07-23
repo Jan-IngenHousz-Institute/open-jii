@@ -1,0 +1,102 @@
+---
+title: "Usage"
+description: "Configure the current MMI process, connect, measure, and publish."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+## Configure the process environment
+
+The current `Config` class reads these variables with `os.getenv`:
+
+| Variable                       | Default / behavior                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `AWS_IOT_ENDPOINT`             | A repository-coded development endpoint; set the endpoint supplied for your environment. |
+| `AWS_IOT_PORT`                 | `8883`                                                                                   |
+| `AWS_IOT_CERT_FILEPATH`        | no default                                                                               |
+| `AWS_IOT_PRIVATE_KEY_FILEPATH` | no default                                                                               |
+| `AWS_IOT_CA_FILEPATH`          | no default                                                                               |
+| `AWS_IOT_CLIENT_ID`            | `test-` plus a random UUID                                                               |
+| `AWS_IOT_TOPIC`                | ingestion topic with placeholder experiment/protocol and `cli_test_sensor_id`            |
+| `AWS_IOT_KEEP_ALIVE`           | `30` seconds                                                                             |
+| `AWS_IOT_CLEAN_SESSION`        | `False`; only the string `true` (case-insensitive) enables it                            |
+| `AWS_IOT_PROXY_HOST`           | unset                                                                                    |
+| `AWS_IOT_PROXY_PORT`           | `0`                                                                                      |
+
+Example shell setup:
+
+```bash
+export AWS_IOT_ENDPOINT="your-endpoint-ats.iot.eu-central-1.amazonaws.com"
+export AWS_IOT_CERT_FILEPATH="$HOME/.config/openjii-iot/device-certificate.pem.crt"
+export AWS_IOT_PRIVATE_KEY_FILEPATH="$HOME/.config/openjii-iot/device-private.pem.key"
+export AWS_IOT_CA_FILEPATH="$HOME/.config/openjii-iot/root-CA.pem"
+export AWS_IOT_CLIENT_ID="mmi-$USER"
+```
+
+MMI does **not** call a dotenv loader. If you keep values in a `.env` file, source/export them with your shell or another trusted launcher before starting `mmi`.
+
+## Interactive connection flow
+
+Start the tool:
+
+```bash
+mmi
+```
+
+Then:
+
+```text
+MultispeQ > connect
+MultispeQ > status
+MultispeQ > publish
+MultispeQ > disconnect
+MultispeQ > exit
+```
+
+`connect` asks for an experiment ID, protocol ID, certificate ID, and certificate directory. It constructs these filenames in that directory and assigns them to the active configuration:
+
+```text
+<certificate-id>-certificate.pem.crt
+<certificate-id>-private.pem.key
+root-CA.pem
+```
+
+It validates that all three files exist and that the endpoint resembles a hostname, then creates an AWS IoT mTLS connection. Because this prompt overwrites certificate paths, place or name the files accordingly even if certificate variables were exported.
+
+## Measurements
+
+`publish` (`m`) opens the current hard-coded serial port, asks for plant metadata, takes one SPAD measurement, saves the analyzed result under `./dump`, adds `plant_metadata`, and publishes the JSON. The implementation prints the outgoing topic and payload, so review logs before using sensitive metadata.
+
+`continuous_publish` (`k`) repeats that flow every six seconds until Enter is pressed. It adds an ISO timestamp to each reading and disconnects the device when the session ends.
+
+`set_plant` stores plant metadata in memory for the current process. It is not persisted between runs.
+
+## Topic updates
+
+`set_topic` (`t`) prompts for experiment and protocol IDs and rebuilds the topic as:
+
+```text
+experiment/data_ingest/v1/{experimentId}/multispeq/v1.0/cli_test_sensor_id/{protocolId}
+```
+
+If MQTT is connected, it disconnects and runs the interactive connection flow again. The current CLI does not expose runtime prompts for sensor version or sensor ID.
+
+## Command summary
+
+| Command              | Shortcut | Current behavior                                                                |
+| -------------------- | -------- | ------------------------------------------------------------------------------- |
+| `connect`            | `c`      | Prompt, validate certificate paths, connect to AWS IoT Core.                    |
+| `disconnect`         | `d`      | Disconnect MQTT.                                                                |
+| `ping`               | `p`      | OS-level ICMP ping of the endpoint; it does not publish an MQTT health message. |
+| `publish`            | `m`      | Measure once and publish.                                                       |
+| `continuous_publish` | `k`      | Measure/publish every six seconds until stopped.                                |
+| `status`             | `s`      | Show connection endpoint, client ID, and topic.                                 |
+| `config`             | `f`      | Print active configuration.                                                     |
+| `set_topic`          | `t`      | Change experiment/protocol topic segments.                                      |
+| `connect_device`     | `v`      | Open the current hard-coded serial port.                                        |
+| `set_plant`          | none     | Update in-memory plant metadata.                                                |
+| `help`               | `h`      | Show command help.                                                              |
+| `clear`              | none     | Clear and redraw the terminal.                                                  |
+| `exit` / `quit`      | `q`      | Clean up and exit.                                                              |
+
+For channel semantics continue to [MQTT protocol](/developers/multispeq-mqtt-tool/mqtt-protocol).

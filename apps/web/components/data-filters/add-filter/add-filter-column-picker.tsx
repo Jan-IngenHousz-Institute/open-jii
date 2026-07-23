@@ -1,8 +1,8 @@
 "use client";
 
-import type { DataColumn } from "@repo/api/schemas/experiment.schema";
-import type { ColumnKind } from "@repo/api/utils/column-type-utils";
-import { getColumnKind } from "@repo/api/utils/column-type-utils";
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ColumnKind } from "@repo/api/transforms/column-type-utils";
+import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import {
   Command,
@@ -23,8 +23,8 @@ const KIND_LABEL_KEYS: Record<ColumnKind, string> = {
 const KIND_ORDER: ColumnKind[] = ["temporal", "numeric", "categorical", "complex"];
 
 export interface AddFilterColumnPickerProps {
-  columns: DataColumn[];
-  onPick: (column: DataColumn) => void;
+  columns: ExperimentDataColumn[];
+  onPick: (column: ExperimentDataColumn) => void;
 }
 
 export function AddFilterColumnPicker({ columns, onPick }: AddFilterColumnPickerProps) {
@@ -55,8 +55,8 @@ export function AddFilterColumnPicker({ columns, onPick }: AddFilterColumnPicker
 }
 
 interface FilterColumnOptionProps {
-  column: DataColumn;
-  onPick: (column: DataColumn) => void;
+  column: ExperimentDataColumn;
+  onPick: (column: ExperimentDataColumn) => void;
 }
 
 function FilterColumnOption({ column, onPick }: FilterColumnOptionProps) {
@@ -70,8 +70,10 @@ function FilterColumnOption({ column, onPick }: FilterColumnOptionProps) {
   );
 }
 
-function groupColumnsByKind(columns: DataColumn[]): Partial<Record<ColumnKind, DataColumn[]>> {
-  const groups: Partial<Record<ColumnKind, DataColumn[]>> = {};
+function groupColumnsByKind(
+  columns: ExperimentDataColumn[],
+): Partial<Record<ColumnKind, ExperimentDataColumn[]>> {
+  const groups: Partial<Record<ColumnKind, ExperimentDataColumn[]>> = {};
   for (const col of columns) {
     const kind = getColumnKind(col.type_text) ?? "complex";
     groups[kind] ??= [];

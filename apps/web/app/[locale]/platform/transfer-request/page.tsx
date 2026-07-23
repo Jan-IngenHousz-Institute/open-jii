@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DocsHelpLink } from "~/components/docs-help-link";
 import { TransferRequestForm } from "~/components/transfer-request-form";
 
 import initTranslations from "@repo/i18n/server";
@@ -27,6 +28,9 @@ export default async function TransferRequestPage({ params }: TransferRequestPag
           <li>{t("transferRequest.note2")}</li>
           <li>{t("transferRequest.note3")}</li>
         </ul>
+        <div className="mt-3">
+          <DocsHelpLink path="/guide/sharing/project-transfers" />
+        </div>
       </div>
 
       <TransferRequestForm />

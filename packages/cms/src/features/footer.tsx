@@ -14,9 +14,17 @@ interface HomeFooterProps {
   footerData: FooterFieldsFragment;
   preview: boolean;
   locale: string;
+  // Optional app-owned slot (e.g. the newsletter subscribe form) rendered
+  // inside the footer layout without touching the Contentful content model.
+  newsletterSlot?: React.ReactNode;
 }
 
-export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, locale }) => {
+export const HomeFooter: React.FC<HomeFooterProps> = ({
+  footerData,
+  preview,
+  locale,
+  newsletterSlot,
+}) => {
   const liveFooter = useContentfulLiveUpdates<FooterFieldsFragment>(footerData, {
     skip: !preview,
     locale,
@@ -90,6 +98,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
                 {currentFooter.badge}
               </span>
             </div>
+            {newsletterSlot && <div className="mt-6 w-full max-w-sm">{newsletterSlot}</div>}
           </div>
 
           {/* Centered Menu and Support aligned right */}

@@ -1,8 +1,10 @@
 """Decorator-driven registry for inline data repairs. See README.md."""
+
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from pyspark.sql import functions as F
 
@@ -20,11 +22,11 @@ class InlineRepair:
     issue: str
     description: str
     severity: Severity
-    fn: Callable[..., "DataFrame"]
-    predicate: Optional[Callable[[], "Column"]] = None
+    fn: Callable[..., DataFrame]
+    predicate: Callable[[], Column] | None = None
 
 
-_INLINE_REPAIRS: List[InlineRepair] = []
+_INLINE_REPAIRS: list[InlineRepair] = []
 
 
 def inline_repair(
@@ -33,13 +35,13 @@ def inline_repair(
     issue: str,
     description: str,
     severity: Severity = "apply",
-    predicate: Optional[Callable[[], "Column"]] = None,
+    predicate: Callable[[], Column] | None = None,
 ):
     """Register a DataFrame transform. If ``predicate`` is set, the framework
     pre-filters by it so the repair (and any UDFs it calls) only touches
     matching rows. ``severity="advisory"`` registers without applying."""
 
-    def _decorate(fn: Callable[["DataFrame"], "DataFrame"]) -> Callable[["DataFrame"], "DataFrame"]:
+    def _decorate(fn: Callable[[DataFrame], DataFrame]) -> Callable[[DataFrame], DataFrame]:
         _INLINE_REPAIRS.append(
             InlineRepair(
                 name=fn.__name__,
@@ -56,7 +58,7 @@ def inline_repair(
     return _decorate
 
 
-def apply_inline_repairs(df: "DataFrame", table_name: str) -> "DataFrame":
+def apply_inline_repairs(df: DataFrame, table_name: str) -> DataFrame:
     """Apply every repair registered for ``table_name`` in registration order."""
     for repair in _INLINE_REPAIRS:
         if repair.table != table_name:
@@ -73,6 +75,6 @@ def apply_inline_repairs(df: "DataFrame", table_name: str) -> "DataFrame":
     return df
 
 
-def list_repairs() -> List[InlineRepair]:
+def list_repairs() -> list[InlineRepair]:
     """Current registry snapshot."""
     return list(_INLINE_REPAIRS)

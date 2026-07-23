@@ -1,10 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { DISTINCT_VALUES_DEFAULT_LIMIT } from "@repo/api/schemas/experiment.schema";
+import { DISTINCT_VALUES_DEFAULT_LIMIT } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
-  DistinctValuesQuery,
-  DistinctValuesResponse,
-} from "@repo/api/schemas/experiment.schema";
+  ExperimentDistinctValuesQuery,
+  ExperimentDistinctValuesResponse,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -28,8 +28,8 @@ export class GetDistinctColumnValuesUseCase {
   async execute(
     experimentId: string,
     userId: string,
-    query: DistinctValuesQuery,
-  ): Promise<Result<DistinctValuesResponse>> {
+    query: ExperimentDistinctValuesQuery,
+  ): Promise<Result<ExperimentDistinctValuesResponse>> {
     this.logger.log({
       msg: "Looking up distinct column values",
       operation: "getDistinctColumnValues",

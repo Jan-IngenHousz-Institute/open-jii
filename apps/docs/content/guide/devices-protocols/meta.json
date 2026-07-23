@@ -1,0 +1,13 @@
+{
+  "title": "Devices & Protocols",
+  "pages": [
+    "index",
+    "multispeq",
+    "continuous-sensors",
+    "protocols",
+    "writing-protocols",
+    "writing-macros",
+    "commands",
+    "multi-device"
+  ]
+}

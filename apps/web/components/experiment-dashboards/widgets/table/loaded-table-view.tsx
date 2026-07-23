@@ -12,7 +12,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import type { DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { TableBody } from "@repo/ui/components/table";
 
@@ -30,7 +30,7 @@ export interface LoadedTableViewProps {
   pageSize: number;
   experimentId: string;
   selectedColumns?: string[];
-  widgetFilters?: DataFilter[];
+  widgetFilters?: ExperimentDataFilter[];
 }
 
 export function LoadedTableView({

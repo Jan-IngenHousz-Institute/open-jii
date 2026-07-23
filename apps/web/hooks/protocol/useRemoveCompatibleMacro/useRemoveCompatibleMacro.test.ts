@@ -14,7 +14,8 @@ describe("useRemoveCompatibleMacro", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "protocol-1", macroId: "m-1" },
+        id: "protocol-1",
+        macroId: "m-1",
       });
     });
 
@@ -31,7 +32,8 @@ describe("useRemoveCompatibleMacro", () => {
 
     act(() => {
       result.current.mutate({
-        params: { id: "protocol-1", macroId: "m-1" },
+        id: "protocol-1",
+        macroId: "m-1",
       });
     });
 

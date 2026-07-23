@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { MacroCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
@@ -96,7 +96,7 @@ describe("MacroCellComponent", () => {
     renderMacroCell();
 
     await waitFor(() => {
-      const link = screen.getByRole("link");
+      const link = screen.getByRole("link", { name: /open macro in new tab/i });
       expect(link).toHaveAttribute("href", "/platform/macros/macro-1");
     });
   });
@@ -412,9 +412,13 @@ describe("MacroCellComponent", () => {
         isPending: false,
       } as ReturnType<typeof useSession>);
       server.mount(contract.macros.getMacro, { body: baseMacro });
+      // Hold the save response until the language rerender below has landed,
+      // so the "concurrent" update is guaranteed to be in flight.
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => (releaseSave = resolve));
       server.mount(contract.macros.updateMacro, {
         body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
-        delay: 100,
+        unblock: saveGate,
       });
       const onUpdate = vi.fn();
 
@@ -437,6 +441,7 @@ describe("MacroCellComponent", () => {
           onDelete={vi.fn()}
         />,
       );
+      releaseSave();
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalled());
       const updated = onUpdate.mock.lastCall?.[0] as MacroCell;

@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useMutation } from "@tanstack/react-query";
 
 interface UseExperimentFlowUpdateOptions {
   onSuccess?: (data: unknown) => void;
@@ -11,8 +12,10 @@ interface UseExperimentFlowUpdateOptions {
  * @returns Mutation object for updating experiment flow
  */
 export const useExperimentFlowUpdate = (options?: UseExperimentFlowUpdateOptions) => {
-  return tsr.experiments.updateFlow.useMutation({
-    onSuccess: (data: unknown) => options?.onSuccess?.(data),
-    onError: (error: unknown) => options?.onError?.(error),
-  });
+  return useMutation(
+    orpc.experiments.updateFlow.mutationOptions({
+      onSuccess: (data) => options?.onSuccess?.(data),
+      onError: (error) => options?.onError?.(error),
+    }),
+  );
 };

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { IDeviceDriver, ITransportAdapter } from "@repo/iot";
 import {
+  AmbitDriver,
   GenericDeviceDriver,
   GENERIC_BLE_UUIDS,
   GENERIC_SERIAL_DEFAULTS,
+  MiniParDriver,
   MultispeqDriver,
   MULTISPEQ_SERIAL_DEFAULTS,
   isTransportSupported,
@@ -25,7 +27,7 @@ interface DeviceInfo {
   device_id?: string;
 }
 
-async function createAdapter(
+export async function createAdapter(
   sensorFamily: SensorFamily,
   connectionType: ConnectionType,
 ): Promise<ITransportAdapter> {
@@ -49,14 +51,23 @@ async function createAdapter(
     });
   }
 
-  // Serial — use device-specific defaults
+  // Serial - use device-specific defaults
   const serialDefaults =
     sensorFamily === "multispeq" ? MULTISPEQ_SERIAL_DEFAULTS : GENERIC_SERIAL_DEFAULTS;
   return WebSerialAdapter.requestAndConnect(serialDefaults);
 }
 
-function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
-  return sensorFamily === "multispeq" ? new MultispeqDriver() : new GenericDeviceDriver();
+export function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
+  switch (sensorFamily) {
+    case "multispeq":
+      return new MultispeqDriver();
+    case "ambit":
+      return new AmbitDriver();
+    case "minipar":
+      return new MiniParDriver();
+    default:
+      return new GenericDeviceDriver();
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────

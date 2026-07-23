@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 
-import { WellKnownColumnTypes } from "@repo/api/schemas/experiment.schema";
+import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 /**
  * Per-experiment anonymization policy: rewrite CONTRIBUTOR struct values to

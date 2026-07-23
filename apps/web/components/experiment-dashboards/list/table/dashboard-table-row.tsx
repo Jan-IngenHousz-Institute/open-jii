@@ -7,7 +7,7 @@ import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import type { ExperimentDashboard } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -67,9 +67,7 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
 
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
-    deleteDashboard({
-      params: { id: experimentId, dashboardId: dashboard.id },
-    });
+    deleteDashboard({ id: experimentId, dashboardId: dashboard.id });
   };
 
   return (

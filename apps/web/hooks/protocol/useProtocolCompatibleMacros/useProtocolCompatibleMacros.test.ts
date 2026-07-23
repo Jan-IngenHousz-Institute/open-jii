@@ -22,10 +22,10 @@ describe("useProtocolCompatibleMacros", () => {
     const { result } = renderHook(() => useProtocolCompatibleMacros("protocol-1"));
 
     await waitFor(() => {
-      expect(result.current.data?.body).toHaveLength(1);
+      expect(result.current.data).toHaveLength(1);
     });
 
-    expect(result.current.data?.body[0]?.macro.filename).toBe("macro_a.py");
+    expect(result.current.data?.[0]?.macro.filename).toBe("macro_a.py");
   });
 
   it("does not fetch when protocolId is empty", () => {

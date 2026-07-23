@@ -15,6 +15,7 @@ import {
   User,
   Webcam,
 } from "lucide-react";
+import { env } from "~/env";
 
 export interface NavLink {
   titleKey: string; // i18n key for the title
@@ -164,7 +165,7 @@ export const userNavigation = {
   support: {
     titleKey: "navigation.support",
     namespace: "navigation",
-    url: (_locale: string) => "https://docs.openjii.org",
+    url: (_locale: string) => env.NEXT_PUBLIC_DOCS_URL,
     icon: "LifeBuoy",
     external: true,
   },

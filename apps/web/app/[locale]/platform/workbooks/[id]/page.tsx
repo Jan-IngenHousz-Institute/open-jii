@@ -27,15 +27,14 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   }
 
   // Mount the editor only after data loads so `useAutosave` sees the
-  // persisted state as its first value.
+  // persisted state as its first value. The Fork action lives in the workbook
+  // layout header, next to the version/created-by metadata.
   return (
-    <div className="space-y-6">
-      <WorkbookDraftEditor
-        id={id}
-        initialCells={data.cells}
-        createdBy={data.createdBy}
-        name={data.name}
-      />
-    </div>
+    <WorkbookDraftEditor
+      id={id}
+      initialCells={data.cells}
+      createdBy={data.createdBy}
+      name={data.name}
+    />
   );
 }

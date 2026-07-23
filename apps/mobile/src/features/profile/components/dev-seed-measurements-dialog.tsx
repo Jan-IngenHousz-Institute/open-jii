@@ -55,7 +55,7 @@ export function DevSeedMeasurementsDialog({ visible, onClose }: DevSeedMeasureme
           </Text>
           <Text className="text-card-foreground mb-3 text-left text-sm font-normal">
             Creates fake pending rows and enqueues them. Exercises queue + publisher without a real
-            MultispeQ.
+            physical device.
           </Text>
 
           <View className="border-border bg-surface mb-4 flex-row items-center rounded-lg border">

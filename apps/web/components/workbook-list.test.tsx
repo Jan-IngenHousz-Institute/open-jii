@@ -4,7 +4,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { WorkbookList } from "./workbook-list";
@@ -48,6 +48,11 @@ describe("WorkbookList delete gating (workbook-deletion flag)", () => {
 
   beforeEach(() => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
+  });
+
+  it("shows a docs help link in the empty state when showEmptyHelp is set", () => {
+    render(<WorkbookList workbooks={[]} showEmptyHelp />);
+    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
   });
 
   it("hides Delete for an in-use workbook when the flag is off", async () => {
@@ -96,7 +101,7 @@ describe("WorkbookList row actions", () => {
     await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
+    expect(spy.body).toMatchObject({ name: "Fork of Source WB" });
   });
 
   it("shows an error toast when duplicate fails", async () => {

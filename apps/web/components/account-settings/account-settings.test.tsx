@@ -4,7 +4,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateUserProfileBody } from "@repo/api/schemas/user.schema";
+import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import type { Session } from "@repo/auth/types";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -65,6 +65,10 @@ vi.mock("./profile-information-card", () => ({
       </button>
     </div>
   ),
+}));
+
+vi.mock("./newsletter-subscription-card", () => ({
+  NewsletterSubscriptionCard: () => <div data-testid="newsletter-subscription-card" />,
 }));
 
 const session: Session = {
@@ -148,7 +152,8 @@ describe("<AccountSettings />", () => {
     expect(within(pictureCard).getByTestId("avatarUrl")).toHaveTextContent(
       "https://example.com/ada.png",
     );
-    expect(within(pictureCard).getByTestId("email")).toHaveTextContent("test@example.com");
+    expect(within(pictureCard).getByTestId("email")).toHaveTextContent("hello@example.com");
+    expect(screen.getByTestId("newsletter-subscription-card")).toBeInTheDocument();
   });
 
   it("saves an inline name edit", async () => {

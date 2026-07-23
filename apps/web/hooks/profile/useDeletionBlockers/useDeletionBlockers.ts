@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Fetches the experiments where the user is the only admin (the blockers for account deletion),
@@ -9,9 +10,10 @@ import { tsr } from "@/lib/tsr";
  * @param options Pass `enabled: false` to defer fetching until the dialog opens
  */
 export const useDeletionBlockers = (userId: string, options?: { enabled?: boolean }) => {
-  return tsr.users.getDeletionBlockers.useQuery({
-    queryData: { params: { id: userId } },
-    queryKey: ["deletion-blockers", userId],
-    enabled: (options?.enabled ?? true) && userId.length > 0,
-  });
+  return useQuery(
+    orpc.users.getDeletionBlockers.queryOptions({
+      input: { id: userId },
+      enabled: (options?.enabled ?? true) && userId.length > 0,
+    }),
+  );
 };

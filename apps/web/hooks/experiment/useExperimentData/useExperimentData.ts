@@ -1,16 +1,17 @@
+import { useQuery } from "@tanstack/react-query";
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
-import { tsr } from "~/lib/tsr";
+import { orpc } from "~/lib/orpc";
 
+import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentData,
-  AnnotationType,
-  DataColumn,
-  DataFilter,
-} from "@repo/api/schemas/experiment.schema";
-import { zDataFilter } from "@repo/api/schemas/experiment.schema";
+  ExperimentDataColumn,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   isTimestampType,
   isStringType,
@@ -22,7 +23,7 @@ import {
   isDecimalType,
   isWellKnownType,
   isStructType,
-} from "@repo/api/utils/column-type-utils";
+} from "@repo/api/transforms/column-type-utils";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -31,8 +32,8 @@ export type DataRenderFunction = (
   rowId: string,
   columnName?: string,
   onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], type: AnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], type: AnnotationType) => void,
+  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void,
+  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void,
   onToggleCellExpansion?: (rowId: string, columnName: string) => void,
   isCellExpanded?: (rowId: string, columnName: string) => boolean,
   errorColumn?: string,
@@ -81,7 +82,7 @@ function getTypePrecedence(typeText: string): number {
  * structs, strings, numerics, arrays, other). Used as the canonical
  * starting order whenever the user hasn't explicitly reordered.
  */
-export function sortColumnsForDisplay<T extends DataColumn>(columns: readonly T[]): T[] {
+export function sortColumnsForDisplay<T extends ExperimentDataColumn>(columns: readonly T[]): T[] {
   return [...columns].sort((a, b) => {
     const pinnedA = PINNED_TIME_COLUMNS.indexOf(a.name);
     const pinnedB = PINNED_TIME_COLUMNS.indexOf(b.name);
@@ -205,7 +206,7 @@ export interface TableMetadata {
   columns: AccessorKeyColumnDef<DataRow, unknown>[];
   totalRows: number;
   totalPages: number;
-  rawColumns?: DataColumn[];
+  rawColumns?: ExperimentDataColumn[];
   errorColumn?: string;
 }
 
@@ -224,7 +225,7 @@ export interface UseExperimentDataParams {
    * and `totalRows` reports the row count returned (not the unfiltered
    * table size).
    */
-  filters?: DataFilter[];
+  filters?: ExperimentDataFilter[];
   formatFunction?: DataRenderFunction;
   onChartClick?: (data: number[], columnName: string) => void;
   onAddAnnotation?: (rowIds: string[]) => void;
@@ -235,11 +236,13 @@ export interface UseExperimentDataParams {
   enabled?: boolean;
 }
 
-function compactFilters(filters: DataFilter[] | undefined): DataFilter[] | undefined {
+function compactFilters(
+  filters: ExperimentDataFilter[] | undefined,
+): ExperimentDataFilter[] | undefined {
   if (!filters || filters.length === 0) {
     return undefined;
   }
-  const compact = filters.filter((f) => zDataFilter.safeParse(f).success);
+  const compact = filters.filter((f) => zExperimentDataFilter.safeParse(f).success);
   return compact.length > 0 ? compact : undefined;
 }
 
@@ -289,10 +292,10 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     [cleanedFilters],
   );
 
-  const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.getExperimentData.queryOptions({
+      input: {
+        id: experimentId,
         tableName,
         page,
         pageSize,
@@ -300,22 +303,12 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
         orderDirection,
         filters: filtersJson,
       },
-    },
-    queryKey: [
-      "experiment",
-      experimentId,
-      tableName,
-      orderBy,
-      orderDirection,
-      filtersJson,
-      page,
-      pageSize,
-    ],
-    staleTime: STALE_TIME,
-    enabled,
-  });
+      staleTime: STALE_TIME,
+      enabled,
+    }),
+  );
 
-  const tableData = data?.body[0];
+  const tableData = data?.[0];
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData

@@ -34,7 +34,7 @@ describe("useListExports", () => {
     const { result } = renderHook(() => useListExports({ experimentId, tableName }));
 
     await waitFor(() => {
-      expect(result.current.data?.body.exports).toEqual(mockExports);
+      expect(result.current.data?.exports).toEqual(mockExports);
     });
 
     expect(spy.params.id).toBe(experimentId);
@@ -48,7 +48,7 @@ describe("useListExports", () => {
     const { result } = renderHook(() => useListExports({ experimentId, tableName }));
 
     await waitFor(() => {
-      expect(result.current.data?.body.exports).toEqual([]);
+      expect(result.current.data?.exports).toEqual([]);
     });
   });
 
@@ -85,9 +85,9 @@ describe("useListExports", () => {
     const { result } = renderHook(() => useListExports({ experimentId, tableName }));
 
     await waitFor(() => {
-      expect(result.current.data?.body.exports).toEqual(mockExports);
+      expect(result.current.data?.exports).toEqual(mockExports);
     });
-    expect(result.current.data?.body.exports[0]?.exportId).toBeNull();
-    expect(result.current.data?.body.exports[0]?.status).toBe("running");
+    expect(result.current.data?.exports[0]?.exportId).toBeNull();
+    expect(result.current.data?.exports[0]?.status).toBe("running");
   });
 });

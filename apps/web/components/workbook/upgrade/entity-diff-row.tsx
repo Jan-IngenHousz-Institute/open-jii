@@ -2,12 +2,12 @@
 
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { contract, getContractError } from "@/lib/tsr";
+import { getOrpcError } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { formatDate } from "@/util/date";
 import { useEffect, useRef } from "react";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
@@ -93,12 +93,12 @@ interface RowProps {
 
 export function ProtocolDiffRow({ id, oldCode, fallbackName, onResolved }: RowProps) {
   const query = useProtocol(id);
-  const body = query.data?.body;
+  const body = query.data;
   const settled = !query.isLoading;
   const exists = !!body;
   // A 404 means the protocol was genuinely deleted (removed); any other error
   // (5xx, network) is transient and must not be reported as "removed".
-  const notFound = getContractError(contract.protocols.getProtocol, query.error)?.status === 404;
+  const notFound = getOrpcError(query.error)?.status === 404;
   const loadFailed = !!query.error && !notFound;
 
   const reported = useRef(false);
@@ -142,7 +142,7 @@ export function MacroDiffRow({ id, oldCode, fallbackName, onResolved }: RowProps
   const exists = !!body;
   // A 404 means the macro was genuinely deleted (removed); any other error
   // (5xx, network) is transient and must not be reported as "removed".
-  const notFound = getContractError(contract.macros.getMacro, error)?.status === 404;
+  const notFound = getOrpcError(error)?.status === 404;
   const loadFailed = !!error && !notFound;
 
   const reported = useRef(false);

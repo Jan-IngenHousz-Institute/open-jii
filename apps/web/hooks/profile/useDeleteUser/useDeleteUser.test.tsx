@@ -17,7 +17,7 @@ describe("useDeleteUser", () => {
     const { result } = renderHook(() => useDeleteUser({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { id: USER_ID } });
+      result.current.mutate({ id: USER_ID });
     });
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
@@ -33,7 +33,7 @@ describe("useDeleteUser", () => {
     const { result } = renderHook(() => useDeleteUser({ onError }));
 
     act(() => {
-      result.current.mutate({ params: { id: USER_ID } });
+      result.current.mutate({ id: USER_ID });
     });
 
     await waitFor(() => {

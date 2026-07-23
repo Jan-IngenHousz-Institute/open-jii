@@ -1,12 +1,11 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { searchContract } from "@repo/api/contracts/search.contract";
+import { searchContract } from "@repo/api/domains/search/search.contract";
 
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GlobalSearchUseCase } from "../application/use-cases/global-search/global-search";
 
 @Controller()
@@ -15,23 +14,20 @@ export class SearchController {
 
   constructor(private readonly globalSearchUseCase: GlobalSearchUseCase) {}
 
-  @TsRestHandler(searchContract.globalSearch)
+  @Implement(searchContract.globalSearch)
   globalSearch(@Session() session: UserSession) {
-    return tsRestHandler(searchContract.globalSearch, async ({ query }) => {
+    return implement(searchContract.globalSearch).handler(async ({ input }) => {
       const result = await this.globalSearchUseCase.execute(
         session.user.id,
-        query.query,
-        query.limit,
+        input.query,
+        input.limit,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK,
-          body: result.value,
-        };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "globalSearch");
     });
   }
 }

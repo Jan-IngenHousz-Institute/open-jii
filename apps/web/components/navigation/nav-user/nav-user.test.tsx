@@ -89,7 +89,7 @@ describe("NavUser", () => {
 
   it("uses docs URL from environment for support link", async () => {
     useProfileOverride({ firstName: "Test", lastName: "User" });
-    env.NEXT_PUBLIC_DOCS_URL = "https://docs.openjii.org";
+    env.NEXT_PUBLIC_DOCS_URL = "https://docs.example.com";
     const user = userEvent.setup();
     renderNav();
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe("NavUser", () => {
     await user.click(screen.getByRole("button"));
     expect(screen.getByRole("menuitem", { name: "navigation.support" })).toHaveAttribute(
       "href",
-      "https://docs.openjii.org",
+      env.NEXT_PUBLIC_DOCS_URL,
     );
   });
 

@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to fetch all metadata records for an experiment
@@ -6,8 +7,9 @@ import { tsr } from "@/lib/tsr";
  * @returns Query result containing the list of experiment metadata records
  */
 export const useExperimentMetadata = (experimentId: string) => {
-  return tsr.experiments.listExperimentMetadata.useQuery({
-    queryData: { params: { id: experimentId } },
-    queryKey: ["experiment", experimentId, "metadata"],
-  });
+  return useQuery(
+    orpc.experiments.listExperimentMetadata.queryOptions({
+      input: { id: experimentId },
+    }),
+  );
 };

@@ -6,7 +6,7 @@ import { useCallback } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-import type { UpdateExperimentVisualizationBody } from "@repo/api/schemas/experiment.schema";
+import type { UpdateExperimentVisualizationBody } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { useReportAutosaveStatus } from "../../../shared/autosave/autosave-status-context";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -36,7 +36,7 @@ export function useVisualizationAutosave({
         dataConfig: sanitizeDataConfigForSave(snapshot.dataConfig),
         config: { ...snapshot.config },
       };
-      await mutateAsync({ params: { id: experimentId, visualizationId }, body });
+      await mutateAsync({ id: experimentId, visualizationId, ...body });
     },
     [mutateAsync, experimentId, visualizationId],
   );

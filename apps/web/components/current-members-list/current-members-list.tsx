@@ -2,10 +2,11 @@ import { useLocale } from "@/hooks/useLocale";
 import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { DocsHelpLink } from "~/components/docs-help-link";
 import { parseApiError } from "~/util/apiError";
 
-import type { ExperimentMemberRole } from "@repo/api/schemas/experiment.schema";
-import type { UserProfile } from "@repo/api/schemas/user.schema";
+import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
+import type { UserProfile } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -99,8 +100,9 @@ export function MemberList({
     setUpdatingMemberId(userId);
     updateMemberRole(
       {
-        params: { id: experimentId, memberId: userId },
-        body: { role: newRole },
+        id: experimentId,
+        memberId: userId,
+        role: newRole,
       },
       {
         onSuccess: () => {
@@ -183,6 +185,9 @@ export function MemberList({
         <p className="text-muted-foreground mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
           {t("experimentSettings.addCollaborators")}
         </p>
+        <div className="mt-3">
+          <DocsHelpLink path="/guide/experiments/collaborators" />
+        </div>
       </div>
     );
   }

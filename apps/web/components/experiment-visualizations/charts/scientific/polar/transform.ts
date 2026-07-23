@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { PolarSeriesData } from "@repo/ui/components/charts/polar";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -54,7 +54,7 @@ function sortByTheta(
 /** Pure data transform for the polar chart: pulls (theta, r) pairs per Y series, optionally split per categorical color. */
 export function transformPolarData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): PolarSeriesData[] {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

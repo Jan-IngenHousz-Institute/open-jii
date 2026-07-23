@@ -3,8 +3,8 @@
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
-import type { Macro } from "@repo/api/schemas/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/schemas/protocol.schema";
+import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";

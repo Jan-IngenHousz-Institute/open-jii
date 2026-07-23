@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { ChevronRight, MessageCircleMore } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { useTranslation } from "~/shared/i18n";
 import { TabBar } from "~/shared/ui/TabBar";
@@ -17,6 +18,10 @@ type TabKey = "result" | "raw";
 interface MeasurementResultProps {
   rawMeasurement: any;
   macro: any;
+  /** Upstream cell outputs the macro reads as `ctx.<name>` (flow context only). */
+  ctx?: Record<string, unknown>;
+  /** Called with the macro outputs once computed, so a flow can persist them. */
+  onProcessed?: (outputs: MacroOutput[]) => void;
   /** When set, shows a Comment row that calls this on press */
   onCommentPress?: () => void;
 }
@@ -24,6 +29,8 @@ interface MeasurementResultProps {
 export function MeasurementResult({
   rawMeasurement,
   macro,
+  ctx,
+  onProcessed,
   onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
@@ -46,9 +53,17 @@ export function MeasurementResult({
     // applyMacro is a pure local computation; "always" keeps it from being
     // paused by the onlineManager while offline.
     networkMode: "always",
-    queryKey: ["measurement-result", rawMeasurement, macro],
-    queryFn: () => applyMacro(rawMeasurement, macro),
+    // ctx enters the key as a stable serialization so a changed upstream
+    // output recomputes, while an identical rebuild does not.
+    queryKey: ["measurement-result", rawMeasurement, macro, ctx ? JSON.stringify(ctx) : undefined],
+    queryFn: () => applyMacro(rawMeasurement, macro, ctx ?? {}),
   });
+
+  // Surface the computed outputs so a flow can persist them (cellOutputs) for
+  // downstream branches/macros. No-op outside a flow (onProcessed unset).
+  useEffect(() => {
+    if (processedMeasurement && onProcessed) onProcessed(processedMeasurement);
+  }, [processedMeasurement, onProcessed]);
 
   const messageGroups: MacroMessageGroup[] =
     processedMeasurement

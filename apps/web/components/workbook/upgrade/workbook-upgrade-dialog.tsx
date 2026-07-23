@@ -6,9 +6,9 @@ import { diffCells } from "@/lib/workbook-diff";
 import { AlertTriangle, ArrowUpCircle, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { WorkbookIssue } from "@repo/api/utils/validate-workbook";
-import { validateWorkbook } from "@repo/api/utils/validate-workbook";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { WorkbookIssue } from "@repo/api/transforms/validate-workbook";
+import { validateWorkbook } from "@repo/api/transforms/validate-workbook";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -230,10 +230,7 @@ export function WorkbookUpgradeDialog({
                     <ProtocolDiffRow
                       key={id}
                       id={id}
-                      oldCode={
-                        (pinned.entitySnapshots.protocols[id] as { code?: unknown } | undefined)
-                          ?.code
-                      }
+                      oldCode={pinned.entitySnapshots?.protocols[id]?.code}
                       fallbackName={name}
                       onResolved={handleResolved}
                     />
@@ -243,7 +240,7 @@ export function WorkbookUpgradeDialog({
                       key={id}
                       id={id}
                       oldCode={
-                        (pinned.entitySnapshots.macros[id] as { code?: string } | undefined)?.code
+                        (pinned.entitySnapshots?.macros[id] as { code?: string } | undefined)?.code
                       }
                       fallbackName={name}
                       onResolved={handleResolved}

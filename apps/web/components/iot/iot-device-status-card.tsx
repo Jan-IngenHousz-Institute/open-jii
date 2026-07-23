@@ -1,7 +1,9 @@
 "use client";
 
 import { AlertCircle, Battery, CheckCircle2, Loader2, Zap } from "lucide-react";
+import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
@@ -20,6 +22,8 @@ interface DeviceStatusCardProps {
   error: string | null;
   deviceInfo: DeviceInfo | null;
   connectionType: "bluetooth" | "serial";
+  /** The protocol's family, used to resolve product context for an unnamed device. */
+  sensorFamily?: SensorFamily;
   onConnect: () => void;
   onDisconnect: () => void;
 }
@@ -30,10 +34,19 @@ export function DeviceStatusCard({
   error,
   deviceInfo,
   connectionType,
+  sensorFamily,
   onConnect,
   onDisconnect,
 }: DeviceStatusCardProps) {
   const { t } = useTranslation("iot");
+
+  // Shared identity hierarchy: name first, then canonical product name, then a
+  // localized unknown-device fallback.
+  const present = presentDevice({
+    name: deviceInfo?.device_name,
+    family: sensorFamily,
+    id: deviceInfo?.device_id,
+  });
 
   return (
     <div className="space-y-1.5">
@@ -63,17 +76,18 @@ export function DeviceStatusCard({
                 t("iot.protocolRunner.notConnected")
               )}
             </div>
-            {isConnected && deviceInfo ? (
+            {isConnected ? (
               <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
-                <div className="truncate">
-                  {deviceInfo.device_name ?? t("iot.protocolRunner.unknownDevice")}
-                </div>
-                {deviceInfo.device_version && (
+                <div className="truncate">{resolveDevicePrimaryLabel(present, t)}</div>
+                {present.provenance === "name" && present.productName && (
+                  <div className="truncate">{present.productName}</div>
+                )}
+                {deviceInfo?.device_version && (
                   <div>
                     {t("iot.protocolRunner.version")} {deviceInfo.device_version}
                   </div>
                 )}
-                {deviceInfo.device_battery != null && (
+                {deviceInfo?.device_battery != null && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Battery className="h-3 w-3" />
                     <span>{deviceInfo.device_battery}%</span>
@@ -83,7 +97,7 @@ export function DeviceStatusCard({
             ) : (
               <div className="text-muted-foreground mt-0.5 text-xs">
                 {isConnecting
-                  ? t("iot.protocolRunner.pairingWithDevice")
+                  ? t("iot.protocolRunner.connectingToDevice")
                   : connectionType === "bluetooth"
                     ? t("iot.protocolRunner.wireless")
                     : t("iot.protocolRunner.usb")}

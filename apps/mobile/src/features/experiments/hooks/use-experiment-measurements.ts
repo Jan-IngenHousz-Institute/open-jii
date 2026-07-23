@@ -1,4 +1,5 @@
-import { tsr } from "~/shared/api/tsr";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "~/shared/api/orpc";
 
 export interface ExperimentDataTable {
   name: string;
@@ -21,13 +22,11 @@ export interface ExperimentDataTable {
 }
 
 export function useExperimentMeasurements(experimentId: string | undefined) {
-  return tsr.experiments.getExperimentData.useQuery({
-    queryKey: ["experiment-data", experimentId],
-    queryData: {
-      params: { id: experimentId ?? "" },
-      query: { tableName: "raw_data" },
-    },
-    enabled: !!experimentId,
-    networkMode: "offlineFirst",
-  });
+  return useQuery(
+    orpc.experiments.getExperimentData.queryOptions({
+      input: { id: experimentId ?? "", tableName: "raw_data" },
+      enabled: !!experimentId,
+      networkMode: "offlineFirst",
+    }),
+  );
 }

@@ -1,6 +1,9 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { AnnotationRowsAffected, UpdateAnnotationBody } from "@repo/api/schemas/experiment.schema";
+import {
+  ExperimentAnnotationRowsAffected,
+  ExperimentUpdateAnnotationBody,
+} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
@@ -23,9 +26,9 @@ export class UpdateAnnotationUseCase {
   async execute(
     experimentId: string,
     annotationId: string,
-    data: UpdateAnnotationBody,
+    data: ExperimentUpdateAnnotationBody,
     userId: string,
-  ): Promise<Result<AnnotationRowsAffected>> {
+  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
     this.logger.log({
       msg: "Updating annotation to experiment data",
       operation: "updateAnnotation",

@@ -1,12 +1,12 @@
-import { Controller, Logger, StreamableFile } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
+import type { Readable } from "stream";
 
-import { contract } from "@repo/api/contract";
+import { experimentExportsContract } from "@repo/api/domains/experiment/exports/experiment-exports.contract";
 
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
@@ -21,21 +21,10 @@ export class ExperimentDataExportsController {
     private readonly downloadExportUseCase: DownloadExportUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.initiateExport)
+  @Implement(experimentExportsContract.initiateExport)
   initiateExport(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.initiateExport, async ({ params, body }) => {
-      const { id: experimentId } = params;
-      const { tableName, format, anonymizeContributors } = body;
-
-      this.logger.log({
-        msg: "Processing initiate export request",
-        operation: "initiateExport",
-        experimentId,
-        userId: session.user.id,
-        tableName,
-        format,
-        anonymizeContributors,
-      });
+    return implement(experimentExportsContract.initiateExport).handler(async ({ input }) => {
+      const { id: experimentId, tableName, format, anonymizeContributors } = input;
 
       const result = await this.initiateExportUseCase.execute(experimentId, session.user.id, {
         tableName,
@@ -44,102 +33,51 @@ export class ExperimentDataExportsController {
       });
 
       if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Export initiated successfully",
-          operation: "initiateExport",
-          experimentId,
-          tableName,
-          format,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.CREATED,
-          body: result.value,
-        };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.listExports)
+  @Implement(experimentExportsContract.listExports)
   listExports(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listExports, async ({ params, query }) => {
-      const { id: experimentId } = params;
-      const { tableName } = query;
-
-      this.logger.log({
-        msg: "Processing list exports request",
-        operation: "listExports",
-        experimentId,
-        userId: session.user.id,
-        tableName,
-      });
-
-      const result = await this.listExportsUseCase.execute(experimentId, session.user.id, {
-        tableName,
+    return implement(experimentExportsContract.listExports).handler(async ({ input }) => {
+      const result = await this.listExportsUseCase.execute(input.id, session.user.id, {
+        tableName: input.tableName,
       });
 
       if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Exports listed successfully",
-          operation: "listExports",
-          experimentId,
-          tableName,
-          count: result.value.exports.length,
-          status: "success",
-        });
-
-        return {
-          status: StatusCodes.OK,
-          body: result.value,
-        };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.downloadExport)
+  @Implement(experimentExportsContract.downloadExport)
   downloadExport(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.downloadExport, async ({ params }) => {
-      const { id: experimentId, exportId } = params;
-
-      this.logger.log({
-        msg: "Processing download export request",
-        operation: "downloadExport",
-        experimentId,
-        exportId,
-        userId: session.user.id,
-      });
-
+    return implement(experimentExportsContract.downloadExport).handler(async ({ input }) => {
       const result = await this.downloadExportUseCase.execute(
-        experimentId,
-        exportId,
+        input.id,
+        input.exportId,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Export download successful",
-          operation: "downloadExport",
-          exportId,
-          filename: result.value.filename,
-          status: "success",
-        });
-
         const { stream, filename } = result.value;
-        return {
-          status: StatusCodes.OK,
-          body: new StreamableFile(stream, {
-            type: "application/octet-stream",
-            disposition: `attachment; filename="${filename}"`,
-          }),
-        };
+        return this.toDownloadFile(stream, filename);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
+  }
+
+  private async toDownloadFile(stream: Readable, filename: string): Promise<File> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Buffer));
+    }
+    return new File([Buffer.concat(chunks)], filename, { type: "application/octet-stream" });
   }
 }

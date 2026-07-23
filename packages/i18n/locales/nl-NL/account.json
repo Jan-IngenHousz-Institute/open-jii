@@ -1,0 +1,136 @@
+{
+  "mobileNavAriaLabel": "Instellingennavigatie",
+  "overview": {
+    "title": "Overzicht"
+  },
+  "security": {
+    "title": "Beveiliging"
+  },
+  "notifications": {
+    "title": "Meldingen"
+  },
+  "team": {
+    "title": "Team"
+  },
+  "activity": {
+    "title": "Activiteit"
+  },
+  "settings": {
+    "AccountIdentityCard": {
+      "title": "Profielfoto",
+      "upload": "Nieuwe foto uploaden",
+      "description": "Plak een link naar een afbeelding om die als avatar te gebruiken.",
+      "urlLabel": "Afbeeldings-URL",
+      "urlPlaceholder": "https://example.com/avatar.png",
+      "emptyUrl": "Geen aangepaste afbeeldings-URL"
+    },
+    "ProfileInformationCard": {
+      "title": "Profielinformatie",
+      "description": "Profielgegevens die binnen OpenJII worden weergegeven.",
+      "emptyName": "Stel je profiel in",
+      "nameValidation": "Vul minimaal een voor- en achternaam in.",
+      "bio": "Bio",
+      "bioPlaceholder": "Vertel iets over jezelf",
+      "emptyBio": "Geen bio toegevoegd",
+      "institution": "Instelling/organisatie",
+      "institutionPlaceholder": "Vul je instelling of organisatie in",
+      "emptyInstitution": "Geen instelling toegevoegd"
+    },
+    "NewsletterSubscriptionCard": {
+      "title": "Nieuwsbrief",
+      "description": "Beheer je abonnement op de openJII-communitynieuwsbrief.",
+      "toggleLabel": "Communitynieuwsbrief",
+      "subscribed": "Je bent geabonneerd op de communitynieuwsbrief.",
+      "pending": "Bevestigingsmail verzonden. Controleer je inbox om je abonnement af te ronden.",
+      "unsubscribed": "Abonneer je om nieuws en updates van de community te ontvangen.",
+      "loading": "Je nieuwsbriefabonnement wordt gecontroleerd…",
+      "error": "Je nieuwsbriefabonnement kon niet worden geladen. Je andere instellingen blijven beschikbaar.",
+      "retry": "Opnieuw proberen",
+      "retrying": "Opnieuw proberen…",
+      "updating": "Je nieuwsbriefabonnement wordt bijgewerkt…",
+      "updateError": "Je nieuwsbriefabonnement kon niet worden bijgewerkt. Probeer het opnieuw.",
+      "forgottenEmailError": "Dit e-mailadres is op je eerdere verzoek uit onze nieuwsbrief verwijderd en kan niet automatisch opnieuw worden toegevoegd. Neem contact op met support als je je opnieuw wilt aanmelden."
+    },
+    "status": {
+      "active": "Account actief",
+      "deactivated": "Account gedeactiveerd"
+    },
+    "disabled": "Uitgeschakeld",
+    "title": "Instellingen",
+    "accountsettings": "Accountinstellingen",
+    "loading": "Accountinstellingen laden...",
+    "errorTitle": "Fout bij het laden van accountinstellingen",
+    "cancel": "Annuleren",
+    "save": "Wijzigingen opslaan",
+    "saving": "Opslaan...",
+    "saved": "Accountinstellingen opgeslagen"
+  },
+  "dangerZone": {
+    "title": "Gevarenzone",
+    "deactivate": {
+      "title": "Account deactiveren",
+      "description": "Schakel je account tijdelijk uit.",
+      "button": "Deactiveren",
+      "buttonDeactivated": "Gedeactiveerd",
+      "dialogTitle": "Account deactiveren",
+      "dialogDescription": "Hiermee wordt je account tijdelijk uitgeschakeld en je profiel voor andere gebruikers verborgen.",
+      "warningTitle": "Wat er gebeurt wanneer je deactiveert:",
+      "warningList": {
+        "profileHidden": "Je profiel wordt verborgen voor andere onderzoekers",
+        "noRequests": "Je ontvangt geen samenwerkingsverzoeken meer",
+        "contentAccessible": "Je experimenten, macro's en protocollen blijven beschikbaar voor medewerkers",
+        "loggedOut": "Je wordt uitgelogd",
+        "canReactivate": "Je kunt je account opnieuw activeren door weer in te loggen"
+      },
+      "confirmPrompt": "Typ",
+      "confirmWord": "deactiveren",
+      "confirmSuffix": "om te bevestigen:",
+      "confirmPlaceholder": "Typ hier 'deactiveren'",
+      "buttonSaving": "Opslaan...",
+      "buttonConfirm": "Account deactiveren",
+      "successMessage": "Account gedeactiveerd"
+    },
+    "delete": {
+      "title": "Account verwijderen",
+      "description": "Verwijder je account en alle bijbehorende gegevens permanent. Dit kan niet ongedaan worden gemaakt.",
+      "button": "Account verwijderen",
+      "dialogTitle": "Account verwijderen",
+      "dialogDescription": "Deze actie kan niet ongedaan worden gemaakt. Je persoonlijke gegevens worden permanent gewist, maar je gepubliceerde bijdragen blijven behouden.",
+      "warningEraseTitle": "Dit wordt gewist:",
+      "warningEraseList": {
+        "profile": "Je profiel en persoonlijke gegevens",
+        "email": "Je e-mailadres en contactgegevens",
+        "teams": "Je teamlidmaatschappen"
+      },
+      "warningPreserveTitle": "Je inhoud blijft behouden:",
+      "warningPreserveList": {
+        "content": "Experimenten, macro's en protocollen blijven intact"
+      },
+      "confirmPrompt": "Typ",
+      "confirmWord": "verwijderen",
+      "confirmSuffix": "om te bevestigen:",
+      "confirmPlaceholder": "Typ hier 'verwijderen'",
+      "buttonDeleting": "Verwijderen...",
+      "buttonConfirm": "Account verwijderen",
+      "successMessage": "Account verwijderd. Je persoonlijke gegevens zijn gewist.",
+      "blockers": {
+        "title": "Draag eerst je experimenten over",
+        "description": "Je bent de enige beheerder van de onderstaande experimenten, waardoor ze zonder eigenaar achterblijven. Kies wie de beheerdersrechten overneemt en draag ze hier over.",
+        "loading": "Je experimenten worden gecontroleerd…",
+        "applyToAllLabel": "Alles aan één persoon overdragen",
+        "applyToAllPlaceholder": "Zoek iemand die alles overneemt…",
+        "rowPlaceholder": "Zoek een persoon…",
+        "noCandidatesHint": "Nog geen medewerkers. Zoek hierboven naar iemand of nodig iemand uit via de medewerkerspagina van het experiment.",
+        "manageLink": "Medewerkers openen",
+        "transferAll": "Beheerdersrechten overdragen",
+        "transferring": "Overdragen…",
+        "transferSuccess": "Beheerdersrechten overgedragen.",
+        "transferPartial": "Sommige experimenten konden niet worden bijgewerkt. Controleer ze en probeer het opnieuw.",
+        "transferError": "Beheerdersrechten konden niet worden overgedragen. Probeer het opnieuw.",
+        "expand": "Vergroten naar volledig scherm",
+        "collapse": "Volledig scherm verlaten"
+      }
+    },
+    "cancel": "Annuleren"
+  }
+}

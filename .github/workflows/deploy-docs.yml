@@ -1,5 +1,5 @@
 # Documentation Site Deployment Workflow
-# Builds Docusaurus site and deploys to S3 with CloudFront invalidation
+# Builds the Fumadocs (Next.js static export) site and deploys to S3 with CloudFront invalidation
 
 name: Documentation Deployment Workflow
 
@@ -55,7 +55,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
           hoisted: "false"
 
       - name: Install Dependencies
@@ -64,32 +64,55 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Build Documentation Site
+        env:
+          # Only production is crawlable; dev/staging keep robots.txt Disallow.
+          DOCS_INDEXABLE: ${{ inputs.environment == 'prod' && 'true' || 'false' }}
+          DOCS_BASE_URL: ${{ inputs.environment == 'prod' && 'https://docs.openjii.org' || format('https://docs.{0}.openjii.org', inputs.environment) }}
+          # Docs-to-platform links resolve to the platform of the same environment
+          # (prod docs -> prod platform, non-prod docs -> dev platform). Matches
+          # the web build's own prod-vs-dev origin split in opennext-build.
+          PLATFORM_BASE_URL: ${{ inputs.environment == 'prod' && 'https://openjii.org' || 'https://dev.openjii.org' }}
         run: |
-          echo "Building Docusaurus documentation site..."
+          echo "Building documentation site (Fumadocs / Next.js static export)..."
           pnpm run build --filter=docs
 
       - name: Check Build Output
         run: |
           echo "Verifying documentation build output..."
-          if [[ ! -d "apps/docs/build" ]]; then
-            echo "::error::Documentation build directory not found: apps/docs/build"
+          if [[ ! -d "apps/docs/out" ]]; then
+            echo "::error::Documentation build directory not found: apps/docs/out"
             exit 1
           fi
 
           echo "Documentation build directory found"
           echo "Build contents:"
-          ls -la apps/docs/build/
+          ls -la apps/docs/out/
 
           # Check for essential files
-          if [[ ! -f "apps/docs/build/index.html" ]]; then
+          if [[ ! -f "apps/docs/out/index.html" ]]; then
             echo "::warning::No index.html found in build output"
           else
             echo "✓ index.html found"
           fi
 
+          # Check for the real 404 page served by the CloudFront error mapping
+          if [[ ! -f "apps/docs/out/404.html" ]]; then
+            echo "::warning::No 404.html found in build output (CloudFront serves this on 403/404)"
+          else
+            echo "✓ 404.html found"
+          fi
+
           # Check build size
-          BUILD_SIZE=$(du -sh apps/docs/build | cut -f1)
+          BUILD_SIZE=$(du -sh apps/docs/out | cut -f1)
           echo "Build size: $BUILD_SIZE"
+
+      - name: Run Local Documentation Validation Gate
+        run: |
+          pnpm --filter docs check-media-tooling
+          pnpm --filter docs check-links
+          pnpm --filter docs check-routing
+          pnpm --filter docs check-deploy-workflow
+          pnpm --filter docs validate:local
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6
@@ -126,17 +149,72 @@ jobs:
             exit 1
           fi
 
+      - name: Archive Current Site (Rollback Artifact)
+        id: rollback-archive
+        run: |
+          DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
+          ROLLBACK_DIR="rollback-site"
+          ARTIFACT_NAME="docs-rollback-${{ inputs.environment }}-${{ steps.get-sha.outputs.sha }}"
+          ARCHIVE="${ARTIFACT_NAME}.tar.gz"
+
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+          echo "Archiving current bucket state before the destructive (--delete) sync..."
+          echo "The docs bucket is unversioned; this artifact is the rollback source."
+
+          mkdir -p "$ROLLBACK_DIR"
+
+          # Mirror the live bucket to a local dir. Fail closed: a partial/missing
+          # rollback mirror must stop the job before any destructive upload.
+          # A successful sync that copies no objects is a valid first deploy.
+          if ! aws s3 sync "s3://${DOCS_BUCKET}/" "$ROLLBACK_DIR/" --quiet; then
+            echo "::error::Failed to capture the current docs bucket; refusing destructive deployment"
+            exit 1
+          fi
+
+          if [[ -z "$(ls -A "$ROLLBACK_DIR" 2>/dev/null)" ]]; then
+            echo "::notice::Bucket is empty (likely first deploy) - no prior site to archive."
+            echo "archived=false" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$ARCHIVE" -C "$ROLLBACK_DIR" .
+            echo "Created rollback archive: $ARCHIVE ($(du -sh "$ARCHIVE" | cut -f1))"
+            echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+            echo "archived=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Rollback Artifact
+        if: steps.rollback-archive.outputs.archived == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rollback-archive.outputs.artifact_name }}
+          path: ${{ steps.rollback-archive.outputs.archive }}
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Upload Documentation to S3
         id: upload-docs
         run: |
           DOCS_BUCKET="${{ env.DOCS_BUCKET }}"
-          BUILD_DIR="apps/docs/build"
+          BUILD_DIR="apps/docs/out"
 
           echo "Uploading documentation site to S3 bucket: $DOCS_BUCKET"
 
           cd "$BUILD_DIR"
 
-          # Upload static assets with long cache duration
+          # Remove routing/text classes first. The static-assets sync excludes
+          # these classes, so an explicit delete ensures legacy Docusaurus HTML,
+          # sitemap, and robots files cannot survive the clean replacement.
+          echo "Deleting previous HTML, XML, and TXT objects..."
+          aws s3 rm "s3://${DOCS_BUCKET}/" \
+            --recursive \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.xml" \
+            --include "*.txt" \
+            --quiet
+
+          # Upload all other static assets once with long cache duration. The
+          # --delete reconciles stale non-HTML assets against this exact export.
           echo "Uploading static assets with long cache..."
           aws s3 sync . "s3://${DOCS_BUCKET}/" \
             --delete \
@@ -146,30 +224,22 @@ jobs:
             --exclude "*.txt" \
             --quiet
 
-          # Upload HTML files with shorter cache duration
-          echo "Uploading HTML files with shorter cache..."
+          # Upload HTML exactly once with no cache for clean routing/cutover.
+          echo "Uploading HTML page files with no cache..."
           aws s3 sync . "s3://${DOCS_BUCKET}/" \
-            --cache-control "public, max-age=3600" \
+            --exclude "*" \
             --include "*.html" \
+            --cache-control "public, max-age=0, must-revalidate" \
             --quiet
 
-          # Upload XML and TXT files (sitemaps, robots.txt) with medium cache
+          # Upload XML/TXT exactly once with the intended medium cache duration.
           echo "Uploading XML and TXT files with medium cache..."
           aws s3 sync . "s3://${DOCS_BUCKET}/" \
-            --cache-control "public, max-age=86400" \
+            --exclude "*" \
             --include "*.xml" \
             --include "*.txt" \
+            --cache-control "public, max-age=86400" \
             --quiet
-
-          # Upload index.html files with no cache for proper routing
-          echo "Uploading index files with no cache for proper routing..."
-          find . -name "index.html" -type f | while read -r file; do
-            # Remove leading ./ from file path
-            s3_key="${file#./}"
-            aws s3 cp "$file" "s3://${DOCS_BUCKET}/${s3_key}" \
-              --cache-control "public, max-age=0, must-revalidate" \
-              --quiet
-          done
 
           echo "✓ Documentation uploaded successfully to S3"
           echo "uploaded=true" >> $GITHUB_OUTPUT
@@ -200,15 +270,6 @@ jobs:
           else
             echo "::warning::Failed to create CloudFront invalidation"
           fi
-
-      - name: Publish DORA Metrics
-        if: always()
-        uses: ./.github/actions/publish-dora-metrics
-        with:
-          deployment-outcome: ${{ steps.upload-docs.outcome || 'failure' }}
-          service: "docs"
-          environment: ${{ inputs.environment }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Get Documentation URLs
         id: get-urls
@@ -259,6 +320,31 @@ jobs:
             fi
           fi
 
+      - name: Run Deployed Documentation Validation Gate
+        id: remote-gate
+        shell: bash
+        run: |
+          BASE_URL="${{ steps.get-urls.outputs.custom_url }}"
+          if [[ -z "$BASE_URL" ]]; then
+            BASE_URL="${{ steps.get-urls.outputs.cloudfront_url }}"
+          fi
+          if [[ -z "$BASE_URL" ]]; then
+            echo "::error::Could not resolve a custom-domain or CloudFront URL for validation"
+            exit 1
+          fi
+
+          echo "Validating deployed documentation at $BASE_URL"
+          pnpm --filter docs validate:deployment -- --base-url "$BASE_URL"
+
+      - name: Publish DORA Metrics
+        if: always()
+        uses: ./.github/actions/publish-dora-metrics
+        with:
+          deployment-outcome: ${{ steps.remote-gate.outcome || steps.upload-docs.outcome || 'failure' }}
+          service: "docs"
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Deployment Summary
         if: always()
         run: |
@@ -267,6 +353,12 @@ jobs:
           echo "Environment: ${{ inputs.environment }}"
           echo "S3 Bucket: ${{ env.DOCS_BUCKET }}"
           echo "Documentation Uploaded: ${{ steps.upload-docs.outputs.uploaded || 'false' }}"
+          echo "Validation Gate: ${{ steps.remote-gate.outcome || 'not-run' }}"
+          if [[ "${{ steps.rollback-archive.outputs.archived }}" == "true" ]]; then
+            echo "Rollback Artifact: ${{ steps.rollback-archive.outputs.artifact_name }}"
+          else
+            echo "Rollback Artifact: not created (pre-deploy bucket was empty or capture did not complete)"
+          fi
 
           CLOUDFRONT_DISTRIBUTION_ID="${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
           if [[ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]]; then

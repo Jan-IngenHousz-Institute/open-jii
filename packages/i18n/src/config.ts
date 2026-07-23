@@ -34,6 +34,7 @@ export const namespaces = [
   "experimentVisualizations",
   "experimentDashboards",
   "iot",
+  "newsletter",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

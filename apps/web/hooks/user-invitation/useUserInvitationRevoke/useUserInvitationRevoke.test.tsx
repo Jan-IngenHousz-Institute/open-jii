@@ -14,7 +14,7 @@ describe("useUserInvitationRevoke", () => {
     const { result } = renderHook(() => useUserInvitationRevoke());
 
     act(() => {
-      result.current.mutate({ params: { invitationId: "inv-1" } });
+      result.current.mutate({ invitationId: "inv-1" });
     });
 
     await waitFor(() => {
@@ -37,7 +37,7 @@ describe("useUserInvitationRevoke", () => {
     const { result } = renderHook(() => useUserInvitationRevoke());
 
     act(() => {
-      result.current.mutate({ params: { invitationId: "inv-1" } });
+      result.current.mutate({ invitationId: "inv-1" });
     });
 
     await waitFor(() => {
@@ -55,7 +55,7 @@ describe("useUserInvitationRevoke", () => {
     const { result } = renderHook(() => useUserInvitationRevoke());
 
     act(() => {
-      result.current.mutate({ params: { invitationId: "inv-1" } });
+      result.current.mutate({ invitationId: "inv-1" });
     });
 
     await waitFor(() => {
@@ -70,7 +70,7 @@ describe("useUserInvitationRevoke", () => {
     const { result } = renderHook(() => useUserInvitationRevoke());
 
     act(() => {
-      result.current.mutate({ params: { invitationId: "inv-1" } });
+      result.current.mutate({ invitationId: "inv-1" });
     });
 
     await waitFor(() => {

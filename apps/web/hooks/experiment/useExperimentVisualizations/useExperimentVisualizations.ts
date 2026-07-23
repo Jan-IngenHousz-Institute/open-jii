@@ -1,7 +1,8 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { ChartFamily } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentChartFamily } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 export const useExperimentVisualizations = ({
   experimentId,
@@ -10,28 +11,29 @@ export const useExperimentVisualizations = ({
   initialOffset = 0,
 }: {
   experimentId: string;
-  initialChartFamily?: ChartFamily | undefined;
+  initialChartFamily?: ExperimentChartFamily | undefined;
   initialLimit?: number;
   initialOffset?: number;
 }) => {
-  const [chartFamily, setChartFamily] = useState<ChartFamily | undefined>(initialChartFamily);
+  const [chartFamily, setChartFamily] = useState<ExperimentChartFamily | undefined>(
+    initialChartFamily,
+  );
   const [limit, setLimit] = useState<number>(initialLimit);
   const [offset, setOffset] = useState<number>(initialOffset);
 
-  const { data, isLoading, error } = tsr.experiments.listExperimentVisualizations.useQuery({
-    queryData: {
-      params: { id: experimentId },
-      query: {
+  const { data, isLoading, error } = useQuery(
+    orpc.experiments.listExperimentVisualizations.queryOptions({
+      input: {
+        id: experimentId,
         chartFamily,
         limit,
         offset,
       },
-    },
-    queryKey: ["experiment-visualizations", experimentId, chartFamily, limit, offset],
-  });
+    }),
+  );
 
   // Helper functions for pagination
-  const hasNextPage = data?.body.length === limit;
+  const hasNextPage = data?.length === limit;
   const hasPreviousPage = offset > 0;
 
   const nextPage = () => {

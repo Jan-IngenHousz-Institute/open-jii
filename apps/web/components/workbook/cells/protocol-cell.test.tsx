@@ -7,7 +7,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ProtocolCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
 import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
@@ -121,7 +121,7 @@ describe("ProtocolCellComponent", () => {
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
-    const link = screen.getByRole("link");
+    const link = screen.getByRole("link", { name: /open protocol in new tab/i });
     expect(link).toHaveAttribute("href", "/platform/protocols/p1");
   });
 
@@ -426,8 +426,11 @@ describe("ProtocolCellComponent", () => {
         <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
       );
 
-      await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
-      expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved");
+      // The indicator can render a tick after the editor mounts, so assert it
+      // eventually rather than synchronously.
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saved"),
+      );
     });
 
     it("shows the saving state immediately after a valid edit, before the debounce", async () => {
@@ -460,6 +463,9 @@ describe("ProtocolCellComponent", () => {
       await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
       await user.click(screen.getByTestId("simulate-change"));
 
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.saving"),
+      );
       await vi.advanceTimersByTimeAsync(1100);
       await waitFor(() => expect(updateSpy.called).toBe(true));
       await waitFor(() =>

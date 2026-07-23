@@ -1,13 +1,14 @@
 /**
- * `server.mount()` — concise per-test endpoint override.
+ * `server.mount()`: concise per-test endpoint override.
  *
  * A thin wrapper around `server.use(http[method](url, handler))` that:
- * - Derives the HTTP method & URL from a ts-rest contract endpoint
+ * - Derives the HTTP method & URL from an oRPC contract procedure
  * - Returns a {@link RequestSpy} for asserting on request details
  * - Picks sensible default status codes (200/201/204) per method
  *
- * No factory knowledge — tests provide the exact body they want.
+ * No factory knowledge; tests provide the exact body they want.
  */
+import type { AnyContractProcedure } from "@orpc/contract";
 import { http, HttpResponse, delay as mswDelay } from "msw";
 import type { SetupServer } from "msw/node";
 
@@ -15,34 +16,24 @@ export const API_URL = "http://localhost:3020";
 
 // ── Types ───────────────────────────────────────────────────────
 
-/** Minimal shape of a ts-rest contract endpoint with typed responses. */
-export interface ContractEndpoint {
-  method: string;
-  path: string;
-  responses: Record<number, unknown>;
-}
-
-/** Resolve a ts-rest response schema to its inferred output type. */
-type InferBody<T> = T extends { _output: infer O } ? O : T extends null ? null : unknown;
-
-/** Status codes defined in an endpoint's responses. */
-type StatusOf<T extends ContractEndpoint> = Extract<keyof T["responses"], number>;
-
-/** Union of all possible body types for an endpoint's responses. */
-type AnyBody<T extends ContractEndpoint> = {
-  [S in StatusOf<T>]: InferBody<T["responses"][S]>;
-}[StatusOf<T>];
-
-/** Type-safe mount function - infers status codes and body types from the contract. */
-export type MountFn = <T extends ContractEndpoint>(
+/**
+ * Mount function keyed off an oRPC contract procedure (method/path/status come
+ * from `procedure["~orpc"].route`). `body` is intentionally `unknown`: many
+ * tests respond with error envelopes or partial fixtures that don't match the
+ * procedure's success output schema, so the contract output type isn't a useful
+ * constraint here.
+ */
+export type MountFn = <T extends AnyContractProcedure>(
   endpoint: T,
   options?: {
-    /** HTTP status - contract-defined codes + 500. */
-    status?: StatusOf<T> | 500;
+    /** HTTP status. Defaults to the procedure's `successStatus`. */
+    status?: number;
     /** JSON response body. */
-    body?: AnyBody<T>;
+    body?: unknown;
     /** Artificial delay in ms (or "infinite" to hang forever). */
     delay?: number | "infinite";
+    /** Hold the response until this promise resolves (deterministic in-flight windows). */
+    unblock?: Promise<unknown>;
   },
 ) => RequestSpy;
 
@@ -83,6 +74,17 @@ export interface RequestSpy {
 
 type HttpMethod = "get" | "post" | "patch" | "put" | "delete";
 
+/** Runtime view of the route metadata an oRPC contract procedure carries. */
+interface RouteCarrier {
+  "~orpc": {
+    route: {
+      method?: string;
+      path?: string;
+      successStatus?: number;
+    };
+  };
+}
+
 function statusForMethod(method: HttpMethod): number {
   if (method === "post") return 201;
   if (method === "delete") return 204;
@@ -95,11 +97,19 @@ function statusForMethod(method: HttpMethod): number {
  */
 export function createMount(server: SetupServer): MountFn {
   function mount(
-    endpoint: ContractEndpoint,
-    options: { body?: unknown; status?: number; delay?: number | "infinite" } = {},
+    endpoint: RouteCarrier,
+    options: {
+      body?: unknown;
+      status?: number;
+      delay?: number | "infinite";
+      unblock?: Promise<unknown>;
+    } = {},
   ): RequestSpy {
-    const method = endpoint.method.toLowerCase() as HttpMethod;
-    const url = `${API_URL}${endpoint.path}`;
+    const route = endpoint["~orpc"].route;
+    const method = (route.method ?? "GET").toLowerCase() as HttpMethod;
+    // oRPC paths use `{param}`; MSW expects `:param`.
+    const path = (route.path ?? "").replace(/\{(\w+)\}/g, ":$1");
+    const url = `${API_URL}${path}`;
 
     const spy: RequestSpy = {
       called: false,
@@ -152,9 +162,10 @@ export function createMount(server: SetupServer): MountFn {
 
       // ── Delay ───────────────────────────────────────────────
       if (options.delay) await mswDelay(options.delay);
+      if (options.unblock) await options.unblock;
 
       // ── Response ────────────────────────────────────────────
-      const status = options.status ?? statusForMethod(method);
+      const status = options.status ?? route.successStatus ?? statusForMethod(method);
 
       if (status === 204) return new HttpResponse(null, { status });
       if (status >= 400) return HttpResponse.json(options.body ?? { message: "Error" }, { status });

@@ -3,13 +3,19 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "node": "24.18.0",
+      "pnpm": "11.15.0"
+    },
     "preview": {
+      "extends": "base",
       "channel": "preview",
       "android": {
         "buildType": "apk"
       }
     },
     "internal": {
+      "extends": "base",
       "channel": "internal",
       "autoIncrement": true,
       "android": {
@@ -17,6 +23,7 @@
       }
     },
     "beta": {
+      "extends": "base",
       "channel": "beta",
       "autoIncrement": true,
       "android": {
@@ -24,6 +31,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "channel": "production",
       "autoIncrement": true,
       "android": {

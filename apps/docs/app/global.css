@@ -1,0 +1,52 @@
+@import url("https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;700;800;900&family=Poppins:wght@600;700&display=swap");
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";
+
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+@source "../node_modules/fumadocs-openapi/dist/**/*.js";
+
+@theme {
+  --color-jii-teal: #005e5e;
+  --color-jii-green: #49e06d;
+  --font-sans: "Overpass", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Poppins", "Overpass", sans-serif;
+}
+
+/* JII brand tokens mapped onto Fumadocs theme variables. */
+:root {
+  --color-fd-primary: #005e5e;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-ring: #005e5e;
+}
+
+.dark {
+  --color-fd-primary: #49e06d;
+  --color-fd-primary-foreground: #04231a;
+  --color-fd-ring: #49e06d;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+/* Keep portrait mobile captures readable without letting them fill the page. */
+img[src^="/img/mobile/"] {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(680px, 72vh);
+  height: auto;
+  margin-inline: auto;
+  object-fit: contain;
+}

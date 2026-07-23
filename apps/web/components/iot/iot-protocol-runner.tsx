@@ -2,13 +2,14 @@
 
 import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { protocolRequiresInteraction } from "@repo/iot";
+import { DEVICE_TRANSPORT_SUPPORT, protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -42,9 +43,15 @@ export function IotProtocolRunner({
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
 
+  // A Bluetooth Classic-only device is BLE-incapable, so Web Bluetooth cannot
+  // reach it and the user must be directed to USB/serial. This is derived from
+  // the IoT transport capability flags, not a hard-coded family.
+  const transportCaps = DEVICE_TRANSPORT_SUPPORT[sensorFamilyToDeviceType(sensorFamily)];
+  const bluetoothClassicOnly = transportCaps.supportsBluetoothClassic && !transportCaps.supportsBLE;
+
   // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
-  // instrument's prompts rather than assuming it hung. See OJD-1643.
+  // device's prompts rather than assuming it hung. See OJD-1643.
   const requiresInteraction = protocolRequiresInteraction(protocolCode);
 
   // Auto-select the first supported connection type
@@ -123,6 +130,7 @@ export function IotProtocolRunner({
               connectionType={connectionType}
               onConnectionTypeChange={setConnectionType}
               browserSupport={browserSupport}
+              bluetoothClassicOnly={bluetoothClassicOnly}
             />
           )}
 
@@ -133,6 +141,7 @@ export function IotProtocolRunner({
             error={error}
             deviceInfo={deviceInfo}
             connectionType={connectionType}
+            sensorFamily={sensorFamily}
             onConnect={connect}
             onDisconnect={disconnect}
           />
@@ -162,7 +171,7 @@ export function IotProtocolRunner({
 
           {/* Interactive protocols pause for the user to open/close the clamp.
               The device gives no signal while it waits, so prompt the user to
-              follow the instrument rather than assume the run stalled. */}
+              follow the device rather than assume the run stalled. */}
           {isConnected && requiresInteraction && (
             <div className="bg-muted text-foreground flex items-start gap-2 rounded-lg p-3">
               <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />

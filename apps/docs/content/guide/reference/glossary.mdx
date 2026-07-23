@@ -1,0 +1,135 @@
+---
+title: "Glossary"
+description: "Canonical openJII terms for experiments, hardware, workflows, and data."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+### Admin
+
+An experiment collaborator who can manage settings, members, visibility,
+workbooks, data uploads, analysis configuration, and archiving. **Admin** and
+**member** are the only experiment roles; there is no Viewer role.
+
+### Ambyte
+
+The MQTT gateway and ingestion family for autonomous sensors. Its enum/API value
+is `ambyte`. Ambyte ingestion and IoT registration exist; mobile local connection
+and device monitoring are not the current workflow. Web protocol testing can run
+the `ambyte` family through the generic device driver over BLE or USB/serial as a
+compatibility path; a dedicated Ambyte BLE integration is planned, not built.
+Legacy `ambyte` rows are not provenance-clean: migration `0037` remapped existing
+`ambit` rows to `ambyte` before migration `0038` re-added `ambit`, so some stored
+`ambyte` data was captured by an Ambit. openJII records this and does not rewrite
+historical rows.
+
+### Ambit
+
+A leaf measurement device in the `ambit` family, distinct from the Ambyte
+gateway. The web workbook host can identify it over USB serial and send direct
+command cells for calibration or spot readings. Full Ambit measurements run
+through its Ambyte gateway rather than a direct protocol cell.
+
+### Bronze, Silver, Gold
+
+Responsibilities in the medallion data pipeline. Bronze keeps source records
+close to ingestion, Silver validates and standardizes them, and Gold presents
+analysis-oriented tables or aggregates. They are pipeline terms, not researcher
+access levels.
+
+### Dashboard
+
+A saved experiment layout that can combine visualizations, tables, filters, and
+explanatory content for repeated viewing.
+
+### Data table / dataset
+
+A named, processed collection of experiment rows displayed as a tab in **Data**.
+Exports are created for one table at a time.
+
+### Device
+
+In researcher-facing copy, handheld hardware requiring regular human operation,
+such as a MultispeQ. Some technical interfaces use “device” more broadly for
+registered IoT hardware.
+
+### Embargo
+
+A temporary period during which an experiment remains private. The end date must
+be no more than 365 days away; an automated daily job publishes expired
+embargoes.
+
+### Experiment
+
+The main research container for collaborators, locations, metadata, a pinned
+workbook version, measurement data, visualizations, dashboards, and access
+settings. The create form has no species field; species belongs in metadata.
+
+### FAIR
+
+Principles for making digital research outputs Findable, Accessible,
+Interoperable, and Reusable. FAIR does not mean that every dataset must be fully
+open, and public visibility alone does not establish FAIR compliance.
+
+### Macro
+
+Code used by a workbook to transform or analyze a protocol result. In the mobile
+flow, macro output is reviewed with each device's measurement before acceptance.
+
+### Measurement
+
+One timestamped result associated with an experiment and protocol, optionally
+including question answers, annotations, macro output, device identity,
+latitude and longitude, and a multi-device workbook-run ID.
+
+### Member
+
+An experiment collaborator who can participate in the research workflow but
+does not have the admin-only management controls.
+
+### Metadata
+
+Structured context that explains how to interpret measurements: subject or
+sample identity, species, genotype, treatment, location, conditions, units, and
+other non-measurement variables relevant to the study.
+
+### MultispeQ
+
+Handheld hardware used for protocol-guided optical measurements. The mobile app
+connects over Bluetooth or USB; multi-device mobile work uses wired USB.
+
+### Protocol
+
+A machine-readable measurement recipe for one sensor family. It contains device
+steps and parameters. If you need to change someone else's protocol, fork it
+into an editable copy instead of overwriting the original.
+
+### Provenance
+
+The record of where data came from and what happened to it: experiment, device,
+contributor, protocol, workbook version, timestamp, source system, transformations,
+annotations, and export or migration context.
+
+### Sensor
+
+In researcher-facing copy, autonomous hardware that records observations over
+time with little interaction after setup. In technical UI, **sensor family** is
+also the legacy shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic
+hardware; that technical field name does not make the Ambyte gateway a sensor.
+
+### Visibility
+
+Whether an experiment is public or private under embargo. New experiments
+default to public, and the interface treats a move to public as irreversible.
+
+### Visualization
+
+A saved chart configuration linked to an experiment dataset. Visualizations can
+be viewed on their own or placed on dashboards.
+
+### Workbook
+
+The versioned data-collection design used by an experiment. Cells can contain
+instructions, questions, protocols, device commands, macros, branches, markdown,
+and outputs. An experiment pins a published workbook version so later draft
+edits do not silently change its field flow.

@@ -80,7 +80,7 @@ resource "aws_lambda_function" "metrics_publisher" {
   function_name    = "${var.environment}-metrics-publisher"
   role             = aws_iam_role.metrics_publisher.arn
   handler          = "index.handler"
-  runtime          = "nodejs22.x"
+  runtime          = "nodejs24.x"
   timeout          = 60
 
   vpc_config {

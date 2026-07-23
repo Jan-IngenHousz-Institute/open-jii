@@ -1,15 +1,21 @@
 "use client";
 
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
-import { tsr } from "@/lib/tsr";
+import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
 import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
+import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
+import { mockDevicesEnabled } from "~/lib/iot/mock-devices";
+import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
-import type { SensorFamily } from "@repo/api/schemas/protocol.schema";
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { useTranslation } from "@repo/i18n";
+import { getDeviceTransportSupport } from "@repo/iot";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,25 +39,26 @@ import {
 import { useIsMobile, useIsLgTablet, useIsTablet } from "@repo/ui/hooks/use-mobile";
 import { cn } from "@repo/ui/lib/utils";
 
-interface DeviceInfo {
-  device_name?: string;
-  device_battery?: number;
-  device_version?: string;
-  device_id?: string;
-}
-
 interface WorkbookHeaderProps {
   title: string;
   cells: WorkbookCell[];
   isConnected: boolean;
   isConnecting: boolean;
-  deviceInfo: DeviceInfo | null;
+  connectedDevices: {
+    id: string;
+    label: string;
+    family?: SensorFamily;
+    name?: string;
+    stableId?: string;
+    ordinal?: number;
+  }[];
   sensorFamily: SensorFamily;
   onSensorFamilyChange?: (family: SensorFamily) => void;
-  connectionType: "bluetooth" | "serial";
-  onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
+  connectionType: WorkbookConnectionType;
+  onConnectionTypeChange?: (type: WorkbookConnectionType) => void;
   onConnect: () => void;
   onDisconnect: () => void;
+  onDisconnectDevice?: (id: string) => void;
   isRunningAll: boolean;
   onRunAll: () => void;
   onStopExecution: () => void;
@@ -99,13 +106,14 @@ export function WorkbookHeader({
   cells,
   isConnected,
   isConnecting,
-  deviceInfo,
+  connectedDevices,
   sensorFamily,
   onSensorFamilyChange,
   connectionType,
   onConnectionTypeChange,
   onConnect,
   onDisconnect,
+  onDisconnectDevice,
   isRunningAll,
   onRunAll,
   onStopExecution,
@@ -115,14 +123,47 @@ export function WorkbookHeader({
   isSticky,
   readOnly = false,
 }: WorkbookHeaderProps) {
+  const { t } = useTranslation("iot");
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isLgTablet = useIsLgTablet();
   const compact = isMobile || isTablet || isLgTablet;
 
   const browserSupport = useIotBrowserSupport(sensorFamily);
+  const deviceTransportSupport = getDeviceTransportSupport(sensorFamilyToDeviceType(sensorFamily));
+  const bluetoothClassicOnly =
+    deviceTransportSupport.supportsBluetoothClassic && !deviceTransportSupport.supportsBLE;
+  const presentedDevices = connectedDevices.map((device) => {
+    const presentation = presentDevice({
+      name: device.name ?? (device.family ? undefined : device.label),
+      family: device.family,
+      id: device.stableId,
+    });
+    const primary = resolveDevicePrimaryLabel(presentation, t);
+    const ordinal = device.ordinal != null ? `Device #${device.ordinal}` : null;
+    const identitySecondary =
+      presentation.id ?? ordinal ?? (device.label !== primary ? device.label : null);
+    const secondaryParts = [
+      presentation.provenance === "name" ? presentation.productName : null,
+      identitySecondary,
+    ]
+      .filter((value): value is string => value != null && value !== primary)
+      .filter((value, index, values) => values.indexOf(value) === index);
+    const secondary = secondaryParts.length > 0 ? secondaryParts.join(" · ") : null;
+    return { ...device, primary, secondary };
+  });
+  // Resolved after mount: depends on window.location, so rendering it on the
+  // server would cause a hydration mismatch.
+  const [showMockDevices, setShowMockDevices] = useState(false);
+  useEffect(() => {
+    setShowMockDevices(mockDevicesEnabled());
+  }, []);
   const transportSupported =
-    connectionType === "serial" ? browserSupport.serial : browserSupport.bluetooth;
+    connectionType === "mock"
+      ? true
+      : connectionType === "serial"
+        ? browserSupport.serial
+        : browserSupport.bluetooth;
   const transportTooltip = transportSupported
     ? null
     : connectionType === "serial"
@@ -131,7 +172,9 @@ export function WorkbookHeader({
         : "This device does not support serial."
       : browserSupport.bluetoothReason === "browser"
         ? "Your browser does not support Web Bluetooth. Use Chrome or Edge."
-        : "This device does not support Bluetooth.";
+        : bluetoothClassicOnly
+          ? "This device uses Bluetooth Classic, which Web Bluetooth cannot access. Connect over USB/serial instead."
+          : "This device does not support Bluetooth Low Energy (BLE).";
 
   const handleExportJSON = useCallback(() => {
     const workbook = {
@@ -156,13 +199,15 @@ export function WorkbookHeader({
     if (protocolCells.length === 0) return;
 
     for (const cell of protocolCells) {
-      const result = await tsr.protocols.getProtocol.query({
-        params: { id: cell.payload.protocolId },
-      });
-      if (result.status !== 200) continue;
-      const { name, code } = result.body;
-      const filename = `${slugify(name)}.json`;
-      downloadFile(JSON.stringify(code, null, 2), filename, "application/json");
+      try {
+        const { name, code } = await orpcClient.protocols.getProtocol({
+          id: cell.payload.protocolId,
+        });
+        const filename = `${slugify(name)}.json`;
+        downloadFile(JSON.stringify(code, null, 2), filename, "application/json");
+      } catch {
+        continue;
+      }
     }
   }, [cells]);
 
@@ -173,21 +218,23 @@ export function WorkbookHeader({
     // Use the macro's display name, not the stored DB filename (which can be
     // a generic placeholder like seed_macro_e5664d67...).
     for (const cell of macroCells) {
-      const result = await tsr.macros.getMacro.query({
-        params: { id: cell.payload.macroId },
-      });
-      if (result.status !== 200) continue;
-      const { name, language, code } = result.body;
-      const decoded = (() => {
-        try {
-          return decodeBase64(code);
-        } catch {
-          return code;
-        }
-      })();
-      const filename = `${slugify(name)}${macroExtension(language)}`;
-      // octet-stream preserves the filename; text/plain forces .txt in some browsers.
-      downloadFile(decoded, filename, "application/octet-stream");
+      try {
+        const { name, language, code } = await orpcClient.macros.getMacro({
+          id: cell.payload.macroId,
+        });
+        const decoded = (() => {
+          try {
+            return decodeBase64(code);
+          } catch {
+            return code;
+          }
+        })();
+        const filename = `${slugify(name)}${macroExtension(language)}`;
+        // octet-stream preserves the filename; text/plain forces .txt in some browsers.
+        downloadFile(decoded, filename, "application/octet-stream");
+      } catch {
+        continue;
+      }
     }
   }, [cells]);
 
@@ -247,8 +294,8 @@ export function WorkbookHeader({
         {onConnectionTypeChange && (
           <Select
             value={connectionType}
-            onValueChange={(v) => onConnectionTypeChange(v as "bluetooth" | "serial")}
-            disabled={isConnected || isConnecting}
+            onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
+            disabled={isConnecting}
           >
             <SelectTrigger
               className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
@@ -257,10 +304,11 @@ export function WorkbookHeader({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="serial">Serial</SelectItem>
+              <SelectItem value="serial">USB/serial</SelectItem>
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
-                Bluetooth
+                Bluetooth Low Energy (BLE)
               </SelectItem>
+              {showMockDevices && <SelectItem value="mock">Mock</SelectItem>}
             </SelectContent>
           </Select>
         )}
@@ -281,11 +329,12 @@ export function WorkbookHeader({
                   ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
                   : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
               }
-              onClick={isConnected ? onDisconnect : onConnect}
-              disabled={isConnecting || (!isConnected && !transportSupported)}
+              onClick={onConnect}
+              disabled={isConnecting || !transportSupported}
+              data-testid="connect-device"
             >
               <Usb className="size-4" />
-              <span className="hidden xl:inline">{isConnected ? "Disconnect" : "Connect"}</span>
+              <span className="hidden xl:inline">{isConnected ? "Add device" : "Connect"}</span>
             </button>
           </TooltipTrigger>
           {transportTooltip && (
@@ -296,10 +345,10 @@ export function WorkbookHeader({
         </Tooltip>
       </TooltipProvider>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         <Circle
           className={cn(
-            "size-2",
+            "size-2 shrink-0",
             isConnected
               ? "fill-emerald-500 text-emerald-500"
               : isConnecting
@@ -307,20 +356,58 @@ export function WorkbookHeader({
                 : "fill-gray-300 text-gray-300",
           )}
         />
-        <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
-          {isConnecting
-            ? "Connecting..."
-            : isConnected
-              ? (deviceInfo?.device_name ?? "Connected")
-              : "Disconnected"}
-        </span>
+        {isConnected ? (
+          // One compact trigger regardless of device count; the dropdown
+          // lists every connected device with per-device disconnect.
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex min-w-0 items-center gap-1 text-[12px] leading-[18px] text-[#68737B] hover:text-[#011111] xl:text-[13px] xl:leading-[21px]"
+                data-testid="device-menu-trigger"
+              >
+                <span className="truncate">
+                  {presentedDevices.length > 1
+                    ? `${presentedDevices.length} devices`
+                    : (presentedDevices[0]?.primary ?? "Connected")}
+                </span>
+                {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
+                  <span className="hidden truncate text-[11px] text-[#68737B] xl:inline">
+                    · {presentedDevices[0].secondary}
+                  </span>
+                )}
+                <ChevronDown className="size-3 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {presentedDevices.map((device) => (
+                <DropdownMenuItem
+                  key={device.id}
+                  data-testid="device-menu-item"
+                  aria-label={`Disconnect ${device.primary}`}
+                  className="flex items-center justify-between gap-4"
+                  onSelect={() => onDisconnectDevice?.(device.id)}
+                >
+                  <span className="flex flex-col">
+                    <span>{device.primary}</span>
+                    {device.secondary && device.secondary !== device.primary && (
+                      <span className="text-[10px] text-[#68737B]">{device.secondary}</span>
+                    )}
+                  </span>
+                  <span className="text-[11px] text-[#68737B]">Disconnect</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem data-testid="disconnect-all" onSelect={onDisconnect}>
+                Disconnect all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
+            {isConnecting ? "Connecting..." : "Disconnected"}
+          </span>
+        )}
       </div>
-
-      {isConnected && deviceInfo?.device_version && (
-        <span className="hidden text-[13px] leading-[21px] text-[#68737B] xl:inline">
-          FW {deviceInfo.device_version}
-        </span>
-      )}
 
       <div className="flex-1" />
 

@@ -1,0 +1,55 @@
+// Managed by OpenTofu (infrastructure/modules/cloudfront). Do not edit by hand.
+// Viewer-request function for a static-export docs site on S3 + CloudFront:
+//   1. Legacy paths in the redirect map -> 301 to their new URL.
+//   2. The extensionless static-search index passes through unchanged.
+//   3. Clean (extensionless) page URLs -> the exported ".html" object.
+//   4. Everything else (assets, already-.html) passes through unchanged.
+// The redirect map is templated from apps/docs/redirects.json at plan time.
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+
+  // --- 1. Legacy redirect map -------------------------------------------
+  var redirects = ${redirect_map_json};
+
+  var key = uri;
+  if (key.length > 1 && key.charAt(key.length - 1) === "/") {
+    key = key.substring(0, key.length - 1);
+  }
+  if (redirects[key]) {
+    return {
+      statusCode: 301,
+      statusDescription: "Moved Permanently",
+      headers: { location: { value: redirects[key] } },
+    };
+  }
+
+  // --- 2. Extensionless static objects -----------------------------------
+  // Next exports a few real objects without a file extension: the Orama
+  // search index and the generated Open Graph image. They must bypass the
+  // clean-page rewrite below, which would otherwise request a ".html" that
+  // does not exist.
+  if (uri === "/api/search" || uri === "/opengraph-image") {
+    return request;
+  }
+
+  // --- 3. Clean-URL rewrite to static-export .html objects ---------------
+  // If the last path segment already has an extension it is a real asset
+  // (/_next/*, /img/*.png, *.html, *.txt, favicon.ico) -> leave untouched.
+  var lastSegment = uri.substring(uri.lastIndexOf("/") + 1);
+  if (lastSegment.indexOf(".") !== -1) {
+    return request;
+  }
+
+  // Next static export (trailingSlash: false) emits flat files: /guide.html,
+  // /guide/get-started.html, index.html at the root. Map clean URLs onto them.
+  if (uri === "/") {
+    request.uri = "/index.html";
+  } else if (uri.charAt(uri.length - 1) === "/") {
+    request.uri = uri.substring(0, uri.length - 1) + ".html";
+  } else {
+    request.uri = uri + ".html";
+  }
+
+  return request;
+}

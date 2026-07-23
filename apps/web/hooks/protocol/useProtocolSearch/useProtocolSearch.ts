@@ -1,6 +1,7 @@
-import type { Protocol } from "@repo/api/schemas/protocol.schema";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
-import { tsr } from "../../../lib/tsr";
+import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 
 /**
  * Hook to fetch a list of protocols with optional search functionality
@@ -15,15 +16,14 @@ interface useProtocolSearchResult {
 }
 
 export const useProtocolSearch = (search = ""): useProtocolSearchResult => {
-  const { data, isLoading, error } = tsr.protocols.listProtocols.useQuery({
-    queryData: {
-      query: { search: search || undefined },
-    },
-    queryKey: ["protocols", search],
-  });
+  const { data, isLoading, error } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: { search: search || undefined },
+    }),
+  );
 
   return {
-    protocols: data?.body,
+    protocols: data,
     isLoading: isLoading,
     error,
   };

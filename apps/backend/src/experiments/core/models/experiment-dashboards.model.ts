@@ -1,7 +1,10 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zDashboardLayout, zDashboardWidget } from "@repo/api/schemas/experiment.schema";
+import {
+  zExperimentDashboardLayout,
+  zExperimentDashboardWidget,
+} from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { experimentDashboards } from "@repo/database";
 
 // Override the JSONB columns with the typed Zod schemas so DTOs flow through
@@ -16,8 +19,8 @@ export const createExperimentDashboardSchema = createInsertSchema(experimentDash
     createdBy: true,
   })
   .extend({
-    layout: zDashboardLayout.partial().optional(),
-    widgets: z.array(zDashboardWidget).optional(),
+    layout: zExperimentDashboardLayout.partial().optional(),
+    widgets: z.array(zExperimentDashboardWidget).optional(),
   });
 
 export const updateExperimentDashboardSchema = createInsertSchema(experimentDashboards)
@@ -30,13 +33,13 @@ export const updateExperimentDashboardSchema = createInsertSchema(experimentDash
     createdBy: true,
   })
   .extend({
-    layout: zDashboardLayout.partial().optional(),
-    widgets: z.array(zDashboardWidget).optional(),
+    layout: zExperimentDashboardLayout.partial().optional(),
+    widgets: z.array(zExperimentDashboardWidget).optional(),
   });
 
 export const selectExperimentDashboardSchema = createSelectSchema(experimentDashboards).extend({
-  layout: zDashboardLayout,
-  widgets: z.array(zDashboardWidget),
+  layout: zExperimentDashboardLayout,
+  widgets: z.array(zExperimentDashboardWidget),
   createdByName: z.string().optional(),
 });
 

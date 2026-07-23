@@ -1,0 +1,100 @@
+---
+title: "Continuous sensors"
+description: "Stream autonomous sensor data over MQTT while distinguishing the Ambyte gateway from Ambit and MiniPAR measurement devices."
+---
+
+{/* verified: code@147e5cf48 2026-07-22 */}
+
+A continuous sensor records observations over time without a person starting
+each reading, unlike a handheld MultispeQ. Bringing that data into openJII is a
+**generic MQTT capability**: any autonomous device can publish measurements to
+the platform's IoT endpoint once it is registered and holds credentials.
+
+**Ambyte** is JII's own edge device built on exactly this capability: a field
+gateway that receives readings from autonomous sensors and measurement devices,
+such as the **Ambit**, and publishes their observations to the platform over
+MQTT. Ambit (`ambit`) and **MiniPAR** (`minipar`) are separate measurement-device
+families; MiniPAR is normally operated locally.
+
+## Register the device and issue credentials
+
+Registration and credentials are the same for any continuous sensor:
+
+1. Open **Devices** and register the device using its physical identifier.
+2. Issue device credentials (certificates) from the registered device's
+   **Credentials** tab.
+3. Install the credentials on the device or its gateway so it can authenticate
+   against the platform's MQTT endpoint.
+
+<Callout type="warn">
+  Device credentials include private key material that is shown once. Store it securely and never
+  paste it into an issue, screenshot, or shared document.
+</Callout>
+
+## Where the data goes
+
+A registered device publishes its measurements over MQTT; the platform routes
+them through the ingestion pipeline into the experiment's data tables. The topic
+structure, message schema, and connection details are developer material: see
+[Data ingestion](/developers/architecture/data-ingestion) in the Developers tab
+and the [MQTT API reference](/api/mqtt).
+
+<Callout type="info">
+  `ambyte` and `ambit` are distinct stored values today, but their history is not clean: database
+  migration `0037` remapped existing `ambit` rows to `ambyte`, and migration `0038` later re-added
+  `ambit`. A legacy `ambyte` row may therefore hold data captured by an Ambit. openJII records this
+  ambiguity and follows the current stored value; it does not rewrite historical rows.
+</Callout>
+
+## Bring in Ambyte data
+
+- Register the Ambyte from **Devices** and issue its credentials as above.
+- Upload an Ambyte folder to an experiment data table. The uploader expects an
+  `Ambyte_N/[1-4]/*.txt` folder layout and processes the data asynchronously.
+- View the resulting table after the processing pipeline has materialized it.
+
+## Connect Ambit or MiniPAR locally
+
+The web workbook host can identify Ambit and MiniPAR devices over USB serial and
+select the matching driver automatically. MiniPAR can run a protocol cell and
+return a measurement envelope. A direct Ambit session supports command cells for
+calibration and spot readings; it does not run protocol cells because full Ambit
+measurements go through the Ambyte gateway.
+
+If the family selected in the workbook toolbar differs from the identification
+handshake, the host shows a mismatch notice and uses the identified family.
+
+The web host connects local devices through the browser: **USB/serial** over Web
+Serial, and **Bluetooth Low Energy (BLE)** over Web Bluetooth. Browsers cannot
+reach Bluetooth Classic (BR/EDR), so a Bluetooth-Classic device such as a
+MultispeQ connects over USB/serial on the web rather than over the browser's
+Bluetooth.
+
+## Ambyte support by surface
+
+Ambyte behaves differently in three separate contexts; keep them distinct:
+
+- **Web protocol testing** routes the `ambyte` family through the generic device
+  driver, which offers the browser's BLE and USB/serial channels. This is a
+  compatibility path for exercising a protocol, not a dedicated Ambyte
+  integration.
+- **Mobile local connection and execution** has no Ambyte path. The mobile app
+  cannot connect to an Ambyte for measurement.
+- A **product-specific Ambyte BLE integration** is planned but not yet built. Do
+  not read the generic web route above as that dedicated support.
+
+## Current limits
+
+For its normal workflow, Ambyte is an MQTT and folder-ingestion family rather
+than a monitored, locally connected workbook device. The registered-device
+**Monitoring** and **Onboarding** tabs are marked **Coming Soon**. Do not plan a
+field workflow around a live monitoring dashboard until that workflow has been
+confirmed on the deployed platform.
+
+{/* NEEDS-LIVE-CHECK: register a production-equivalent Ambyte, ingest a representative folder, record processing latency, and confirm which data table appears. */}
+![A populated Ambyte experiment data table after ingestion](/img/guide/web/ambyte-data.png)
+
+{/* MEDIA-PARTIAL: the authenticated non-mutating pass verified the populated Ambyte table. It intentionally omits device credentials and Coming Soon monitoring or onboarding panels. */}
+
+For analysis after ingestion, continue with
+[Viewing your data](/guide/data-analysis/viewing-data).

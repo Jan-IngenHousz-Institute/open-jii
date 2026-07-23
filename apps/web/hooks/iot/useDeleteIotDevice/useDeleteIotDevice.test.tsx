@@ -14,7 +14,7 @@ describe("useDeleteIotDevice", () => {
     const { result } = renderHook(() => useDeleteIotDevice({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "dev-9" } });
+      result.current.mutate({ deviceId: "dev-9" });
     });
 
     await waitFor(() => {
@@ -29,7 +29,7 @@ describe("useDeleteIotDevice", () => {
     const { result } = renderHook(() => useDeleteIotDevice());
 
     act(() => {
-      result.current.mutate({ params: { deviceId: "missing" } });
+      result.current.mutate({ deviceId: "missing" });
     });
 
     await waitFor(() => {

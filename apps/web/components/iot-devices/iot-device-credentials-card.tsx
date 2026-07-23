@@ -6,7 +6,7 @@ import { useRotateIotCredentials } from "@/hooks/iot/useRotateIotCredentials/use
 import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { useState } from "react";
 
-import type { IotDevice, IssueIotCredentialsResponse } from "@repo/api/schemas/iot.schema";
+import type { IotDevice, IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -48,13 +48,11 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
   const onIssueError = () =>
     toast({ title: t("iot.devices.credentials.issueError"), variant: "destructive" });
 
-  const handleIssue = () =>
-    issue({ params: { deviceId: device.id }, body: {} }, { onError: onIssueError });
-  const handleRotate = () =>
-    rotate({ params: { deviceId: device.id }, body: {} }, { onError: onIssueError });
+  const handleIssue = () => issue({ deviceId: device.id }, { onError: onIssueError });
+  const handleRotate = () => rotate({ deviceId: device.id }, { onError: onIssueError });
   const handleRevoke = () =>
     revoke(
-      { params: { deviceId: device.id } },
+      { deviceId: device.id },
       {
         onError: () =>
           toast({ title: t("iot.devices.credentials.revokeError"), variant: "destructive" }),

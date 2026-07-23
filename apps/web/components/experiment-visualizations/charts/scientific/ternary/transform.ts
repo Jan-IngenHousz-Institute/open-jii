@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { TernarySeriesData } from "@repo/ui/components/charts/ternary";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -23,7 +23,7 @@ interface TernaryPoint {
 /** Pure data transform for the ternary chart: pulls (a, b, c) tuples and optionally splits into one trace per categorical-color value. */
 export function transformTernaryData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): TernaryTransformResult {
   const aColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;

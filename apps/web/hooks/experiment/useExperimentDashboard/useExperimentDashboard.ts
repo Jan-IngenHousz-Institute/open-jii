@@ -1,10 +1,10 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 export const useExperimentDashboard = (dashboardId: string, experimentId: string) => {
-  return tsr.experiments.getExperimentDashboard.useQuery({
-    queryData: {
-      params: { id: experimentId, dashboardId },
-    },
-    queryKey: ["experiment-dashboard", experimentId, dashboardId],
-  });
+  return useQuery(
+    orpc.experiments.getExperimentDashboard.queryOptions({
+      input: { id: experimentId, dashboardId },
+    }),
+  );
 };

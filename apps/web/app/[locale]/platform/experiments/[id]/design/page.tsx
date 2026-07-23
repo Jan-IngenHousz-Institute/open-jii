@@ -23,8 +23,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useMemo } from "react";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import { cellsToFlowGraph } from "@repo/api/utils/cells-to-flow";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
@@ -52,8 +52,8 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: session } = useSession();
   const { t } = useTranslation("experiments");
 
-  const experimentData = experiment?.body;
-  const hasAccess = accessData?.body.isAdmin ?? false;
+  const experimentData = experiment;
+  const hasAccess = accessData?.isAdmin ?? false;
   const workbookId = experimentData?.workbookId;
   const workbookVersionId = experimentData?.workbookVersionId;
 
@@ -78,7 +78,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   // Each autosave re-pins the experiment to the latest version (OJD-1626).
   const upgradeVersion = useUpgradeWorkbookVersion(id);
   const handleDraftSaved = useCallback(() => {
-    upgradeVersion.mutate({ params: { id } });
+    upgradeVersion.mutate({ id });
   }, [id, upgradeVersion]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
@@ -121,7 +121,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     return <ErrorDisplay error={error ?? accessError} title={t("failedToLoad")} />;
   }
 
-  if (!experimentData || !accessData?.body.experiment) {
+  if (!experimentData || !accessData?.experiment) {
     return <div>{t("notFound")}</div>;
   }
 
@@ -170,18 +170,16 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         />
 
         <NavTabs defaultValue="list">
-          <div className="border-border border-b">
-            <NavTabsList>
-              <NavTabsTrigger value="list">
-                <List className="h-4 w-4" />
-                {t("flow.viewList")}
-              </NavTabsTrigger>
-              <NavTabsTrigger value="graph">
-                <GitBranch className="h-4 w-4" />
-                {t("flow.viewGraph")}
-              </NavTabsTrigger>
-            </NavTabsList>
-          </div>
+          <NavTabsList>
+            <NavTabsTrigger value="list">
+              <List className="h-4 w-4" />
+              {t("flow.viewList")}
+            </NavTabsTrigger>
+            <NavTabsTrigger value="graph">
+              <GitBranch className="h-4 w-4" />
+              {t("flow.viewGraph")}
+            </NavTabsTrigger>
+          </NavTabsList>
 
           <NavTabsContent value="list" className="mt-6">
             {canEdit ? (

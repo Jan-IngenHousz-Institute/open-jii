@@ -26,7 +26,7 @@ describe("useProtocol", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject({
+    expect(result.current.data).toMatchObject({
       id: "protocol-123",
       name: protocol.name,
     });
@@ -43,7 +43,7 @@ describe("useProtocol", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("uses different query keys per protocol ID", async () => {

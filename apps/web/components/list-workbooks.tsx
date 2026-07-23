@@ -36,7 +36,7 @@ export function ListWorkbooks() {
   const [newName, setNewName] = useState("");
   const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
     onSuccess: (data) => {
-      router.push(`/${locale}/platform/workbooks/${data.body.id}`);
+      router.push(`/${locale}/platform/workbooks/${data.id}`);
     },
   });
 
@@ -44,7 +44,7 @@ export function ListWorkbooks() {
     if (isCreating) return;
     const name = newName.trim();
     if (!name) return;
-    createWorkbook({ body: { name } });
+    createWorkbook({ name });
   };
 
   return (
@@ -83,7 +83,7 @@ export function ListWorkbooks() {
         </div>
       </div>
 
-      <WorkbookList workbooks={workbooks} isLoading={isLoading} />
+      <WorkbookList workbooks={workbooks} isLoading={isLoading} showEmptyHelp={!search} />
 
       <Dialog
         open={createOpen}

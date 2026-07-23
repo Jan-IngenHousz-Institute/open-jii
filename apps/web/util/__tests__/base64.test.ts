@@ -59,17 +59,62 @@ return output`;
       expect(result).toBe("");
     });
 
-    it("should handle encoding errors gracefully", () => {
+    it("should fall back to empty string when the underlying btoa throws", () => {
       const originalBtoa = global.btoa;
       global.btoa = vi.fn(() => {
         throw new Error("Encoding failed");
       });
 
-      const result = encodeBase64("test content");
+      try {
+        expect(encodeBase64("test content")).toBe("");
+      } finally {
+        global.btoa = originalBtoa;
+      }
+    });
+  });
 
-      expect(result).toBe("");
+  // Regression: macros containing any non-Latin1 character used to be silently
+  // saved as "" because `btoa` throws outside Latin1 and the catch swallowed it.
+  // These are exactly the characters that arrive when a long macro is pasted
+  // from a doc/PDF/web page (curly quotes, Greek symbols, arrows, emoji, CJK).
+  describe("unicode round-trips", () => {
+    const samples: [string, string][] = [
+      ["curly quotes", "print(“hello”)"],
+      ["greek mu + superscripts", "flux = 1.0  # μmol·m⁻²·s⁻¹"],
+      ["arrow", "a → b"],
+      ["emoji", "rocket = 1  # \u{1F680}"],
+      ["CJK", "変数 = 42"],
+      ["degree (latin1)", "temp = 25°C"],
+    ];
 
-      global.btoa = originalBtoa;
+    it.each(samples)("encodes and decodes %s losslessly", (_label, code) => {
+      const encoded = encodeBase64(code);
+
+      expect(encoded).not.toBe("");
+      expect(decodeBase64(encoded)).toBe(code);
+    });
+  });
+
+  describe("long content", () => {
+    it("round-trips a large macro with unicode without truncation or stack overflow", () => {
+      const code = "# π\n" + "output = compute()  # → value\n".repeat(20000);
+
+      const encoded = encodeBase64(code);
+
+      expect(encoded).not.toBe("");
+      expect(decodeBase64(encoded)).toBe(code);
+    });
+  });
+
+  describe("backward compatibility with the old Latin1 btoa path", () => {
+    it("decodes ASCII content saved before the fix", () => {
+      expect(decodeBase64(btoa("output = {}"))).toBe("output = {}");
+    });
+
+    it("decodes Latin1 content saved before the fix", () => {
+      // The old path stored `°` as the single byte 0xB0; the decoder must still
+      // recover it rather than mojibake or error.
+      expect(decodeBase64(btoa("temp = 25°C"))).toBe("temp = 25°C");
     });
   });
 });

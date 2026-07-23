@@ -245,6 +245,29 @@ describe("MultispeqDriver", () => {
     });
   });
 
+  describe("getDeviceIdentity", () => {
+    it("falls back to battery and hello on firmware without device_info", async () => {
+      driver.initialize(transport);
+      vi.mocked(transport.send).mockImplementation((payload: string) => {
+        const command = payload.trim();
+        const reply =
+          command === "device_info"
+            ? "BAD COMMAND\n"
+            : command === "battery"
+              ? "battery:77\n"
+              : "Legacy MultispeQ\n";
+        setTimeout(() => transport.simulateData(reply), 0);
+        return Promise.resolve();
+      });
+
+      await expect(driver.getDeviceIdentity()).resolves.toMatchObject({
+        family: "multispeq",
+        name: "Legacy MultispeQ",
+        batteryPercent: 77,
+      });
+    });
+  });
+
   describe("destroy", () => {
     it("should clean up emitter and buffer", async () => {
       driver.initialize(transport);

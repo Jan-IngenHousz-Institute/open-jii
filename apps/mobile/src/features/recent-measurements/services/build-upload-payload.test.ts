@@ -98,6 +98,21 @@ describe("buildUploadPayload payload construction", () => {
     expect("_sample_encoding" in payload).toBe(false);
   });
 
+  it("serializes workbook version and device-scoped macro context", () => {
+    const macroContext = { measurement: { phi2: 0.8 }, $device: { id: "device-1" } };
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [{ phi2: 0.8 }] },
+      workbookVersionId: "version-1",
+      macroContext,
+    });
+
+    expect(payload).toMatchObject({
+      workbook_version_id: "version-1",
+      macro_context: JSON.stringify(macroContext),
+    });
+  });
+
   it("null sample survives untouched: no injection, no compression, no marker", () => {
     const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: { sample: null } });
 
@@ -216,5 +231,91 @@ describe("input purity", () => {
     expect(sampleArray[0]).toStrictEqual({ v: 1 });
     expect(payload.sample).not.toBe(rawMeasurement.sample);
     expect(Object.keys(rawMeasurement)).toStrictEqual(["device_id", "sample"]);
+  });
+});
+
+describe("workbook run correlation", () => {
+  it("stamps workbook_run_id when given, alongside sample compression", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001", sample: [{ data_raw: [1, 2] }] },
+      workbookRunId: "run-1",
+    });
+
+    expect(payload.workbook_run_id).toBe("run-1");
+    expect(payload._sample_encoding).toBe("gzip+base64");
+    expect(typeof payload.sample).toBe("string");
+  });
+
+  it("omits workbook_run_id when not linked to a round", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+    });
+
+    expect(payload).not.toHaveProperty("workbook_run_id");
+  });
+
+  it("falls back to the local device id only when the firmware did not supply one", () => {
+    const withFirmwareId = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      fallbackDeviceId: "42",
+    });
+    expect(withFirmwareId.device_id).toBe("MSPx-0001");
+
+    const withoutFirmwareId = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceId: "42",
+    });
+    expect(withoutFirmwareId.device_id).toBe("42");
+
+    const withNeither = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+    });
+    expect(withNeither).not.toHaveProperty("device_id");
+  });
+});
+
+describe("measurement location", () => {
+  it("stamps latitude/longitude when a location is given", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      location: { latitude: 52.0907, longitude: 5.1214 },
+    });
+
+    expect(payload.latitude).toBe(52.0907);
+    expect(payload.longitude).toBe(5.1214);
+  });
+
+  it("omits latitude/longitude when location is null or absent", () => {
+    const withNull = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      location: null,
+    });
+    expect(withNull).not.toHaveProperty("latitude");
+    expect(withNull).not.toHaveProperty("longitude");
+
+    const withAbsent = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+    });
+    expect(withAbsent).not.toHaveProperty("latitude");
+    expect(withAbsent).not.toHaveProperty("longitude");
+  });
+
+  it("wins over caller-supplied coordinates in rawMeasurement", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001", latitude: 1, longitude: 2 },
+      location: { latitude: 52.0907, longitude: 5.1214 },
+    });
+
+    expect(payload.latitude).toBe(52.0907);
+    expect(payload.longitude).toBe(5.1214);
   });
 });

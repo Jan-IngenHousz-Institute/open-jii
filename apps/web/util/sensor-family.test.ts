@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
+import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import {
   SENSOR_FAMILY_OPTIONS,
@@ -38,10 +38,11 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
     expect(ambyte?.disabled).toBe(true);
   });
 
-  it("should mark minipar as disabled", () => {
+  it("should mark minipar and ambit as enabled (locally connectable)", () => {
     const minipar = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "minipar");
-    expect(minipar).toBeDefined();
-    expect(minipar?.disabled).toBe(true);
+    const ambit = SENSOR_FAMILY_OPTIONS.find((o) => o.value === "ambit");
+    expect(minipar?.disabled).toBe(false);
+    expect(ambit?.disabled).toBe(false);
   });
 
   it("should mark generic as enabled", () => {
@@ -96,8 +97,9 @@ describe("getSensorFamilyBadgeColor", () => {
     expect(getSensorFamilyBadgeColor("ambyte")).toBe("bg-badge-active");
   });
 
-  it("should fall back to the archived badge for any other family", () => {
+  it("gives minipar and ambit their own badges, archived for the rest", () => {
     expect(getSensorFamilyBadgeColor("generic")).toBe("bg-badge-archived");
-    expect(getSensorFamilyBadgeColor("minipar")).toBe("bg-badge-archived");
+    expect(getSensorFamilyBadgeColor("minipar")).toBe("bg-badge-stale");
+    expect(getSensorFamilyBadgeColor("ambit")).toBe("bg-badge-active");
   });
 });

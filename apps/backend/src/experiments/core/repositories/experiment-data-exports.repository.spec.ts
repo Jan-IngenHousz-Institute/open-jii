@@ -164,6 +164,115 @@ describe("ExperimentDataExportsRepository", () => {
       expect(result.value[0].exportId).toBeNull();
       expect(result.value[1].status).toBe("completed");
       expect(result.value[1].exportId).toBe("completed-export-1");
+      expect(result.value[1].rowCount).toBe(1000);
+      expect(result.value[1].fileSize).toBe(50000);
+      expect(result.value[1].jobRunId).toBe(111);
+    });
+
+    it("should normalize raw Databricks numeric and timestamp cells", async () => {
+      const exportId = faker.string.uuid();
+      const mockSchemaData = {
+        columns: [
+          { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+          { name: "experiment_id", type_name: "string", type_text: "string", position: 1 },
+          { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+          { name: "format", type_name: "string", type_text: "string", position: 3 },
+          { name: "status", type_name: "string", type_text: "string", position: 4 },
+          { name: "file_path", type_name: "string", type_text: "string", position: 5 },
+          { name: "row_count", type_name: "bigint", type_text: "bigint", position: 6 },
+          { name: "file_size", type_name: "bigint", type_text: "bigint", position: 7 },
+          { name: "created_by", type_name: "string", type_text: "string", position: 8 },
+          { name: "created_at", type_name: "timestamp", type_text: "timestamp", position: 9 },
+          { name: "completed_at", type_name: "timestamp", type_text: "timestamp", position: 10 },
+          { name: "job_run_id", type_name: "bigint", type_text: "bigint", position: 11 },
+        ],
+        rows: [
+          [
+            exportId,
+            experimentId,
+            tableName,
+            "parquet",
+            "completed",
+            "/path/to/file.parquet",
+            "2500",
+            "1048576",
+            faker.string.uuid(),
+            "2026-07-18 09:55:01.123456",
+            "2026-07-18 09:59:55.892636",
+            "987654",
+          ],
+        ],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
+      vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success([]));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(success([]));
+
+      const result = await repository.listExports({ experimentId, tableName });
+
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({
+        exportId,
+        rowCount: 2500,
+        fileSize: 1048576,
+        createdAt: "2026-07-18T09:55:01.123456Z",
+        completedAt: "2026-07-18T09:59:55.892636Z",
+        jobRunId: 987654,
+      });
+    });
+
+    it("should map empty and invalid nullable integers to null", async () => {
+      const mockSchemaData = {
+        columns: [
+          { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+          { name: "experiment_id", type_name: "string", type_text: "string", position: 1 },
+          { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+          { name: "format", type_name: "string", type_text: "string", position: 3 },
+          { name: "status", type_name: "string", type_text: "string", position: 4 },
+          { name: "file_path", type_name: "string", type_text: "string", position: 5 },
+          { name: "row_count", type_name: "bigint", type_text: "bigint", position: 6 },
+          { name: "file_size", type_name: "bigint", type_text: "bigint", position: 7 },
+          { name: "created_by", type_name: "string", type_text: "string", position: 8 },
+          { name: "created_at", type_name: "timestamp", type_text: "timestamp", position: 9 },
+          { name: "completed_at", type_name: "timestamp", type_text: "timestamp", position: 10 },
+          { name: "job_run_id", type_name: "bigint", type_text: "bigint", position: 11 },
+        ],
+        rows: [
+          [
+            faker.string.uuid(),
+            experimentId,
+            tableName,
+            "csv",
+            "completed",
+            null,
+            "",
+            "12MB",
+            faker.string.uuid(),
+            "2026-07-18 09:55:01",
+            null,
+            null,
+          ],
+        ],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "getExportMetadata").mockResolvedValue(success(mockSchemaData));
+      vi.spyOn(databricksPort, "getActiveExports").mockResolvedValue(success([]));
+      vi.spyOn(databricksPort, "getFailedExports").mockResolvedValue(success([]));
+
+      const result = await repository.listExports({ experimentId, tableName });
+
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({
+        filePath: null,
+        rowCount: null,
+        fileSize: null,
+        completedAt: null,
+        jobRunId: null,
+      });
     });
 
     it("should return only completed exports when getActiveExports fails", async () => {

@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { useIotCommunication } from "./useIotCommunication";
+import { createDriver, useIotCommunication } from "./useIotCommunication";
 
 // Mock the IoT package
 vi.mock("@repo/iot", () => ({
@@ -27,6 +27,12 @@ vi.mock("@repo/iot", () => ({
       }),
       destroy: vi.fn().mockResolvedValue(undefined),
     };
+  }),
+  AmbitDriver: vi.fn(function () {
+    return { family: "ambit" };
+  }),
+  MiniParDriver: vi.fn(function () {
+    return { family: "minipar" };
   }),
   GENERIC_BLE_UUIDS: {
     SERVICE: "generic-service",
@@ -76,6 +82,13 @@ vi.mock("@repo/iot/transport/web", () => ({
 describe("useIotCommunication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("createDriver", () => {
+    it("constructs the dedicated Ambit and MiniPAR drivers", () => {
+      expect(createDriver("ambit")).toMatchObject({ family: "ambit" });
+      expect(createDriver("minipar")).toMatchObject({ family: "minipar" });
+    });
   });
 
   describe("initial state", () => {

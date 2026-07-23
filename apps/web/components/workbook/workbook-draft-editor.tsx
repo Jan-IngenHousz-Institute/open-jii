@@ -8,9 +8,9 @@ import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkboo
 import { useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import { zWorkbookCellArray } from "@repo/api/schemas/workbook-cells.schema";
-import type { QuestionCell, WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
-import type { Workbook } from "@repo/api/schemas/workbook.schema";
+import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -64,7 +64,7 @@ export function WorkbookDraftEditor({
   const save = useCallback(
     async (next: WorkbookCell[]) => {
       try {
-        await updateWorkbook({ params: { id }, body: { cells: next } });
+        await updateWorkbook({ id, cells: next });
       } catch (err) {
         const message = parseApiError(err)?.message;
         if (message) toast({ description: message, variant: "destructive" });
@@ -94,13 +94,14 @@ export function WorkbookDraftEditor({
   const {
     isConnected,
     isConnecting,
-    deviceInfo,
+    connectedDevices,
     sensorFamily,
     setSensorFamily,
     connectionType,
     setConnectionType,
     connect,
     disconnect,
+    disconnectDevice,
     executionStates,
     isRunningAll,
     runCell,
@@ -147,7 +148,7 @@ export function WorkbookDraftEditor({
       executionStates={executionStates}
       isConnected={isConnected}
       isConnecting={isConnecting}
-      deviceInfo={deviceInfo}
+      connectedDevices={connectedDevices}
       sensorFamily={sensorFamily}
       onSensorFamilyChange={setSensorFamily}
       connectionType={connectionType}
@@ -155,6 +156,7 @@ export function WorkbookDraftEditor({
       isRunningAll={isRunningAll}
       onConnect={connect}
       onDisconnect={disconnect}
+      onDisconnectDevice={disconnectDevice}
       onRunAll={runAll}
       onStopExecution={stopExecution}
       onClearOutputs={handleClearOutputs}

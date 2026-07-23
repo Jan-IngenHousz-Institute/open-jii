@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useWatch } from "react-hook-form";
 
-import { filterColumnsForRole } from "@repo/api/utils/visualization-contracts";
+import { filterColumnsForRole } from "@repo/api/domains/experiment/visualizations/experiment-visualization-role-rules";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 

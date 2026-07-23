@@ -5,8 +5,8 @@ Provides a pandas UDF that calls the backend's /api/v1/macros/execute-batch
 endpoint instead of running macros locally on Spark workers.
 
 The backend:
-  1. Groups items by macro_id
-  2. Fetches macro scripts from the database
+  1. Groups items by macro_id + workbook_version_id
+  2. Resolves immutable workbook snapshots (or live macros for legacy rows)
   3. Invokes the appropriate Lambda function (Python / JS / R)
   4. Returns results with output or error per item
 
@@ -15,21 +15,46 @@ ran unsandboxed code on Databricks workers.
 """
 
 import json
-from typing import Optional
+from typing import Any
 
 import pandas as pd
-from pyspark.sql.types import VariantVal
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StringType, StructField, StructType
 
 from .backend_client import BackendClient, BackendIntegrationError
 
+# VariantVal is only available on Databricks Runtime (DBR 15+) and PySpark 4+.
+# Import lazily inside the UDF so the module loads under vanilla PySpark 3.5
+# for local tests; the UDF only runs on Spark workers where it's available.
+try:
+    from pyspark.sql.types import VariantVal as _VariantVal
+except ImportError:  # pragma: no cover: exercised only on PyPI pyspark
+    _VariantVal = None  # type: ignore[assignment]
+
+
+def _is_scalar_na(value) -> bool:
+    """``True`` iff ``value`` is a scalar NA. Wraps the pandas check so pyright
+    sees a bool instead of the ndarray-or-bool union ``pd.isna`` declares."""
+    return bool(pd.api.types.is_scalar(value) and pd.isna(value))
+
+
+def _add_workbook_metadata(item: dict[str, Any], row) -> None:
+    """Attach optional deterministic workbook execution fields to an API item."""
+    workbook_version_id = row.get("workbook_version_id")
+    macro_context = row.get("macro_context")
+    if not _is_scalar_na(workbook_version_id):
+        item["workbook_version_id"] = str(workbook_version_id)
+    if not _is_scalar_na(macro_context):
+        item["context"] = macro_context
+
 
 # Schema returned by the pandas UDF
-MACRO_RESULT_SCHEMA = StructType([
-    StructField("result", StringType(), True),
-    StructField("error", StringType(), True),
-])
+MACRO_RESULT_SCHEMA = StructType(
+    [
+        StructField("result", StringType(), True),
+        StructField("error", StringType(), True),
+    ]
+)
 
 
 def make_execute_macro_udf(
@@ -37,7 +62,7 @@ def make_execute_macro_udf(
     dbutils,
     timeout: int = 30,
     max_batch_size: int = 25,
-    scope_override: Optional[str] = None,
+    scope_override: str | None = None,
 ):
     """
     Create a pandas UDF that executes macros via the backend batch API.
@@ -46,6 +71,8 @@ def make_execute_macro_udf(
       - id: row identifier (string)
       - macro_id: UUID of the macro to execute (string)
       - data: measurement data (VARIANT, string, or native object)
+      - workbook_version_id: immutable workbook snapshot UUID (optional)
+      - macro_context: upstream workbook namespace as JSON (optional)
 
     Returns a struct<result: string, error: string> where result is JSON.
 
@@ -76,11 +103,11 @@ def make_execute_macro_udf(
         Input DataFrame columns: id, macro_id, data
         Output DataFrame columns: result (JSON string | None), error (string | None)
         """
-        results = [None] * len(pdf)
-        errors = [None] * len(pdf)
+        results: list[str | None] = [None] * len(pdf)
+        errors: list[str | None] = [None] * len(pdf)
 
         # Build items list for the backend
-        items = []
+        items: list[dict[str, Any]] = []
         idx_map = []  # maps backend item index -> original DataFrame index
 
         for pos, (_, row) in enumerate(pdf.iterrows()):
@@ -88,23 +115,24 @@ def make_execute_macro_udf(
             macro_id = row.get("macro_id")
             data = row.get("data")
 
-            if (pd.api.types.is_scalar(macro_id) and pd.isna(macro_id)) or (
-                pd.api.types.is_scalar(data) and pd.isna(data)
-            ):
+            if _is_scalar_na(macro_id) or _is_scalar_na(data):
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
                 continue
 
-            # Send data as a JSON string
-            if isinstance(data, VariantVal):
-                data = data.toJson()
+            # Send data as a JSON string. VariantVal is only present on DBR/PySpark 4;
+            # check via the local alias which is None when unavailable.
+            if _VariantVal is not None and isinstance(data, _VariantVal):
+                data = data.toJson()  # pyright: ignore[reportOptionalMemberAccess]
             elif not isinstance(data, str):
                 data = json.dumps(data)
 
-            items.append({
+            item: dict[str, Any] = {
                 "id": str(row_id),
                 "macro_id": str(macro_id),
                 "data": data,
-            })
+            }
+            _add_workbook_metadata(item, row)
+            items.append(item)
             idx_map.append(pos)
 
         if not items:
@@ -112,7 +140,9 @@ def make_execute_macro_udf(
 
         # Reuse a single BackendClient (and its requests.Session) per worker
         if client_holder[0] is None:
-            client_holder[0] = BackendClient(base_url, api_key_id, webhook_secret, timeout=max(timeout + 10, 60))
+            client_holder[0] = BackendClient(
+                base_url, api_key_id, webhook_secret, timeout=max(timeout + 10, 60)
+            )
         client = client_holder[0]
 
         try:
@@ -124,7 +154,7 @@ def make_execute_macro_udf(
         except BackendIntegrationError as e:
             # Mark all items in this batch as failed
             for idx in idx_map:
-                errors[idx] = f"Backend API error: {str(e)}"
+                errors[idx] = f"Backend API error: {e!s}"
             return pd.DataFrame({"result": results, "error": errors})
 
         # Map results back by (id, macro_id) to handle multiple macros per row
@@ -140,7 +170,9 @@ def make_execute_macro_udf(
             if match is None:
                 errors[df_idx] = f"No result returned for item {item['id']}"
             elif match.get("success"):
-                results[df_idx] = json.dumps(match["output"]) if "output" in match and match["output"] is not None else None
+                results[df_idx] = (
+                    json.dumps(match["output"]) if "output" in match and match["output"] is not None else None
+                )
                 errors[df_idx] = None
             else:
                 results[df_idx] = None

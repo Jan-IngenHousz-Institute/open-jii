@@ -1,13 +1,11 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { macroContract } from "@repo/api/contracts/macro.contract";
-import { zMacroBatchExecutionRequestBody } from "@repo/api/schemas/macro.schema";
+import { macroContract } from "@repo/api/domains/macro/macro.contract";
 
 import { HmacGuard } from "../../common/guards/hmac.guard";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ExecuteMacroBatchUseCase } from "../application/use-cases/execute-macro-batch/execute-macro-batch";
 
 @Controller()
@@ -18,29 +16,10 @@ export class MacroWebhookController {
 
   constructor(private readonly executeMacroBatchUseCase: ExecuteMacroBatchUseCase) {}
 
-  @TsRestHandler(macroContract.executeMacroBatch)
+  @Implement(macroContract.executeMacroBatch)
   handleExecuteMacroBatch() {
-    return tsRestHandler(macroContract.executeMacroBatch, async ({ body }) => {
-      const parsed = zMacroBatchExecutionRequestBody.safeParse(body);
-
-      if (!parsed.success) {
-        this.logger.warn({
-          msg: "Invalid macro batch execution request",
-          operation: "executeMacroBatch",
-          errors: parsed.error.format(),
-        });
-
-        return {
-          status: StatusCodes.BAD_REQUEST as const,
-          body: {
-            error: "VALIDATION_ERROR",
-            message: "Invalid request body",
-            statusCode: StatusCodes.BAD_REQUEST,
-          },
-        };
-      }
-
-      const result = await this.executeMacroBatchUseCase.execute(parsed.data);
+    return implement(macroContract.executeMacroBatch).handler(async ({ input }) => {
+      const result = await this.executeMacroBatchUseCase.execute(input);
 
       if (result.isSuccess()) {
         this.logger.log({
@@ -51,14 +30,10 @@ export class MacroWebhookController {
           failureCount: result.value.results.filter((r) => !r.success).length,
           status: "success",
         });
-
-        return {
-          status: StatusCodes.OK as const,
-          body: result.value,
-        };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 }

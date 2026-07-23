@@ -1,14 +1,17 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { createDriverCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
-import { bluetoothClassicTransport } from "~/features/connection/services/multispeq-communication/transports/bluetooth-classic-transport";
-import { serialPortTransport } from "~/features/connection/services/multispeq-communication/transports/serial-port-transport";
+import type { DeviceCommandExecutor } from "~/features/connection/services/device-command-executor";
+import { createMockCommandExecutor } from "~/features/connection/services/multispeq/mock-device/create-mock-command-executor";
+import {
+  closeMockDevice,
+  openMockDevice,
+} from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
+import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
+import { createMultispeqCommandExecutor } from "~/features/connection/services/multispeq/multispeq-command-executor";
+import { bluetoothClassicTransport } from "~/features/connection/services/multispeq/transports/bluetooth-classic-transport";
+import { serialPortTransport } from "~/features/connection/services/multispeq/transports/serial-port-transport";
 import type { Device, DeviceType } from "~/shared/types/device";
 
-import {
-  getConnectedSerialPortConnection,
-  setSerialPortConnection,
-} from "./serial-port-connection";
+import { closeSerialPort, getSerialPortConnection, openSerialPort } from "./serial-port-connection";
 
 // The single decision table over device transports. Adding a transport =
 // adding one entry here; nothing else in the app switches on device.type.
@@ -18,7 +21,7 @@ interface DeviceTypeOps {
   connect(device: Device): Promise<void>;
   disconnect(device: Device): Promise<void>;
   unpair?(device: Device): Promise<void>;
-  createExecutor(device: Device): Promise<IMultispeqCommandExecutor | undefined>;
+  createExecutor(device: Device): Promise<DeviceCommandExecutor | undefined>;
 }
 
 const bluetoothClassicOps: DeviceTypeOps = {
@@ -50,33 +53,45 @@ const bluetoothClassicOps: DeviceTypeOps = {
   },
   async createExecutor(device) {
     const bluetoothDevice = await RNBluetoothClassic.getConnectedDevice(device.id);
-    return createDriverCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
+    return createMultispeqCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
   },
 };
 
-// Serial state (with USB-unplug detection + teardown-before-reconnect) lives in
-// serial-port-connection.ts; usbOps just delegates so device-queries and the
-// executor read one source of truth.
+// Serial state (Device registry with prune-based unplug detection and
+// teardown-before-reconnect) lives in serial-port-connection.ts; usbOps just
+// delegates so device-queries and the executor read one source of truth.
 const usbOps: DeviceTypeOps = {
   async connect(device) {
-    await setSerialPortConnection(device);
+    await openSerialPort(device);
   },
-  async disconnect() {
-    await setSerialPortConnection(undefined);
+  async disconnect(device) {
+    await closeSerialPort(device.id);
   },
   // eslint-disable-next-line @typescript-eslint/require-await
-  async createExecutor() {
-    const connection = getConnectedSerialPortConnection();
+  async createExecutor(device) {
+    const connection = getSerialPortConnection(device.id);
     if (!connection) return undefined;
-    return createDriverCommandExecutor(serialPortTransport(connection));
+    return createMultispeqCommandExecutor(serialPortTransport(connection));
   },
 };
 
-// Dev-only scan-list entries; not connectable.
+// Dev-only devices backed by an in-memory registry; connectable only when
+// mock devices are enabled so the multi-scan UI can be exercised without
+// hardware.
 const mockDeviceOps: DeviceTypeOps = {
-  connect: () => Promise.reject(new Error("Unsupported device type")),
-  disconnect: () => Promise.resolve(),
-  createExecutor: () => Promise.reject(new Error("Unsupported device type")),
+  connect(device) {
+    if (!mockDevicesEnabled) return Promise.reject(new Error("Unsupported device type"));
+    openMockDevice(device);
+    return Promise.resolve();
+  },
+  disconnect(device) {
+    closeMockDevice(device.id);
+    return Promise.resolve();
+  },
+  createExecutor(device) {
+    if (!mockDevicesEnabled) return Promise.reject(new Error("Unsupported device type"));
+    return Promise.resolve(createMockCommandExecutor(device.id));
+  },
 };
 
 const deviceOps: Record<DeviceType, DeviceTypeOps> = {
@@ -99,8 +114,8 @@ export async function unpairDevice(device: Device): Promise<void> {
   await unpair(device);
 }
 
-export async function createCommandExecutor(
+export async function createDeviceCommandExecutor(
   device: Device,
-): Promise<IMultispeqCommandExecutor | undefined> {
+): Promise<DeviceCommandExecutor | undefined> {
   return deviceOps[device.type].createExecutor(device);
 }

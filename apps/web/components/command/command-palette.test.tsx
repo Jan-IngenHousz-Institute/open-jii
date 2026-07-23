@@ -6,8 +6,9 @@ import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { render, screen, userEvent, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { env } from "~/env";
 
-import type { SearchResult } from "@repo/api/schemas/search.schema";
+import type { SearchResult } from "@repo/api/domains/search/search.schema";
 
 import { CommandPalette } from "./command-palette";
 
@@ -112,11 +113,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette locale="en-US" />);
     openPalette();
     await user.click(await screen.findByText("commandPalette.entries.openDocumentation"));
-    expect(openSpy).toHaveBeenCalledWith(
-      "https://docs.openjii.org",
-      "_blank",
-      "noopener,noreferrer",
-    );
+    expect(openSpy).toHaveBeenCalledWith(env.NEXT_PUBLIC_DOCS_URL, "_blank", "noopener,noreferrer");
     openSpy.mockRestore();
   });
 

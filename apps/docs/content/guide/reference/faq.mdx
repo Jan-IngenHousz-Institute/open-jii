@@ -1,0 +1,94 @@
+---
+title: "FAQ"
+description: "Answers to common openJII field, data, sharing, and account questions."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+## Why is my experiment missing from the mobile flow?
+
+The mobile list contains experiments where you are a member. The experiment also
+needs an attached, pinned workbook version to run a flow. Reconnect, return the
+app to the foreground, and allow it to refresh. Ask an admin to check your
+membership and the experiment's **Design** tab if it is still missing.
+
+## Can I measure without internet?
+
+Yes, after an online sign-in and successful cache. Select the experiment while
+online and look for **Offline ready**. Measurements save locally and the outbox
+resumes on reconnect. See [Working offline & syncing](/guide/measuring/offline-sync).
+
+## Why is a synced measurement not on the web yet?
+
+**Synced** means the upload was acknowledged; processing into an experiment
+table can continue afterward. Refresh the Data tab after a short wait. The normal
+production delay remains a live-check item; report a persistent gap with the
+experiment, protocol, and approximate measurement time.
+
+## My MultispeQ is not listed. What should I try?
+
+Turn it on, hold its button for about three seconds, allow Bluetooth scanning,
+and scan again. On older Android versions Bluetooth discovery may also require
+location permission. For wired use, check the cable and USB permission prompt.
+
+## Is there an iOS app?
+
+No. openJII publishes an **Android** app only. None of today's measurement
+devices can connect to the app on iOS: they use USB serial or Bluetooth Classic,
+and neither channel is available to an app on iOS.
+
+## Can I use several devices at once?
+
+Yes, with several wired MultispeQs connected through USB, usually through a
+powered hub. One protocol runs across them in parallel. A Bluetooth connection
+stays single-device. See [Multi-device measurements](/guide/devices-protocols/multi-device).
+
+## Where do I put species or genotype?
+
+Add it as experiment metadata after creation. The create wizard intentionally has
+no species field. Use stable column names and values that your team agrees on.
+
+## What is the difference between a protocol and a workbook?
+
+A protocol is the device measurement recipe. A workbook is the full field flow
+that can combine protocols with instructions, questions, branches, commands, and
+analysis. The experiment pins a workbook version.
+
+## Can a member change settings?
+
+No. The current roles are **admin** and **member**. Admins manage experiment
+settings and collaborators; members participate in collection. There is no
+Viewer role.
+
+## Can I make a public experiment private again?
+
+The interface says no. Use a private experiment with a future embargo date when
+temporary protection is required, and review everything before publishing.
+
+## How do I download data for R or Python?
+
+Open the experiment's Data tab and create an export for the intended table.
+Choose CSV, NDJSON, JSON Array, Parquet, or Excel. Parquet is often the better
+typed, columnar choice for larger analysis. See [Exporting data](/guide/data-analysis/exporting-data).
+
+## Can I use API keys?
+
+Not from the shipped branch documented here. The API-key UI is still in an open
+draft pull request, so no user-facing API-key instructions are published.
+
+## How do I move a PhotosynQ project?
+
+Use **Request Project Transfer** and submit the PhotosynQ project ID and URL.
+This is a migration request, not an openJII ownership-transfer control.
+
+## Where are the raw fluorescence traces?
+
+Raw MultispeQ payloads are retained in the data pipeline, but easy trace
+exploration and bulk access are still known gaps. Inspect the processed table and
+export representation for your experiment; ask for help if the required raw
+series is not exposed safely.
+
+## Where do I report a problem or suggest a feature?
+
+Use [Getting help / report an issue](/guide/reference/getting-help). Security
+vulnerabilities must be reported privately, never in a public issue.

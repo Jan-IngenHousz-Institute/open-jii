@@ -1,12 +1,11 @@
 import { useQueries } from "@tanstack/react-query";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
-import { contentKeys } from "~/shared/api/content-query-keys";
-import { tsr } from "~/shared/api/tsr";
+import { orpc } from "~/shared/api/orpc";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
-  requiresSensor: boolean;
+  requiresDevice: boolean;
   questionsOnly: boolean;
   nodeCount: number;
   durationMin: number;
@@ -14,7 +13,7 @@ export interface ExperimentFlowMeta {
 
 /**
  * Fetch the per-experiment flow graphs in parallel so the picker cards can
- * render sensor/questions tags and node-count metadata. Uses the
+ * render device/question tags and node-count metadata. Uses the
  * ["experiment-flow", id] key so the eventual single-experiment selection
  * hits a warm cache.
  *
@@ -25,14 +24,9 @@ export function useExperimentsFlowMeta(
   experimentIds: string[],
 ): Record<string, ExperimentFlowMeta> {
   const results = useQueries({
-    queries: experimentIds.map((id) => ({
-      queryKey: contentKeys.experimentFlow(id),
-      queryFn: async () => {
-        const res = await tsr.experiments.getFlow.query({ params: { id } });
-        return res.status === 200 ? res.body : null;
-      },
-      enabled: !!id,
-    })),
+    queries: experimentIds.map((id) =>
+      orpc.experiments.getFlow.queryOptions({ input: { id }, enabled: !!id }),
+    ),
   });
 
   const out: Record<string, ExperimentFlowMeta> = {};
@@ -42,10 +36,10 @@ export function useExperimentsFlowMeta(
     if (!id || !body?.graph) return;
 
     const nodes = orderFlowNodes(body.graph.nodes, body.graph.edges ?? []);
-    const requiresSensor = nodes.some((n) => n.type === "measurement");
+    const requiresDevice = nodes.some((n) => n.type === "measurement");
     const questionsOnly = isQuestionsOnlyFlow(nodes);
     out[id] = {
-      requiresSensor,
+      requiresDevice,
       questionsOnly,
       nodeCount: nodes.length,
       durationMin: estimateFlowDuration(nodes),

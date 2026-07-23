@@ -5,13 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "build/**",
-        "dist/**",
-        "apps/data/src/lib/**/dist/**"
-      ],
+      "outputs": [".next/**", "!.next/cache/**", "build/**", "dist/**", "out/**"],
       "env": [
         "NODE_ENV",
         "AUTH_SECRET",
@@ -27,7 +21,10 @@
         "DB_HOST",
         "DB_PORT",
         "DB_NAME",
-        "DB_CREDENTIALS"
+        "DB_CREDENTIALS",
+        "DOCS_INDEXABLE",
+        "DOCS_BASE_URL",
+        "PLATFORM_BASE_URL"
       ]
     },
     "lint": {

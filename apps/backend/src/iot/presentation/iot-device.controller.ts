@@ -1,14 +1,14 @@
 import { Controller, Inject, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import { contract } from "@repo/api/contract";
+import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { AppError } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
@@ -18,11 +18,6 @@ import { RevokeIotCredentialsUseCase } from "../application/use-cases/revoke-iot
 import { RotateIotCredentialsUseCase } from "../application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
-
-const DEVICES_DISABLED_RESPONSE = {
-  status: StatusCodes.FORBIDDEN,
-  body: { message: "The device registry is currently disabled" },
-} as const;
 
 @Controller()
 export class IotDeviceController {
@@ -47,117 +42,122 @@ export class IotDeviceController {
     );
   }
 
-  @TsRestHandler(contract.iot.listIotDevices)
+  private disabled(operation: string): never {
+    return throwOrpcError(
+      AppError.forbidden("The device registry is currently disabled"),
+      this.logger,
+      operation,
+    );
+  }
+
+  @Implement(iotContract.listIotDevices)
   listIotDevices(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.listIotDevices, async () => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.listIotDevices).handler(async () => {
+      if (!(await this.devicesEnabled(session))) this.disabled("listIotDevices");
 
       const result = await this.listIotDevicesUseCase.execute(session.user.id);
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.OK, body: formatDatesList(result.value) };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "listIotDevices");
     });
   }
 
-  @TsRestHandler(contract.iot.registerIotDevice)
+  @Implement(iotContract.registerIotDevice)
   registerIotDevice(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.registerIotDevice, async ({ body }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.registerIotDevice).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("registerIotDevice");
 
-      const result = await this.registerIotDeviceUseCase.execute(body, session.user.id);
+      const result = await this.registerIotDeviceUseCase.execute(input, session.user.id);
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.CREATED, body: formatDates(result.value) };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "registerIotDevice");
     });
   }
 
-  @TsRestHandler(contract.iot.getIotDevice)
+  @Implement(iotContract.getIotDevice)
   getIotDevice(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.getIotDevice, async ({ params }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.getIotDevice).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getIotDevice");
 
-      const result = await this.getIotDeviceUseCase.execute(params.deviceId, session.user.id);
+      const result = await this.getIotDeviceUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.OK, body: formatDates(result.value) };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "getIotDevice");
     });
   }
 
-  @TsRestHandler(contract.iot.deleteIotDevice)
+  @Implement(iotContract.deleteIotDevice)
   deleteIotDevice(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.deleteIotDevice, async ({ params }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.deleteIotDevice).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("deleteIotDevice");
 
-      const result = await this.deleteIotDeviceUseCase.execute(params.deviceId, session.user.id);
+      const result = await this.deleteIotDeviceUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.NO_CONTENT as const, body: null };
+        return undefined;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "deleteIotDevice");
     });
   }
 
-  @TsRestHandler(contract.iot.issueIotCredentials)
+  @Implement(iotContract.issueIotCredentials)
   issueIotCredentials(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.issueIotCredentials, async ({ params }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.issueIotCredentials).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("issueIotCredentials");
 
-      const result = await this.issueIotCredentialsUseCase.execute(
-        params.deviceId,
-        session.user.id,
-      );
+      const result = await this.issueIotCredentialsUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.CREATED, body: result.value };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "issueIotCredentials");
     });
   }
 
-  @TsRestHandler(contract.iot.rotateIotCredentials)
+  @Implement(iotContract.rotateIotCredentials)
   rotateIotCredentials(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.rotateIotCredentials, async ({ params }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.rotateIotCredentials).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("rotateIotCredentials");
 
       const result = await this.rotateIotCredentialsUseCase.execute(
-        params.deviceId,
+        input.deviceId,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.CREATED, body: result.value };
+        return result.value;
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "rotateIotCredentials");
     });
   }
 
-  @TsRestHandler(contract.iot.revokeIotCredentials)
+  @Implement(iotContract.revokeIotCredentials)
   revokeIotCredentials(@Session() session: UserSession) {
-    return tsRestHandler(contract.iot.revokeIotCredentials, async ({ params }) => {
-      if (!(await this.devicesEnabled(session))) return DEVICES_DISABLED_RESPONSE;
+    return implement(iotContract.revokeIotCredentials).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("revokeIotCredentials");
 
       const result = await this.revokeIotCredentialsUseCase.execute(
-        params.deviceId,
+        input.deviceId,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return { status: StatusCodes.OK, body: formatDates(result.value) };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger, "revokeIotCredentials");
     });
   }
 }

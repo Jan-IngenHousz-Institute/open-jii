@@ -1,12 +1,26 @@
-"""
-OpenJII Data Analysis Helpers for Databricks
+"""OpenJII data analysis helpers for Databricks.
 
-Provides helper functions for reading and transforming data in Databricks
-pipelines, including catalog-aware table reading and set data explosion.
+Helpers for reading and transforming data in Databricks pipelines and
+notebooks: catalog-aware table reading, set-data explosion, and gzip+base64
+sample decompression.
 """
 
-from .helpers import read_table, explode_set_data, get_catalog_name
 from .compression import decompress_sample, decompress_sample_value
+from .helpers import (
+    explode_set_data,
+    get_catalog_name,
+    get_table_metadata,
+    load_experiment_table,
+    read_table,
+)
 
-__all__ = ["read_table", "explode_set_data", "get_catalog_name", "decompress_sample", "decompress_sample_value"]
+__all__ = [
+    "decompress_sample",
+    "decompress_sample_value",
+    "explode_set_data",
+    "get_catalog_name",
+    "get_table_metadata",
+    "load_experiment_table",
+    "read_table",
+]
 __version__ = "0.1.0"

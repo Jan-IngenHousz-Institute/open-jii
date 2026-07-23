@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import type { DashboardWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -62,7 +62,7 @@ const STYLE_SECTION: InspectorSection = {
 
 // Style strip is suppressed for table/filter/richText: no meaningful
 // per-widget style overrides planned for those types.
-const SECTIONS_BY_WIDGET: Record<DashboardWidget["type"], InspectorSection[]> = {
+const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSection[]> = {
   visualization: [WIDGET_SECTION, DATA_SECTION, STYLE_SECTION],
   table: [WIDGET_SECTION, DATA_SECTION],
   filter: [WIDGET_SECTION, DATA_SECTION],
@@ -177,7 +177,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
 }
 
 interface ActiveStripProps {
-  widget: DashboardWidget;
+  widget: ExperimentDashboardWidget;
   widgetIndex: number;
   experimentId: string;
   section: InspectorSectionKey;

@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
@@ -16,10 +17,7 @@ describe("useWorkbookUpdate", () => {
     const { result } = renderHook(() => useWorkbookUpdate("wb-1"));
 
     act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Updated" },
-      });
+      result.current.mutate({ id: "wb-1", name: "Updated" });
     });
 
     await waitFor(() => {
@@ -36,10 +34,7 @@ describe("useWorkbookUpdate", () => {
     const { result } = renderHook(() => useWorkbookUpdate("wb-1", { onSuccess }));
 
     act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Updated" },
-      });
+      result.current.mutate({ id: "wb-1", name: "Updated" });
     });
 
     await waitFor(() => {
@@ -49,22 +44,19 @@ describe("useWorkbookUpdate", () => {
     });
   });
 
-  it("optimistically updates the workbook in cache", async () => {
+  it("optimistically updates the workbook detail cache", async () => {
     server.mount(contract.workbooks.updateWorkbook, {
       body: createWorkbook({ id: "wb-1", name: "Updated" }),
     });
 
-    const original = createWorkbook({ id: "wb-1", name: "Original" });
+    const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbook", "wb-1"], { body: original });
+    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-1", name: "Original" }));
 
     const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
 
     act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Updated" },
-      });
+      result.current.mutate({ id: "wb-1", name: "Updated" });
     });
 
     await waitFor(() => {
@@ -72,56 +64,22 @@ describe("useWorkbookUpdate", () => {
     });
   });
 
-  it("optimistically updates the workbooks list cache", async () => {
-    server.mount(contract.workbooks.updateWorkbook, {
-      body: createWorkbook({ id: "wb-1", name: "Updated" }),
-    });
-
-    const wb1 = createWorkbook({ id: "wb-1", name: "Original" });
-    const wb2 = createWorkbook({ id: "wb-2", name: "Other" });
-    const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbooks"], { body: [wb1, wb2] });
-
-    const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
-
-    act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Updated" },
-      });
-    });
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-  });
-
-  it("rolls back both caches on error", async () => {
+  it("rolls back the detail cache on error", async () => {
     server.mount(contract.workbooks.updateWorkbook, { status: 400 });
 
-    const original = createWorkbook({ id: "wb-1", name: "Original" });
+    const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(["workbook", "wb-1"], { body: original });
-    queryClient.setQueryData(["workbooks"], { body: [original] });
+    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-1", name: "Original" }));
 
     const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
 
     act(() => {
-      result.current.mutate({
-        params: { id: "wb-1" },
-        body: { name: "Should Fail" },
-      });
+      result.current.mutate({ id: "wb-1", name: "Should Fail" });
     });
 
     await waitFor(() => {
-      const cachedSingle = queryClient.getQueryData<{ body: { name: string } }>([
-        "workbook",
-        "wb-1",
-      ]);
-      expect(cachedSingle?.body.name).toBe("Original");
-
-      const cachedList = queryClient.getQueryData<{ body: { name: string }[] }>(["workbooks"]);
-      expect(cachedList?.body[0].name).toBe("Original");
+      const cached = queryClient.getQueryData<{ name: string }>(detailKey);
+      expect(cached?.name).toBe("Original");
     });
   });
 });

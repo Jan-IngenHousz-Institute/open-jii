@@ -69,7 +69,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  const experiment = data.body;
+  const experiment = data;
 
   // Check if experiment is archived - if not, redirect to not found
   if (experiment.status !== "archived") {
@@ -98,7 +98,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             {t("experimentData.noData")}
           </p>
           <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/docs/data-platform/mobile-app`}
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
             target="_blank"
             rel="noopener noreferrer"
           >

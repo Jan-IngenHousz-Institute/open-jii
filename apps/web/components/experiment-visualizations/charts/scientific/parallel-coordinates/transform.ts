@@ -1,4 +1,4 @@
-import type { DataSourceConfig } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { ParallelCoordinatesSeriesData } from "@repo/ui/components/charts/parallel-coordinates";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -25,7 +25,7 @@ interface ColorChannel {
 /** Pure data transform for parallel-coordinates: builds one dimension per picked Y axis plus a per-line color array. */
 export function transformParallelCoordinatesData(
   rows: Record<string, unknown>[],
-  dataSources: DataSourceConfig[],
+  dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
 ): { series: ParallelCoordinatesSeriesData[]; axes: string[] } {
   const yColumns = dataSourcesByRole(dataSources, "y")

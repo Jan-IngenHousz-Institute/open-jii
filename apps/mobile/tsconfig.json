@@ -1,13 +1,12 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
-    "lib": ["es2017"],
+    "lib": ["es2022"],
     "module": "ESNext",
     "declaration": false,
     "declarationMap": false,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
       "~/features/*": ["./src/features/*"],

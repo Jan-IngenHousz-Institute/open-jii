@@ -2,11 +2,12 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
+import { DocsHelpLink } from "~/components/docs-help-link";
 import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 import { parseApiError } from "~/util/apiError";
 
-import type { InitiateExportBody } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentInitiateExportBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import {
@@ -43,7 +44,7 @@ export function DataExportModal({
 
   // Toggle inherits the experiment's stored setting; user can override per-export.
   const { data: experimentData } = useExperiment(experimentId);
-  const experimentAnonymize = experimentData?.body.anonymizeContributors;
+  const experimentAnonymize = experimentData?.anonymizeContributors;
   const [anonymizeOverride, setAnonymizeOverride] = React.useState<boolean | undefined>();
   const effectiveAnonymize = anonymizeOverride ?? experimentAnonymize;
 
@@ -68,20 +69,18 @@ export function DataExportModal({
     },
   });
 
-  const handleCreateExport = (format: InitiateExportBody["format"]) => {
+  const handleCreateExport = (format: ExperimentInitiateExportBody["format"]) => {
     setCreationStatus("creating");
 
     initiateExport(
       {
-        params: { id: experimentId },
-        body: {
-          tableName,
-          format,
-          // Omit when not overridden so backend falls back to the stored setting.
-          ...(anonymizeOverride !== undefined && {
-            anonymizeContributors: anonymizeOverride,
-          }),
-        },
+        id: experimentId,
+        tableName,
+        format,
+        // Omit when not overridden so backend falls back to the stored setting.
+        ...(anonymizeOverride !== undefined && {
+          anonymizeContributors: anonymizeOverride,
+        }),
       },
       {
         onError: (error) => {
@@ -111,6 +110,7 @@ export function DataExportModal({
           <DialogDescription>
             {t("experimentData.exportModal.description", { tableName: displayName ?? tableName })}
           </DialogDescription>
+          <DocsHelpLink path="/guide/data-analysis/exporting-data" className="mt-1" />
         </DialogHeader>
 
         <div className="bg-muted/30 -mb-2 flex items-center gap-2 rounded-md border p-3">

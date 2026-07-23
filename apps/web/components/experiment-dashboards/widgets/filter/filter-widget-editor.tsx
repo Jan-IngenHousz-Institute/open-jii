@@ -3,7 +3,8 @@
 import { Filter } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import type { DataFilterValue, FilterWidget } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { FilterValueInput } from "../../../data-filters/value-input";
@@ -11,7 +12,7 @@ import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
 interface FilterWidgetEditorProps {
-  widget: FilterWidget;
+  widget: ExperimentFilterWidget;
   experimentId: string;
   widgetIndex: number;
 }
@@ -24,7 +25,7 @@ export function FilterWidgetEditor({ widget, experimentId, widgetIndex }: Filter
     experimentId,
   );
 
-  const handleChange = (next: DataFilterValue) => {
+  const handleChange = (next: ExperimentDataFilterValue) => {
     form.setValue(
       `widgets.${widgetIndex}.config`,
       { ...widget.config, defaultValue: next },

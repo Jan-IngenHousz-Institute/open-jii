@@ -1,12 +1,13 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy, Terminal } from "lucide-react";
 import { useMemo } from "react";
 
-import type { CommandFormat } from "@repo/api/schemas/experiment.schema";
-import type { CommandCell as CommandCellType } from "@repo/api/schemas/workbook-cells.schema";
-import { validateInlineCommand } from "@repo/api/utils/command-payload";
+import type { CommandFormat } from "@repo/api/domains/experiment/experiment.schema";
+import type { CommandCell as CommandCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { validateInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -108,6 +109,11 @@ export function CommandCellComponent({
       readOnly={readOnly}
       headerActions={
         <div className="flex items-center gap-1">
+          <DocsHelpLink
+            iconOnly
+            path="/guide/devices-protocols/commands"
+            className="h-7 w-7 justify-center"
+          />
           {!readOnly ? (
             <Select value={format} onValueChange={(v) => update({ format: v as CommandFormat })}>
               <SelectTrigger className="h-7 w-[90px] text-xs" aria-label="Command format">

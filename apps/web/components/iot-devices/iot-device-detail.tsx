@@ -5,6 +5,12 @@ import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotD
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
+import {
+  presentDevice,
+  resolveDevicePrimaryLabel,
+  resolveDeviceRoleLabels,
+} from "@/util/device-presentation";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
@@ -68,8 +74,16 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
     );
   }
 
-  const device = data.body;
-  const displayName = device.name ?? device.serialNumber;
+  const device = data;
+  // Registry identity hierarchy: name, then canonical product name, then a
+  // localized unknown-device fallback.
+  const present = presentDevice({
+    name: device.name,
+    family: device.deviceType,
+    id: device.serialNumber,
+  });
+  const displayName = resolveDevicePrimaryLabel(present, t);
+  const roleLabels = resolveDeviceRoleLabels(present, t);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -107,7 +121,13 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
         <NavTabsContent value="overview" className="space-y-8">
           <div className="flex flex-wrap items-start gap-10">
             <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
-            <MetaField label={t("iot.devices.detail.meta.type")} value={device.deviceType} />
+            <MetaField
+              label={t("iot.devices.detail.meta.type")}
+              value={getSensorFamilyLabel(device.deviceType)}
+            />
+            {roleLabels.length > 0 && (
+              <MetaField label={t("iot.devices.detail.meta.role")} value={roleLabels.join(" · ")} />
+            )}
             <MetaField
               label={t("iot.devices.detail.meta.status")}
               value={t(`iot.devices.status.${device.status}`)}
@@ -179,7 +199,7 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
               disabled={isDeleting}
               onClick={(e) => {
                 e.preventDefault();
-                deleteDevice({ params: { deviceId: device.id } });
+                deleteDevice({ deviceId: device.id });
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

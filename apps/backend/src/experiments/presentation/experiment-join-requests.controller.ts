@@ -1,13 +1,13 @@
 import { Controller, Logger } from "@nestjs/common";
+import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
-import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api/contract";
+import { experimentJoinRequestsContract } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { AppError } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ApproveJoinRequestUseCase } from "../application/use-cases/experiment-join-requests/approve-join-request";
 import { CancelJoinRequestUseCase } from "../application/use-cases/experiment-join-requests/cancel-join-request";
 import { GetMyJoinRequestUseCase } from "../application/use-cases/experiment-join-requests/get-my-join-request";
@@ -28,125 +28,111 @@ export class ExperimentJoinRequestsController {
     private readonly cancelJoinRequestUseCase: CancelJoinRequestUseCase,
   ) {}
 
-  @TsRestHandler(contract.experiments.createJoinRequest)
+  @Implement(experimentJoinRequestsContract.createJoinRequest)
   createJoinRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.createJoinRequest, async ({ params, body }) => {
-      const result = await this.requestJoinExperimentUseCase.execute(
-        params.id,
-        session.user.id,
-        body.message,
-      );
+    return implement(experimentJoinRequestsContract.createJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.requestJoinExperimentUseCase.execute(
+          input.id,
+          session.user.id,
+          input.message,
+        );
 
-      if (result.isSuccess()) {
-        const formatted = formatDates(result.value.joinRequest);
-        return {
-          status: result.value.created ? (StatusCodes.CREATED as const) : (StatusCodes.OK as const),
-          body: formatted,
-        };
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value.joinRequest);
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.listJoinRequests)
+  @Implement(experimentJoinRequestsContract.listJoinRequests)
   listJoinRequests(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.listJoinRequests, async ({ params }) => {
+    return implement(experimentJoinRequestsContract.listJoinRequests).handler(async ({ input }) => {
       const result = await this.listExperimentJoinRequestsUseCase.execute(
-        params.id,
+        input.id,
         session.user.id,
       );
 
       if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDatesList(result.value),
-        };
+        return formatDatesList(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.getMyJoinRequest)
+  @Implement(experimentJoinRequestsContract.getMyJoinRequest)
   getMyJoinRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.getMyJoinRequest, async ({ params }) => {
-      const result = await this.getMyJoinRequestUseCase.execute(params.id, session.user.id);
+    return implement(experimentJoinRequestsContract.getMyJoinRequest).handler(async ({ input }) => {
+      const result = await this.getMyJoinRequestUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
         if (!result.value) {
-          return {
-            status: StatusCodes.NOT_FOUND as const,
-            body: { message: "No pending join request" },
-          };
+          return throwOrpcError(AppError.notFound("No pending join request"), this.logger);
         }
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDates(result.value),
-        };
+        return formatDates(result.value);
       }
 
-      return handleFailure(result, this.logger);
+      return throwOrpcFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.experiments.approveJoinRequest)
+  @Implement(experimentJoinRequestsContract.approveJoinRequest)
   approveJoinRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.approveJoinRequest, async ({ params }) => {
-      const result = await this.approveJoinRequestUseCase.execute(
-        params.id,
-        params.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsContract.approveJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.approveJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDates(result.value),
-        };
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.rejectJoinRequest)
+  @Implement(experimentJoinRequestsContract.rejectJoinRequest)
   rejectJoinRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.rejectJoinRequest, async ({ params }) => {
-      const result = await this.rejectJoinRequestUseCase.execute(
-        params.id,
-        params.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsContract.rejectJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.rejectJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return {
-          status: StatusCodes.OK as const,
-          body: formatDates(result.value),
-        };
-      }
+        if (result.isSuccess()) {
+          return formatDates(result.value);
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.experiments.cancelJoinRequest)
+  @Implement(experimentJoinRequestsContract.cancelJoinRequest)
   cancelJoinRequest(@Session() session: UserSession) {
-    return tsRestHandler(contract.experiments.cancelJoinRequest, async ({ params }) => {
-      const result = await this.cancelJoinRequestUseCase.execute(
-        params.id,
-        params.requestId,
-        session.user.id,
-      );
+    return implement(experimentJoinRequestsContract.cancelJoinRequest).handler(
+      async ({ input }) => {
+        const result = await this.cancelJoinRequestUseCase.execute(
+          input.id,
+          input.requestId,
+          session.user.id,
+        );
 
-      if (result.isSuccess()) {
-        return {
-          status: StatusCodes.NO_CONTENT as const,
-          body: null,
-        };
-      }
+        if (result.isSuccess()) {
+          return undefined;
+        }
 
-      return handleFailure(result, this.logger);
-    });
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

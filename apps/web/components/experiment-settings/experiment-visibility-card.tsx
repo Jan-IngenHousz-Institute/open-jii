@@ -1,11 +1,12 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { ExperimentVisibility } from "@repo/api/schemas/experiment.schema";
-import { visibilitySchema } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisibility } from "@repo/api/domains/experiment/experiment.schema";
+import { visibilitySchema } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
@@ -76,11 +77,9 @@ export function ExperimentVisibilityCard({
     if (!currentVisibilityValue) return;
 
     await updateExperiment({
-      params: { id: experimentId },
-      body: {
-        visibility: currentVisibilityValue,
-        embargoUntil: iso ?? "",
-      },
+      id: experimentId,
+      visibility: currentVisibilityValue,
+      embargoUntil: iso ?? "",
     });
 
     toast({ description: t("experiments.experimentUpdated") });
@@ -98,8 +97,8 @@ export function ExperimentVisibilityCard({
     };
 
     await updateExperiment({
-      params: { id: experimentId },
-      body: updateData,
+      id: experimentId,
+      ...updateData,
     });
 
     form.setValue("visibility", pendingVisibility);
@@ -119,6 +118,7 @@ export function ExperimentVisibilityCard({
       <CardHeader>
         <CardTitle>{t("experimentVisibility.visibilityCardTitle")}</CardTitle>
         <CardDescription>{t("experimentVisibility.visibilityCardDescription")}</CardDescription>
+        <DocsHelpLink path="/guide/sharing/visibility-embargo" className="mt-1" />
       </CardHeader>
       <CardContent className="space-y-6">
         <ExperimentVisibilityForm

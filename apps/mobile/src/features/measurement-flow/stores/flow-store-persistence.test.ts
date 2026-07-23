@@ -23,6 +23,7 @@ const MEASUREMENT_FIXTURE = `{
   "state": {
     "experimentId": "exp-42",
     "experimentLabel": "Greenhouse Trial B",
+    "workbookVersionId": "version-17",
     "protocolId": "proto-7",
     "currentStep": 1,
     "flowNodes": [
@@ -64,7 +65,14 @@ const MEASUREMENT_FIXTURE = `{
     "isFlowFinished": true,
     "isQuestionsSubmitPending": true,
     "scanResult": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] },
+    "scanResults": [
+      {
+        "device": { "id": "1002", "name": "MultispeQ #1002" },
+        "result": { "device_name": "MultispeQ v2.0", "spad": [41.2, 39.8] }
+      }
+    ],
     "producerCellId": "node-m1",
+    "cellOutputs": { "node-a1": { "spad_avg": 40.5 } },
     "isFromOverview": true,
     "cells": [{ "id": "cell-b1", "type": "branch", "name": "N branch" }],
     "edges": [{ "id": "edge-1", "source": "node-q1", "target": "node-m1" }],
@@ -146,6 +154,7 @@ describe("measurement-flow-storage v1 wire format", () => {
     expect(Object.keys(persisted).sort()).toEqual([
       "branchReturnStack",
       "branchVisitCounts",
+      "cellOutputs",
       "cells",
       "currentFlowStep",
       "currentStep",
@@ -160,6 +169,8 @@ describe("measurement-flow-storage v1 wire format", () => {
       "lastMatchedPath",
       "producerCellId",
       "scanResult",
+      "scanResults",
+      "workbookVersionId",
     ]);
   });
 });

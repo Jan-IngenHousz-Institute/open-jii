@@ -9,6 +9,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
+import { stripHtml } from "@/util/strip-html";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
@@ -36,7 +37,7 @@ export function ExperimentLinkedWorkbook({
   });
 
   // Find the version number for the pinned version
-  const versionsList = versionsData?.body;
+  const versionsList = versionsData;
   const pinnedVersion = versionsList?.find((v) => v.id === workbookVersionId);
   const latestVersion = versionsList?.[0];
 
@@ -54,6 +55,7 @@ export function ExperimentLinkedWorkbook({
   if (!workbook) return null;
 
   const hasCells = getWorkbookCellSummary(workbook.cells).length > 0;
+  const plainDescription = workbook.description ? stripHtml(workbook.description) : "";
 
   return (
     <div className="space-y-4">
@@ -90,10 +92,8 @@ export function ExperimentLinkedWorkbook({
             </div>
           </div>
 
-          {workbook.description && (
-            <p className="text-muted-foreground mt-3 line-clamp-2 text-sm">
-              {workbook.description}
-            </p>
+          {plainDescription && (
+            <p className="text-muted-foreground mt-3 line-clamp-2 text-sm">{plainDescription}</p>
           )}
 
           {hasCells ? (

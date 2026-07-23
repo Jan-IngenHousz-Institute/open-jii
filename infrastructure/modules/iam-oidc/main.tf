@@ -200,6 +200,9 @@ locals {
         "lambda:ListLayers",
         "lambda:ListLayerVersions",
         "lambda:PublishLayerVersion",
+        # Lambda@Edge replication (CloudFront enables/disables this when attaching/removing a function on a distribution)
+        "lambda:EnableReplication*",
+        "lambda:DisableReplication*",
       ]
       resource = "*"
     }
@@ -642,6 +645,12 @@ locals {
         "route53:ChangeResourceRecordSets",
         "route53:ListResourceRecordSets",
         "route53:GetChange",
+        # Health checks (Terraform - site availability alert)
+        "route53:CreateHealthCheck",
+        "route53:DeleteHealthCheck",
+        "route53:GetHealthCheck",
+        "route53:UpdateHealthCheck",
+        "route53:ListHealthChecks",
         # Tags (Terraform)
         "route53:ListTagsForResource",
         "route53:ChangeTagsForResource",

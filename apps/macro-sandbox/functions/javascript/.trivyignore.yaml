@@ -64,6 +64,18 @@ vulnerabilities:
       ReDoS via a crafted value. Sandbox has no outbound HTTP, so
       no attacker-controlled response reaches axios.
     expired_at: 2026-07-12
+  - id: GHSA-gcfj-64vw-6mp9
+    statement: >-
+      Node HTTP adapter can reuse an inherited proxy after interceptor
+      config changes it. Sandbox has no outbound HTTP and no proxy
+      configuration, so no request ever reaches the adapter's proxy logic.
+
+  # brace-expansion in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
+  - id: CVE-2026-13149
+    statement: >-
+      ReDoS via exponential-time complexity. Bundled inside @aws-sdk's own
+      dependency tree, not invoked by sandbox code; sandbox has no outbound
+      HTTP and no IAM creds, so no attacker-controlled string ever reaches it.
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
@@ -219,4 +231,43 @@ vulnerabilities:
     expired_at: 2026-11-05
   - id: CVE-2026-9150
     statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+
+  # glib2 in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
+  # glib2` on the image: no installed package depends on it — it ships unused.
+  # The JS macro sandbox and its runtime deps never touch
+  # GVariant/GDateTime/GRegex/GIOChannel/GKeyFile/GDBus. Fixed upstream in
+  # glib2-2.82.2-770.amzn2023 (installed: -769); awaiting AWS base image republish.
+  - id: CVE-2026-58010
+    statement: "glib GVariant buffer over-read. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58011
+    statement: "glib GDateTime out-of-bounds read. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58012
+    statement: "glib GRegex buffer over-read. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58013
+    statement: "glib GIOChannel buffer over-read. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58014
+    statement: "glib GKeyFile off-by-one. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58015
+    statement: "glib GDBus SHA1 auth path traversal. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+  - id: CVE-2026-58016
+    statement: "glib GDBus introspection integer underflow. glib2 unused; no package requires it."
+    expired_at: 2026-11-05
+
+  # libacl in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
+  # libacl`: no installed package depends on it. Both CVEs require running
+  # getfacl/setfacl against an attacker-controlled symlink path; the sandbox
+  # invokes no ACL tooling at runtime. Fixed upstream in libacl-2.4.0-1.amzn2023.0.1
+  # (installed: 2.3.1-2.amzn2023.0.2); awaiting AWS base image republish.
+  - id: CVE-2026-54369
+    statement: "acl symlink traversal privilege escalation. No ACL tooling invoked at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-54370
+    statement: "acl TOCTOU symlink traversal via getfacl/setfacl. No ACL tooling invoked at runtime."
     expired_at: 2026-11-05

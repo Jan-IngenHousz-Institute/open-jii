@@ -1,0 +1,71 @@
+---
+title: "Time synchronization"
+description: "How the mobile app corrects clock skew and preserves measurement-time timezone data."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+AWS signing and scientific timestamps both depend on reliable time. A phone clock can be skewed or manually configured, so the mobile app calculates an offset from backend time instead of treating `Date.now()` as authoritative.
+
+## Synchronization sequence
+
+1. `expo-location` supplies coordinates when location permission is available.
+2. `@photostructure/tz-lookup` resolves an IANA timezone locally from those coordinates. If permission or location lookup fails, the implementation falls back to `UTC`.
+3. The app calls the unauthenticated backend `GET /health/time` endpoint and measures request round-trip time.
+4. It estimates server time at the response midpoint and stores `offsetMs = estimatedServerTime - deviceReceiveTime` with the timezone.
+5. Synced helpers apply the offset whenever the app needs a timestamp.
+
+The backend response contains `utcTimestampMs`, `utcTimestampSec`, and `iso`. The contract is defined in `packages/api/src/domains/health/health.contract.ts` and implemented by `apps/backend/src/health/health.controller.ts`.
+
+## Lifecycle and failure behavior
+
+`TimeSyncProvider` starts synchronization when the allowed application services mount. The one-time startup sync runs after persisted state is restored. Later foreground triggers pass through a leading-edge `@tanstack/pacer` debouncer, preventing repeated foreground events from starting overlapping requests.
+
+The state is persisted in AsyncStorage. A failed refresh keeps the last known offset and increments `missedPings`; there is currently no threshold notification tied to that counter. `ensureSynced()` waits for a usable state before AWS IoT authentication proceeds, shows the time-sync-unavailable toast, and rejects if it cannot obtain one within ten seconds.
+
+## Using synced time
+
+Import helpers from the current module path:
+
+```ts
+import {
+  ensureSynced,
+  getSyncedLocalISO,
+  getSyncedUtcISO,
+  getSyncedUtcNow,
+  getTimeSyncState,
+} from "~/shared/time/time-sync";
+
+await ensureSynced();
+const signedAtMs = getSyncedUtcNow();
+const measuredAt = getSyncedUtcISO();
+const displayTime = getSyncedLocalISO();
+const { timezone } = getTimeSyncState();
+```
+
+`getSyncedLocalISO()` is display-only. The upload payload captures a normalized UTC ISO timestamp from `getSyncedUtcISO()` plus the IANA timezone at measurement time. Retries reuse the stored payload, so an upload performed later does not overwrite when and where the measurement was taken.
+
+## Measurement coordinates
+
+Timezone resolution and measurement coordinates share the foreground location
+permission but use separate code paths. `getMeasurementLocation()` never requests
+permission. It checks the existing grant, prefers a last-known position at most
+60 seconds old, and otherwise races a balanced-accuracy position request against
+a 10-second timeout. It catches every failure and returns `null`, so location
+lookup cannot block an upload.
+
+The measurement uploader requests one fix per multi-device round and spreads
+flat `latitude` and `longitude` fields into each device payload. The
+questions-only uploader uses the same helper. Payloads without a fix omit both
+fields.
+
+## Source map
+
+- time state and helpers: `apps/mobile/src/shared/time/time-sync.ts`
+- measurement location: `apps/mobile/src/shared/location/measurement-location.ts`
+- measurement payload: `apps/mobile/src/features/recent-measurements/services/build-upload-payload.ts`
+- provider: `apps/mobile/src/shared/ui/time-sync-provider.tsx`
+- MQTT credential signing: `apps/mobile/src/features/connection/services/mqtt/aws-iot-auth.ts`
+- server endpoint: `apps/backend/src/health/health.controller.ts`
+
+Callers that require corrected time should use these helpers rather than raw device time.

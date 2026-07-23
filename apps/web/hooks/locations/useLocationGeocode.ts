@@ -1,4 +1,5 @@
-import { tsr } from "@/lib/tsr";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to reverse geocode coordinates to get place information
@@ -8,14 +9,10 @@ import { tsr } from "@/lib/tsr";
  * @returns Query result containing geocode results
  */
 export const useLocationGeocode = (latitude: number, longitude: number, enabled = true) => {
-  return tsr.experiments.geocodeLocation.useQuery({
-    queryData: {
-      query: {
-        latitude,
-        longitude,
-      },
-    },
-    queryKey: ["location-geocode", latitude, longitude],
-    enabled: enabled && !isNaN(latitude) && !isNaN(longitude),
-  });
+  return useQuery(
+    orpc.experiments.geocodeLocation.queryOptions({
+      input: { latitude, longitude },
+      enabled: enabled && !isNaN(latitude) && !isNaN(longitude),
+    }),
+  );
 };

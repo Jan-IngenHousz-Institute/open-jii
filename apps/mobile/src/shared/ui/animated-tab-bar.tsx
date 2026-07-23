@@ -1,5 +1,5 @@
-import { BottomTabBar } from "@react-navigation/bottom-tabs";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { BottomTabBar } from "expo-router/js-tabs";
+import type { BottomTabBarProps } from "expo-router/js-tabs";
 import React, { useEffect, useState } from "react";
 import Animated, {
   Easing,

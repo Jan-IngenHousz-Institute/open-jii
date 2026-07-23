@@ -1,0 +1,37 @@
+---
+title: "MultispeQ MQTT Tool"
+description: "A code-verified guide to the development CLI that measures with MultispeQ and publishes to AWS IoT Core."
+---
+
+{/* verified: code@12a361a74966 2026-07-19 */}
+
+The MultispeQ MQTT Interface (MMI) is a Python command-line development tool under `apps/tools/multispeq_mqtt_interface`. It connects to AWS IoT Core with an X.509 certificate, takes a SPAD measurement through the JII MultispeQ library, and publishes JSON at MQTT QoS 1.
+
+![MultispeQ MQTT Interface](/img/openjii-mmi-cli-tool-screenshot.png)
+
+## Intended use
+
+Use MMI to develop and diagnose the device-to-cloud path with project-provided IoT credentials. It is not the researcher mobile workflow, a daemon, or a general MQTT administration client.
+
+The current implementation is explicitly development-stage and has important constraints:
+
+- it publishes measurements but does not subscribe to device-script or remote-control topics;
+- `publish`, `continuous_publish`, and `connect_device` currently use the hard-coded macOS serial port `/dev/cu.usbmodem42949672951`;
+- the measurement protocol is fixed to a single SPAD reading;
+- runtime topic updates fix the sensor family/version/id to `multispeq/v1.0/cli_test_sensor_id`;
+- configuration comes from process environment variables and prompts; the Python package does not load `.env` files itself;
+- there are no implemented `--debug`, batch, JSON-input, or non-interactive CLI flags.
+
+These corrections matter because earlier documentation described planned behavior as if it had shipped.
+
+## Data path
+
+```mermaid
+flowchart LR
+  Q[MultispeQ] -->|serial + JII-MultispeQ| CLI[MMI CLI]
+  CLI -->|mTLS, MQTT QoS 1| IOT[AWS IoT Core]
+  IOT --> K[Kinesis]
+  K --> D[Databricks centrum pipeline]
+```
+
+Continue with [Installation](/developers/multispeq-mqtt-tool/installation) and [Usage](/developers/multispeq-mqtt-tool/usage). The platform-wide channel schema is in the generated [MQTT API reference](/api/mqtt).

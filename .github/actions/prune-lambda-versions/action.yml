@@ -1,0 +1,30 @@
+name: "Prune old Lambda versions"
+description: "Deletes all published versions of a Lambda function except the newest N, leaving $LATEST untouched."
+inputs:
+  function-name:
+    description: "Name of the Lambda function to prune versions for"
+    required: true
+  keep:
+    description: "Number of most recent versions to keep"
+    required: false
+    default: "10"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prune old versions
+      shell: bash
+      run: |
+        FUNCTION_NAME="${{ inputs.function-name }}"
+        KEEP="${{ inputs.keep }}"
+        echo "Pruning old Lambda versions for $FUNCTION_NAME (keeping $KEEP latest)..."
+        # Get all versions except $LATEST, sort by version number (numeric), skip the newest $KEEP, and delete the rest
+        aws lambda list-versions-by-function --function-name "$FUNCTION_NAME" \
+          --query 'Versions[?Version!=`$LATEST`].Version' --output text | \
+          tr '\t' '\n' | sort -n | head -n -"$KEEP" | while read VERSION; do
+            if [[ -n "$VERSION" ]]; then
+              echo "Deleting old version: $VERSION"
+              aws lambda delete-function --function-name "$FUNCTION_NAME" --qualifier "$VERSION" || true
+            fi
+          done
+        echo "✅ Version pruning complete"

@@ -1,0 +1,62 @@
+---
+title: "Multi-device measurements"
+description: "Run a shared measurement or route connected devices to family-specific cells."
+---
+
+{/* verified: code@c12fe0855 2026-07-22 */}
+
+A normal protocol cell runs the same protocol on every connected device in
+parallel. A workbook can instead use a connected-device branch to route each
+device to a different protocol or command cell. Each device still produces an
+independent result and upload; a shared `workbook_run_id` identifies readings
+from the same round.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/multi-device-demo.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+The recording uses the web workbook host with mock devices. The mobile field flow
+uses the same per-device outcome model.
+
+## Set up a mobile round
+
+1. Connect several MultispeQs by USB. A powered USB hub is recommended.
+2. Open **Devices** and confirm the connected-device count.
+3. Start an experiment whose workbook contains the intended protocol.
+4. Start the measurement. The app runs the protocol on all connected devices.
+5. Review the results per device before accepting them.
+
+A Bluetooth connection remains single-device, and the app does not mix a
+Bluetooth device into a wired multi-device setup.
+
+## Route by connected device
+
+In a branch cell, choose the pinned **Connected device** source. Conditions can
+use `family`, `id`, `name`, zero-based `index`, or `firmwareVersion`. Point each
+path, including any default, to a protocol or command cell. At run time each
+connected device evaluates the branch with its own identity and runs only its
+matched target.
+
+Devices that do not match a path, or whose path does not resolve to a measurement
+target, sit out that round while matched devices continue. If no device has a
+valid target, the workbook continues to the next cell. In the web workbook host,
+the identification handshake overrides a conflicting toolbar family and shows a
+mismatch notice.
+
+## Handle partial failure
+
+If some devices fail, successful readings are retained. You can retry only the
+failed devices or continue with the successful results. Already-successful
+devices are not scanned again during that retry.
+
+After acceptance, each reading is saved and queued separately. Offline retries
+therefore behave like ordinary single-device uploads; the shared run ID is
+correlation, not a batched upload.
+
+{/* NEEDS-LIVE-CHECK: run a real multi-device mobile round through a powered USB hub, including one partial failure, retry, offline save, and eventual sync. */}
+{/* MEDIA-WAIVER: no wired MultispeQs or powered hub were connected during capture. The mock-device web recording above is retained and explicitly labelled; mobile hardware success is not simulated. */}
+
+Current limits: battery display tracks the first connected device, and workbook
+runs performed on the web are test runs rather than uploaded experiment
+measurements.

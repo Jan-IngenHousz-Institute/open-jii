@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { SeriesTraceType } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { CartesianChart } from "@repo/ui/components/charts/cartesian-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
@@ -13,7 +13,7 @@ import type { ChartRendererProps } from "../types";
 import { transformCartesianData } from "./cartesian-transform";
 
 interface CartesianRendererProps extends ChartRendererProps {
-  defaultTraceType: SeriesTraceType;
+  defaultTraceType: ExperimentSeriesTraceType;
   supportsContinuousColor?: boolean;
   supportsSize?: boolean;
 }

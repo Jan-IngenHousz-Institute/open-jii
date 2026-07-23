@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { expect } from "vitest";
 
 import { AppError, success, failure } from "../../common/utils/fp-utils";
@@ -7,38 +6,15 @@ import { TestHarness } from "../../test/test-harness";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
-import { ExperimentDataController } from "./experiment-data.controller";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
 describe("ExperimentDataController", () => {
   const testApp = TestHarness.App;
-  let controller: ExperimentDataController;
+  let testUserId: string;
   let getExperimentDataUseCase: GetExperimentDataUseCase;
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
   let getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase;
-
-  const mockSession: UserSession = {
-    user: {
-      id: faker.string.uuid(),
-      email: faker.internet.email(),
-      name: faker.person.fullName(),
-      emailVerified: true,
-      image: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    session: {
-      id: faker.string.uuid(),
-      userId: faker.string.uuid(),
-      expiresAt: new Date(Date.now() + 86400000),
-      token: faker.string.alphanumeric(32),
-      ipAddress: "127.0.0.1",
-      userAgent: "test-agent",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  };
 
   beforeAll(async () => {
     await testApp.setup();
@@ -46,7 +22,7 @@ describe("ExperimentDataController", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    controller = testApp.module.get(ExperimentDataController);
+    testUserId = await testApp.createTestUser({});
     getExperimentDataUseCase = testApp.module.get(GetExperimentDataUseCase);
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
     getDistinctColumnValuesUseCase = testApp.module.get(GetDistinctColumnValuesUseCase);
@@ -65,44 +41,34 @@ describe("ExperimentDataController", () => {
       const experimentId = faker.string.uuid();
       const mockTables = [
         {
-          name: "raw_data",
+          identifier: "raw_data",
+          tableType: "static" as const,
           displayName: "Raw Data",
-          catalog_name: "centrum",
-          schema_name: "centrum",
-          full_name: "centrum.centrum.exp_123_raw_data",
-          table_type: "MANAGED",
-          data_source_format: "DELTA",
           totalRows: 1000,
-          columns: [
-            { name: "id", type_name: "string", type_text: "string", position: 0 },
-            { name: "value", type_name: "int", type_text: "int", position: 1 },
-          ],
         },
       ];
 
       vi.spyOn(getExperimentTablesUseCase, "execute").mockResolvedValue(success(mockTables));
 
-      const handler = controller.getExperimentTables(mockSession);
-      const result = await handler({ params: { id: experimentId }, headers: {} });
+      const response = await testApp
+        .get(`/api/v1/experiments/${experimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(200);
 
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual(mockTables);
-      expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(
-        experimentId,
-        mockSession.user.id,
-      );
+      expect(response.body).toEqual(mockTables);
+      expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(experimentId, testUserId);
     });
 
-    it("should handle use case failure", async () => {
+    it("should map a use-case failure to its HTTP status", async () => {
       const experimentId = faker.string.uuid();
-      const error = AppError.notFound("Experiment not found");
+      vi.spyOn(getExperimentTablesUseCase, "execute").mockResolvedValue(
+        failure(AppError.notFound("Experiment not found")),
+      );
 
-      vi.spyOn(getExperimentTablesUseCase, "execute").mockResolvedValue(failure(error));
-
-      const handler = controller.getExperimentTables(mockSession);
-      const result = await handler({ params: { id: experimentId }, headers: {} });
-
-      expect(result.status).toBe(404);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(404);
     });
   });
 
@@ -135,79 +101,41 @@ describe("ExperimentDataController", () => {
 
       vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(success(mockData));
 
-      const handler = controller.getExperimentData(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: {
-          tableName: "raw_data",
-          page: 1,
-          pageSize: 10,
-        },
-        headers: {},
-      });
+      const response = await testApp
+        .get(`/api/v1/experiments/${experimentId}/data?tableName=raw_data&page=1&pageSize=10`)
+        .withAuth(testUserId)
+        .expect(200);
 
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual(mockData);
+      expect(response.body).toEqual(mockData);
       expect(getExperimentDataUseCase.execute).toHaveBeenCalledWith(
         experimentId,
-        mockSession.user.id,
-        {
-          tableName: "raw_data",
-          page: 1,
-          pageSize: 10,
-          columns: undefined,
-          orderBy: undefined,
-          orderDirection: undefined,
-        },
+        testUserId,
+        expect.objectContaining({ tableName: "raw_data", page: 1, pageSize: 10 }),
       );
     });
 
-    it("should handle use case failure", async () => {
+    it("should map a use-case forbidden failure to 403", async () => {
       const experimentId = faker.string.uuid();
-      const error = AppError.forbidden("Access denied");
+      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Access denied")),
+      );
 
-      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
-
-      const handler = controller.getExperimentData(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(403);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(403);
     });
 
-    it("should return 403 if user doesn't have access to the experiment", async () => {
+    it("should map a use-case bad-request failure to 400", async () => {
       const experimentId = faker.string.uuid();
-      const error = AppError.forbidden("Access denied to this experiment");
+      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(
+        failure(AppError.badRequest("Invalid experiment data request")),
+      );
 
-      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
-
-      const handler = controller.getExperimentData(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "test_table", page: 1, pageSize: 5 },
-        headers: {},
-      });
-
-      expect(result.status).toBe(403);
-    });
-
-    it("should return 400 for invalid experiment UUID", async () => {
-      const invalidId = "not-a-uuid";
-      const error = AppError.badRequest("Invalid experiment ID");
-
-      vi.spyOn(getExperimentDataUseCase, "execute").mockResolvedValue(failure(error));
-
-      const handler = controller.getExperimentData(mockSession);
-      const result = await handler({
-        params: { id: invalidId },
-        query: { tableName: "test_table" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(400);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data?tableName=test_table`)
+        .withAuth(testUserId)
+        .expect(400);
     });
   });
 
@@ -218,37 +146,31 @@ describe("ExperimentDataController", () => {
 
       vi.spyOn(getDistinctColumnValuesUseCase, "execute").mockResolvedValue(success(body));
 
-      const handler = controller.getDistinctColumnValues(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data", column: "site", limit: 50 },
-        headers: {},
-      });
+      const response = await testApp
+        .get(
+          `/api/v1/experiments/${experimentId}/data/distinct?tableName=raw_data&column=site&limit=50`,
+        )
+        .withAuth(testUserId)
+        .expect(200);
 
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual(body);
+      expect(response.body).toEqual(body);
       expect(getDistinctColumnValuesUseCase.execute).toHaveBeenCalledWith(
         experimentId,
-        mockSession.user.id,
-        { tableName: "raw_data", column: "site", limit: 50 },
+        testUserId,
+        expect.objectContaining({ tableName: "raw_data", column: "site", limit: 50 }),
       );
     });
 
     it("maps a use-case failure to its HTTP status", async () => {
       const experimentId = faker.string.uuid();
-
       vi.spyOn(getDistinctColumnValuesUseCase, "execute").mockResolvedValue(
         failure(AppError.forbidden("Access denied")),
       );
 
-      const handler = controller.getDistinctColumnValues(mockSession);
-      const result = await handler({
-        params: { id: experimentId },
-        query: { tableName: "raw_data", column: "site" },
-        headers: {},
-      });
-
-      expect(result.status).toBe(403);
+      await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/distinct?tableName=raw_data&column=site`)
+        .withAuth(testUserId)
+        .expect(403);
     });
   });
 });

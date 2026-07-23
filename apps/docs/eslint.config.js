@@ -1,0 +1,13 @@
+import baseConfig from "@repo/eslint-config/base";
+import nextjsConfig from "@repo/eslint-config/nextjs";
+import reactConfig from "@repo/eslint-config/react";
+
+/** @type {import('typescript-eslint').Config} */
+export default [
+  {
+    ignores: [".next/**", "out/**", ".source/**", "next-env.d.ts", ".releaserc.js"],
+  },
+  ...baseConfig,
+  ...reactConfig,
+  ...nextjsConfig,
+];

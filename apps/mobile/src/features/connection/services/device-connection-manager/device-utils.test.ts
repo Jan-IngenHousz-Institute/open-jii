@@ -1,7 +1,23 @@
 import type { BluetoothNativeDevice } from "react-native-bluetooth-classic";
 import { describe, expect, it } from "vitest";
 
-import { bluetoothDeviceToDevice, discoveredEventToDevice } from "./device-utils";
+import {
+  bluetoothDeviceToDevice,
+  discoveredEventToDevice,
+  serialDeviceToDevice,
+} from "./device-utils";
+
+describe("serialDeviceToDevice", () => {
+  it("names MultispeQs with the Android deviceId suffix (hub disambiguation)", () => {
+    const device = serialDeviceToDevice({ deviceId: 1002, vendorId: 5824, productId: 1155 });
+    expect(device).toEqual({ id: "1002", type: "usb", name: "MultispeQ #1002" });
+  });
+
+  it("names unknown devices by their vendor:product pair", () => {
+    const device = serialDeviceToDevice({ deviceId: 7, vendorId: 0x1a86, productId: 0x55d4 });
+    expect(device).toEqual({ id: "7", type: "usb", name: "1a86:55d4 #7" });
+  });
+});
 
 describe("bluetoothDeviceToDevice", () => {
   it("maps a device with a usable address", () => {

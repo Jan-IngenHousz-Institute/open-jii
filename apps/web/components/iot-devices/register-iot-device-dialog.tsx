@@ -7,8 +7,8 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { zRegisterIotDeviceBody } from "@repo/api/schemas/iot.schema";
-import { zSensorFamily } from "@repo/api/schemas/protocol.schema";
+import { zRegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
+import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -74,11 +74,9 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
     const name = values.name?.trim();
     registerIotDevice(
       {
-        body: {
-          serialNumber: values.serialNumber,
-          deviceType: values.deviceType,
-          ...(name ? { name } : {}),
-        },
+        serialNumber: values.serialNumber,
+        deviceType: values.deviceType,
+        ...(name ? { name } : {}),
       },
       {
         onError: () => {

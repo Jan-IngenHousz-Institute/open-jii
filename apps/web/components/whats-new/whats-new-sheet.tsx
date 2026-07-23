@@ -42,8 +42,8 @@ export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
   const handleOpenChange = (next: boolean) => {
     setIsOpen(next);
     // On close, stamp "seen" (cross-device) only when something was actually unread.
-    if (!next && countUnread(entries, lastSeen.data?.body.lastSeenAt ?? null) > 0) {
-      markSeen.mutate({ body: {} });
+    if (!next && countUnread(entries, lastSeen.data?.lastSeenAt ?? null) > 0) {
+      markSeen.mutate({});
     }
   };
 

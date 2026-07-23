@@ -16,14 +16,18 @@ import { contract } from "@repo/api/contract";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
 
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
-  useIotBrowserSupport: () => ({
+const browserSupport = vi.hoisted(() => ({
+  current: {
     bluetooth: true,
     serial: true,
     any: true,
-    bluetoothReason: null,
-    serialReason: null,
-  }),
+    bluetoothReason: null as "browser" | "device" | null,
+    serialReason: null as "browser" | "device" | null,
+  },
+}));
+
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => browserSupport.current,
 }));
 
 const protocolCell = createProtocolCell({
@@ -42,7 +46,7 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
     cells: [markdownCell, protocolCell, macroCell],
     isConnected: false,
     isConnecting: false,
-    deviceInfo: null,
+    connectedDevices: [] as { id: string; label: string }[],
     sensorFamily: "multispeq" as const,
     onSensorFamilyChange: vi.fn(),
     connectionType: "serial" as const,
@@ -67,6 +71,16 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
   };
 }
 
+beforeEach(() => {
+  browserSupport.current = {
+    bluetooth: true,
+    serial: true,
+    any: true,
+    bluetoothReason: null,
+    serialReason: null,
+  };
+});
+
 describe("WorkbookHeader", () => {
   it("calls onConnect when user clicks the Connect button", async () => {
     const user = userEvent.setup();
@@ -78,17 +92,47 @@ describe("WorkbookHeader", () => {
     expect(props.onConnect).toHaveBeenCalledOnce();
   });
 
-  it("calls onDisconnect when connected and user clicks Disconnect", async () => {
+  it("calls onDisconnect via the device menu's Disconnect all item", async () => {
     const user = userEvent.setup();
     const { props } = renderHeader({
       isConnected: true,
-      deviceInfo: { device_name: "MultispeQ v2" },
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
 
-    const disconnectButton = screen.getByRole("button", { name: /disconnect/i });
-    await user.click(disconnectButton);
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    await user.click(screen.getByTestId("disconnect-all"));
 
     expect(props.onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the connect button as Add device while connected", async () => {
+    const user = userEvent.setup();
+    const { props } = renderHeader({
+      isConnected: true,
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
+    });
+
+    await user.click(screen.getByTestId("connect-device"));
+    expect(props.onConnect).toHaveBeenCalledOnce();
+  });
+
+  it("lists connected devices in a dropdown with per-device disconnect", async () => {
+    const user = userEvent.setup();
+    const onDisconnectDevice = vi.fn();
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        { id: "d1", label: "Mock MultispeQ 1" },
+        { id: "d2", label: "Mock MultispeQ 2" },
+      ],
+      onDisconnectDevice,
+    });
+
+    expect(screen.getByText("2 devices")).toBeInTheDocument();
+    await user.click(screen.getByTestId("device-menu-trigger"));
+    expect(screen.getAllByTestId("device-menu-item")).toHaveLength(2);
+    await user.click(screen.getByRole("menuitem", { name: "Disconnect Mock MultispeQ 2" }));
+    expect(onDisconnectDevice).toHaveBeenCalledWith("d2");
   });
 
   it("shows 'Disconnected' status when not connected", () => {
@@ -99,9 +143,81 @@ describe("WorkbookHeader", () => {
   it("shows device name when connected", () => {
     renderHeader({
       isConnected: true,
-      deviceInfo: { device_name: "MultispeQ v2" },
+      connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
     expect(screen.getByText("MultispeQ v2")).toBeInTheDocument();
+  });
+
+  it("uses product-first identity with stable id as secondary context", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Device #1",
+          ordinal: 1,
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Ambit")).toBeInTheDocument();
+    expect(screen.getByText(/AMB-42/)).toBeInTheDocument();
+  });
+
+  it("keeps canonical product and stable id as secondary context for a named device", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Canopy sensor",
+          name: "Canopy sensor",
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Canopy sensor")).toBeInTheDocument();
+    expect(screen.getByText(/Ambit · AMB-42/)).toBeInTheDocument();
+  });
+
+  it("labels the browser wireless option precisely as Bluetooth Low Energy", async () => {
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(screen.getAllByRole("combobox")[1]);
+    expect(screen.getByRole("option", { name: "Bluetooth Low Energy (BLE)" })).toBeInTheDocument();
+  });
+
+  it("disables Web Bluetooth for a Bluetooth-Classic-only device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "multispeq" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
+  });
+
+  it("disables Web Bluetooth for a serial-only measurement device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "ambit" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
   });
 
   it("shows 'Connecting...' while connecting", () => {
@@ -174,14 +290,6 @@ describe("WorkbookHeader", () => {
     await user.click(flowButton);
 
     expect(props.onToggleFlowchart).toHaveBeenCalledOnce();
-  });
-
-  it("shows firmware version when connected with device info", () => {
-    renderHeader({
-      isConnected: true,
-      deviceInfo: { device_name: "Device", device_version: "3.0.1" },
-    });
-    expect(screen.getByText("FW 3.0.1")).toBeInTheDocument();
   });
 });
 

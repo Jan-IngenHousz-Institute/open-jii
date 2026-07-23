@@ -61,7 +61,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "22"
+          node-version: "24"
           hoisted: "false"
 
       - name: Check Docker
@@ -121,7 +121,7 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
           ignore-unfixed: true
-          trivyignores: .trivyignore
+          trivyignores: .trivyignore.docker-images
 
       - name: Push image to Amazon ECR
         run: docker push ${{ steps.build-image.outputs.image }}

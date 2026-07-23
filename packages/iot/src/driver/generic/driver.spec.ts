@@ -75,6 +75,12 @@ describe("GenericDeviceDriver", () => {
     transport = createMockTransport();
   });
 
+  describe("getDeviceIdentity", () => {
+    it("returns a minimal identity when the INFO probe cannot run", async () => {
+      await expect(driver.getDeviceIdentity()).resolves.toEqual({ family: "generic", raw: {} });
+    });
+  });
+
   describe("initialize", () => {
     it("should set up data and status handlers", async () => {
       await initDriver(driver, transport);

@@ -1,0 +1,185 @@
+asyncapi: "2.0.0"
+info:
+  title: openJII MQTT API (AWS IoT Core)
+  version: "1.0.0"
+  description: >
+    This AsyncAPI specification defines the MQTT topics and message schemas for AWS IoT Core.
+    It details channels for device status updates and sensor data, allowing devices to publish
+    their state and sensor readings securely.
+  contact:
+    name: openJII
+    email: ji-institute@info.nl
+  license:
+    name: GNU General Public License
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  production:
+    url: a123456789.iot.us-east-1.amazonaws.com
+    protocol: mqtt
+    description: AWS IoT Core production endpoint
+
+channels:
+  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
+    description: |
+      Channel for ingesting experiment sensor data.
+      The path parameters represent:
+      <ul>
+        <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
+        <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
+        <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+        <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
+        <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
+      </ul>
+    parameters:
+      experimentId:
+        description: Unique identifier of the experiment (e.g., exp123).
+        schema:
+          type: string
+      sensorType:
+        description: The type or family of sensor (e.g., MutlispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Sensor firmware/hardware revision (e.g., v1, v2.1).
+        schema:
+          type: string
+      sensorId:
+        description: Unique sensor identifier (UUID format recommended).
+        schema:
+          type: string
+      protocolId:
+        description: Unique identifier for the sampling or measurement protocol (e.g., protoA).
+        schema:
+          type: string
+    subscribe:
+      operationId: ingestExperimentData
+      summary: Ingest experiment sensor data.
+      message:
+        $ref: "#/components/messages/ExperimentDataMessage"
+
+  device/scripts/v1/{sensorType}/{sensorVersion}/{thingName}:
+    description: |
+      Channel for delivering behaviour scripts to a device. The cloud publishes and
+      the device subscribes, then applies the script to its attached sensor. Messages
+      are published retained at QoS 1 so a device that reconnects immediately receives
+      the current script for its topic.
+      The path parameters represent:
+      <ul>
+        <li><strong>sensorType:</strong> The target sensor family (e.g., MultispeQ, Ambit...).</li>
+        <li><strong>sensorVersion:</strong> Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+        <li><strong>thingName:</strong> AWS IoT Thing name of the target device. The IoT policy binds this
+          segment to ${iot:Connection.Thing.ThingName}, so a device (authenticated by its X.509 certificate)
+          can only subscribe to and receive its own scripts.</li>
+      </ul>
+    parameters:
+      sensorType:
+        description: The target sensor family (e.g., MultispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Target firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
+        schema:
+          type: string
+      thingName:
+        description: AWS IoT Thing name of the target device (e.g., dom_ludo_prototype_ambyte_thing_v2).
+        schema:
+          type: string
+    publish:
+      operationId: deliverDeviceScript
+      summary: Deliver a behaviour script to a device.
+      message:
+        $ref: "#/components/messages/DeviceScriptMessage"
+
+components:
+  messages:
+    ExperimentDataMessage:
+      contentType: application/json
+      name: ExperimentDataMessage
+      title: Experiment Data Ingestion Message
+      summary: A message containing sensor data for an experiment.
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            description: Sensor data payload.
+            additionalProperties: true
+            properties:
+              sample:
+                type: string
+                description: >
+                  Sensor sample data. May be a raw JSON string (legacy) or a
+                  gzip+base64 encoded string when _sample_encoding is set.
+              _sample_encoding:
+                type: string
+                enum: ["gzip+base64"]
+                description: >
+                  When present, indicates that the `sample` field has been
+                  compressed (gzip) and base64-encoded to reduce payload size.
+                  Absent on legacy (uncompressed) payloads.
+              timestamp:
+                type: string
+                description: >
+                  ISO 8601 timestamp with UTC offset captured at measurement
+                  time using the synced clock (e.g. "2026-03-09T10:30:00.000-05:00").
+              timezone:
+                type: string
+                description: >
+                  IANA timezone identifier resolved from GPS at measurement
+                  time (e.g. "America/Chicago"). Preserved across retries so
+                  the original measurement-time timezone is never lost.
+        required:
+          - data
+      examples:
+        - payload:
+            data:
+              moisture: 30.5
+              temperature: 22.1
+
+    DeviceScriptMessage:
+      contentType: application/json
+      name: DeviceScriptMessage
+      title: Device Script Update Message
+      summary: A protocol measurement script delivered from the cloud to a device.
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            enum: ["script_update"]
+            description: Command discriminator, so the same topic can carry future command types.
+          id:
+            type: string
+            description: Unique update identifier (e.g. upd-2026-06-08-001). Lets a device skip an update it has already applied.
+          payload:
+            type: string
+            description: >
+              The protocol measurement script body (Lua source), sent inline. May be a
+              raw string or a gzip+base64 encoded string when _payload_encoding is set.
+          _payload_encoding:
+            type: string
+            enum: ["gzip+base64"]
+            description: >
+              When present, indicates that the `payload` field has been compressed
+              (gzip) and base64-encoded. Absent on raw (uncompressed) payloads.
+          checksum:
+            type: string
+            description: SHA-256 hex digest of the decoded script body, for integrity verification before applying.
+        required:
+          - type
+          - id
+          - payload
+      examples:
+        - payload:
+            type: "script_update"
+            id: "upd-2026-06-08-001"
+            payload: "-- Lua protocol script\nreturn { pulses = 100, interval_ms = 500 }"
+            checksum: "adaeff5386f5e9dcaef58c0cc39f69f2d62a98bedae07195d02bdc82595a90ad"
+
+  securitySchemes:
+    sigv4:
+      type: apiKey
+      in: user
+      description: >
+        AWS Signature Version 4 is used to sign the MQTT connection requests to AWS IoT Core.

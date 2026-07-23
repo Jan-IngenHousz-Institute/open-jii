@@ -8,7 +8,7 @@ Living glossary for the Field Companion (mobile app). Terms used in code, tests,
 
 ### Measurement
 
-A single sample produced by a MultispeQ device for a given experiment + protocol, optionally accompanied by user-answered questions, macro output, and annotations. Persisted locally in SQLite (`shared/db/measurements-storage.ts`) before any cloud upload is attempted.
+A single sample produced by a measurement device for a given experiment + protocol, optionally accompanied by user-answered questions, macro output, and annotations. Persisted locally in SQLite (`shared/db/measurements-storage.ts`) before any cloud upload is attempted.
 
 ### Status
 
@@ -22,7 +22,31 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 ### Topic
 
-The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMultispeqMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no MultispeQ sample).
+The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no device sample).
+
+### Workbook run
+
+N Measurements produced by one Multi-scan round, correlated only by a shared `workbook_run_id` (one uuid per round) embedded in each otherwise-ordinary wire payload. There is no run entity locally or server-side — an unlinked measurement simply has no `workbook_run_id`. There is no batched publish either; the Outbox still sends N independent messages.
+
+---
+
+## Devices
+
+### Device registry
+
+The `Map<Device.id, connection>` in `device-connection-manager/serial-port-connection.ts` that holds all open USB serial ports (replacing the former single-connection module variables). USB only — Bluetooth Classic remains max one device. Insertion order = connect order.
+
+### Primary device
+
+The first connected device (first Device registry entry, or the lone Bluetooth device). Legacy single-device surfaces — battery chip, home card, BT flows, `useConnectedDevice()` — bind to it.
+
+### Multi-scan
+
+Running one protocol on all connected devices in parallel (`Promise.allSettled` semantics). Outcomes are per-device; partial failure is allowed — the user can continue with the successful Measurements or retry only the failed devices. Per-device battery tracking is deferred: only the Primary device's battery is stored.
+
+### Transport exclusivity
+
+At any time the app holds up to N USB devices OR exactly one Bluetooth Classic device, never a mix. Connecting on one transport disconnects the other.
 
 ---
 

@@ -6,30 +6,34 @@ the platform device registry (uuid, serial, owner, status) from the openJII
 backend API, mirroring user_metadata.add_user_column.
 """
 
-from typing import Dict, Any, List
+from typing import Any
+
 import pandas as pd
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StringType, StructField, StructType
 
 from .backend_client import BackendClient
 
-
 # device struct: STRUCT<id, serial_number, owner, status, device_type>
-device_schema = StructType([
-    StructField("id", StringType(), True),
-    StructField("serial_number", StringType(), True),
-    StructField("owner", StringType(), True),
-    StructField("status", StringType(), True),
-    StructField("device_type", StringType(), True),
-])
+device_schema = StructType(
+    [
+        StructField("id", StringType(), True),
+        StructField("serial_number", StringType(), True),
+        StructField("owner", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("device_type", StringType(), True),
+    ]
+)
 
 
-def _fetch_device_registry(thing_names: List[str], backend_client: BackendClient) -> Dict[str, Dict[str, Any]]:
+def _fetch_device_registry(
+    thing_names: list[str], backend_client: BackendClient
+) -> dict[str, dict[str, Any]]:
     if not thing_names:
         return {}
     try:
         return backend_client.get_device_registry(thing_names)
     except Exception as e:
-        print(f"Error fetching device registry: {str(e)}")
+        print(f"Error fetching device registry: {e!s}")
         return {}
 
 
@@ -49,8 +53,9 @@ def add_device_registry(df, environment: str, dbutils):
     Returns:
         DataFrame with an added `device` STRUCT<id, serial_number, owner, status, device_type>.
     """
-    from .backend_client import BackendClient
     from pyspark.sql import functions as F
+
+    from .backend_client import BackendClient
 
     # Get secrets on driver node to pass to workers
     scope = f"node-webhook-secret-scope-{environment}"
@@ -68,13 +73,15 @@ def add_device_registry(df, environment: str, dbutils):
             if pd.isna(cid):
                 return pd.Series([None, None, None, None, None])
             info = registry.get(cid, {})
-            return pd.Series([
-                info.get('id'),
-                info.get('serialNumber'),
-                info.get('createdBy'),
-                info.get('status'),
-                info.get('deviceType'),
-            ])
+            return pd.Series(
+                [
+                    info.get("id"),
+                    info.get("serialNumber"),
+                    info.get("createdBy"),
+                    info.get("status"),
+                    info.get("deviceType"),
+                ]
+            )
 
         return client_ids.apply(extract)
 

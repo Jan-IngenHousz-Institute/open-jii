@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { SearchResult, SearchResultType } from "@repo/api/schemas/search.schema";
+import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
 
 import { Result, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";

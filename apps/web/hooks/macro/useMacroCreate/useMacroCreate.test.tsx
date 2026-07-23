@@ -1,6 +1,6 @@
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { renderHook, waitFor, act } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -14,20 +14,15 @@ describe("useMacroCreate", () => {
     });
 
     const onSuccess = vi.fn();
-    const queryClient = createTestQueryClient();
-
-    // Pre-populate the macros cache so we can observe invalidation
-    queryClient.setQueryData(["macros"], { body: [] });
-
-    const { result } = renderHook(() => useMacroCreate({ onSuccess }), { queryClient });
+    const { result } = renderHook(() => useMacroCreate({ onSuccess }));
 
     act(() => {
-      result.current.mutate({ body: { name: "New Macro", language: "python", code: "" } });
+      result.current.mutate({ name: "New Macro", language: "python", code: "" });
     });
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalled();
-      expect((onSuccess.mock.calls[0][0] as { body: { id: string } }).body.id).toBe("macro-1");
+      expect((onSuccess.mock.calls[0][0] as { id: string }).id).toBe("macro-1");
     });
   });
 
@@ -40,7 +35,9 @@ describe("useMacroCreate", () => {
 
     act(() => {
       result.current.mutate({
-        body: { name: "Test", language: "python", code: 'print("hi")' },
+        name: "Test",
+        language: "python",
+        code: 'print("hi")',
       });
     });
 
@@ -56,7 +53,7 @@ describe("useMacroCreate", () => {
     const { result } = renderHook(() => useMacroCreate({ onError }));
 
     act(() => {
-      result.current.mutate({ body: { name: "", language: "python", code: "" } });
+      result.current.mutate({ name: "", language: "python", code: "" });
     });
 
     await waitFor(() => {

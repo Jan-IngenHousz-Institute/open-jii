@@ -22,7 +22,7 @@ describe("useExperimentVisualization", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data?.body).toMatchObject({
+    expect(result.current.data).toMatchObject({
       id: visualization.id,
       name: visualization.name,
       chartFamily: visualization.chartFamily,
@@ -59,6 +59,6 @@ describe("useExperimentVisualization", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.data?.body).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 });

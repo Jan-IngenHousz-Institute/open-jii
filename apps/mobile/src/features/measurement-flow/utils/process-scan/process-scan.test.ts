@@ -34,7 +34,7 @@ vi.mock("expo-file-system", () => ({
 
 const encode = (code: string) => Buffer.from(code, "utf8").toString("base64");
 
-describe("applyMacro — input isolation (OJD-1463)", () => {
+describe("applyMacro: input isolation (OJD-1463)", () => {
   describe("JavaScript macros", () => {
     it("does not mutate top-level scalar properties on the original sample", async () => {
       const sample = { meta: "original", phi2: 0.5 };
@@ -144,7 +144,7 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
       });
 
       await applyMacro(result, {
-        code: encode("# python body irrelevant — runner is mocked"),
+        code: encode("# python body irrelevant; runner is mocked"),
         language: "python",
       });
 
@@ -172,5 +172,54 @@ describe("applyMacro — input isolation (OJD-1463)", () => {
       expect(sample1.data_raw).toEqual([1, 2, 3]);
       expect(sample2.data_raw).toEqual([4, 5, 6]);
     });
+  });
+});
+
+describe("applyMacro: ctx namespace", () => {
+  it("exposes upstream ctx to a JS macro", async () => {
+    const result = { sample: { phi2: 0.5 } };
+    const code = encode(`return { sum: ctx.baseline.value + ctx.stress.value };`);
+    const [out] = await applyMacro(
+      result,
+      { code, language: "javascript" },
+      { baseline: { value: 10 }, stress: { value: 4 } },
+    );
+    expect(out).toEqual({ sum: 14 });
+  });
+
+  it("defaults ctx to an empty object", async () => {
+    const result = { sample: { phi2: 0.5 } };
+    const code = encode(`return { empty: Object.keys(ctx).length === 0 };`);
+    const [out] = await applyMacro(result, { code, language: "javascript" });
+    expect(out).toEqual({ empty: true });
+  });
+
+  it("freezes ctx so a JS macro cannot mutate upstream state", async () => {
+    const result = { sample: { phi2: 0.5 } };
+    const code = encode(`
+      try { ctx.baseline.value = 999; } catch (e) {}
+      return { v: ctx.baseline.value };
+    `);
+    const [out] = await applyMacro(
+      result,
+      { code, language: "javascript" },
+      { baseline: { value: 10 } },
+    );
+    expect(out).toEqual({ v: 10 });
+  });
+
+  it("passes ctx through to the Python runner", async () => {
+    let receivedCtx: unknown = null;
+    registerPythonMacroRunner((_code, _json, ctx) => {
+      receivedCtx = ctx;
+      return Promise.resolve({ ok: true });
+    });
+    await applyMacro(
+      { sample: { phi2: 0.5 } },
+      { code: encode("# irrelevant"), language: "python" },
+      { baseline: { value: 7 } },
+    );
+    registerPythonMacroRunner(null);
+    expect(receivedCtx).toEqual({ baseline: { value: 7 } });
   });
 });

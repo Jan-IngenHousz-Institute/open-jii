@@ -1,17 +1,18 @@
+import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
-
-import { tsr } from "../../../lib/tsr";
+import { useQuery } from "@tanstack/react-query";
 
 export function useMacro(id: string, enabled = true) {
-  const query = tsr.macros.getMacro.useQuery({
-    queryData: { params: { id } },
-    queryKey: ["macro", id],
-    retry: shouldRetryQuery,
-    enabled: enabled && !!id,
-  });
+  const query = useQuery(
+    orpc.macros.getMacro.queryOptions({
+      input: { id },
+      retry: shouldRetryQuery,
+      enabled: enabled && !!id,
+    }),
+  );
 
   return {
-    data: query.data?.body,
+    data: query.data,
     isLoading: query.isLoading,
     error: query.error,
   };

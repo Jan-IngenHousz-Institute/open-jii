@@ -2,9 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
+  DevicePlanEntry,
   FlowState,
   MatchedPath,
   ScanResult,
+  ScanResultEntry,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import {
   dismissQuestionsSubmitState,
@@ -21,7 +23,7 @@ import {
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
-import type { WorkbookCell } from "@repo/api/schemas/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 interface MeasurementFlowStore extends FlowState {
   // AutoProceededSummary anchor: first manual question at the start of the
@@ -37,7 +39,12 @@ interface MeasurementFlowStore extends FlowState {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
-  setFlowGraph: (nodes: FlowNode[], edges: FlowEdge[], cells: WorkbookCell[]) => void;
+  setFlowGraph: (
+    nodes: FlowNode[],
+    edges: FlowEdge[],
+    cells: WorkbookCell[],
+    workbookVersionId?: string,
+  ) => void;
   setLastMatchedPath: (path: MatchedPath | undefined) => void;
   incrementBranchVisit: (nodeId: string) => void;
   recordBranchJump: (landing: number) => void;
@@ -48,6 +55,18 @@ interface MeasurementFlowStore extends FlowState {
   // producerCellId records which cell (protocol or command) yielded the result;
   // omitting it clears any stale attribution.
   setScanResult: (result: ScanResult | undefined, producerCellId?: string) => void;
+  // Multi-scan: per-device results in connect order; scanResult mirrors the
+  // Primary device's result for branch evaluation and legacy consumers.
+  setScanResults: (results: ScanResultEntry[], producerCellId?: string) => void;
+  // Persists a macro/analysis output under its cell id for downstream reads.
+  setCellOutput: (cellId: string, data: unknown) => void;
+  // Dispatcher branch routing: the per-device plan plus the target node ids
+  // the round covers beyond the routed-to node (skipped once by nextStep).
+  // Passing plan=undefined deactivates dispatch entirely.
+  setDevicePlan: (plan: DevicePlanEntry[] | undefined, consumedNodeIds: string[]) => void;
+  // Round done: drop the plan but keep consumedNodeIds so advancing still
+  // skips the other targets once.
+  completeDevicePlan: () => void;
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
@@ -86,11 +105,12 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
-      setFlowGraph: (nodes, edges, cells) =>
+      setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
         set({
           flowNodes: nodes,
           edges,
           cells,
+          workbookVersionId,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -117,7 +137,23 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       finishFlow: () => set(finishFlowState),
 
-      setScanResult: (result, producerCellId) => set({ scanResult: result, producerCellId }),
+      setScanResult: (result, producerCellId) =>
+        set({
+          scanResult: result,
+          scanResults: result === undefined ? undefined : [{ result }],
+          producerCellId,
+        }),
+
+      setScanResults: (results, producerCellId) =>
+        set({ scanResults: results, scanResult: results[0]?.result, producerCellId }),
+
+      setCellOutput: (cellId, data) =>
+        set((state) => ({ cellOutputs: { ...state.cellOutputs, [cellId]: data } })),
+
+      setDevicePlan: (plan, consumedNodeIds) => set({ devicePlan: plan, consumedNodeIds }),
+
+      completeDevicePlan: () => set({ devicePlan: undefined }),
+
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
       dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
@@ -142,6 +178,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
+        workbookVersionId: state.workbookVersionId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,
@@ -149,7 +186,9 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         isFlowFinished: state.isFlowFinished,
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
+        scanResults: state.scanResults,
         producerCellId: state.producerCellId,
+        cellOutputs: state.cellOutputs,
         isFromOverview: state.isFromOverview,
         cells: state.cells,
         edges: state.edges,

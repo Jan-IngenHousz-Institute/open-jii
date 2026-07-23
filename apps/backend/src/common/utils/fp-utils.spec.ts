@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import type { Logger } from "@nestjs/common";
 import { StatusCodes } from "http-status-codes";
 import { vi } from "vitest";
 import { z } from "zod";
@@ -12,7 +10,6 @@ import {
   assertSuccess,
   defaultRepositoryErrorMapper,
   failure,
-  handleFailure,
   isFailure,
   isSuccess,
   success,
@@ -203,153 +200,6 @@ describe("Functional Programming Utilities", () => {
       expect(error.code).toBe("CUSTOM_CONFLICT");
       expect(error.statusCode).toBe(StatusCodes.CONFLICT);
       expect(error.details).toEqual({ field: "email" });
-    });
-  });
-
-  describe("handleFailure", () => {
-    let mockLogger: Logger;
-
-    beforeEach(() => {
-      mockLogger = {
-        error: vi.fn(),
-        warn: vi.fn(),
-        log: vi.fn(),
-        debug: vi.fn(),
-        verbose: vi.fn(),
-        fatal: vi.fn(),
-        setContext: vi.fn(),
-        options: {},
-        localInstance: undefined,
-        registerLocalInstanceRef: vi.fn(),
-      } as Logger;
-    });
-
-    it("should handle server errors properly", () => {
-      const error = AppError.internal("Server error", "SERVER_ERROR", {
-        detail: "test",
-      });
-      const failureResult = failure(error) as Failure<AppError>;
-      const handled = handleFailure(failureResult, mockLogger);
-
-      expect(handled).toEqual({
-        status: StatusCodes.INTERNAL_SERVER_ERROR,
-        body: {
-          message: "Server error",
-          code: "SERVER_ERROR",
-          details: { detail: "test" },
-        },
-      });
-
-      expect(mockLogger.error).toHaveBeenCalled();
-      expect(mockLogger.warn).not.toHaveBeenCalled();
-    });
-
-    it("should handle client errors properly", () => {
-      const error = AppError.badRequest("Bad request", "BAD_REQUEST", {
-        detail: "test",
-      });
-      const failureResult = failure(error) as Failure<AppError>;
-      const handled = handleFailure(failureResult, mockLogger);
-
-      expect(handled).toEqual({
-        status: StatusCodes.BAD_REQUEST,
-        body: {
-          message: "Bad request",
-          code: "BAD_REQUEST",
-          details: { detail: "test" },
-        },
-      });
-
-      expect(mockLogger.error).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalled();
-    });
-
-    it("should exclude details in production", () => {
-      const originalEnv = process.env.NODE_ENV;
-      (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
-
-      const error = AppError.badRequest("Bad request", "BAD_REQUEST", {
-        detail: "test",
-      });
-      const failureResult = failure(error) as Failure<AppError>;
-      const handled = handleFailure(failureResult, mockLogger);
-
-      expect(handled.body).not.toHaveProperty("details");
-
-      (process.env as { NODE_ENV?: string }).NODE_ENV = originalEnv;
-    });
-
-    it("should log errors with status code 500 and above using error level", () => {
-      const error = new AppError("Critical error", "CRITICAL_ERROR", 503, {
-        service: "external",
-      });
-      const failureResult = failure(error) as Failure<AppError>;
-      handleFailure(failureResult, mockLogger);
-
-      expect(mockLogger.error).toHaveBeenCalled();
-      expect(mockLogger.warn).not.toHaveBeenCalled();
-    });
-
-    it("should log errors with status code below 500 using warn level", () => {
-      const error = AppError.unauthorized("Access denied", "UNAUTHORIZED", {
-        userId: "123",
-      });
-      const failureResult = failure(error) as Failure<AppError>;
-      handleFailure(failureResult, mockLogger);
-
-      expect(mockLogger.warn).toHaveBeenCalled();
-      expect(mockLogger.error).not.toHaveBeenCalled();
-    });
-
-    it("should handle errors without details", () => {
-      const error = AppError.notFound("Resource not found", "NOT_FOUND");
-      const failureResult = failure(error) as Failure<AppError>;
-      const handled = handleFailure(failureResult, mockLogger);
-
-      expect(handled).toEqual({
-        status: StatusCodes.NOT_FOUND,
-        body: {
-          message: "Resource not found",
-          code: "NOT_FOUND",
-        },
-      });
-
-      expect(mockLogger.warn).toHaveBeenCalled();
-    });
-
-    it("should return proper status codes for different error types", () => {
-      const testCases = [
-        {
-          error: AppError.badRequest(),
-          expectedStatus: StatusCodes.BAD_REQUEST,
-        },
-        {
-          error: AppError.unauthorized(),
-          expectedStatus: StatusCodes.UNAUTHORIZED,
-        },
-        {
-          error: AppError.forbidden(),
-          expectedStatus: StatusCodes.FORBIDDEN,
-        },
-        {
-          error: AppError.notFound(),
-          expectedStatus: StatusCodes.NOT_FOUND,
-        },
-        {
-          error: AppError.internal(),
-          expectedStatus: StatusCodes.INTERNAL_SERVER_ERROR,
-        },
-        {
-          error: AppError.conflict(),
-          expectedStatus: StatusCodes.CONFLICT,
-        },
-      ];
-
-      testCases.forEach(({ error, expectedStatus }) => {
-        const failureResult = failure(error) as Failure<AppError>;
-        const handled = handleFailure(failureResult, mockLogger);
-        expect(handled.status).toBe(expectedStatus);
-      });
     });
   });
 

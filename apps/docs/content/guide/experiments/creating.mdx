@@ -1,0 +1,84 @@
+---
+title: "Creating an experiment"
+description: "Create an experiment in a short guided wizard: name it, set visibility, add members and locations, then review and create."
+---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
+{/* verified: code@12a361a74 2026-07-19 */}
+
+You create an experiment through a short guided wizard. Only a name is required,
+so you can start simple and fill in the rest later.
+
+To begin, open **Experiments** and select **Create Experiment**.
+
+![The experiments list with the Create Experiment button](/img/guide/web/create-experiment-entry.png)
+
+<PlatformCta path="/en-US/platform/experiments/new">Create an experiment in openJII</PlatformCta>
+
+## The create wizard
+
+The wizard has four steps. You can move **Next** and **Back** between them, and
+nothing is created until the final step.
+
+<Steps>
+<Step>
+### Details
+
+- **Name** _(required)_ — a clear, descriptive name makes your experiment easy to
+  find and share.
+- **Description** _(optional)_ — a short summary of the experiment's purpose.
+- **Workbook** _(optional)_ — the measurement flow the mobile app will follow.
+  You can attach one now or add it later.
+
+</Step>
+
+<Step>
+### Members & Visibility
+
+- **Add Members** — search for people to add now, and give each the **Member** or
+  **Admin** role. You can also do this later.
+- **Visibility** — choose **Public** or **Private**. New experiments are **public
+  by default**. If you choose Private, set an **embargo** date on which the
+  experiment becomes public automatically.
+
+<Callout type="warn">
+  Once an experiment is public, its visibility cannot be changed back to private.
+</Callout>
+</Step>
+
+<Step>
+### Locations
+
+Add one or more geographic **locations** where the experiment takes place. This is
+optional.
+
+</Step>
+
+<Step>
+### Review
+
+Check your settings, then select **Create Experiment**. Your new experiment opens
+and appears in your experiments list.
+
+</Step>
+</Steps>
+
+![The Details step in the four-step create-experiment wizard](/img/guide/web/create-experiment-details.png)
+
+## About visibility and embargo
+
+openJII is built around open data:
+
+- **Public** experiments are visible to everyone. This is the default.
+- **Private** experiments stay hidden until their **embargo** date, then become
+  public automatically. The embargo can run up to about a year.
+
+You can read more in [Sharing & Collaboration](/guide/sharing).
+
+## What comes next
+
+- The Details step lets you attach a **Workbook** (measurement flow). Set up what
+  field users measure in [Devices & Protocols](/guide/devices-protocols).
+- Add context to your measurements with [metadata](/guide/experiments/metadata).
+- [Invite collaborators](/guide/experiments/collaborators) and set their roles.

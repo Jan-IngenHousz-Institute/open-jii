@@ -4,7 +4,8 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { DashboardWidget, DataFilter } from "@repo/api/schemas/experiment.schema";
+import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   DashboardFiltersProvider,
@@ -12,7 +13,7 @@ import {
   useDashboardFiltersForTable,
 } from "./dashboard-filters-context";
 
-function wrapWithWidgets(widgets: DashboardWidget[]) {
+function wrapWithWidgets(widgets: ExperimentDashboardWidget[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <DashboardFiltersProvider widgets={widgets}>{children}</DashboardFiltersProvider>;
   };
@@ -245,14 +246,14 @@ describe("useDashboardFilterWidget", () => {
     });
     const richText = createRichTextWidget({ config: { html: "<p>a</p>" } });
 
-    function Harness({ widgets }: { widgets: DashboardWidget[] }) {
+    function Harness({ widgets }: { widgets: ExperimentDashboardWidget[] }) {
       return (
         <DashboardFiltersProvider widgets={widgets}>
           <Probe />
         </DashboardFiltersProvider>
       );
     }
-    const captured: DataFilter[][] = [];
+    const captured: ExperimentDataFilter[][] = [];
     function Probe() {
       captured.push(useDashboardFiltersForTable("raw_data"));
       return null;

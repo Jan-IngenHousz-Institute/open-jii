@@ -4,10 +4,8 @@ import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisu
 import { AlertCircle } from "lucide-react";
 import { useMemo } from "react";
 
-import type {
-  ExperimentVisualization,
-  VisualizationWidget,
-} from "@repo/api/schemas/experiment.schema";
+import type { ExperimentVisualizationWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 
 import ExperimentVisualizationRenderer from "../../../experiment-visualizations/experiment-visualization-renderer";
@@ -17,7 +15,7 @@ import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { WidgetHeader } from "../shell/widget-header";
 
 export interface LoadedVisualizationViewProps {
-  widget: VisualizationWidget;
+  widget: ExperimentVisualizationWidget;
   visualizationId: string;
   experimentId: string;
 }
@@ -35,7 +33,7 @@ export function LoadedVisualizationView({
   // is editing this viz, so edits land instantly without waiting for
   // autosave + network round-trip.
   const body = useMemo<ExperimentVisualization | undefined>(() => {
-    const server = data?.body;
+    const server = data;
     if (!server) return undefined;
     if (live?.vizId !== visualizationId) return server;
     // Drop draft data sources so the renderer's query doesn't 400
@@ -52,7 +50,7 @@ export function LoadedVisualizationView({
       config: { ...live.values.config },
       dataConfig: { ...live.values.dataConfig, dataSources: configuredSources },
     };
-  }, [data?.body, live, visualizationId]);
+  }, [data, live, visualizationId]);
 
   if (isLoading) {
     return (

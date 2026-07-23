@@ -1,12 +1,12 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
-  ExperimentTableName,
-  zUploadHistoryStatus,
-  zUploadSourceKind,
-} from "@repo/api/schemas/experiment.schema";
-import type { UploadTargetTable } from "@repo/api/schemas/experiment.schema";
+  zExperimentUploadHistoryStatus,
+  zExperimentUploadSourceKind,
+} from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentUploadTargetTable } from "@repo/api/domains/experiment/experiment.schema";
 
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
@@ -36,7 +36,7 @@ export class ExperimentDataUploadsRepository {
    */
   async validateTargetTable(input: {
     experimentId: string;
-    target: UploadTargetTable;
+    target: ExperimentUploadTargetTable;
   }): Promise<Result<{ uploadTableId: string; uploadTableName: string }>> {
     const { experimentId, target } = input;
 
@@ -176,8 +176,8 @@ export class ExperimentDataUploadsRepository {
     // that's since been removed) must not fail the whole history read; skip it,
     // consistent with the safeParse-and-skip in getActiveUploads/getFailedUploads.
     return schemaData.rows.flatMap((row) => {
-      const sourceKind = zUploadSourceKind.safeParse(row[sourceKindIdx]);
-      const status = zUploadHistoryStatus.safeParse(row[statusIdx]);
+      const sourceKind = zExperimentUploadSourceKind.safeParse(row[sourceKindIdx]);
+      const status = zExperimentUploadHistoryStatus.safeParse(row[statusIdx]);
       if (!sourceKind.success || !status.success) {
         this.logger.warn({
           msg: "Skipping upload history row with unrecognized source_kind/status",
