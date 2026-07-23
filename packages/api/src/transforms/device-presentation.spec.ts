@@ -11,7 +11,7 @@ describe("device-presentation", () => {
       expect(result.primary).toBe("Greenhouse A");
       expect(result.provenance).toBe("name");
       // Product context is still available as secondary data alongside the name.
-      expect(result.productName).toBe("MultiSpeQ");
+      expect(result.productName).toBe("MultispeQ");
       expect(result.productId).toBe("multispeq");
       expect(result.id).toBe("sn-1");
     });

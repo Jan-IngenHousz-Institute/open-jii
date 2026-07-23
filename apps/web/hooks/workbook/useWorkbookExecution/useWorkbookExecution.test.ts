@@ -215,7 +215,7 @@ describe("useWorkbookExecution", () => {
         { deviceId: "dev-4", ...identified("Mock MultispeQ 4"), data: { device_id: "mock-4" } },
       ]);
       expect(outputCell?.messages).toEqual([
-        "Mock MultispeQ 3 · MultiSpeQ: Mock device failure (simulated)",
+        "Mock MultispeQ 3 · MultispeQ: Mock device failure (simulated)",
       ]);
     });
 
@@ -304,8 +304,8 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.data).toBeUndefined();
       expect(outputCell?.deviceResults).toHaveLength(2);
       expect(outputCell?.messages).toEqual([
-        "Mock MultispeQ 1 · MultiSpeQ: device not open",
-        "Mock MultispeQ 2 · MultiSpeQ: device not open",
+        "Mock MultispeQ 1 · MultispeQ: device not open",
+        "Mock MultispeQ 2 · MultispeQ: device not open",
       ]);
     });
 

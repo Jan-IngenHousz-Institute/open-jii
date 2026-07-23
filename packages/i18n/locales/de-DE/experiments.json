@@ -293,8 +293,8 @@
     "description": "Laden Sie Sensordaten zur Analyse in Ihr Experiment hoch",
     "options": {
       "multispeq": {
-        "label": "MultiSpeQ",
-        "description": "MultiSpeQ-Sensordaten hochladen"
+        "label": "MultispeQ",
+        "description": "MultispeQ-Messdaten hochladen"
       }
     },
     "sensorFamily": {
@@ -303,13 +303,13 @@
     },
     "sensorTypes": {
       "multispeq": {
-        "label": "MultiSpeQ",
-        "description": "MultiSpeQ-Sensordaten-Upload (in Kürze)",
+        "label": "MultispeQ",
+        "description": "MultispeQ-Messdaten hochladen (in Kürze)",
         "comingSoon": "In Kürze"
       },
       "ambyte": {
         "label": "Ambyte",
-        "description": "Ambyte-Sensorordner mit Messdaten hochladen"
+        "description": "Ambyte-Datenordner mit Messdaten hochladen"
       }
     },
     "fileUpload": {

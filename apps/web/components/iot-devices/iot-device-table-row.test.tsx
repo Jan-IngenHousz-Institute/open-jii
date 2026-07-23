@@ -32,7 +32,7 @@ describe("IotDeviceTableRow", () => {
     renderRow(createIotDevice({ name: null, deviceType: "multispeq", serialNumber: "SN-XYZ" }));
 
     // Name absent, product known: show the product; the serial stays in its column.
-    expect(screen.getByRole("link", { name: "MultiSpeQ" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "MultispeQ" })).toBeInTheDocument();
     expect(screen.getByText("SN-XYZ")).toBeInTheDocument();
   });
 

@@ -8,4 +8,3 @@ apps/docs/.source/
 
 # Auto-generated from packages/api during the docs build; drift-checked verbatim in CI.
 apps/docs/openapi.json
-tooling/device-nomenclature/reports/

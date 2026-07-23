@@ -24,7 +24,7 @@ export const zProtocolCell = zBaseCell.extend({
 });
 
 // An inline command cell sends a raw string (e.g. `hello`, `battery`), JSON, or
-// YAML straight to the instrument. Kept as a separate cell type (not folded into
+// YAML straight to the device. Kept as a separate cell type (not folded into
 // the protocol cell) so old mobile apps, whose bundled cells->flow only knows
 // "protocol", keep rendering protocol cells and simply skip command cells.
 const zCommandPayload = z

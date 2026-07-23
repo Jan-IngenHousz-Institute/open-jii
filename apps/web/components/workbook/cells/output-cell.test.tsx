@@ -160,7 +160,7 @@ describe("OutputCellComponent", () => {
       render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
 
       expect(screen.getByTestId("single-device-result")).toBeInTheDocument();
-      expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
+      expect(screen.getByText("MultispeQ")).toBeInTheDocument();
       expect(screen.getByText("MSQ-42")).toBeInTheDocument();
     });
 

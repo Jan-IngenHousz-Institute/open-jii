@@ -25,10 +25,10 @@ historical rows.
 
 ### Ambit
 
-A leaf sensor in the `ambit` family, distinct from the Ambyte gateway. The web
-workbook host can identify it over USB serial and send direct command cells for
-calibration or spot readings. Full Ambit measurements run through its Ambyte
-gateway rather than a direct protocol cell.
+A leaf measurement device in the `ambit` family, distinct from the Ambyte
+gateway. The web workbook host can identify it over USB serial and send direct
+command cells for calibration or spot readings. Full Ambit measurements run
+through its Ambyte gateway rather than a direct protocol cell.
 
 ### Bronze, Silver, Gold
 
@@ -96,7 +96,7 @@ other non-measurement variables relevant to the study.
 ### MultispeQ
 
 Handheld hardware used for protocol-guided optical measurements. The mobile app
-connects over Bluetooth Classic or USB; multi-device mobile work uses wired USB.
+connects over Bluetooth or USB; multi-device mobile work uses wired USB.
 
 ### Protocol
 
@@ -114,7 +114,8 @@ annotations, and export or migration context.
 
 In researcher-facing copy, autonomous hardware that records observations over
 time with little interaction after setup. In technical UI, **sensor family** is
-also the shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic hardware.
+also the legacy shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic
+hardware; that technical field name does not make the Ambyte gateway a sensor.
 
 ### Visibility
 

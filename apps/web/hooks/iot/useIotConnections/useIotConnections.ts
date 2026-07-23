@@ -32,7 +32,7 @@ export interface IotDeviceConnection {
 
 /**
  * Device registry for the workbook host: N devices connected at once (a USB
- * hub of sensors), each identified by a post-connect handshake and driving
+ * hub of devices), each identified by a post-connect handshake and driving
  * its own connector. Connect order is insertion order; the first entry is
  * the primary device. Mirrors the mobile scanner registry semantics.
  */

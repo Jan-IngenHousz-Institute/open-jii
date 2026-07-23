@@ -136,7 +136,7 @@ export function ScanningState({
 
       {/* Interactive protocols pause for the user to open/close the clamp. The
           device gives no app-visible signal when it is waiting, so tell the user
-          up front to follow the instrument's own prompts. */}
+          up front to follow the device's own prompts. */}
       {requiresInteraction && (
         <View className="bg-muted mt-2 max-w-xs rounded-lg p-3">
           <Text className={clsx("text-center text-sm font-semibold", classes.text)}>

@@ -52,7 +52,7 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportsBLE: false,
     supportsBluetoothClassic: true,
   },
-  // Ambit and MiniPAR are ESP32 sensors that expose only a USB-CDC serial
+  // Ambit and MiniPAR are ESP32 measurement devices that expose only a USB-CDC serial
   // console to hosts (the Ambit's radio talks to its Ambyte gateway, not us).
   ambit: {
     supportedTransports: ["serial"],

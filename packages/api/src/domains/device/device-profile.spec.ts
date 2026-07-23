@@ -15,7 +15,7 @@ describe("device-profile", () => {
   });
 
   it("uses canonical product spellings for known families", () => {
-    expect(DEVICE_PROFILES.multispeq.productName).toBe("MultiSpeQ");
+    expect(DEVICE_PROFILES.multispeq.productName).toBe("MultispeQ");
     expect(DEVICE_PROFILES.ambit.productName).toBe("Ambit");
     expect(DEVICE_PROFILES.minipar.productName).toBe("MiniPAR");
     expect(DEVICE_PROFILES.ambyte.productName).toBe("Ambyte");

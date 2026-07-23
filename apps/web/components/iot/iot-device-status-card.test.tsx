@@ -79,7 +79,7 @@ describe("DeviceStatusCard", () => {
         />,
       );
 
-      expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
+      expect(screen.getByText("MultispeQ")).toBeInTheDocument();
       expect(screen.queryByText("iot.protocolRunner.wireless")).not.toBeInTheDocument();
     });
 

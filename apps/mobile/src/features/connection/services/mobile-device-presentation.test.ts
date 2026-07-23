@@ -35,11 +35,11 @@ describe("presentMobileDevice", () => {
     expect(presentation).toMatchObject({
       primary: "Plot probe",
       provenance: "name",
-      productName: "MultiSpeQ",
+      productName: "MultispeQ",
       id: "SN-42",
     });
     expect(mobileDeviceSecondaryParts(presentation, labels)).toEqual([
-      "MultiSpeQ",
+      "MultispeQ",
       "Measurement device",
       "ID SN-42",
     ]);
@@ -48,14 +48,14 @@ describe("presentMobileDevice", () => {
   it("uses the canonical product when identity has no usable name", () => {
     const presentation = presentMobileDevice(device, identity({}));
 
-    expect(presentation).toMatchObject({ primary: "MultiSpeQ", provenance: "product" });
+    expect(presentation).toMatchObject({ primary: "MultispeQ", provenance: "product" });
     expect(mobileDeviceSecondaryParts(presentation, labels)).toEqual([
       "Measurement device",
       "ID AA:BB:CC:DD:EE:FF",
     ]);
   });
 
-  it("does not fabricate MultiSpeQ while identity is unavailable or failed", () => {
+  it("does not fabricate MultispeQ while identity is unavailable or failed", () => {
     const presentation = presentMobileDevice(device);
 
     expect(presentation).toMatchObject({
@@ -99,7 +99,7 @@ describe("presentMobileDevice", () => {
         unknownDevice: "Unknown device",
         identifier: labels.identifier,
       }),
-    ).toBe("MultiSpeQ (ID SN-42)");
+    ).toBe("MultispeQ (ID SN-42)");
   });
 
   it("adds stable identifier context to an unknown fallback", () => {

@@ -40,7 +40,7 @@ describe("ConnectedDeviceRow identity hierarchy", () => {
     );
 
     expect(screen.getByText("Plot probe")).toBeTruthy();
-    expect(screen.getByText(/MultiSpeQ · Measurement device/)).toBeTruthy();
+    expect(screen.getByText(/MultispeQ · Measurement device/)).toBeTruthy();
     expect(screen.getByText(/Battery 87%/)).toBeTruthy();
   });
 
@@ -53,15 +53,15 @@ describe("ConnectedDeviceRow identity hierarchy", () => {
       />,
     );
 
-    expect(screen.getByText("MultiSpeQ")).toBeTruthy();
+    expect(screen.getByText("MultispeQ")).toBeTruthy();
     expect(screen.getByText(/ID AA:BB:CC:DD:EE:FF/)).toBeTruthy();
   });
 
-  it("renders Unknown device without a MultiSpeQ fallback before identity", () => {
+  it("renders Unknown device without a MultispeQ fallback before identity", () => {
     render(<ConnectedDeviceRow device={device} onDisconnect={vi.fn()} />);
 
     expect(screen.getByText("Unknown device")).toBeTruthy();
-    expect(screen.queryByText("MultiSpeQ")).toBeNull();
+    expect(screen.queryByText("MultispeQ")).toBeNull();
     expect(screen.getByText(/ID AA:BB:CC:DD:EE:FF/)).toBeTruthy();
   });
 });

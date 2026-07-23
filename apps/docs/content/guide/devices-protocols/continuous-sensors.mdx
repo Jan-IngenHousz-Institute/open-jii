@@ -1,6 +1,6 @@
 ---
 title: "Continuous sensors"
-description: "Stream autonomous sensor data into openJII over MQTT, with Ambyte as JII's own edge gateway."
+description: "Stream autonomous sensor data over MQTT while distinguishing the Ambyte gateway from Ambit and MiniPAR measurement devices."
 ---
 
 {/* verified: code@147e5cf48 2026-07-22 */}
@@ -11,8 +11,10 @@ each reading, unlike a handheld MultispeQ. Bringing that data into openJII is a
 the platform's IoT endpoint once it is registered and holds credentials.
 
 **Ambyte** is JII's own edge device built on exactly this capability: a field
-gateway that connects JII's leaf sensors, such as the **Ambit**, and publishes
-their observations to the platform over MQTT.
+gateway that receives readings from autonomous sensors and measurement devices,
+such as the **Ambit**, and publishes their observations to the platform over
+MQTT. Ambit (`ambit`) and **MiniPAR** (`minipar`) are separate measurement-device
+families; MiniPAR is normally operated locally.
 
 ## Register the device and issue credentials
 

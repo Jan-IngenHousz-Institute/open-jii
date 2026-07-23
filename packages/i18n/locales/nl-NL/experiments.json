@@ -212,8 +212,8 @@
     "description": "Upload sensorgegevens naar uw experiment voor analyse",
     "options": {
       "multispeq": {
-        "label": "MultiSpeQ",
-        "description": "MultiSpeQ-sensorgegevens uploaden"
+        "label": "MultispeQ",
+        "description": "MultispeQ-meetgegevens uploaden"
       }
     },
     "sensorFamily": {
@@ -222,13 +222,13 @@
     },
     "sensorTypes": {
       "multispeq": {
-        "label": "MultiSpeQ",
-        "description": "MultiSpeQ-sensorgegevens uploaden (binnenkort beschikbaar)",
+        "label": "MultispeQ",
+        "description": "MultispeQ-meetgegevens uploaden (binnenkort beschikbaar)",
         "comingSoon": "Binnenkort beschikbaar"
       },
       "ambyte": {
         "label": "Ambyte",
-        "description": "Upload Ambyte-sensormappen met meetgegevens"
+        "description": "Upload Ambyte-gegevensmappen met meetgegevens"
       }
     },
     "fileUpload": {

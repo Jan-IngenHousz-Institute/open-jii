@@ -10,7 +10,6 @@
     "clean:workspaces": "turbo run clean && pnpm run clean",
     "dev": "turbo dev --concurrency 20",
     "check:affected": "turbo ls --affected",
-    "check:nomenclature": "pnpm --filter @repo/device-nomenclature check",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "lint": "turbo run lint --concurrency 20 --continue -- --no-cache",

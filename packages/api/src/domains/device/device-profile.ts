@@ -38,7 +38,7 @@ export interface DeviceProfile {
   readonly productId: string | null;
   /**
    * Canonical product spelling used for display (a product trademark such as
-   * `MultiSpeQ`). `null` for the generic family, which has no fabricated name.
+   * `MultispeQ`). `null` for the generic family, which has no fabricated name.
    */
   readonly productName: string | null;
   /**
@@ -62,7 +62,7 @@ function freezeProfile(profile: DeviceProfile): DeviceProfile {
 export const DEVICE_PROFILES: Readonly<Record<SensorFamily, DeviceProfile>> = Object.freeze({
   multispeq: freezeProfile({
     productId: "multispeq",
-    productName: "MultiSpeQ",
+    productName: "MultispeQ",
     roles: ["measurement-device"],
   }),
   ambit: freezeProfile({

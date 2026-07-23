@@ -51,7 +51,7 @@ export function IotProtocolRunner({
 
   // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
-  // instrument's prompts rather than assuming it hung. See OJD-1643.
+  // device's prompts rather than assuming it hung. See OJD-1643.
   const requiresInteraction = protocolRequiresInteraction(protocolCode);
 
   // Auto-select the first supported connection type
@@ -171,7 +171,7 @@ export function IotProtocolRunner({
 
           {/* Interactive protocols pause for the user to open/close the clamp.
               The device gives no signal while it waits, so prompt the user to
-              follow the instrument rather than assume the run stalled. */}
+              follow the device rather than assume the run stalled. */}
           {isConnected && requiresInteraction && (
             <div className="bg-muted text-foreground flex items-start gap-2 rounded-lg p-3">
               <Hand className="text-primary mt-0.5 h-4 w-4 shrink-0" />

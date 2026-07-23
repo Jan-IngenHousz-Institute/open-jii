@@ -13,7 +13,7 @@ export interface ExperimentFlowMeta {
 
 /**
  * Fetch the per-experiment flow graphs in parallel so the picker cards can
- * render sensor/questions tags and node-count metadata. Uses the
+ * render device/question tags and node-count metadata. Uses the
  * ["experiment-flow", id] key so the eventual single-experiment selection
  * hits a warm cache.
  *

@@ -166,7 +166,7 @@ describe("ProtocolCellComponent", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("MultiSpeQ")).toBeInTheDocument();
+      expect(screen.getByText("MultispeQ")).toBeInTheDocument();
     });
   });
 

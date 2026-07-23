@@ -105,7 +105,7 @@ describe("useDeviceSheetActions", () => {
     await result.current.handleDisconnect(unnamedDevice);
 
     expect(mockT).toHaveBeenCalledWith("setup.errorDisconnect", {
-      name: "MultiSpeQ (ID SN-42)",
+      name: "MultispeQ (ID SN-42)",
     });
   });
 

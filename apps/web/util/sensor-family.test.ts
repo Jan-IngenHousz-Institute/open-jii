@@ -64,7 +64,7 @@ describe("SENSOR_FAMILY_OPTIONS", () => {
     >;
 
     expect(byValue.generic.label).toBe("Generic");
-    expect(byValue.multispeq.label).toBe("MultiSpeQ");
+    expect(byValue.multispeq.label).toBe("MultispeQ");
     expect(byValue.ambyte.label).toBe("Ambyte");
     expect(byValue.minipar.label).toBe("MiniPAR");
   });
@@ -75,8 +75,8 @@ describe("getSensorFamilyLabel", () => {
     expect(getSensorFamilyLabel("generic")).toBe("Generic");
   });
 
-  it("should return 'MultiSpeQ' for multispeq", () => {
-    expect(getSensorFamilyLabel("multispeq")).toBe("MultiSpeQ");
+  it("should return 'MultispeQ' for multispeq", () => {
+    expect(getSensorFamilyLabel("multispeq")).toBe("MultispeQ");
   });
 
   it("should return 'Ambyte' for ambyte", () => {
