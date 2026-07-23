@@ -35,11 +35,19 @@ def raw_large_data():
         .load(LARGE_IOT_S3_PATH)
     )
 
-    # experiment_id lives in the S3 key (large-iot/{experimentId}/{uuid}.json), not the payload.
+    # experiment_id comes from the S3 key (large-iot/{experimentId}/{uuid}.json).
+    # The key is server-issued (pre-signed URL scoped to a membership-checked
+    # experiment), so it wins over the client-controlled payload field.
     path_experiment_id = F.regexp_extract(F.col("_metadata.file_path"), r"large-iot/([^/]+)/", 1)
 
     return (
         df
-        .withColumn("experiment_id", F.coalesce(F.col("experiment_id"), path_experiment_id))
+        .withColumn(
+            "experiment_id",
+            F.coalesce(
+                F.when(path_experiment_id != "", path_experiment_id),
+                F.col("experiment_id"),
+            )
+        )
         .withColumn("ingestion_timestamp", F.current_timestamp())
     )

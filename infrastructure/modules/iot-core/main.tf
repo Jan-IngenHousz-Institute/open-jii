@@ -224,7 +224,11 @@ resource "aws_iam_policy" "backend_s3_presign" {
 
 # IAM policy granting the Databricks storage-credential role read access to the
 # large-iot bucket so the DLT pipeline can ingest payloads via Auto Loader.
+# Gated on the bucket ARN so environments without a large-iot bucket (DR)
+# don't render an invalid empty Resource.
 resource "aws_iam_policy" "databricks_large_iot_read" {
+  count = var.large_iot_bucket_arn != "" ? 1 : 0
+
   name = "open_jii_${var.environment}_databricks_large_iot_read"
   policy = jsonencode({
     Version = "2012-10-17"

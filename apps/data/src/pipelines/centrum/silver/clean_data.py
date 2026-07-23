@@ -328,6 +328,23 @@ def clean_data():
                 )
             )
         )
+        # Same annotation ID/timestamp population as the bronze path: mobile
+        # payloads carry only type/content.
+        .withColumn(
+            "annotations",
+            F.expr("""
+                transform(annotations, a -> struct(
+                    coalesce(a.id, uuid()) as id,
+                    coalesce(a.rowId, cast(id as string)) as rowId,
+                    a.type as type,
+                    a.content as content,
+                    a.createdBy as createdBy,
+                    a.createdByName as createdByName,
+                    coalesce(a.createdAt, current_timestamp()) as createdAt,
+                    coalesce(a.updatedAt, current_timestamp()) as updatedAt
+                ))
+            """)
+        )
         .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
         # No MQTT topic, so no protocol to extract.
         .withColumn("protocol_id", F.lit(None).cast("string"))

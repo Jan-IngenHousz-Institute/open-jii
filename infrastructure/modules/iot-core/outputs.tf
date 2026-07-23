@@ -30,7 +30,7 @@ output "backend_s3_presign_policy_arn" {
 }
 
 output "databricks_large_iot_read_policy_arn" {
-  description = "ARN of the IAM policy granting the Databricks storage-credential role read access to the large-iot bucket"
-  value       = aws_iam_policy.databricks_large_iot_read.arn
+  description = "ARN of the IAM policy granting the Databricks storage-credential role read access to the large-iot bucket (null when large_iot_bucket_arn is unset)"
+  value       = var.large_iot_bucket_arn != "" ? aws_iam_policy.databricks_large_iot_read[0].arn : null
 }
 
