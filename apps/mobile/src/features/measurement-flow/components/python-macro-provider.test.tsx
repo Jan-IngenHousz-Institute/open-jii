@@ -33,7 +33,7 @@ vi.mock("~/shared/observability/logger", () => ({
 
 function inlineSandboxScript(): string {
   const scripts = Array.from(
-    pythonMacroSandboxHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g),
+    pythonMacroSandboxHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi),
   );
   const source = scripts.at(-1)?.[1];
   if (!source) throw new Error("Python sandbox inline script not found");
