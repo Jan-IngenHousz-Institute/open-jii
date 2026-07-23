@@ -42,11 +42,7 @@ export class OutputDataNormalizationError extends Error {
 export function isOutputDataNormalizationError(
   error: unknown,
 ): error is OutputDataNormalizationError {
-  return (
-    error instanceof Error &&
-    error.name === "OutputDataNormalizationError" &&
-    "code" in error
-  );
+  return error instanceof Error && error.name === "OutputDataNormalizationError" && "code" in error;
 }
 
 function normalizeOutputData(data: unknown): unknown {
