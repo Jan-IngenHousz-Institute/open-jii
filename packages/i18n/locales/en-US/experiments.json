@@ -334,11 +334,11 @@
     "options": {
       "multispeq": {
         "label": "MultispeQ",
-        "description": "MultispeQ sensor data upload"
+        "description": "Upload MultispeQ measurement data"
       },
       "ambyte": {
         "label": "Ambyte",
-        "description": "Upload Ambyte sensor folders containing measurement data"
+        "description": "Upload Ambyte data folders containing measurements"
       },
       "metadata": {
         "label": "Plot/Plant Metadata",
@@ -352,12 +352,12 @@
     "sensorTypes": {
       "multispeq": {
         "label": "MultispeQ",
-        "description": "MultispeQ sensor data upload (coming soon)",
+        "description": "Upload MultispeQ measurement data (coming soon)",
         "comingSoon": "Coming Soon"
       },
       "ambyte": {
         "label": "Ambyte (Coming soon)",
-        "description": "Upload Ambyte sensor folders containing measurement data"
+        "description": "Upload Ambyte data folders containing measurements"
       }
     },
     "fileUpload": {

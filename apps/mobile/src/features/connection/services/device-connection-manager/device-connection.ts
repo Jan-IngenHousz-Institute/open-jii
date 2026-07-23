@@ -1,14 +1,14 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { createDriverCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
-import { createMockCommandExecutor } from "~/features/connection/services/multispeq-communication/mock-device/create-mock-command-executor";
+import type { DeviceCommandExecutor } from "~/features/connection/services/device-command-executor";
+import { createMockCommandExecutor } from "~/features/connection/services/multispeq/mock-device/create-mock-command-executor";
 import {
   closeMockDevice,
   openMockDevice,
-} from "~/features/connection/services/multispeq-communication/mock-device/mock-device-registry";
-import { mockDevicesEnabled } from "~/features/connection/services/multispeq-communication/mock-device/mock-devices-enabled";
-import { bluetoothClassicTransport } from "~/features/connection/services/multispeq-communication/transports/bluetooth-classic-transport";
-import { serialPortTransport } from "~/features/connection/services/multispeq-communication/transports/serial-port-transport";
+} from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
+import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
+import { createMultispeqCommandExecutor } from "~/features/connection/services/multispeq/multispeq-command-executor";
+import { bluetoothClassicTransport } from "~/features/connection/services/multispeq/transports/bluetooth-classic-transport";
+import { serialPortTransport } from "~/features/connection/services/multispeq/transports/serial-port-transport";
 import type { Device, DeviceType } from "~/shared/types/device";
 
 import { closeSerialPort, getSerialPortConnection, openSerialPort } from "./serial-port-connection";
@@ -21,7 +21,7 @@ interface DeviceTypeOps {
   connect(device: Device): Promise<void>;
   disconnect(device: Device): Promise<void>;
   unpair?(device: Device): Promise<void>;
-  createExecutor(device: Device): Promise<IMultispeqCommandExecutor | undefined>;
+  createExecutor(device: Device): Promise<DeviceCommandExecutor | undefined>;
 }
 
 const bluetoothClassicOps: DeviceTypeOps = {
@@ -53,7 +53,7 @@ const bluetoothClassicOps: DeviceTypeOps = {
   },
   async createExecutor(device) {
     const bluetoothDevice = await RNBluetoothClassic.getConnectedDevice(device.id);
-    return createDriverCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
+    return createMultispeqCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
   },
 };
 
@@ -71,7 +71,7 @@ const usbOps: DeviceTypeOps = {
   async createExecutor(device) {
     const connection = getSerialPortConnection(device.id);
     if (!connection) return undefined;
-    return createDriverCommandExecutor(serialPortTransport(connection));
+    return createMultispeqCommandExecutor(serialPortTransport(connection));
   },
 };
 
@@ -114,8 +114,8 @@ export async function unpairDevice(device: Device): Promise<void> {
   await unpair(device);
 }
 
-export async function createCommandExecutor(
+export async function createDeviceCommandExecutor(
   device: Device,
-): Promise<IMultispeqCommandExecutor | undefined> {
+): Promise<DeviceCommandExecutor | undefined> {
   return deviceOps[device.type].createExecutor(device);
 }

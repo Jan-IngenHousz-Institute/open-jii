@@ -5,7 +5,7 @@ import { orpc } from "~/shared/api/orpc";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
 export interface ExperimentFlowMeta {
-  requiresSensor: boolean;
+  requiresDevice: boolean;
   questionsOnly: boolean;
   nodeCount: number;
   durationMin: number;
@@ -13,7 +13,7 @@ export interface ExperimentFlowMeta {
 
 /**
  * Fetch the per-experiment flow graphs in parallel so the picker cards can
- * render sensor/questions tags and node-count metadata. Uses the
+ * render device/question tags and node-count metadata. Uses the
  * ["experiment-flow", id] key so the eventual single-experiment selection
  * hits a warm cache.
  *
@@ -36,10 +36,10 @@ export function useExperimentsFlowMeta(
     if (!id || !body?.graph) return;
 
     const nodes = orderFlowNodes(body.graph.nodes, body.graph.edges ?? []);
-    const requiresSensor = nodes.some((n) => n.type === "measurement");
+    const requiresDevice = nodes.some((n) => n.type === "measurement");
     const questionsOnly = isQuestionsOnlyFlow(nodes);
     out[id] = {
-      requiresSensor,
+      requiresDevice,
       questionsOnly,
       nodeCount: nodes.length,
       durationMin: estimateFlowDuration(nodes),

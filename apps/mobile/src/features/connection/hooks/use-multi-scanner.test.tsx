@@ -10,10 +10,9 @@ import type { Device } from "~/shared/types/device";
 
 import { useMultiScanner } from "./use-multi-scanner";
 
-vi.mock(
-  "~/features/connection/services/scan-manager/utils/create-multispeq-command-executor",
-  () => ({ createMultispeqCommandExecutor: vi.fn() }),
-);
+vi.mock("~/features/connection/services/device-connection-manager/device-connection", () => ({
+  createDeviceCommandExecutor: vi.fn(),
+}));
 
 const DEVICE_A: Device = { id: "usb-a", type: "usb", name: "MultispeQ #1" };
 const DEVICE_B: Device = { id: "usb-b", type: "usb", name: "MultispeQ #2" };
@@ -69,8 +68,9 @@ describe("useMultiScanner", () => {
   });
 
   it("maps executor entries to per-device scan statuses", () => {
+    const identity = { family: "multispeq" as const, name: "Plot probe", raw: {} };
     setEntries([
-      entry(DEVICE_A, { isExecuting: true }),
+      entry(DEVICE_A, { isExecuting: true, identity }),
       entry(DEVICE_B, { error: new Error("boom") }),
       entry({ id: "usb-c", type: "usb", name: "MultispeQ #3" }, { commandResponse: { ok: 1 } }),
       entry({ id: "usb-d", type: "usb", name: "MultispeQ #4" }),
@@ -84,6 +84,7 @@ describe("useMultiScanner", () => {
       "done",
       "idle",
     ]);
+    expect(result.current.deviceStates[0]?.identity).toBe(identity);
   });
 
   it("partitions per-device outcomes and patches each device's battery cache", async () => {

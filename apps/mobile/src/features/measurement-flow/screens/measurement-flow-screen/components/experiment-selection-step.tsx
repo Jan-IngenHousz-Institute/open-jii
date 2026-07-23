@@ -68,9 +68,9 @@ export function ExperimentSelectionStep() {
 
   const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
   const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
-  const requiresSensor = !!selectedMeta?.requiresSensor;
+  const requiresDevice = !!selectedMeta?.requiresDevice;
   const isConnected = !!connectedDevice;
-  const showSensorBanner = !!selectedExperimentId && requiresSensor && !isConnected;
+  const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
 
   const handleStart = () => {
     if (!selectedExperimentId || !experimentFlowReady) return;
@@ -155,7 +155,7 @@ export function ExperimentSelectionStep() {
                   description={item.description}
                   selected={selectedExperimentId === item.value}
                   onPress={setSelectedExperimentId}
-                  requiresSensor={!!meta?.requiresSensor}
+                  requiresDevice={!!meta?.requiresDevice}
                   questionsOnly={!!meta?.questionsOnly}
                   nodeCount={meta?.nodeCount ?? 0}
                   durationMin={meta?.durationMin ?? 0}
@@ -176,11 +176,11 @@ export function ExperimentSelectionStep() {
           backgroundColor: colors.background,
         }}
       >
-        {showSensorBanner ? (
+        {showDeviceBanner ? (
           <Banner
-            title={t("experimentSelection.sensorBannerTitle")}
-            body={t("experimentSelection.sensorBannerBody")}
-            actionLabel={t("experimentSelection.sensorBannerAction")}
+            title={t("experimentSelection.deviceBannerTitle")}
+            body={t("experimentSelection.deviceBannerBody")}
+            actionLabel={t("experimentSelection.deviceBannerAction")}
             onAction={() => useDeviceSheetStore.getState().open()}
           />
         ) : null}

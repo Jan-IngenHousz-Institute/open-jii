@@ -22,18 +22,26 @@ interface ConnectionTypeSelectorProps {
     bluetoothReason: TransportUnavailableReason;
     serialReason: TransportUnavailableReason;
   };
+  /**
+   * True when the selected device speaks Bluetooth Classic but not BLE, so Web
+   * Bluetooth cannot reach it. Shows accurate Classic-vs-BLE guidance.
+   */
+  bluetoothClassicOnly?: boolean;
 }
 
 export function ConnectionTypeSelector({
   connectionType,
   onConnectionTypeChange,
   browserSupport,
+  bluetoothClassicOnly = false,
 }: ConnectionTypeSelectorProps) {
   const { t } = useTranslation("iot");
 
   const bluetoothTooltip =
     browserSupport.bluetoothReason === "device"
-      ? t("iot.protocolRunner.deviceNoBLE")
+      ? bluetoothClassicOnly
+        ? t("iot.protocolRunner.bluetoothClassicHint")
+        : t("iot.protocolRunner.deviceNoBLE")
       : browserSupport.bluetoothReason === "browser"
         ? t("iot.protocolRunner.webBluetoothNotSupported")
         : undefined;

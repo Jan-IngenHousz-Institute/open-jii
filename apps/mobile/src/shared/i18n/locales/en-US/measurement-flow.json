@@ -30,13 +30,13 @@
     "noDescription": "No description available",
     "startFlow": "Start measurement",
     "startNamedFlow": "Measure {{label}}",
-    "sensorBannerTitle": "This measurement needs a sensor",
-    "sensorBannerBody": "Connect a MultispeQ to capture readings.",
-    "sensorBannerAction": "Connect",
+    "deviceBannerTitle": "This measurement needs a device",
+    "deviceBannerBody": "Connect a measurement device to capture readings.",
+    "deviceBannerAction": "Connect",
     "tag": {
-      "sensorRequired": "Sensor required",
+      "deviceRequired": "Device required",
       "questionsOnly": "Questions only",
-      "sensorAndQuestions": "Sensor + questions"
+      "deviceAndQuestions": "Device + questions"
     },
     "meta": {
       "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
@@ -133,7 +133,7 @@
     "running": "Running…",
     "continue": "Continue",
     "toast": {
-      "notConnected": "Not connected to sensor",
+      "notConnected": "No device connected",
       "error": "Command failed"
     }
   },
@@ -162,11 +162,11 @@
       "elapsed": "{{elapsed}} elapsed",
       "elapsedOfEstimate": "{{elapsed}} of ~{{estimate}}",
       "expected": "~{{estimate}} expected",
-      "interactionTitle": "Follow the instrument",
+      "interactionTitle": "Follow the device",
       "interactionHint": "This protocol pauses for you to open and close the clamp. Watch the device and act when its lights prompt you."
     },
     "toast": {
-      "notConnected": "Not connected to sensor",
+      "notConnected": "No device connected",
       "noProtocol": "No protocol selected",
       "protocolUnavailable": "Protocol unavailable, connect to the internet and try again",
       "deviceDisconnected": "Device disconnected, reconnect and try again",

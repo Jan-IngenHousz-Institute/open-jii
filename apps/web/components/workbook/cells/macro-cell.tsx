@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
@@ -274,6 +275,11 @@ export function MacroCellComponent({
       }
       headerActions={
         <div className="flex items-center gap-1">
+          <DocsHelpLink
+            iconOnly
+            path="/guide/devices-protocols/writing-macros"
+            className="h-7 w-7 justify-center"
+          />
           <Button
             asChild
             variant="ghost"

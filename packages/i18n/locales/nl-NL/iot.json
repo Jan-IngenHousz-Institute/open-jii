@@ -2,22 +2,21 @@
   "iot": {
     "protocolRunner": {
       "connectionType": "Verbindingstype",
-      "bluetooth": "Bluetooth",
-      "serial": "Serieel",
+      "bluetooth": "Bluetooth Low Energy (BLE)",
+      "serial": "USB/serieel",
       "device": "Apparaat",
       "connected": "Verbonden",
       "connecting": "Verbinden",
       "notConnected": "Niet verbonden",
-      "pairingWithDevice": "Koppelen met apparaat",
+      "connectingToDevice": "Verbinden met apparaat",
       "wireless": "Draadloos",
       "usb": "USB",
       "connect": "Verbinden",
       "disconnect": "Verbreken",
-      "unknownDevice": "Onbekend apparaat",
       "version": "Versie",
       "runProtocol": "Protocol uitvoeren",
       "running": "Wordt uitgevoerd...",
-      "interactionTitle": "Volg het instrument",
+      "interactionTitle": "Begeleiding voor apparaatinteractie",
       "interactionHint": "Dit protocol pauzeert zodat u de clip kunt openen en sluiten. Let op het apparaat en handel wanneer de lampjes daarom vragen.",
       "results": "Resultaten",
       "success": "Succes",
@@ -30,11 +29,158 @@
       "webBluetoothNotSupported": "Web Bluetooth wordt niet ondersteund in deze browser",
       "webSerialNotSupported": "Web Serial wordt niet ondersteund in deze browser",
       "deviceNoBLE": "Dit apparaat ondersteunt geen Bluetooth Low Energy (BLE)",
+      "bluetoothClassicHint": "Dit apparaat verbindt via Bluetooth Classic, dat browsers niet via Web Bluetooth kunnen bereiken. Maak in plaats daarvan verbinding via USB/serieel.",
       "deviceNoSerial": "Dit apparaat ondersteunt geen seriële verbindingen",
       "testProtocol": "Protocol testen",
       "connectToDeviceDescription": "Verbind met een apparaat en test uw protocol voordat u het opslaat",
       "browserNotSupported": "Uw browser ondersteunt geen Web Bluetooth of Web Serial APIs.",
       "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop."
+    },
+    "deviceIdentity": {
+      "unknown": "Onbekend apparaat",
+      "role": {
+        "measurementDevice": "Meetapparaat",
+        "gateway": "Gateway"
+      }
+    },
+    "devices": {
+      "tabLabel": "Apparaten",
+      "title": "Apparaten",
+      "description": "Registreer en beheer uw hardware-apparaten. Certificaten worden in een latere stap uitgegeven.",
+      "register": "Apparaat registreren",
+      "searchPlaceholder": "Zoeken op naam of serienummer",
+      "loadError": "Apparaten laden mislukt.",
+      "columns": {
+        "name": "Naam",
+        "serial": "Serienummer",
+        "type": "Type",
+        "status": "Status",
+        "created": "Geregistreerd"
+      },
+      "status": {
+        "pending": "In behandeling",
+        "active": "Actief",
+        "rotating": "Roteren",
+        "revoked": "Ingetrokken"
+      },
+      "tabs": {
+        "all": "Alle"
+      },
+      "sections": {
+        "overview": "Overzicht",
+        "devices": "Apparaten",
+        "groups": "Groepen",
+        "onboarding": "Onboarding",
+        "monitoring": "Monitoring"
+      },
+      "detailTabs": {
+        "overview": "Overzicht",
+        "credentials": "Inloggegevens",
+        "onboarding": "Onboarding",
+        "members": "Leden",
+        "lineage": "Herkomst",
+        "monitoring": "Monitoring"
+      },
+      "overview": {
+        "total": "Totaal aantal apparaten"
+      },
+      "comingSoon": {
+        "title": "Binnenkort beschikbaar",
+        "groups": "Organiseer apparaten in groepen die u samen kunt beheren, provisioneren en onboarden.",
+        "onboarding": "Onboard apparaten naar experimenten: geef elk apparaat zijn verbinding, experiment en workbook-procedure.",
+        "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
+        "members": "Deel apparaatbeheer met medewerkers, zoals experimenten toegang delen.",
+        "lineage": "Traceer de identiteit van dit apparaat tot aan zijn opgenomen metingen."
+      },
+      "pageOf": "Pagina {{page}} van {{total}}",
+      "actions": {
+        "more": "Apparaatacties",
+        "view": "Details bekijken",
+        "delete": "Verwijderen"
+      },
+      "empty": {
+        "title": "Nog geen apparaten",
+        "description": "Registreer een apparaat om zijn record aan te maken. Een certificaat wordt in een latere stap uitgegeven om het te activeren.",
+        "cta": "Apparaat registreren"
+      },
+      "zeroResults": {
+        "title": "Geen apparaten komen overeen met uw filters",
+        "description": "Probeer een andere zoekterm of statusfilter.",
+        "clear": "Filters wissen"
+      },
+      "dialog": {
+        "title": "Apparaat registreren",
+        "description": "Registreer een hardware-apparaat. In deze stap wordt geen certificaat uitgegeven.",
+        "serialLabel": "Serienummer",
+        "serialPlaceholder": "E8:F6:0A:B1:1D:D4",
+        "typeLabel": "Apparaattype",
+        "typePlaceholder": "Selecteer een apparaattype",
+        "nameLabel": "Naam (optioneel)",
+        "namePlaceholder": "Kassensensor 1",
+        "submit": "Registreren",
+        "createSuccess": "Apparaat geregistreerd",
+        "createSuccessDetail": "Er wordt een certificaat uitgegeven om het te activeren.",
+        "createError": "Apparaat registreren mislukt"
+      },
+      "remove": {
+        "title": "Apparaat verwijderen",
+        "confirm": "Hiermee worden {{name}} en zijn apparaatrecord permanent verwijderd.",
+        "success": "Apparaat verwijderd"
+      },
+      "detail": {
+        "back": "Terug naar apparaten",
+        "notFound": "Apparaat niet gevonden.",
+        "meta": {
+          "serial": "Serienummer",
+          "type": "Type",
+          "role": "Rol",
+          "status": "Status",
+          "registered": "Geregistreerd",
+          "thingName": "Apparaat-identificatie"
+        },
+        "credentials": {
+          "title": "Inloggegevens"
+        },
+        "dangerZone": {
+          "title": "Gevarenzone",
+          "deleteLabel": "Dit apparaat verwijderen",
+          "deleteDescription": "Verwijdert het apparaat en zijn cloud-record permanent. Dit kan niet ongedaan worden gemaakt."
+        }
+      },
+      "credentials": {
+        "pendingDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het te activeren en verbinding met AWS IoT toe te staan.",
+        "issue": "Certificaat uitgeven",
+        "reissue": "Certificaat opnieuw uitgeven",
+        "issueError": "Certificaat uitgeven mislukt",
+        "activeLabel": "Certificaat actief",
+        "rotate": "Certificaat roteren",
+        "rotatingDescription": "Een certificaatrotatie is bezig.",
+        "revokedDescription": "Het certificaat is ingetrokken, waardoor dit apparaat zich niet meer bij AWS IoT kan authenticeren. Geef een nieuw certificaat uit om de toegang te herstellen.",
+        "revoke": "Certificaat intrekken",
+        "revokeTitle": "Certificaat intrekken",
+        "revokeConfirm": "Hiermee wordt het apparaatcertificaat onmiddellijk ingetrokken, zodat het niet meer voor authenticatie bij AWS IoT kan worden gebruikt. U kunt later een nieuw certificaat uitgeven.",
+        "revokeSuccess": "Certificaat ingetrokken",
+        "revokeError": "Certificaat intrekken mislukt",
+        "dialogTitle": "Apparaatcertificaat uitgegeven",
+        "dialogDescription": "Download en installeer de certificaat- en sleutelbestanden op het apparaat zodat het verbinding kan maken met AWS IoT. Ze kunnen niet worden opgehaald nadat u dit sluit.",
+        "showOnceWarning": "Dit is de enige keer dat u deze bestanden kunt downloaden. Bewaar ze veilig voordat u sluit.",
+        "sectionCertificate": "Apparaatcertificaat",
+        "certificate": "Apparaatcertificaat",
+        "sectionKeys": "Sleutelbestanden",
+        "keysDescription": "De sleutelbestanden zijn uniek voor dit certificaat en kunnen niet opnieuw worden gedownload nadat u dit sluit.",
+        "publicKey": "Openbaar sleutelbestand",
+        "privateKey": "Privésleutelbestand",
+        "sectionRootCa": "Root CA-certificaten",
+        "rootCaDescription": "Download de root CA die past bij uw endpoint en cipher suite. U kunt deze ook later downloaden.",
+        "rootCaLearnMore": "Meer over CA-certificaten",
+        "rootCa1": "Amazon Root CA 1",
+        "rootCa1Sub": "RSA 2048-bits sleutel",
+        "rootCa3": "Amazon Root CA 3",
+        "rootCa3Sub": "ECC 256-bits sleutel",
+        "copy": "Kopiëren",
+        "download": "Downloaden",
+        "downloadAll": "Alles downloaden"
+      }
     }
   }
 }

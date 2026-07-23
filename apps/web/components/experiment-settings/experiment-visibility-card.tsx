@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -117,6 +118,7 @@ export function ExperimentVisibilityCard({
       <CardHeader>
         <CardTitle>{t("experimentVisibility.visibilityCardTitle")}</CardTitle>
         <CardDescription>{t("experimentVisibility.visibilityCardDescription")}</CardDescription>
+        <DocsHelpLink path="/guide/sharing/visibility-embargo" className="mt-1" />
       </CardHeader>
       <CardContent className="space-y-6">
         <ExperimentVisibilityForm

@@ -29,6 +29,7 @@ import type {
 import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
+import { presentDevice } from "@repo/api/transforms/device-presentation";
 import {
   evaluateBranch,
   isDeviceScopedBranch,
@@ -120,6 +121,28 @@ function makeErrorOutputCell(producedBy: string, error: string, executionTime = 
   return makeOutputCell(producedBy, undefined, executionTime, [error]);
 }
 
+function secondaryDeviceLabel(device: IotDeviceConnection): string {
+  return (
+    device.identity.deviceId ??
+    (device.ordinal != null ? `Device #${device.ordinal}` : device.label)
+  );
+}
+
+function resultDisplayLabel(result: OutputDeviceResult): string {
+  const presentation = presentDevice({ name: result.deviceName, family: result.family });
+  const primary =
+    presentation.provenance === "fallback"
+      ? (result.deviceLabel ?? result.deviceId)
+      : presentation.primary;
+  const secondary = [
+    presentation.provenance === "name" ? presentation.productName : null,
+    result.deviceLabel,
+  ]
+    .filter((value): value is string => value != null && value !== primary)
+    .filter((value, index, values) => values.indexOf(value) === index);
+  return [primary, ...secondary].join(" · ");
+}
+
 // Normalises any non-object device response into the output cell's data shape.
 function toOutputData(data: unknown): Record<string, unknown> {
   if (data !== null && typeof data === "object" && !Array.isArray(data)) {
@@ -175,9 +198,9 @@ export function useWorkbookExecution({
 
   const execCounterRef = useRef(0);
 
-  // Collapse per-device settled outcomes into one output cell. A single
-  // device keeps the exact legacy output shape; several devices additionally
-  // carry per-device results, with failures listed as messages.
+  // Collapse per-device settled outcomes into one output cell. Primary `data`
+  // keeps the legacy result shape, while `deviceResults` now carries identity
+  // for both single- and multi-device runs.
   const finishDeviceFanOut = useCallback(
     (
       cellId: string,
@@ -198,11 +221,12 @@ export function useWorkbookExecution({
       }[] = devices.map((d, i) => {
         const outcome = settled[i];
         const identity = { family: d.family, deviceName: d.identity.name };
+        const deviceLabel = secondaryDeviceLabel(d);
         return outcome.status === "fulfilled"
-          ? { deviceId: d.id, deviceLabel: d.label, ...identity, data: normalize(outcome.value) }
+          ? { deviceId: d.id, deviceLabel, ...identity, data: normalize(outcome.value) }
           : {
               deviceId: d.id,
-              deviceLabel: d.label,
+              deviceLabel,
               ...identity,
               error:
                 outcome.reason instanceof Error
@@ -213,17 +237,17 @@ export function useWorkbookExecution({
       const successes = results.filter((r) => r.error === undefined);
       const failures = results.filter((r) => r.error !== undefined);
       const isMulti = devices.length > 1;
-      const messages = isMulti ? failures.map((f) => `${f.deviceLabel}: ${f.error}`) : [];
+      const messages = isMulti ? failures.map((f) => `${resultDisplayLabel(f)}: ${f.error}`) : [];
 
       if (successes.length === 0) {
         const message = failures[0]?.error ?? fallbackMessage;
         setCellState(cellId, { status: "error", error: message });
-        const errorOutput = isMulti
-          ? {
-              ...makeOutputCell(cellId, undefined, executionTime, messages),
-              deviceResults: results,
-            }
-          : makeErrorOutputCell(cellId, message, executionTime);
+        const errorOutput = {
+          ...(isMulti
+            ? makeOutputCell(cellId, undefined, executionTime, messages)
+            : makeErrorOutputCell(cellId, message, executionTime)),
+          deviceResults: results,
+        };
         return insertOutputAfterCell(currentCells, cellId, errorOutput);
       }
 
@@ -231,11 +255,7 @@ export function useWorkbookExecution({
       // usable and the failed ones are called out in the output messages.
       setCellState(cellId, { status: "completed" });
       const output = makeOutputCell(cellId, successes[0].data, executionTime, messages);
-      return insertOutputAfterCell(
-        currentCells,
-        cellId,
-        isMulti ? { ...output, deviceResults: results } : output,
-      );
+      return insertOutputAfterCell(currentCells, cellId, { ...output, deviceResults: results });
     },
     [setCellState],
   );
@@ -433,7 +453,7 @@ export function useWorkbookExecution({
         });
         const successes = results.filter((r) => r.error === undefined);
         const failures = results.filter((r) => r.error !== undefined);
-        const messages = failures.map((f) => `${f.deviceLabel ?? f.deviceId}: ${f.error}`);
+        const messages = failures.map((f) => `${resultDisplayLabel(f)}: ${f.error}`);
 
         if (successes.length === 0) {
           setCellState(cell.id, {
@@ -469,20 +489,44 @@ export function useWorkbookExecution({
         );
         const executionTime = performance.now() - startTime;
         setCellState(cell.id, { status: "completed" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeOutputCell(cell.id, output, executionTime, []),
-        );
+        const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
+        return insertOutputAfterCell(currentCells, cell.id, {
+          ...makeOutputCell(cell.id, output, executionTime, []),
+          ...(singleInputIdentity
+            ? {
+                deviceResults: [
+                  {
+                    deviceId: singleInputIdentity.deviceId,
+                    deviceLabel: singleInputIdentity.deviceLabel,
+                    family: singleInputIdentity.family,
+                    deviceName: singleInputIdentity.deviceName,
+                    data: output,
+                  },
+                ],
+              }
+            : {}),
+        });
       } catch (err) {
         const executionTime = performance.now() - startTime;
         const message = err instanceof Error ? err.message : "Macro execution failed";
         setCellState(cell.id, { status: "error", error: message });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, message, executionTime),
-        );
+        const singleInputIdentity = inputResults?.length === 1 ? inputResults[0] : undefined;
+        return insertOutputAfterCell(currentCells, cell.id, {
+          ...makeErrorOutputCell(cell.id, message, executionTime),
+          ...(singleInputIdentity
+            ? {
+                deviceResults: [
+                  {
+                    deviceId: singleInputIdentity.deviceId,
+                    deviceLabel: singleInputIdentity.deviceLabel,
+                    family: singleInputIdentity.family,
+                    deviceName: singleInputIdentity.deviceName,
+                    error: message,
+                  },
+                ],
+              }
+            : {}),
+        });
       }
     },
     [setCellState, executeMacroOn, deviceContextFor],
@@ -796,7 +840,14 @@ export function useWorkbookExecution({
   return {
     isConnected,
     isConnecting,
-    connectedDevices: connections.map(({ id, label, family }) => ({ id, label, family })),
+    connectedDevices: connections.map(({ id, label, ordinal, family, identity }) => ({
+      id,
+      label,
+      ordinal,
+      family,
+      name: identity.name,
+      stableId: identity.deviceId,
+    })),
     sensorFamily,
     setSensorFamily,
     connectionType,

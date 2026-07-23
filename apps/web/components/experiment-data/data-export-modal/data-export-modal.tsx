@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
+import { DocsHelpLink } from "~/components/docs-help-link";
 import { useExperiment } from "~/hooks/experiment/useExperiment/useExperiment";
 import { useInitiateExport } from "~/hooks/experiment/useInitiateExport/useInitiateExport";
 import { parseApiError } from "~/util/apiError";
@@ -109,6 +110,7 @@ export function DataExportModal({
           <DialogDescription>
             {t("experimentData.exportModal.description", { tableName: displayName ?? tableName })}
           </DialogDescription>
+          <DocsHelpLink path="/guide/data-analysis/exporting-data" className="mt-1" />
         </DialogHeader>
 
         <div className="bg-muted/30 -mb-2 flex items-center gap-2 rounded-md border p-3">

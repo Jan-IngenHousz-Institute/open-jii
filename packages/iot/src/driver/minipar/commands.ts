@@ -4,8 +4,9 @@
  *
  * The firmware is dual-mode: a plain string runs in LINE mode (raw text
  * reply); a JSON protocol (`[{"set":[{"label":"par","protocol_repeats":N}]}]`,
- * labels = these command names) replies with a MultispeQ-shaped envelope plus
- * the constant `7A1E3AA1` footer. Per-command errors appear inline as
+ * labels = these command names) replies with a JSON envelope of `device_*`
+ * header fields plus a `sample` array of nested `set` readings, closed by the
+ * constant `7A1E3AA1` footer. Per-command errors appear inline as
  * `{"error":"unknown_command"}` entries.
  */
 

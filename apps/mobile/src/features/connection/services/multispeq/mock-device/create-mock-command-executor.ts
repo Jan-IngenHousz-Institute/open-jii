@@ -1,11 +1,11 @@
-import type { IMultispeqCommandExecutor } from "~/features/connection/services/multispeq-communication/driver-command-executor";
+import type { DeviceCommandExecutor } from "~/features/connection/services/device-command-executor";
 import { delay } from "~/features/connection/utils/delay";
 
 // Device id whose scans always fail; lets the multi-scan partial-failure UI
 // be demoed without unplugging hardware mid-measurement.
 export const FAILING_MOCK_DEVICE_ID = "3";
 
-export function createMockCommandExecutor(deviceId: string): IMultispeqCommandExecutor {
+export function createMockCommandExecutor(deviceId: string): DeviceCommandExecutor {
   let cancelled = false;
   return {
     async execute(_command: string | object) {

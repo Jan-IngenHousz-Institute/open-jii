@@ -8,7 +8,7 @@ import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
-import { getMultispeqMqttTopic } from "~/shared/measurements/measurement-topic";
+import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
@@ -120,7 +120,7 @@ export function useMeasurementUpload() {
 
       for (const result of results) {
         const { rawMeasurement, device, macroContext } = result;
-        const topic = getMultispeqMqttTopic({
+        const topic = getMeasurementMqttTopic({
           experimentId,
           protocolId: result.protocolId ?? protocolId,
         });

@@ -13,7 +13,7 @@ describe("serialDeviceToDevice", () => {
     expect(device).toEqual({ id: "1002", type: "usb", name: "MultispeQ #1002" });
   });
 
-  it("names unknown sensors by their vendor:product pair", () => {
+  it("names unknown devices by their vendor:product pair", () => {
     const device = serialDeviceToDevice({ deviceId: 7, vendorId: 0x1a86, productId: 0x55d4 });
     expect(device).toEqual({ id: "7", type: "usb", name: "1a86:55d4 #7" });
   });

@@ -16,14 +16,18 @@ import { contract } from "@repo/api/contract";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
 
-vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
-  useIotBrowserSupport: () => ({
+const browserSupport = vi.hoisted(() => ({
+  current: {
     bluetooth: true,
     serial: true,
     any: true,
-    bluetoothReason: null,
-    serialReason: null,
-  }),
+    bluetoothReason: null as "browser" | "device" | null,
+    serialReason: null as "browser" | "device" | null,
+  },
+}));
+
+vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => browserSupport.current,
 }));
 
 const protocolCell = createProtocolCell({
@@ -66,6 +70,16 @@ function renderHeader(overrides: Partial<Parameters<typeof WorkbookHeader>[0]> =
     props: defaultProps,
   };
 }
+
+beforeEach(() => {
+  browserSupport.current = {
+    bluetooth: true,
+    serial: true,
+    any: true,
+    bluetoothReason: null,
+    serialReason: null,
+  };
+});
 
 describe("WorkbookHeader", () => {
   it("calls onConnect when user clicks the Connect button", async () => {
@@ -132,6 +146,78 @@ describe("WorkbookHeader", () => {
       connectedDevices: [{ id: "d1", label: "MultispeQ v2" }],
     });
     expect(screen.getByText("MultispeQ v2")).toBeInTheDocument();
+  });
+
+  it("uses product-first identity with stable id as secondary context", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Device #1",
+          ordinal: 1,
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Ambit")).toBeInTheDocument();
+    expect(screen.getByText(/AMB-42/)).toBeInTheDocument();
+  });
+
+  it("keeps canonical product and stable id as secondary context for a named device", () => {
+    renderHeader({
+      isConnected: true,
+      connectedDevices: [
+        {
+          id: "connection-1",
+          label: "Canopy sensor",
+          name: "Canopy sensor",
+          family: "ambit",
+          stableId: "AMB-42",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Canopy sensor")).toBeInTheDocument();
+    expect(screen.getByText(/Ambit · AMB-42/)).toBeInTheDocument();
+  });
+
+  it("labels the browser wireless option precisely as Bluetooth Low Energy", async () => {
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(screen.getAllByRole("combobox")[1]);
+    expect(screen.getByRole("option", { name: "Bluetooth Low Energy (BLE)" })).toBeInTheDocument();
+  });
+
+  it("disables Web Bluetooth for a Bluetooth-Classic-only device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "multispeq" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
+  });
+
+  it("disables Web Bluetooth for a serial-only measurement device", () => {
+    browserSupport.current = {
+      bluetooth: false,
+      serial: true,
+      any: true,
+      bluetoothReason: "device",
+      serialReason: null,
+    };
+
+    renderHeader({ connectionType: "bluetooth", sensorFamily: "ambit" });
+
+    expect(screen.getByTestId("connect-device")).toBeDisabled();
   });
 
   it("shows 'Connecting...' while connecting", () => {

@@ -14,10 +14,15 @@ import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device
 import { useDeviceSheetActions } from "~/features/connection/hooks/use-device-sheet-actions";
 import { partitionDevices } from "~/features/connection/services/device-connection-manager/device-sort";
 import {
+  mobileDevicePrimaryLabel,
+  presentMobileDevice,
+} from "~/features/connection/services/mobile-device-presentation";
+import {
   hasBluetoothPermission,
   requestBluetoothPermission,
 } from "~/features/connection/services/request-bluetooth-permissions";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -37,6 +42,7 @@ export function DeviceSheet() {
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible: isOpen });
 
   const { data: connectedDevices = [] } = useConnectedDevices();
+  const executors = useScannerCommandExecutorStore((s) => s.executors);
   const lastConnectedDevice = useDeviceConnectionStore((s) => s.lastConnectedDevice);
   const batteryLevel = useBatteryLevel();
   const { data: nearbyDevices = [], refetch: refreshDevices, isFetching } = useAllDevices();
@@ -58,7 +64,7 @@ export function DeviceSheet() {
     return nearbyDevices.filter((d) => !connectedIds.has(d.id));
   }, [nearbyDevices, connectedDevices]);
   const { named, unnamed } = useMemo(() => partitionDevices(availableDevices), [availableDevices]);
-  // When nothing has a friendly name (common: MultispeQs advertise as a MAC),
+  // When nothing has a friendly name (common for Bluetooth discovery),
   // show every device directly instead of an empty list above "See more".
   const collapseUnnamed = named.length > 0 && !showAllDevices;
   const visibleDevices = collapseUnnamed ? named : [...named, ...unnamed];
@@ -87,6 +93,12 @@ export function DeviceSheet() {
   const primaryIsWired = hasConnected && connectedDevices[0].type !== "bluetooth-classic";
   // Reflect the connection type on the reconnect card (cable vs over-the-air).
   const CurrentDeviceIcon = lastConnectedDevice?.type === "usb" ? Usb : Bluetooth;
+  const reconnectPresentation = lastConnectedDevice
+    ? presentMobileDevice(lastConnectedDevice)
+    : undefined;
+  const reconnectName = reconnectPresentation
+    ? mobileDevicePrimaryLabel(reconnectPresentation, t("identity.unknownDevice"))
+    : undefined;
 
   return (
     <BottomSheetModal
@@ -123,6 +135,7 @@ export function DeviceSheet() {
               <ConnectedDeviceRow
                 key={d.id}
                 device={d}
+                identity={executors.get(d.id)?.identity}
                 batteryLevel={i === 0 ? (batteryLevel ?? undefined) : undefined}
                 onDisconnect={(dev) => void handleDisconnect(dev)}
               />
@@ -148,7 +161,7 @@ export function DeviceSheet() {
                       style={{ fontFamily: "Poppins-Bold", fontSize: 15 }}
                       numberOfLines={1}
                     >
-                      {t("deviceSheet.reconnectTitle", { name: lastConnectedDevice.name })}
+                      {t("deviceSheet.reconnectTitle", { name: reconnectName })}
                     </Text>
                     <Text className="text-muted-body mt-0.5 text-[12px]" numberOfLines={1}>
                       {t("deviceSheet.reconnectSub", { mac: lastConnectedDevice.id })}
@@ -239,8 +252,8 @@ export function DeviceSheet() {
                 <NearbyDeviceRow
                   key={d.id}
                   device={d}
-                  isPairing={connectingDeviceId === d.id}
-                  onPair={(dev) => void handleConnect(dev)}
+                  isConnecting={connectingDeviceId === d.id}
+                  onConnect={(dev) => void handleConnect(dev)}
                   isLast={i === visibleDevices.length - 1 && !collapseUnnamed}
                 />
               ))}

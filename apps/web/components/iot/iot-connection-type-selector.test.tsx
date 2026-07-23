@@ -159,6 +159,60 @@ describe("ConnectionTypeSelector", () => {
     });
   });
 
+  describe("bluetooth classic guidance", () => {
+    it("shows the Bluetooth Classic hint when the device is Classic-only and BLE is unavailable", async () => {
+      const user = userEvent.setup();
+      render(
+        <ConnectionTypeSelector
+          connectionType="serial"
+          onConnectionTypeChange={mockOnConnectionTypeChange}
+          browserSupport={{
+            bluetooth: false,
+            serial: true,
+            bluetoothReason: "device",
+            serialReason: null,
+          }}
+          bluetoothClassicOnly={true}
+        />,
+      );
+
+      const bluetoothButton = screen
+        .getAllByRole("button")
+        .find((btn) => btn.textContent.includes("bluetooth"));
+      if (!bluetoothButton) throw new Error("bluetooth button not found");
+      await user.hover(bluetoothButton);
+
+      expect(
+        await screen.findAllByText("iot.protocolRunner.bluetoothClassicHint"),
+      ).not.toHaveLength(0);
+    });
+
+    it("shows the generic no-BLE message when the device lacks BLE but is not Classic-only", async () => {
+      const user = userEvent.setup();
+      render(
+        <ConnectionTypeSelector
+          connectionType="serial"
+          onConnectionTypeChange={mockOnConnectionTypeChange}
+          browserSupport={{
+            bluetooth: false,
+            serial: true,
+            bluetoothReason: "device",
+            serialReason: null,
+          }}
+          bluetoothClassicOnly={false}
+        />,
+      );
+
+      const bluetoothButton = screen
+        .getAllByRole("button")
+        .find((btn) => btn.textContent.includes("bluetooth"));
+      if (!bluetoothButton) throw new Error("bluetooth button not found");
+      await user.hover(bluetoothButton);
+
+      expect(await screen.findAllByText("iot.protocolRunner.deviceNoBLE")).not.toHaveLength(0);
+    });
+  });
+
   describe("button variant", () => {
     it("highlights bluetooth button when selected", () => {
       render(

@@ -2,6 +2,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { DocsHelpLink } from "~/components/docs-help-link";
 import { parseApiError } from "~/util/apiError";
 
 import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
@@ -184,6 +185,9 @@ export function MemberList({
         <p className="text-muted-foreground mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
           {t("experimentSettings.addCollaborators")}
         </p>
+        <div className="mt-3">
+          <DocsHelpLink path="/guide/experiments/collaborators" />
+        </div>
       </div>
     );
   }

@@ -14,15 +14,21 @@ workbooks, data uploads, analysis configuration, and archiving. **Admin** and
 ### Ambyte
 
 The MQTT gateway and ingestion family for autonomous sensors. Its enum/API value
-is `ambyte`. Ambyte ingestion and IoT registration exist; local connection and
-device monitoring are not the current workflow.
+is `ambyte`. Ambyte ingestion and IoT registration exist; mobile local connection
+and device monitoring are not the current workflow. Web protocol testing can run
+the `ambyte` family through the generic device driver over BLE or USB/serial as a
+compatibility path; a dedicated Ambyte BLE integration is planned, not built.
+Legacy `ambyte` rows are not provenance-clean: migration `0037` remapped existing
+`ambit` rows to `ambyte` before migration `0038` re-added `ambit`, so some stored
+`ambyte` data was captured by an Ambit. openJII records this and does not rewrite
+historical rows.
 
 ### Ambit
 
-A leaf sensor in the `ambit` family, distinct from the Ambyte gateway. The web
-workbook host can identify it over USB serial and send direct command cells for
-calibration or spot readings. Full Ambit measurements run through its Ambyte
-gateway rather than a direct protocol cell.
+A leaf measurement device in the `ambit` family, distinct from the Ambyte
+gateway. The web workbook host can identify it over USB serial and send direct
+command cells for calibration or spot readings. Full Ambit measurements run
+through its Ambyte gateway rather than a direct protocol cell.
 
 ### Bronze, Silver, Gold
 
@@ -90,7 +96,7 @@ other non-measurement variables relevant to the study.
 ### MultispeQ
 
 Handheld hardware used for protocol-guided optical measurements. The mobile app
-connects over Bluetooth Classic or USB; multi-device mobile work uses wired USB.
+connects over Bluetooth or USB; multi-device mobile work uses wired USB.
 
 ### Protocol
 
@@ -108,7 +114,8 @@ annotations, and export or migration context.
 
 In researcher-facing copy, autonomous hardware that records observations over
 time with little interaction after setup. In technical UI, **sensor family** is
-also the shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic hardware.
+also the legacy shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic
+hardware; that technical field name does not make the Ambyte gateway a sensor.
 
 ### Visibility
 

@@ -52,6 +52,11 @@ describe("WorkbookList delete gating (workbook-deletion flag)", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
   });
 
+  it("shows a docs help link in the empty state when showEmptyHelp is set", () => {
+    render(<WorkbookList workbooks={[]} showEmptyHelp />);
+    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
+  });
+
   it("hides Delete for an in-use workbook when the flag is off", async () => {
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[inUse]} />);
@@ -98,7 +103,7 @@ describe("WorkbookList row actions", () => {
     await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toMatchObject({ name: "workbooks.duplicateName" });
+    expect(spy.body).toMatchObject({ name: "Fork of Source WB" });
   });
 
   it("shows an error toast when duplicate fails", async () => {

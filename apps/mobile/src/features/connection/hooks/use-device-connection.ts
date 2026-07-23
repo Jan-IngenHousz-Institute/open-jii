@@ -3,10 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/features/connection/hooks/use-device-connection-store";
 import { connectionKeys } from "~/features/connection/services/connection-keys";
+import { listSerialPortDevices } from "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection";
 import { closeAllSerialPorts } from "~/features/connection/services/device-connection-manager/serial-port-connection";
-import { listMockDevices } from "~/features/connection/services/multispeq-communication/mock-device/list-mock-devices";
-import { closeAllMockDevices } from "~/features/connection/services/multispeq-communication/mock-device/mock-device-registry";
-import { mockDevicesEnabled } from "~/features/connection/services/multispeq-communication/mock-device/mock-devices-enabled";
+import { listMockDevices } from "~/features/connection/services/multispeq/mock-device/list-mock-devices";
+import { closeAllMockDevices } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
+import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
@@ -22,7 +23,6 @@ import {
   discoveredEventToDevice,
   serialDeviceToDevice,
 } from "../services/device-connection-manager/device-utils";
-import { listSerialPortDevices } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 
 function useConnectedDevicesQuery<T>(select: (devices: Device[]) => T) {
   return useQuery({

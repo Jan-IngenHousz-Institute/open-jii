@@ -1,5 +1,7 @@
+import { DOCS_CONTENT_ROOT, GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
+import { ViewOptionsPopover } from "fumadocs-ui/layouts/docs/page";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -12,11 +14,26 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
   if (!page) notFound();
 
   const MDXContent = page.data.body;
+  const githubPath = `${DOCS_CONTENT_ROOT}/${page.path}`;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      editOnGithub={{
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        sha: GITHUB_BRANCH,
+        path: githubPath,
+      }}
+    >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
+      <div className="flex flex-row items-center gap-2 border-b pb-4">
+        <ViewOptionsPopover
+          githubUrl={`https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${githubPath}`}
+        />
+      </div>
       <DocsBody>
         <MDXContent components={getMDXComponents()} />
       </DocsBody>

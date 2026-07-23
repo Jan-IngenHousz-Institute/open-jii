@@ -2,22 +2,21 @@
   "iot": {
     "protocolRunner": {
       "connectionType": "Connection Type",
-      "bluetooth": "Bluetooth",
-      "serial": "Serial",
+      "bluetooth": "Bluetooth Low Energy (BLE)",
+      "serial": "USB/serial",
       "device": "Device",
       "connected": "Connected",
       "connecting": "Connecting",
       "notConnected": "Not Connected",
-      "pairingWithDevice": "Pairing with device",
+      "connectingToDevice": "Connecting to device",
       "wireless": "Wireless",
       "usb": "USB",
       "connect": "Connect",
       "disconnect": "Disconnect",
-      "unknownDevice": "Unknown Device",
       "version": "Version",
       "runProtocol": "Run Protocol",
       "running": "Running...",
-      "interactionTitle": "Follow the instrument",
+      "interactionTitle": "Device interaction guidance",
       "interactionHint": "This protocol pauses for you to open and close the clamp. Watch the device and act when its lights prompt you.",
       "results": "Results",
       "success": "Success",
@@ -30,11 +29,19 @@
       "webBluetoothNotSupported": "Web Bluetooth is not supported in this browser",
       "webSerialNotSupported": "Web Serial is not supported in this browser",
       "deviceNoBLE": "This device does not support Bluetooth Low Energy (BLE)",
+      "bluetoothClassicHint": "This device connects over Bluetooth Classic, which browsers can't reach with Web Bluetooth. Connect over USB/serial instead.",
       "deviceNoSerial": "This device does not support serial connections",
       "testProtocol": "Test Protocol",
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
       "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+    },
+    "deviceIdentity": {
+      "unknown": "Unknown device",
+      "role": {
+        "measurementDevice": "Measurement device",
+        "gateway": "Gateway"
+      }
     },
     "devices": {
       "tabLabel": "Devices",
@@ -126,6 +133,7 @@
         "meta": {
           "serial": "Serial number",
           "type": "Type",
+          "role": "Role",
           "status": "Status",
           "registered": "Registered",
           "thingName": "Device identifier"
@@ -147,10 +155,10 @@
         "activeLabel": "Certificate active",
         "rotate": "Rotate certificate",
         "rotatingDescription": "A certificate rotation is in progress.",
-        "revokedDescription": "The certificate was revoked, so this device can no longer connect. Issue a new certificate to bring it back online.",
+        "revokedDescription": "The certificate was revoked, so this device can no longer authenticate to AWS IoT. Issue a new certificate to restore credential access.",
         "revoke": "Revoke certificate",
         "revokeTitle": "Revoke certificate",
-        "revokeConfirm": "This revokes the device certificate immediately. The device will no longer be able to connect. You can issue a new certificate later.",
+        "revokeConfirm": "This immediately revokes the device certificate, so it can no longer be used to authenticate to AWS IoT. You can issue a new certificate later.",
         "revokeSuccess": "Certificate revoked",
         "revokeError": "Failed to revoke certificate",
         "dialogTitle": "Device certificate issued",

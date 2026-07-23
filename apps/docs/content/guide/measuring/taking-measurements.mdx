@@ -12,19 +12,19 @@ analysis steps appear.
 ## Take a reading
 
 1. Open the measurement flow and choose an experiment. The app labels flows as
-   sensor required, questions only, or sensor plus questions.
-2. If a sensor is required, open **Devices** and connect the MultispeQ.
+   device required, questions only, or device plus questions.
+2. If a device is required, open **Devices** and connect your measurement device.
 3. Select **Start measurement** (or the named measurement action).
 4. Follow the workbook in order. Answer required questions and act on any field
    instructions.
 5. At a measurement step, select **Start measurement** and follow prompts from
-   the instrument. Some protocols pause for clamp interaction.
+   the device. Some protocols pause for clamp interaction.
 6. Review the result and any macro output. Select **Accept data** to save it, or
    **Discard & retry** to measure again.
 7. Check **Recent** for the saved reading and its sync state.
 
 Workbook branches are evaluated on the device and may skip ahead or return to an
-earlier step. Question-only flows finish without a MultispeQ reading.
+earlier step. Question-only flows finish without a device reading.
 
 <video controls width="100%" preload="metadata">
   <source src="/img/mobile/question-flow.webm" type="video/webm" />
@@ -32,14 +32,14 @@ earlier step. Question-only flows finish without a MultispeQ reading.
 </video>
 
 _Questions-only flow excerpt on production app 2.16.1. It intentionally does
-not represent a MultispeQ protocol run or show final submission._
+not represent a device protocol run or show final submission._
 
 ![A required choice in a questions-only measurement flow](/img/mobile/measurement-question.png)
 
 ![The questions-only review screen before submission](/img/mobile/measurement-review.png)
 
-{/* NEEDS-LIVE-CHECK: complete sensor, questions-only, and branching flows on the production build; confirm exact action labels, timestamp display, and any public-data notice. */}
-{/* MEDIA-PARTIAL: questions-only progress and review are captured. The MultispeQ step, completed analysis, acceptance, and resulting Recent row need a physical instrument; sync-state is shown on the offline/sync page. */}
+{/* NEEDS-LIVE-CHECK: complete device, questions-only, and branching flows on the production build; confirm exact action labels, timestamp display, and any public-data notice. */}
+{/* MEDIA-PARTIAL: questions-only progress and review are captured. The device step, completed analysis, acceptance, and resulting Recent row need physical hardware; sync-state is shown on the offline/sync page. */}
 
 ## If something interrupts the flow
 

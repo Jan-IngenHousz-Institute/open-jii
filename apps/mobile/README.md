@@ -1,6 +1,8 @@
 # 📸 PhotosynQ
 
-openJII is a mobile application developed using [Expo](https://expo.dev/), enabling fast development and deployment for both Android and iOS platforms. This guide will help you get started with running and building the app locally.
+openJII is a mobile application developed using [Expo](https://expo.dev/). This guide will help you get started with running and building the app locally.
+
+> **Android is the only published platform.** No iOS app is published because the measurement devices used today require USB serial or Bluetooth Classic, and neither channel is available to an app on iOS. The iOS project and build configuration are retained on purpose for simulator and UI development; running on the iOS simulator is a UI-only workflow and does not support collecting data from hardware.
 
 ---
 
@@ -42,9 +44,12 @@ pnpm run android
 
 Make sure you have an Android device connected or an emulator running.
 
-### 🍏 Run on iOS
+### 🍏 Run on iOS (simulator, UI development only)
 
-To run the app on an iOS simulator (macOS only):
+The iOS simulator is supported for UI development only. There is no published iOS
+app and no hardware data-collection path on iOS, because the current measurement
+devices require USB serial or Bluetooth Classic. To run the app on an iOS
+simulator (macOS only):
 
 ```bash
 pnpm run ios

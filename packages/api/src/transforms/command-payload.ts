@@ -13,7 +13,7 @@ export type ResolvedCommand = string | Record<string, unknown> | unknown[];
  * Resolve an inline command payload into what the device driver expects.
  * `string` is sent raw (e.g. `hello`, `battery`); `json`/`yaml` parse into a
  * protocol-shaped object/array. Throws on malformed JSON/YAML so callers can
- * surface a useful error instead of sending garbage to the instrument.
+ * surface a useful error instead of sending garbage to the device.
  */
 export function resolveInlineCommand({ format, content }: InlineCommand): ResolvedCommand {
   switch (format) {

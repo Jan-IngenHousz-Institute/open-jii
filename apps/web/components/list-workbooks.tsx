@@ -83,7 +83,7 @@ export function ListWorkbooks() {
         </div>
       </div>
 
-      <WorkbookList workbooks={workbooks} isLoading={isLoading} />
+      <WorkbookList workbooks={workbooks} isLoading={isLoading} showEmptyHelp={!search} />
 
       <Dialog
         open={createOpen}

@@ -41,8 +41,8 @@ export const KNOWN_DEVICE_COMMANDS = [
     group: "Connection",
     description: "Sleep (hold button 5s to wake)",
   },
-  { value: "reset", label: "Reset", group: "Connection", description: "Reboot the instrument" },
-  { value: "reboot", label: "Reboot", group: "Connection", description: "Reboot the instrument" },
+  { value: "reset", label: "Reset", group: "Connection", description: "Reboot the device" },
+  { value: "reboot", label: "Reboot", group: "Connection", description: "Reboot the device" },
 
   // Device info
   {
