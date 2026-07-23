@@ -73,13 +73,15 @@ export function EmailLoginForm({
     const availability = publicKeyCredential?.isConditionalMediationAvailable?.();
     if (!availability) return;
     let cancelled = false;
-    void availability.then((supported) => {
-      if (!supported || cancelled) return;
-      signInPasskeyMutation
-        .mutateAsync({ autoFill: true })
-        .then(() => router.push(callbackUrl ?? "/platform"))
-        .catch(() => undefined);
-    });
+    void availability
+      .then((supported) => {
+        if (!supported || cancelled) return;
+        signInPasskeyMutation
+          .mutateAsync({ autoFill: true })
+          .then(() => router.push(callbackUrl ?? "/platform"))
+          .catch(() => undefined);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };

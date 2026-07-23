@@ -133,9 +133,25 @@ describe("EmailLoginForm", () => {
     }
   });
 
+  it("ignores rejected conditional mediation availability checks", async () => {
+    Object.defineProperty(window, "PublicKeyCredential", {
+      value: { isConditionalMediationAvailable: () => Promise.reject(new Error("unavailable")) },
+      configurable: true,
+    });
+    try {
+      render(<EmailLoginForm {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument(),
+      );
+      expect(authClient.signIn.passkey).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "PublicKeyCredential");
+    }
+  });
+
   it("shows the last used badge when email was the last method", () => {
     render(<EmailLoginForm {...defaultProps} isLastUsed />);
-    expect(screen.getByText("auth.lastUsed")).toBeInTheDocument();
+    expect(screen.getByText("auth.lastUsed")).toHaveClass("pointer-events-none");
   });
 
   it("hides the last used badge by default", () => {

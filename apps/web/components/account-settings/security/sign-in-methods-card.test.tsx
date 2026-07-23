@@ -30,7 +30,7 @@ describe("SignInMethodsCard", () => {
     render(<SignInMethodsCard />);
 
     await waitFor(() =>
-      expect(screen.getByText("signInMethods.passkeysCount")).toBeInTheDocument(),
+      expect(screen.getByText("signInMethods.passkeysCount:2")).toBeInTheDocument(),
     );
   });
 

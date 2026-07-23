@@ -10,7 +10,7 @@ export function LastUsedBadge() {
   const { t } = useTranslation();
 
   return (
-    <span className="bg-secondary text-secondary-foreground absolute -right-1 -top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm">
+    <span className="bg-secondary text-secondary-foreground pointer-events-none absolute -right-1 -top-2 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm">
       {t("auth.lastUsed")}
     </span>
   );

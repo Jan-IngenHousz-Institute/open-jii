@@ -113,9 +113,11 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      key === "workbooks.duplicateName" && typeof options?.name === "string"
-        ? `Fork of ${options.name}`
-        : key,
+      key === "signInMethods.passkeysCount" && typeof options?.count === "number"
+        ? `${key}:${options.count}`
+        : key === "workbooks.duplicateName" && typeof options?.name === "string"
+          ? `Fork of ${options.name}`
+          : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   defaultLocale: "en-US",
