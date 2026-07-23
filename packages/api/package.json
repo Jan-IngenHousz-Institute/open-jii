@@ -14,6 +14,7 @@
       "types": "./dist/transforms/*.d.ts",
       "default": "./dist/transforms/*.js"
     },
+    "./fixtures/macro-input-normalization.json": "./fixtures/macro-input-normalization.json",
     "./shared/*": {
       "types": "./dist/shared/*.d.ts",
       "default": "./dist/shared/*.js"

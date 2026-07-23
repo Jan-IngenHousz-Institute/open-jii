@@ -23,8 +23,9 @@ RUN chmod +x /var/runtime/bootstrap
 
 COPY functions/r/handler.R /var/task/handler.R
 
-# Wrapper and helpers
+# Wrapper, helpers, and contract guard
 COPY lib/wrappers/wrapper.R /var/task/wrappers/wrapper.R
 COPY lib/helpers/helpers.R /var/task/src/helpers/helpers.R
+COPY lib/guards/guard.R /var/task/guards/guard.R
 
 ENTRYPOINT ["/var/runtime/bootstrap"]

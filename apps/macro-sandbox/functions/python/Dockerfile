@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir \
 
 COPY lib/wrappers/wrapper.py ${LAMBDA_TASK_ROOT}/wrappers/wrapper.py
 COPY lib/helpers/helpers.py ${LAMBDA_TASK_ROOT}/src/helpers/helpers.py
+COPY lib/guards/guard.py ${LAMBDA_TASK_ROOT}/guards/guard.py
 
 # Lambda handler
 COPY functions/python/handler.py ${LAMBDA_TASK_ROOT}/handler.py

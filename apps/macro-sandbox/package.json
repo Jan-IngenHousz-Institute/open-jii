@@ -21,6 +21,8 @@
     "test:down": "pnpm env:test docker compose down",
     "test": "pnpm --silent env:test sh -c 'if [ -z \"$MACRO_SB_TEST_KEY\" ]; then echo \"Skipping macro-sandbox tests (MACRO_SB_TEST_KEY not set)\"; else trap \"pnpm test:down\" EXIT; pnpm test:up && pnpm test:run; fi'",
     "test:run": "pnpm env:test vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:container": "MACRO_SB_CONTAINER=1 vitest run --config vitest.unit.config.ts test/handler-container.spec.ts",
     "test:generate": "pnpm env:test tsx test/scripts/generate.ts",
     "test:init": "pnpm env:test tsx test/scripts/init.ts",
     "test:view": "pnpm env:test tsx test/scripts/view.ts",

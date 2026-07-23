@@ -8,6 +8,8 @@ import { FlowNode } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 
 import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { OutputDataNormalizationError } from "@repo/api/transforms/build-cell-namespace";
+import { isOutputDataNormalizationError } from "@repo/api/transforms/build-cell-namespace";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
 import type { BranchRuntimeContext } from "@repo/api/transforms/evaluate-branch";
 import { evaluateBranch, isDeviceScopedBranch } from "@repo/api/transforms/evaluate-branch";
@@ -122,7 +124,7 @@ function dispatchDeviceBranch(
 // Evaluates a branch via the reused `evaluateBranch` (first match wins, else
 // default) and routes: matched `gotoCellId` jumps to that node's index, else
 // falls through. A per-node visit cap stops goto-loops. Pure/offline-safe.
-export function evaluateAndRoute(node: FlowNode): void {
+export function evaluateAndRoute(node: FlowNode): OutputDataNormalizationError | undefined {
   const flow = useMeasurementFlowStore.getState();
 
   // Guard against stale / double invocation (e.g. dev StrictMode): only the
@@ -156,26 +158,38 @@ export function evaluateAndRoute(node: FlowNode): void {
     return;
   }
 
-  if (isDeviceScopedBranch(branchCell)) {
-    dispatchDeviceBranch(flow, branchCell, hydrated);
-    return;
-  }
-
-  const matched = evaluateBranch(branchCell, hydrated, primaryDeviceRuntime());
-  flow.setLastMatchedPath(matched ? { label: matched.label, color: matched.color } : undefined);
-
-  if (matched?.gotoCellId) {
-    const idx = flow.flowNodes.findIndex((n) => n.id === matched.gotoCellId);
-    // Ignore a no-op self-jump (would stall on the branch); fall through instead.
-    if (idx >= 0 && idx !== flow.currentFlowStep) {
-      // Only a forward jump skips over un-visited nodes that Back must unwind
-      // past. A backward (loop-back) jump skips nothing, so Back steps linearly
-      // from the target; recording a return there would push Back forward.
-      if (idx > flow.currentFlowStep) flow.recordBranchJump(idx);
-      flow.setCurrentFlowStep(idx);
+  try {
+    if (isDeviceScopedBranch(branchCell)) {
+      dispatchDeviceBranch(flow, branchCell, hydrated);
       return;
     }
-  }
 
-  advanceSequential();
+    const matched = evaluateBranch(branchCell, hydrated, primaryDeviceRuntime());
+    flow.setLastMatchedPath(matched ? { label: matched.label, color: matched.color } : undefined);
+
+    if (matched?.gotoCellId) {
+      const idx = flow.flowNodes.findIndex((n) => n.id === matched.gotoCellId);
+      // Ignore a no-op self-jump (would stall on the branch); fall through instead.
+      if (idx >= 0 && idx !== flow.currentFlowStep) {
+        // Only a forward jump skips over un-visited nodes that Back must unwind
+        // past. A backward (loop-back) jump skips nothing, so Back steps linearly
+        // from the target; recording a return there would push Back forward.
+        if (idx > flow.currentFlowStep) flow.recordBranchJump(idx);
+        flow.setCurrentFlowStep(idx);
+        return;
+      }
+    }
+
+    advanceSequential();
+  } catch (error) {
+    if (!isOutputDataNormalizationError(error)) throw error;
+    log.error("branch input normalization failed", {
+      error: error.code,
+      source: error.source,
+      branch_id: node.id,
+    });
+    flow.setLastMatchedPath(undefined);
+    flow.setDevicePlan(undefined, []);
+    return error;
+  }
 }

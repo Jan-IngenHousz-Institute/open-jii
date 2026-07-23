@@ -78,6 +78,7 @@ vi.mock("./analysis-summary-card", () => ({
 vi.mock("./analysis-macro-result", () => ({
   AnalysisMacroResult: (props: {
     ctx?: Record<string, unknown>;
+    inputError?: Error;
     onProcessed?: (outputs: Record<string, unknown>[]) => void;
   }) => {
     macroResultProps(props);
@@ -113,6 +114,10 @@ beforeEach(() => {
     currentFlowStep: 0,
     iterationCount: 0,
     scanResult: undefined,
+    scanResults: undefined,
+    producerCellId: undefined,
+    cellOutputs: {},
+    cells: [],
   });
   useFlowAnswersStore.setState({
     answersHistory: [{}],
@@ -210,6 +215,41 @@ describe("AnalysisNode macro output", () => {
 
     act(() => onProcessed?.([{ chlorophyll: 42 }]));
     expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
+  });
+
+  it.each([
+    ["an empty sample envelope", { sample: [] }],
+    ["an empty top-level array", []],
+  ])("surfaces %s as a controlled processing failure", (_label, raw) => {
+    useMeasurementFlowStore.setState({
+      scanResult: raw as never,
+      scanResults: [{ result: raw as never }],
+      producerCellId: "p1",
+      cells: [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: "proto-1", version: 1, name: "Measurement" },
+        },
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: "macro-1", language: "javascript", name: "Analysis" },
+        },
+      ],
+    });
+
+    expect(() => render(<AnalysisNode content={CONTENT} nodeId="m1" />)).not.toThrow();
+    const props = macroResultProps.mock.calls.at(-1)?.[0] as
+      | { ctx?: Record<string, unknown>; inputError?: Error }
+      | undefined;
+    expect(props?.ctx).toEqual({});
+    expect(props?.inputError).toMatchObject({
+      name: "OutputDataNormalizationError",
+      code: "empty-envelope",
+    });
   });
 });
 

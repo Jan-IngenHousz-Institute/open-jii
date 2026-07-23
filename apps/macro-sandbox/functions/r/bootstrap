@@ -26,6 +26,12 @@ while true; do
   EXIT_CODE=0
   RESPONSE=$(Rscript /var/task/handler.R "$EVENT_FILE" 2>/tmp/handler_stderr.log) || EXIT_CODE=$?
 
+  # Forward handler stderr (guard telemetry, warnings) to the runtime log stream
+  # on every invocation. Error diagnostics below still read the same file.
+  if [ -s /tmp/handler_stderr.log ]; then
+    cat /tmp/handler_stderr.log >&2
+  fi
+
   # 4. Clean up event file
   rm -f "$EVENT_FILE"
 

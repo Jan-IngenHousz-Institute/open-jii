@@ -14,6 +14,8 @@ interface AnalysisMacroResultProps {
   scanResult: object | undefined;
   /** Upstream cell outputs the macro reads as `ctx.<name>`. */
   ctx?: Record<string, unknown>;
+  /** Upstream normalization failure surfaced by MeasurementResult. */
+  inputError?: Error;
   /** Called with the macro outputs once computed, so the flow can persist them. */
   onProcessed?: (outputs: MacroOutput[]) => void;
   onCommentPress: () => void;
@@ -25,6 +27,7 @@ export function AnalysisMacroResult({
   macroId,
   scanResult,
   ctx,
+  inputError,
   onProcessed,
   onCommentPress,
 }: AnalysisMacroResultProps) {
@@ -72,6 +75,7 @@ export function AnalysisMacroResult({
       rawMeasurement={scanResult}
       macro={macro}
       ctx={ctx}
+      inputError={inputError}
       onProcessed={onProcessed}
       onCommentPress={onCommentPress}
     />
