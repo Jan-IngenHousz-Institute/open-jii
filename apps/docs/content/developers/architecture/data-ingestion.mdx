@@ -3,7 +3,7 @@ title: "Data ingestion"
 description: "The verified path from an MQTT publish to the central Databricks lakehouse."
 ---
 
-{/* verified: code@22aae4d36 2026-07-22 */}
+{/* verified: code@b92f75cb4 2026-07-23 */}
 
 openJII uses an extract-load-transform path: capture and acknowledge the measurement first, preserve the raw event, then refine it in Databricks.
 
@@ -122,6 +122,44 @@ Because pre-signed uploads never touch the broker, there is no authenticated MQT
 
 This lets researchers query one experiment-facing model without erasing the source-specific raw layers.
 
+## Macro input projection
+
+Macro execution reads one canonical measurement value without rewriting the
+stored event. The compatibility projection recognizes three top-level forms:
+`{ sample: [measurement] }`, `{ sample: measurement }` when `measurement` is a
+JSON object, and `[measurement]`. It selects the measurement exactly once.
+Direct objects and scalars pass through unchanged.
+
+The same rule is applied at each execution surface:
+
+| Surface                          | Where projection occurs                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------------------- |
+| Workbook web                     | Backend single-item execution before the language Lambda                                 |
+| Databricks Gold macro processing | Backend batch execution after the pandas UDF submits raw `data`; each item is normalized |
+| Mobile                           | The local JavaScript or Pyodide Python runner before user code                           |
+
+An empty recognized envelope (`[]` or `{ sample: [] }`) fails before macro code
+runs. In a backend batch, only that item fails and valid siblings continue. If
+an envelope contains multiple entries, the first is selected and the host emits
+a content-free warning containing the source and counts, not measurement
+values. The operation is deliberately shallow, so a nested envelope is not
+projected repeatedly.
+
+This is a read-time boundary, not an ingestion transformation. It does not
+rewrite MQTT payloads, source measurement columns, workbook output cells, or
+mobile upload payloads. Canonical projection is used when a host exposes a value
+to macro `json`, builds macro `ctx`, or resolves a workbook branch field.
+Databricks writes macro results separately to `experiment_macro_data`; it does
+not replace the source measurement.
+
+The backend marks Lambda events as `canonical-measurement-v1`. In this change,
+the JavaScript, Python, and R sandbox guards remain in **shadow mode**: they
+classify boundary input and emit content-free telemetry, but do not reject or
+reshape it. Enforce mode is not enabled, and the existing language wrappers are
+not cleaned up or changed to enforce this contract. Macro authors should
+therefore target the canonical direct-value contract and must not depend on
+wrapper behavior such as reading `json.sample[0]`.
+
 ## Where to inspect the implementation
 
 | Concern                     | Current source                                                                  |
@@ -132,5 +170,8 @@ This lets researchers query one experiment-facing model without erasing the sour
 | MQTT session                | `apps/mobile/src/features/connection/services/mqtt/`                            |
 | IoT routing                 | `infrastructure/modules/iot-core/main.tf`                                       |
 | Bronze/Silver/Gold pipeline | `apps/data/src/pipelines/centrum/`                                              |
+| Shared macro projection     | `packages/api/src/transforms/normalize-macro-input.ts`                          |
+| Backend macro execution     | `apps/backend/src/macros/application/use-cases/`                                |
+| Mobile macro execution      | `apps/mobile/src/features/measurement-flow/utils/process-scan/`                 |
 
 Continue with [Medallion layers](/developers/architecture/medallion-layers) for the transformation model.

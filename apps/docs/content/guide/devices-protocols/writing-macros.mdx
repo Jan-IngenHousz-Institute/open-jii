@@ -3,7 +3,7 @@ title: "Writing macros"
 description: "Read measurements and workbook context, then return analysis-ready values."
 ---
 
-{/* verified: code@5bec21dc9 2026-07-22 */}
+{/* verified: code@b92f75cb4 2026-07-23 */}
 
 A macro is a **data-processing script**: it turns a measurement or earlier
 workbook values into a JSON object of named results. openJII stores Python,
@@ -22,7 +22,7 @@ it needs, then run the workbook with representative data.
 
 | Name         | What the macro receives                                                                                                                                                                                           |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `json`       | The triggering measurement: normally the nearest preceding output, scoped to the device whose macro is running. A non-empty array is unwrapped to its first object by the web wrappers.                           |
+| `json`       | The canonical triggering measurement value: normally the nearest preceding output, scoped to the device whose macro is running. Compatibility envelopes are projected before macro code runs.                     |
 | `ctx`        | Completed upstream questions, protocols, commands, and macros keyed by canonical workbook name. Names are lowercased, punctuation becomes underscores, and duplicate names resolve to the nearest upstream value. |
 | Return value | A JSON-serializable object: a Python dictionary, JavaScript object, or R list. Its keys become the macro output available to later cells and data processing.                                                     |
 
@@ -30,6 +30,36 @@ Question values use an `{ answer: ... }` object. Named protocol, command, and
 macro entries contain their output object. Only upstream cells are included;
 the macro cannot read itself or a later cell. The host passes `ctx` itself to
 macro code; there is no `ctx.byId` API.
+
+### Treat `json` as one measurement
+
+Write macros against the direct measurement value. In particular, do **not**
+write `json.sample[0]`: the legacy transport envelope is not part of the macro
+authoring contract.
+
+The web Workbook runner, backend single and Databricks batch execution paths,
+and mobile JavaScript and Python runners apply the same compatibility
+projection:
+
+| Value presented to a host         | Value macro code receives                          |
+| --------------------------------- | -------------------------------------------------- |
+| Direct object, scalar, or `null`  | The same value                                     |
+| `{ sample: [measurement] }`       | `measurement`                                      |
+| `{ sample: measurement }`         | `measurement` when it is a JSON object             |
+| `[measurement]`                   | `measurement`                                      |
+| `{ sample: [] }` or `[]`          | An `empty-envelope` failure; macro code is not run |
+| An envelope with multiple entries | The first entry                                    |
+
+For a multi-entry envelope, the host discards later entries and emits an
+operational `additional-items-discarded` warning. The warning contains only the
+operational metadata needed to identify the run, envelope source, and entry
+counts, never measurement content. Batch execution fails an empty item
+independently and still runs its valid siblings.
+
+Projection is shallow and happens exactly once: nested envelope shapes are not
+supported macro input. Raw protocol and output values remain unchanged in
+storage and transport; the projection applies when the host exposes a value as
+`json`, as an entry in `ctx`, or to a workbook branch condition.
 
 ## Start with the triggering measurement in Python
 
@@ -109,8 +139,17 @@ return {
 ```
 
 R macros receive `json`, `ctx`, and an `output` environment in the web sandbox;
-return an R list. Use the web workbook runner to test R macros because the
-mobile runner currently selects only JavaScript or Python.
+return an R list. The direct-value form is the same:
+
+```r
+baseline <- ctx$baseline$value
+current <- json$value
+
+return(list(change_from_baseline = current - baseline))
+```
+
+Use the web workbook runner to test R macros because the mobile runner currently
+selects only JavaScript or Python.
 
 ## Runtimes and available libraries
 
