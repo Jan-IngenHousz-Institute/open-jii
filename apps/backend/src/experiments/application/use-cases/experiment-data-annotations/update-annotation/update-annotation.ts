@@ -7,7 +7,6 @@ import {
 
 import { AppError, failure, Result, success } from "../../../../../common/utils/fp-utils";
 import { UpdateAnnotationDto } from "../../../../core/models/experiment-data-annotation.model";
-import type { ExperimentDto } from "../../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../../core/ports/databricks.port";
 import { ExperimentDataAnnotationsRepository } from "../../../../core/repositories/experiment-data-annotations.repository";
@@ -50,56 +49,39 @@ export class UpdateAnnotationUseCase {
       );
     }
 
-    // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
+    }
+    if (!experimentResult.value) {
+      this.logger.warn({
+        msg: "Experiment not found",
+        operation: "updateAnnotation",
+        experimentId,
+      });
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(
-      async ({
-        hasAccess,
-        experiment,
-      }: {
-        hasAccess: boolean;
-        experiment: ExperimentDto | null;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            operation: "updateAnnotation",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User attempted to access experiment data without proper permissions",
-            operation: "updateAnnotation",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
+    // Experiment membership is enforced by @CanContributeToExperiment.
+    const updateAnnotation: UpdateAnnotationDto = {};
+    if ("text" in data.content) {
+      updateAnnotation.contentText = data.content.text;
+    }
+    if ("flagType" in data.content) {
+      updateAnnotation.flagType = data.content.flagType;
+      updateAnnotation.contentText = data.content.text ?? null;
+    }
 
-        const updateAnnotation: UpdateAnnotationDto = {};
-        if ("text" in data.content) {
-          updateAnnotation.contentText = data.content.text;
-        }
-        if ("flagType" in data.content) {
-          updateAnnotation.flagType = data.content.flagType;
-          updateAnnotation.contentText = data.content.text ?? null;
-        }
-
-        const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
-          experimentId,
-          annotationId,
-          updateAnnotation,
-        );
-
-        if (result.isFailure()) {
-          return failure(AppError.internal(result.error.message));
-        }
-
-        return success(result.value);
-      },
+    const result = await this.experimentDataAnnotationsRepository.updateAnnotation(
+      experimentId,
+      annotationId,
+      updateAnnotation,
     );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(result.error.message));
+    }
+
+    return success(result.value);
   }
 }

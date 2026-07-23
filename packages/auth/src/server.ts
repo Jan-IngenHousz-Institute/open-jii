@@ -7,6 +7,7 @@ import { emailOTP, genericOAuth, organization } from "better-auth/plugins";
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { ac, roles } from "./access";
 import { sendOtpEmail } from "./email/otpEmail";
 import { orcidProvider } from "./providers/orcid";
 
@@ -156,6 +157,11 @@ export const auth = betterAuth({
       allowUserToCreateOrganization: true,
       creatorRole: "owner",
       teams: { enabled: true },
+      // Single permission matrix (replaces the backend's hand-rolled abilities):
+      // org roles owner/admin → full control, member → read, across every
+      // openJII resource type. See packages/auth/src/access.ts.
+      ac,
+      roles,
       // openJII org profile fields, persisted in one organization.create call.
       schema: {
         organization: {
@@ -189,8 +195,9 @@ export const auth = betterAuth({
       : {}),
   },
   // Database lifecycle hooks: provision a personal organization for every user
-  // and set it as the active organization atomically when a session is created
-  // (avoids the cookie-cache lag of a post-hoc update).
+  // on sign-up. Authorization always runs against a resource's owning org, so
+  // there is no "active organization" concept on the session — new resources
+  // default to the creator's personal org (or an explicit organizationId).
   databaseHooks: {
     user: {
       create: {
@@ -199,34 +206,6 @@ export const auth = betterAuth({
             await ensurePersonalOrganization(db, { id: user.id, name: user.name });
           } catch (err) {
             console.warn("Failed to provision personal organization for user:", err);
-          }
-        },
-      },
-    },
-    session: {
-      create: {
-        before: async (session) => {
-          try {
-            // Derive the org name from the user's profile (first + last) so a
-            // user who lacks an org gets a properly-named one on login rather
-            // than the generic fallback. ensurePersonalOrganization only names
-            // on creation, so this never renames an existing org.
-            const profileRows = await db
-              .select({ firstName: profiles.firstName, lastName: profiles.lastName })
-              .from(profiles)
-              .where(eq(profiles.userId, session.userId))
-              .limit(1);
-            const name = profileRows.length
-              ? `${profileRows[0].firstName} ${profileRows[0].lastName}`
-              : undefined;
-            const organizationId = await ensurePersonalOrganization(db, {
-              id: session.userId,
-              name,
-            });
-            return { data: { ...session, activeOrganizationId: organizationId } };
-          } catch (err) {
-            console.warn("Failed to set active organization on session:", err);
-            return;
           }
         },
       },

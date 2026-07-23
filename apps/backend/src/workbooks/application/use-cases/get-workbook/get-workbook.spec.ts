@@ -33,7 +33,7 @@ describe("GetWorkbookUseCase", () => {
 
   it("returns a workbook by id", async () => {
     const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
-    const result = await useCase.execute(workbook.id, userId);
+    const result = await useCase.execute(workbook.id);
     assertSuccess(result);
     expect(result.value.id).toBe(workbook.id);
     expect(result.value.name).toBe("WB");
@@ -42,20 +42,20 @@ describe("GetWorkbookUseCase", () => {
   it("includes createdByName from profile", async () => {
     const namedUser = await testApp.createTestUser({ name: "Jane Doe" });
     const workbook = await testApp.createWorkbook({ name: "WB", createdBy: namedUser });
-    const result = await useCase.execute(workbook.id, namedUser);
+    const result = await useCase.execute(workbook.id);
     assertSuccess(result);
     expect(result.value.createdByName).toBeDefined();
   });
 
   it("returns 404 when workbook does not exist", async () => {
-    const result = await useCase.execute("00000000-0000-0000-0000-000000000000", userId);
+    const result = await useCase.execute("00000000-0000-0000-0000-000000000000");
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
   });
 
   it("returns failure when repository findById fails", async () => {
     vi.spyOn(repo, "findById").mockResolvedValue(failure(AppError.internal("DB error")));
-    const result = await useCase.execute("00000000-0000-0000-0000-000000000000", userId);
+    const result = await useCase.execute("00000000-0000-0000-0000-000000000000");
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);
     vi.restoreAllMocks();
@@ -68,7 +68,7 @@ describe("GetWorkbookUseCase", () => {
         cells: [{ id: "md1", type: "markdown", content: "hi", isCollapsed: false }],
         createdBy: userId,
       });
-      const result = await useCase.execute(workbook.id, userId);
+      const result = await useCase.execute(workbook.id);
       assertSuccess(result);
       expect(result.value.isUpgradable).toBe(false);
     });
@@ -82,7 +82,7 @@ describe("GetWorkbookUseCase", () => {
       const published = await publishVersion.execute(workbook.id, userId);
       assertSuccess(published);
 
-      const result = await useCase.execute(workbook.id, userId);
+      const result = await useCase.execute(workbook.id);
       assertSuccess(result);
       expect(result.value.isUpgradable).toBe(false);
     });
@@ -100,7 +100,7 @@ describe("GetWorkbookUseCase", () => {
         cells: [{ id: "md1", type: "markdown", content: "edited", isCollapsed: false }],
       });
 
-      const result = await useCase.execute(workbook.id, userId);
+      const result = await useCase.execute(workbook.id);
       assertSuccess(result);
       expect(result.value.isUpgradable).toBe(true);
     });

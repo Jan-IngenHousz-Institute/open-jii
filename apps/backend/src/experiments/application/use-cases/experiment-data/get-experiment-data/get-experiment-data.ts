@@ -37,75 +37,60 @@ export class GetExperimentDataUseCase {
       query,
     });
 
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // Read authorization (owning-org role / grant / public) is enforced by the
+    // `@CanAccess({ resource: "experiment", action: "read" })` route guard. The
+    // experiment row is still loaded because the data repository needs it.
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        hasAccess,
-        experiment,
-      }: {
-        hasAccess: boolean;
-        experiment: ExperimentDto | null;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
-            operation: "getExperimentData",
-            experimentId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-        if (!hasAccess && experiment.visibility !== "public") {
-          this.logger.warn({
-            msg: "User attempted to access experiment data without permission",
-            errorCode: ErrorCodes.FORBIDDEN,
-            operation: "getExperimentData",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        // Leave page/pageSize undefined; the repo discriminates "paginated
-        // read" from "all matching rows" by their presence.
-        const {
-          page,
-          pageSize,
-          tableName,
-          columns,
-          orderBy,
-          orderDirection = "ASC",
-          filters,
-          aggregation,
-          limit,
-        } = query;
-
-        if (!tableName) {
-          this.logger.warn({
-            msg: "tableName parameter is required",
-            operation: "getExperimentData",
-            experimentId,
-          });
-          return failure(AppError.badRequest("tableName parameter is required"));
-        }
-
-        const parsedColumns = columns?.split(",").map((c) => c.trim());
-
-        return this.experimentDataRepository.getTableData({
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
+          errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
+          operation: "getExperimentData",
           experimentId,
-          experiment,
-          tableName,
-          columns: parsedColumns,
-          filters,
-          aggregation,
-          orderBy,
-          orderDirection,
-          page,
-          pageSize,
-          limit,
         });
-      },
-    );
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      // Leave page/pageSize undefined; the repo discriminates "paginated
+      // read" from "all matching rows" by their presence.
+      const {
+        page,
+        pageSize,
+        tableName,
+        columns,
+        orderBy,
+        orderDirection = "ASC",
+        filters,
+        aggregation,
+        limit,
+      } = query;
+
+      if (!tableName) {
+        this.logger.warn({
+          msg: "tableName parameter is required",
+          operation: "getExperimentData",
+          experimentId,
+        });
+        return failure(AppError.badRequest("tableName parameter is required"));
+      }
+
+      const parsedColumns = columns?.split(",").map((c) => c.trim());
+
+      return this.experimentDataRepository.getTableData({
+        experimentId,
+        experiment,
+        tableName,
+        columns: parsedColumns,
+        filters,
+        aggregation,
+        orderBy,
+        orderDirection,
+        page,
+        pageSize,
+        limit,
+      });
+    });
   }
 }

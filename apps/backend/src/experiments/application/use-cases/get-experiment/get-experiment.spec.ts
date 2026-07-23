@@ -56,23 +56,18 @@ describe("GetExperimentUseCase", () => {
     });
   });
 
-  it("should return FORBIDDEN error if user is not a member", async () => {
-    // Create an experiment
+  it("loads the experiment without duplicating route authorization", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Access Control Test",
       userId: testUserId,
     });
-
-    // Create another user who is not a member
     const otherUserId = await testApp.createTestUser({});
 
-    // Try to get experiment as non-member
     const result = await useCase.execute(experiment.id, otherUserId);
 
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("You do not have permission to access this experiment");
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.id).toBe(experiment.id);
   });
 
   it("should return not found error when experiment does not exist", async () => {

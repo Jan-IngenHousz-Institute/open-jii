@@ -17,9 +17,14 @@ import {
   profiles,
   alias,
   getTableColumns,
+  ensurePersonalOrganization,
+  resourceGrants,
+  organizationMembers,
+  teamMembers,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
@@ -41,21 +46,28 @@ export class ExperimentRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async create(
     createExperimentDto: CreateExperimentDto,
     userId: string,
+    targetOrganizationId?: string | null,
   ): Promise<Result<ExperimentDto[]>> {
-    return tryCatch(() =>
-      this.database
+    return tryCatch(async () => {
+      // Own the experiment with the requested target org, falling back to the
+      // creator's personal org so there is never an org-less resource.
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
+      return this.database
         .insert(experiments)
         .values({
           ...createExperimentDto,
           createdBy: userId,
+          organizationId,
         })
-        .returning(experimentColumns),
-    );
+        .returning(experimentColumns);
+    });
   }
 
   async findAll(
@@ -75,6 +87,7 @@ export class ExperimentRepository {
       anonymizeContributors: experiments.anonymizeContributors,
       workbookId: experiments.workbookId,
       workbookVersionId: experiments.workbookVersionId,
+      organizationId: experiments.organizationId,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
@@ -88,37 +101,89 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      // Only apply membership filter if explicitly requested
-      if (filter === "member") {
-        conditions.push(
-          exists(
-            this.database
-              .select()
-              .from(experimentMembers)
-              .where(
-                and(
-                  eq(experimentMembers.experimentId, experiments.id),
-                  eq(experimentMembers.userId, userId),
-                ),
-              ),
+      // Accessibility scoping, aligned with can(): a user sees an experiment
+      // when it is public, they are an experiment member (contributor), they
+      // hold a grant (directly, via a team, or via an org grant), or they are a
+      // member of the experiment's owning organization.
+      const memberExists = exists(
+        this.database
+          .select()
+          .from(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, experiments.id),
+              eq(experimentMembers.userId, userId),
+            ),
           ),
-        );
+      );
+
+      if (filter === "member") {
+        // Explicit "my experiments" filter: membership only.
+        conditions.push(memberExists);
       } else {
-        // If no filter, only show public experiments OR experiments where user is a member
+        const userGrantExists = exists(
+          this.database
+            .select()
+            .from(resourceGrants)
+            .where(
+              and(
+                eq(resourceGrants.resourceType, "experiment"),
+                eq(resourceGrants.resourceId, experiments.id),
+                eq(resourceGrants.granteeType, "user"),
+                eq(resourceGrants.granteeId, userId),
+              ),
+            ),
+        );
+        const teamGrantExists = exists(
+          this.database
+            .select()
+            .from(resourceGrants)
+            .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
+            .where(
+              and(
+                eq(resourceGrants.resourceType, "experiment"),
+                eq(resourceGrants.resourceId, experiments.id),
+                eq(resourceGrants.granteeType, "team"),
+                eq(teamMembers.userId, userId),
+              ),
+            ),
+        );
+        const orgGrantExists = exists(
+          this.database
+            .select()
+            .from(resourceGrants)
+            .innerJoin(
+              organizationMembers,
+              eq(organizationMembers.organizationId, resourceGrants.granteeId),
+            )
+            .where(
+              and(
+                eq(resourceGrants.resourceType, "experiment"),
+                eq(resourceGrants.resourceId, experiments.id),
+                eq(resourceGrants.granteeType, "organization"),
+                eq(organizationMembers.userId, userId),
+              ),
+            ),
+        );
+        const owningOrgMemberExists = exists(
+          this.database
+            .select()
+            .from(organizationMembers)
+            .where(
+              and(
+                eq(organizationMembers.organizationId, experiments.organizationId),
+                eq(organizationMembers.userId, userId),
+              ),
+            ),
+        );
         conditions.push(
           or(
             eq(experiments.visibility, "public"),
-            exists(
-              this.database
-                .select()
-                .from(experimentMembers)
-                .where(
-                  and(
-                    eq(experimentMembers.experimentId, experiments.id),
-                    eq(experimentMembers.userId, userId),
-                  ),
-                ),
-            ),
+            memberExists,
+            userGrantExists,
+            teamGrantExists,
+            orgGrantExists,
+            owningOrgMemberExists,
           ),
         );
       }
@@ -254,6 +319,13 @@ export class ExperimentRepository {
       // First delete experiment members to maintain referential integrity
       await this.database.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
+      // Clean up the mirrored resource grants (polymorphic — no FK cascade).
+      await this.database
+        .delete(resourceGrants)
+        .where(
+          and(eq(resourceGrants.resourceType, "experiment"), eq(resourceGrants.resourceId, id)),
+        );
+
       // Then delete the experiment
       await this.database.delete(experiments).where(eq(experiments.id, id));
     });
@@ -268,6 +340,7 @@ export class ExperimentRepository {
       hasAccess: boolean;
       hasArchiveAccess: boolean;
       isAdmin: boolean;
+      isMember: boolean;
     }>
   > {
     return tryCatch(async () => {
@@ -281,6 +354,7 @@ export class ExperimentRepository {
         anonymizeContributors: experiments.anonymizeContributors,
         workbookId: experiments.workbookId,
         workbookVersionId: experiments.workbookVersionId,
+        organizationId: experiments.organizationId,
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,
@@ -306,18 +380,34 @@ export class ExperimentRepository {
         .limit(1);
 
       if (result.length === 0) {
-        return { experiment: null, hasAccess: false, isAdmin: false, hasArchiveAccess: false };
+        return {
+          experiment: null,
+          hasAccess: false,
+          isAdmin: false,
+          hasArchiveAccess: false,
+          isMember: false,
+        };
       }
 
       const { experiment, memberRole } = result[0];
       const isMember = memberRole !== null;
-      const isAdmin = memberRole === "admin";
 
-      // If experiment is archived, no one has access
-      // Otherwise, only admins have access
+      // Structural authorization flows through the unified can() (owning-org
+      // role → resource grants). experiment_members remains the contributor
+      // layer: `isMember` gates field measurements + annotations, and `hasAccess`
+      // (member OR public, applied at the call sites) gates reads.
+      const isAdmin = (
+        await this.authz.can(userId, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          action: "manage",
+        })
+      ).allow;
+      const hasAccess = isMember;
+      // Archived experiments are read-only: even admins lose write access.
       const hasArchiveAccess = experiment.status === "archived" ? false : isAdmin;
 
-      return { experiment, hasAccess: isMember, isAdmin, hasArchiveAccess };
+      return { experiment, hasAccess, isAdmin, hasArchiveAccess, isMember };
     });
   }
 

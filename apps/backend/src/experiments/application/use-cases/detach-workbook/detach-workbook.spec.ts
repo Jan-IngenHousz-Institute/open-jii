@@ -10,7 +10,6 @@ describe("DetachWorkbookUseCase", () => {
   let detachUseCase: DetachWorkbookUseCase;
   let flowRepo: FlowRepository;
   let adminUserId: string;
-  let memberUserId: string;
   let experimentId: string;
   let workbookId: string;
 
@@ -21,7 +20,6 @@ describe("DetachWorkbookUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     adminUserId = await testApp.createTestUser({});
-    memberUserId = await testApp.createTestUser({ email: "member@test.com" });
 
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     detachUseCase = testApp.module.get(DetachWorkbookUseCase);
@@ -32,8 +30,6 @@ describe("DetachWorkbookUseCase", () => {
       userId: adminUserId,
     });
     experimentId = experiment.id;
-
-    await testApp.addExperimentMember(experimentId, memberUserId, "member");
 
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
@@ -68,12 +64,6 @@ describe("DetachWorkbookUseCase", () => {
     const result = await detachUseCase.execute("00000000-0000-0000-0000-000000000000", adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
-  });
-
-  it("returns failure when user is not admin", async () => {
-    const result = await detachUseCase.execute(experimentId, memberUserId);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
   });
 
   it("returns failure when no workbook is attached", async () => {

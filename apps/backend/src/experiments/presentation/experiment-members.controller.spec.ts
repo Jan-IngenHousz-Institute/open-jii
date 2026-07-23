@@ -8,6 +8,7 @@ import type {
 } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -672,7 +673,7 @@ describe("ExperimentMembersController", () => {
         .send({ role: "admin" })
         .expect(StatusCodes.FORBIDDEN)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("Only admins can update member roles");
+          expect(body.message).toContain("You cannot manage this experiment");
         });
     });
 
@@ -884,6 +885,67 @@ describe("ExperimentMembersController", () => {
         .withoutAuth()
         .send({ transfers: [{ experimentId: experiment.id, targetUserId: faker.string.uuid() }] })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "list members",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "add members",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.addExperimentMembers, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ members: [{ userId: faker.string.uuid(), role: "member" }] }),
+      },
+      {
+        name: "update member role",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.updateExperimentMemberRole, {
+                id: experimentId,
+                memberId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId)
+            .send({ role: "admin" }),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action,
+      });
     });
   });
 });

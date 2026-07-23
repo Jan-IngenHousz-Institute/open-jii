@@ -6,6 +6,7 @@ import type { Readable } from "stream";
 
 import { experimentExportsContract } from "@repo/api/domains/experiment/exports/experiment-exports.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
@@ -21,6 +22,7 @@ export class ExperimentDataExportsController {
     private readonly downloadExportUseCase: DownloadExportUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentExportsContract.initiateExport)
   initiateExport(@Session() session: UserSession) {
     return implement(experimentExportsContract.initiateExport).handler(async ({ input }) => {
@@ -40,6 +42,7 @@ export class ExperimentDataExportsController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentExportsContract.listExports)
   listExports(@Session() session: UserSession) {
     return implement(experimentExportsContract.listExports).handler(async ({ input }) => {
@@ -55,6 +58,7 @@ export class ExperimentDataExportsController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentExportsContract.downloadExport)
   downloadExport(@Session() session: UserSession) {
     return implement(experimentExportsContract.downloadExport).handler(async ({ input }) => {

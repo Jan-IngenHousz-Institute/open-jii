@@ -57,14 +57,14 @@ describe("IssueIotCredentialsUseCase", () => {
     assertSuccess(created);
     const device = created.value[0];
     if (status === "active") {
-      await repo.update(device.id, userId, {
+      await repo.update(device.id, {
         status: "active",
         certificateId: "old-cert",
         certificateArn: "arn:old",
       });
     }
     if (status === "revoked") {
-      await repo.update(device.id, userId, {
+      await repo.update(device.id, {
         status: "revoked",
         certificateId: null,
         certificateArn: null,
@@ -88,7 +88,7 @@ describe("IssueIotCredentialsUseCase", () => {
     assertSuccess(result);
     expect(result.value).toEqual(CERT);
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(CERT.certificateId);
@@ -104,7 +104,7 @@ describe("IssueIotCredentialsUseCase", () => {
     assertSuccess(result);
     expect(result.value).toEqual(CERT);
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(CERT.certificateId);
@@ -134,7 +134,7 @@ describe("IssueIotCredentialsUseCase", () => {
     assertFailure(result);
     expect(revokeSpy).toHaveBeenCalledWith(CERT.certificateId, "REVOKED");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("pending");
   });
@@ -159,9 +159,7 @@ describe("IssueIotCredentialsUseCase", () => {
   });
 
   it("propagates a repository lookup failure", async () => {
-    vi.spyOn(repo, "findByIdForOwner").mockResolvedValue(
-      failure(AppError.internal("db unavailable")),
-    );
+    vi.spyOn(repo, "findById").mockResolvedValue(failure(AppError.internal("db unavailable")));
 
     const result = await useCase.execute("11111111-1111-4111-8111-111111111111", userId);
 
@@ -189,7 +187,7 @@ describe("IssueIotCredentialsUseCase", () => {
     expect(detachSpy).toHaveBeenCalledWith(device.thingName, CERT.certificateArn);
     expect(revokeSpy).toHaveBeenCalledWith(CERT.certificateId, "REVOKED");
 
-    const stored = await repo.findByIdForOwner(device.id, userId);
+    const stored = await repo.findById(device.id);
     assertSuccess(stored);
     expect(stored.value?.status).toBe("pending");
   });

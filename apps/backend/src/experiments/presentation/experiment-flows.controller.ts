@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentFlowsContract } from "@repo/api/domains/experiment/flows/experiment-flows.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateFlowUseCase } from "../application/use-cases/flows/create-flow";
@@ -21,6 +22,7 @@ export class ExperimentFlowsController {
     private readonly updateFlowUseCase: UpdateFlowUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentFlowsContract.getFlow)
   getFlow(@Session() session: UserSession) {
     return implement(experimentFlowsContract.getFlow).handler(async ({ input }) => {
@@ -32,6 +34,7 @@ export class ExperimentFlowsController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentFlowsContract.createFlow)
   createFlow(@Session() session: UserSession) {
     return implement(experimentFlowsContract.createFlow).handler(async ({ input }) => {
@@ -44,6 +47,7 @@ export class ExperimentFlowsController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentFlowsContract.updateFlow)
   updateFlow(@Session() session: UserSession) {
     return implement(experimentFlowsContract.updateFlow).handler(async ({ input }) => {

@@ -37,18 +37,6 @@ export class AddCompatibleProtocolsUseCase {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
     }
 
-    // Check ownership
-    if (macroResult.value.createdBy !== currentUserId) {
-      this.logger.warn({
-        msg: "Unauthorized attempt to add compatible protocols",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "addCompatibleProtocols",
-        macroId,
-        userId: currentUserId,
-      });
-      return failure(AppError.forbidden("Only the macro creator can manage compatible protocols"));
-    }
-
     // Validate that all protocols exist
     for (const protocolId of protocolIds) {
       const protocolResult = await this.macroProtocolRepository.findProtocolById(protocolId);

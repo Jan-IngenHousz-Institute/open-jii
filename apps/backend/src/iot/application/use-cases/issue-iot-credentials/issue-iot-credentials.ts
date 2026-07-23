@@ -24,7 +24,7 @@ export class IssueIotCredentialsUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
+    const deviceResult = await this.deviceRepository.findById(deviceId);
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
@@ -70,7 +70,7 @@ export class IssueIotCredentialsUseCase {
       return failure(policyResult.error);
     }
 
-    const updateResult = await this.deviceRepository.update(deviceId, userId, {
+    const updateResult = await this.deviceRepository.update(deviceId, {
       certificateId: cert.certificateId,
       certificateArn: cert.certificateArn,
       status: "active",

@@ -12,7 +12,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   let workbookRepo: WorkbookRepository;
   let flowRepo: FlowRepository;
   let adminUserId: string;
-  let memberUserId: string;
   let experimentId: string;
   let workbookId: string;
 
@@ -23,7 +22,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     adminUserId = await testApp.createTestUser({});
-    memberUserId = await testApp.createTestUser({ email: "member@test.com" });
 
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     upgradeUseCase = testApp.module.get(UpgradeWorkbookVersionUseCase);
@@ -35,8 +33,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       userId: adminUserId,
     });
     experimentId = experiment.id;
-
-    await testApp.addExperimentMember(experimentId, memberUserId, "member");
 
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
@@ -80,12 +76,6 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     );
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
-  });
-
-  it("returns failure when user is not admin", async () => {
-    const result = await upgradeUseCase.execute(experimentId, memberUserId);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
   });
 
   it("returns failure when no workbook is attached", async () => {

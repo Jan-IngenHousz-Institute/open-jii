@@ -11,11 +11,16 @@ export class UpdateProtocolUseCase {
 
   constructor(private readonly protocolRepository: ProtocolRepository) {}
 
-  async execute(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto>> {
+  async execute(
+    id: string,
+    updateProtocolDto: UpdateProtocolDto,
+    userId: string,
+  ): Promise<Result<ProtocolDto>> {
     this.logger.log({
       msg: "Updating protocol",
       operation: "updateProtocol",
       protocolId: id,
+      userId,
     });
 
     // Check if protocol exists
@@ -36,7 +41,7 @@ export class UpdateProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    // Protocol exists and is not assigned, now update it
+    // Protocol exists, now update it
     const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
 
     if (updateResult.isFailure()) {

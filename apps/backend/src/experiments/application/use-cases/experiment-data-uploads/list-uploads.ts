@@ -20,12 +20,18 @@ export class ListUploadsUseCase {
     userId: string,
     query: { uploadTableId?: string; uploadTableName?: string },
   ): Promise<Result<{ uploads: UploadMetadata[] }>> {
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-    if (accessResult.isFailure()) {
-      return failure(accessResult.error);
+    this.logger.debug({
+      msg: "Listing uploads",
+      operation: "listUploads",
+      experimentId,
+      userId,
+    });
+
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
+      return failure(experimentResult.error);
     }
-    const { experiment, hasAccess } = accessResult.value;
-    if (!experiment) {
+    if (!experimentResult.value) {
       this.logger.warn({
         msg: "Experiment not found",
         errorCode: ErrorCodes.EXPERIMENT_NOT_FOUND,
@@ -33,9 +39,6 @@ export class ListUploadsUseCase {
         experimentId,
       });
       return failure(AppError.notFound("Experiment not found"));
-    }
-    if (!hasAccess && experiment.visibility !== "public") {
-      return failure(AppError.forbidden("Access denied to this experiment"));
     }
 
     const uploadsResult = await this.uploadsRepository.listUploads({

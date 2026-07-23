@@ -1,5 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
+import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -52,6 +54,41 @@ describe("CreateProtocolUseCase", () => {
       code: protocolData.code,
       createdBy: testUserId,
     });
+  });
+
+  it("should assign the target organization to the protocol", async () => {
+    const [targetOrganization] = await testApp.database
+      .insert(organizations)
+      .values({ name: "Target Protocol Organization", slug: `target-${testUserId}` })
+      .returning();
+    await testApp.database.insert(organizationMembers).values({
+      organizationId: targetOrganization.id,
+      userId: testUserId,
+      role: "owner",
+    });
+
+    const result = await useCase.execute(
+      { ...protocolData, name: "Target Organization Protocol" },
+      testUserId,
+      targetOrganization.id,
+    );
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(targetOrganization.id);
+  });
+
+  it("should fall back to the creator's personal organization when no target is provided", async () => {
+    const result = await useCase.execute(
+      { ...protocolData, name: "Personal Organization Protocol" },
+      testUserId,
+      null,
+    );
+    const personalOrganizationId = await ensurePersonalOrganization(testApp.database, {
+      id: testUserId,
+    });
+
+    assertSuccess(result);
+    expect(result.value.organizationId).toBe(personalOrganizationId);
   });
 
   it("should return a 409 conflict error when a protocol with the same name already exists", async () => {

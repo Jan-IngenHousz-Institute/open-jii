@@ -45,7 +45,7 @@ describe("DeleteProtocolUseCase", () => {
     const createdProtocol = createResult.value[0];
 
     // Act
-    const result = await useCase.execute(createdProtocol.id);
+    const result = await useCase.execute(createdProtocol.id, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -66,7 +66,7 @@ describe("DeleteProtocolUseCase", () => {
 
   it("should return not found error for non-existent protocol", async () => {
     // Act
-    const result = await useCase.execute(faker.string.uuid());
+    const result = await useCase.execute(faker.string.uuid(), testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);

@@ -32,80 +32,75 @@ export class AddExperimentLocationsUseCase {
       locationCount: locationsData.length,
     });
 
-    // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // Check if the experiment exists
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Experiment not found",
-            operation: "addExperimentLocations",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.notFound("Experiment not found"));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "User attempted to add locations without proper permissions",
-            operation: "addExperimentLocations",
-            experimentId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        if (locationsData.length === 0) {
-          this.logger.warn({
-            msg: "No locations provided for experiment",
-            operation: "addExperimentLocations",
-            experimentId,
-            userId,
-          });
-          return success([]);
-        }
-
-        // Add experimentId to each location DTO
-        const locationsWithExperimentId = locationsData.map((location) => ({
-          ...location,
-          experimentId,
-        }));
-
-        // Create the locations
-        const createResult = await this.locationRepository.createMany(locationsWithExperimentId);
-
-        if (createResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to create locations for experiment",
-            errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_CREATE_FAILED,
-            operation: "addExperimentLocations",
-            experimentId,
-            userId,
-            error: createResult.error.message,
-          });
-          return failure(
-            AppError.badRequest(`Failed to create locations: ${createResult.error.message}`),
-          );
-        }
-
-        this.logger.log({
-          msg: "Successfully added locations to experiment",
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Experiment not found",
           operation: "addExperimentLocations",
           experimentId,
           userId,
-          locationCount: createResult.value.length,
-          status: "success",
         });
-        return success(createResult.value);
-      },
-    );
+        return failure(AppError.notFound("Experiment not found"));
+      }
+
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // Archived experiments are read-only — a domain rule describing which
+      // operations are legal, not who may perform them.
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to add locations to an archived experiment",
+          operation: "addExperimentLocations",
+          experimentId,
+          userId,
+        });
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      if (locationsData.length === 0) {
+        this.logger.warn({
+          msg: "No locations provided for experiment",
+          operation: "addExperimentLocations",
+          experimentId,
+          userId,
+        });
+        return success([]);
+      }
+
+      // Add experimentId to each location DTO
+      const locationsWithExperimentId = locationsData.map((location) => ({
+        ...location,
+        experimentId,
+      }));
+
+      // Create the locations
+      const createResult = await this.locationRepository.createMany(locationsWithExperimentId);
+
+      if (createResult.isFailure()) {
+        this.logger.error({
+          msg: "Failed to create locations for experiment",
+          errorCode: ErrorCodes.EXPERIMENT_LOCATIONS_CREATE_FAILED,
+          operation: "addExperimentLocations",
+          experimentId,
+          userId,
+          error: createResult.error.message,
+        });
+        return failure(
+          AppError.badRequest(`Failed to create locations: ${createResult.error.message}`),
+        );
+      }
+
+      this.logger.log({
+        msg: "Successfully added locations to experiment",
+        operation: "addExperimentLocations",
+        experimentId,
+        userId,
+        locationCount: createResult.value.length,
+        status: "success",
+      });
+      return success(createResult.value);
+    });
   }
 }

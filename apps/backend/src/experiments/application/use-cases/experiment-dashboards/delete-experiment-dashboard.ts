@@ -25,95 +25,87 @@ export class DeleteExperimentDashboardUseCase {
       userId,
     });
 
-    // Access checked against the URL experimentId BEFORE findById, so a 404
-    // forking on "exists in another experiment" can't leak ids to outsiders.
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    // The experiment is loaded (existence + archived state) BEFORE findById so a
+    // 404 forking on "exists in another experiment" can't leak ids to outsiders.
+    // Authorization itself is enforced declaratively by @CanAccess on the route;
+    // the archived rule stays here as a domain rule about which writes are legal.
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        hasArchiveAccess: boolean;
-        isAdmin: boolean;
-      }) => {
-        if (!experiment) {
-          this.logger.warn({
-            msg: "Attempt to delete dashboard of non-existent experiment",
-            operation: "deleteExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
-
-        if (!hasArchiveAccess) {
-          this.logger.warn({
-            msg: "User does not have access to experiment",
-            operation: "deleteExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-          });
-          return failure(AppError.forbidden("You do not have access to this experiment"));
-        }
-
-        const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
-
-        return dashboardResult.chain(async (dashboard: ExperimentDashboardDto | null) => {
-          if (!dashboard) {
-            this.logger.warn({
-              msg: "Attempt to delete non-existent dashboard",
-              operation: "deleteExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-            });
-            return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
-          }
-
-          if (dashboard.experimentId !== experimentId) {
-            this.logger.warn({
-              msg: "Dashboard does not belong to experiment",
-              operation: "deleteExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-            });
-            return failure(
-              AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
-            );
-          }
-
-          const deleteResult = await this.experimentDashboardRepository.delete(dashboardId);
-
-          if (deleteResult.isFailure()) {
-            this.logger.error({
-              msg: "Failed to delete dashboard",
-              errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_DELETE_FAILED,
-              operation: "deleteExperimentDashboard",
-              experimentId,
-              dashboardId,
-              userId,
-              error: deleteResult.error.message,
-            });
-            return failure(AppError.internal("Failed to delete dashboard"));
-          }
-
-          this.logger.log({
-            msg: "Successfully deleted dashboard",
-            operation: "deleteExperimentDashboard",
-            experimentId,
-            dashboardId,
-            userId,
-            status: "success",
-          });
-          return success(undefined);
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        this.logger.warn({
+          msg: "Attempt to delete dashboard of non-existent experiment",
+          operation: "deleteExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
         });
-      },
-    );
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      if (experiment.status === "archived") {
+        this.logger.warn({
+          msg: "Attempt to delete dashboard of archived experiment",
+          operation: "deleteExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
+        });
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      const dashboardResult = await this.experimentDashboardRepository.findById(dashboardId);
+
+      return dashboardResult.chain(async (dashboard: ExperimentDashboardDto | null) => {
+        if (!dashboard) {
+          this.logger.warn({
+            msg: "Attempt to delete non-existent dashboard",
+            operation: "deleteExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+          });
+          return failure(AppError.notFound(`Dashboard with ID ${dashboardId} not found`));
+        }
+
+        if (dashboard.experimentId !== experimentId) {
+          this.logger.warn({
+            msg: "Dashboard does not belong to experiment",
+            operation: "deleteExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+          });
+          return failure(
+            AppError.notFound(`Dashboard with ID ${dashboardId} not found in this experiment`),
+          );
+        }
+
+        const deleteResult = await this.experimentDashboardRepository.delete(dashboardId);
+
+        if (deleteResult.isFailure()) {
+          this.logger.error({
+            msg: "Failed to delete dashboard",
+            errorCode: ErrorCodes.EXPERIMENT_DASHBOARDS_DELETE_FAILED,
+            operation: "deleteExperimentDashboard",
+            experimentId,
+            dashboardId,
+            userId,
+            error: deleteResult.error.message,
+          });
+          return failure(AppError.internal("Failed to delete dashboard"));
+        }
+
+        this.logger.log({
+          msg: "Successfully deleted dashboard",
+          operation: "deleteExperimentDashboard",
+          experimentId,
+          dashboardId,
+          userId,
+          status: "success",
+        });
+        return success(undefined);
+      });
+    });
   }
 }

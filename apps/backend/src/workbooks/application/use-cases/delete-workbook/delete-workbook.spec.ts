@@ -37,7 +37,7 @@ describe("DeleteWorkbookUseCase", () => {
     assertSuccess(result);
 
     // Verify it no longer exists
-    const getResult = await getUseCase.execute(workbook.id, userId);
+    const getResult = await getUseCase.execute(workbook.id);
     assertFailure(getResult);
     expect(getResult.error.statusCode).toBe(404);
   });
@@ -48,20 +48,12 @@ describe("DeleteWorkbookUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 403 when non-owner tries to delete", async () => {
-    const otherUser = await testApp.createTestUser({});
-    const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
-    const result = await useCase.execute(workbook.id, otherUser);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-  });
-
   it("does not delete other workbooks", async () => {
     const wb1 = await testApp.createWorkbook({ name: "WB 1", createdBy: userId });
     const wb2 = await testApp.createWorkbook({ name: "WB 2", createdBy: userId });
     await useCase.execute(wb1.id, userId);
 
-    const getResult = await getUseCase.execute(wb2.id, userId);
+    const getResult = await getUseCase.execute(wb2.id);
     assertSuccess(getResult);
     expect(getResult.value.id).toBe(wb2.id);
   });

@@ -15,6 +15,7 @@ import type { Request } from "express";
 
 import { experimentUploadsContract } from "@repo/api/domains/experiment/uploads/experiment-uploads.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import type { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ListUploadsUseCase } from "../application/use-cases/experiment-data-uploads/list-uploads";
@@ -33,6 +34,7 @@ export class ExperimentDataUploadsController {
   // without buffering, so it stays off the oRPC contract (oRPC drains the body to
   // materialise File parts). Form fields are validated in-flow against
   // zExperimentUploadFormFields inside UploadDataUseCase.
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Post("/api/v1/experiments/:id/data/uploads")
   @HttpCode(201)
   async uploadData(
@@ -60,6 +62,7 @@ export class ExperimentDataUploadsController {
     };
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentUploadsContract.listUploads)
   listUploads(@Session() session: UserSession) {
     return implement(experimentUploadsContract.listUploads).handler(async ({ input }) => {

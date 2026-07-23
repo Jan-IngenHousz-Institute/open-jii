@@ -51,7 +51,7 @@ describe("UpdateProtocolUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(createdProtocol.id, updateData);
+    const result = await useCase.execute(createdProtocol.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -88,7 +88,7 @@ describe("UpdateProtocolUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(createdProtocol.id, updateData);
+    const result = await useCase.execute(createdProtocol.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -112,7 +112,7 @@ describe("UpdateProtocolUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(faker.string.uuid(), updateData);
+    const result = await useCase.execute(faker.string.uuid(), updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);

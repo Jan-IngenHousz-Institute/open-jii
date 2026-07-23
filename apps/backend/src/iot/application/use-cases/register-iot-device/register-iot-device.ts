@@ -19,7 +19,11 @@ export class RegisterIotDeviceUseCase {
     private readonly deviceRepository: IotDeviceRepository,
   ) {}
 
-  async execute(body: RegisterIotDeviceBody, userId: string): Promise<Result<IotDeviceDto>> {
+  async execute(
+    body: RegisterIotDeviceBody,
+    userId: string,
+    targetOrganizationId?: string | null,
+  ): Promise<Result<IotDeviceDto>> {
     this.logger.log({
       msg: "Registering device",
       operation: "registerIotDevice",
@@ -62,6 +66,7 @@ export class RegisterIotDeviceUseCase {
         deviceType: body.deviceType,
       },
       userId,
+      targetOrganizationId,
     );
 
     if (createResult.isFailure() || createResult.value.length === 0) {

@@ -34,70 +34,65 @@ export class SetWorkbookVersionUseCase {
     versionId: string,
     userId: string,
   ): Promise<Result<SetWorkbookVersionResult>> {
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return accessResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
-        if (!experiment) {
-          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
-        }
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
 
-        if (!isAdmin) {
-          return failure(AppError.forbidden("Only admins can change the workbook version"));
-        }
-
-        if (!experiment.workbookId) {
-          return failure(
-            AppError.badRequest(
-              "Experiment does not have an attached workbook. Attach a workbook first.",
-            ),
-          );
-        }
-
-        const versionsResult = await this.workbookVersionRepository.findByWorkbookId(
-          experiment.workbookId,
+      if (!experiment.workbookId) {
+        return failure(
+          AppError.badRequest(
+            "Experiment does not have an attached workbook. Attach a workbook first.",
+          ),
         );
-        if (versionsResult.isFailure()) return versionsResult;
+      }
 
-        // Restrict the target to a version of THIS experiment's workbook.
-        const target = versionsResult.value.find((v) => v.id === versionId);
-        if (!target) {
-          return failure(
-            AppError.notFound(
-              `Version ${versionId} does not belong to workbook ${experiment.workbookId}`,
-            ),
-          );
-        }
+      const versionsResult = await this.workbookVersionRepository.findByWorkbookId(
+        experiment.workbookId,
+      );
+      if (versionsResult.isFailure()) return versionsResult;
 
-        // Refresh the materialised flow row first, then re-pin. If the flow
-        // upsert fails, the experiment stays on the old (consistent) version
-        // rather than pointing at a version whose flow never updated.
-        const flowResult = await this.flowRepository.upsert(
-          experimentId,
-          cellsToFlowGraph(target.cells),
+      // Restrict the target to a version of THIS experiment's workbook.
+      const target = versionsResult.value.find((v) => v.id === versionId);
+      if (!target) {
+        return failure(
+          AppError.notFound(
+            `Version ${versionId} does not belong to workbook ${experiment.workbookId}`,
+          ),
         );
-        if (flowResult.isFailure()) return flowResult;
+      }
 
-        const updateResult = await this.experimentRepository.update(experimentId, {
-          workbookVersionId: target.id,
-        });
-        if (updateResult.isFailure()) return updateResult;
+      // Refresh the materialised flow row first, then re-pin. If the flow
+      // upsert fails, the experiment stays on the old (consistent) version
+      // rather than pointing at a version whose flow never updated.
+      const flowResult = await this.flowRepository.upsert(
+        experimentId,
+        cellsToFlowGraph(target.cells),
+      );
+      if (flowResult.isFailure()) return flowResult;
 
-        this.logger.log({
-          msg: "Experiment pinned to a specific workbook version",
-          operation: "setWorkbookVersion",
-          experimentId,
-          workbookId: experiment.workbookId,
-          workbookVersionId: target.id,
-          version: target.version,
-        });
+      const updateResult = await this.experimentRepository.update(experimentId, {
+        workbookVersionId: target.id,
+      });
+      if (updateResult.isFailure()) return updateResult;
 
-        return success({
-          workbookId: experiment.workbookId,
-          workbookVersionId: target.id,
-          version: target.version,
-        });
-      },
-    );
+      this.logger.log({
+        msg: "Experiment pinned to a specific workbook version",
+        operation: "setWorkbookVersion",
+        experimentId,
+        userId,
+        workbookId: experiment.workbookId,
+        workbookVersionId: target.id,
+        version: target.version,
+      });
+
+      return success({
+        workbookId: experiment.workbookId,
+        workbookVersionId: target.id,
+        version: target.version,
+      });
+    });
   }
 }

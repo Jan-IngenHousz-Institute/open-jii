@@ -15,7 +15,7 @@ export class GetWorkbookUseCase {
     private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
   ) {}
 
-  async execute(id: string, _userId: string): Promise<Result<WorkbookDto>> {
+  async execute(id: string): Promise<Result<WorkbookDto>> {
     this.logger.log({
       msg: "Getting workbook",
       operation: "getWorkbook",

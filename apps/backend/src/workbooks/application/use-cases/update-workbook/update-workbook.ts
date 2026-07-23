@@ -37,17 +37,6 @@ export class UpdateWorkbookUseCase {
       return failure(AppError.notFound(`Workbook with ID ${id} not found`));
     }
 
-    if (existingWorkbook.createdBy !== userId) {
-      this.logger.warn({
-        msg: "Unauthorized workbook update attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "updateWorkbook",
-        workbookId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("Only the workbook creator can update this workbook"));
-    }
-
     const updateResult = await this.workbookRepository.update(id, data);
 
     if (updateResult.isFailure()) {

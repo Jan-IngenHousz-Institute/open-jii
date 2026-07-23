@@ -14,6 +14,7 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -739,6 +740,66 @@ describe("ExperimentLocationsController", () => {
         .withoutAuth()
         .query({ latitude: "40.7128", longitude: "-74.006" })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "get locations",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.getExperimentLocations, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "add locations",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.addExperimentLocations, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ locations: [] }),
+      },
+      {
+        name: "update locations",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .put(
+              testApp.resolveOrpcPath(contract.experiments.updateExperimentLocations, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ locations: [] }),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action,
+      });
     });
   });
 });

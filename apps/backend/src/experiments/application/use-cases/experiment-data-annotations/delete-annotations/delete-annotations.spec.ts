@@ -131,42 +131,12 @@ describe("DeleteAnnotations", () => {
       annotationId: "test-annotation-id",
     };
 
-    // Act
     const result = await useCase.execute(nonExistentId, request, testUserId);
 
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
+    expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
-  });
-
-  it("should return forbidden error when user does not have access to private experiment", async () => {
-    // Create experiment with another user
-    const otherUserId = await testApp.createTestUser({
-      email: "other@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private Experiment",
-      description: "Private experiment",
-      status: "active",
-      visibility: "private",
-      userId: otherUserId,
-    });
-
-    const request: DeleteAnnotationsRequest = {
-      annotationId: "test-annotation-id",
-    };
-
-    // Act
-    const result = await useCase.execute(experiment.id, request, testUserId);
-
-    // Assert result is failure
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should handle repository deleteAnnotation failure", async () => {
@@ -239,37 +209,6 @@ describe("DeleteAnnotations", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to delete annotations");
-  });
-
-  it("should allow deleting annotations from public experiments", async () => {
-    // Create a public experiment with another user
-    const otherUserId = await testApp.createTestUser({
-      email: "other@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Public Experiment",
-      description: "Public experiment",
-      status: "active",
-      visibility: "public",
-      userId: otherUserId,
-    });
-
-    // Mock the repository to succeed
-    const repository = testApp.module.get(ExperimentDataAnnotationsRepository);
-    vi.spyOn(repository, "deleteAnnotation").mockResolvedValue(success({ rowsAffected: 1 }));
-
-    const request: DeleteAnnotationsRequest = {
-      annotationId: "test-annotation-id",
-    };
-
-    // Act - testUserId (not owner) should be able to delete from public experiment
-    const result = await useCase.execute(experiment.id, request, testUserId);
-
-    // Assert - should succeed
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.rowsAffected).toBe(1);
   });
 
   it("should delete flag annotations in bulk", async () => {

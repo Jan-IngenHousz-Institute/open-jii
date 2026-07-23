@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentDashboardsContract } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateExperimentDashboardUseCase } from "../application/use-cases/experiment-dashboards/create-experiment-dashboard";
@@ -25,6 +26,7 @@ export class ExperimentDashboardsController {
     private readonly deleteExperimentDashboardUseCase: DeleteExperimentDashboardUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDashboardsContract.listExperimentDashboards)
   listDashboards(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.listExperimentDashboards).handler(
@@ -43,6 +45,7 @@ export class ExperimentDashboardsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentDashboardsContract.createExperimentDashboard)
   createDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.createExperimentDashboard).handler(
@@ -61,6 +64,7 @@ export class ExperimentDashboardsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDashboardsContract.getExperimentDashboard)
   getDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.getExperimentDashboard).handler(
@@ -78,6 +82,7 @@ export class ExperimentDashboardsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentDashboardsContract.updateExperimentDashboard)
   updateDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.updateExperimentDashboard).handler(
@@ -97,6 +102,7 @@ export class ExperimentDashboardsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentDashboardsContract.deleteExperimentDashboard)
   deleteDashboard(@Session() session: UserSession) {
     return implement(experimentDashboardsContract.deleteExperimentDashboard).handler(

@@ -20,31 +20,26 @@ export class CreateFlowUseCase {
     userId: string,
     graph: FlowGraphDto,
   ): Promise<Result<FlowDto>> {
-    const access = await this.experimentRepository.checkAccess(experimentId, userId);
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
 
-    return access.chain(
-      async ({
-        experiment,
-        hasArchiveAccess,
-      }: {
-        experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
-      }) => {
-        if (!experiment) return failure(AppError.notFound("Experiment not found"));
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
+      if (!experiment) return failure(AppError.notFound("Experiment not found"));
 
-        if (!hasArchiveAccess) {
-          return failure(AppError.forbidden("You do not have access to this experiment"));
+      // Authorization is enforced declaratively by @CanAccess on the route.
+      // Archived experiments are read-only — a domain rule describing which
+      // operations are legal, not who may perform them.
+      if (experiment.status === "archived") {
+        return failure(AppError.forbidden("Cannot modify an archived experiment"));
+      }
+
+      // Ensure there isn't an existing flow
+      const existing = await this.flowRepository.getByExperimentId(experimentId);
+      return existing.chain(async (flow) => {
+        if (flow) {
+          return failure(AppError.badRequest("Flow already exists for this experiment"));
         }
-
-        // Ensure there isn't an existing flow
-        const existing = await this.flowRepository.getByExperimentId(experimentId);
-        return existing.chain(async (flow) => {
-          if (flow) {
-            return failure(AppError.badRequest("Flow already exists for this experiment"));
-          }
-          return this.flowRepository.create(experimentId, graph);
-        });
-      },
-    );
+        return this.flowRepository.create(experimentId, graph);
+      });
+    });
   }
 }

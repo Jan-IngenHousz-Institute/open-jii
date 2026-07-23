@@ -113,12 +113,7 @@ export class UploadDataUseCase {
           state.sourceKind = parsed.data;
         }
         if (!state.ctx) {
-          const prep = await this.preexecute(
-            input.experimentId,
-            input.userId,
-            state.sourceKind,
-            formFields,
-          );
+          const prep = await this.preexecute(input.experimentId, state.sourceKind, formFields);
           if (prep.isFailure()) {
             file.stream.resume();
             return failure(prep.error);
@@ -164,20 +159,20 @@ export class UploadDataUseCase {
 
   private async preexecute(
     experimentId: string,
-    userId: string,
     sourceKind: ExperimentUploadSourceKind,
     formFields: { targetKind?: string; targetName?: string; uploadTableId?: string },
   ): Promise<Result<UploadContext>> {
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-    if (accessResult.isFailure()) {
+    const experimentResult = await this.experimentRepository.findOne(experimentId);
+    if (experimentResult.isFailure()) {
       return failure(AppError.internal("Failed to verify experiment access"));
     }
-    const { experiment, hasArchiveAccess } = accessResult.value;
+    const experiment = experimentResult.value;
     if (!experiment) {
       return failure(AppError.notFound("Experiment not found"));
     }
-    if (!hasArchiveAccess) {
-      return failure(AppError.forbidden("Access denied to this experiment"));
+    // Archived experiments are read-only, even for admins.
+    if (experiment.status === "archived") {
+      return failure(AppError.forbidden("Cannot upload data to an archived experiment"));
     }
 
     const parsedForm = zExperimentUploadFormFields.safeParse({ ...formFields, sourceKind });

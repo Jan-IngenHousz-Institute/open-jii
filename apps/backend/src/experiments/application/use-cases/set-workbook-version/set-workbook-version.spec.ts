@@ -19,7 +19,6 @@ describe("SetWorkbookVersionUseCase", () => {
   let flowRepo: FlowRepository;
 
   let adminUserId: string;
-  let memberUserId: string;
   let experimentId: string;
   let workbookId: string;
   let v1Id: string;
@@ -32,7 +31,6 @@ describe("SetWorkbookVersionUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     adminUserId = await testApp.createTestUser({});
-    memberUserId = await testApp.createTestUser({ email: "member@test.com" });
 
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     upgradeUseCase = testApp.module.get(UpgradeWorkbookVersionUseCase);
@@ -47,8 +45,6 @@ describe("SetWorkbookVersionUseCase", () => {
       userId: adminUserId,
     });
     experimentId = experiment.id;
-    await testApp.addExperimentMember(experimentId, memberUserId, "member");
-
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
       cells: [{ id: "md1", type: "markdown", content: "v1", isCollapsed: false }],
@@ -113,12 +109,6 @@ describe("SetWorkbookVersionUseCase", () => {
     const access = await experimentRepo.checkAccess(experimentId, adminUserId);
     assertSuccess(access);
     expect(access.value.experiment?.workbookVersionId).toBe(v2Id);
-  });
-
-  it("rejects a non-admin", async () => {
-    const result = await setUseCase.execute(experimentId, v1Id, memberUserId);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
   });
 
   it("rejects a version that belongs to a different workbook", async () => {

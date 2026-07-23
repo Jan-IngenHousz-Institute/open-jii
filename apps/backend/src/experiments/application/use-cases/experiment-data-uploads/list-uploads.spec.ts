@@ -10,7 +10,6 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import type { UploadMetadata } from "../../../core/models/experiment-data-uploads.model";
 import { ExperimentDataUploadsRepository } from "../../../core/repositories/experiment-data-uploads.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { ListUploadsUseCase } from "./list-uploads";
 
 describe("ListUploadsUseCase", () => {
@@ -109,33 +108,12 @@ describe("ListUploadsUseCase", () => {
   });
 
   it("should return not found when experiment does not exist", async () => {
-    const nonExistentId = faker.string.uuid();
-
-    const result = await useCase.execute(nonExistentId, testUserId, {});
+    const result = await useCase.execute(faker.string.uuid(), testUserId, {});
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain("Experiment not found");
-  });
-
-  it("should return forbidden when user does not have access to private experiment", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "another@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private_Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {});
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("Access denied");
   });
 
   it("should allow access to public experiments without membership", async () => {
@@ -174,25 +152,5 @@ describe("ListUploadsUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
     // Underlying repository error is preserved (not flattened to a generic message).
     expect(result.error.message).toContain("Failed to query uploads");
-  });
-
-  it("should handle checkAccess failure", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
-    });
-
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      failure(AppError.internal("Database connection failed")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {});
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    // Underlying repository error is preserved (not flattened to a generic message).
-    expect(result.error.message).toBe("Database connection failed");
   });
 });

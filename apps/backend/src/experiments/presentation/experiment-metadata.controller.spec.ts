@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
@@ -389,6 +390,80 @@ describe("ExperimentMetadataController", () => {
       });
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "list metadata",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "create metadata",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.createExperimentMetadata, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send(validMetadataBody),
+      },
+      {
+        name: "update metadata",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .put(
+              testApp.resolveOrpcPath(contract.experiments.updateExperimentMetadata, {
+                id: experimentId,
+                metadataId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId)
+            .send(validMetadataBody),
+      },
+      {
+        name: "delete metadata",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
+                id: experimentId,
+                metadataId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action,
+      });
     });
   });
 });

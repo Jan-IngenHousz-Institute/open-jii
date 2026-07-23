@@ -37,17 +37,8 @@ export class UpdateMacroUseCase {
       return failure(AppError.notFound(`Macro with ID ${id} not found`));
     }
 
-    if (existingMacro.createdBy !== userId) {
-      this.logger.warn({
-        msg: "Unauthorized macro update attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "updateMacro",
-        macroId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("Only the macro creator can update this macro"));
-    }
-
+    // Authorization (owner/admin/grant) is enforced upstream by the
+    // `@CanAccess({ resource: "macro", action: "update" })` route guard.
     const updateResult = await this.macroRepository.update(id, data);
 
     if (updateResult.isFailure()) {

@@ -1,13 +1,11 @@
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "./create-flow";
 
 describe("CreateFlowUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: CreateFlowUseCase;
   let ownerId: string;
-  let memberId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -16,7 +14,6 @@ describe("CreateFlowUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     ownerId = await testApp.createTestUser({});
-    memberId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateFlowUseCase);
   });
 
@@ -39,47 +36,13 @@ describe("CreateFlowUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 403 if user is not a member of experiment", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // Do not add memberId as a member
-    const result = await useCase.execute(
-      experiment.id,
-      memberId,
-      testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
-    );
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-  });
-
-  it("returns 403 when user is a member and tries to create flow", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
-    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
-    const result = await useCase.execute(experiment.id, memberId, graph);
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-  });
-
   it("returns 403 when any user attempts to create flow for archived experiments", async () => {
     // Create an archived experiment
     const { experiment } = await testApp.createExperiment({
       name: "Archived Exp",
       userId: ownerId,
+      status: "archived",
     });
-
-    // Mock repository to simulate archived experiment regardless of role
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...experiment, status: "archived" },
-        hasAccess: true,
-        hasArchiveAccess: false,
-        isAdmin: true,
-      }),
-    );
 
     const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
 
@@ -88,7 +51,7 @@ describe("CreateFlowUseCase", () => {
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
-    expect(result.error.message).toContain("You do not have access to this experiment");
+    expect(result.error.message).toContain("Cannot modify an archived experiment");
   });
 
   it("creates flow when user is admin and no existing flow", async () => {

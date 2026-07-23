@@ -7,6 +7,7 @@ import type { Experiment, ExperimentList } from "@repo/api/domains/experiment/ex
 import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -392,6 +393,63 @@ describe("ExperimentController", () => {
       expect(response.body.data).toBeUndefined();
     });
 
+    it("allows a plain owning-organization member to read a private experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Organization experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const organizationMemberId = await testApp.createTestUser({});
+      if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
+      await testApp.addOrganizationMember(
+        experiment.organizationId,
+        organizationMemberId,
+        "member",
+      );
+
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
+        id: experiment.id,
+      });
+
+      await testApp.get(path).withAuth(organizationMemberId).expect(StatusCodes.OK);
+    });
+
+    it("allows an explicit read grantee to read a private experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Granted experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const granteeId = await testApp.createTestUser({});
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId,
+        role: "viewer",
+      });
+
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
+        id: experiment.id,
+      });
+
+      await testApp.get(path).withAuth(granteeId).expect(StatusCodes.OK);
+    });
+
+    it("denies an unrelated user access to a private experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Private experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const unrelatedUserId = await testApp.createTestUser({});
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
+        id: experiment.id,
+      });
+
+      await testApp.get(path).withAuth(unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+    });
+
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
       const path = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
@@ -426,6 +484,37 @@ describe("ExperimentController", () => {
     });
   });
 
+  describe("getExperimentAccess", () => {
+    it("reports read access without granting manage access to an organization member", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Organization access experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const organizationMemberId = await testApp.createTestUser({});
+      if (!experiment.organizationId) throw new Error("Experiment has no owning organization");
+      await testApp.addOrganizationMember(
+        experiment.organizationId,
+        organizationMemberId,
+        "member",
+      );
+
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperimentAccess, {
+        id: experiment.id,
+      });
+      const response = await testApp
+        .get(path)
+        .withAuth(organizationMemberId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        experiment: { id: experiment.id },
+        hasAccess: true,
+        isAdmin: false,
+      });
+    });
+  });
+
   describe("updateExperiment", () => {
     it("should update an experiment successfully", async () => {
       const { experiment } = await testApp.createExperiment({
@@ -449,6 +538,23 @@ describe("ExperimentController", () => {
         name: "Updated Name",
         status: "active",
       });
+    });
+
+    it("should return 403 when updating an experiment without update access", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment owned by someone else",
+        userId: testUserId,
+      });
+      const otherUserId = await testApp.createTestUser({});
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(otherUserId)
+        .send({ name: "Unauthorized update" })
+        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("should return 404 if experiment does not exist", async () => {
@@ -567,6 +673,19 @@ describe("ExperimentController", () => {
         id: experiment.id,
       });
       await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should return 403 when deleting an experiment without manage access", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment another user cannot delete",
+        userId: testUserId,
+      });
+      const otherUserId = await testApp.createTestUser({});
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
+        id: experiment.id,
+      });
+
+      await testApp.delete(path).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
     });
 
     it("should return 403 if experiment deletion is disabled", async () => {
@@ -775,6 +894,94 @@ describe("ExperimentController", () => {
       });
 
       await testApp.delete(removePath).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "get experiment",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experimentId }))
+            .withAuth(userId),
+      },
+      {
+        name: "get experiment access",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.getExperimentAccess, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "update experiment",
+        action: "update",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.updateExperiment, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ name: "Blocked update" }),
+      },
+      {
+        name: "delete experiment",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.experiments.deleteExperiment, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Guarded private experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(experiment.id, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action,
+      });
+    });
+
+    it("returns 403 when creating an experiment in an organization the caller is not a member of", async () => {
+      const organizationId = faker.string.uuid();
+      const isOrgMemberSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "isOrgMember")
+        .mockResolvedValue(false);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
+        .withAuth(testUserId)
+        .send({
+          name: "Org experiment",
+          description: "x",
+          status: "active",
+          visibility: "private",
+          organizationId,
+        })
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(isOrgMemberSpy).toHaveBeenCalledWith(testUserId, organizationId);
     });
   });
 });

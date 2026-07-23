@@ -1,5 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
+import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { generateHashedFilename } from "../../../../macros/core/models/macro.model";
@@ -53,6 +55,41 @@ describe("CreateMacroUseCase", () => {
         code: mockRequest.code,
         createdBy: testUserId,
       });
+    });
+
+    it("should assign the target organization to the macro", async () => {
+      const [targetOrganization] = await testApp.database
+        .insert(organizations)
+        .values({ name: "Target Macro Organization", slug: `target-${testUserId}` })
+        .returning();
+      await testApp.database.insert(organizationMembers).values({
+        organizationId: targetOrganization.id,
+        userId: testUserId,
+        role: "owner",
+      });
+
+      const result = await useCase.execute(
+        { ...mockRequest, name: "Target Organization Macro" },
+        testUserId,
+        targetOrganization.id,
+      );
+
+      assertSuccess(result);
+      expect(result.value.organizationId).toBe(targetOrganization.id);
+    });
+
+    it("should fall back to the creator's personal organization when no target is provided", async () => {
+      const result = await useCase.execute(
+        { ...mockRequest, name: "Personal Organization Macro" },
+        testUserId,
+        null,
+      );
+      const personalOrganizationId = await ensurePersonalOrganization(testApp.database, {
+        id: testUserId,
+      });
+
+      assertSuccess(result);
+      expect(result.value.organizationId).toBe(personalOrganizationId);
     });
 
     it("should handle duplicate macro names", async () => {

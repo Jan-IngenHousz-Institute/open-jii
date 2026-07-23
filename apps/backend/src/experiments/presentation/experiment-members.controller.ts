@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentMembersContract } from "@repo/api/domains/experiment/members/experiment-members.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
@@ -25,6 +26,7 @@ export class ExperimentMembersController {
     private readonly transferExperimentAdminUseCase: TransferExperimentAdminUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentMembersContract.listExperimentMembers)
   listMembers(@Session() session: UserSession) {
     return implement(experimentMembersContract.listExperimentMembers).handler(async ({ input }) => {
@@ -36,6 +38,7 @@ export class ExperimentMembersController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentMembersContract.addExperimentMembers)
   addMembers(@Session() session: UserSession) {
     return implement(experimentMembersContract.addExperimentMembers).handler(async ({ input }) => {
@@ -69,6 +72,7 @@ export class ExperimentMembersController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentMembersContract.updateExperimentMemberRole)
   updateMemberRole(@Session() session: UserSession) {
     return implement(experimentMembersContract.updateExperimentMemberRole).handler(

@@ -1,7 +1,14 @@
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+  AppError,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
+import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { AddExperimentMembersUseCase } from "./add-experiment-members";
 
 describe("AddExperimentMembersUseCase", () => {
@@ -93,33 +100,6 @@ describe("AddExperimentMembersUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return FORBIDDEN error if user is not an admin", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Batch Test Experiment",
-      userId: testUserId,
-    });
-
-    // Create a non-admin user
-    const nonAdminId = await testApp.createTestUser({
-      email: "nonadmin-batch@example.com",
-    });
-    const memberId = await testApp.createTestUser({
-      email: "member-batch@example.com",
-    });
-
-    // Try to add members as a non-admin user
-    const result = await useCase.execute(
-      experiment.id,
-      [{ userId: memberId, role: "member" }],
-      nonAdminId,
-    );
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-  });
-
   it("should return FORBIDDEN when attempting to add members to an archived experiment", async () => {
     // Create an experiment and archive it
     const { experiment } = await testApp.createExperiment({
@@ -141,5 +121,51 @@ describe("AddExperimentMembersUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
+  });
+
+  it("should return internal error when the repository fails to add members", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Add Members Repo Failure",
+      userId: testUserId,
+    });
+    const memberId = await testApp.createTestUser({ email: "repo-fail-member@example.com" });
+
+    const memberRepository = testApp.module.get(ExperimentMemberRepository);
+    vi.spyOn(memberRepository, "addMembers").mockResolvedValue(
+      failure(AppError.internal("db down")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ userId: memberId, role: "member" }],
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
+    expect(result.error.message).toContain("Failed to add experiment members");
+  });
+
+  it("should return internal error when the actor profile lookup fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Add Members Actor Profile Failure",
+      userId: testUserId,
+    });
+    const memberId = await testApp.createTestUser({ email: "actor-fail-member@example.com" });
+
+    const memberRepository = testApp.module.get(ExperimentMemberRepository);
+    vi.spyOn(memberRepository, "findUserFullNameFromProfile").mockResolvedValue(
+      failure(AppError.internal("no profile")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ userId: memberId, role: "member" }],
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
+    expect(result.error.message).toContain("Failed to retrieve actor profile");
   });
 });

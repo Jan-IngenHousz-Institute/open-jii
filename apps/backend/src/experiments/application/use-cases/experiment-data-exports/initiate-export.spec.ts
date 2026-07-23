@@ -80,28 +80,6 @@ describe("InitiateExportUseCase", () => {
     expect(result.error.message).toContain("Experiment not found");
   });
 
-  it("should return forbidden when user does not have access to private experiment", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "another@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private_Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "raw_data",
-      format: "csv",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("Access denied");
-  });
-
   it("should allow access to public experiments without membership", async () => {
     const anotherUserId = await testApp.createTestUser({
       email: "public-user@example.com",
@@ -144,28 +122,6 @@ describe("InitiateExportUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to initiate export");
-  });
-
-  it("should handle checkAccess failure", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
-    });
-
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      failure(AppError.internal("Database connection failed")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-      format: "csv",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toBe("Failed to verify experiment access");
   });
 
   describe("anonymizeContributors override", () => {

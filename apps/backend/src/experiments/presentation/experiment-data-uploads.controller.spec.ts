@@ -1,6 +1,6 @@
-import { faker } from "@faker-js/faker";
 import { describe, expect, vi } from "vitest";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { ListUploadsUseCase } from "../application/use-cases/experiment-data-uploads/list-uploads";
@@ -11,6 +11,7 @@ import { UploadDataUseCase } from "../application/use-cases/experiment-data-uplo
 describe("ExperimentDataUploadsController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let readableExperimentId: string;
   let uploadDataUseCase: UploadDataUseCase;
   let listUploadsUseCase: ListUploadsUseCase;
 
@@ -21,6 +22,11 @@ describe("ExperimentDataUploadsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Readable experiment",
+      userId: testUserId,
+    });
+    readableExperimentId = experiment.id;
     uploadDataUseCase = testApp.module.get(UploadDataUseCase);
     listUploadsUseCase = testApp.module.get(ListUploadsUseCase);
   });
@@ -35,7 +41,7 @@ describe("ExperimentDataUploadsController", () => {
 
   describe("uploadData (native streaming)", () => {
     it("streams to the use case and returns 201 with the upload result", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const files = [{ fileName: "data.csv", filePath: "/Volumes/x/y" }];
       vi.spyOn(uploadDataUseCase, "execute").mockResolvedValue(
         success({
@@ -70,7 +76,7 @@ describe("ExperimentDataUploadsController", () => {
     });
 
     it("omits uploadTableId/uploadTableName when the use case returns none", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(uploadDataUseCase, "execute").mockResolvedValue(
         success({ uploadId: "u-3", sourceKind: "csv", uploadTableName: undefined, files: [] }),
       );
@@ -88,7 +94,7 @@ describe("ExperimentDataUploadsController", () => {
     });
 
     it("returns 409 when the target table name is taken", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(uploadDataUseCase, "execute").mockResolvedValue(
         failure(AppError.conflict("A table named 'x' already exists", "UPLOAD_TABLE_NAME_TAKEN")),
       );
@@ -113,7 +119,7 @@ describe("ExperimentDataUploadsController", () => {
 
   describe("listUploads (oRPC)", () => {
     it("forwards the optional uploadTableName filter to the use case", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(listUploadsUseCase, "execute").mockResolvedValue(success({ uploads: [] }));
 
       const response = await testApp
@@ -130,7 +136,7 @@ describe("ExperimentDataUploadsController", () => {
     });
 
     it("maps a not-found use case failure to 404", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       vi.spyOn(listUploadsUseCase, "execute").mockResolvedValue(
         failure(AppError.notFound("Experiment not found")),
       );
@@ -139,6 +145,35 @@ describe("ExperimentDataUploadsController", () => {
         .get(`/api/v1/experiments/${experimentId}/data/uploads`)
         .withAuth(testUserId)
         .expect(404);
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "upload data",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp.post(`/api/v1/experiments/${experimentId}/data/uploads`).withAuth(userId),
+      },
+      {
+        name: "list uploads",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp.get(`/api/v1/experiments/${experimentId}/data/uploads`).withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(readableExperimentId, unrelatedUserId).expect(403);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: readableExperimentId,
+        action,
+      });
     });
   });
 });

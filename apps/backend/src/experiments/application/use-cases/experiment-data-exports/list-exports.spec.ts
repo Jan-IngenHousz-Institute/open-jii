@@ -10,7 +10,6 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import type { ExportMetadata } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { ListExportsUseCase } from "./list-exports";
 
 describe("ListExportsUseCase", () => {
@@ -113,9 +112,7 @@ describe("ListExportsUseCase", () => {
   });
 
   it("should return not found when experiment does not exist", async () => {
-    const nonExistentId = faker.string.uuid();
-
-    const result = await useCase.execute(nonExistentId, testUserId, {
+    const result = await useCase.execute(faker.string.uuid(), testUserId, {
       tableName: "raw_data",
     });
 
@@ -123,27 +120,6 @@ describe("ListExportsUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain("Experiment not found");
-  });
-
-  it("should return forbidden when user does not have access to private experiment", async () => {
-    const anotherUserId = await testApp.createTestUser({
-      email: "another@example.com",
-    });
-
-    const { experiment } = await testApp.createExperiment({
-      name: "Private_Experiment",
-      visibility: "private",
-      userId: testUserId,
-    });
-
-    const result = await useCase.execute(experiment.id, anotherUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("Access denied");
   });
 
   it("should allow access to public experiments without membership", async () => {
@@ -185,26 +161,5 @@ describe("ListExportsUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to list exports");
-  });
-
-  it("should handle checkAccess failure", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Test_Experiment",
-      userId: testUserId,
-    });
-
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      failure(AppError.internal("Database connection failed")),
-    );
-
-    const result = await useCase.execute(experiment.id, testUserId, {
-      tableName: "raw_data",
-    });
-
-    expect(result.isFailure()).toBe(true);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-    expect(result.error.message).toBe("Failed to verify experiment access");
   });
 });

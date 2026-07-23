@@ -24,7 +24,7 @@ export class RotateIotCredentialsUseCase {
       userId,
     });
 
-    const deviceResult = await this.deviceRepository.findByIdForOwner(deviceId, userId);
+    const deviceResult = await this.deviceRepository.findById(deviceId);
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
@@ -50,11 +50,11 @@ export class RotateIotCredentialsUseCase {
     const oldCertificateId = device.certificateId;
     const oldCertificateArn = device.certificateArn;
 
-    await this.deviceRepository.update(deviceId, userId, { status: "rotating" });
+    await this.deviceRepository.update(deviceId, { status: "rotating" });
 
     const certResult = await this.awsPort.createDeviceCertificate();
     if (certResult.isFailure()) {
-      await this.revertToActive(deviceId, userId);
+      await this.revertToActive(deviceId);
       return failure(certResult.error);
     }
     const cert = certResult.value;
@@ -65,14 +65,14 @@ export class RotateIotCredentialsUseCase {
     );
     if (attachResult.isFailure()) {
       await this.revokeCertificate(cert.certificateId);
-      await this.revertToActive(deviceId, userId);
+      await this.revertToActive(deviceId);
       return failure(attachResult.error);
     }
 
     const policyResult = await this.awsPort.attachDevicePolicies(cert.certificateArn);
     if (policyResult.isFailure()) {
       await this.detachAndRevoke(device.thingName, cert);
-      await this.revertToActive(deviceId, userId);
+      await this.revertToActive(deviceId);
       return failure(policyResult.error);
     }
 
@@ -80,7 +80,7 @@ export class RotateIotCredentialsUseCase {
     // with the new cert, so log failures but do not abort.
     await this.retireCertificate(device.thingName, oldCertificateId, oldCertificateArn);
 
-    const updateResult = await this.deviceRepository.update(deviceId, userId, {
+    const updateResult = await this.deviceRepository.update(deviceId, {
       certificateId: cert.certificateId,
       certificateArn: cert.certificateArn,
       status: "active",
@@ -99,8 +99,8 @@ export class RotateIotCredentialsUseCase {
     return success(cert);
   }
 
-  private async revertToActive(deviceId: string, userId: string): Promise<void> {
-    const revert = await this.deviceRepository.update(deviceId, userId, { status: "active" });
+  private async revertToActive(deviceId: string): Promise<void> {
+    const revert = await this.deviceRepository.update(deviceId, { status: "active" });
     if (revert.isFailure()) {
       this.logger.warn({ msg: "Cleanup failed: revert status to active", deviceId });
     }

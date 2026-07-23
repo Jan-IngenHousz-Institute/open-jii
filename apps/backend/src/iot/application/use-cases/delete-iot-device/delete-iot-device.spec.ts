@@ -91,20 +91,8 @@ describe("DeleteIotDeviceUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 404 for another user's device", async () => {
-    const otherUser = await testApp.createTestUser({});
-    const device = await testApp.createIotDevice({ createdBy: otherUser });
-
-    const result = await useCase.execute(device.id, userId);
-
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(404);
-  });
-
   it("propagates a repository lookup failure", async () => {
-    vi.spyOn(repo, "findByIdForOwner").mockResolvedValue(
-      failure(AppError.internal("db unavailable")),
-    );
+    vi.spyOn(repo, "findById").mockResolvedValue(failure(AppError.internal("db unavailable")));
 
     const result = await useCase.execute(faker.string.uuid(), userId);
 

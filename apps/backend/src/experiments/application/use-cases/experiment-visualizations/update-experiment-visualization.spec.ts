@@ -133,54 +133,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe("Visualization not found");
     });
 
-    it("should fail when user is not the creator of the visualization", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Original Visualization",
-        description: "Original Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        config: { title: "Original Visualization" },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Arrange
-      const differentUserVisualization = {
-        ...mockVisualization,
-        createdBy: faker.string.uuid(), // Different user
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(differentUserVisualization),
-      );
-
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: true,
-          hasArchiveAccess: true,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have permission to modify this visualization");
-    });
-
     it("should fail when repository update operation fails", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
@@ -335,58 +287,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe(`Experiment with ID ${fakeExperimentId} not found`);
-    });
-
-    it("should fail when user does not have access to experiment", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: "Test Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updateData: UpdateExperimentVisualizationDto = {
-        name: "Updated Visualization",
-        chartFamily: "basic",
-        chartType: "line",
-        config: { chartType: "line", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
-      );
-
-      // Mock experiment access to return experiment but no access
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment,
-          hasAccess: false,
-          hasArchiveAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have access to this experiment");
     });
 
     it("should allow admin to update visualization even if not creator", async () => {
@@ -563,14 +463,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         success(mockVisualization),
       );
 
-      // Mock experimentRepository.checkAccess to return archived experiment
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: { ...experiment, status: "archived" },
-          hasAccess: true,
-          hasArchiveAccess: false,
-          isAdmin: true,
-        }),
+      vi.spyOn(experimentRepository, "findOne").mockResolvedValue(
+        success({ ...experiment, status: "archived" }),
       );
 
       // Act
@@ -579,7 +473,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       // Assert
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain("You do not have access to this experiment");
+      expect(result.error.message).toContain("Cannot modify an archived experiment");
     });
   });
 });

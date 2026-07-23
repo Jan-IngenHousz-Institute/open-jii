@@ -148,7 +148,7 @@ describe("shared entity propagation across workbooks (integration)", () => {
     // Edit the protocol. This is the SAME call the protocol cell autosave makes
     // "from the workbook page" and the standalone protocol page makes
     // "directly": there is no workbook-scoped copy.
-    assertSuccess(await updateProtocol.execute(protocol.id, { code: NEW_CODE }));
+    assertSuccess(await updateProtocol.execute(protocol.id, { code: NEW_CODE }, ownerId));
 
     // The single shared row now holds the new code.
     const live = await protocolRepo.findOne(protocol.id);
@@ -187,7 +187,7 @@ describe("shared entity propagation across workbooks (integration)", () => {
     });
     await publish(wa.id, ownerId);
     await publish(wb.id, otherId);
-    assertSuccess(await updateProtocol.execute(protocol.id, { code: NEW_CODE }));
+    assertSuccess(await updateProtocol.execute(protocol.id, { code: NEW_CODE }, ownerId));
 
     // The owner upgrades WA (what the experiment design page / upgrade banner
     // does): a new version snapshots the current live code.

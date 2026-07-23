@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentDataContract } from "@repo/api/domains/experiment/data/experiment-data.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
@@ -20,6 +21,7 @@ export class ExperimentDataController {
     private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentTables)
   getExperimentTables(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentTables).handler(async ({ input }) => {
@@ -31,6 +33,7 @@ export class ExperimentDataController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getExperimentData)
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
@@ -43,6 +46,7 @@ export class ExperimentDataController {
     });
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentDataContract.getDistinctColumnValues)
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {

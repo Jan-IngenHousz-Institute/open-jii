@@ -178,12 +178,12 @@ describe("GetExperimentAccessUseCase", () => {
           status: "active",
           visibility: "public",
         }),
-        hasAccess: false, // User is not a member
+        hasAccess: true,
         isAdmin: false,
       });
     });
 
-    it("should return forbidden error when user is not a member of private experiment", async () => {
+    it("reports effective read access after the route guard authorizes a private experiment", async () => {
       // Arrange
       const { experiment } = await testApp.createExperiment({
         name: "Private Test",
@@ -195,13 +195,10 @@ describe("GetExperimentAccessUseCase", () => {
       const result = await useCase.execute(experiment.id, anotherUserId);
 
       // Assert
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-
-      const error = result.error;
-      expect(error).toBeInstanceOf(AppError);
-      expect(error.statusCode).toBe(403);
-      expect(error.message).toBe("You do not have permission to access this experiment");
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.hasAccess).toBe(true);
+      expect(result.value.isAdmin).toBe(false);
     });
 
     it("should return not found error when experiment does not exist", async () => {
@@ -294,12 +291,13 @@ describe("GetExperimentAccessUseCase", () => {
         userId: testUserId,
       });
 
-      // Act & Assert - Private experiment with non-member should be forbidden
+      // The route guard owns the read decision; the use case reports the state
+      // after that guard has allowed the request.
       const privateResult = await useCase.execute(privateExp.id, anotherUserId);
-      expect(privateResult.isFailure()).toBe(true);
-      assertFailure(privateResult);
-      // The error should be 403 if access is denied, but could be 404 if experiment not found
-      expect([403, 404]).toContain(privateResult.error.statusCode);
+      expect(privateResult.isSuccess()).toBe(true);
+      assertSuccess(privateResult);
+      expect(privateResult.value.hasAccess).toBe(true);
+      expect(privateResult.value.isAdmin).toBe(false);
 
       // Act & Assert - Public experiment with non-member should succeed
       const publicResult = await useCase.execute(publicExp.id, anotherUserId);
@@ -308,7 +306,7 @@ describe("GetExperimentAccessUseCase", () => {
       }
       expect(publicResult.isSuccess()).toBe(true);
       assertSuccess(publicResult);
-      expect(publicResult.value.hasAccess).toBe(false); // Not a member
+      expect(publicResult.value.hasAccess).toBe(true);
       expect(publicResult.value.isAdmin).toBe(false);
     });
 

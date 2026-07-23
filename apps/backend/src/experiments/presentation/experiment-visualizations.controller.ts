@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { experimentVisualizationsContract } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.contract";
 
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
@@ -25,6 +26,7 @@ export class ExperimentVisualizationsController {
     private readonly deleteExperimentVisualizationUseCase: DeleteExperimentVisualizationUseCase,
   ) {}
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentVisualizationsContract.listExperimentVisualizations)
   listVisualizations(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.listExperimentVisualizations).handler(
@@ -41,6 +43,7 @@ export class ExperimentVisualizationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentVisualizationsContract.createExperimentVisualization)
   createVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.createExperimentVisualization).handler(
@@ -59,6 +62,7 @@ export class ExperimentVisualizationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "read" })
   @Implement(experimentVisualizationsContract.getExperimentVisualization)
   getVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.getExperimentVisualization).handler(
@@ -76,6 +80,7 @@ export class ExperimentVisualizationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentVisualizationsContract.updateExperimentVisualization)
   updateVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.updateExperimentVisualization).handler(
@@ -94,6 +99,7 @@ export class ExperimentVisualizationsController {
     );
   }
 
+  @CanAccess({ resource: "experiment", action: "manage" })
   @Implement(experimentVisualizationsContract.deleteExperimentVisualization)
   deleteVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.deleteExperimentVisualization).handler(

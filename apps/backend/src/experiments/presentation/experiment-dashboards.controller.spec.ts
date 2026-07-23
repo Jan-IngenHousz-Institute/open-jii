@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -41,6 +42,7 @@ const createMockDashboardDto = (
 describe("ExperimentDashboardsController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let readableExperimentId: string;
   let listExperimentDashboardsUseCase: ListExperimentDashboardsUseCase;
   let createExperimentDashboardUseCase: CreateExperimentDashboardUseCase;
   let getExperimentDashboardUseCase: GetExperimentDashboardUseCase;
@@ -54,6 +56,11 @@ describe("ExperimentDashboardsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Readable experiment",
+      userId: testUserId,
+    });
+    readableExperimentId = experiment.id;
 
     listExperimentDashboardsUseCase = testApp.module.get(ListExperimentDashboardsUseCase);
     createExperimentDashboardUseCase = testApp.module.get(CreateExperimentDashboardUseCase);
@@ -72,7 +79,7 @@ describe("ExperimentDashboardsController", () => {
 
   describe("listDashboards", () => {
     it("should successfully list experiment dashboards", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const mockDashboards: ExperimentDashboardDto[] = [
         createMockDashboardDto(experimentId, testUserId, { name: "Dashboard 1" }),
         createMockDashboardDto(experimentId, testUserId, { name: "Dashboard 2" }),
@@ -97,7 +104,7 @@ describe("ExperimentDashboardsController", () => {
     });
 
     it("should handle not found errors when listing dashboards", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const errorMessage = "Experiment not found";
 
       vi.spyOn(listExperimentDashboardsUseCase, "execute").mockResolvedValue(
@@ -120,7 +127,7 @@ describe("ExperimentDashboardsController", () => {
 
   describe("createDashboard", () => {
     it("should successfully create a dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const body = createTestDashboardBody({ name: "New Dashboard" });
       const mockDashboard = createMockDashboardDto(experimentId, testUserId, {
         name: "New Dashboard",
@@ -148,7 +155,7 @@ describe("ExperimentDashboardsController", () => {
     });
 
     it("should handle use case errors when creating dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const errorMessage = "Failed to create dashboard";
 
       vi.spyOn(createExperimentDashboardUseCase, "execute").mockResolvedValue(
@@ -172,7 +179,7 @@ describe("ExperimentDashboardsController", () => {
 
   describe("getDashboard", () => {
     it("should successfully get a dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
       const mockDashboard = createMockDashboardDto(experimentId, testUserId, { id: dashboardId });
 
@@ -193,7 +200,7 @@ describe("ExperimentDashboardsController", () => {
     });
 
     it("should handle not found errors when getting dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
       const errorMessage = "Dashboard not found";
 
@@ -218,7 +225,7 @@ describe("ExperimentDashboardsController", () => {
 
   describe("updateDashboard", () => {
     it("should successfully update a dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
       const mockUpdated = createMockDashboardDto(experimentId, testUserId, {
         id: dashboardId,
@@ -243,7 +250,7 @@ describe("ExperimentDashboardsController", () => {
     });
 
     it("should handle forbidden errors when updating dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
       const errorMessage = "You do not have permission to modify this dashboard";
 
@@ -269,7 +276,7 @@ describe("ExperimentDashboardsController", () => {
 
   describe("deleteDashboard", () => {
     it("should successfully delete a dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
 
       vi.spyOn(deleteExperimentDashboardUseCase, "execute").mockResolvedValue(success(undefined));
@@ -286,7 +293,7 @@ describe("ExperimentDashboardsController", () => {
     });
 
     it("should handle not found errors when deleting dashboard", async () => {
-      const experimentId = faker.string.uuid();
+      const experimentId = readableExperimentId;
       const dashboardId = faker.string.uuid();
       const errorMessage = "Dashboard not found";
 
@@ -306,6 +313,88 @@ describe("ExperimentDashboardsController", () => {
         .expect((response) => {
           expect(response.body).toHaveProperty("message", errorMessage);
         });
+    });
+  });
+
+  describe("authorization", () => {
+    it.each([
+      {
+        name: "list dashboards",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.listExperimentDashboards, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "create dashboard",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .post(
+              testApp.resolveOrpcPath(contract.experiments.createExperimentDashboard, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send(createTestDashboardBody()),
+      },
+      {
+        name: "get dashboard",
+        action: "read",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(
+              testApp.resolveOrpcPath(contract.experiments.getExperimentDashboard, {
+                id: experimentId,
+                dashboardId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+      {
+        name: "update dashboard",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.updateExperimentDashboard, {
+                id: experimentId,
+                dashboardId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId)
+            .send({ name: "Blocked dashboard update" }),
+      },
+      {
+        name: "delete dashboard",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .delete(
+              testApp.resolveOrpcPath(contract.experiments.deleteExperimentDashboard, {
+                id: experimentId,
+                dashboardId: faker.string.uuid(),
+              }),
+            )
+            .withAuth(userId),
+      },
+    ])("requires $action access to $name", async ({ action, request }) => {
+      const unrelatedUserId = await testApp.createTestUser({});
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await request(readableExperimentId, unrelatedUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledTimes(1);
+      expect(canSpy).toHaveBeenCalledWith(unrelatedUserId, {
+        resourceType: "experiment",
+        resourceId: readableExperimentId,
+        action,
+      });
     });
   });
 });

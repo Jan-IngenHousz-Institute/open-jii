@@ -35,17 +35,6 @@ export class DeleteWorkbookUseCase {
       return failure(AppError.notFound("Workbook not found"));
     }
 
-    if (workbookResult.value.createdBy !== userId) {
-      this.logger.warn({
-        msg: "Unauthorized workbook deletion attempt",
-        errorCode: ErrorCodes.FORBIDDEN,
-        operation: "deleteWorkbook",
-        workbookId: id,
-        userId,
-      });
-      return failure(AppError.forbidden("Only the workbook creator can delete this workbook"));
-    }
-
     const deleteResult = await this.workbookRepository.delete(id);
 
     if (deleteResult.isFailure()) {

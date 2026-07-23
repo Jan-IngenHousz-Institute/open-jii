@@ -12,6 +12,7 @@ import {
   profiles,
   sql,
   getTableColumns,
+  ensurePersonalOrganization,
 } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
@@ -48,10 +49,18 @@ export class MacroRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
   ) {}
 
-  async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
+  async create(
+    data: CreateMacroDto,
+    userId: string,
+    targetOrganizationId?: string | null,
+  ): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       // Generate UUID for the macro to create a consistent hashed filename
       const macroId = crypto.randomUUID();
+
+      // Own the macro with the requested target org (fallback: the creator's personal org).
+      const organizationId =
+        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
 
       const results = await this.database
         .insert(macros)
@@ -60,6 +69,7 @@ export class MacroRepository {
           id: macroId,
           filename: generateHashedFilename(macroId),
           createdBy: userId,
+          organizationId,
         })
         .returning(macroColumns);
       return results;

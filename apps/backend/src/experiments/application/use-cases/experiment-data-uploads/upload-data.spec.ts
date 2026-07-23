@@ -255,11 +255,10 @@ describe("UploadDataUseCase", () => {
     expect(databricksPort.triggerDataUploadJob).not.toHaveBeenCalled();
   });
 
-  it("returns forbidden when the user lacks archive access", async () => {
-    const otherUserId = await testApp.createTestUser({ email: "other@example.com" });
+  it("returns forbidden when the experiment is archived", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Upload_Forbidden",
-      visibility: "private",
+      name: "Upload_Archived",
+      status: "archived",
       userId: testUserId,
     });
 
@@ -272,7 +271,7 @@ describe("UploadDataUseCase", () => {
 
     const result = await useCase.execute({
       experimentId: experiment.id,
-      userId: otherUserId,
+      userId: testUserId,
       requestStream: Readable.from([""]),
       requestHeaders: MULTIPART_HEADERS,
     });

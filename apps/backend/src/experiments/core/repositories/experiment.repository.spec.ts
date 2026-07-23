@@ -1,4 +1,10 @@
-import { experiments as experimentsTable, experimentMembers, eq, and } from "@repo/database";
+import {
+  experiments as experimentsTable,
+  experimentMembers,
+  resourceGrants,
+  eq,
+  and,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -1175,7 +1181,9 @@ describe("ExperimentRepository", () => {
       expect(memberAccess.isAdmin).toBe(false);
       expect(memberAccess.hasArchiveAccess).toBe(false);
 
-      // Promote to admin directly
+      // Promote to admin directly (mirroring the grant, as the production
+      // ExperimentMemberRepository.updateMemberRole does) so can()-based isAdmin
+      // resolves.
       await testApp.database
         .update(experimentMembers)
         .set({ role: "admin" })
@@ -1183,6 +1191,17 @@ describe("ExperimentRepository", () => {
           and(
             eq(experimentMembers.experimentId, experiment.id),
             eq(experimentMembers.userId, memberId),
+          ),
+        );
+      await testApp.database
+        .update(resourceGrants)
+        .set({ role: "admin" })
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, memberId),
           ),
         );
 
