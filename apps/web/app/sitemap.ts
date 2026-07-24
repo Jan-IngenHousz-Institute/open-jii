@@ -134,28 +134,36 @@ async function fetchAllCollectionItems<T>(
   throw new Error("Contentful pagination exceeded the sitemap safety limit");
 }
 
+function safeErrorType(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
 const getCachedSitemapContent = unstable_cache(
   async () => {
-    const { client } = await getContentfulClients();
-    const now = new Date();
-    const [blogPosts, releases] = await Promise.all([
-      fetchAllCollectionItems(async (limit, skip) => {
-        const data = await client.sitemapPages({ locale: defaultLocale, limit, skip });
-        return data.pageBlogPostCollection;
-      }),
-      fetchAllCollectionItems(async (limit, skip) => {
-        const data = await client.allReleaseNotes({
-          locale: defaultLocale,
-          now: now.toISOString(),
-          preview: false,
-          limit,
-          skip,
-        });
-        return data.componentReleaseNoteCollection;
-      }),
-    ]);
+    try {
+      const { client } = await getContentfulClients();
+      const now = new Date();
+      const [blogPosts, releases] = await Promise.all([
+        fetchAllCollectionItems(async (limit, skip) => {
+          const data = await client.sitemapPages({ locale: defaultLocale, limit, skip });
+          return data.pageBlogPostCollection;
+        }),
+        fetchAllCollectionItems(async (limit, skip) => {
+          const data = await client.allReleaseNotes({
+            locale: defaultLocale,
+            now: now.toISOString(),
+            preview: false,
+            limit,
+            skip,
+          });
+          return data.componentReleaseNoteCollection;
+        }),
+      ]);
 
-    return { blogPosts, releases };
+      return { failed: false as const, blogPosts, releases };
+    } catch (error) {
+      return { failed: true as const, errorType: safeErrorType(error) };
+    }
   },
   ["sitemap-contentful"],
   { revalidate: 300 },
@@ -166,7 +174,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const now = new Date();
-    const { blogPosts, releases } = await getCachedSitemapContent();
+    const cachedContent = await getCachedSitemapContent();
+    if (cachedContent.failed) {
+      console.error(
+        "[sitemap] Dynamic content unavailable; serving static routes.",
+        cachedContent.errorType,
+      );
+      return fallback;
+    }
+    const { blogPosts, releases } = cachedContent;
     const dynamicEntries = new Map<string, Date>();
 
     for (const post of blogPosts) {
@@ -198,7 +214,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Do not expose Contentful/AWS error details, which may contain request or secret metadata.
     console.error(
       "[sitemap] Dynamic content unavailable; serving static routes.",
-      error instanceof Error ? error.name : typeof error,
+      safeErrorType(error),
     );
     return fallback;
   }

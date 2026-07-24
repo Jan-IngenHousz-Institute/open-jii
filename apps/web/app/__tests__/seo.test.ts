@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getContentfulClients } from "~/lib/contentful";
 
@@ -93,6 +95,10 @@ describe("public SEO routes", () => {
       },
       sitemap: "https://openjii.org/sitemap.xml",
     });
+  });
+
+  it("does not let a legacy public asset shadow the generated robots route", () => {
+    expect(existsSync(resolve(process.cwd(), "public/robots.txt"))).toBe(false);
   });
 
   it("allows auth pages to be crawled so their layout noindex metadata is observable", () => {
@@ -325,10 +331,13 @@ describe("public SEO routes", () => {
     });
 
     const entries = await sitemap();
+    const cachedEntries = await sitemap();
 
     expect(entries).toHaveLength(8);
+    expect(cachedEntries).toEqual(entries);
     expect(entries.every((entry) => !entry.url.includes("/blog/"))).toBe(true);
     expect(sitemapPages.mock.calls.map(([variables]) => variables.skip)).toEqual([0, 1]);
+    expect(getContentfulClients).toHaveBeenCalledTimes(1);
     expect(errorLog).toHaveBeenCalledWith(
       "[sitemap] Dynamic content unavailable; serving static routes.",
       "Error",
