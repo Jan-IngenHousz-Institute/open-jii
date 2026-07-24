@@ -3,42 +3,8 @@ import base64
 import gzip
 import subprocess
 import os
-import sys
 import shutil
 import tempfile
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "guards"))
-try:
-    from guard import guard_batch, merge_results, partition_items  # noqa: E402
-except Exception:
-    guard_batch = None
-    merge_results = None
-    partition_items = None
-
-
-GUARD_CLASSIFICATION_ERROR_CODE = "guard-classification-unavailable"
-
-
-def _guard_mode() -> str:
-    # Shadow (default) classifies + logs only; enforce rejects non-canonical
-    # items. Shadow keeps execution unchanged for Ticket 02.
-    return "enforce" if os.environ.get("MACRO_GUARD_MODE") == "enforce" else "shadow"
-
-
-def _guard_unavailable_telemetry(
-    input_contract: object, item_count: int, mode: str
-) -> dict[str, object]:
-    return {
-        "event": "macro-guard",
-        "mode": mode,
-        "markerPresent": isinstance(input_contract, str),
-        "markerValid": False,
-        "itemCount": item_count,
-        "counts": {"canonical": 0, "empty-envelope": 0, "non-canonical-envelope": 0},
-        "emptyEnvelopeIds": [],
-        "nonCanonicalIds": [],
-        "classificationUnavailable": True,
-    }
 
 
 # AWS Lambda sync responses are capped at 6 MB. Compress every response so
@@ -110,34 +76,6 @@ def _execute(event):
 
     timeout = max(DEFAULT_TIMEOUT, min(int(event.get("timeout", DEFAULT_TIMEOUT)), MAX_TIMEOUT))
 
-    # Contract guard. Shadow classifies + logs; execution is unchanged.
-    mode = _guard_mode()
-    guard = None
-    try:
-        if guard_batch is None:
-            raise RuntimeError("guard unavailable")
-        guard = guard_batch({"input_contract": event.get("input_contract"), "items": items}, mode)
-        print("[guard] " + json.dumps(guard["telemetry"]), file=sys.stderr)
-    except Exception:
-        print(
-            "[guard] "
-            + json.dumps(_guard_unavailable_telemetry(event.get("input_contract"), len(items), mode)),
-            file=sys.stderr,
-        )
-        if mode == "enforce":
-            return {
-                "status": "error",
-                "results": [],
-                "errors": [GUARD_CLASSIFICATION_ERROR_CODE],
-            }
-
-    exec_items = items
-    invalid_results = []
-    if mode == "enforce":
-        if not guard["markerValid"]:
-            return {"status": "error", "results": [], "errors": [guard["markerError"]]}
-        exec_items, invalid_results = partition_items(items, guard["decisions"])
-
     # Write to temp files
     tmpdir = tempfile.mkdtemp(prefix="macro_", dir="/tmp")
     try:
@@ -155,7 +93,7 @@ def _execute(event):
             "w",
             opener=lambda path, flags: os.open(path, flags, 0o600),
         ) as f:
-            json.dump(exec_items, f)
+            json.dump(items, f)
 
         # Run wrapper in a subprocess with a stripped environment.
         result = subprocess.run(
@@ -186,23 +124,6 @@ def _execute(event):
                     "status": "error",
                     "results": [],
                     "errors": ["Wrapper returned invalid JSON"],
-                }
-            # Reassemble pre-failed items with wrapper results in request order.
-            if mode == "enforce" and parsed.get("status") == "success":
-                executed_results = parsed.get("results")
-                if not isinstance(executed_results, list) or len(executed_results) != len(
-                    exec_items
-                ):
-                    return {
-                        "status": "error",
-                        "results": [],
-                        "errors": ["Wrapper result count mismatch"],
-                    }
-                return {
-                    "status": "success",
-                    "results": merge_results(
-                        guard["decisions"], executed_results, invalid_results
-                    ),
                 }
             return parsed
         else:

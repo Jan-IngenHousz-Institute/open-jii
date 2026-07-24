@@ -217,10 +217,8 @@ describe("AnalysisNode macro output", () => {
     expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
   });
 
-  it.each([
-    ["an empty sample envelope", { sample: [] }],
-    ["an empty top-level array", []],
-  ])("surfaces %s as a controlled processing failure", (_label, raw) => {
+  it("surfaces an empty sample envelope as a controlled processing failure", () => {
+    const raw = { sample: [] };
     useMeasurementFlowStore.setState({
       scanResult: raw as never,
       scanResults: [{ result: raw as never }],
@@ -250,6 +248,39 @@ describe("AnalysisNode macro output", () => {
       name: "OutputDataNormalizationError",
       code: "empty-envelope",
     });
+  });
+
+  it.each([
+    ["empty", []],
+    ["multi-item", [{ phi2: 0.8 }, { phi2: 0.2 }]],
+  ])("keeps a %s root array whole in macro ctx", (_label, raw) => {
+    useMeasurementFlowStore.setState({
+      scanResult: raw as never,
+      scanResults: [{ result: raw as never }],
+      producerCellId: "p1",
+      cells: [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: "proto-1", version: 1, name: "Measurement" },
+        },
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: "macro-1", language: "javascript", name: "Analysis" },
+        },
+      ],
+    });
+
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+
+    const props = macroResultProps.mock.calls.at(-1)?.[0] as
+      | { ctx?: Record<string, unknown>; inputError?: Error }
+      | undefined;
+    expect(props?.inputError).toBeUndefined();
+    expect(props?.ctx?.measurement).toEqual(raw);
   });
 });
 

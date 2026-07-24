@@ -124,26 +124,42 @@ This lets researchers query one experiment-facing model without erasing the sour
 
 ## Macro input projection
 
-Macro execution reads one canonical measurement value without rewriting the
-stored event. The compatibility projection recognizes three top-level forms:
-`{ sample: [measurement] }`, `{ sample: measurement }` when `measurement` is a
-JSON object, and `[measurement]`. It selects the measurement exactly once.
-Direct objects and scalars pass through unchanged.
+Macro execution reads one canonical value without rewriting the stored event.
+Every execution host calls the shared normalizer for every input. The
+normalizer projects only a plain top-level object with its own `sample`
+property when that property contains a JSON object or array. Direct objects,
+scalars, `null`, and root arrays of any length pass through unchanged.
 
-The same rule is applied at each execution surface:
+The same normalizer runs at each execution surface, but Databricks deliberately
+adapts its legacy source shape before the host receives it:
 
-| Surface                          | Where projection occurs                                                                  |
-| -------------------------------- | ---------------------------------------------------------------------------------------- |
-| Workbook web                     | Backend single-item execution before the language Lambda                                 |
-| Databricks Gold macro processing | Backend batch execution after the pandas UDF submits raw `data`; each item is normalized |
-| Mobile                           | The local JavaScript or Pyodide Python runner before user code                           |
+| Surface                          | Value supplied to normalization and resulting root-array behavior                                    |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Generic backend API              | Receives the caller's root array; macro code receives the complete array, including `[]`             |
+| Workbook web                     | Preserves a root-array output for the backend; macro `json`, `ctx`, and branches see the whole array |
+| Mobile                           | Local JavaScript or Pyodide Python host passes the complete root array to user code                  |
+| Databricks Gold macro processing | Legacy producer wraps a source root array as `{ sample: data }`; macro code receives the first item  |
 
-An empty recognized envelope (`[]` or `{ sample: [] }`) fails before macro code
-runs. In a backend batch, only that item fails and valid siblings continue. If
-an envelope contains multiple entries, the first is selected and the host emits
-a content-free warning containing the source and counts, not measurement
-values. The operation is deliberately shallow, so a nested envelope is not
-projected repeatedly.
+This root-array change is intentional migration behavior. Generic backend,
+web, and mobile execution no longer interprets `[first, second]` as a transport
+envelope and no longer rejects `[]`; those values reach macro code whole. Code
+that wants one element must select it explicitly.
+
+Databricks is the deliberate compatibility exception. Its adapter keeps
+wrapping legacy source arrays before the backend batch call, so the shared
+normalizer still applies sample-envelope semantics: it selects the first
+measurement, and an empty source array becomes `{ sample: [] }` and fails. This
+preserves existing Gold macro results while the other surfaces adopt the new
+generic JSON contract.
+
+At the generic backend, web, and mobile boundaries, an empty root array is valid
+and remains `[]`. Only a value actually presented to normalization as an empty
+sample envelope (`{ sample: [] }`) fails before macro code runs. In a backend
+batch, only that item fails and valid siblings continue. If a `sample` envelope
+contains multiple entries, the first is selected and the host emits a
+content-free warning containing the source and counts, not measurement values.
+The operation is deliberately shallow: it inspects only the input object's own
+top-level `sample` property and never traverses nested values.
 
 This is a read-time boundary, not an ingestion transformation. It does not
 rewrite MQTT payloads, source measurement columns, workbook output cells, or
@@ -152,13 +168,16 @@ to macro `json`, builds macro `ctx`, or resolves a workbook branch field.
 Databricks writes macro results separately to `experiment_macro_data`; it does
 not replace the source measurement.
 
-The backend marks Lambda events as `canonical-measurement-v1`. In this change,
-the JavaScript, Python, and R sandbox guards remain in **shadow mode**: they
-classify boundary input and emit content-free telemetry, but do not reject or
-reshape it. Enforce mode is not enabled, and the existing language wrappers are
-not cleaned up or changed to enforce this contract. Macro authors should
-therefore target the canonical direct-value contract and must not depend on
-wrapper behavior such as reading `json.sample[0]`.
+Language sandboxes receive the value prepared by their host. There is no
+sandbox normalization guard, shadow/enforce mode, or event marker: the shared
+host normalizer is the only compatibility projection. Macro authors must not
+depend on wrapper behavior such as reading `json.sample[0]`.
+
+For mixed-version deployments, release the backend normalization first while
+the old sandbox remains compatible, then release the web producer and
+Databricks adapter, and simplify the language sandboxes last. The deployment
+workflow encodes the same successful-or-skipped dependency order without
+forcing unchanged applications to deploy.
 
 ## Where to inspect the implementation
 

@@ -12,7 +12,6 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
-  CANONICAL_MEASUREMENT_CONTRACT,
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
@@ -228,7 +227,6 @@ export class ExecuteMacroBatchUseCase {
     const functionName = this.lambdaPort.getFunctionNameForLanguage(macro.language);
 
     const payload: LambdaExecutionPayload = {
-      input_contract: CANONICAL_MEASUREMENT_CONTRACT,
       script: macro.code,
       items: validItems.map(({ item, data }) => ({
         id: item.id,
@@ -287,7 +285,7 @@ export class ExecuteMacroBatchUseCase {
       };
     }
 
-    // Ticket 02 returns one result per valid item, in order, echoing each
+    // The sandbox returns one result per valid item, in order, echoing each
     // request ID. A count or per-position ID mismatch fails the whole group
     // safely (position stays authoritative; ID equality is only a check,
     // compatible with duplicate/empty IDs). Length is checked first.

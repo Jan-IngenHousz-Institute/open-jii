@@ -321,12 +321,9 @@ describe("evaluateAndRoute", () => {
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1); // sequential fall-through
   });
 
-  it.each([
-    ["an empty sample envelope", { sample: [] }],
-    ["an empty top-level array", []],
-  ])("stops routing on %s instead of taking a dependent or default path", (_label, raw) => {
+  it("stops routing on an empty sample envelope instead of taking another path", () => {
     flowState.producerCellId = "p1";
-    flowState.scanResult = raw;
+    flowState.scanResult = { sample: [] };
     flowState.cells = [
       pCell("p1", "proto-1"),
       branch(
@@ -349,6 +346,29 @@ describe("evaluateAndRoute", () => {
     expect(mockSetCurrentFlowStep).not.toHaveBeenCalled();
     expect(mockRecordBranchJump).not.toHaveBeenCalled();
     expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it("evaluates a multi-item root array as a whole branch value", () => {
+    const rootArray = [{ phi2: 0.8 }, { phi2: 0.2 }];
+    flowState.producerCellId = "p1";
+    flowState.scanResult = rootArray;
+    flowState.cells = [
+      pCell("p1", "proto-1"),
+      branch(
+        "b1",
+        [path("whole", [cond("p1", "eq", "2", "length")], "tgt"), path("pdef", [])],
+        "pdef",
+      ),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("default"), plainFlowNode("tgt")];
+    flowState.currentFlowStep = 0;
+
+    const error = evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(error).toBeUndefined();
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "WHOLE", color: "#abcdef" });
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
+    expect(flowState.scanResult).toBe(rootArray);
   });
 
   it("clears the chip and falls through when nothing matches and there is no default", () => {

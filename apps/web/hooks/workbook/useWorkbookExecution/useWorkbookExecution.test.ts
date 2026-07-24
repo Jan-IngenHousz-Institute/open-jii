@@ -678,6 +678,36 @@ describe("useWorkbookExecution", () => {
       expect(output.data).toEqual({ sample: [] });
     });
 
+    it.each([
+      ["empty", []],
+      ["multi-item", [{ phi2: 0.8 }, { phi2: 0.2 }]],
+    ])("keeps a %s root array whole for macro json and ctx", async (_label, rootArray) => {
+      const proto = createProtocolCell({
+        id: "proto-array",
+        payload: { protocolId: crypto.randomUUID(), version: 1, name: "Scan" },
+      });
+      const output = createOutputCell({ producedBy: proto.id, data: rootArray });
+      const macro = createMacroCell();
+      let capturedBody: { data?: unknown; context?: Record<string, unknown> } | undefined;
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, async ({ request }) => {
+          capturedBody = (await request.json()) as typeof capturedBody;
+          return HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: { ok: true },
+          });
+        }),
+      );
+
+      const { result } = renderExecution([proto, output, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(capturedBody?.data).toEqual(rootArray);
+      expect(capturedBody?.context?.scan).toEqual(rootArray);
+      expect(output.data).toEqual(rootArray);
+    });
+
     it("scopes each per-device macro run's ctx to that device's results", async () => {
       const proto = createProtocolCell({
         id: "proto-scan",
@@ -1088,6 +1118,56 @@ describe("useWorkbookExecution", () => {
       ]);
       expect(updated.find((cell) => cell.id === branch.id)).not.toHaveProperty("evaluatedPathId");
       expect(output.data).toEqual({ sample: [] });
+    });
+
+    it("evaluates a multi-item root array as a whole branch value", async () => {
+      const proto = createProtocolCell({ id: "proto-array" });
+      const rootArray = [{ phi2: 0.8 }, { phi2: 0.2 }];
+      const output = createOutputCell({ producedBy: proto.id, data: rootArray });
+      const branch = createBranchCell({
+        id: "branch-array",
+        paths: [
+          {
+            id: "path-whole-array",
+            label: "Whole array",
+            color: "#22c55e",
+            conditions: [
+              {
+                id: "cond-1",
+                sourceCellId: proto.id,
+                field: "length",
+                operator: "eq",
+                value: "2",
+              },
+            ],
+          },
+          {
+            id: "path-other",
+            label: "Other",
+            color: "#0ea5e9",
+            conditions: [
+              {
+                id: "cond-2",
+                sourceCellId: proto.id,
+                field: "length",
+                operator: "neq",
+                value: "2",
+              },
+            ],
+          },
+        ],
+        defaultPathId: "path-other",
+      });
+
+      const { result, onCellsChange } = renderExecution([proto, output, branch]);
+      await act(() => result.current.runCell(branch.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(updated.find((cell) => cell.id === branch.id)).toHaveProperty(
+        "evaluatedPathId",
+        "path-whole-array",
+      );
+      expect(output.data).toEqual(rootArray);
     });
 
     function deviceBranch(targets: { multispeq: string; other: string }) {

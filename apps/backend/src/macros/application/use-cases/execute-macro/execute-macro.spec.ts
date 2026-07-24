@@ -321,7 +321,7 @@ describe("ExecuteMacroUseCase", () => {
       );
     }
 
-    it("unwraps a { sample: [measurement] } envelope and marks the event canonical", async () => {
+    it("unwraps a { sample: [measurement] } envelope", async () => {
       const macro = await createTestMacro();
       const measurement = { phi2: 0.8, trace_1: [1, 2, 3] };
       const invokeSpy = mockOkLambda();
@@ -332,24 +332,24 @@ describe("ExecuteMacroUseCase", () => {
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({
-          input_contract: "canonical-measurement-v1",
           items: [expect.objectContaining({ id: "single", data: measurement })],
         }),
       );
     });
 
-    it("unwraps a top-level array to its first element", async () => {
+    it("passes a top-level array through unchanged", async () => {
       const macro = await createTestMacro();
       const measurement = { phi2: 0.5 };
+      const data = [measurement, { phi2: 0.1 }];
       const invokeSpy = mockOkLambda();
       vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
 
-      await useCase.execute(macro.id, { data: [measurement, { phi2: 0.1 }] });
+      await useCase.execute(macro.id, { data });
 
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({
-          items: [expect.objectContaining({ data: measurement })],
+          items: [expect.objectContaining({ data })],
         }),
       );
     });
@@ -370,17 +370,18 @@ describe("ExecuteMacroUseCase", () => {
       );
     });
 
-    it("supports a scalar first element from a top-level array", async () => {
+    it("passes scalar values in a top-level array through unchanged", async () => {
       const macro = await createTestMacro();
+      const data = [42, 43];
       const invokeSpy = mockOkLambda();
       vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
 
-      await useCase.execute(macro.id, { data: [42, 43] });
+      await useCase.execute(macro.id, { data });
 
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({
-          items: [expect.objectContaining({ data: 42 })],
+          items: [expect.objectContaining({ data })],
         }),
       );
     });
@@ -401,7 +402,7 @@ describe("ExecuteMacroUseCase", () => {
       expect(getFnSpy).not.toHaveBeenCalled();
     });
 
-    it("returns an empty-envelope failure without invoking Lambda for a top-level []", async () => {
+    it("invokes Lambda with a top-level [] unchanged", async () => {
       const macro = await createTestMacro();
       const invokeSpy = mockOkLambda();
       const getFnSpy = vi
@@ -411,10 +412,12 @@ describe("ExecuteMacroUseCase", () => {
       const result = await useCase.execute(macro.id, { data: [] });
 
       assertSuccess(result);
-      expect(result.value.success).toBe(false);
-      expect(result.value.error).toContain("empty-envelope");
-      expect(invokeSpy).not.toHaveBeenCalled();
-      expect(getFnSpy).not.toHaveBeenCalled();
+      expect(result.value.success).toBe(true);
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({ items: [expect.objectContaining({ data: [] })] }),
+      );
+      expect(getFnSpy).toHaveBeenCalledTimes(1);
     });
 
     it("logs a content-free warning when additional entries are discarded", async () => {

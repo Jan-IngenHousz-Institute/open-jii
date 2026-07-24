@@ -7,15 +7,6 @@
 import { z } from "zod";
 
 /**
- * Event-level discriminator for the private backend-to-sandbox contract. It
- * versions the payload schema (not per-macro behavior) and asserts that every
- * `items[].data` has already passed through the shared canonical projection.
- * It is never stored on a macro or Workbook snapshot.
- */
-export const CANONICAL_MEASUREMENT_CONTRACT = "canonical-measurement-v1" as const;
-export type MacroInputContract = typeof CANONICAL_MEASUREMENT_CONTRACT;
-
-/**
  * Stable failed-result message for a recognized-but-empty measurement envelope.
  * The macro is not invoked; only this item fails. `source` attributes the
  * envelope shape without exposing any measurement content.
@@ -28,9 +19,9 @@ export function emptyEnvelopeError(source: string): string {
 
 export interface LambdaExecutionItem {
   id: string;
-  // Canonical measurement value produced by the shared normalizer. Modeled as
-  // `unknown` because array compatibility can legitimately select a scalar or
-  // any JSON value; the public request schema is not broadened.
+  // Measurement value produced by the shared normalizer. Direct JSON values
+  // and root arrays pass unchanged; a sample envelope can select any JSON
+  // value. The public request schema is not broadened.
   data: unknown;
   // Upstream cell outputs keyed by canonical name; injected into the sandbox as
   // read-only `ctx`. Absent for legacy/batch callers that send only `data`.
@@ -38,7 +29,6 @@ export interface LambdaExecutionItem {
 }
 
 export interface LambdaExecutionPayload {
-  input_contract: MacroInputContract;
   script: string; // Base64-encoded macro script
   items: LambdaExecutionItem[];
   timeout: number;

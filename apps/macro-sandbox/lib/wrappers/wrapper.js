@@ -58,14 +58,6 @@ if (macroResult !== undefined) {
 }
 `;
 
-// Macros expect `json` to be the single measurement object. Unwrap a
-// non-empty array down to its first element, matching the legacy
-// multispeq JS executor.
-function unwrapMeasurement(data) {
-  if (Array.isArray(data) && data.length > 0) return data[0];
-  return data;
-}
-
 // Clone data preserving its type (array vs plain object).
 function cloneData(data) {
   if (Array.isArray(data)) return data.slice();
@@ -167,9 +159,8 @@ let results = [];
 
 // 5. EXECUTION LOOP
 for (const item of batchItems) {
-  const measurement = unwrapMeasurement(item.data);
-  sandbox.json = cloneData(measurement);
-  sandbox.input_data = cloneData(measurement);
+  sandbox.json = cloneData(item.data);
+  sandbox.input_data = cloneData(item.data);
   sandbox.ctx = item.context ? deepFreezeClone(item.context) : Object.create(null);
   sandbox.output = Object.create(null);
 

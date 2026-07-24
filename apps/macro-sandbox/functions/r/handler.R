@@ -14,25 +14,6 @@ DEFAULT_TIMEOUT <- 10
 
 WRAPPER_PATH <- "/var/task/wrappers/wrapper.R"
 
-# Load the contract guard from the same install tree as this handler.
-handler_args <- commandArgs(trailingOnly = FALSE)
-handler_file_arg <- grep("--file=", handler_args, value = TRUE)
-handler_dir <- if (length(handler_file_arg) > 0) {
-  dirname(sub("--file=", "", handler_file_arg[1]))
-} else {
-  "/var/task"
-}
-
-# Shadow (default) classifies + logs only; enforce rejects non-canonical items.
-GUARD_MODE <- if (identical(Sys.getenv("MACRO_GUARD_MODE"), "enforce")) "enforce" else "shadow"
-GUARD_CLASSIFICATION_ERROR_CODE <- "guard-classification-unavailable"
-guard_load_ok <- tryCatch({
-  source(file.path(handler_dir, "guards", "guard.R"))
-  TRUE
-}, error = function(e) {
-  FALSE
-})
-
 # Read event file path from command args
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
@@ -85,77 +66,6 @@ if (length(items) > MAX_ITEM_COUNT) {
 
 timeout <- max(DEFAULT_TIMEOUT, min(as.numeric(ifelse(is.null(event$timeout), DEFAULT_TIMEOUT, event$timeout)), MAX_TIMEOUT))
 
-# Contract guard. Classify each item from the RAW event JSON so {} and [] differ.
-# Guard failures remain execution-neutral in shadow mode and fail closed in
-# enforce mode without exposing input or exception content in telemetry.
-guard_state <- if (guard_load_ok) tryCatch({
-  raw_event <- paste(readLines(event_file, warn = FALSE), collapse = "\n")
-  classifications <- guard_classify_event_items(raw_event)
-  ids <- vapply(items, function(it) if (is.null(it$id)) NA_character_ else as.character(it$id), character(1))
-  count_mismatch <- length(classifications) != length(ids)
-  telemetry_classifications <- if (count_mismatch) rep("unavailable", length(ids)) else classifications
-  marker_valid <- guard_marker_valid(event$input_contract)
-  telemetry <- guard_build_telemetry(event$input_contract, marker_valid, ids, telemetry_classifications, GUARD_MODE)
-  telemetry$countMismatch <- count_mismatch
-  list(
-    ok = TRUE,
-    classifications = classifications,
-    ids = ids,
-    count_mismatch = count_mismatch,
-    marker_valid = marker_valid,
-    telemetry = telemetry
-  )
-}, error = function(e) {
-  list(ok = FALSE)
-}) else {
-  list(ok = FALSE)
-}
-
-exec_items <- items
-invalid_results <- list()
-item_classifications <- rep("unavailable", length(items))
-
-if (!isTRUE(guard_state$ok)) {
-  fallback_telemetry <- list(
-    event = "macro-guard",
-    mode = GUARD_MODE,
-    markerPresent = is.character(event$input_contract) && length(event$input_contract) == 1,
-    markerValid = FALSE,
-    itemCount = length(items),
-    counts = list(canonical = 0, "empty-envelope" = 0, "non-canonical-envelope" = 0),
-    emptyEnvelopeIds = list(),
-    nonCanonicalIds = list(),
-    classificationUnavailable = TRUE
-  )
-  cat("[guard] ", toJSON(fallback_telemetry, auto_unbox = TRUE, null = "null"), "\n", sep = "", file = stderr())
-  if (GUARD_MODE == "enforce") {
-    cat(toJSON(list(status = "error", results = list(), errors = list(GUARD_CLASSIFICATION_ERROR_CODE)), auto_unbox = TRUE))
-    quit(status = 0)
-  }
-} else {
-  item_classifications <- guard_state$classifications
-  item_ids <- guard_state$ids
-  count_mismatch <- guard_state$count_mismatch
-  marker_valid <- guard_state$marker_valid
-  cat("[guard] ", toJSON(guard_state$telemetry, auto_unbox = TRUE, null = "null"), "\n", sep = "", file = stderr())
-}
-
-if (GUARD_MODE == "enforce") {
-  if (count_mismatch) {
-    cat(toJSON(list(status = "error", results = list(), errors = list(GUARD_CLASSIFICATION_ERROR_CODE)), auto_unbox = TRUE))
-    quit(status = 0)
-  }
-  if (!marker_valid) {
-    cat(toJSON(list(status = "error", results = list(), errors = list(GUARD_MARKER_ERROR_CODE)), auto_unbox = TRUE))
-    quit(status = 0)
-  }
-  exec_items <- items[item_classifications == "canonical"]
-  invalid_idx <- which(item_classifications != "canonical")
-  invalid_results <- lapply(invalid_idx, function(i) {
-    list(id = item_ids[i], success = FALSE, error = guard_error_for(item_classifications[i]))
-  })
-}
-
 # Warm-start cleanup: remove leftover temp dirs from crashed invocations.
 for (d in Sys.glob("/tmp/macro_*")) {
   unlink(d, recursive = TRUE)
@@ -169,7 +79,7 @@ input_path <- file.path(tmpdir, "input.json")
 output_path <- file.path(tmpdir, "output.json")
 
 writeLines(script_content, script_path)
-writeLines(toJSON(exec_items, auto_unbox = TRUE), input_path)
+writeLines(toJSON(items, auto_unbox = TRUE, null = "null"), input_path)
 
 # Run wrapper in a subprocess with stripped environment (env -i).
 # Output file (3rd arg) prevents user cat()/print() from corrupting JSON.
@@ -211,16 +121,6 @@ result <- tryCatch({
 # Clean up
 unlink(tmpdir, recursive = TRUE)
 
-# Reassemble by original position (never by id) so duplicate/empty IDs survive.
-if (GUARD_MODE == "enforce" && identical(result$status, "success")) {
-  if (is.null(result$results) || length(result$results) != length(exec_items)) {
-    result <- list(status = "error", results = list(), errors = list("Wrapper result count mismatch"))
-  } else {
-    merged <- guard_merge_positional(item_classifications, result$results, invalid_results)
-    result <- list(status = "success", results = merged)
-  }
-}
-
 # Produce true gzip bytes (with 0x1f 0x8b magic) for the given text.
 # memCompress(., "gzip") emits zlib-format output despite the name, which
 # Node's gunzipSync rejects ("incorrect header check"); we route through a
@@ -237,5 +137,5 @@ gzip_text <- function(text) {
 # AWS Lambda sync responses are capped at 6 MB. Compress every response so
 # macro outputs of ~25-50 MB raw can still fit. Callers detect the
 # {encoding, payload} wrapper and decompress.
-payload <- jsonlite::base64_enc(gzip_text(toJSON(result, auto_unbox = TRUE)))
+payload <- jsonlite::base64_enc(gzip_text(toJSON(result, auto_unbox = TRUE, null = "null")))
 cat(toJSON(list(encoding = "gzip+base64", payload = payload), auto_unbox = TRUE))

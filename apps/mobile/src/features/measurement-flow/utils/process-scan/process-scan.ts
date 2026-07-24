@@ -65,29 +65,12 @@ export interface MacroInput {
 
 export class MacroInputNormalizationError extends Error {
   constructor(
-    public readonly code: "empty-envelope" | "non-canonical-input",
-    public readonly source: "sample-envelope" | "top-level-array",
+    public readonly code: "empty-envelope",
+    public readonly source: "sample-envelope",
   ) {
     super(`Macro input rejected: ${code}`);
     this.name = "MacroInputNormalizationError";
   }
-}
-
-function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
-
-// The shared normalizer deliberately unwraps one level. Local runners enforce
-// its postcondition so nested residue can never become user-code input.
-function isRecognizedEnvelope(value: unknown): boolean {
-  if (Array.isArray(value)) return true;
-  return (
-    isPlainJsonObject(value) &&
-    Object.prototype.hasOwnProperty.call(value, "sample") &&
-    (Array.isArray(value.sample) || isPlainJsonObject(value.sample))
-  );
 }
 
 export async function applyMacro(
@@ -103,15 +86,6 @@ export async function applyMacro(
       sourceCount: normalized.sourceCount,
     });
     throw new MacroInputNormalizationError(normalized.error, normalized.source);
-  }
-
-  if (isRecognizedEnvelope(normalized.value)) {
-    log.error("input normalization left envelope residue", {
-      error: "non-canonical-input",
-      source: normalized.source,
-    });
-    const source = Array.isArray(normalized.value) ? "top-level-array" : "sample-envelope";
-    throw new MacroInputNormalizationError("non-canonical-input", source);
   }
 
   if (normalized.warning) {

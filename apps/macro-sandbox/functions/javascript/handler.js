@@ -4,34 +4,6 @@ const path = require("path");
 const os = require("os");
 const zlib = require("zlib");
 
-const GUARD_CLASSIFICATION_ERROR_CODE = "guard-classification-unavailable";
-let guardModule;
-try {
-  guardModule = require(path.join(__dirname, "guards", "guard.js"));
-} catch {
-  guardModule = null;
-}
-
-// Shadow classifies and logs only; enforce rejects non-canonical items. Shadow
-// is the default so this release does not change execution (Ticket 02).
-function guardMode() {
-  return process.env.MACRO_GUARD_MODE === "enforce" ? "enforce" : "shadow";
-}
-
-function guardUnavailableTelemetry(inputContract, itemCount, mode) {
-  return {
-    event: "macro-guard",
-    mode,
-    markerPresent: typeof inputContract === "string",
-    markerValid: false,
-    itemCount,
-    counts: { canonical: 0, "empty-envelope": 0, "non-canonical-envelope": 0 },
-    emptyEnvelopeIds: [],
-    nonCanonicalIds: [],
-    classificationUnavailable: true,
-  };
-}
-
 // AWS Lambda sync responses are capped at 6 MB. Compress every response so
 // macro outputs of ~25-50 MB raw can still fit. Callers detect the
 // {encoding, payload} wrapper and decompress.
@@ -108,45 +80,13 @@ async function _runMacroBatch(event) {
       Math.min(parseInt(event.timeout) || DEFAULT_TIMEOUT, MAX_TIMEOUT),
     );
 
-    // Contract guard. Shadow classifies + logs; execution is unchanged.
-    const mode = guardMode();
-    let guard;
-    try {
-      if (!guardModule) throw new Error("guard unavailable");
-      guard = guardModule.guardBatch({ input_contract: event.input_contract, items }, mode);
-      console.error("[guard] " + JSON.stringify(guard.telemetry));
-    } catch {
-      console.error(
-        "[guard] " +
-          JSON.stringify(guardUnavailableTelemetry(event.input_contract, items.length, mode)),
-      );
-      if (mode === "enforce") {
-        return {
-          status: "error",
-          results: [],
-          errors: [GUARD_CLASSIFICATION_ERROR_CODE],
-        };
-      }
-    }
-
-    let execItems = items;
-    let invalidResults = [];
-    if (mode === "enforce") {
-      if (!guard.markerValid) {
-        return { status: "error", results: [], errors: [guard.markerError] };
-      }
-      const partitioned = guardModule.partitionItems(items, guard.decisions);
-      execItems = partitioned.validItems;
-      invalidResults = partitioned.invalidResults;
-    }
-
     // Write temp files
     tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), "macro_"));
     const scriptPath = path.join(tmpdir, "script");
     const inputPath = path.join(tmpdir, "input.json");
 
     fs.writeFileSync(scriptPath, scriptContent, { mode: 0o600 });
-    fs.writeFileSync(inputPath, JSON.stringify(execItems), { mode: 0o600 });
+    fs.writeFileSync(inputPath, JSON.stringify(items), { mode: 0o600 });
 
     // Run wrapper in a subprocess with a stripped environment.
     const result = await new Promise((resolve) => {
@@ -214,21 +154,6 @@ async function _runMacroBatch(event) {
         },
       );
     });
-
-    // Reassemble pre-failed items with wrapper results in request order.
-    if (mode === "enforce" && result.status === "success") {
-      if (!Array.isArray(result.results) || result.results.length !== execItems.length) {
-        return {
-          status: "error",
-          results: [],
-          errors: ["Wrapper result count mismatch"],
-        };
-      }
-      return {
-        status: "success",
-        results: guardModule.mergeResults(guard.decisions, result.results, invalidResults),
-      };
-    }
 
     return result;
   } catch (e) {

@@ -4,12 +4,8 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { applyInputContract, INPUT_CONTRACT } from "./helpers.js";
-
-// Opt-in: exercises the REAL handlers inside their Lambda containers. Skipped by
-// default so `test:unit` stays Docker-free. Run with `pnpm test:container`.
-// When enabled it FAILS CLOSED: missing Docker, a failed image build, or a
-// runtime that never becomes ready fails the suite instead of skipping.
+// Opt-in: exercises the real handlers and wrappers inside their Lambda containers.
+// Run with `pnpm test:container`.
 const ENABLED = process.env.MACRO_SB_CONTAINER === "1";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, "..");
@@ -20,55 +16,37 @@ interface LangSpec {
   language: string;
   image: string;
   dockerfile: string;
-  shadowPort: number;
-  enforcePort: number;
-  brokenShadowPort: number;
-  brokenEnforcePort: number;
-  guardFile: string;
-  // Trivial macro that succeeds on any input.
-  script: string;
-  // Macro that echoes json.tag into output, to prove per-item output association.
+  port: number;
   echoScript: string;
+  isolationScript: string;
 }
 
-// Unique localhost tags rebuilt every run, so a stale same-named image can never
-// be picked up (podman short-name resolution can otherwise shadow these).
+// Unique localhost tags rebuilt every run, so stale images cannot satisfy the suite.
 const LANGS: LangSpec[] = [
   {
     language: "javascript",
-    image: "localhost/macro-sandbox-guardtest-js",
+    image: "localhost/macro-sandbox-passthrough-js",
     dockerfile: "functions/javascript/Dockerfile",
-    shadowPort: 9101,
-    enforcePort: 9201,
-    brokenShadowPort: 9301,
-    brokenEnforcePort: 9401,
-    guardFile: "/var/task/guards/guard.js",
-    script: 'output["ok"] = 1',
-    echoScript: 'output["tag"] = json["tag"]',
+    port: 9101,
+    echoScript: 'output["seen"] = json',
+    isolationScript: 'if (json["fail"]) throw new Error("boom"); output["tag"] = json["tag"]',
   },
   {
     language: "python",
-    image: "localhost/macro-sandbox-guardtest-py",
+    image: "localhost/macro-sandbox-passthrough-py",
     dockerfile: "functions/python/Dockerfile",
-    shadowPort: 9102,
-    enforcePort: 9202,
-    brokenShadowPort: 9302,
-    brokenEnforcePort: 9402,
-    guardFile: "/var/task/guards/guard.py",
-    script: 'output["ok"] = 1',
-    echoScript: 'output["tag"] = json["tag"]',
+    port: 9102,
+    echoScript: 'output["seen"] = json',
+    isolationScript:
+      'if json.get("fail"):\n    raise ValueError("boom")\noutput["tag"] = json["tag"]',
   },
   {
     language: "r",
-    image: "localhost/macro-sandbox-guardtest-r",
+    image: "localhost/macro-sandbox-passthrough-r",
     dockerfile: "functions/r/Dockerfile.local",
-    shadowPort: 9103,
-    enforcePort: 9203,
-    brokenShadowPort: 9303,
-    brokenEnforcePort: 9403,
-    guardFile: "/var/task/guards/guard.R",
-    script: "output$ok <- 1",
-    echoScript: "output$tag <- json$tag",
+    port: 9103,
+    echoScript: "output$seen <- json; invisible(NULL)",
+    isolationScript: 'if (isTRUE(json$fail)) stop("boom"); output$tag <- json$tag',
   },
 ];
 
@@ -76,13 +54,11 @@ function b64(s: string): string {
   return Buffer.from(s, "utf8").toString("base64");
 }
 
-/** True only if `docker` runs and exits 0. A missing or failing binary is false. */
 function dockerAvailable(): boolean {
   return spawnSync("docker", ["--version"], { encoding: "utf8" }).status === 0;
 }
 
 function buildImage(spec: LangSpec): void {
-  // Always rebuild from current source; layer cache keeps this fast.
   const build = spawnSync("docker", ["build", "-f", spec.dockerfile, "-t", spec.image, "."], {
     cwd: appDir,
     encoding: "utf8",
@@ -92,19 +68,11 @@ function buildImage(spec: LangSpec): void {
   }
 }
 
-function runContainer(
-  name: string,
-  image: string,
-  port: number,
-  enforce: boolean,
-  brokenGuardFile?: string,
-): void {
+function runContainer(name: string, image: string, port: number): void {
   spawnSync("docker", ["rm", "-f", name], { encoding: "utf8" });
-  const args = ["run", "-d", "--name", name, "-p", `${port}:8080`];
-  if (enforce) args.push("-e", "MACRO_GUARD_MODE=enforce");
-  if (brokenGuardFile) args.push("-v", `/dev/null:${brokenGuardFile}:ro`);
-  args.push(image);
-  const res = spawnSync("docker", args, { encoding: "utf8" });
+  const res = spawnSync("docker", ["run", "-d", "--name", name, "-p", `${port}:8080`, image], {
+    encoding: "utf8",
+  });
   if (res.status !== 0) throw new Error(`docker run ${name} failed: ${res.stderr}`);
 }
 
@@ -114,17 +82,18 @@ interface ResultRow {
   output?: Record<string, unknown>;
   error?: string;
 }
+
 interface Envelope {
   status: string;
   results: ResultRow[];
   errors?: string[];
 }
 
-async function invokeRaw(port: number, body: string): Promise<Envelope> {
+async function invoke(port: number, event: unknown): Promise<Envelope> {
   const res = await fetch(`http://localhost:${port}${INVOKE_PATH}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body,
+    body: JSON.stringify(event),
   });
   const raw = (await res.json()) as { encoding?: string; payload?: string };
   if (raw.encoding === "gzip+base64" && typeof raw.payload === "string") {
@@ -133,56 +102,35 @@ async function invokeRaw(port: number, body: string): Promise<Envelope> {
   return raw as unknown as Envelope;
 }
 
-function invoke(port: number, event: unknown): Promise<Envelope> {
-  return invokeRaw(port, JSON.stringify(event));
-}
-
 async function waitReady(port: number, event: unknown, attempts = 90): Promise<void> {
   for (let i = 0; i < attempts; i++) {
     try {
       await invoke(port, event);
       return;
     } catch {
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((resolveReady) => setTimeout(resolveReady, 1000));
     }
   }
   throw new Error(`container on port ${port} never became ready`);
 }
 
-function dockerLogs(name: string): string {
-  const res = spawnSync("docker", ["logs", name], { encoding: "utf8" });
-  return res.stdout + res.stderr;
-}
-
 const containers: string[] = [];
 
-describe.skipIf(!ENABLED)("handler container contract", () => {
+describe.skipIf(!ENABLED)("handler container data contract", () => {
   beforeAll(async () => {
-    // Fail closed: with the mode explicitly on, Docker must be present.
     if (!dockerAvailable()) {
-      throw new Error("MACRO_SB_CONTAINER=1 but Docker is unavailable; failing closed");
+      throw new Error("MACRO_SB_CONTAINER=1 but Docker is unavailable");
     }
-    const warmup = (spec: LangSpec) => ({
-      input_contract: INPUT_CONTRACT,
-      script: b64(spec.script),
-      items: [{ id: "warm", data: { a: 1 } }],
-      timeout: 10,
-    });
     for (const spec of LANGS) {
       buildImage(spec);
-      const shadowName = `mstest-${spec.language}-shadow`;
-      const enforceName = `mstest-${spec.language}-enforce`;
-      const brokenShadowName = `mstest-${spec.language}-broken-shadow`;
-      const brokenEnforceName = `mstest-${spec.language}-broken-enforce`;
-      runContainer(shadowName, spec.image, spec.shadowPort, false);
-      runContainer(enforceName, spec.image, spec.enforcePort, true);
-      runContainer(brokenShadowName, spec.image, spec.brokenShadowPort, false, spec.guardFile);
-      runContainer(brokenEnforceName, spec.image, spec.brokenEnforcePort, true, spec.guardFile);
-      containers.push(shadowName, enforceName, brokenShadowName, brokenEnforceName);
-      await waitReady(spec.shadowPort, warmup(spec));
-      await waitReady(spec.enforcePort, warmup(spec));
-      await waitReady(spec.brokenShadowPort, warmup(spec));
-      await waitReady(spec.brokenEnforcePort, warmup(spec));
+      const name = `mstest-${spec.language}-passthrough`;
+      runContainer(name, spec.image, spec.port);
+      containers.push(name);
+      await waitReady(spec.port, {
+        script: b64(spec.echoScript),
+        items: [{ id: "warm", data: { ready: true } }],
+        timeout: 10,
+      });
     }
   }, 900_000);
 
@@ -192,153 +140,53 @@ describe.skipIf(!ENABLED)("handler container contract", () => {
 
   for (const spec of LANGS) {
     describe(spec.language, () => {
-      it("shadow: marked and unmarked (helper-omitted) events return identical results", async () => {
-        const items = [
-          { id: "a", data: { phi2: 0.8 } },
-          { id: "b", data: { sample: [{ v: 1 }] } },
-          { id: "c", data: [] as unknown[] },
+      it("passes every JSON root type unchanged and does not reshape sample envelopes", async () => {
+        const values: unknown[] = [
+          { kind: "object", nested: { value: 1 } },
+          {},
+          42,
+          null,
+          [{ value: 1 }],
+          [{ value: 1 }, { value: 2 }],
+          [],
+          [1, 2],
+          { sample: [{ value: 1 }, { value: 2 }] },
         ];
-        // Marker defaulted vs omitted, both through the shared helper path.
-        const markedPayload = applyInputContract({
-          input_contract: undefined as string | null | undefined,
-          script: b64(spec.script),
-          items,
-          timeout: 10,
-        });
-        const unmarkedPayload = applyInputContract({
-          input_contract: null as string | null | undefined,
-          script: b64(spec.script),
-          items,
-          timeout: 10,
-        });
-        // The helper defaulted one and removed the marker from the other.
-        expect(markedPayload.input_contract).toBe(INPUT_CONTRACT);
-        expect("input_contract" in unmarkedPayload).toBe(false);
+        const items = values.map((data, index) => ({ id: `value-${index}`, data }));
 
-        const marked = await invoke(spec.shadowPort, markedPayload);
-        const unmarked = await invoke(spec.shadowPort, unmarkedPayload);
-
-        // Shadow runs every item unchanged, marker present or not.
-        expect(marked.status).toBe("success");
-        expect(marked.results.map((r) => [r.id, r.success])).toEqual([
-          ["a", true],
-          ["b", true],
-          ["c", true],
-        ]);
-        expect(unmarked.results).toEqual(marked.results);
-      });
-
-      it("shadow: telemetry is visible and never echoes the marker value", async () => {
-        const sentinel = "sentinel-marker-should-not-appear";
-        await invoke(spec.shadowPort, {
-          input_contract: sentinel,
-          script: b64(spec.script),
-          items: [{ id: "a", data: { phi2: 1 } }],
-          timeout: 10,
-        });
-        const logs = dockerLogs(`mstest-${spec.language}-shadow`);
-        expect(logs).toContain("[guard]");
-        expect(logs).toContain('"markerPresent"');
-        expect(logs).not.toContain(sentinel);
-      });
-
-      it("enforce: unsupported marker fails the whole invocation", async () => {
-        const res = await invoke(spec.enforcePort, {
-          input_contract: "canonical-measurement-v9",
-          script: b64(spec.script),
-          items: [{ id: "a", data: { phi2: 0.8 } }],
-          timeout: 10,
-        });
-        expect(res.status).toBe("error");
-        expect(res.errors).toContain("unsupported-input-contract");
-      });
-
-      it("guard unavailable: shadow executes unchanged and enforce fails closed", async () => {
-        const event = {
-          input_contract: INPUT_CONTRACT,
-          script: b64(spec.script),
-          items: [{ id: "a", data: { phi2: 0.8 } }],
-          timeout: 10,
-        };
-
-        const shadow = await invoke(spec.brokenShadowPort, event);
-        expect(shadow).toEqual({
-          status: "success",
-          results: [{ id: "a", success: true, output: { ok: 1 } }],
-        });
-
-        const enforce = await invoke(spec.brokenEnforcePort, event);
-        expect(enforce.status).toBe("error");
-        expect(enforce.results).toEqual([]);
-        expect(enforce.errors).toContain("guard-classification-unavailable");
-
-        const logs = dockerLogs(`mstest-${spec.language}-broken-shadow`);
-        expect(logs).toMatch(/"classificationUnavailable"\s*:\s*true/);
-        expect(logs).not.toContain("phi2");
-      });
-
-      it("enforce: complete distinguishable positional rows (outputs, dup/empty IDs, failures, order)", async () => {
-        const res = await invoke(spec.enforcePort, {
-          input_contract: INPUT_CONTRACT,
+        const response = await invoke(spec.port, {
           script: b64(spec.echoScript),
+          items,
+          timeout: 10,
+        });
+
+        expect(response.status).toBe("success");
+        expect(response.results).toHaveLength(values.length);
+        expect(response.results.map((result) => result.id)).toEqual(items.map((item) => item.id));
+        expect(response.results.map((result) => result.success)).toEqual(values.map(() => true));
+        expect(response.results.map((result) => result.output?.seen)).toEqual(values);
+      });
+
+      it("isolates per-item failures while preserving order and duplicate or empty IDs", async () => {
+        const response = await invoke(spec.port, {
+          script: b64(spec.isolationScript),
           items: [
-            { id: "dup", data: { tag: "t1" } },
-            { id: "dup", data: { sample: [{ v: 1 }] } },
-            { id: "", data: { tag: "t3" } },
-            { id: "", data: [] as unknown[] },
+            { id: "dup", data: { tag: "first" } },
+            { id: "dup", data: { tag: "failed", fail: true } },
+            { id: "", data: { tag: "third" } },
+            { id: "dup", data: { tag: "fourth" } },
           ],
           timeout: 10,
         });
-        expect(res.status).toBe("success");
-        expect(res.results).toHaveLength(4);
-        // Distinct outputs prove each canonical result stayed at its own position.
-        const normalized = res.results.map((r) =>
-          r.success
-            ? { id: r.id, success: true, output: r.output }
-            : { id: r.id, success: false, error: r.error },
-        );
-        expect(normalized).toEqual([
-          { id: "dup", success: true, output: { tag: "t1" } },
-          { id: "dup", success: false, error: "non-canonical-input" },
-          { id: "", success: true, output: { tag: "t3" } },
-          { id: "", success: false, error: "empty-envelope" },
-        ]);
+
+        expect(response.status).toBe("success");
+        expect(response.results.map((result) => result.id)).toEqual(["dup", "dup", "", "dup"]);
+        expect(response.results.map((result) => result.success)).toEqual([true, false, true, true]);
+        expect(response.results[0]?.output).toEqual({ tag: "first" });
+        expect(response.results[1]?.error).toContain("boom");
+        expect(response.results[2]?.output).toEqual({ tag: "third" });
+        expect(response.results[3]?.output).toEqual({ tag: "fourth" });
       });
-
-      it("enforce: an escaped sample key on the raw wire is treated as an envelope", async () => {
-        // Literal raw body: the wire bytes contain sample, not sample, so the
-        // R raw-parser path must decode the key before jsonlite reserialization.
-        const rawBody = `{"input_contract":"${INPUT_CONTRACT}","script":"${b64(spec.script)}","timeout":10,"items":[{"id":"esc","data":{"\\u0073ample":[]}}]}`;
-        expect(rawBody).toContain('"\\u0073ample"');
-        expect(rawBody).not.toContain('"sample"');
-
-        const res = await invokeRaw(spec.enforcePort, rawBody);
-        expect(res.status).toBe("success");
-        expect(res.results).toEqual([{ id: "esc", success: false, error: "empty-envelope" }]);
-      });
-
-      if (spec.language === "r") {
-        const bomBody =
-          "\uFEFF" +
-          `{"input_contract":"${INPUT_CONTRACT}","script":"${b64(spec.script)}","timeout":10,"items":[{"id":"bom","data":{"phi2":0.8}}]}`;
-
-        it("enforce: a raw-classifier count mismatch fails the invocation closed", async () => {
-          expect(bomBody.startsWith("\uFEFF")).toBe(true);
-
-          const res = await invokeRaw(spec.enforcePort, bomBody);
-          expect(res.status).toBe("error");
-          expect(res.results).toHaveLength(0);
-          expect(res.errors).toContain("guard-classification-unavailable");
-        });
-
-        it("shadow: a raw-classifier count mismatch remains execution-neutral", async () => {
-          expect(bomBody.startsWith("\uFEFF")).toBe(true);
-
-          const res = await invokeRaw(spec.shadowPort, bomBody);
-          expect(res.status).toBe("success");
-          expect(res.results).toEqual([{ id: "bom", success: true, output: { ok: 1 } }]);
-        });
-      }
     });
   }
 });

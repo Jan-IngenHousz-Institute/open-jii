@@ -95,10 +95,11 @@ describe("buildCellNamespace", () => {
     expect(ns.ctx).toEqual({});
   });
 
-  it("unwraps a non-empty array output to its first element", () => {
-    const cells = [protocol("p1", "Scan"), output("p1", [{ value: 1 }, { value: 2 }])];
+  it("keeps a root array output unchanged", () => {
+    const data = [{ value: 1 }, { value: 2 }];
+    const cells = [protocol("p1", "Scan"), output("p1", data)];
     const ns = buildCellNamespace(cells);
-    expect(ns.ctx.scan).toEqual({ value: 1 });
+    expect(ns.ctx.scan).toBe(data);
   });
 
   it("only sees cells strictly before beforeIndex (upstream-only)", () => {

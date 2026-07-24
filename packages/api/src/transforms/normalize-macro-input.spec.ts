@@ -99,6 +99,16 @@ describe("normalizeMacroInput", () => {
     expect(JSON.stringify(input)).toBe(before);
   });
 
+  it("does not mutate or clone a direct root array", () => {
+    const input = Object.freeze([Object.freeze({ value: 18 })]);
+    const result = normalizeMacroInput(input);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected a successful direct result");
+    expect(result.value).toBe(input);
+    expect(result).toMatchObject({ source: "direct", discardedCount: 0 });
+  });
+
   it("does not mutate or clone the selected envelope value", () => {
     const first = Object.freeze({ value: 19 });
     const second = Object.freeze({ value: 20 });

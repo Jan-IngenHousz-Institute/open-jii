@@ -101,7 +101,7 @@ describe("resolveConditionValue", () => {
     expect(resolveConditionValue(cells, "p1", "status")).toBe("ok");
   });
 
-  it("reads field from array output data (first element)", () => {
+  it("does not project fields from a direct root array", () => {
     const cells: WorkbookCell[] = [
       {
         id: "p1",
@@ -114,8 +114,8 @@ describe("resolveConditionValue", () => {
         { phi2: 0.8, spad: 35 },
       ]),
     ];
-    expect(resolveConditionValue(cells, "p1", "phi2")).toBe(0.75);
-    expect(resolveConditionValue(cells, "p1", "spad")).toBe(30);
+    expect(resolveConditionValue(cells, "p1", "phi2")).toBeUndefined();
+    expect(resolveConditionValue(cells, "p1", "spad")).toBeUndefined();
   });
 
   it("reads fields from the reserved sample envelope", () => {

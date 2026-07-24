@@ -37,30 +37,46 @@ Write macros against the direct measurement value. In particular, do **not**
 write `json.sample[0]`: the legacy transport envelope is not part of the macro
 authoring contract.
 
-The web Workbook runner, backend single and Databricks batch execution paths,
-and mobile JavaScript and Python runners apply the same compatibility
-projection:
+The backend single and Databricks batch hosts, and the mobile JavaScript and
+Python host, call the shared normalizer for every input. The call is
+unconditional; the normalizer reshapes only a plain top-level object with its
+own `sample` property whose value is a JSON object or array:
 
-| Value presented to a host         | Value macro code receives                          |
-| --------------------------------- | -------------------------------------------------- |
-| Direct object, scalar, or `null`  | The same value                                     |
-| `{ sample: [measurement] }`       | `measurement`                                      |
-| `{ sample: measurement }`         | `measurement` when it is a JSON object             |
-| `[measurement]`                   | `measurement`                                      |
-| `{ sample: [] }` or `[]`          | An `empty-envelope` failure; macro code is not run |
-| An envelope with multiple entries | The first entry                                    |
+| Value presented to a host                    | Value macro code receives                          |
+| -------------------------------------------- | -------------------------------------------------- |
+| Direct object, scalar, or `null`             | The same value                                     |
+| `{ sample: [measurement] }`                  | `measurement`                                      |
+| `{ sample: measurement }`                    | `measurement` when it is a JSON object             |
+| Root array, including `[]` or multiple items | The complete, unchanged array                      |
+| `{ sample: [] }`                             | An `empty-envelope` failure; macro code is not run |
+| `{ sample: [first, second] }`                | `first`                                            |
 
-For a multi-entry envelope, the host discards later entries and emits an
+**Intentional root-array behavior change.** On generic backend calls, web
+workbooks, and mobile JavaScript or Python runs, a root array is no longer
+treated as a compatibility envelope. A macro now receives `[]` as an empty
+array and `[first, second]` as the complete two-item array. A macro that wants
+one element must select that element itself.
+
+Databricks Gold processing is the deliberate compatibility exception. Its
+legacy producer wraps a source root array as `{ sample: data }` before calling
+the backend batch host. The normalizer therefore sees a `sample` envelope and
+keeps the existing first-measurement behavior; an empty source array becomes
+`{ sample: [] }` and fails as an empty envelope. This adapter behavior preserves
+existing Gold results while the generic backend, web, and mobile contract moves
+to whole root arrays.
+
+For a multi-entry `sample` envelope, the host discards later entries and emits an
 operational `additional-items-discarded` warning. The warning contains only the
 operational metadata needed to identify the run, envelope source, and entry
 counts, never measurement content. Batch execution fails an empty item
 independently and still runs its valid siblings.
 
-Projection is shallow and happens exactly once. After that single projection,
-any nested envelope object is passed to macro code unchanged; it is not
-projected recursively. Raw protocol and output values remain unchanged in
-storage and transport; the projection applies when the host exposes a value as
-`json`, as an entry in `ctx`, or to a workbook branch condition.
+Projection is shallow: the normalizer inspects only that own top-level `sample`
+property and never traverses nested values. A selected value that is itself
+sample-shaped passes unchanged rather than being projected again. Root arrays
+stay whole when exposed as `json`, as an entry in `ctx`, or to a workbook branch
+condition. Raw protocol and output values remain unchanged in storage and
+transport.
 
 ## Start with the triggering measurement in Python
 

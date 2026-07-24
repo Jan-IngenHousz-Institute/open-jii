@@ -192,12 +192,15 @@ jobs:
 
   deploy-databricks:
     name: Deploy Databricks
-    needs: [deploy-infrastructure, detect, approval-gate]
+    # Mixed-version macro rollout: backend normalization lands before the
+    # Databricks producer adapter. A skipped backend still permits data-only deploys.
+    needs: [deploy-infrastructure, deploy-backend, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.deploy-backend.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'data')))
     permissions:
       id-token: write
@@ -209,12 +212,25 @@ jobs:
 
   deploy-macro-sandbox:
     name: Deploy Macro Sandbox
-    needs: [deploy-infrastructure, detect, approval-gate]
+    # Sandbox simplification is last: backend normalization, the web producer,
+    # and the Databricks adapter must be deployed or intentionally skipped first.
+    needs:
+      [
+        deploy-infrastructure,
+        deploy-backend,
+        deploy-frontend,
+        deploy-databricks,
+        detect,
+        approval-gate,
+      ]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.deploy-backend.result) &&
+      contains('success,skipped', needs.deploy-frontend.result) &&
+      contains('success,skipped', needs.deploy-databricks.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') && needs.detect.outputs.macro_sandbox_languages != '[]'))
     permissions:
       id-token: write

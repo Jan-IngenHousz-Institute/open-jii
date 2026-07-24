@@ -468,8 +468,8 @@ describe("ExecuteMacroBatchUseCase", () => {
   });
 
   describe("canonical input normalization", () => {
-    // Mirror the Ticket 02 handler contract: one result per valid item, in
-    // request order, echoing each request ID, with a distinguishable output.
+    // Mirror the sandbox positional-response contract: one result per valid
+    // item, in request order, echoing each request ID with a distinct output.
     function mockEchoLambda() {
       return vi.spyOn(lambdaPort, "invokeLambda").mockImplementation((_fn, payload) => {
         const items = (payload as LambdaExecutionPayload).items;
@@ -481,7 +481,9 @@ describe("ExecuteMacroBatchUseCase", () => {
               results: items.map((it) => ({
                 id: it.id,
                 success: true,
-                output: { echo: (it.data as { phi2: number }).phi2 },
+                output: {
+                  echo: Array.isArray(it.data) ? it.data : (it.data as { phi2: number }).phi2,
+                },
               })),
             },
           }),
@@ -504,14 +506,14 @@ describe("ExecuteMacroBatchUseCase", () => {
         ],
       });
 
-      // Lambda invoked once with only the three valid items, marked canonical.
+      // Lambda invoked once with every item except the empty sample envelope.
       expect(invokeSpy).toHaveBeenCalledTimes(1);
       const payload = invokeSpy.mock.calls[0][1] as LambdaExecutionPayload;
-      expect(payload.input_contract).toBe("canonical-measurement-v1");
       expect(payload.items).toEqual([
         expect.objectContaining({ id: "item-a", data: { phi2: 0.1 } }),
         expect.objectContaining({ id: "item-c", data: { phi2: 0.3 } }),
-        expect.objectContaining({ id: "item-d", data: { phi2: 0.4 } }),
+        expect.objectContaining({ id: "item-d", data: [{ phi2: 0.4 }] }),
+        expect.objectContaining({ id: "item-e", data: [] }),
       ]);
 
       assertSuccess(result);
@@ -527,9 +529,12 @@ describe("ExecuteMacroBatchUseCase", () => {
       expect(b.success).toBe(false);
       expect(b.error).toContain("empty-envelope");
       expect(c).toMatchObject({ id: "item-c", success: true, output: { echo: 0.3 } });
-      expect(d).toMatchObject({ id: "item-d", success: true, output: { echo: 0.4 } });
-      expect(e.success).toBe(false);
-      expect(e.error).toContain("empty-envelope");
+      expect(d).toMatchObject({
+        id: "item-d",
+        success: true,
+        output: { echo: [{ phi2: 0.4 }] },
+      });
+      expect(e).toMatchObject({ id: "item-e", success: true, output: { echo: [] } });
       // A per-item empty envelope must not surface as a group-wide error.
       expect(result.value.errors).toBeUndefined();
     });
@@ -625,7 +630,7 @@ describe("ExecuteMacroBatchUseCase", () => {
       });
     });
 
-    it("calls neither Lambda nor function-name resolution when every item is empty", async () => {
+    it("calls neither Lambda nor function-name resolution when every item is an empty sample envelope", async () => {
       const macro = await createTestMacro();
       const invokeSpy = mockEchoLambda();
       const getFnSpy = vi
@@ -635,7 +640,7 @@ describe("ExecuteMacroBatchUseCase", () => {
       const result = await useCase.execute({
         items: [
           { id: "e1", macro_id: macro.id, data: { sample: [] } },
-          { id: "e2", macro_id: macro.id, data: [] },
+          { id: "e2", macro_id: macro.id, data: { sample: [] } },
         ],
       });
 
@@ -776,7 +781,7 @@ describe("ExecuteMacroBatchUseCase", () => {
       expect(serialized).not.toContain("phi2");
     });
 
-    it("keeps published-snapshot resolution unchanged while marking the event canonical", async () => {
+    it("keeps published-snapshot resolution unchanged", async () => {
       const macroId = faker.string.uuid();
       const versionId = faker.string.uuid();
       vi.spyOn(macroSnapshotRepository, "findScriptsByVersionIds").mockResolvedValue(
@@ -807,7 +812,6 @@ describe("ExecuteMacroBatchUseCase", () => {
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({
-          input_contract: "canonical-measurement-v1",
           script: "snapshot-code",
           items: [expect.objectContaining({ id: "snap-1", data: { phi2: 0.6 } })],
         }),

@@ -11,7 +11,6 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
-  CANONICAL_MEASUREMENT_CONTRACT,
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
@@ -85,11 +84,10 @@ export class ExecuteMacroUseCase {
       });
     }
 
-    // 3. Resolve the Lambda function and build the marked payload
+    // 3. Resolve the Lambda function and build the payload
     const functionName = this.lambdaPort.getFunctionNameForLanguage(macro.language);
 
     const payload: LambdaExecutionPayload = {
-      input_contract: CANONICAL_MEASUREMENT_CONTRACT,
       script: macro.code,
       items: [{ id: itemId, data: normalized.value, context: request.context }],
       timeout: request.timeout ?? 30,

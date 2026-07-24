@@ -1,4 +1,4 @@
-export const MACRO_INPUT_SOURCES = ["direct", "sample-envelope", "top-level-array"] as const;
+export const MACRO_INPUT_SOURCES = ["direct", "sample-envelope"] as const;
 export type MacroInputSource = (typeof MACRO_INPUT_SOURCES)[number];
 
 export const MACRO_INPUT_WARNING_CODES = ["additional-items-discarded"] as const;
@@ -23,8 +23,6 @@ export type NormalizeMacroInputResult =
       error: MacroInputErrorCode;
     };
 
-type EnvelopeSource = Exclude<MacroInputSource, "direct">;
-
 function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
 
@@ -32,16 +30,16 @@ function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
-function normalizeArray(input: unknown[], source: EnvelopeSource): NormalizeMacroInputResult {
+function normalizeSampleArray(input: unknown[]): NormalizeMacroInputResult {
   if (input.length === 0) {
-    return { ok: false, source, sourceCount: 0, error: "empty-envelope" };
+    return { ok: false, source: "sample-envelope", sourceCount: 0, error: "empty-envelope" };
   }
 
   const discardedCount = input.length - 1;
   return {
     ok: true,
     value: input[0],
-    source,
+    source: "sample-envelope",
     sourceCount: input.length,
     discardedCount,
     ...(discardedCount > 0 ? { warning: "additional-items-discarded" as const } : {}),
@@ -49,26 +47,23 @@ function normalizeArray(input: unknown[], source: EnvelopeSource): NormalizeMacr
 }
 
 /**
- * Project one recognized compatibility envelope to the single value supplied
- * to macro code. The projection is deliberately shallow: a selected value
- * that is itself envelope-shaped is returned unchanged for callers to guard at
- * their execution boundary.
+ * Project an own top-level `sample` compatibility envelope to the single value
+ * supplied to macro code. The projection is deliberately shallow: a selected
+ * value that is itself envelope-shaped is passed unchanged after this one
+ * projection. Every non-envelope value, including root arrays, is returned
+ * directly and unchanged.
  *
  * The function is pure. It neither mutates nor clones the input or selected
  * value, and it has no logging or runtime-specific behavior.
  */
 export function normalizeMacroInput(input: unknown): NormalizeMacroInputResult {
-  if (Array.isArray(input)) {
-    return normalizeArray(input, "top-level-array");
-  }
-
   if (
     isPlainJsonObject(input) &&
     Object.prototype.hasOwnProperty.call(input, "sample") &&
     (Array.isArray(input.sample) || isPlainJsonObject(input.sample))
   ) {
     if (Array.isArray(input.sample)) {
-      return normalizeArray(input.sample, "sample-envelope");
+      return normalizeSampleArray(input.sample);
     }
 
     return {

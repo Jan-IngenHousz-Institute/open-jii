@@ -1,7 +1,7 @@
 {
   "fixtureVersion": 1,
   "vocabulary": {
-    "sources": ["direct", "sample-envelope", "top-level-array"],
+    "sources": ["direct", "sample-envelope"],
     "warnings": ["additional-items-discarded"],
     "errors": ["empty-envelope"]
   },
@@ -111,48 +111,43 @@
       }
     },
     {
-      "name": "single top-level array",
+      "name": "direct single top-level array",
       "input": [{ "value": 9 }],
       "expected": {
         "ok": true,
-        "value": { "value": 9 },
-        "source": "top-level-array",
-        "sourceCount": 1,
+        "value": [{ "value": 9 }],
+        "source": "direct",
         "discardedCount": 0
       }
     },
     {
-      "name": "multiple top-level array",
+      "name": "direct multiple top-level array",
       "input": [{ "value": 10 }, { "value": 11 }],
       "expected": {
         "ok": true,
-        "value": { "value": 10 },
-        "source": "top-level-array",
-        "sourceCount": 2,
-        "discardedCount": 1,
-        "warning": "additional-items-discarded"
+        "value": [{ "value": 10 }, { "value": 11 }],
+        "source": "direct",
+        "discardedCount": 0
       }
     },
     {
-      "name": "empty top-level array",
+      "name": "direct empty top-level array",
       "input": [],
       "expected": {
-        "ok": false,
-        "source": "top-level-array",
-        "sourceCount": 0,
-        "error": "empty-envelope"
+        "ok": true,
+        "value": [],
+        "source": "direct",
+        "discardedCount": 0
       }
     },
     {
-      "name": "scalar first top-level value",
+      "name": "direct scalar top-level values",
       "input": [12, 13],
       "expected": {
         "ok": true,
-        "value": 12,
-        "source": "top-level-array",
-        "sourceCount": 2,
-        "discardedCount": 1,
-        "warning": "additional-items-discarded"
+        "value": [12, 13],
+        "source": "direct",
+        "discardedCount": 0
       }
     },
     {
@@ -167,13 +162,12 @@
       }
     },
     {
-      "name": "top-level array unwraps only once",
+      "name": "nested top-level array is direct",
       "input": [[{ "value": 15 }]],
       "expected": {
         "ok": true,
-        "value": [{ "value": 15 }],
-        "source": "top-level-array",
-        "sourceCount": 1,
+        "value": [[{ "value": 15 }]],
+        "source": "direct",
         "discardedCount": 0
       }
     }
