@@ -7,6 +7,45 @@ import { isIndexableSiteUrl, SITE_URL } from "../../lib/site-url";
 import { createRobots } from "../robots";
 import sitemap, { dynamic } from "../sitemap";
 
+const nextCache = vi.hoisted(() => {
+  const stores: { hasValue: boolean; value?: unknown }[] = [];
+  const registrations: {
+    keyParts?: string[];
+    options?: { revalidate?: number | false; tags?: string[] };
+  }[] = [];
+
+  return {
+    registrations,
+    reset() {
+      for (const store of stores) {
+        store.hasValue = false;
+        store.value = undefined;
+      }
+    },
+    unstableCache: vi.fn(
+      (
+        fn: (...args: unknown[]) => Promise<unknown>,
+        keyParts?: string[],
+        options?: { revalidate?: number | false; tags?: string[] },
+      ) => {
+        registrations.push({ keyParts, options });
+        const store = { hasValue: false, value: undefined as unknown };
+        stores.push(store);
+
+        return async (...args: unknown[]) => {
+          if (!store.hasValue) {
+            store.value = await fn(...args);
+            store.hasValue = true;
+          }
+          return store.value;
+        };
+      },
+    ),
+  };
+});
+
+vi.mock("next/cache", () => ({ unstable_cache: nextCache.unstableCache }));
+
 describe("public SEO routes", () => {
   const sitemapPages =
     vi.fn<(variables: { locale: string; limit: number; skip: number }) => Promise<unknown>>();
@@ -22,6 +61,7 @@ describe("public SEO routes", () => {
     >();
 
   beforeEach(() => {
+    nextCache.reset();
     sitemapPages.mockResolvedValue({
       pageBlogPostCollection: { items: [] },
     });
@@ -88,6 +128,21 @@ describe("public SEO routes", () => {
       [defaultLocale]: `${SITE_URL}/${defaultLocale}`,
       "x-default": `${SITE_URL}/${defaultLocale}`,
     });
+  });
+
+  it("caches Contentful sitemap pagination for five minutes without changing dynamic rendering", async () => {
+    const first = await sitemap();
+    const second = await sitemap();
+
+    expect(dynamic).toBe("force-dynamic");
+    expect(nextCache.registrations).toContainEqual({
+      keyParts: ["sitemap-contentful"],
+      options: { revalidate: 300 },
+    });
+    expect(second).toEqual(first);
+    expect(getContentfulClients).toHaveBeenCalledTimes(1);
+    expect(sitemapPages).toHaveBeenCalledTimes(1);
+    expect(allReleaseNotes).toHaveBeenCalledTimes(1);
   });
 
   it("appends published blog and release detail routes with last-modified dates", async () => {
@@ -276,7 +331,9 @@ describe("public SEO routes", () => {
     expect(sitemapPages.mock.calls.map(([variables]) => variables.skip)).toEqual([0, 1]);
     expect(errorLog).toHaveBeenCalledWith(
       "[sitemap] Dynamic content unavailable; serving static routes.",
+      "Error",
     );
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("request details must not be logged");
     errorLog.mockRestore();
   });
 
@@ -305,6 +362,7 @@ describe("public SEO routes", () => {
     expect(sitemapPages.mock.calls.map(([variables]) => variables.skip)).toEqual([0, 1]);
     expect(errorLog).toHaveBeenCalledWith(
       "[sitemap] Dynamic content unavailable; serving static routes.",
+      "Error",
     );
     errorLog.mockRestore();
   });

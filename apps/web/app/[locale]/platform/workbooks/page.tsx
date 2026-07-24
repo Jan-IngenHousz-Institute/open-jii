@@ -4,12 +4,15 @@ import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Workbooks",
-};
-
 interface WorkbookPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: WorkbookPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["workbook"] });
+
+  return { title: t("workbooks.title") };
 }
 
 export default async function WorkbookPage({ params }: WorkbookPageProps) {

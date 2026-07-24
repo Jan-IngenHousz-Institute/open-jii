@@ -29,6 +29,10 @@ function handler(event) {
   // search index and the generated Open Graph/Twitter images. They must bypass the
   // clean-page rewrite below, which would otherwise request a ".html" that
   // does not exist.
+  if (uri === "/opengraph-image/" || uri === "/twitter-image/") {
+    request.uri = uri.substring(0, uri.length - 1);
+    return request;
+  }
   if (uri === "/api/search" || uri === "/opengraph-image" || uri === "/twitter-image") {
     return request;
   }

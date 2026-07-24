@@ -8695,13 +8695,6 @@ export type SitemapPagesFieldsFragment = {
       sys: { __typename?: "Sys"; publishedAt?: any | null };
     } | null>;
   } | null;
-  pageLandingCollection?: {
-    __typename?: "PageLandingCollection";
-    items: Array<{
-      __typename?: "PageLanding";
-      sys: { __typename?: "Sys"; publishedAt?: any | null };
-    } | null>;
-  } | null;
 };
 
 export type SitemapPagesQueryVariables = Exact<{
@@ -9322,13 +9315,6 @@ export const SitemapPagesFieldsFragmentDoc = gql`
       total
       items {
         slug
-        sys {
-          publishedAt
-        }
-      }
-    }
-    pageLandingCollection(limit: 1, locale: $locale) {
-      items {
         sys {
           publishedAt
         }

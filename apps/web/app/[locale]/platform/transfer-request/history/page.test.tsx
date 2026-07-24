@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { ExperimentTransferRequestStatus } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 
-import TransferRequestHistoryPage from "./page";
+import TransferRequestHistoryPage from "./transfer-request-history-client";
 
 vi.mock("~/util/date", () => ({
   formatDate: (date: string) => `formatted-${date}`,

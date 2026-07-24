@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import MacroOverviewPage from "../page";
+import MacroOverviewPage from "../macro-overview-content";
 
 vi.mock("@/util/base64", () => ({
   decodeBase64: (s: string) => {

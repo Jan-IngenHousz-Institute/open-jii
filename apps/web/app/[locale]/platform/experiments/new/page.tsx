@@ -5,12 +5,15 @@ import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  title: "New experiment",
-};
-
 interface NewExperimentPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: NewExperimentPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["common"] });
+
+  return { title: t("experiments.newExperiment") };
 }
 
 export default async function NewExperimentPage({ params }: NewExperimentPageProps) {

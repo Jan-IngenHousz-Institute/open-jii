@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
-import VisualizationsPage from "./page";
+import VisualizationsPage from "./visualizations-list-content";
 
 vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
   default: ({

@@ -1,40 +1,20 @@
-"use client";
+import { buildWorkbookMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { use } from "react";
-
-import { useTranslation } from "@repo/i18n";
+import WorkbookOverviewContent from "./workbook-overview-content";
 
 interface WorkbookOverviewPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
+}
+
+export function generateMetadata({ params }: WorkbookOverviewPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildWorkbookMetadata({ locale, id });
+  });
 }
 
 export default function WorkbookOverviewPage({ params }: WorkbookOverviewPageProps) {
-  const { id } = use(params);
-  const { data, isLoading, error } = useWorkbook(id);
-  const { t } = useTranslation(["workbook", "common"]);
-
-  if (isLoading) {
-    return <div>{t("common.loading")}</div>;
-  }
-  if (error) {
-    return <ErrorDisplay error={error} title={t("workbooks.errorLoading")} />;
-  }
-  if (!data) {
-    return <div>{t("workbooks.notFound")}</div>;
-  }
-
-  // Mount the editor only after data loads so `useAutosave` sees the
-  // persisted state as its first value. The Fork action lives in the workbook
-  // layout header, next to the version/created-by metadata.
-  return (
-    <WorkbookDraftEditor
-      id={id}
-      initialCells={data.cells}
-      createdBy={data.createdBy}
-      name={data.name}
-    />
-  );
+  return <WorkbookOverviewContent params={params} />;
 }

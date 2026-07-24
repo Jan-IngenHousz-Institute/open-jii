@@ -1,5 +1,6 @@
 import { SITE_URL } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { defaultLocale } from "@repo/i18n/config";
@@ -133,10 +134,8 @@ async function fetchAllCollectionItems<T>(
   throw new Error("Contentful pagination exceeded the sitemap safety limit");
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const fallback = staticSitemap();
-
-  try {
+const getCachedSitemapContent = unstable_cache(
+  async () => {
     const { client } = await getContentfulClients();
     const now = new Date();
     const [blogPosts, releases] = await Promise.all([
@@ -155,6 +154,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         return data.componentReleaseNoteCollection;
       }),
     ]);
+
+    return { blogPosts, releases };
+  },
+  ["sitemap-contentful"],
+  { revalidate: 300 },
+);
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const fallback = staticSitemap();
+
+  try {
+    const now = new Date();
+    const { blogPosts, releases } = await getCachedSitemapContent();
     const dynamicEntries = new Map<string, Date>();
 
     for (const post of blogPosts) {
@@ -182,9 +194,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         alternates: { languages: languageAlternates(url) },
       })),
     ];
-  } catch {
+  } catch (error) {
     // Do not expose Contentful/AWS error details, which may contain request or secret metadata.
-    console.error("[sitemap] Dynamic content unavailable; serving static routes.");
+    console.error(
+      "[sitemap] Dynamic content unavailable; serving static routes.",
+      error instanceof Error ? error.name : typeof error,
+    );
     return fallback;
   }
 }

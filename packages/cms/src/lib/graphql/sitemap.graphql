@@ -8,15 +8,7 @@ fragment sitemapPagesFields on Query {
       }
     }
   }
-  pageLandingCollection(limit: 1, locale: $locale) {
-    items {
-      sys {
-        publishedAt
-      }
-    }
-  }
 }
-
 
 query sitemapPages($locale: String!, $limit: Int = 100, $skip: Int = 0) {
   ...sitemapPagesFields
