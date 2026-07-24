@@ -263,7 +263,7 @@ describe("ExperimentDesignPage", () => {
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/v2 is available/)).toBeInTheDocument();
+      expect(screen.getByText(/flow\.upgradeBanner\.newVersion/)).toBeInTheDocument();
       expect(screen.getByText(/flow\.reviewAndUpgrade/)).toBeInTheDocument();
     });
   });
@@ -275,7 +275,7 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
     });
-    expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/flow\.upgradeBanner\.newVersion/)).not.toBeInTheDocument();
   });
 
   it("shows no-workbook-linked state when no workbook attached", async () => {
