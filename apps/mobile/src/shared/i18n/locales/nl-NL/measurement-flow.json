@@ -10,6 +10,9 @@
       "analysis": "Bekijk de meetgegevens en accepteer of verwerp ze."
     }
   },
+  "resume": {
+    "invalidState": "Deze meting kon niet veilig worden hervat. Start de meting opnieuw."
+  },
   "endFlow": {
     "buttonTitle": "Beëindigen",
     "alertTitle": "Meting beëindigen?",
@@ -128,6 +131,7 @@
   },
   "commandNode": {
     "heading": "Apparaatopdracht",
+    "dynamicSummary": "Dynamische opdracht uit veld: {{field}}",
     "responseLabel": "Antwoord",
     "run": "Opdracht uitvoeren",
     "running": "Bezig…",
@@ -135,6 +139,26 @@
     "toast": {
       "notConnected": "Geen apparaat verbonden",
       "error": "Opdracht mislukt"
+    },
+    "resolution": {
+      "COMMAND_CELL_MISSING": "Deze opdracht staat niet meer in het geladen werkboek. Laad de meting opnieuw.",
+      "COMMAND_PROVENANCE_MISSING": "Start deze meting opnieuw voordat je de opdracht uitvoert.",
+      "STATIC_COMMAND_INVALID": "Deze opgeslagen opdracht is ongeldig.",
+      "COMMAND_SOURCE_MISSING": "Voer eerst de gekoppelde bronstap in deze meting uit en probeer opnieuw.",
+      "COMMAND_SOURCE_INELIGIBLE": "De gekoppelde bron kan geen opdrachtwaarde leveren.",
+      "COMMAND_SOURCE_NOT_EARLIER": "De gekoppelde bron moet vóór deze opdracht staan.",
+      "COMMAND_FIELD_EMPTY": "Kies een bronveld voor deze opdracht.",
+      "COMMAND_OUTPUT_MISSING": "Voer eerst de gekoppelde bronstap in deze meting uit en probeer opnieuw.",
+      "COMMAND_OUTPUT_DUPLICATE": "De bron heeft conflicterende resultaten. Start deze meting opnieuw.",
+      "COMMAND_OUTPUT_INVALID": "Het bronresultaat is ongeldig. Voer de bronstap opnieuw uit.",
+      "COMMAND_SOURCE_STALE": "Het bronresultaat komt uit een oudere meetcyclus. Voer de bron opnieuw uit.",
+      "DEVICE_OUTPUT_MISSING": "Voer de bronstap opnieuw uit met deze verbonden sensor.",
+      "DEVICE_OUTPUT_DUPLICATE": "Deze sensor heeft conflicterende bronresultaten. Voer de bron opnieuw uit.",
+      "SOURCE_DEVICE_FAILED": "De bronstap is voor deze sensor mislukt. Voer die eerst opnieuw uit.",
+      "COMMAND_FIELD_MISSING": "Het gekozen veld ontbreekt in het bronresultaat.",
+      "COMMAND_VALUE_NOT_STRING": "Het gekozen veld moet tekst bevatten.",
+      "COMMAND_VALUE_EMPTY": "Het gekozen veld is leeg. Voer de bron opnieuw uit of corrigeer deze.",
+      "COMMAND_TRANSPORT_FAILED": "De opdracht kon niet naar deze sensor worden gestuurd. Verbind opnieuw en probeer opnieuw."
     }
   },
   "measurementNode": {

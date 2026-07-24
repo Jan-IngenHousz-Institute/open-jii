@@ -44,6 +44,19 @@ describe("WorkbookSidebar", () => {
     expect(screen.getByText("Protocol")).toBeInTheDocument();
   });
 
+  it("labels a dynamic (ref) command deterministically and keeps it visible", () => {
+    const refCommand: WorkbookCell = {
+      id: "cmd-ref",
+      type: "command",
+      isCollapsed: false,
+      payload: { kind: "ref", ref: { sourceCellId: "macro-1", field: "toDevice" } },
+    };
+    render(<WorkbookSidebar cells={[refCommand]} onCellClick={onCellClick} />);
+    // Deterministic label shared with the canvas/read-only cell (never a
+    // resolved value); the cell is not dropped for being a ref.
+    expect(screen.getByText("Dynamic command · toDevice")).toBeInTheDocument();
+  });
+
   it("shows cell subtitles", () => {
     render(
       <WorkbookSidebar

@@ -20,6 +20,12 @@ const cells: WorkbookCell[] = [
     isCollapsed: false,
     payload: { macroId: "m1", language: "python", name: "My Macro" },
   },
+  {
+    id: "c3",
+    type: "command",
+    isCollapsed: false,
+    payload: { kind: "ref", ref: { sourceCellId: "c2", field: "toDevice" } },
+  },
 ];
 
 const snapshots: EntitySnapshots = {
@@ -43,6 +49,13 @@ const nodes: FlowNode[] = [
     content: { params: {}, macroId: "m1" },
   },
   { id: "n3", name: "n3", type: "question", isStart: false, content: { kind: "text" } },
+  {
+    id: "c3",
+    name: "Dynamic command",
+    type: "measurement",
+    isStart: false,
+    content: { command: { kind: "ref", ref: { sourceCellId: "c2", field: "toDevice" } } },
+  },
 ];
 
 describe("hydrateFlowNodes", () => {
@@ -69,6 +82,11 @@ describe("hydrateFlowNodes", () => {
   it("leaves non-measurement/analysis nodes untouched", () => {
     const questionNode = hydrateFlowNodes(nodes, cells, snapshots)[2];
     expect(questionNode).toEqual(nodes[2]);
+  });
+
+  it("preserves a referenced command carrier verbatim", () => {
+    const dynamicNode = hydrateFlowNodes(nodes, cells, snapshots)[3];
+    expect(dynamicNode).toEqual(nodes[3]);
   });
 
   it("falls back to empty code / filename name when the snapshot or cell name is missing", () => {

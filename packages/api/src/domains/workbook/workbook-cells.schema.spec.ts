@@ -419,4 +419,89 @@ describe("Workbook Cells Schema", () => {
       expect(parsed.isCollapsed).toBe(true);
     });
   });
+
+  describe("strict cell envelopes (wrong-level keys rejected)", () => {
+    it("rejects a markdown cell carrying a wrong-level payload", () => {
+      const cell = { id: "md1", type: "markdown", content: "hi", payload: { protocolId: "x" } };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(false);
+    });
+
+    it("rejects a markdown cell carrying a wrong-level command/ref", () => {
+      const cell = {
+        id: "md1",
+        type: "markdown",
+        content: "hi",
+        command: { kind: "ref", ref: { sourceCellId: "s", field: "f" } },
+      };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(false);
+    });
+
+    it("rejects a protocol cell with an extra sibling key", () => {
+      const cell = {
+        id: "p1",
+        type: "protocol",
+        payload: { protocolId: "11111111-1111-1111-1111-111111111111", version: 1 },
+        command: { kind: "ref", ref: { sourceCellId: "s", field: "f" } },
+      };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(false);
+    });
+
+    it("rejects a workbook branch path with a misplaced command/ref key", () => {
+      const cell = {
+        id: "b1",
+        type: "branch",
+        paths: [
+          {
+            id: "p1",
+            label: "x",
+            color: "#000",
+            conditions: [],
+            command: { kind: "ref", ref: { sourceCellId: "s", field: "f" } },
+          },
+        ],
+      };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(false);
+    });
+
+    it("rejects a workbook branch condition with an extra key", () => {
+      const cell = {
+        id: "b1",
+        type: "branch",
+        paths: [
+          {
+            id: "p1",
+            label: "x",
+            color: "#000",
+            conditions: [
+              {
+                id: "c1",
+                sourceCellId: "s",
+                field: "f",
+                operator: "eq",
+                value: "1",
+                ref: { sourceCellId: "s", field: "f" },
+              },
+            ],
+          },
+        ],
+      };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(false);
+    });
+
+    it("still accepts a canonical branch cell", () => {
+      const cell = {
+        id: "b1",
+        type: "branch",
+        paths: [
+          {
+            id: "p1",
+            label: "x",
+            color: "#000",
+            conditions: [{ id: "c1", sourceCellId: "s", field: "f", operator: "eq", value: "1" }],
+          },
+        ],
+      };
+      expect(zWorkbookCell.safeParse(cell).success).toBe(true);
+    });
+  });
 });

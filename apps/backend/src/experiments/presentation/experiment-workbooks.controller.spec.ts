@@ -78,6 +78,42 @@ describe("ExperimentWorkbooksController", () => {
       await testApp.post(path).withAuth(testUserId).send({}).expect(StatusCodes.BAD_REQUEST);
     });
 
+    it("returns sanitized structural {issues} over HTTP in production", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      const issues = [
+        {
+          code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+          commandCellId: "c1",
+          sourceCellId: "gone",
+          field: "toDevice",
+          index: 1,
+        },
+      ];
+      vi.spyOn(attachUseCase, "execute").mockResolvedValue(
+        failure(
+          AppError.badRequest(
+            "Workbook has structural validation errors",
+            "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+            { issues },
+          ),
+        ),
+      );
+
+      const expId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ workbookId: faker.string.uuid() })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      const serialized = JSON.stringify(response.body);
+      expect(serialized).toContain("WORKBOOK_STRUCTURAL_VALIDATION_FAILED");
+      expect(serialized).toContain("DYNAMIC_COMMAND_SOURCE_MISSING");
+      expect(serialized).toContain("commandCellId");
+      vi.unstubAllEnvs();
+    });
+
     it("should return 401 without auth", async () => {
       const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });

@@ -214,6 +214,35 @@ describe("Experiment Schema", () => {
       expect(zExperimentFlowEdge.parse(edge)).toEqual(edge);
     });
 
+    it("rejects a flow node with a wrong-level sibling command/ref key", () => {
+      const node = {
+        id: "n1",
+        type: "question",
+        name: "Q",
+        content: { kind: "open_ended", text: "?", required: false },
+        command: { kind: "ref", ref: { sourceCellId: "s", field: "f" } },
+        isStart: true,
+      };
+      expect(zExperimentFlowNode.safeParse(node).success).toBe(false);
+    });
+
+    it("rejects a flow node with an extra position key", () => {
+      const node = {
+        id: "n1",
+        type: "question",
+        name: "Q",
+        content: { kind: "open_ended", text: "?", required: false },
+        position: { x: 1, y: 2, z: 3 },
+        isStart: true,
+      };
+      expect(zExperimentFlowNode.safeParse(node).success).toBe(false);
+    });
+
+    it("rejects a flow edge with an extra key", () => {
+      const edge = { id: "e1", source: "n1", target: "n2", command: { kind: "ref" } };
+      expect(zExperimentFlowEdge.safeParse(edge).success).toBe(false);
+    });
+
     it("zExperimentFlowGraph enforces exactly one start node", () => {
       const goodGraph = {
         nodes: [
@@ -279,7 +308,7 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentFlowGraph allows duplicate labels across node types", () => {
-      // Only question-node labels become column keys downstream — other types
+      // Only question-node labels become column keys downstream; other types
       // can share labels with each other or with a question without conflict.
       const graph = {
         nodes: [
@@ -357,6 +386,162 @@ describe("Experiment Schema", () => {
         expect(issue?.message.toLowerCase()).toContain("reserved");
       }
     });
+
+    const uuidA = "11111111-1111-1111-1111-111111111111";
+    const uuidB = "22222222-2222-2222-2222-222222222222";
+
+    it("accepts every canonical node type/content pairing", () => {
+      const graph = {
+        nodes: [
+          {
+            id: "proto",
+            type: "measurement",
+            name: "P",
+            content: { protocolId: uuidA },
+            isStart: true,
+          },
+          {
+            id: "cmd",
+            type: "measurement",
+            name: "C",
+            content: { command: { format: "string", content: "battery" } },
+          },
+          {
+            id: "ref",
+            type: "measurement",
+            name: "R",
+            content: { command: { kind: "ref", ref: { sourceCellId: "mac", field: "toDevice" } } },
+          },
+          { id: "mac", type: "analysis", name: "M", content: { macroId: uuidB } },
+          { id: "q", type: "question", name: "Q", content: { kind: "open_ended", text: "?" } },
+          { id: "i", type: "instruction", name: "I", content: { text: "do" } },
+          {
+            id: "b",
+            type: "branch",
+            name: "B",
+            content: { paths: [{ id: "p1", label: "x", color: "#000" }] },
+          },
+        ],
+        edges: [],
+      };
+      expect(zExperimentFlowGraph.safeParse(graph).success).toBe(true);
+    });
+
+    it("rejects a node whose content does not match its type", () => {
+      const graph = {
+        nodes: [
+          // measurement type but question content
+          {
+            id: "n1",
+            type: "measurement",
+            name: "Bad",
+            content: { kind: "yes_no", text: "ok?", required: false },
+            isStart: true,
+          },
+        ],
+        edges: [],
+      };
+      const result = zExperimentFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects an analysis node carrying a measurement protocol", () => {
+      const graph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "analysis",
+            name: "Bad",
+            content: { protocolId: uuidA },
+            isStart: true,
+          },
+        ],
+        edges: [],
+      };
+      expect(zExperimentFlowGraph.safeParse(graph).success).toBe(false);
+    });
+
+    it.each(["instruction", "analysis", "branch"] as const)(
+      "rejects a hidden foreign `command` key on a %s node (strict carrier)",
+      (type) => {
+        const base = {
+          instruction: { text: "do" },
+          analysis: { macroId: uuidB },
+          branch: { paths: [{ id: "p1", label: "x", color: "#000" }] },
+        }[type];
+        const graph = {
+          nodes: [
+            {
+              id: "n1",
+              type,
+              name: "Sneaky",
+              content: {
+                ...base,
+                command: { kind: "ref", ref: { sourceCellId: "s", field: "f" } },
+              },
+              isStart: true,
+            },
+          ],
+          edges: [],
+        };
+        expect(zExperimentFlowGraph.safeParse(graph).success).toBe(false);
+      },
+    );
+
+    it("rejects duplicate node ids", () => {
+      const node = (isStart: boolean) => ({
+        id: "dup",
+        type: "instruction" as const,
+        name: "I",
+        content: { text: "x" },
+        isStart,
+      });
+      const graph = { nodes: [node(true), node(false)], edges: [] };
+      const result = zExperimentFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.message.includes("Duplicate node id"))).toBe(true);
+      }
+    });
+
+    it("rejects duplicate edge ids", () => {
+      const graph = {
+        nodes: [
+          { id: "n1", type: "instruction", name: "A", content: { text: "a" }, isStart: true },
+          { id: "n2", type: "instruction", name: "B", content: { text: "b" } },
+        ],
+        edges: [
+          { id: "e1", source: "n1", target: "n2" },
+          { id: "e1", source: "n2", target: "n1" },
+        ],
+      };
+      const result = zExperimentFlowGraph.safeParse(graph);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.message.includes("Duplicate edge id"))).toBe(true);
+      }
+    });
+
+    it.each(["command", "ref", "payload", "unknown"])(
+      "rejects a graph-root %s key instead of stripping it",
+      (key) => {
+        const graph = {
+          nodes: [
+            {
+              id: "n1",
+              type: "instruction",
+              name: "Start",
+              content: { text: "Go" },
+              isStart: true,
+            },
+          ],
+          edges: [],
+          [key]: { sentinel: true },
+        };
+
+        expect(zExperimentFlowGraph.safeParse(graph).success).toBe(false);
+      },
+    );
   });
 
   describe("Create/Update bodies & filters", () => {

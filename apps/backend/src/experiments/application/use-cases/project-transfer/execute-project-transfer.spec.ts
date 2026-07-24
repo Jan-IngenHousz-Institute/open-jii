@@ -132,10 +132,11 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(workbook.value?.cells).toHaveLength(3);
     });
 
-    it("should handle flow creation failure gracefully (non-fatal)", async () => {
-      // CreateFlowUseCase delegates to FlowRepository internally
-      vi.spyOn(FlowRepository.prototype, "create").mockResolvedValue(
-        failure(AppError.internal("Flow creation failed")),
+    it("should handle flow bind failure gracefully (non-fatal)", async () => {
+      // The flow is now materialized + bound atomically via FlowRepository.upsert
+      // inside the binding transaction; a failure there is non-fatal (flowId null).
+      vi.spyOn(FlowRepository.prototype, "upsert").mockResolvedValue(
+        failure(AppError.internal("Flow upsert failed")),
       );
 
       const payload = buildPayload();

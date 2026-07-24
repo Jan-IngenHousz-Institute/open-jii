@@ -4,7 +4,22 @@ import type {
   zExperimentFlowEdge,
   zExperimentFlowNode,
 } from "../domains/experiment/experiment.schema";
+import { isReferencedCommandPayload } from "../domains/workbook/command-source.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+
+/**
+ * Deterministic, never-empty flow-node label for a dynamic command node. Uses
+ * the author name when present, otherwise a label derived from the referenced
+ * field. Never dereferences absent static content. Shared with the reverse
+ * converter so the round-trip can tell a derived label from an authored name.
+ */
+export function dynamicCommandNodeLabel(opts: { name?: string; field: string }): string {
+  const authored = opts.name?.trim();
+  if (authored) return authored.slice(0, 64);
+  const field = opts.field.trim();
+  const derived = field ? `Dynamic command · ${field}` : "Dynamic command";
+  return derived.slice(0, 64);
+}
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;
 type FlowEdge = z.infer<typeof zExperimentFlowEdge>;
@@ -15,8 +30,19 @@ export interface DerivedFlowGraph {
   edges: FlowEdge[];
 }
 
+// Length-prefixed, kind-tagged edge id: `<byteLen>:<value>` per segment so
+// distinct tuples never coincide. Plain delimiter concatenation collided for
+// valid ids (ordinary a->"b-c" and goto a/"b"->c both became "e-a-b-c"), which
+// now trips the duplicate-edge-id check. The id is opaque (old ids stay valid).
+function encodeEdgeId(kind: "seq" | "goto", segments: string[]): string {
+  return [`e2`, kind, ...segments.map((s) => `${s.length}:${s}`)].join("|");
+}
+
 function makeEdge(source: string, target: string, label?: string, sourceHandle?: string): FlowEdge {
-  const id = sourceHandle ? `e-${source}-${sourceHandle}-${target}` : `e-${source}-${target}`;
+  const id =
+    sourceHandle != null
+      ? encodeEdgeId("goto", [source, sourceHandle, target])
+      : encodeEdgeId("seq", [source, target]);
   return {
     id,
     source,
@@ -48,8 +74,19 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       );
 
     case "command": {
-      // Inline command rides the existing measurement node so old apps drop it
-      // cleanly (unknown content) rather than choking on a new node type.
+      // Command rides the existing measurement node so old apps drop it cleanly
+      // (unknown content) rather than choking on a new node type. Branch on the
+      // source variant before touching static `format`/`content`.
+      if (isReferencedCommandPayload(cell.payload)) {
+        const { sourceCellId, field } = cell.payload.ref;
+        return makeNode(
+          cell.id,
+          "measurement",
+          dynamicCommandNodeLabel({ name: cell.payload.name, field }),
+          { command: { kind: "ref", ref: { sourceCellId, field } } },
+          isStart,
+        );
+      }
       const source = cell.payload.name?.trim() ? cell.payload.name : cell.payload.content;
       const label = source
         .replace(/[\r\n]+/g, " ")
@@ -88,12 +125,21 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       );
 
     case "branch":
+      // Carry the full path structure (conditions + goto) so a branch survives
+      // cells -> flow -> cells losslessly. Goto is also emitted as an edge
+      // (below) for the canvas; both representations agree.
       return makeNode(
         cell.id,
         "branch",
         "Branch",
         {
-          paths: cell.paths.map((p) => ({ id: p.id, label: p.label, color: p.color })),
+          paths: cell.paths.map((p) => ({
+            id: p.id,
+            label: p.label,
+            color: p.color,
+            conditions: p.conditions,
+            ...(p.gotoCellId ? { gotoCellId: p.gotoCellId } : {}),
+          })),
           defaultPathId: cell.defaultPathId,
         },
         isStart,

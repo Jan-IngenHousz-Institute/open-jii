@@ -143,4 +143,41 @@ describe("validateWorkbook", () => {
       }),
     );
   });
+
+  it("aggregates dynamic command reference issues as blocking errors", () => {
+    const cells: WorkbookCell[] = [
+      macroCell("m1", "mac-1"),
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { kind: "ref", ref: { sourceCellId: "gone", field: "toDevice" } },
+      },
+    ];
+    const result = validateWorkbook(cells, ctx({}, { "mac-1": {} }));
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+        cellId: "c1",
+        ref: "gone",
+        detail: "toDevice",
+      }),
+    );
+  });
+
+  it("does not flag a well-formed dynamic command reference", () => {
+    const cells: WorkbookCell[] = [
+      macroCell("m1", "mac-1"),
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } },
+      },
+    ];
+    const result = validateWorkbook(cells, ctx({}, { "mac-1": {} }));
+    expect(result.issues.some((i) => i.code.startsWith("DYNAMIC_COMMAND"))).toBe(false);
+  });
 });

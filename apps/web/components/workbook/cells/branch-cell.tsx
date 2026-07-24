@@ -3,6 +3,7 @@
 import { ArrowRight, ChevronRight, GitBranch, Plus, Route, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
+import { isReferencedCommandPayload } from "@repo/api/domains/workbook/command-source.schema";
 import type {
   BranchCell as BranchCellType,
   BranchCondition,
@@ -128,7 +129,11 @@ export function BranchCellComponent({
         case "protocol":
           return `Protocol (${c.payload.name ?? c.payload.protocolId.slice(0, 8)})`;
         case "command": {
-          const source = c.payload.name?.trim() ? c.payload.name : c.payload.content.slice(0, 12);
+          const source = c.payload.name?.trim()
+            ? c.payload.name
+            : isReferencedCommandPayload(c.payload)
+              ? c.payload.ref.field
+              : c.payload.content.slice(0, 12);
           return `Command (${source.length > 0 ? source : "Empty"})`;
         }
         case "macro":

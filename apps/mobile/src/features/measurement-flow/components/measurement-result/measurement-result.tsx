@@ -59,7 +59,7 @@ export function MeasurementResult({
     queryFn: () => applyMacro(rawMeasurement, macro, ctx ?? {}),
   });
 
-  // Surface the computed outputs so a flow can persist them (cellOutputs) for
+  // Surface the computed outputs so a flow can persist them for
   // downstream branches/macros. No-op outside a flow (onProcessed unset).
   useEffect(() => {
     if (processedMeasurement && onProcessed) onProcessed(processedMeasurement);

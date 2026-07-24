@@ -1,7 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
-
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
@@ -10,7 +8,8 @@ import { WorkbookVersionRepository } from "../../../../workbooks/core/repositori
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
+import { FlowBindingRepository } from "../../../core/repositories/flow-binding.repository";
+import { materializeFlowGraph } from "../materialize-flow-graph";
 
 export interface AttachWorkbookResult {
   workbookId: string;
@@ -28,7 +27,7 @@ export class AttachWorkbookUseCase {
     private readonly workbookVersionRepository: WorkbookVersionRepository,
     private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
     private readonly publishVersionUseCase: PublishVersionUseCase,
-    private readonly flowRepository: FlowRepository,
+    private readonly flowBindingRepository: FlowBindingRepository,
   ) {}
 
   async execute(
@@ -82,12 +81,19 @@ export class AttachWorkbookUseCase {
         return updateResult;
       }
 
-      // Materialise a flow row from the version's cells; mobile still reads from `flows`.
-      const flowGraph = cellsToFlowGraph(version.cells);
-      const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
-      if (flowResult.isFailure()) {
-        return flowResult;
-      }
+      // Materialise + strictly validate before any mutation, then re-point
+      // and upsert/delete the flow atomically (rolls back together; rejects a
+      // concurrent workbook change). The published version may end unreferenced.
+      const materialized = materializeFlowGraph(version.cells);
+      if (materialized.isFailure()) return materialized;
+
+      const bindResult = await this.flowBindingRepository.bind({
+        experimentId,
+        expectedWorkbookId: experiment.workbookId ?? null,
+        pointer: { workbookId, workbookVersionId: version.id },
+        materialization: materialized.value,
+      });
+      if (bindResult.isFailure()) return bindResult;
 
       this.logger.log({
         msg: "Workbook attached to experiment",

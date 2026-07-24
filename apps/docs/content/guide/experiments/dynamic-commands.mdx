@@ -1,0 +1,195 @@
+---
+title: "Dynamic device commands"
+description: "Send a device command whose value comes from an earlier workbook cell at run time."
+---
+
+{/* verified: code@e76bf12ab (dynamic-command feature branch) 2026-07-24 */}
+
+A **command cell** normally holds a fixed instruction that is sent to the
+connected device, such as `battery` or a small JSON payload. A **dynamic**
+command cell holds a *reference* instead: at run time it reads one field from an
+earlier cell's output and sends that value to the device. Nothing static is
+stored alongside the reference, so what the device receives always reflects the
+current run.
+
+The classic use is device calibration: a protocol measures, a Python macro
+computes a device-specific setting from the measurement, and a dynamic command
+sends that computed string back to the instrument.
+
+<Callout type="info">
+  Dynamic commands are rolling out gradually. If you do not see the
+  Static/Dynamic switch on your command cells yet, the authoring controls are
+  not enabled for your account. Existing static command cells are unaffected.
+</Callout>
+
+## Eligible sources
+
+A dynamic command can reference any of these cell types, as long as the source
+sits **before** the command in the workbook:
+
+- **Protocol** — the measurement result for each device.
+- **Macro** — the analysis output; per-device when the macro ran per device.
+- **Command** — an earlier command's device reply, which allows chaining.
+- **Question** — the participant's answer, exposed as the single field `answer`.
+
+Order is what you see in the workbook, not what a branch happens to execute
+first. A source placed after the command never becomes eligible, even if a
+branch jump runs it earlier, so the dependency stays visible when reading the
+workbook top to bottom.
+
+## Author a dynamic command
+
+1. Add a **Command** cell where the device instruction must run.
+2. Switch the cell from **Static** to **Dynamic**. The static content is
+   replaced by the reference; switching back clears the reference again.
+3. Pick the source cell. The picker lists only eligible earlier cells.
+4. Pick or type the **field**: the name of one top-level key in the source's
+   output, for example `toDevice`. If the source has already produced output,
+   the editor suggests its field names; before that, type the name the source
+   will produce. Selecting a question fills the field `answer` automatically.
+
+![The earlier-source picker of a dynamic command cell listing an eligible question, macro, and command cell](/img/guide/web/dynamic-command-source-picker.png)
+
+The referenced value must resolve to a non-empty text string. Structured
+JSON/YAML values, nested paths, and templates are not supported in this first
+version — compute the exact string in a macro instead.
+
+![A configured dynamic command cell referencing a macro's toDevice field](/img/guide/web/dynamic-command-configured.png)
+
+After a run, the cell shows the string that was resolved for that run, per
+device when values differ, and the device reply becomes this cell's own output
+so a later dynamic command can reference it.
+
+## One value per device
+
+Protocol, command, and per-device macro outputs are **device-scoped**: when
+several devices are connected, each device receives only the value computed
+from its *own* measurement. A value is never borrowed from another device, and
+a device whose source failed or produced nothing is skipped with a clear error
+while the remaining devices continue.
+
+Question answers are intentionally **shared**: every target device receives the
+same answer string.
+
+## Fix a broken reference
+
+A draft never loses a broken reference — if you delete, move, or replace the
+source cell, the command cell keeps the reference and shows what is wrong so
+you can repair it:
+
+![A dynamic command cell whose deleted source is preserved with repair guidance below the picker](/img/guide/web/dynamic-command-repair-guidance.png)
+
+Publishing (and attaching or upgrading an experiment workbook) is blocked while
+a dynamic command:
+
+- has no source selected, or its source cell was deleted;
+- references a cell type that produces no output (markdown, branch);
+- references itself or a cell that sits at or below the command;
+- has an empty field name.
+
+The publish or attach dialog lists each blocked command cell with the same
+guidance, so you can open the workbook and repair it before trying again.
+Whether the field exists and holds a non-empty string is checked at run time,
+because it depends on that run's data.
+
+## Worked example: decode the signal with the command that produced it
+
+A MultispeQ detector trace is just a flat list of numbers. It only becomes a
+time series when you know the measurement recipe that produced it — how many
+pulses each phase fired, how far apart, on which detector channels, under which
+LEDs. That is exactly what dynamic commands preserve: the recipe travels as
+workbook data instead of being hardcoded, so a later macro can read **both**
+the signal and the recipe and decode them together.
+
+In this workbook, an earlier Python cell named *Compute protocol* computed the
+measurement recipe and published it (including the `toDevice` string that a
+dynamic command cell then dispatched to this device). A macro placed after the
+measurement decodes the reply:
+
+```python
+# json   -> this device's measurement (the raw detector signal)
+# ctx    -> read-only outputs of earlier cells, keyed by canonical name
+# output -> what this macro publishes for later cells
+
+# 1. The raw detector trace: one flat list of ADC readings.
+data_raw = json["sample_raw"][0]["data_raw"]
+
+# 2. The recipe that produced it, from the same cell the dynamic command
+#    referenced. ctx["compute_protocol"]["toDevice"] is the exact string that
+#    was dispatched to THIS device. With a static command you would have to
+#    hardcode these numbers here — which is what dynamic mode removes.
+recipe = ctx["compute_protocol"]
+pulses = recipe["pulses"]            # pulses per phase, e.g. [10, 100, 10]
+distance_us = recipe["pulse_distance"]  # spacing per phase, in microseconds
+detectors = recipe["detectors"]      # detector channels per phase
+lights = recipe["pulsed_lights"]     # pulsed LED per phase and channel
+
+# 3. Decode: a phase fires one pulse per detector channel, each spaced by
+#    pulse_distance, so a phase covers pulses x channels x distance in time.
+timeseries = []
+cursor = 0
+t_us = 0
+for phase in range(len(pulses)):
+    channels = detectors[phase]
+    for pulse in range(pulses[phase]):
+        for k in range(len(channels)):
+            timeseries.append({
+                "t_ms": round(t_us / 1000, 3),
+                "led": lights[phase][k],
+                "detector": channels[k],
+                "value": data_raw[cursor],
+            })
+            cursor += 1
+            t_us += distance_us[phase]
+
+output["timeseries"] = timeseries
+output["points"] = len(timeseries)
+```
+
+This is a deliberately simplified illustration of the timing model; the
+platform's workbook time-series visualization implements the complete decode
+(sub-protocol sets, repeats, variable resolution, pre-illumination and actinic
+phases). The point is the shape: the decode is impossible from `data_raw`
+alone — the recipe must come with it. Because the recipe is ordinary cell
+output, the identical logic runs unchanged in the web runner, on mobile, and in
+Databricks post-processing: the same provenance travels with the measurement
+everywhere.
+
+### Same data in Databricks
+
+When a measurement is uploaded from the field, it does not travel alone. The
+record carries its provenance: which cell produced it and what kind of producer
+it was, the command string that was actually dispatched and the reference it
+was resolved from, the execution cycle it belongs to, the workbook run and
+version, and the upstream `ctx` values the macro saw. A Databricks/Spark job
+can therefore group many uploaded measurements and run the same decode offline,
+joining each detector trace to the exact recipe that produced it — no
+guessing which protocol a row belongs to.
+
+<Callout type="info">
+  The provenance fields are landing in the data pipeline alongside this
+  feature; confirm exact column names against the shipped pipeline tables
+  before writing queries against them.
+</Callout>
+
+## What happens on mobile
+
+Measurement flows execute dynamic commands the same way in the mobile app. The
+value is resolved from the active measurement cycle just before dispatch, and
+if it cannot be resolved safely the app shows a typed error instead of sending
+anything to the device. Common cases:
+
+- **The source has not run in this cycle** (for example, a branch skipped it):
+  the app asks you to run the named source first.
+- **A device reconnected under a new identity**: its previous result no longer
+  applies; rerun the source for that device.
+- **The workbook version changed mid-cycle**: the cycle restarts so a value
+  from the old version can never be sent.
+- **The field is missing, empty, or not text**: the app names the source and
+  field so the workbook author can fix the macro or the reference.
+
+An in-progress cycle survives closing or restarting the app; resuming offline
+keeps earlier results usable for dynamic commands within the same cycle.
+
+For the surrounding workbook workflow — attaching, versioning, and upgrading —
+see [Working with workbooks](/guide/experiments/workbooks).

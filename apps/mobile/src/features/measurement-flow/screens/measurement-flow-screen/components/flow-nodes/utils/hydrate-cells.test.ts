@@ -43,8 +43,11 @@ const mCell = (id: string): MacroCell => ({
 const ctx = (over: Partial<HydrationContext> = {}): HydrationContext => ({
   iterationCount: 0,
   getAnswer: () => undefined,
+  outputsByCellId: {},
   ...over,
 });
+
+const provenance = { workbookVersionId: "version-1", executionEpoch: "epoch-1" };
 
 describe("hydrateCells", () => {
   it("fills question answers from the answers store", () => {
@@ -58,24 +61,32 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "q1", "answer")).toBeUndefined();
   });
 
-  it("attaches the latest measurement as an output cell keyed to its producer", () => {
+  it("hydrates a shared runtime output keyed to its producer", () => {
     const hydrated = hydrateCells(
-      [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, producerCellId: "p1" }),
+      [mCell("m1")],
+      ctx({
+        outputsByCellId: {
+          m1: { scope: "shared", provenance, data: { fvfm: 0.72 } },
+        },
+      }),
     );
-    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
+    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
   });
 
-  it("hydrates and scopes every device's live measurement", () => {
+  it("hydrates every exact device result without display metadata", () => {
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
       ctx({
-        scanResult: { sample: [{ phi2: 0.8 }] },
-        scanResults: [
-          { device: { id: "usb-a", name: "A" }, result: { sample: [{ phi2: 0.8 }] } },
-          { device: { id: "usb-b", name: "B" }, result: { sample: [{ phi2: 0.6 }] } },
-        ],
-        producerCellId: "p1",
+        outputsByCellId: {
+          p1: {
+            scope: "device",
+            provenance,
+            deviceResults: [
+              { deviceId: "usb-a", deviceLabel: "A", data: { phi2: 0.8 } },
+              { deviceId: "usb-b", deviceLabel: "B", data: { phi2: 0.6 } },
+            ],
+          },
+        },
       }),
     );
 
@@ -83,39 +94,26 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "p1", "phi2", { deviceId: "usb-b" })).toBe(0.6);
   });
 
-  it("wraps a scalar command result under `response` (mirrors web) so a branch resolves it", () => {
-    const hydrated = hydrateCells([cCell("c1")], ctx({ scanResult: "87", producerCellId: "c1" }));
+  it("resolves a normalized command response from the registry", () => {
+    const hydrated = hydrateCells(
+      [cCell("c1")],
+      ctx({
+        outputsByCellId: {
+          c1: {
+            scope: "device",
+            provenance,
+            deviceResults: [{ deviceId: "usb-a", data: { response: "87" } }],
+          },
+        },
+      }),
+    );
     expect(resolveConditionValue(hydrated, "c1", "response")).toBe("87");
   });
 
-  it("passes an object command result through so its fields resolve directly", () => {
-    const hydrated = hydrateCells(
-      [cCell("c1")],
-      ctx({ scanResult: { voltage: 3.9 }, producerCellId: "c1" }),
-    );
-    expect(resolveConditionValue(hydrated, "c1", "voltage")).toBe(3.9);
-  });
-
-  it("wraps a non-array sample", () => {
-    const hydrated = hydrateCells(
-      [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: { phi2: 0.5 } }, producerCellId: "p1" }),
-    );
-    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.5);
-  });
-
-  it("synthesizes no output when there is no scan result", () => {
-    const hydrated = hydrateCells([pCell("p1", "proto-1")], ctx({ producerCellId: "p1" }));
+  it("synthesizes no output when the runtime registry is empty", () => {
+    const hydrated = hydrateCells([pCell("p1", "proto-1")], ctx());
     expect(hydrated.some((c) => c.type === "output")).toBe(false);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBeUndefined();
-  });
-
-  it("synthesizes no output when no cell matches the producer id", () => {
-    const hydrated = hydrateCells(
-      [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, producerCellId: "p-OTHER" }),
-    );
-    expect(hydrated.some((c) => c.type === "output")).toBe(false);
   });
 
   it("replaces a stale output for the same producer instead of duplicating it", () => {
@@ -129,7 +127,11 @@ describe("hydrateCells", () => {
     const cells: WorkbookCell[] = [pCell("p1", "proto-1"), stale];
     const hydrated = hydrateCells(
       cells,
-      ctx({ scanResult: { sample: [{ phi2: 0.9 }] }, producerCellId: "p1" }),
+      ctx({
+        outputsByCellId: {
+          p1: { scope: "shared", provenance, data: { phi2: 0.9 } },
+        },
+      }),
     );
     expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);
@@ -141,34 +143,17 @@ describe("hydrateCells", () => {
     expect(cells[0].answer).toBeUndefined();
   });
 
-  it("synthesizes output cells from cellOutputs (macro results)", () => {
-    const hydrated = hydrateCells([mCell("m1")], ctx({ cellOutputs: { m1: { fvfm: 0.72 } } }));
-    expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
-  });
-
-  it("synthesizes both a macro output and the latest scan", () => {
+  it("synthesizes outputs for every retained producer", () => {
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1"), mCell("m1")],
       ctx({
-        scanResult: { sample: [{ phi2: 0.8 }] },
-        producerCellId: "p1",
-        cellOutputs: { m1: { fvfm: 0.72 } },
+        outputsByCellId: {
+          p1: { scope: "shared", provenance, data: { phi2: 0.8 } },
+          m1: { scope: "shared", provenance, data: { fvfm: 0.72 } },
+        },
       }),
     );
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
     expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
-  });
-
-  it("prefers the live scan over a stored cellOutputs entry for the same producer", () => {
-    const hydrated = hydrateCells(
-      [pCell("p1", "proto-1")],
-      ctx({
-        scanResult: { sample: [{ phi2: 0.9 }] },
-        producerCellId: "p1",
-        cellOutputs: { p1: { phi2: 0.1 } },
-      }),
-    );
-    expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
-    expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);
   });
 });

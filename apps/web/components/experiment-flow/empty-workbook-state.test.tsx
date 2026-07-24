@@ -1,5 +1,6 @@
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
+import { structuralIssue, structuralValidationErrorBody } from "@/test/orpc-error";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -84,6 +85,40 @@ describe("EmptyWorkbookState", () => {
         variant: "destructive",
       }),
     );
+  });
+
+  it("shows repairable structural issues inline (keyed by command) with no leak, not a toast", async () => {
+    server.mount(contract.experiments.attachWorkbook, {
+      status: 400,
+      body: structuralValidationErrorBody(
+        [structuralIssue({ commandCellId: "cmd-x", secretLeak: "TOP-SECRET" })],
+        { secretTop: "TOP-SECRET" },
+      ),
+    });
+    const user = userEvent.setup();
+    render(<EmptyWorkbookState experimentId="exp-1" experimentName="My Experiment" hasAccess />);
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByText("Workbook One"));
+    await user.click(screen.getByRole("button", { name: /flow\.attach/ }));
+
+    const issues = await screen.findByTestId("structural-issues");
+    // The async-inserted block is an atomic live alert for AT.
+    expect(issues).toHaveAttribute("role", "alert");
+    expect(issues).toHaveAttribute("aria-atomic", "true");
+    expect(screen.getByRole("alert")).toBe(issues);
+    expect(issues).toHaveTextContent("cmd-x");
+    expect(issues).toHaveTextContent(/cells\.commandDynamic\.issue\.sourceMissing/);
+    // A link to open the offending workbook for repair.
+    expect(
+      screen.getByRole("link", { name: "flow.structuralAttach.openWorkbook" }),
+    ).toHaveAttribute("href", "/en-US/platform/workbooks/wb-1");
+    // No sentinel leaks, and the generic failure toast is not used.
+    expect(screen.queryByText(/TOP-SECRET/)).not.toBeInTheDocument();
+    expect(toast).not.toHaveBeenCalledWith({
+      description: "flow.attachFailed",
+      variant: "destructive",
+    });
   });
 
   it("creates a new workbook and attaches it", async () => {

@@ -80,6 +80,11 @@ def clean_data():
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))
+        .withColumn("producer_cell_id", F.col("producer_cell_id"))
+        .withColumn("producer_kind", F.col("producer_kind"))
+        .withColumn("dispatched_command", F.col("dispatched_command"))
+        .withColumn("command_source", F.col("command_source"))
+        .withColumn("execution_epoch", F.col("execution_epoch"))
         # GPS fix at measurement time; null on older payloads / no permission.
         .withColumn("latitude", F.col("parsed_data.latitude"))
         .withColumn("longitude", F.col("parsed_data.longitude"))
@@ -206,6 +211,11 @@ def clean_data():
         "workbook_run_id",
         "workbook_version_id",
         "macro_context",
+        "producer_cell_id",
+        "producer_kind",
+        "dispatched_command",
+        "command_source",
+        "execution_epoch",
         "latitude",
         "longitude",
         "timestamp",
@@ -258,6 +268,11 @@ def clean_data():
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
         .withColumn("workbook_version_id", F.lit(None).cast("string"))
         .withColumn("macro_context", F.lit(None).cast("string"))
+        .withColumn("producer_cell_id", F.lit(None).cast("string"))
+        .withColumn("producer_kind", F.lit(None).cast("string"))
+        .withColumn("dispatched_command", F.lit(None).cast("string"))
+        .withColumn("command_source", F.lit(None).cast("string"))
+        .withColumn("execution_epoch", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
@@ -280,6 +295,11 @@ def clean_data():
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
+            "producer_cell_id",
+            "producer_kind",
+            "dispatched_command",
+            "command_source",
+            "execution_epoch",
             "latitude",
             "longitude",
             "timestamp",

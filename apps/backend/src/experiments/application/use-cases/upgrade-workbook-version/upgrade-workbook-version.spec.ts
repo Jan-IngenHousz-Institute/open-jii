@@ -1,6 +1,7 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "./upgrade-workbook-version";
@@ -45,6 +46,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
@@ -67,6 +69,78 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     assertSuccess(result);
     expect(result.value.version).toBe(2);
     expect(result.value.workbookId).toBe(workbookId);
+  });
+
+  it("atomically deletes the old flow when upgrading to an empty (no-node) workbook", async () => {
+    // Flow exists after attach (beforeEach workbook has a markdown cell).
+    const before = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(before);
+    expect(before.value).not.toBeNull();
+
+    await workbookRepo.update(workbookId, { cells: [] });
+    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    assertSuccess(result);
+
+    const after = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(after);
+    expect(after.value).toBeNull();
+  });
+
+  it("does not persist a flow when the upgraded cells materialize an invalid graph", async () => {
+    await workbookRepo.update(workbookId, {
+      cells: [
+        { id: "dup", type: "markdown", content: "a", isCollapsed: false },
+        { id: "dup", type: "markdown", content: "b", isCollapsed: false },
+      ],
+    });
+    const upsertSpy = vi.spyOn(flowRepo, "upsert");
+
+    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FLOW_MATERIALIZATION_FAILED");
+    expect(upsertSpy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("rolls back the version pin when the flow upsert fails", async () => {
+    await workbookRepo.update(workbookId, {
+      cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
+    });
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    const before = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(before);
+    const currentVersionId = before.value.experiment?.workbookVersionId;
+
+    vi.spyOn(flowRepo, "upsert").mockResolvedValue(failure(AppError.internal("flow boom")));
+
+    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    assertFailure(result);
+
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookVersionId).toBe(currentVersionId);
+  });
+
+  it("rolls back when the pointer update fails", async () => {
+    await workbookRepo.update(workbookId, {
+      cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
+    });
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    const before = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(before);
+    const currentVersionId = before.value.experiment?.workbookVersionId;
+
+    vi.spyOn(experimentRepo, "update").mockResolvedValue(
+      failure(AppError.internal("pointer boom")),
+    );
+
+    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    assertFailure(result);
+
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookVersionId).toBe(currentVersionId);
   });
 
   it("returns failure when experiment not found", async () => {

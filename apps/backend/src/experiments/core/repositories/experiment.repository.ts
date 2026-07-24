@@ -22,7 +22,7 @@ import {
   organizationMembers,
   teamMembers,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -304,9 +304,10 @@ export class ExperimentRepository {
   async update(
     id: string,
     updateExperimentDto: UpdateExperimentDto,
+    db: DbOrTx = this.database,
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(() =>
-      this.database
+      db
         .update(experiments)
         .set(updateExperimentDto)
         .where(eq(experiments.id, id))

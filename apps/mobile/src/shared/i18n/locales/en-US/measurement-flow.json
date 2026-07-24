@@ -10,6 +10,9 @@
       "analysis": "Check out the measurement data and accept or discard."
     }
   },
+  "resume": {
+    "invalidState": "This measurement could not be resumed safely. Please start it again."
+  },
   "endFlow": {
     "buttonTitle": "Finish",
     "alertTitle": "Finish measurement?",
@@ -128,6 +131,7 @@
   },
   "commandNode": {
     "heading": "Device command",
+    "dynamicSummary": "Dynamic command from field: {{field}}",
     "responseLabel": "Response",
     "run": "Run command",
     "running": "Running…",
@@ -135,6 +139,26 @@
     "toast": {
       "notConnected": "No device connected",
       "error": "Command failed"
+    },
+    "resolution": {
+      "COMMAND_CELL_MISSING": "This command is no longer part of the loaded workbook. Reload the measurement.",
+      "COMMAND_PROVENANCE_MISSING": "Restart this measurement before running the command.",
+      "STATIC_COMMAND_INVALID": "This saved command is invalid.",
+      "COMMAND_SOURCE_MISSING": "Run the referenced source step in this measurement, then try again.",
+      "COMMAND_SOURCE_INELIGIBLE": "The referenced source cannot provide a command value.",
+      "COMMAND_SOURCE_NOT_EARLIER": "The referenced source must appear before this command.",
+      "COMMAND_FIELD_EMPTY": "Choose a source field for this command.",
+      "COMMAND_OUTPUT_MISSING": "Run the referenced source step in this measurement, then try again.",
+      "COMMAND_OUTPUT_DUPLICATE": "The source has conflicting outputs. Restart this measurement.",
+      "COMMAND_OUTPUT_INVALID": "The source output is invalid. Rerun the source step.",
+      "COMMAND_SOURCE_STALE": "The source result is from an older measurement cycle. Rerun the source.",
+      "DEVICE_OUTPUT_MISSING": "Rerun the source step with this connected sensor.",
+      "DEVICE_OUTPUT_DUPLICATE": "This sensor has conflicting source results. Rerun the source.",
+      "SOURCE_DEVICE_FAILED": "The source step failed for this sensor. Rerun it first.",
+      "COMMAND_FIELD_MISSING": "The selected field is missing from the source result.",
+      "COMMAND_VALUE_NOT_STRING": "The selected field must contain text.",
+      "COMMAND_VALUE_EMPTY": "The selected field is empty. Rerun or correct the source.",
+      "COMMAND_TRANSPORT_FAILED": "The command could not be sent to this sensor. Reconnect and try again."
     }
   },
   "measurementNode": {

@@ -60,7 +60,7 @@ def raw_data():
         .withColumn("client_id", F.get_json_object(F.col("data").cast("string"), "$.client_id"))
         # Workbook execution metadata is also extracted top-level. Adding fields
         # to parsed_data would evolve the nested struct of this non-resettable
-        # bronze table. macro_context stays JSON because its keys are dynamic.
+        # bronze table. JSON-shaped values stay serialized strings.
         .withColumn(
             "workbook_version_id",
             F.get_json_object(F.col("data").cast("string"), "$.workbook_version_id"),
@@ -69,11 +69,36 @@ def raw_data():
             "macro_context",
             F.get_json_object(F.col("data").cast("string"), "$.macro_context"),
         )
+        .withColumn(
+            "producer_cell_id",
+            F.get_json_object(F.col("data").cast("string"), "$.producer_cell_id"),
+        )
+        .withColumn(
+            "producer_kind",
+            F.get_json_object(F.col("data").cast("string"), "$.producer_kind"),
+        )
+        .withColumn(
+            "dispatched_command",
+            F.get_json_object(F.col("data").cast("string"), "$.dispatched_command"),
+        )
+        .withColumn(
+            "command_source",
+            F.get_json_object(F.col("data").cast("string"), "$.command_source"),
+        )
+        .withColumn(
+            "execution_epoch",
+            F.get_json_object(F.col("data").cast("string"), "$.execution_epoch"),
+        )
         .select(
             "experiment_id",
             "client_id",
             "workbook_version_id",
             "macro_context",
+            "producer_cell_id",
+            "producer_kind",
+            "dispatched_command",
+            "command_source",
+            "execution_epoch",
             "parsed_data",
             "ingestion_timestamp",
             "ingest_date",

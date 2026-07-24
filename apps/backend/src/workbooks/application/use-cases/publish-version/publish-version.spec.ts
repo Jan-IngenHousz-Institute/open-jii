@@ -98,6 +98,90 @@ describe("PublishVersionUseCase", () => {
     vi.restoreAllMocks();
   });
 
+  const refCommandCells = (sourceCellId: string, field = "toDevice") => [
+    {
+      id: "m1",
+      type: "macro",
+      isCollapsed: false,
+      payload: { macroId: "22222222-2222-2222-2222-222222222222", language: "python" },
+    },
+    {
+      id: "c1",
+      type: "command",
+      isCollapsed: false,
+      payload: { kind: "ref", ref: { sourceCellId, field } },
+    },
+  ];
+
+  it("rejects publish when a dynamic command reference is structurally invalid", async () => {
+    // Source id "gone" does not exist -> DYNAMIC_COMMAND_SOURCE_MISSING.
+    const workbook = await testApp.createWorkbook({
+      name: "WBBadRef",
+      cells: refCommandCells("gone"),
+      createdBy: userId,
+    });
+    const createSpy = vi.spyOn(versionRepo, "create");
+
+    const result = await useCase.execute(workbook.id, userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(400);
+    expect(result.error.code).toBe("WORKBOOK_STRUCTURAL_VALIDATION_FAILED");
+    expect((result.error.details as { issues: unknown[] }).issues.length).toBeGreaterThan(0);
+    // Never reaches version creation.
+    expect(createSpy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("blocks a structurally valid dynamic workbook while the publish gate is off", async () => {
+    const workbook = await testApp.createWorkbook({
+      name: "WBGateOff",
+      cells: refCommandCells("m1"),
+      createdBy: userId,
+    });
+    const createSpy = vi.spyOn(versionRepo, "create");
+
+    const result = await useCase.execute(workbook.id, userId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("DYNAMIC_COMMAND_PUBLISH_DISABLED");
+    expect(createSpy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("publishes a dynamic workbook when the gate is enabled", async () => {
+    vi.stubEnv("DYNAMIC_COMMAND_PUBLISH_ENABLED", "true");
+    const workbook = await testApp.createWorkbook({
+      name: "WBGateOn",
+      cells: refCommandCells("m1"),
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+
+    assertSuccess(result);
+    expect(result.value.version).toBe(1);
+    vi.unstubAllEnvs();
+  });
+
+  it("publishes a static workbook regardless of the publish gate", async () => {
+    const workbook = await testApp.createWorkbook({
+      name: "WBStaticCmd",
+      cells: [
+        {
+          id: "c1",
+          type: "command",
+          isCollapsed: false,
+          payload: { format: "string", content: "battery" },
+        },
+      ],
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+    assertSuccess(result);
+  });
+
   it("snapshots the current cells of the workbook", async () => {
     const cells = [
       {

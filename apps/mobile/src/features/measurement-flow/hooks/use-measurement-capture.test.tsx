@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
     navigateToQuestionFromOverview: vi.fn(),
     devicePlan: undefined as { deviceId: string; targetCellId: string }[] | undefined,
     completeDevicePlan: vi.fn(),
+    recordDeviceProducerOutcomes: vi.fn(),
     flowNodes: [] as {
       id: string;
       name: string;
@@ -20,6 +21,10 @@ const mocks = vi.hoisted(() => {
       content: unknown;
       isStart: boolean;
     }[],
+    cells: [] as Record<string, unknown>[],
+    workbookVersionId: "version-1",
+    executionEpoch: "epoch-1",
+    getRuntimeCellOutput: vi.fn(),
   };
   const useMeasurementFlowStore = vi.fn(() => flowState);
   Object.assign(useMeasurementFlowStore, { getState: () => flowState });
@@ -36,7 +41,7 @@ const mocks = vi.hoisted(() => {
     logWarn: vi.fn(),
     logError: vi.fn(),
     toastError: vi.fn(),
-    resolveInlineCommand: vi.fn(),
+    resolveCommandPayload: vi.fn(),
     flowState,
     useMeasurementFlowStore,
     isScanning: false,
@@ -86,7 +91,7 @@ vi.mock("~/shared/observability/logger", () => ({
 }));
 vi.mock("sonner-native", () => ({ toast: { error: mocks.toastError } }));
 vi.mock("@repo/api/transforms/command-payload", () => ({
-  resolveInlineCommand: mocks.resolveInlineCommand,
+  resolveCommandPayload: mocks.resolveCommandPayload,
 }));
 
 const DEVICE_A: Device = { id: "usb-a", type: "usb", name: "Device A" };
@@ -108,13 +113,23 @@ describe("useMeasurementCapture", () => {
     mocks.refetchConnectedDevices.mockResolvedValue({ data: [DEVICE_A, DEVICE_B] });
     mocks.cancelAll.mockResolvedValue(undefined);
     mocks.playSound.mockResolvedValue(undefined);
-    mocks.resolveInlineCommand.mockImplementation((command: { content: string }) => {
-      if (command.content === "bad") throw new Error("invalid inline command");
-      return `resolved:${command.content}`;
-    });
+    mocks.resolveCommandPayload.mockImplementation(
+      ({ commandCell }: { commandCell: { id: string } }) => {
+        if (commandCell.id === "target-4") {
+          return {
+            ok: false,
+            error: { code: "STATIC_COMMAND_INVALID", commandCellId: commandCell.id },
+          };
+        }
+        return { ok: true, value: "resolved:status" };
+      },
+    );
     Object.assign(mocks.flowState, {
       devicePlan: undefined,
       flowNodes: [],
+      cells: [],
+      workbookVersionId: "version-1",
+      executionEpoch: "epoch-1",
     });
   });
 
@@ -133,8 +148,20 @@ describe("useMeasurementCapture", () => {
     expect(mocks.executeScanAll).toHaveBeenCalledWith(CONTENT.protocol, [DEVICE_A, DEVICE_B]);
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
-        { device: { id: "usb-a", name: "Device A" }, result: { value: 1 } },
-        { device: { id: "usb-b", name: "Device B" }, result: { value: 2 } },
+        {
+          device: { id: "usb-a", name: "Device A" },
+          result: { value: 1 },
+          producerCellId: "measurement-cell",
+          producerKind: "protocol",
+          executionEpoch: "epoch-1",
+        },
+        {
+          device: { id: "usb-b", name: "Device B" },
+          result: { value: 2 },
+          producerCellId: "measurement-cell",
+          producerKind: "protocol",
+          executionEpoch: "epoch-1",
+        },
       ],
       "measurement-cell",
     );
@@ -184,6 +211,20 @@ describe("useMeasurementCapture", () => {
         isStart: false,
       },
     ];
+    mocks.flowState.cells = [
+      {
+        id: "target-2",
+        type: "command",
+        isCollapsed: false,
+        payload: { format: "string", content: "status" },
+      },
+      {
+        id: "target-4",
+        type: "command",
+        isCollapsed: false,
+        payload: { format: "string", content: "bad" },
+      },
+    ];
     mocks.executeScanAssignments.mockImplementation((assignments, prefailed) =>
       Promise.resolve({
         successes: assignments.map(({ device }: { device: Device }, index: number) => ({
@@ -202,10 +243,18 @@ describe("useMeasurementCapture", () => {
       {
         device: DEVICE_A,
         command: [{ set: [{ label: "a" }] }],
+        producerCellId: "target-1",
+        producerKind: "protocol",
         protocolId: "proto-a",
         protocolName: "Protocol A",
       },
-      { device: DEVICE_B, command: "resolved:status", protocolName: "Command target" },
+      {
+        device: DEVICE_B,
+        command: "resolved:status",
+        producerCellId: "target-2",
+        producerKind: "command",
+        protocolName: "Command target",
+      },
     ]);
     expect(
       prefailed.map(({ device, error }: { device: Device; error: Error }) => [
@@ -214,7 +263,7 @@ describe("useMeasurementCapture", () => {
       ]),
     ).toEqual([
       ["usb-c", "Dispatch target is not part of this flow"],
-      ["usb-d", "invalid inline command"],
+      ["usb-d", "measurementFlow:commandNode.resolution.STATIC_COMMAND_INVALID"],
       ["usb-e", "Protocol code is unavailable for this dispatch target"],
     ]);
 
@@ -227,17 +276,207 @@ describe("useMeasurementCapture", () => {
           result: { value: 1 },
           protocolId: "proto-a",
           protocolName: "Protocol A",
+          producerCellId: "target-1",
+          producerKind: "protocol",
+          executionEpoch: "epoch-1",
         },
         {
           device: { id: "usb-b", name: "Device B" },
           result: { value: 2 },
           protocolId: undefined,
           protocolName: "Command target",
+          producerCellId: "target-2",
+          producerKind: "command",
+          dispatchedCommand: "resolved:status",
+          executionEpoch: "epoch-1",
         },
       ],
+      undefined,
+    );
+    expect(mocks.flowState.recordDeviceProducerOutcomes).toHaveBeenCalledWith(
       "target-1",
+      "protocol",
+      [{ device: { id: "usb-a", name: "Device A" }, data: { value: 1 } }],
+    );
+    expect(mocks.flowState.recordDeviceProducerOutcomes).toHaveBeenCalledWith(
+      "target-2",
+      "command",
+      [{ device: { id: "usb-b", name: "Device B" }, data: { value: 2 } }],
     );
     expect(mocks.flowState.completeDevicePlan).toHaveBeenCalledOnce();
+  });
+
+  it("pre-fails only the invalid branch device while its exact-device peer continues", async () => {
+    mocks.flowState.devicePlan = [
+      { deviceId: DEVICE_A.id, targetCellId: "dynamic-command" },
+      { deviceId: DEVICE_B.id, targetCellId: "dynamic-command" },
+    ];
+    mocks.flowState.flowNodes = [
+      {
+        id: "dynamic-command",
+        name: "Dynamic command",
+        type: "measurement",
+        content: {
+          command: { kind: "ref", ref: { sourceCellId: "macro-source", field: "toDevice" } },
+        },
+        isStart: false,
+      },
+    ];
+    mocks.flowState.cells = [
+      {
+        id: "macro-source",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "00000000-0000-0000-0000-000000000001", language: "python" },
+      },
+      {
+        id: "dynamic-command",
+        type: "command",
+        isCollapsed: false,
+        payload: {
+          kind: "ref",
+          ref: { sourceCellId: "macro-source", field: "toDevice" },
+        },
+      },
+    ];
+    mocks.resolveCommandPayload.mockImplementation(
+      ({ targetDeviceId }: { targetDeviceId: string }) =>
+        targetDeviceId === DEVICE_A.id
+          ? { ok: true, value: "command-for-a" }
+          : {
+              ok: false,
+              error: {
+                code: "DEVICE_OUTPUT_MISSING",
+                commandCellId: "dynamic-command",
+                sourceCellId: "macro-source",
+                targetDeviceId,
+              },
+            },
+    );
+    mocks.executeScanAssignments.mockImplementation((assignments, prefailed) =>
+      Promise.resolve({
+        successes: assignments.map(({ device }: { device: Device }) => ({
+          device,
+          result: { response: "ok" },
+          producerCellId: "dynamic-command",
+          producerKind: "command",
+        })),
+        failures: prefailed,
+      }),
+    );
+    const { result } = renderHook(() => useMeasurementCapture({}, "dynamic-command"));
+
+    await act(async () => result.current.startScan());
+
+    expect(mocks.resolveCommandPayload).toHaveBeenCalledTimes(2);
+    const [assignments, prefailed] = mocks.executeScanAssignments.mock.calls[0];
+    expect(assignments).toEqual([
+      {
+        device: DEVICE_A,
+        command: "command-for-a",
+        producerCellId: "dynamic-command",
+        producerKind: "command",
+        protocolName: "Dynamic command",
+        commandSource: { sourceCellId: "macro-source", field: "toDevice" },
+      },
+    ]);
+    expect(prefailed).toHaveLength(1);
+    expect(prefailed[0].device).toBe(DEVICE_B);
+    expect(prefailed[0].error).toMatchObject({
+      failure: { code: "DEVICE_OUTPUT_MISSING", targetDeviceId: DEVICE_B.id },
+    });
+    expect(result.current.commandDispatchPreviews).toEqual([
+      {
+        deviceId: DEVICE_A.id,
+        deviceName: DEVICE_A.name,
+        resolved: "command-for-a",
+      },
+      {
+        deviceId: DEVICE_B.id,
+        deviceName: DEVICE_B.name,
+        error: "measurementFlow:commandNode.resolution.DEVICE_OUTPUT_MISSING",
+      },
+    ]);
+    expect(mocks.flowState.recordDeviceProducerOutcomes).not.toHaveBeenCalled();
+
+    act(() => result.current.completeWithSuccesses());
+    expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
+      [
+        {
+          device: { id: DEVICE_A.id, name: DEVICE_A.name },
+          result: { response: "ok" },
+          protocolId: undefined,
+          protocolName: "Dynamic command",
+          producerCellId: "dynamic-command",
+          producerKind: "command",
+          dispatchedCommand: "command-for-a",
+          commandSource: { sourceCellId: "macro-source", field: "toDevice" },
+          executionEpoch: "epoch-1",
+        },
+      ],
+      undefined,
+    );
+  });
+
+  it("records an executed branch command transport failure under its exact producer", async () => {
+    mocks.devices = [DEVICE_A];
+    mocks.refetchConnectedDevices.mockResolvedValue({ data: [DEVICE_A] });
+    mocks.flowState.devicePlan = [{ deviceId: DEVICE_A.id, targetCellId: "dynamic-command" }];
+    mocks.flowState.flowNodes = [
+      {
+        id: "dynamic-command",
+        name: "Dynamic command",
+        type: "measurement",
+        content: {
+          command: { kind: "ref", ref: { sourceCellId: "macro-source", field: "toDevice" } },
+        },
+        isStart: false,
+      },
+    ];
+    mocks.flowState.cells = [
+      {
+        id: "macro-source",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "00000000-0000-0000-0000-000000000001", language: "python" },
+      },
+      {
+        id: "dynamic-command",
+        type: "command",
+        isCollapsed: false,
+        payload: {
+          kind: "ref",
+          ref: { sourceCellId: "macro-source", field: "toDevice" },
+        },
+      },
+    ];
+    mocks.resolveCommandPayload.mockReturnValue({ ok: true, value: "command-for-a" });
+    mocks.executeScanAssignments.mockResolvedValue({
+      successes: [],
+      failures: [
+        {
+          device: DEVICE_A,
+          error: new Error("raw-transport-secret"),
+          producerCellId: "dynamic-command",
+          producerKind: "command",
+          wasDispatched: true,
+        },
+      ],
+    });
+    const { result } = renderHook(() => useMeasurementCapture({}, "dynamic-command"));
+
+    await act(async () => result.current.startScan());
+
+    expect(mocks.flowState.recordDeviceProducerOutcomes).toHaveBeenCalledWith(
+      "dynamic-command",
+      "command",
+      [
+        {
+          device: { id: DEVICE_A.id, name: DEVICE_A.name },
+          error: "COMMAND_EXECUTION_FAILED",
+        },
+      ],
+    );
   });
 
   it("blocks immediately when no device is connected", async () => {

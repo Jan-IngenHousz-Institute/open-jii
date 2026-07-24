@@ -1,5 +1,6 @@
 import { createExperiment, createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
+import { structuralIssue, structuralValidationErrorBody } from "@/test/orpc-error";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -96,7 +97,7 @@ describe("LinkedWorkbookCard", () => {
   it("shows upgrade banner when a newer version is available", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);
-    await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("flow.upgradeBanner.newVersion")).toBeInTheDocument());
   });
 
   it("hides upgrade banner when pinned version is latest", async () => {
@@ -106,7 +107,7 @@ describe("LinkedWorkbookCard", () => {
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
-    expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
+    expect(screen.queryByText("flow.upgradeBanner.newVersion")).not.toBeInTheDocument();
   });
 
   // isUpgradable drift shows the banner even with no newer published version.
@@ -117,7 +118,7 @@ describe("LinkedWorkbookCard", () => {
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() =>
-      expect(screen.getByText(/Workbook has updates available/)).toBeInTheDocument(),
+      expect(screen.getByText("flow.upgradeBanner.updatesAvailable")).toBeInTheDocument(),
     );
   });
 
@@ -129,8 +130,8 @@ describe("LinkedWorkbookCard", () => {
 
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
-    expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Workbook has updates available/)).not.toBeInTheDocument();
+    expect(screen.queryByText("flow.upgradeBanner.newVersion")).not.toBeInTheDocument();
+    expect(screen.queryByText("flow.upgradeBanner.updatesAvailable")).not.toBeInTheDocument();
   });
 
   it("hides controls when hasAccess is false", async () => {
@@ -203,7 +204,7 @@ describe("LinkedWorkbookCard", () => {
     });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} />);
-    await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("flow.upgradeBanner.newVersion")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
 
@@ -217,12 +218,64 @@ describe("LinkedWorkbookCard", () => {
     expect(toast).not.toHaveBeenCalledWith({ description: "flow.versionUpgraded" });
   });
 
+  it("recovers from a structural upgrade rejection: reject -> close/reopen -> retry succeeds", async () => {
+    mountDefaults();
+    // First upgrade attempt is rejected with a structural validation envelope.
+    const spy = server.mount(contract.experiments.upgradeWorkbookVersion, {
+      status: 400,
+      body: structuralValidationErrorBody([
+        structuralIssue({ commandCellId: "cmd-ref", secretLeak: "TOP-SECRET" }),
+      ]),
+    });
+    const user = userEvent.setup();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("flow.upgradeBanner.newVersion")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
+    const confirmBtn = await screen.findByRole("button", { name: /flow\.confirmUpgrade/ });
+    await waitFor(() => expect(confirmBtn).not.toBeDisabled());
+    await user.click(confirmBtn);
+
+    // The rejection is shown as repairable server issues (keyed by command), no
+    // sentinel leaks, no generic toast, and Confirm is now blocked.
+    const issues = await screen.findByTestId("upgrade-server-issues");
+    expect(issues).toHaveTextContent("cmd-ref");
+    expect(screen.queryByText(/TOP-SECRET/)).not.toBeInTheDocument();
+    expect(toast).not.toHaveBeenCalledWith({
+      description: "flow.upgradeFailed",
+      variant: "destructive",
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeDisabled(),
+    );
+    expect(spy.callCount).toBe(1);
+
+    // Close the dialog, then the workbook is repaired and republished -> success.
+    await user.click(screen.getByRole("button", { name: "cancel" }));
+    const successSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
+      body: { workbookId: "wb-1", workbookVersionId: "ver-2", version: 2 },
+    });
+
+    // Reopening resets the retained rejection so Confirm can start a new mutation.
+    await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
+    const confirmAgain = await screen.findByRole("button", { name: /flow\.confirmUpgrade/ });
+    await waitFor(() => expect(confirmAgain).not.toBeDisabled());
+    await user.click(confirmAgain);
+
+    // The second mutation runs (was permanently blocked before the reset fix) and
+    // succeeds; the dialog closes and no stale server issues remain.
+    await waitFor(() => expect(successSpy.called).toBe(true));
+    await waitFor(() =>
+      expect(screen.queryByTestId("upgrade-server-issues")).not.toBeInTheDocument(),
+    );
+  });
+
   it("shows error toast when upgrade fails", async () => {
     mountDefaults();
     server.mount(contract.experiments.upgradeWorkbookVersion, { status: 500 });
     const user = userEvent.setup();
     render(<LinkedWorkbookCard {...defaultProps} />);
-    await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("flow.upgradeBanner.newVersion")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
 
@@ -381,6 +434,42 @@ describe("LinkedWorkbookCard", () => {
         variant: "destructive",
       }),
     );
+  });
+
+  it("shows inline repairable issues (not a toast) when a changed-workbook attach is structurally rejected", async () => {
+    mountDefaults();
+    server.mount(contract.experiments.attachWorkbook, {
+      status: 400,
+      body: structuralValidationErrorBody([
+        structuralIssue({ commandCellId: "cmd-z", secretLeak: "TOP-SECRET" }),
+      ]),
+    });
+    const user = userEvent.setup();
+    render(<LinkedWorkbookCard {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
+
+    await user.click(screen.getByText("flow.changeWorkbook"));
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByText("Other Workbook"));
+    await user.click(screen.getByRole("button", { name: /flow\.attach/ }));
+    const confirmBtn = screen
+      .getAllByText("flow.confirmChange")
+      .find((el) => el.closest("[role='alertdialog']"));
+    if (confirmBtn) await user.click(confirmBtn);
+
+    const issues = await screen.findByTestId("structural-issues");
+    expect(issues).toHaveAttribute("role", "alert");
+    expect(issues).toHaveTextContent("cmd-z");
+    expect(
+      screen.getByRole("link", { name: "flow.structuralAttach.openWorkbook" }),
+    ).toHaveAttribute("href", "/en-US/platform/workbooks/wb-2");
+    // The picker stays open for repair; no leak, no generic toast.
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.queryByText(/TOP-SECRET/)).not.toBeInTheDocument();
+    expect(toast).not.toHaveBeenCalledWith({
+      description: "flow.attachFailed",
+      variant: "destructive",
+    });
   });
 
   it("changes workbook via attach confirm dialog", async () => {

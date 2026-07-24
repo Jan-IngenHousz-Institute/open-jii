@@ -141,10 +141,7 @@ export function evaluateAndRoute(node: FlowNode): void {
   const hydrated: WorkbookCell[] = hydrateCells(flow.cells, {
     iterationCount: flow.iterationCount,
     getAnswer,
-    scanResult: flow.scanResult,
-    scanResults: flow.scanResults,
-    producerCellId: flow.producerCellId,
-    cellOutputs: flow.cellOutputs,
+    outputsByCellId: flow.outputsByCellId,
   });
 
   const branchCell = hydrated.find((c): c is BranchCell => c.id === node.id && c.type === "branch");

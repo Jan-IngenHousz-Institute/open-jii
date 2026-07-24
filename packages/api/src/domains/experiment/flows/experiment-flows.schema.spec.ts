@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { zExperimentFlow, zExperimentUpsertFlowBody } from "./experiment-flows.schema";
+import {
+  zExperimentFlow,
+  zExperimentFlowRouteInput,
+  zExperimentUpsertFlowBody,
+} from "./experiment-flows.schema";
 
 const graph = {
   nodes: [
@@ -45,4 +49,21 @@ describe("zExperimentUpsertFlowBody", () => {
   it("rejects a graph missing nodes", () => {
     expect(() => zExperimentUpsertFlowBody.parse({ edges: [] })).toThrow();
   });
+});
+
+describe("zExperimentFlowRouteInput", () => {
+  const id = "22222222-2222-2222-2222-222222222222";
+
+  it("accepts the composed route id and canonical graph fields", () => {
+    expect(zExperimentFlowRouteInput.parse({ id, ...graph })).toEqual({ id, ...graph });
+  });
+
+  it.each(["command", "ref", "payload", "unknown"])(
+    "rejects a route-root %s key instead of stripping it",
+    (key) => {
+      expect(
+        zExperimentFlowRouteInput.safeParse({ id, ...graph, [key]: { sentinel: true } }).success,
+      ).toBe(false);
+    },
+  );
 });

@@ -3,6 +3,8 @@ import { MeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 
+import type { CommandRef } from "@repo/api/domains/workbook/command-source.schema";
+
 export interface MacroInfo {
   id: string;
   name: string;
@@ -23,6 +25,11 @@ export interface BuildUploadPayloadArgs {
   workbookVersionId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
+  producerCellId?: string;
+  producerKind?: "protocol" | "command";
+  dispatchedCommand?: string | object;
+  commandSource?: CommandRef;
+  executionEpoch?: string;
   fallbackDeviceId?: string;
   /** GPS fix at measurement time; null/absent uploads without location. */
   location?: MeasurementLocation | null;
@@ -41,6 +48,11 @@ export function buildUploadPayload({
   workbookRunId,
   workbookVersionId,
   macroContext,
+  producerCellId,
+  producerKind,
+  dispatchedCommand,
+  commandSource,
+  executionEpoch,
   fallbackDeviceId,
   location,
 }: BuildUploadPayloadArgs) {
@@ -72,6 +84,18 @@ export function buildUploadPayload({
     ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
+    ...(producerCellId !== undefined ? { producer_cell_id: producerCellId } : {}),
+    ...(producerKind !== undefined ? { producer_kind: producerKind } : {}),
+    ...(dispatchedCommand !== undefined
+      ? {
+          dispatched_command:
+            typeof dispatchedCommand === "string"
+              ? dispatchedCommand
+              : JSON.stringify(dispatchedCommand),
+        }
+      : {}),
+    ...(commandSource !== undefined ? { command_source: JSON.stringify(commandSource) } : {}),
+    ...(executionEpoch !== undefined ? { execution_epoch: executionEpoch } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };
 

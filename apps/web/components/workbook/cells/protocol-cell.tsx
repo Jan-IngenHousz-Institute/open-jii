@@ -31,7 +31,10 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { CellTitle } from "../cell-title";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
-import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
+import {
+  useWorkbookEntitySaved,
+  useWorkbookExecutableEdit,
+} from "../workbook-entity-saved-context";
 
 interface ProtocolCellProps {
   cell: ProtocolCellType;
@@ -87,8 +90,20 @@ export function ProtocolCellComponent({
   const { mutateAsync: saveProtocol } = useProtocolUpdate(protocolId);
   const { mutateAsync: forkProtocol, isPending: isForking } = useProtocolCreate();
   const onEntitySaved = useWorkbookEntitySaved();
+  const onExecutableEdit = useWorkbookExecutableEdit();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
+
+  // Editing protocol code invalidates runtime freshness synchronously BEFORE the
+  // editor state changes, so an in-flight producer cannot commit against the old
+  // code. Runs ahead of debounced persistence.
+  const handleCodeChange = useCallback(
+    (code: string) => {
+      onExecutableEdit();
+      setLocalCode(code);
+    },
+    [onExecutableEdit],
+  );
 
   useEffect(() => {
     if (protocolCode != null && localCode == null) {
@@ -183,6 +198,9 @@ export function ProtocolCellComponent({
         family: src.family,
         forkedFrom: src.id,
       });
+      // A successful fork repoints this cell at different executable code;
+      // invalidate synchronously before the cell payload changes.
+      onExecutableEdit();
       onUpdate({
         ...cell,
         payload: { ...cell.payload, protocolId: res.id, name: res.name },
@@ -190,7 +208,7 @@ export function ProtocolCellComponent({
     } catch {
       // useProtocolCreate already surfaces the error toast.
     }
-  }, [protocolData, forkProtocol, onUpdate, cell]);
+  }, [protocolData, forkProtocol, onUpdate, cell, onExecutableEdit]);
 
   // Track the latest cell so the async rename merges into current state, not a
   // stale snapshot from when the save began. Sync in a layout effect (not during
@@ -359,7 +377,7 @@ export function ProtocolCellComponent({
       ) : localCode != null || protocolCode != null ? (
         <WorkbookCodeEditor
           value={localCode ?? protocolCode ?? ""}
-          onChange={isEditable ? setLocalCode : undefined}
+          onChange={isEditable ? handleCodeChange : undefined}
           language="json"
           minHeight={isEditable ? "120px" : "80px"}
           maxHeight={isEditable ? "500px" : "400px"}

@@ -1,5 +1,4 @@
 import { act, render, screen } from "@testing-library/react-native";
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -75,15 +74,30 @@ vi.mock("./analysis-summary-card", () => ({
     return null;
   },
 }));
-vi.mock("./analysis-macro-result", () => ({
-  AnalysisMacroResult: (props: {
-    ctx?: Record<string, unknown>;
-    onProcessed?: (outputs: Record<string, unknown>[]) => void;
-  }) => {
-    macroResultProps(props);
-    return null;
-  },
-}));
+vi.mock("./analysis-macro-result", async () => {
+  const { useEffect } = await import("react");
+  const { MacroMessages } = await import(
+    "~/features/measurement-flow/components/measurement-result/components/macro-messages"
+  );
+  return {
+    AnalysisMacroResult: (props: {
+      ctx?: Record<string, unknown>;
+      scanResult?: { __testMacroOutputs?: Record<string, unknown>[] };
+      onProcessed?: (outputs: Record<string, unknown>[]) => void;
+    }) => {
+      macroResultProps(props);
+      const outputs = props.scanResult?.__testMacroOutputs;
+      const { onProcessed } = props;
+      useEffect(() => {
+        if (outputs) onProcessed?.(outputs);
+      }, [onProcessed, outputs]);
+      const messages = outputs?.flatMap((output) =>
+        output.messages && typeof output.messages === "object" ? [output.messages] : [],
+      );
+      return messages && messages.length > 0 ? <MacroMessages messages={messages} /> : null;
+    },
+  };
+});
 vi.mock("./analysis-action-bar", () => ({
   AnalysisActionBar: (props: { onUpload: () => void }) => {
     actionBarProps(props);
@@ -102,6 +116,7 @@ vi.mock("~/shared/ui/measurement/measurement-questions-modal", () => ({
 }));
 
 const CONTENT = { params: {}, macroId: "macro-1" } as AnalysisContent;
+const storeSetMacroOutput = useMeasurementFlowStore.getState().setMacroOutput;
 
 const resolvedName = () => summaryProps.mock.calls.at(-1)?.[0]?.experimentName as string;
 
@@ -113,6 +128,11 @@ beforeEach(() => {
     currentFlowStep: 0,
     iterationCount: 0,
     scanResult: undefined,
+    scanResults: undefined,
+    workbookVersionId: "version-1",
+    executionEpoch: "epoch-1",
+    outputsByCellId: {},
+    setMacroOutput: storeSetMacroOutput,
   });
   useFlowAnswersStore.setState({
     answersHistory: [{}],
@@ -196,20 +216,90 @@ describe("AnalysisNode macro output", () => {
   });
 
   it("persists the primary output once and ignores empty or identical callbacks", () => {
-    useMeasurementFlowStore.setState({ cellOutputs: {} });
     render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     const onProcessed = macroResultProps.mock.calls.at(-1)?.[0]?.onProcessed as
       | ((outputs: Record<string, unknown>[]) => void)
       | undefined;
 
     act(() => onProcessed?.([]));
-    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toBeUndefined();
+    expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toBeUndefined();
 
     act(() => onProcessed?.([{ chlorophyll: 42 }]));
-    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
+    expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toEqual({
+      scope: "shared",
+      provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+      data: { chlorophyll: 42 },
+    });
 
     act(() => onProcessed?.([{ chlorophyll: 42 }]));
-    expect(useMeasurementFlowStore.getState().cellOutputs.m1).toEqual({ chlorophyll: 42 });
+    expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toMatchObject({
+      scope: "shared",
+      data: { chlorophyll: 42 },
+    });
+  });
+
+  it("retains the processed output for every device", () => {
+    useMeasurementFlowStore.setState({
+      scanResult: { sample: [{ phi2: 0.8 }] },
+      scanResults: [
+        { device: { id: "device-a", name: "A" }, result: { sample: [{ phi2: 0.8 }] } },
+        { device: { id: "device-b", name: "B" }, result: { sample: [{ phi2: 0.6 }] } },
+      ],
+    });
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+    const first = macroResultProps.mock.calls[0]?.[0]?.onProcessed as
+      | ((outputs: Record<string, unknown>[]) => void)
+      | undefined;
+    const second = macroResultProps.mock.calls[1]?.[0]?.onProcessed as
+      | ((outputs: Record<string, unknown>[]) => void)
+      | undefined;
+
+    act(() => first?.([{ chlorophyll: 42 }]));
+    act(() => second?.([{ chlorophyll: 37 }]));
+
+    expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toMatchObject({
+      scope: "device",
+      deviceResults: [
+        { deviceId: "device-a", data: { chlorophyll: 42 } },
+        { deviceId: "device-b", data: { chlorophyll: 37 } },
+      ],
+    });
+  });
+
+  it("converges messages-bearing multi-device writes while retaining display messages", () => {
+    const setMacroOutput = vi.fn(storeSetMacroOutput);
+    const outputA = [{ chlorophyll: 42, messages: { warning: ["Device A needs attention"] } }];
+    const outputB = [{ chlorophyll: 37, messages: { info: ["Device B completed"] } }];
+    useMeasurementFlowStore.setState({
+      setMacroOutput,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+      scanResults: [
+        {
+          device: { id: "device-a", name: "A" },
+          result: { sample: [{ phi2: 0.8 }], __testMacroOutputs: outputA },
+        },
+        {
+          device: { id: "device-b", name: "B" },
+          result: { sample: [{ phi2: 0.6 }], __testMacroOutputs: outputB },
+        },
+      ],
+    });
+
+    render(<AnalysisNode content={CONTENT} nodeId="m1" />);
+
+    expect(screen.getByText("Device A needs attention")).toBeTruthy();
+    expect(screen.getByText("Device B completed")).toBeTruthy();
+    expect(setMacroOutput).toHaveBeenCalledTimes(2);
+    expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toEqual({
+      scope: "device",
+      provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+      deviceResults: [
+        { deviceId: "device-a", deviceLabel: "A", data: { chlorophyll: 42 } },
+        { deviceId: "device-b", deviceLabel: "B", data: { chlorophyll: 37 } },
+      ],
+    });
+    expect(outputA[0].messages).toEqual({ warning: ["Device A needs attention"] });
+    expect(outputB[0].messages).toEqual({ info: ["Device B completed"] });
   });
 });
 
@@ -288,10 +378,36 @@ describe("AnalysisNode upload with a command in the flow", () => {
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
-        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
-        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+        {
+          device: { id: "1", name: "MultispeQ #1" },
+          result: { sample: [{ phi2: 0.8 }] },
+          producerCellId: "command-1",
+          producerKind: "command",
+          dispatchedCommand: "measure 1",
+          commandSource: { sourceCellId: "p1", field: "command" },
+          executionEpoch: "epoch-1",
+        },
+        {
+          device: { id: "2", name: "MultispeQ #2" },
+          result: { sample: [{ phi2: 0.7 }] },
+          producerCellId: "command-1",
+          producerKind: "command",
+          dispatchedCommand: "measure 2",
+          commandSource: { sourceCellId: "p1", field: "command" },
+          executionEpoch: "epoch-1",
+        },
       ],
       producerCellId: "p1",
+      outputsByCellId: {
+        p1: {
+          scope: "device",
+          provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+          deviceResults: [
+            { deviceId: "1", deviceLabel: "MultispeQ #1", data: { phi2: 0.8 } },
+            { deviceId: "2", deviceLabel: "MultispeQ #2", data: { phi2: 0.7 } },
+          ],
+        },
+      },
       cells: [
         {
           id: "p1",
@@ -333,11 +449,21 @@ describe("AnalysisNode upload with a command in the flow", () => {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
           device: { id: "1" },
           macroContext: { measurement: { phi2: 0.8 } },
+          producerCellId: "command-1",
+          producerKind: "command",
+          dispatchedCommand: "measure 1",
+          commandSource: { sourceCellId: "p1", field: "command" },
+          executionEpoch: "epoch-1",
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
           device: { id: "2" },
           macroContext: { measurement: { phi2: 0.7 } },
+          producerCellId: "command-1",
+          producerKind: "command",
+          dispatchedCommand: "measure 2",
+          commandSource: { sourceCellId: "p1", field: "command" },
+          executionEpoch: "epoch-1",
         },
       ],
     });

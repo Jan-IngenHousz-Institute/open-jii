@@ -1,8 +1,14 @@
-import { Controller, Logger } from "@nestjs/common";
+import { Controller, Logger, Req } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
+import type { Request } from "express";
 
+import {
+  DYNAMIC_COMMAND_REF_CAPABILITY,
+  OPENJII_CAPABILITIES_HEADER,
+  hasCapability,
+} from "@repo/api/domains/workbook/capabilities";
 import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -131,9 +137,17 @@ export class WorkbookController {
 
   @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbookVersion)
-  getWorkbookVersion() {
+  getWorkbookVersion(@Req() request: Request) {
+    // Capability is advertised via a header so the React Query cache key (derived
+    // from input, not headers) is unchanged and offline resume keeps its cache.
+    const clientSupportsDynamicRef = hasCapability(
+      request.headers[OPENJII_CAPABILITIES_HEADER],
+      DYNAMIC_COMMAND_REF_CAPABILITY,
+    );
     return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {
-      const result = await this.getWorkbookVersionUseCase.execute(input.versionId);
+      const result = await this.getWorkbookVersionUseCase.execute(input.versionId, {
+        clientSupportsDynamicRef,
+      });
 
       if (result.isSuccess()) {
         return formatDates(result.value);

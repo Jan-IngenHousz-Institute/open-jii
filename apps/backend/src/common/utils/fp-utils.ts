@@ -246,6 +246,14 @@ export class AppError extends Error {
   ): AppError {
     return new AppError(message, code, StatusCodes.CONFLICT, details);
   }
+
+  static upgradeRequired(
+    message = "Client upgrade required",
+    code = "UPGRADE_REQUIRED",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.UPGRADE_REQUIRED, details);
+  }
 }
 
 /**

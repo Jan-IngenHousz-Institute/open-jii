@@ -2,8 +2,12 @@
 
 import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
+import { WorkbookExecutableEditProvider } from "@/components/workbook/workbook-entity-saved-context";
 import { useAutosave } from "@/hooks/useAutosave";
-import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
+import {
+  useWorkbookExecution,
+  workbookDesignSignature,
+} from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useCallback, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -44,6 +48,10 @@ export function WorkbookDraftEditor({
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
 
   const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
+  // Latest cells for synchronous authored-change comparison in the editor
+  // callback (before setCells), independent of render timing.
+  const cellsRef = useRef(cells);
+  cellsRef.current = cells;
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -87,9 +95,15 @@ export function WorkbookDraftEditor({
 
   useReportAutosaveStatus(autosave);
 
-  const handleCellsChange = useCallback((next: WorkbookCell[]) => {
-    setCells(next);
-  }, []);
+  // Execution-owned commits arrive as pure transforms (field-scoped deltas that
+  // the hook computed) applied to the LATEST state, so concurrent completions
+  // and a collapse toggled mid-run compose without rollback.
+  const handleExecutionCellsChange = useCallback(
+    (update: (latest: WorkbookCell[]) => WorkbookCell[]) => {
+      setCells(update);
+    },
+    [],
+  );
 
   const {
     isConnected,
@@ -108,11 +122,28 @@ export function WorkbookDraftEditor({
     runAll,
     stopExecution,
     clearOutputs,
+    commandPreviews,
+    invalidateExecutableDesign,
   } = useWorkbookExecution({
     cells,
-    onCellsChange: handleCellsChange,
+    onCellsChange: handleExecutionCellsChange,
     onPromptQuestion: handlePromptQuestion,
+    workbookId: id,
   });
+
+  // Authored editor commits: when the non-output design actually changes, bump
+  // the generation SYNCHRONOUSLY before setCells so an in-flight producer cannot
+  // commit stale output or overwrite the edit. Output/answer/evaluated/collapse
+  // changes leave the signature unchanged and pass through without invalidating.
+  const handleAuthoredCellsChange = useCallback(
+    (next: WorkbookCell[]) => {
+      if (workbookDesignSignature(cellsRef.current) !== workbookDesignSignature(next)) {
+        invalidateExecutableDesign();
+      }
+      setCells(next);
+    },
+    [invalidateExecutableDesign],
+  );
 
   const isCreator = session?.user.id === createdBy;
 
@@ -140,29 +171,32 @@ export function WorkbookDraftEditor({
   }, [cells, clearOutputs, t]);
 
   return (
-    <WorkbookEditor
-      cells={cells}
-      onCellsChange={handleCellsChange}
-      readOnly={!isCreator}
-      title={name}
-      executionStates={executionStates}
-      isConnected={isConnected}
-      isConnecting={isConnecting}
-      connectedDevices={connectedDevices}
-      sensorFamily={sensorFamily}
-      onSensorFamilyChange={setSensorFamily}
-      connectionType={connectionType}
-      onConnectionTypeChange={setConnectionType}
-      isRunningAll={isRunningAll}
-      onConnect={connect}
-      onDisconnect={disconnect}
-      onDisconnectDevice={disconnectDevice}
-      onRunAll={runAll}
-      onStopExecution={stopExecution}
-      onClearOutputs={handleClearOutputs}
-      onRunCell={handleRunCell}
-      promptedQuestionId={promptedQuestionId}
-      onQuestionAnswered={handleQuestionAnswered}
-    />
+    <WorkbookExecutableEditProvider onExecutableEdit={invalidateExecutableDesign}>
+      <WorkbookEditor
+        cells={cells}
+        onCellsChange={handleAuthoredCellsChange}
+        readOnly={!isCreator}
+        title={name}
+        executionStates={executionStates}
+        commandPreviews={commandPreviews}
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        connectedDevices={connectedDevices}
+        sensorFamily={sensorFamily}
+        onSensorFamilyChange={setSensorFamily}
+        connectionType={connectionType}
+        onConnectionTypeChange={setConnectionType}
+        isRunningAll={isRunningAll}
+        onConnect={connect}
+        onDisconnect={disconnect}
+        onDisconnectDevice={disconnectDevice}
+        onRunAll={runAll}
+        onStopExecution={stopExecution}
+        onClearOutputs={handleClearOutputs}
+        onRunCell={handleRunCell}
+        promptedQuestionId={promptedQuestionId}
+        onQuestionAnswered={handleQuestionAnswered}
+      />
+    </WorkbookExecutableEditProvider>
   );
 }

@@ -10,6 +10,7 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { RuntimeCellOutput } from "@repo/api/transforms/runtime-output";
 
 import { evaluateAndRoute, MAX_BRANCH_VISITS } from "./evaluate-and-route";
 
@@ -25,8 +26,7 @@ interface MockFlowState {
   flowNodes: FlowNode[];
   currentFlowStep: number;
   iterationCount: number;
-  scanResult?: unknown;
-  producerCellId?: string;
+  outputsByCellId: Record<string, RuntimeCellOutput>;
   cells: WorkbookCell[];
   branchVisitCounts: Record<string, number>;
   setCurrentFlowStep: typeof mockSetCurrentFlowStep;
@@ -41,8 +41,7 @@ const flowState: MockFlowState = {
   flowNodes: [],
   currentFlowStep: 0,
   iterationCount: 0,
-  scanResult: undefined,
-  producerCellId: undefined,
+  outputsByCellId: {},
   cells: [],
   branchVisitCounts: {},
   setCurrentFlowStep: mockSetCurrentFlowStep,
@@ -150,8 +149,7 @@ beforeEach(() => {
   flowState.flowNodes = [];
   flowState.currentFlowStep = 0;
   flowState.iterationCount = 0;
-  flowState.scanResult = undefined;
-  flowState.producerCellId = undefined;
+  flowState.outputsByCellId = {};
   flowState.cells = [];
   flowState.branchVisitCounts = {};
 });
@@ -241,8 +239,13 @@ describe("evaluateAndRoute", () => {
 
   it("requires all conditions in a path (implicit AND), incl. measurement output", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
-    flowState.producerCellId = "p1";
-    flowState.scanResult = { sample: [{ phi2: 0.8 }] };
+    flowState.outputsByCellId = {
+      p1: {
+        scope: "shared",
+        provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+        data: { phi2: 0.8 },
+      },
+    };
     flowState.cells = [
       qCell("q1"),
       pCell("p1", "proto-1"),
@@ -273,8 +276,13 @@ describe("evaluateAndRoute", () => {
     // branch's `response` field was undefined and it fell to the default path
     // while web (which wraps a scalar as { response }) matched. hydrateCells now
     // mirrors web for command producers.
-    flowState.producerCellId = "cmd1";
-    flowState.scanResult = "OK";
+    flowState.outputsByCellId = {
+      cmd1: {
+        scope: "shared",
+        provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+        data: { response: "OK" },
+      },
+    };
     flowState.cells = [
       cCell("cmd1"),
       branch(
@@ -294,8 +302,13 @@ describe("evaluateAndRoute", () => {
 
   it("does not match a path when one AND condition fails", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
-    flowState.producerCellId = "p1";
-    flowState.scanResult = { sample: [{ phi2: 0.3 }] }; // fails the > 0.5 check
+    flowState.outputsByCellId = {
+      p1: {
+        scope: "shared",
+        provenance: { workbookVersionId: "version-1", executionEpoch: "epoch-1" },
+        data: { phi2: 0.3 },
+      },
+    }; // fails the > 0.5 check
     flowState.cells = [
       qCell("q1"),
       pCell("p1", "proto-1"),

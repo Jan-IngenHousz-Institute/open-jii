@@ -23,7 +23,8 @@ import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { CreateFlowUseCase } from "../flows/create-flow";
+import { FlowBindingRepository } from "../../../core/repositories/flow-binding.repository";
+import { materializeFlowGraph } from "../materialize-flow-graph";
 
 @Injectable()
 export class ExecuteProjectTransferUseCase {
@@ -33,7 +34,7 @@ export class ExecuteProjectTransferUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly locationRepository: LocationRepository,
-    private readonly createFlowUseCase: CreateFlowUseCase,
+    private readonly flowBindingRepository: FlowBindingRepository,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
     private readonly createMacroUseCase: CreateMacroUseCase,
     private readonly macroRepository: MacroRepository,
@@ -234,24 +235,9 @@ export class ExecuteProjectTransferUseCase {
         target: nodeIds[i + 1],
       }));
 
-      const flowResult = await this.createFlowUseCase.execute(
-        experiment.id,
-        data.experiment.createdBy,
-        { nodes: allNodes, edges },
-      );
-
-      if (flowResult.isSuccess()) {
-        flowId = flowResult.value.id;
-      } else {
-        this.logger.warn({
-          msg: "Failed to create flow during project transfer (non-fatal)",
-          operation: "executeProjectTransfer",
-          experimentId: experiment.id,
-          error: flowResult.error,
-        });
-      }
-
-      // 7. Materialise a workbook from the same nodes (non-fatal).
+      // 6/7. Materialise a workbook from the nodes, publish a version, then
+      // atomically bind the pointer + flow (the flow IS the materialized version,
+      // no longer created independently). All non-fatal.
       const cells = flowNodesToWorkbookCells(allNodes, edges);
       if (cells.length > 0) {
         const workbookResult = await this.workbookRepository.create(
@@ -272,17 +258,32 @@ export class ExecuteProjectTransferUseCase {
           );
 
           if (versionResult.isSuccess()) {
-            const linkResult = await this.experimentRepository.update(experiment.id, {
-              workbookId,
-              workbookVersionId: versionResult.value.id,
-            });
-            if (linkResult.isFailure()) {
+            const materialized = materializeFlowGraph(versionResult.value.cells);
+            if (materialized.isSuccess()) {
+              const bindResult = await this.flowBindingRepository.bind({
+                experimentId: experiment.id,
+                expectedWorkbookId: null,
+                pointer: { workbookId, workbookVersionId: versionResult.value.id },
+                materialization: materialized.value,
+              });
+              if (bindResult.isSuccess()) {
+                flowId = bindResult.value.flowId;
+              } else {
+                this.logger.warn({
+                  msg: "Failed to bind workbook/flow during project transfer (non-fatal)",
+                  operation: "executeProjectTransfer",
+                  experimentId: experiment.id,
+                  workbookId,
+                  error: bindResult.error,
+                });
+              }
+            } else {
               this.logger.warn({
-                msg: "Failed to link workbook to experiment during project transfer (non-fatal)",
+                msg: "Failed to materialize flow during project transfer (non-fatal)",
                 operation: "executeProjectTransfer",
                 experimentId: experiment.id,
                 workbookId,
-                error: linkResult.error,
+                error: materialized.error,
               });
             }
           } else {

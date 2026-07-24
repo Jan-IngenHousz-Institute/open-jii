@@ -32,7 +32,9 @@ import {
 import { useCallback } from "react";
 import { stripHtml } from "~/util/strip-html";
 
+import { isReferencedCommandPayload } from "@repo/api/domains/workbook/command-source.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { dynamicCommandNodeLabel } from "@repo/api/transforms/cells-to-flow";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -84,7 +86,9 @@ function getCellSubtitle(cell: WorkbookCell): string {
     case "protocol":
       return cell.payload.name ?? "JSON";
     case "command":
-      return cell.payload.name ?? (cell.payload.content || cell.payload.format);
+      return isReferencedCommandPayload(cell.payload)
+        ? dynamicCommandNodeLabel({ name: cell.payload.name, field: cell.payload.ref.field })
+        : (cell.payload.name ?? (cell.payload.content || cell.payload.format));
     case "macro":
       return cell.payload.name ?? capitalize(cell.payload.language);
     case "branch":

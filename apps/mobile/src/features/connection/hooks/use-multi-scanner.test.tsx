@@ -20,7 +20,13 @@ const PROTOCOL = { code: [{ _protocol_set_: [] }] };
 
 interface Round {
   successes: { device: Device; result: object }[];
-  failures: { device: Device; error: Error }[];
+  failures: {
+    device: Device;
+    error: Error;
+    producerCellId?: string;
+    producerKind?: "protocol" | "command";
+    wasDispatched?: boolean;
+  }[];
 }
 
 function entry(device: Device, patch: Partial<DeviceExecutorEntry> = {}): DeviceExecutorEntry {
@@ -155,6 +161,83 @@ describe("useMultiScanner", () => {
     ]);
     // Battery patching applies to assignment rounds too.
     expect(client.getQueryData(connectionKeys.battery(DEVICE_A.id))).toBe(55);
+  });
+
+  it("accepts a scalar command reply and retains its producer assignment", async () => {
+    setEntries([entry(DEVICE_A)]);
+    const executeCommandOn = vi.fn().mockResolvedValue("command-reply");
+    useScannerCommandExecutorStore.setState({ executeCommandOn });
+    const { result } = renderHook(() => useMultiScanner(), { wrapper });
+
+    let round: Round | undefined;
+    await act(async () => {
+      round = await result.current.executeScanAssignments([
+        {
+          device: DEVICE_A,
+          command: "dynamic-command",
+          producerCellId: "command-cell",
+          producerKind: "command",
+        },
+      ]);
+    });
+
+    expect(round?.successes).toEqual([
+      {
+        device: DEVICE_A,
+        result: { response: "command-reply" },
+        producerCellId: "command-cell",
+        producerKind: "command",
+      },
+    ]);
+  });
+
+  it("makes zero device calls when every assignment was pre-failed", async () => {
+    const executeCommandOn = vi.fn();
+    useScannerCommandExecutorStore.setState({ executeCommandOn });
+    const { result } = renderHook(() => useMultiScanner(), { wrapper });
+
+    let round: Round | undefined;
+    await act(async () => {
+      round = await result.current.executeScanAssignments(
+        [],
+        [
+          { device: DEVICE_A, error: new Error("Rerun the source") },
+          { device: DEVICE_B, error: new Error("Rerun the source") },
+        ],
+      );
+    });
+
+    expect(executeCommandOn).not.toHaveBeenCalled();
+    expect(round?.failures).toHaveLength(2);
+    expect(round?.failures.every((failure) => failure.wasDispatched === undefined)).toBe(true);
+  });
+
+  it("marks only transport failures with their exact producer assignment", async () => {
+    const executeCommandOn = vi.fn().mockRejectedValue(new Error("transport failed"));
+    useScannerCommandExecutorStore.setState({ executeCommandOn });
+    const { result } = renderHook(() => useMultiScanner(), { wrapper });
+
+    let round: Round | undefined;
+    await act(async () => {
+      round = await result.current.executeScanAssignments([
+        {
+          device: DEVICE_A,
+          command: "dynamic-command",
+          producerCellId: "command-cell",
+          producerKind: "command",
+        },
+      ]);
+    });
+
+    expect(round?.failures).toEqual([
+      {
+        device: DEVICE_A,
+        error: new Error("transport failed"),
+        producerCellId: "command-cell",
+        producerKind: "command",
+        wasDispatched: true,
+      },
+    ]);
   });
 
   it("returns an empty round without devices", async () => {

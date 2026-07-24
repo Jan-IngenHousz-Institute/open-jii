@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner-native";
 import { useConnectedDevices } from "~/features/connection/hooks/use-device-connection";
 import { useMultiScanner } from "~/features/connection/hooks/use-multi-scanner";
@@ -14,6 +14,13 @@ import type {
   DevicePlanEntry,
   ScanResult,
 } from "~/features/measurement-flow/domain/flow-transitions";
+import {
+  commandFailureLogFields,
+  commandFailureTranslationKey,
+  resolveMobileCommand,
+} from "~/features/measurement-flow/domain/mobile-command-resolution";
+import type { MobileCommandResolutionFailure } from "~/features/measurement-flow/domain/mobile-command-resolution";
+import type { DeviceProducerOutcome } from "~/features/measurement-flow/domain/runtime-output";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
@@ -21,34 +28,98 @@ import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-no
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
-import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
+import { isReferencedCommand } from "@repo/api/domains/workbook/command-source.schema";
+import type { CommandRef } from "@repo/api/domains/workbook/command-source.schema";
 
 const log = createLogger("measurement-capture");
 
 interface ResolvedTarget {
   command: string | object;
+  producerCellId: string;
+  producerKind: "protocol" | "command";
   protocolId?: string;
   protocolName?: string;
+  commandSource?: CommandRef;
+}
+
+export interface CommandDispatchPreview {
+  deviceId: string;
+  deviceName: string;
+  resolved?: string;
+  error?: string;
+}
+
+function formatResolvedCommand(value: unknown): string {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+export class MobileCommandResolutionError extends Error {
+  constructor(
+    readonly failure: MobileCommandResolutionFailure,
+    message: string,
+  ) {
+    super(message);
+    this.name = "MobileCommandResolutionError";
+  }
 }
 
 // Resolves a dispatch target's payload from its hydrated flow node (protocol
 // snapshot code or inline command), the same mechanism the current node uses.
 // Errors fail only that device's round entry, never the whole round.
-function resolveTargetPayload(node: FlowNode | undefined): ResolvedTarget | Error {
+function resolveTargetPayload(
+  node: FlowNode | undefined,
+  device: Device,
+  translate: (key: string) => string,
+): ResolvedTarget | Error {
   const content = node?.content as MeasurementContent | undefined;
   if (!node || !content) return new Error("Dispatch target is not part of this flow");
   if (content.command) {
-    try {
-      return { command: resolveInlineCommand(content.command), protocolName: node.name };
-    } catch (err) {
-      return err instanceof Error ? err : new Error(String(err));
+    const flow = useMeasurementFlowStore.getState();
+    const resolved = resolveMobileCommand({
+      commandCellId: node.id,
+      cells: flow.cells,
+      targetDeviceId: device.id,
+      workbookVersionId: flow.workbookVersionId,
+      executionEpoch: flow.executionEpoch,
+      getRuntimeCellOutput: flow.getRuntimeCellOutput,
+    });
+    if (!resolved.ok) {
+      log.warn(
+        "command resolution failed",
+        commandFailureLogFields("branch", resolved.error, {
+          workbookVersionId: flow.workbookVersionId,
+          executionEpoch: flow.executionEpoch,
+        }),
+      );
+      return new MobileCommandResolutionError(
+        resolved.error,
+        translate(commandFailureTranslationKey(resolved.error.code)),
+      );
     }
+    return {
+      command: resolved.value as string | object,
+      producerCellId: node.id,
+      producerKind: "command",
+      protocolName: node.name,
+      ...(isReferencedCommand(content.command) ? { commandSource: content.command.ref } : {}),
+    };
   }
   const code = content.protocol?.code;
   if (!content.protocolId || !code || code.length === 0) {
     return new Error("Protocol code is unavailable for this dispatch target");
   }
-  return { command: code, protocolId: content.protocolId, protocolName: content.protocol?.name };
+  return {
+    command: code,
+    producerCellId: node.id,
+    producerKind: "protocol",
+    protocolId: content.protocolId,
+    protocolName: content.protocol?.name,
+  };
 }
 
 // View-model for MeasurementNode: owns the multi-scan lifecycle so the
@@ -74,7 +145,13 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     navigateToQuestionFromOverview,
     devicePlan,
     completeDevicePlan,
+    recordDeviceProducerOutcomes,
+    workbookVersionId,
+    executionEpoch,
   } = useMeasurementFlowStore();
+  const [commandDispatchPreviews, setCommandDispatchPreviews] = useState<CommandDispatchPreview[]>(
+    [],
+  );
   // The dispatch plan applies only while THIS node is one of its targets;
   // otherwise it is stale routing state and the node broadcasts as before.
   const activePlan =
@@ -93,9 +170,20 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
   // Per-device payload provenance of the dispatch round (deviceId keyed),
   // stamped onto each result so its upload carries its own protocolId.
-  const assignmentMetaRef = useRef<Record<string, { protocolId?: string; protocolName?: string }>>(
-    {},
-  );
+  const assignmentMetaRef = useRef<
+    Record<
+      string,
+      {
+        protocolId?: string;
+        protocolName?: string;
+        producerCellId?: string;
+        producerKind?: "protocol" | "command";
+        dispatchedCommand?: string | object;
+        commandSource?: CommandRef;
+        executionEpoch?: string;
+      }
+    >
+  >({});
 
   // Keep stable refs so the disconnect-cleanup effect below doesn't need to
   // list these as dependencies (avoids any memoisation concerns).
@@ -124,6 +212,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     }
   }, [devices.length, isScanning]);
 
+  useEffect(() => {
+    setCommandDispatchPreviews([]);
+  }, [executionEpoch, workbookVersionId]);
+
   const completeWithSuccesses = () => {
     // Order results by connect order so the round reads consistently everywhere.
     const orderOf = (id: string) => {
@@ -134,14 +226,43 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       (a, b) => orderOf(a.device.id) - orderOf(b.device.id),
     );
     successesRef.current = [];
-    setScanResults(
-      ordered.map(({ device, result }) => ({
-        device: { id: device.id, name: device.name },
-        result: result as ScanResult,
-        ...assignmentMetaRef.current[device.id],
-      })),
-      nodeId,
-    );
+    const projection = ordered.map(({ device, result }) => ({
+      device: { id: device.id, name: device.name },
+      result: result as ScanResult,
+      ...assignmentMetaRef.current[device.id],
+    }));
+    if (activePlan) {
+      // A device branch can fan out to several protocol/command producers.
+      // Keep one combined upload/display projection, but record each reply
+      // under the actual target producer for later dynamic references.
+      setScanResults(projection, undefined);
+      const flow = useMeasurementFlowStore.getState();
+      const groups = new Map<
+        string,
+        { kind: "protocol" | "command"; outcomes: DeviceProducerOutcome[] }
+      >();
+      for (const success of ordered) {
+        const plannedCellId = activePlan.find(
+          (entry) => entry.deviceId === success.device.id,
+        )?.targetCellId;
+        const producerCellId = success.producerCellId ?? plannedCellId;
+        const producerNode = flow.flowNodes.find((entry) => entry.id === producerCellId);
+        const kind =
+          success.producerKind ?? (producerNode?.content?.command ? "command" : "protocol");
+        if (!producerCellId) continue;
+        const group = groups.get(producerCellId) ?? { kind, outcomes: [] };
+        group.outcomes.push({
+          device: { id: success.device.id, name: success.device.name },
+          data: success.result,
+        });
+        groups.set(producerCellId, group);
+      }
+      for (const [producerCellId, group] of groups) {
+        recordDeviceProducerOutcomes(producerCellId, group.kind, group.outcomes);
+      }
+    } else {
+      setScanResults(projection, nodeId);
+    }
     assignmentMetaRef.current = {};
     // The round covered every dispatch target; consumedNodeIds keeps skipping
     // the other targets once while the plan itself is done.
@@ -162,20 +283,41 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     const { flowNodes } = useMeasurementFlowStore.getState();
     const assignments: ScanAssignment[] = [];
     const prefailed: DeviceScanFailure[] = [];
+    const previews: CommandDispatchPreview[] = [];
     for (const device of pendingDevices) {
       const target = plan.find((p) => p.deviceId === device.id);
       const node = flowNodes.find((n) => n.id === target?.targetCellId);
-      const resolved = resolveTargetPayload(node);
+      const resolved = resolveTargetPayload(node, device, t);
       if (resolved instanceof Error) {
         prefailed.push({ device, error: resolved });
+        if (node?.content?.command) {
+          previews.push({
+            deviceId: device.id,
+            deviceName: device.name,
+            error: resolved.message,
+          });
+        }
       } else {
         assignments.push({ device, ...resolved });
+        if (resolved.producerKind === "command") {
+          previews.push({
+            deviceId: device.id,
+            deviceName: device.name,
+            resolved: formatResolvedCommand(resolved.command),
+          });
+        }
         assignmentMetaRef.current[device.id] = {
           protocolId: resolved.protocolId,
           protocolName: resolved.protocolName,
+          producerCellId: resolved.producerCellId,
+          producerKind: resolved.producerKind,
+          ...(resolved.producerKind === "command" ? { dispatchedCommand: resolved.command } : {}),
+          ...(resolved.commandSource ? { commandSource: resolved.commandSource } : {}),
+          ...(executionEpoch ? { executionEpoch } : {}),
         };
       }
     }
+    setCommandDispatchPreviews(previews);
     return executeScanAssignments(assignments, prefailed);
   };
 
@@ -226,6 +368,15 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         if (activePlan) {
           round = await runDispatchRound(activePlan, pendingDevices);
         } else if (protocol) {
+          if (nodeId) {
+            for (const device of pendingDevices) {
+              assignmentMetaRef.current[device.id] = {
+                producerCellId: nodeId,
+                producerKind: "protocol",
+                ...(executionEpoch ? { executionEpoch } : {}),
+              };
+            }
+          }
           round = await executeScanAll(protocol, pendingDevices);
         } else {
           return; // unreachable: guarded above
@@ -236,6 +387,29 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
           ),
           ...round.successes,
         ];
+
+        // Only a command assignment that actually reached transport owns a
+        // failed command output. Resolver pre-failures carry no dispatch
+        // metadata and remain non-executions.
+        const commandFailureGroups = new Map<string, DeviceProducerOutcome[]>();
+        for (const failure of round.failures) {
+          if (
+            !failure.wasDispatched ||
+            failure.producerKind !== "command" ||
+            !failure.producerCellId
+          ) {
+            continue;
+          }
+          const outcomes = commandFailureGroups.get(failure.producerCellId) ?? [];
+          outcomes.push({
+            device: { id: failure.device.id, name: failure.device.name },
+            error: "COMMAND_EXECUTION_FAILED",
+          });
+          commandFailureGroups.set(failure.producerCellId, outcomes);
+        }
+        for (const [producerCellId, outcomes] of commandFailureGroups) {
+          recordDeviceProducerOutcomes(producerCellId, "command", outcomes);
+        }
 
         if (round.failures.length > 0 && successesRef.current.length === 0) {
           const kind = classifyScanError(round.failures[0].error);
@@ -298,5 +472,6 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     scanProgress,
     scanStartedAt,
     estimatedMs,
+    commandDispatchPreviews,
   };
 }

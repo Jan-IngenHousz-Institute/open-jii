@@ -3,6 +3,9 @@
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
 import { diffCells } from "@/lib/workbook-diff";
+import { dynamicCommandIssueKey } from "@/lib/workbook/dynamic-command-authoring";
+import { parseStructuralValidationError } from "@/lib/workbook/publish-error";
+import type { StructuralIssue } from "@/lib/workbook/publish-error";
 import { AlertTriangle, ArrowUpCircle, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -36,6 +39,12 @@ interface WorkbookUpgradeDialogProps {
   targetVersionLabel: string;
   onConfirm: () => void;
   isUpgrading: boolean;
+  /**
+   * The error object from a failed upgrade attempt. When it is the structural
+   * validation envelope its allowlisted issues are surfaced as repair guidance
+   * and confirm stays disabled; any other error is left to the caller's toast.
+   */
+  publishError?: unknown;
 }
 
 function issueMessage(
@@ -56,7 +65,26 @@ function issueMessage(
       return t("flow.upgradeDiff.issue.macroWithoutInput", { label });
     case "mixed-sensor-families":
       return t("flow.upgradeDiff.issue.mixedFamilies", { detail: issue.detail ?? "" });
+    default: {
+      // Dynamic-command reference issues carry cell-level repair guidance,
+      // anchored to the command cell. The guidance copy lives in the workbook
+      // locale; translate the code's key rather than embed English here.
+      if (issue.code.startsWith("DYNAMIC_COMMAND_")) {
+        const guidance = t(dynamicCommandIssueKey(issue.code), { ns: "workbook" });
+        return label ? `${label}: ${guidance}` : guidance;
+      }
+      return label || issue.code;
+    }
   }
+}
+
+// Translate a server-rejected structural issue, anchored to its command cell.
+function serverIssueMessage(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  issue: StructuralIssue,
+): string {
+  const guidance = t(dynamicCommandIssueKey(issue.code), { ns: "workbook" });
+  return `${issue.commandCellId}: ${guidance}`;
 }
 
 export function WorkbookUpgradeDialog({
@@ -68,8 +96,14 @@ export function WorkbookUpgradeDialog({
   targetVersionLabel,
   onConfirm,
   isUpgrading,
+  publishError,
 }: WorkbookUpgradeDialogProps) {
-  const { t } = useTranslation("experiments");
+  const { t } = useTranslation(["experiments", "workbook"]);
+
+  // Structural issues the SERVER rejected the upgrade with (allowlisted). These
+  // keep the dialog open with repair guidance; confirm stays disabled until the
+  // author fixes them. A non-structural error is not surfaced here.
+  const serverIssues = useMemo(() => parseStructuralValidationError(publishError), [publishError]);
 
   const {
     data: pinned,
@@ -190,6 +224,25 @@ export function WorkbookUpgradeDialog({
               </p>
             </section>
 
+            {/* Structural issues the server rejected the last upgrade with */}
+            {serverIssues ? (
+              <section data-testid="upgrade-server-issues" role="alert" aria-atomic="true">
+                <VerdictBlock
+                  tone="error"
+                  icon={<XCircle className="h-4 w-4" aria-hidden="true" />}
+                  title={t("flow.upgradeDiff.serverRejected")}
+                >
+                  <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs">
+                    {serverIssues.map((issue, i) => (
+                      <li key={`${issue.commandCellId}-${issue.code}-${i}`}>
+                        {serverIssueMessage(t, issue)}
+                      </li>
+                    ))}
+                  </ul>
+                </VerdictBlock>
+              </section>
+            ) : null}
+
             {/* Cell-level changes */}
             <section>
               <h4 className="text-muted-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
@@ -258,7 +311,14 @@ export function WorkbookUpgradeDialog({
           </Button>
           <Button
             onClick={onConfirm}
-            disabled={isUpgrading || !ready || failed || verdict == null || errors.length > 0}
+            disabled={
+              isUpgrading ||
+              !ready ||
+              failed ||
+              verdict == null ||
+              errors.length > 0 ||
+              serverIssues != null
+            }
           >
             {isUpgrading ? (
               <>

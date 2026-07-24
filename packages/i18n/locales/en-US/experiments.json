@@ -66,6 +66,10 @@
     "attach": "Attach",
     "workbookAttached": "Workbook attached successfully",
     "attachFailed": "Failed to attach workbook",
+    "structuralAttach": {
+      "title": "This workbook has unresolved command references",
+      "openWorkbook": "Open the workbook to fix them"
+    },
     "createNew": "Create new workbook",
     "creating": "Creating…",
     "or": "or",
@@ -113,6 +117,12 @@
     "editIsolatedHint": "To try changes without affecting this experiment, edit from the workbook page instead; edits there stay separate until you upgrade the version.",
     "editOpenWorkbookLink": "Open the workbook page",
     "reviewAndUpgrade": "Review & upgrade",
+    "upgradeBanner": {
+      "newVersion": "v{{version}} is available",
+      "updatesAvailable": "Workbook has updates available",
+      "currentVersion": "(currently on v{{version}})",
+      "upgraded": "Upgraded to v{{version}}"
+    },
     "versionHistory": {
       "open": "Version history",
       "title": "Version history",
@@ -137,6 +147,7 @@
       "codeChanges": "Protocol & macro changes",
       "viewDiff": "View diff",
       "macroCaveat": "Structural checks only. Macro logic is not verified, so test the flow after upgrading.",
+      "serverRejected": "The upgrade was rejected. Fix these command references and try again.",
       "lastChanged": "updated {{when}}",
       "kind": { "protocol": "Protocol", "macro": "Macro" },
       "status": {

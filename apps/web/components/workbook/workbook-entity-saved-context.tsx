@@ -30,3 +30,30 @@ export function WorkbookEntitySavedProvider({
 export function useWorkbookEntitySaved(): () => void {
   return useContext(WorkbookEntitySavedContext);
 }
+
+/**
+ * Signals that an executable entity (protocol/macro code, language, or fork)
+ * was EDITED, before any debounced persistence. The execution host uses it to
+ * invalidate runtime freshness immediately, so a stale command cannot resolve
+ * against a producer whose code just changed. Distinct from the saved signal
+ * above, which fires only after persistence. Defaults to a no-op.
+ */
+const WorkbookExecutableEditContext = createContext<() => void>(() => undefined);
+
+export function WorkbookExecutableEditProvider({
+  onExecutableEdit,
+  children,
+}: {
+  onExecutableEdit: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <WorkbookExecutableEditContext.Provider value={onExecutableEdit}>
+      {children}
+    </WorkbookExecutableEditContext.Provider>
+  );
+}
+
+export function useWorkbookExecutableEdit(): () => void {
+  return useContext(WorkbookExecutableEditContext);
+}

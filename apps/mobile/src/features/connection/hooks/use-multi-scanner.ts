@@ -30,6 +30,8 @@ export interface MultiScanRound {
 export interface ScanAssignment {
   device: Device;
   command: string | object;
+  producerCellId?: string;
+  producerKind?: "protocol" | "command";
   /** Provenance of the payload (dispatch rounds), threaded to the upload. */
   protocolId?: string;
   protocolName?: string;
@@ -65,19 +67,44 @@ export function useMultiScanner() {
       const settled = await Promise.allSettled(
         assignments.map(({ device, command }) => executeCommandOn(device.id, command)),
       );
-      const outcomes = assignments.map(({ device }, i): DeviceCommandOutcome => {
+      const outcomes = assignments.map(({ device, producerKind }, i): DeviceCommandOutcome => {
         const result = settled[i];
-        return result.status === "fulfilled"
-          ? { device, status: "fulfilled", result: result.value }
-          : {
-              device,
-              status: "rejected",
-              error:
-                result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
-            };
+        if (result.status === "rejected") {
+          return {
+            device,
+            status: "rejected",
+            error:
+              result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
+          };
+        }
+        const value =
+          producerKind === "command" &&
+          (typeof result.value !== "object" || result.value === null || Array.isArray(result.value))
+            ? { response: result.value }
+            : result.value;
+        return { device, status: "fulfilled", result: value };
       });
 
       const round = partitionScanOutcomes(outcomes);
+      round.successes = round.successes.map((success) => {
+        const assignment = assignments.find(({ device }) => device.id === success.device.id);
+        if (!assignment?.producerCellId || !assignment.producerKind) return success;
+        return {
+          ...success,
+          producerCellId: assignment.producerCellId,
+          producerKind: assignment.producerKind,
+        };
+      });
+      round.failures = round.failures.map((failure) => {
+        const assignment = assignments.find(({ device }) => device.id === failure.device.id);
+        if (!assignment?.producerCellId || !assignment.producerKind) return failure;
+        return {
+          ...failure,
+          producerCellId: assignment.producerCellId,
+          producerKind: assignment.producerKind,
+          wasDispatched: true,
+        };
+      });
       round.failures.push(...prefailed);
 
       // Scan replies embed the battery level; patch each device's battery

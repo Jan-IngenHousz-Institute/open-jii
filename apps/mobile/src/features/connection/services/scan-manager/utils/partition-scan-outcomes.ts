@@ -4,11 +4,18 @@ import type { Device } from "~/shared/types/device";
 export interface DeviceScanResult {
   device: Device;
   result: object;
+  /** Workbook producer that owned this per-device dispatch assignment. */
+  producerCellId?: string;
+  producerKind?: "protocol" | "command";
 }
 
 export interface DeviceScanFailure {
   device: Device;
   error: Error;
+  /** Present only when a transport assignment actually reached this producer. */
+  producerCellId?: string;
+  producerKind?: "protocol" | "command";
+  wasDispatched?: boolean;
 }
 
 export function partitionScanOutcomes(outcomes: DeviceCommandOutcome[]): {

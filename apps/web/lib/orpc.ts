@@ -6,9 +6,11 @@ import { env } from "~/env";
 
 import { contract } from "@repo/api/contract";
 
+import { orpcClientHeaders } from "./orpc-headers";
+
 const link = new OpenAPILink(contract, {
   url: env.NEXT_PUBLIC_API_URL,
-  headers: () => ({ "x-app-source": "orpc" }),
+  headers: () => orpcClientHeaders(),
   // Send the session cookie with every request (browser-managed); oRPC throws
   // an ORPCError on >= 400, which hooks narrow via `getOrpcError`.
   fetch: (request, init) => fetch(request, { ...init, credentials: "include" }),

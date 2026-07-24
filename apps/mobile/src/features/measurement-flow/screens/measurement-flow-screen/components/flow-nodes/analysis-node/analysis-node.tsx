@@ -8,6 +8,7 @@ import { useScannerCommandExecutorStore } from "~/features/connection/stores/use
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
+import { normalizeMobileProducerData } from "~/features/measurement-flow/domain/runtime-output";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -54,10 +55,9 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     iterationCount,
     flowNodes,
     cells,
-    producerCellId,
-    cellOutputs,
+    outputsByCellId,
     workbookVersionId,
-    setCellOutput,
+    setMacroOutput,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
@@ -102,13 +102,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     const hydrated = hydrateCells(cells, {
       iterationCount,
       getAnswer,
-      scanResult,
-      scanResults,
-      producerCellId,
-      cellOutputs,
+      outputsByCellId,
     });
     return hydrated;
-  }, [cells, iterationCount, getAnswer, scanResult, scanResults, producerCellId, cellOutputs]);
+  }, [cells, iterationCount, getAnswer, outputsByCellId]);
 
   // One device-scoped ctx per rendered result, including that device's
   // upstream measurement and `$device` identity.
@@ -135,18 +132,31 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     });
   }, [executors, results, hydratedCells, nodeId]);
 
-  // Persist the Primary device's macro output so downstream branches/macros can
-  // read it. Compare-before-set: the store write rebuilds ctx and re-runs this
-  // callback, so an identical output must not write (and loop) again.
+  // Persist every device's macro output so downstream branches/macros can read
+  // it. Compare-before-set avoids a ctx rebuild loop for identical output.
   const handleProcessed = useCallback(
-    (outputs: MacroOutput[]) => {
+    (outputs: MacroOutput[], index = 0) => {
       const first = outputs[0];
       if (first === undefined) return;
-      const existing = useMeasurementFlowStore.getState().cellOutputs[nodeId];
-      if (existing !== undefined && JSON.stringify(existing) === JSON.stringify(first)) return;
-      setCellOutput(nodeId, first);
+      const normalized = normalizeMobileProducerData("macro", first);
+      const device = results[index]?.device;
+      const existing = useMeasurementFlowStore.getState().outputsByCellId[nodeId];
+      const existingData = device
+        ? existing?.scope === "device"
+          ? existing.deviceResults.find((entry) => entry.deviceId === device.id)?.data
+          : undefined
+        : existing?.scope === "shared"
+          ? existing.data
+          : undefined;
+      if (
+        existingData !== undefined &&
+        JSON.stringify(existingData) === JSON.stringify(normalized)
+      ) {
+        return;
+      }
+      setMacroOutput(nodeId, normalized, device);
     },
-    [nodeId, setCellOutput],
+    [nodeId, results, setMacroOutput],
   );
 
   // Capture the display timestamp once so it stays stable across re-renders.
@@ -203,12 +213,30 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       // Dispatch rounds stamped a per-device protocolId/protocolName on each
       // result; the upload publishes those on their own protocol topic.
       results: results.map(
-        ({ device, result, protocolId: resultProtocolId, protocolName }, index) => ({
+        (
+          {
+            device,
+            result,
+            protocolId: resultProtocolId,
+            protocolName,
+            producerCellId,
+            producerKind,
+            dispatchedCommand,
+            commandSource,
+            executionEpoch,
+          },
+          index,
+        ) => ({
           rawMeasurement: result,
           device,
           protocolId: resultProtocolId,
           protocolName,
           macroContext: macroCtxs[index],
+          producerCellId,
+          producerKind,
+          dispatchedCommand,
+          commandSource,
+          executionEpoch,
         }),
       ),
       timestamp,
@@ -276,7 +304,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
                 macroId={content.macroId}
                 scanResult={result}
                 ctx={macroCtxs[index]}
-                onProcessed={index === 0 ? handleProcessed : undefined}
+                onProcessed={(outputs) => handleProcessed(outputs, index)}
                 onCommentPress={() => setCommentModalVisible(true)}
               />
             </View>

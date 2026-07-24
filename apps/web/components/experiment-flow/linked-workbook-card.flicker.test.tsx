@@ -63,7 +63,7 @@ vi.mock("@/hooks/experiment/useDetachWorkbook/useDetachWorkbook", () => ({
   useDetachWorkbook: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion", () => ({
-  useUpgradeWorkbookVersion: () => ({ mutate: vi.fn() }),
+  useUpgradeWorkbookVersion: () => ({ mutate: vi.fn(), reset: vi.fn() }),
 }));
 
 const WORKBOOK_ID = "11111111-1111-1111-1111-111111111111";

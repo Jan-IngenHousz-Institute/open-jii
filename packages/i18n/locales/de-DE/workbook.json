@@ -94,6 +94,8 @@
   },
   "cells": {
     "command": "Befehl",
+    "commandFormatAria": "Befehlsformat",
+    "commandCopyAria": "Befehl kopieren",
     "protocolReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "macroReadOnly": "Schreibgeschützt. Zum Bearbeiten forken.",
     "fork": "Zum Bearbeiten forken",
@@ -102,6 +104,40 @@
     "renameSave": "Namen speichern",
     "renameCancel": "Abbrechen",
     "renameConflict": "Dieser Name ist bereits vergeben",
-    "renameFailed": "Umbenennen fehlgeschlagen"
+    "renameFailed": "Umbenennen fehlgeschlagen",
+    "commandDynamic": {
+      "modeGroup": "Befehlsmodus",
+      "modeStatic": "Statisch",
+      "modeDynamic": "Dynamisch",
+      "tooltip": "Dynamische Befehle übernehmen ihren Wert zur Laufzeit aus einer vorherigen Zelle.",
+      "readOnlyNote": "Dieser Befehl liest seinen Wert aus einer vorherigen Zelle.",
+      "sourceLabel": "Quelle",
+      "fieldLabel": "Feld",
+      "none": "Keine",
+      "sourcePickerLabel": "Quelle (vorherige Zelle)",
+      "sourceAria": "Quellzelle",
+      "sourcePlaceholder": "Vorherige Zelle auswählen",
+      "sourceUnavailable": "{{id}} (nicht verfügbar)",
+      "questionNote": "Verwendet das Feld answer (für alle Geräte gemeinsam).",
+      "fieldPlaceholder": "Oberstes Ausgabefeld",
+      "fieldAria": "Ausgabefeld",
+      "sourceType": {
+        "protocol": "Protokoll",
+        "macro": "Makro",
+        "command": "Befehl",
+        "question": "Frage",
+        "generic": "Zelle"
+      },
+      "issue": {
+        "sourceMissing": "Die referenzierte Zelle existiert nicht mehr. Wähle eine vorhandene vorherige Zelle.",
+        "sourceIneligible": "Die referenzierte Zelle kann keinen Befehlswert liefern. Wähle ein Protokoll, einen Befehl, ein Makro oder eine Frage.",
+        "sourceNotEarlier": "Die referenzierte Zelle muss vor diesem Befehl liegen. Wähle eine frühere Zelle.",
+        "fieldEmpty": "Wähle, welches Ausgabefeld den Befehlswert liefert.",
+        "nodeUnreachable": "Dieser Befehl ist vom Anfang des Ablaufs aus nicht erreichbar. Verbinde ihn mit dem gestalteten Ablauf, damit er ausgeführt wird.",
+        "graphAmbiguous": "Die Referenz ist über die Verzweigungspfade hinweg mehrdeutig. Vereinfache den Ablauf oder wähle eine andere Quelle.",
+        "invalidCarrier": "Diese Befehlszelle kann keine dynamische Referenz tragen.",
+        "generic": "Diese Befehlsreferenz muss vor dem Veröffentlichen korrigiert werden."
+      }
+    }
   }
 }

@@ -1,8 +1,12 @@
 "use client";
 
+import { StructuralIssueList } from "@/components/workbook/structural-issue-list";
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
+import { parseStructuralValidationError } from "@/lib/workbook/publish-error";
+import type { StructuralIssue } from "@/lib/workbook/publish-error";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 
@@ -42,6 +46,14 @@ export function NewExperimentForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  // Durable result when the experiment was created but its selected workbook was
+  // structurally rejected: we stay here (never navigate into a contextless empty
+  // state) so the author keeps the command-level repair context and both links.
+  const [attachFailure, setAttachFailure] = useState<{
+    experimentId: string;
+    workbookId: string;
+    issues: StructuralIssue[];
+  } | null>(null);
 
   // Helper to create FormStep with specific cards
   const createFormStep = (cards: Parameters<typeof FormStep>[0]["cards"]) => {
@@ -87,23 +99,44 @@ export function NewExperimentForm() {
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
-      // If a workbook was selected, attach it to create a version snapshot
-      if (pendingWorkbookId.current) {
-        attachWorkbook.mutate(
-          { id: experimentId, workbookId: pendingWorkbookId.current },
-          {
-            onSettled: () => {
-              setIsSubmitting(true);
-              toast({ description: t("experiments.experimentCreated") });
-              router.push(`/${locale}/platform/experiments/${experimentId}`);
-            },
-          },
-        );
-      } else {
+      const experimentUrl = `/${locale}/platform/experiments/${experimentId}`;
+      const workbookId = pendingWorkbookId.current;
+      if (!workbookId) {
         setIsSubmitting(true);
         toast({ description: t("experiments.experimentCreated") });
-        router.push(`/${locale}/platform/experiments/${experimentId}`);
+        router.push(experimentUrl);
+        return;
       }
+      // Attachment is a separate outcome from creation: success and failure are
+      // reported independently (never via onSettled), so a rejected attach is
+      // never announced or navigated to as if the workbook were attached.
+      attachWorkbook.mutate(
+        { id: experimentId, workbookId },
+        {
+          onSuccess: () => {
+            setIsSubmitting(true);
+            toast({ description: t("experiments.experimentCreated") });
+            router.push(experimentUrl);
+          },
+          onError: (error) => {
+            setIsSubmitting(true);
+            // The experiment exists but the workbook did not attach. A structural
+            // rejection is repairable, so keep the command-level context here
+            // (issues + workbook link + a link to the created experiment) instead
+            // of a contextless navigate-away. Other failures stay a toast + go.
+            const structural = parseStructuralValidationError(error);
+            if (structural) {
+              setAttachFailure({ experimentId, workbookId, issues: structural });
+              return;
+            }
+            toast({
+              description: t("experiments.experimentCreatedAttachFailed"),
+              variant: "destructive",
+            });
+            router.push(experimentUrl);
+          },
+        },
+      );
     },
   });
 
@@ -167,6 +200,35 @@ export function NewExperimentForm() {
       pendingNavigation();
     }
   };
+
+  // Durable creation result: experiment created, workbook rejected for structural
+  // reasons. Keep the repair context (issues keyed by command + workbook link)
+  // and offer a link to the created, still-unattached experiment.
+  if (attachFailure) {
+    return (
+      <div className="space-y-4" data-testid="experiment-created-unattached">
+        <div>
+          <h2 className="text-lg font-medium">
+            {t("experiments.experimentCreatedUnattachedTitle")}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {t("experiments.experimentCreatedUnattachedBody")}
+          </p>
+        </div>
+        <StructuralIssueList
+          issues={attachFailure.issues}
+          workbookId={attachFailure.workbookId}
+          locale={locale}
+        />
+        <NextLink
+          href={`/${locale}/platform/experiments/${attachFailure.experimentId}`}
+          className="inline-block text-sm font-medium underline"
+        >
+          {t("experiments.openCreatedExperiment")}
+        </NextLink>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
-import { zCommandFormat, zExperimentQuestionContent } from "../experiment/experiment.schema";
+import { zExperimentQuestionContent } from "../experiment/experiment.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
+import { zCommandPayload } from "./command-source.schema";
 
 const zBaseCell = z.object({
   id: z.string().min(1, "Cell ID is required"),
@@ -18,27 +19,23 @@ const zProtocolPayload = z
   })
   .strict();
 
-export const zProtocolCell = zBaseCell.extend({
-  type: z.literal("protocol"),
-  payload: zProtocolPayload,
-});
-
-// An inline command cell sends a raw string (e.g. `hello`, `battery`), JSON, or
-// YAML straight to the device. Kept as a separate cell type (not folded into
-// the protocol cell) so old mobile apps, whose bundled cells->flow only knows
-// "protocol", keep rendering protocol cells and simply skip command cells.
-const zCommandPayload = z
-  .object({
-    format: zCommandFormat,
-    content: z.string().min(1, "Command content is required"),
-    name: z.string().optional(),
+export const zProtocolCell = zBaseCell
+  .extend({
+    type: z.literal("protocol"),
+    payload: zProtocolPayload,
   })
   .strict();
 
-export const zCommandCell = zBaseCell.extend({
-  type: z.literal("command"),
-  payload: zCommandPayload,
-});
+// A command cell sends a static string/JSON/YAML to the instrument, or (dynamic
+// mode) a value resolved at runtime from an earlier cell's output. Its payload is
+// the strict static-OR-ref `zCommandPayload` union from command-source.schema.
+// Kept a separate cell type so old apps (cells->flow only knows "protocol") skip it.
+export const zCommandCell = zBaseCell
+  .extend({
+    type: z.literal("command"),
+    payload: zCommandPayload,
+  })
+  .strict();
 
 // Macros are always persisted entities; the cell stores a ref. Versioning happens at the experiment/snapshot level.
 const zMacroPayload = z
@@ -49,74 +46,91 @@ const zMacroPayload = z
   })
   .strict();
 
-export const zMacroCell = zBaseCell.extend({
-  type: z.literal("macro"),
-  payload: zMacroPayload,
-});
+export const zMacroCell = zBaseCell
+  .extend({
+    type: z.literal("macro"),
+    payload: zMacroPayload,
+  })
+  .strict();
 
-export const zQuestionCell = zBaseCell.extend({
-  type: z.literal("question"),
-  // Data pipeline canonicalises this into a column key in `questions_data`; must be unique within the workbook.
-  name: z
-    .string()
-    .min(1, "Question name is required")
-    .max(64, "Question name must be 64 characters or less"),
-  question: zExperimentQuestionContent,
-  answer: z.string().optional(),
-  isAnswered: z.boolean().optional().default(false),
-});
+export const zQuestionCell = zBaseCell
+  .extend({
+    type: z.literal("question"),
+    // Data pipeline canonicalises this into a column key in `questions_data`; must be unique within the workbook.
+    name: z
+      .string()
+      .min(1, "Question name is required")
+      .max(64, "Question name must be 64 characters or less"),
+    question: zExperimentQuestionContent,
+    answer: z.string().optional(),
+    isAnswered: z.boolean().optional().default(false),
+  })
+  .strict();
 
 const zBranchOperator = z.enum(["eq", "neq", "gt", "lt", "gte", "lte"]);
 
-const zBranchCondition = z.object({
-  id: z.string().min(1, "Condition ID is required"),
-  sourceCellId: z.string(),
-  field: z.string(),
-  operator: zBranchOperator,
-  value: z.string(),
-});
+const zBranchCondition = z
+  .object({
+    id: z.string().min(1, "Condition ID is required"),
+    sourceCellId: z.string(),
+    field: z.string(),
+    operator: zBranchOperator,
+    value: z.string(),
+  })
+  .strict();
 
-const zBranchPath = z.object({
-  id: z.string().min(1, "Path ID is required"),
-  label: z.string().max(64),
-  color: z.string(),
-  conditions: z.array(zBranchCondition),
-  gotoCellId: z.string().optional(),
-});
+const zBranchPath = z
+  .object({
+    id: z.string().min(1, "Path ID is required"),
+    label: z.string().max(64),
+    color: z.string(),
+    conditions: z.array(zBranchCondition),
+    gotoCellId: z.string().optional(),
+  })
+  .strict();
 
-export const zBranchCell = zBaseCell.extend({
-  type: z.literal("branch"),
-  paths: z.array(zBranchPath).min(1),
-  defaultPathId: z.string().optional(),
-  evaluatedPathId: z.string().optional(),
-});
+export const zBranchCell = zBaseCell
+  .extend({
+    type: z.literal("branch"),
+    paths: z.array(zBranchPath).min(1),
+    defaultPathId: z.string().optional(),
+    evaluatedPathId: z.string().optional(),
+  })
+  .strict();
 
 // One device's outcome from a multi-device run; exactly one of data/error set.
-export const zOutputDeviceResult = z.object({
-  deviceId: z.string(),
-  deviceLabel: z.string().optional(),
-  // Identified sensor family and device-reported name, when the handshake resolved them.
-  family: zSensorFamily.optional(),
-  deviceName: z.string().optional(),
-  data: z.unknown().optional(),
-  error: z.string().optional(),
-});
+export const zOutputDeviceResult = z
+  .object({
+    deviceId: z.string(),
+    deviceLabel: z.string().optional(),
+    // Identified sensor family and device-reported name, when the handshake resolved them.
+    family: zSensorFamily.optional(),
+    deviceName: z.string().optional(),
+    // Arbitrary device payload preserved verbatim (explicit unknown).
+    data: z.unknown().optional(),
+    error: z.string().optional(),
+  })
+  .strict();
 
-export const zOutputCell = zBaseCell.extend({
-  type: z.literal("output"),
-  producedBy: z.string().min(1, "Producer cell ID is required"),
-  // Primary device's result; single-device runs carry only this.
-  data: z.unknown().optional(),
-  executionTime: z.number().nonnegative().optional(),
-  messages: z.array(z.string()).optional(),
-  // Per-device results when the run fanned out to several connected devices.
-  deviceResults: z.array(zOutputDeviceResult).optional(),
-});
+export const zOutputCell = zBaseCell
+  .extend({
+    type: z.literal("output"),
+    producedBy: z.string().min(1, "Producer cell ID is required"),
+    // Primary device's result; single-device runs carry only this.
+    data: z.unknown().optional(),
+    executionTime: z.number().nonnegative().optional(),
+    messages: z.array(z.string()).optional(),
+    // Per-device results when the run fanned out to several connected devices.
+    deviceResults: z.array(zOutputDeviceResult).optional(),
+  })
+  .strict();
 
-export const zMarkdownCell = zBaseCell.extend({
-  type: z.literal("markdown"),
-  content: z.string(),
-});
+export const zMarkdownCell = zBaseCell
+  .extend({
+    type: z.literal("markdown"),
+    content: z.string(),
+  })
+  .strict();
 
 export const zWorkbookCell = z.union([
   zProtocolCell,

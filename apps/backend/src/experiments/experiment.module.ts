@@ -95,6 +95,7 @@ import { ExperimentMemberRepository } from "./core/repositories/experiment-membe
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
+import { FlowBindingRepository } from "./core/repositories/flow-binding.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
 import { ExperimentDashboardsController } from "./presentation/experiment-dashboards.controller";
@@ -172,6 +173,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
     FlowRepository,
+    FlowBindingRepository,
     LocationRepository,
     ProjectTransferRequestsRepository,
 

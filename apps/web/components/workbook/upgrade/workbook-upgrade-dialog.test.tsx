@@ -13,6 +13,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { WorkbookVersion } from "@repo/api/domains/workbook/workbook-version.schema";
 
 import { WorkbookUpgradeDialog } from "./workbook-upgrade-dialog";
@@ -141,6 +142,39 @@ describe("WorkbookUpgradeDialog", () => {
     await waitFor(() =>
       expect(screen.getByText("flow.upgradeDiff.verdict.errors")).toBeInTheDocument(),
     );
+  });
+
+  it("blocks the upgrade on a broken dynamic command reference with cell-level guidance", async () => {
+    mountPinned([{ a: 1 }]);
+    const brokenRef: WorkbookCell = {
+      id: "cmd-ref",
+      type: "command",
+      isCollapsed: false,
+      payload: { kind: "ref", ref: { sourceCellId: "gone", field: "toDevice" } },
+    };
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [protocolCell, brokenRef] }),
+    });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({
+        id: PROTOCOL_ID,
+        name: "My Protocol",
+        code: [{ a: 1 }],
+        family: "multispeq",
+        createdBy: "user-1",
+      }),
+    });
+
+    renderDialog();
+
+    await waitFor(() =>
+      expect(screen.getByText("flow.upgradeDiff.verdict.errors")).toBeInTheDocument(),
+    );
+    // Structured dynamic-command issue mapped to the cell-level guidance KEY
+    // (the i18n test harness returns keys, proving no hardcoded English).
+    expect(screen.getByText(/cells\.commandDynamic\.issue\.sourceMissing/)).toBeInTheDocument();
+    // Publish/upgrade is blocked while the structural error stands.
+    expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeDisabled();
   });
 
   it("shows a load error (not a false missing block) when an entity lookup fails transiently", async () => {
@@ -278,6 +312,79 @@ describe("WorkbookUpgradeDialog", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "cancel" }));
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("surfaces a server-rejected structural error as repair guidance, disables confirm, and leaks no extras", async () => {
+    mountPinned([{ a: 1 }]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [protocolCell] }),
+    });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({
+        id: PROTOCOL_ID,
+        name: "My Protocol",
+        code: [{ a: 1 }],
+        family: "multispeq",
+        createdBy: "user-1",
+      }),
+    });
+
+    // The oRPC envelope carries a top-level sentinel and a per-issue sentinel;
+    // neither may reach the UI, and the upgrade stays blocked while it stands.
+    const publishError = {
+      data: {
+        code: "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        secretTopLevel: "TOP-SECRET",
+        details: {
+          issues: [
+            {
+              code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+              commandCellId: "cmd-ref",
+              field: "toDevice",
+              index: 1,
+              sourceCellId: "gone",
+              secretLeak: "TOP-SECRET",
+            },
+          ],
+        },
+      },
+    };
+
+    renderDialog({ publishError });
+
+    const block = await screen.findByTestId("upgrade-server-issues");
+    // The async-inserted rejection is an atomic live alert for AT.
+    expect(block).toHaveAttribute("role", "alert");
+    expect(block).toHaveAttribute("aria-atomic", "true");
+    expect(block).toHaveTextContent("cmd-ref");
+    expect(block).toHaveTextContent(/cells\.commandDynamic\.issue\.sourceMissing/);
+    expect(screen.queryByText(/TOP-SECRET/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeDisabled();
+  });
+
+  it("ignores a non-structural publishError (no server-issue block)", async () => {
+    mountPinned([{ a: 1 }]);
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbook({ id: WORKBOOK_ID, cells: [protocolCell] }),
+    });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({
+        id: PROTOCOL_ID,
+        name: "My Protocol",
+        code: [{ a: 1 }],
+        family: "multispeq",
+        createdBy: "user-1",
+      }),
+    });
+
+    renderDialog({ publishError: new Error("network down") });
+
+    await waitFor(() =>
+      expect(screen.getByText("flow.upgradeDiff.verdict.ok")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("upgrade-server-issues")).not.toBeInTheDocument();
+    // A clean verdict with no structural rejection leaves confirm enabled.
+    expect(screen.getByRole("button", { name: /flow\.confirmUpgrade/ })).toBeEnabled();
   });
 
   it("shows an error state instead of spinning forever when a fetch fails", async () => {

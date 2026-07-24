@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
@@ -25,6 +26,10 @@ const makeBranch = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
+    loadedExperimentId: undefined,
+    experimentLabel: undefined,
+    workbookVersionId: undefined,
+    executionEpoch: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -33,6 +38,8 @@ function resetStore() {
     isQuestionsSubmitPending: false,
     scanResults: undefined,
     scanResult: undefined,
+    producerCellId: undefined,
+    outputsByCellId: {},
     isFromOverview: false,
     cells: [],
     edges: [],
@@ -41,6 +48,12 @@ function resetStore() {
     branchReturnStack: [],
     devicePlan: undefined,
     consumedNodeIds: [],
+    resumeResetReason: undefined,
+  });
+  useFlowAnswersStore.setState({
+    answersHistory: [],
+    autoincrementSettings: {},
+    rememberAnswerSettings: {},
   });
 }
 
@@ -647,5 +660,278 @@ describe("useMeasurementFlowStore", () => {
       useMeasurementFlowStore.getState().previousStep();
       expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
     });
+  });
+
+  describe("runtime output registry", () => {
+    const cells = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: "protocol-1", version: 1 },
+      },
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { format: "string", content: "battery" },
+      },
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: false,
+        payload: {
+          macroId: "00000000-0000-0000-0000-000000000001",
+          language: "javascript",
+        },
+      },
+      {
+        id: "q1",
+        type: "question",
+        isCollapsed: false,
+        name: "q1",
+        question: { kind: "text", text: "Question", required: false },
+        isAnswered: false,
+      },
+    ] as never;
+
+    function loadCycle(version = "version-1", experiment = "exp-1") {
+      useMeasurementFlowStore
+        .getState()
+        .setFlowGraph(
+          [makeMeasurement("p1"), makeMeasurement("c1"), makeAnalysis("m1")],
+          [],
+          cells,
+          version,
+          experiment,
+        );
+      useMeasurementFlowStore.getState().setExperimentId(experiment);
+    }
+
+    it("retains every producer and every exact device result in the cycle", () => {
+      loadCycle();
+      useMeasurementFlowStore.getState().setScanResults(
+        [
+          {
+            device: { id: "device-a", name: "A" },
+            result: {
+              sample: [{ phi2: 0.81, family: "multispeq", deviceName: "display-only" }],
+              executionTime: 12,
+            },
+          },
+          {
+            device: { id: "device-b", name: "B" },
+            result: { sample: [{ phi2: 0.62 }] },
+          },
+        ],
+        "p1",
+      );
+      useMeasurementFlowStore
+        .getState()
+        .setScanResult({ voltage: 3.9, messages: ["display-only"] }, "c1", {
+          id: "device-a",
+          name: "A",
+        });
+
+      const state = useMeasurementFlowStore.getState();
+      expect(Object.keys(state.outputsByCellId)).toEqual(["p1", "c1"]);
+      expect(state.outputsByCellId.p1).toMatchObject({
+        scope: "device",
+        deviceResults: [
+          { deviceId: "device-a", data: { phi2: 0.81 } },
+          { deviceId: "device-b", data: { phi2: 0.62 } },
+        ],
+      });
+      expect(state.outputsByCellId.c1).toMatchObject({
+        scope: "device",
+        deviceResults: [{ deviceId: "device-a", data: { voltage: 3.9 } }],
+      });
+      expect(JSON.stringify(state.outputsByCellId)).not.toContain("display-only");
+    });
+
+    it("does not promote an unattributed or device-less scan projection", () => {
+      loadCycle();
+      useMeasurementFlowStore.getState().setScanResult({ sample: [{ phi2: 0.5 }] });
+      expect(useMeasurementFlowStore.getState().scanResult).toBeDefined();
+      expect(useMeasurementFlowStore.getState().outputsByCellId).toEqual({});
+    });
+
+    it("retains all device macro results and supports a shared macro", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.setMacroOutput("m1", { fvfm: 0.7 }, { id: "device-a", name: "A" });
+      store.setMacroOutput("m1", { fvfm: 0.6 }, { id: "device-b", name: "B" });
+      expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toMatchObject({
+        scope: "device",
+        deviceResults: [
+          { deviceId: "device-a", data: { fvfm: 0.7 } },
+          { deviceId: "device-b", data: { fvfm: 0.6 } },
+        ],
+      });
+
+      store.setMacroOutput("m1", { shared: true });
+      expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toMatchObject({
+        scope: "shared",
+        data: { shared: true },
+      });
+    });
+
+    it("merges command replies by exact device for later command chaining", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.recordDeviceProducerOutcomes("c1", "command", [
+        { device: { id: "device-a", name: "A" }, data: "reply-a" },
+      ]);
+      store.recordDeviceProducerOutcomes("c1", "command", [
+        { device: { id: "device-b", name: "B" }, data: { response: "reply-b" } },
+      ]);
+
+      expect(useMeasurementFlowStore.getState().outputsByCellId.c1).toEqual({
+        scope: "device",
+        provenance: {
+          workbookVersionId: "version-1",
+          executionEpoch: useMeasurementFlowStore.getState().executionEpoch,
+        },
+        deviceResults: [
+          { deviceId: "device-a", deviceLabel: "A", data: { response: "reply-a" } },
+          { deviceId: "device-b", deviceLabel: "B", data: { response: "reply-b" } },
+        ],
+      });
+    });
+
+    it("adapts the current-cycle question answer as a shared runtime output", () => {
+      loadCycle();
+      useFlowAnswersStore.getState().setAnswer(0, "q1", "yes");
+      expect(useMeasurementFlowStore.getState().getRuntimeCellOutput("q1")).toEqual({
+        scope: "shared",
+        provenance: {
+          workbookVersionId: "version-1",
+          executionEpoch: useMeasurementFlowStore.getState().executionEpoch,
+        },
+        data: { answer: "yes" },
+      });
+    });
+
+    it("fails closed when a stored output has stale provenance", () => {
+      loadCycle();
+      useMeasurementFlowStore.setState({
+        outputsByCellId: {
+          m1: {
+            scope: "shared",
+            provenance: { workbookVersionId: "version-1", executionEpoch: "stale" },
+            data: { secret: "old" },
+          },
+        },
+      });
+      expect(useMeasurementFlowStore.getState().getRuntimeCellOutput("m1")).toBeUndefined();
+    });
+
+    it("preserves the cycle on a same-version refetch", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.setCurrentFlowStep(2);
+      store.setMacroOutput("m1", { value: 1 });
+      useFlowAnswersStore.getState().setAnswer(0, "q1", "kept");
+      const epoch = useMeasurementFlowStore.getState().executionEpoch;
+
+      store.setFlowGraph(
+        [makeMeasurement("p1"), makeAnalysis("m1")],
+        [],
+        cells,
+        "version-1",
+        "exp-1",
+      );
+
+      expect(useMeasurementFlowStore.getState()).toMatchObject({
+        currentFlowStep: 2,
+        executionEpoch: epoch,
+      });
+      expect(useMeasurementFlowStore.getState().outputsByCellId.m1).toBeDefined();
+      expect(useFlowAnswersStore.getState().getAnswer(0, "q1")).toBe("kept");
+    });
+
+    it("starts a clean epoch for a different workbook version", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.setMacroOutput("m1", { value: 1 });
+      useFlowAnswersStore.getState().setAnswer(0, "q1", "old");
+      const epoch = useMeasurementFlowStore.getState().executionEpoch;
+
+      store.setFlowGraph([], [], cells, "version-2", "exp-1");
+
+      expect(useMeasurementFlowStore.getState().executionEpoch).not.toBe(epoch);
+      expect(useMeasurementFlowStore.getState().outputsByCellId).toEqual({});
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
+      expect(useFlowAnswersStore.getState().answersHistory).toEqual([]);
+    });
+
+    it("clears the prior graph and cycle immediately on experiment switch", () => {
+      loadCycle();
+      useMeasurementFlowStore.getState().setMacroOutput("m1", { value: 1 });
+      useMeasurementFlowStore.getState().setExperimentId("exp-2");
+      expect(useMeasurementFlowStore.getState()).toMatchObject({
+        experimentId: "exp-2",
+        flowNodes: [],
+        workbookVersionId: undefined,
+        executionEpoch: undefined,
+        outputsByCellId: {},
+      });
+    });
+
+    it("retry clears current answers, outputs, projections and advances the epoch", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.setMacroOutput("m1", { value: 1 });
+      useFlowAnswersStore.getState().setAnswer(0, "q1", "old");
+      const epoch = useMeasurementFlowStore.getState().executionEpoch;
+
+      store.retryCurrentIteration();
+
+      expect(useMeasurementFlowStore.getState().executionEpoch).not.toBe(epoch);
+      expect(useMeasurementFlowStore.getState().outputsByCellId).toEqual({});
+      expect(useMeasurementFlowStore.getState().scanResult).toBeUndefined();
+      expect(useFlowAnswersStore.getState().getAnswer(0, "q1")).toBeUndefined();
+    });
+
+    it("a new iteration exposes no prior answer and starts a clean epoch", () => {
+      loadCycle();
+      const store = useMeasurementFlowStore.getState();
+      store.setMacroOutput("m1", { value: 1 });
+      useFlowAnswersStore.getState().setAnswer(0, "q1", "prior");
+      const epoch = useMeasurementFlowStore.getState().executionEpoch;
+
+      store.startNewIteration();
+
+      expect(useMeasurementFlowStore.getState().iterationCount).toBe(1);
+      expect(useMeasurementFlowStore.getState().executionEpoch).not.toBe(epoch);
+      expect(useMeasurementFlowStore.getState().outputsByCellId).toEqual({});
+      expect(useMeasurementFlowStore.getState().getRuntimeCellOutput("q1")).toBeUndefined();
+    });
+
+    it.each(["resetFlow", "previousStep"] as const)(
+      "%s abandons outputs, answers, previews and identity",
+      (action) => {
+        loadCycle();
+        const store = useMeasurementFlowStore.getState();
+        store.setMacroOutput("m1", { value: 1 });
+        store.setScanResult({ sample: [{ phi2: 0.8 }] }, "p1", {
+          id: "device-a",
+          name: "A",
+        });
+        useFlowAnswersStore.getState().setAnswer(0, "q1", "old");
+        store.setCurrentFlowStep(0);
+
+        store[action]();
+
+        expect(useMeasurementFlowStore.getState()).toMatchObject({
+          workbookVersionId: undefined,
+          executionEpoch: undefined,
+          outputsByCellId: {},
+          scanResult: undefined,
+          scanResults: undefined,
+        });
+        expect(useFlowAnswersStore.getState().answersHistory).toEqual([]);
+      },
+    );
   });
 });

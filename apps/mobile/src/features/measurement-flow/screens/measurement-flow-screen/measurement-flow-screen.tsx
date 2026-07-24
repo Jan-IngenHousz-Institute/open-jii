@@ -4,9 +4,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useIsFocused, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { X } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { Image, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { toast } from "sonner-native";
 import { useActiveAlerts } from "~/features/alerts/hooks/use-active-alerts";
 import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
@@ -35,6 +36,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   // screen doesn't re-render on every flow tick (scanResult, currentFlowStep,
   // …) and cascade through MeasurementFlowContainer and its children.
   const experimentId = useMeasurementFlowStore((s) => s.experimentId);
+  const resumeResetReason = useMeasurementFlowStore((s) => s.resumeResetReason);
   const { experiment } = useExperiment(experimentId);
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
@@ -42,6 +44,12 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const router = useRouter();
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
+
+  useEffect(() => {
+    if (resumeResetReason !== "FLOW_RESUME_STATE_INVALID") return;
+    toast.error(t("resume.invalidState"));
+    useMeasurementFlowStore.setState({ resumeResetReason: undefined });
+  }, [resumeResetReason, t]);
 
   const hasAlerts = useActiveAlerts().length > 0;
   const isLightMode = themeColors.scheme !== "dark";

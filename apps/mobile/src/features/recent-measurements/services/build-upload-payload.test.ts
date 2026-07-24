@@ -279,6 +279,89 @@ describe("workbook run correlation", () => {
   });
 });
 
+describe("workbook producer provenance", () => {
+  it("serializes full dynamic command provenance with an exact string dispatch", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "device-1" },
+      producerCellId: "command-1",
+      producerKind: "command",
+      dispatchedCommand: "set_intensity 41",
+      commandSource: { sourceCellId: "question-1", field: "answer" },
+      executionEpoch: "epoch-1",
+    });
+
+    expect(payload).toMatchObject({
+      producer_cell_id: "command-1",
+      producer_kind: "command",
+      dispatched_command: "set_intensity 41",
+      command_source: JSON.stringify({ sourceCellId: "question-1", field: "answer" }),
+      execution_epoch: "epoch-1",
+    });
+  });
+
+  it("JSON-serializes object commands without changing the caller's value", () => {
+    const dispatchedCommand = { set_led: [[1, 2, 3]], enabled: true };
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      producerCellId: "command-1",
+      producerKind: "command",
+      dispatchedCommand,
+      executionEpoch: "epoch-1",
+    });
+
+    expect(payload.dispatched_command).toBe(JSON.stringify(dispatchedCommand));
+    expect(dispatchedCommand).toStrictEqual({ set_led: [[1, 2, 3]], enabled: true });
+    expect(payload).not.toHaveProperty("command_source");
+  });
+
+  it("emits only producer identity and epoch for protocol measurements", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      producerCellId: "protocol-1",
+      producerKind: "protocol",
+      executionEpoch: "epoch-1",
+    });
+
+    expect(payload).toMatchObject({
+      producer_cell_id: "protocol-1",
+      producer_kind: "protocol",
+      execution_epoch: "epoch-1",
+    });
+    expect(payload).not.toHaveProperty("dispatched_command");
+    expect(payload).not.toHaveProperty("command_source");
+  });
+
+  it("omits every provenance field for legacy callers", () => {
+    const payload = buildUploadPayload({ ...baseArgs, rawMeasurement: {} });
+
+    expect(payload).not.toHaveProperty("producer_cell_id");
+    expect(payload).not.toHaveProperty("producer_kind");
+    expect(payload).not.toHaveProperty("dispatched_command");
+    expect(payload).not.toHaveProperty("command_source");
+    expect(payload).not.toHaveProperty("execution_epoch");
+  });
+
+  it("authoritative provenance replaces same-named raw measurement fields", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {
+        producer_cell_id: "spoofed",
+        dispatched_command: "spoofed",
+      },
+      producerCellId: "command-1",
+      producerKind: "command",
+      dispatchedCommand: "actual",
+      executionEpoch: "epoch-1",
+    });
+
+    expect(payload.producer_cell_id).toBe("command-1");
+    expect(payload.dispatched_command).toBe("actual");
+  });
+});
+
 describe("measurement location", () => {
   it("stamps latitude/longitude when a location is given", () => {
     const payload = buildUploadPayload({

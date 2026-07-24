@@ -10,7 +10,10 @@ import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
-import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
+import {
+  WorkbookEntitySavedProvider,
+  WorkbookExecutableEditProvider,
+} from "../workbook-entity-saved-context";
 import { ProtocolCellComponent } from "./protocol-cell";
 
 vi.mock("../workbook-code-editor", () => ({
@@ -262,6 +265,30 @@ describe("ProtocolCellComponent", () => {
     await vi.advanceTimersByTimeAsync(1100);
     await waitFor(() => expect(onEntitySaved).toHaveBeenCalled());
     vi.useRealTimers();
+  });
+
+  it("fires the executable-edit invalidator immediately when the owner edits code", async () => {
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+    });
+    mockedUseSession.mockReturnValue({
+      data: { user: { id: OWNER_ID } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const onExecutableEdit = vi.fn();
+
+    const user = userEvent.setup();
+    render(
+      <WorkbookExecutableEditProvider onExecutableEdit={onExecutableEdit}>
+        <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />
+      </WorkbookExecutableEditProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-change"));
+
+    // Synchronous on edit, not after debounced persistence.
+    expect(onExecutableEdit).toHaveBeenCalledTimes(1);
   });
 
   it("does not persist when the owner types unparseable JSON", async () => {

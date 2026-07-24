@@ -335,6 +335,83 @@ describe("WorkbookController", () => {
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
+
+    it("passes clientSupportsDynamicRef=true when the capability header is present", async () => {
+      const version = mockVersion();
+      const executeSpy = vi
+        .spyOn(getWorkbookVersionUseCase, "execute")
+        .mockResolvedValue(success(version));
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: version.workbookId,
+        versionId: version.id,
+      });
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .set("x-openjii-capabilities", "dynamic-command-ref-v1")
+        .expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith(version.id, { clientSupportsDynamicRef: true });
+    });
+
+    it("passes clientSupportsDynamicRef=false when the capability header is absent", async () => {
+      const version = mockVersion();
+      const executeSpy = vi
+        .spyOn(getWorkbookVersionUseCase, "execute")
+        .mockResolvedValue(success(version));
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: version.workbookId,
+        versionId: version.id,
+      });
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith(version.id, { clientSupportsDynamicRef: false });
+    });
+
+    it("maps an upgrade-required refusal to HTTP 426", async () => {
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(
+        failure(
+          AppError.upgradeRequired(
+            "This workbook version requires a newer client to open",
+            "DYNAMIC_COMMAND_CLIENT_UPGRADE_REQUIRED",
+          ),
+        ),
+      );
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: faker.string.uuid(),
+        versionId: faker.string.uuid(),
+      });
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.UPGRADE_REQUIRED);
+    });
+
+    it("returns a 426 body with a stable code and no workbook cells in production", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(
+        failure(
+          AppError.upgradeRequired(
+            "This workbook version requires a newer client to open",
+            "DYNAMIC_COMMAND_CLIENT_UPGRADE_REQUIRED",
+          ),
+        ),
+      );
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: faker.string.uuid(),
+        versionId: faker.string.uuid(),
+      });
+      const response = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.UPGRADE_REQUIRED);
+
+      const serialized = JSON.stringify(response.body);
+      expect(serialized).toContain("DYNAMIC_COMMAND_CLIENT_UPGRADE_REQUIRED");
+      expect(serialized).not.toContain('"cells"');
+      vi.unstubAllEnvs();
+    });
   });
 
   describe("authorization", () => {

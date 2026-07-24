@@ -1,5 +1,6 @@
 "use client";
 
+import type { CommandResolvedPreview } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import {
   DndContext,
   KeyboardSensor,
@@ -49,6 +50,7 @@ interface WorkbookEditorProps {
   onCellsChange: (cells: WorkbookCell[]) => void;
   title?: string;
   executionStates?: Record<string, CellExecutionState>;
+  commandPreviews?: Record<string, CommandResolvedPreview>;
   isConnected?: boolean;
   isConnecting?: boolean;
   connectedDevices?: {
@@ -197,6 +199,7 @@ interface SortableCellGroupProps {
   cells: WorkbookCell[];
   cellNumber?: number;
   executionStates?: Record<string, CellExecutionState>;
+  commandPreview?: CommandResolvedPreview;
   sensorFamily?: SensorFamily;
   readOnly?: boolean;
   entitySnapshots?: EntitySnapshots;
@@ -216,6 +219,7 @@ function SortableCellGroup({
   cells,
   cellNumber,
   executionStates,
+  commandPreview,
   sensorFamily,
   readOnly,
   entitySnapshots,
@@ -289,6 +293,7 @@ function SortableCellGroup({
               allCells={cells}
               executionStatus={cellState?.status}
               executionError={cellState?.error}
+              commandPreview={commandPreview}
               promptedQuestionId={promptedQuestionId}
               onQuestionAnswered={onQuestionAnswered}
               readOnly={readOnly}
@@ -332,6 +337,7 @@ export function WorkbookEditor({
   onCellsChange,
   title,
   executionStates,
+  commandPreviews,
   isConnected,
   isConnecting,
   connectedDevices,
@@ -566,6 +572,7 @@ export function WorkbookEditor({
                   cells={cells}
                   cellNumber={executionCounts[group.source.id]}
                   executionStates={executionStates}
+                  commandPreview={commandPreviews?.[group.source.id]}
                   sensorFamily={sensorFamily}
                   readOnly={readOnly}
                   entitySnapshots={entitySnapshots}

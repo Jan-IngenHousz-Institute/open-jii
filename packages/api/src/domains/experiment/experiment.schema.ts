@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
+import {
+  zCommandFormat,
+  zExperimentMeasurementCommandContent,
+} from "../workbook/command-source.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
 import {
   zExperimentLocationInput,
@@ -100,80 +104,148 @@ export const zExperimentQuestionContent = z.discriminatedUnion("kind", [
   zQuestionNumber,
 ]);
 
-export const zExperimentInstructionContent = z.object({
-  text: z.string().min(1, "Instruction text is required"),
-});
+// Strict so a foreign key (e.g. a hidden `command`) cannot ride along on an
+// instruction node and be stripped before the dynamic-command detector runs.
+export const zExperimentInstructionContent = z
+  .object({
+    text: z.string().min(1, "Instruction text is required"),
+  })
+  .strict();
 
-export const zExperimentMeasurementContent = z.object({
-  protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
-  params: z.record(z.string(), z.unknown()).optional(),
-});
+// Strict so a protocol node cannot also smuggle a `command` carrier: a
+// protocol+command shape must fail validation rather than be silently accepted,
+// stripped, and retyped. Paired with the strict command carrier below, protocol
+// and command measurement content are mutually exclusive.
+export const zExperimentMeasurementContent = z
+  .object({
+    protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
+    params: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
-// Inline command formats a command cell can carry. Defined here (rather than in
-// workbook-cells.schema) so workbook-cells can import it without an import cycle,
-// since workbook-cells already depends on this module.
-export const zCommandFormat = z.enum(["string", "json", "yaml"]);
-export type CommandFormat = z.infer<typeof zCommandFormat>;
+// Command format + measurement-node command carrier now live in the neutral
+// command-source module (static OR ref); re-exported here (imported above for
+// in-file use) so existing importers keep working.
+export { zCommandFormat, zExperimentMeasurementCommandContent };
+export type { CommandFormat } from "../workbook/command-source.schema";
 
-// A measurement node may instead carry an inline device command (raw string,
-// JSON, or YAML) from a command cell. Old apps' cells->flow drops this node
-// (unknown content shape), degrading gracefully; protocol nodes are unaffected.
-export const zExperimentMeasurementCommandContent = z.object({
-  command: z.object({
-    format: zCommandFormat,
-    content: z.string().min(1, "Command content is required"),
-  }),
-});
+// Strict so a foreign `command`/ref key cannot hide on a macro node.
+export const zExperimentAnalysisContent = z
+  .object({
+    macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
+    params: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
-export const zExperimentAnalysisContent = z.object({
-  macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
-  params: z.record(z.string(), z.unknown()).optional(),
-});
+// Branch condition mirrors the workbook `zBranchCondition`. Strict so a
+// misplaced `command`/ref key cannot ride on a condition and be stripped.
+export const zExperimentBranchConditionCarrier = z
+  .object({
+    id: z.string().min(1),
+    sourceCellId: z.string(),
+    field: z.string(),
+    operator: z.enum(["eq", "neq", "gt", "lt", "gte", "lte"]),
+    value: z.string(),
+  })
+  .strict();
 
-export const zExperimentBranchPathSummary = z.object({
-  id: z.string().min(1),
-  label: z.string().max(64),
-  color: z.string(),
-});
+// `conditions` and `gotoCellId` are optional: flows persisted before the carrier
+// was extended omit them (goto was edge-only), so older graphs still parse.
+// Strict so a misplaced ref-like key on a path is rejected, not stripped.
+export const zExperimentBranchPathSummary = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().max(64),
+    color: z.string(),
+    conditions: z.array(zExperimentBranchConditionCarrier).optional(),
+    gotoCellId: z.string().optional(),
+  })
+  .strict();
 
-export const zExperimentBranchContent = z.object({
-  paths: z.array(zExperimentBranchPathSummary).min(1),
-  defaultPathId: z.string().optional(),
-});
+// Strict at every level (content, path, condition) so a foreign `command`/ref
+// key cannot sit beside `paths`, on a path, or on a condition and be stripped.
+export const zExperimentBranchContent = z
+  .object({
+    paths: z.array(zExperimentBranchPathSummary).min(1),
+    defaultPathId: z.string().optional(),
+  })
+  .strict();
 
-export const zExperimentFlowNode = z.object({
-  id: z.string().min(1),
-  type: zExperimentFlowNodeType,
-  name: z
-    .string()
-    .min(1, "Node label is required")
-    .max(64, "Node label must be 64 characters or less"),
-  content: z.union([
-    zExperimentQuestionContent,
-    zExperimentInstructionContent,
-    zExperimentMeasurementContent,
-    zExperimentMeasurementCommandContent,
-    zExperimentAnalysisContent,
-    zExperimentBranchContent,
-  ]),
-  // A node can be marked as a start node. Exactly one node must be the start node for any flow.
-  isStart: z.boolean().optional().default(false),
-  // Optional persisted layout position (added later for backwards compatibility)
-  position: z
-    .object({
-      x: z.number(),
-      y: z.number(),
-    })
-    .optional(),
-});
+/**
+ * Whether a node's content carrier matches its declared type. Couples the two
+ * so a measurement can only carry a protocol/command carrier, analysis a macro,
+ * question a question, instruction text, and branch paths. Preserves every
+ * canonical legacy variant (measurement accepts protocol OR command).
+ */
+export function flowNodeContentMatchesType(type: unknown, content: unknown): boolean {
+  switch (type) {
+    case "measurement":
+      return (
+        zExperimentMeasurementContent.safeParse(content).success ||
+        zExperimentMeasurementCommandContent.safeParse(content).success
+      );
+    case "analysis":
+      return zExperimentAnalysisContent.safeParse(content).success;
+    case "question":
+      return zExperimentQuestionContent.safeParse(content).success;
+    case "instruction":
+      return zExperimentInstructionContent.safeParse(content).success;
+    case "branch":
+      return zExperimentBranchContent.safeParse(content).success;
+    default:
+      return false;
+  }
+}
 
-export const zExperimentFlowEdge = z.object({
-  id: z.string().min(1),
-  source: z.string().min(1),
-  target: z.string().min(1),
-  label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
-  sourceHandle: z.string().max(64).optional().nullable(),
-});
+export const zExperimentFlowNode = z
+  .object({
+    id: z.string().min(1),
+    type: zExperimentFlowNodeType,
+    name: z
+      .string()
+      .min(1, "Node label is required")
+      .max(64, "Node label must be 64 characters or less"),
+    content: z.union([
+      zExperimentQuestionContent,
+      zExperimentInstructionContent,
+      zExperimentMeasurementContent,
+      zExperimentMeasurementCommandContent,
+      zExperimentAnalysisContent,
+      zExperimentBranchContent,
+    ]),
+    // A node can be marked as a start node. Exactly one node must be the start node for any flow.
+    isStart: z.boolean().optional().default(false),
+    // Optional persisted layout position (added later for backwards compatibility)
+    position: z
+      .object({
+        x: z.number(),
+        y: z.number(),
+      })
+      .strict()
+      .optional(),
+  })
+  // Strict so a wrong-level sibling `command`/`ref`/`payload` key on a node is
+  // rejected rather than silently stripped before the content-type check.
+  .strict()
+  .superRefine((node, ctx) => {
+    if (!flowNodeContentMatchesType(node.type, node.content)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Node content does not match node type "${node.type}"`,
+        path: ["content"],
+      });
+    }
+  });
+
+export const zExperimentFlowEdge = z
+  .object({
+    id: z.string().min(1),
+    source: z.string().min(1),
+    target: z.string().min(1),
+    label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
+    sourceHandle: z.string().max(64).optional().nullable(),
+  })
+  .strict();
 
 /**
  * Column names that are reserved by the centrum gold tables. User-supplied
@@ -214,48 +286,91 @@ export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   "_id",
 ]);
 
-export const zExperimentFlowGraph = z
-  .object({
-    nodes: z.array(zExperimentFlowNode).min(1, "At least one node is required to create a flow"),
-    edges: z.array(zExperimentFlowEdge),
-  })
-  .superRefine((graph, ctx) => {
-    // Require exactly one start node when nodes are present
-    const startCount = graph.nodes.reduce((acc, n) => (n.isStart === true ? acc + 1 : acc), 0);
-    if (graph.nodes.length > 0 && startCount !== 1) {
+/** Reusable fields for strict standalone and route-composed flow schemas. */
+export const experimentFlowGraphFields = {
+  nodes: z.array(zExperimentFlowNode).min(1, "At least one node is required to create a flow"),
+  edges: z.array(zExperimentFlowEdge),
+};
+
+interface ExperimentFlowGraphFields {
+  nodes: z.infer<typeof zExperimentFlowNode>[];
+  edges: z.infer<typeof zExperimentFlowEdge>[];
+}
+
+/** Shared graph-level integrity rules for every public graph envelope. */
+export function refineExperimentFlowGraph(
+  graph: ExperimentFlowGraphFields,
+  ctx: z.RefinementCtx,
+): void {
+  // Require exactly one start node when nodes are present
+  const startCount = graph.nodes.reduce((acc, n) => (n.isStart === true ? acc + 1 : acc), 0);
+  if (graph.nodes.length > 0 && startCount !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Exactly one start node is required",
+      path: ["nodes"],
+    });
+  }
+
+  // Node ids must be unique: identity maps downstream must never rely on
+  // last-write-wins, and a duplicate id makes references ambiguous.
+  const seenNodeIds = new Set<string>();
+  graph.nodes.forEach((node, index) => {
+    if (seenNodeIds.has(node.id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Exactly one start node is required",
-        path: ["nodes"],
+        message: `Duplicate node id "${node.id}"`,
+        path: ["nodes", index, "id"],
       });
     }
-
-    // Reject duplicate question-node labels (canonicalized) and any whose
-    // canonical form collides with a reserved experiment-data column name: both
-    // shadow/collide as column keys in `questions_data` and lose answers.
-    const seen = new Map<string, number>();
-    graph.nodes.forEach((node, index) => {
-      if (node.type !== "question") return;
-      const canonical = sanitizeQuestionLabel(node.name);
-      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(canonical)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Question label "${node.name}" resolves to reserved column "${canonical}"`,
-          path: ["nodes", index, "name"],
-        });
-        return;
-      }
-      if (seen.has(canonical)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Question node label "${node.name}" must be unique`,
-          path: ["nodes", index, "name"],
-        });
-        return;
-      }
-      seen.set(canonical, index);
-    });
+    seenNodeIds.add(node.id);
   });
+
+  // Edge ids must be unique too.
+  const seenEdgeIds = new Set<string>();
+  graph.edges.forEach((edge, index) => {
+    if (seenEdgeIds.has(edge.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Duplicate edge id "${edge.id}"`,
+        path: ["edges", index, "id"],
+      });
+    }
+    seenEdgeIds.add(edge.id);
+  });
+
+  // Reject duplicate question-node labels (canonicalized) and any whose
+  // canonical form collides with a reserved experiment-data column name: both
+  // shadow/collide as column keys in `questions_data` and lose answers.
+  const seen = new Map<string, number>();
+  graph.nodes.forEach((node, index) => {
+    if (node.type !== "question") return;
+    const canonical = sanitizeQuestionLabel(node.name);
+    if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(canonical)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Question label "${node.name}" resolves to reserved column "${canonical}"`,
+        path: ["nodes", index, "name"],
+      });
+      return;
+    }
+    if (seen.has(canonical)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Question node label "${node.name}" must be unique`,
+        path: ["nodes", index, "name"],
+      });
+      return;
+    }
+    seen.set(canonical, index);
+  });
+}
+
+/** Standalone persistence/materialization/use-case graph boundary. */
+export const zExperimentFlowGraph = z
+  .object(experimentFlowGraphFields)
+  .strict()
+  .superRefine(refineExperimentFlowGraph);
 
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;

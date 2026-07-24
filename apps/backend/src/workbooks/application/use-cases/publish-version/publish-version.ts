@@ -2,6 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import {
+  hasDynamicCommandRef,
+  validateDynamicCommandReferences,
+} from "@repo/api/transforms/dynamic-command-refs";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
@@ -38,11 +42,51 @@ export class PublishVersionUseCase {
       return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
     }
 
+    const cells = workbook.cells as WorkbookCell[];
+
+    // Structural validation is enforced HERE, before snapshots or version
+    // creation, so direct-API, web, and future clients all publish under the
+    // same rule. Runtime-only checks (freshness, scope, device, value) stay out.
+    const structuralIssues = validateDynamicCommandReferences(cells);
+    if (structuralIssues.length > 0) {
+      this.logger.warn({
+        msg: "Blocked publish: workbook has structural validation errors",
+        errorCode: ErrorCodes.WORKBOOK_STRUCTURAL_VALIDATION_FAILED,
+        operation: "publishVersion",
+        workbookId,
+        issueCodes: structuralIssues.map((i) => i.code),
+      });
+      return failure(
+        AppError.badRequest(
+          "Workbook has structural validation errors",
+          ErrorCodes.WORKBOOK_STRUCTURAL_VALIDATION_FAILED,
+          { issues: structuralIssues },
+        ),
+      );
+    }
+
+    // Default-off release gate. A dynamic-command workbook cannot be published
+    // until DYNAMIC_COMMAND_PUBLISH_ENABLED=true, even if the web authoring flag
+    // was flipped on prematurely. Static workbooks are unaffected.
+    if (hasDynamicCommandRef(cells) && process.env.DYNAMIC_COMMAND_PUBLISH_ENABLED !== "true") {
+      this.logger.warn({
+        msg: "Blocked publish: dynamic command publication is disabled",
+        errorCode: ErrorCodes.DYNAMIC_COMMAND_PUBLISH_DISABLED,
+        operation: "publishVersion",
+        workbookId,
+      });
+      return failure(
+        AppError.badRequest(
+          "Dynamic command publication is currently disabled",
+          ErrorCodes.DYNAMIC_COMMAND_PUBLISH_DISABLED,
+        ),
+      );
+    }
+
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
     if (latestResult.isFailure()) return latestResult;
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
-    const cells = workbook.cells as WorkbookCell[];
     const protocolIds = [
       ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
     ];

@@ -1,7 +1,10 @@
+import { v4 as uuidv4 } from "uuid";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
+import type { CommandRef } from "@repo/api/domains/workbook/command-source.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { RuntimeCellOutput } from "@repo/api/transforms/runtime-output";
 
 // Raw MultispeQ output: device-defined JSON the flow stores verbatim and
 // hands to macro evaluation / upload. Persisted, so keep it structural.
@@ -14,6 +17,14 @@ export interface ScanResultEntry {
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
   protocolName?: string;
+  /** Workbook producer and execution provenance persisted with the upload projection. */
+  producerCellId?: string;
+  producerKind?: "protocol" | "command";
+  /** Exact per-device command sent over transport; command producers only. */
+  dispatchedCommand?: string | object;
+  /** Authored dynamic source reference; absent for static commands and protocols. */
+  commandSource?: CommandRef;
+  executionEpoch?: string;
 }
 
 /** One device's routing from a device-scoped (dispatcher) branch. */
@@ -39,10 +50,15 @@ export interface BranchReturn {
 // requires a persist version bump + migrate, or paused field flows are lost.
 export interface FlowState {
   experimentId?: string;
+  // Experiment whose workbook graph is currently loaded. Kept separate from
+  // experimentId because selection preloads a graph before the user starts it.
+  loadedExperimentId?: string;
   experimentLabel?: string;
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // Active measurement-cycle identity. Every resolvable output must carry it.
+  executionEpoch?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -55,11 +71,10 @@ export interface FlowState {
   // branch evaluation keep reading the Primary device's result.
   scanResults?: ScanResultEntry[];
   // Cell id of the producer (protocol or command) that yielded scanResult;
-  // keys the synthetic output cell in hydrateCells for branch evaluation.
+  // retained only with the legacy upload/UI scan projection.
   producerCellId?: string;
-  // Macro/analysis outputs keyed by cell id so downstream branches and macros
-  // can read them on-device (the web runtime stores these as output cells).
-  cellOutputs: Record<string, unknown>;
+  // Sole resolver authority for protocol, command, and macro producers.
+  outputsByCellId: Record<string, RuntimeCellOutput>;
   isFromOverview: boolean;
   // Workbook-derived data for on-device branch evaluation; empty for legacy
   // flow-only experiments. Persisted so a resumed branching flow keeps routing.
@@ -77,8 +92,10 @@ export interface FlowState {
 
 export const initialFlowState: FlowState = {
   experimentId: undefined,
+  loadedExperimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  executionEpoch: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -88,7 +105,7 @@ export const initialFlowState: FlowState = {
   scanResult: undefined,
   scanResults: undefined,
   producerCellId: undefined,
-  cellOutputs: {},
+  outputsByCellId: {},
   isFromOverview: false,
   cells: [],
   edges: [],
@@ -98,6 +115,20 @@ export const initialFlowState: FlowState = {
   devicePlan: undefined,
   consumedNodeIds: [],
 };
+
+export function createExecutionEpoch(): string {
+  return uuidv4();
+}
+
+function clearedCycleOutputs(): Partial<FlowState> {
+  return {
+    executionEpoch: createExecutionEpoch(),
+    scanResult: undefined,
+    scanResults: undefined,
+    producerCellId: undefined,
+    outputsByCellId: {},
+  };
+}
 
 // Iteration-scoped branch routing, cleared on every new iteration, retry,
 // dismiss or reset so a fresh pass re-evaluates branches from scratch.
@@ -162,6 +193,7 @@ export function nextStepState(state: FlowState): Partial<FlowState> {
       return {
         currentFlowStep: 0,
         iterationCount: state.iterationCount + 1,
+        ...clearedCycleOutputs(),
         ...clearedBranchIteration,
       };
     }
@@ -201,8 +233,10 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
     // abandons the active flow entirely. Leaves isFromOverview untouched.
     return {
       experimentId: undefined,
+      loadedExperimentId: undefined,
       experimentLabel: undefined,
       workbookVersionId: undefined,
+      executionEpoch: undefined,
       currentStep: 0,
       flowNodes: [],
       currentFlowStep: 0,
@@ -212,7 +246,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       scanResult: undefined,
       scanResults: undefined,
       producerCellId: undefined,
-      cellOutputs: {},
+      outputsByCellId: {},
       cells: [],
       edges: [],
       ...clearedBranchIteration,
@@ -230,10 +264,7 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
     isQuestionsSubmitPending: false,
-    scanResult: undefined,
-    scanResults: undefined,
-    producerCellId: undefined,
-    cellOutputs: {},
+    ...clearedCycleOutputs(),
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -243,10 +274,7 @@ export function retryIterationState(): Partial<FlowState> {
   return {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
-    scanResult: undefined,
-    scanResults: undefined,
-    producerCellId: undefined,
-    cellOutputs: {},
+    ...clearedCycleOutputs(),
     isFromOverview: false,
     ...clearedBranchIteration,
   };
@@ -266,10 +294,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     isQuestionsSubmitPending: false,
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
-    scanResult: undefined,
-    scanResults: undefined,
-    producerCellId: undefined,
-    cellOutputs: {},
+    ...clearedCycleOutputs(),
     ...clearedBranchIteration,
   };
 }

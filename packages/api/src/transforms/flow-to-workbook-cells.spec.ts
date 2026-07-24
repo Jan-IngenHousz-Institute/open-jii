@@ -71,15 +71,44 @@ describe("orderFlowNodes", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("skips disconnected nodes", () => {
+  it("retains disconnected nodes after the chain, in original node-array order", () => {
     const nodes = [
       makeNode({ id: "n1", type: "measurement", isStart: true }),
       makeNode({ id: "n2", type: "analysis" }),
       makeNode({ id: "n3", type: "question" }),
     ];
     const edges = [makeEdge("n1", "n2")];
+    // Chain is n1 -> n2; n3 is disconnected and kept at the end (not dropped).
     const result = orderFlowNodes(nodes, edges);
-    expect(result.map((n) => n.id)).toEqual(["n1", "n2"]);
+    expect(result.map((n) => n.id)).toEqual(["n1", "n2", "n3"]);
+  });
+
+  it("appends multiple disconnected nodes in deterministic original order", () => {
+    const nodes = [
+      makeNode({ id: "start", type: "measurement", isStart: true }),
+      makeNode({ id: "b", type: "analysis" }),
+      makeNode({ id: "a", type: "question" }),
+    ];
+    // No edges: only `start` is on the chain; `b` then `a` follow array order.
+    expect(orderFlowNodes(nodes, []).map((n) => n.id)).toEqual(["start", "b", "a"]);
+  });
+
+  it("chooses the ordinary edge as the chain successor, never a goto edge", () => {
+    const nodes = [
+      makeNode({ id: "b1", type: "branch", isStart: true }),
+      makeNode({ id: "goto-target", type: "analysis" }),
+      makeNode({ id: "next", type: "measurement" }),
+    ];
+    // Goto edge is listed FIRST; a handle-blind "first unvisited" would wrongly
+    // make goto-target the successor of b1.
+    const edges: FlowEdge[] = [
+      { id: "e-goto", source: "b1", target: "goto-target", sourceHandle: "p1" },
+      { id: "e-seq", source: "b1", target: "next", sourceHandle: null },
+    ];
+    // `next` is the ordinary successor; the goto-only `goto-target` is retained
+    // but appended after the chain (never dropped, never the successor).
+    const result = orderFlowNodes(nodes, edges);
+    expect(result.map((n) => n.id)).toEqual(["b1", "next", "goto-target"]);
   });
 });
 
@@ -210,5 +239,140 @@ describe("flowNodesToWorkbookCells", () => {
       type: "command",
       payload: { format: "string", content: "battery" },
     });
+  });
+
+  it("converts a ref-carrier measurement node back to a dynamic command cell", () => {
+    const nodes = [
+      makeNode({
+        id: "c1",
+        type: "measurement",
+        name: "Dynamic command · toDevice",
+        isStart: true,
+        content: { command: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } } },
+      }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells).toHaveLength(1);
+    // The derived label is dropped rather than fabricated into an authored name.
+    expect(cells[0]).toEqual({
+      id: "c1",
+      type: "command",
+      isCollapsed: false,
+      payload: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } },
+    });
+  });
+
+  it("keeps an authored name that differs from the derived label", () => {
+    const nodes = [
+      makeNode({
+        id: "c1",
+        type: "measurement",
+        name: "Send LED",
+        isStart: true,
+        content: { command: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } } },
+      }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells[0]).toMatchObject({
+      type: "command",
+      payload: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" }, name: "Send LED" },
+    });
+  });
+
+  it("drops a mixed protocol+command measurement node instead of retyping it", () => {
+    const nodes = [
+      makeNode({
+        id: "mix",
+        type: "measurement",
+        isStart: true,
+        content: { protocolId: uuidA, command: { format: "string", content: "battery" } },
+      }),
+    ];
+    // Mixed carrier is rejected (not stripped/retyped to a command or protocol cell).
+    expect(flowNodesToWorkbookCells(nodes, [])).toHaveLength(0);
+  });
+
+  it("reconstructs a branch cell from node content (conditions + goto)", () => {
+    const nodes = [
+      makeNode({
+        id: "b1",
+        type: "branch",
+        isStart: true,
+        content: {
+          paths: [
+            {
+              id: "p1",
+              label: "Retry",
+              color: "#10b981",
+              conditions: [
+                { id: "cond1", sourceCellId: "m1", field: "ok", operator: "eq", value: "1" },
+              ],
+              gotoCellId: "m1",
+            },
+          ],
+          defaultPathId: "p1",
+        },
+      }),
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, []);
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toEqual({
+      id: "b1",
+      type: "branch",
+      isCollapsed: false,
+      defaultPathId: "p1",
+      paths: [
+        {
+          id: "p1",
+          label: "Retry",
+          color: "#10b981",
+          conditions: [
+            { id: "cond1", sourceCellId: "m1", field: "ok", operator: "eq", value: "1" },
+          ],
+          gotoCellId: "m1",
+        },
+      ],
+    });
+  });
+
+  it("recovers a branch goto from the outgoing edge when content omits it", () => {
+    // Legacy graph: branch content has no gotoCellId; goto lives on the edge.
+    const nodes = [
+      makeNode({
+        id: "b1",
+        type: "branch",
+        isStart: true,
+        content: { paths: [{ id: "p1", label: "Loop", color: "#000" }] },
+      }),
+    ];
+    const edges = [{ id: "e1", source: "b1", target: "m1", sourceHandle: "p1", label: "Loop" }];
+    const cells = flowNodesToWorkbookCells(nodes, edges);
+    expect(cells[0]).toMatchObject({
+      type: "branch",
+      paths: [{ id: "p1", gotoCellId: "m1", conditions: [] }],
+    });
+  });
+
+  it("retains a legacy goto-only target node (never dropped) in deterministic order", () => {
+    // start -> branch (ordinary); branch --p1 goto--> gtarget (edge only, no
+    // ordinary edge into gtarget). gtarget must still be converted and kept.
+    const nodes = [
+      makeNode({ id: "start", type: "measurement", isStart: true, content: { protocolId: uuidA } }),
+      makeNode({
+        id: "b1",
+        type: "branch",
+        content: { paths: [{ id: "p1", label: "Go", color: "#000" }] },
+      }),
+      makeNode({ id: "gtarget", type: "instruction", content: { text: "Jump here" } }),
+    ];
+    const edges: FlowEdge[] = [
+      { id: "e-seq", source: "start", target: "b1", sourceHandle: null },
+      { id: "e-goto", source: "b1", target: "gtarget", sourceHandle: "p1" },
+    ];
+    const cells = flowNodesToWorkbookCells(nodes, edges);
+    // Chain [start, b1] first, then the goto-only `gtarget` appended.
+    expect(cells.map((c) => c.id)).toEqual(["start", "b1", "gtarget"]);
+    const branch = cells.find((c) => c.id === "b1");
+    expect(branch).toMatchObject({ type: "branch", paths: [{ id: "p1", gotoCellId: "gtarget" }] });
   });
 });

@@ -1,12 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
-
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
+import { FlowBindingRepository } from "../../../core/repositories/flow-binding.repository";
+import { materializeFlowGraph } from "../materialize-flow-graph";
 
 export interface SetWorkbookVersionResult {
   workbookId: string;
@@ -26,7 +25,7 @@ export class SetWorkbookVersionUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly flowRepository: FlowRepository,
+    private readonly flowBindingRepository: FlowBindingRepository,
   ) {}
 
   async execute(
@@ -64,19 +63,19 @@ export class SetWorkbookVersionUseCase {
         );
       }
 
-      // Refresh the materialised flow row first, then re-pin. If the flow
-      // upsert fails, the experiment stays on the old (consistent) version
-      // rather than pointing at a version whose flow never updated.
-      const flowResult = await this.flowRepository.upsert(
-        experimentId,
-        cellsToFlowGraph(target.cells),
-      );
-      if (flowResult.isFailure()) return flowResult;
+      // Materialise + strictly validate before any mutation, then re-pin and
+      // upsert/delete the flow atomically (both roll back together; a
+      // concurrent workbook change is rejected).
+      const materialized = materializeFlowGraph(target.cells);
+      if (materialized.isFailure()) return materialized;
 
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookVersionId: target.id,
+      const bindResult = await this.flowBindingRepository.bind({
+        experimentId,
+        expectedWorkbookId: experiment.workbookId,
+        pointer: { workbookVersionId: target.id },
+        materialization: materialized.value,
       });
-      if (updateResult.isFailure()) return updateResult;
+      if (bindResult.isFailure()) return bindResult;
 
       this.logger.log({
         msg: "Experiment pinned to a specific workbook version",

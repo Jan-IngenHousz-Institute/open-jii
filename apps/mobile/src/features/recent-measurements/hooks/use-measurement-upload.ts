@@ -12,6 +12,8 @@ import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic
 import { createLogger } from "~/shared/observability/logger";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
+import type { CommandRef } from "@repo/api/domains/workbook/command-source.schema";
+
 const log = createLogger("measurement-upload");
 
 type TFn = ReturnType<typeof useTranslation>["t"];
@@ -89,6 +91,11 @@ export function useMeasurementUpload() {
         protocolId?: string;
         protocolName?: string;
         macroContext?: Record<string, unknown>;
+        producerCellId?: string;
+        producerKind?: "protocol" | "command";
+        dispatchedCommand?: string | object;
+        commandSource?: CommandRef;
+        executionEpoch?: string;
       }[];
     }) => {
       // Reject malformed input instead of resolving as a no-op. `typeof
@@ -119,7 +126,16 @@ export function useMeasurementUpload() {
       let lastStorageError: unknown;
 
       for (const result of results) {
-        const { rawMeasurement, device, macroContext } = result;
+        const {
+          rawMeasurement,
+          device,
+          macroContext,
+          producerCellId,
+          producerKind,
+          dispatchedCommand,
+          commandSource,
+          executionEpoch,
+        } = result;
         const topic = getMeasurementMqttTopic({
           experimentId,
           protocolId: result.protocolId ?? protocolId,
@@ -135,6 +151,11 @@ export function useMeasurementUpload() {
           workbookRunId,
           workbookVersionId,
           macroContext,
+          producerCellId,
+          producerKind,
+          dispatchedCommand,
+          commandSource,
+          executionEpoch,
           fallbackDeviceId: device?.id,
           location,
         });

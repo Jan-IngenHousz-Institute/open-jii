@@ -10,6 +10,7 @@ export const FEATURE_FLAGS = {
   MACRO_DELETION: "macro-deletion",
   WORKBOOK_DELETION: "workbook-deletion",
   IOT_DEVICES: "iot-devices",
+  DYNAMIC_COMMAND_AUTHORING: "dynamic-command-authoring",
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -26,4 +27,5 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.MACRO_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.IOT_DEVICES]: false, // Device registry & certificates hidden until released
+  [FEATURE_FLAGS.DYNAMIC_COMMAND_AUTHORING]: false, // Authoring/editing of dynamic command refs; runtime stays enabled
 };

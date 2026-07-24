@@ -57,6 +57,11 @@ type SavedCall = [
       workbook_run_id?: string;
       workbook_version_id?: string;
       macro_context?: string;
+      producer_cell_id?: string;
+      producer_kind?: "protocol" | "command";
+      dispatched_command?: string;
+      command_source?: string;
+      execution_epoch?: string;
     };
     metadata: { protocolName: string };
   },
@@ -135,5 +140,51 @@ describe("useMeasurementUpload", () => {
     const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
     expect(measurement.topic).toBe("topic/exp-1/proto-shared");
     expect(measurement.measurementResult).not.toHaveProperty("workbook_run_id");
+  });
+
+  it("keeps distinct per-device command provenance in one linked upload round", async () => {
+    const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
+
+    await act(async () => {
+      await result.current.uploadMeasurements({
+        ...SHARED,
+        workbookVersionId: "version-1",
+        results: [
+          {
+            rawMeasurement: { response: "ok-a" },
+            device: { id: "d1", name: "A" },
+            producerCellId: "command-1",
+            producerKind: "command",
+            dispatchedCommand: "set 41",
+            commandSource: { sourceCellId: "macro-1", field: "forDevice" },
+            executionEpoch: "epoch-1",
+          },
+          {
+            rawMeasurement: { response: "ok-b" },
+            device: { id: "d2", name: "B" },
+            producerCellId: "command-1",
+            producerKind: "command",
+            dispatchedCommand: { set: 42 },
+            commandSource: { sourceCellId: "macro-1", field: "forDevice" },
+            executionEpoch: "epoch-1",
+          },
+        ],
+      });
+    });
+
+    const calls = saveMeasurement.mock.calls as SavedCall[];
+    expect(calls[0][0].measurementResult).toMatchObject({
+      producer_cell_id: "command-1",
+      producer_kind: "command",
+      dispatched_command: "set 41",
+      command_source: JSON.stringify({ sourceCellId: "macro-1", field: "forDevice" }),
+      execution_epoch: "epoch-1",
+      workbook_version_id: "version-1",
+    });
+    expect(calls[1][0].measurementResult.dispatched_command).toBe(JSON.stringify({ set: 42 }));
+    expect(calls[0][0].measurementResult.workbook_run_id).toBeTruthy();
+    expect(calls[1][0].measurementResult.workbook_run_id).toBe(
+      calls[0][0].measurementResult.workbook_run_id,
+    );
   });
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import type { CommandResolvedPreview } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
+
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
@@ -25,6 +27,8 @@ interface CellRendererProps {
   // Pinned entity code/metadata. When provided, protocol/macro cells render
   // from it instead of fetching the live row.
   entitySnapshots?: EntitySnapshots;
+  // Runtime-only resolved preview for a dynamic command cell.
+  commandPreview?: CommandResolvedPreview;
 }
 
 export function CellRenderer({
@@ -39,6 +43,7 @@ export function CellRenderer({
   onQuestionAnswered,
   readOnly,
   entitySnapshots,
+  commandPreview,
 }: CellRendererProps) {
   switch (cell.type) {
     case "markdown":
@@ -75,6 +80,8 @@ export function CellRenderer({
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}
+          allCells={allCells}
+          preview={commandPreview}
         />
       );
     case "macro":

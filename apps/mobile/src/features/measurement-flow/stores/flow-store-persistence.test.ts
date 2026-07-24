@@ -2,11 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { useFlowAnswersStore } from "./use-flow-answers-store";
-import { useMeasurementFlowStore } from "./use-measurement-flow-store";
+import { migrateMeasurementFlowState, useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 1). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. v1 deliberately discards pre-fix v0
+// stores (pinned at version 2). A silent shape change wipes a field
+// researcher's paused flow on rehydrate. v2 migrates attributable v1 outputs
+// into strict envelopes while deliberately discarding pre-fix v0
 // payloads; update fixtures ONLY with a deliberate change or a version bump.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
@@ -16,7 +17,7 @@ const ANSWERS_KEY = "flow-answers-storage";
 const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
 const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
-// v0 envelope for a paused mid-flow session, parked on the measurement node.
+// Real serialized v1 envelope for a paused mid-flow session.
 // Every value differs from the store default so a key dropped from partialize
 // fails its per-field assert instead of silently matching the default.
 const MEASUREMENT_FIXTURE = `{
@@ -83,7 +84,7 @@ const MEASUREMENT_FIXTURE = `{
   "version": 1
 }`;
 
-// v0 envelope after two completed answer iterations with per-question
+// v1 envelope after two completed answer iterations with per-question
 // autoincrement/remember toggles.
 const ANSWERS_FIXTURE = `{
   "state": {
@@ -103,8 +104,8 @@ const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<st
 // Dropped from the persisted slice (protocolId is now derived from flowNodes
 // via flowProtocolId). The fixture keeps it so we prove legacy payloads
 // still rehydrate; the app neither reads nor re-writes it.
-const LEGACY_ONLY_KEYS = ["protocolId"];
-const EXPECTED_WRITTEN_STATE = Object.fromEntries(
+const LEGACY_ONLY_KEYS = ["protocolId", "cellOutputs"];
+const EXPECTED_PRESERVED_STATE = Object.fromEntries(
   Object.entries(MEASUREMENT_STATE).filter(([key]) => !LEGACY_ONLY_KEYS.includes(key)),
 );
 const ANSWERS_STATE = (JSON.parse(ANSWERS_FIXTURE) as { state: Record<string, unknown> }).state;
@@ -119,15 +120,85 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v1 wire format", () => {
+describe("measurement-flow-storage v1 -> v2 migration", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
   });
 
-  it.each(Object.keys(EXPECTED_WRITTEN_STATE))("rehydrates persisted field %s", (key) => {
+  it.each(Object.keys(EXPECTED_PRESERVED_STATE))("preserves persisted field %s", (key) => {
     const state = useMeasurementFlowStore.getState() as unknown as Record<string, unknown>;
     expect(state[key]).toEqual(MEASUREMENT_STATE[key]);
+  });
+
+  it("adds cycle identity and migrates only attributable producer outputs", () => {
+    const state = useMeasurementFlowStore.getState();
+    expect(state.loadedExperimentId).toBe("exp-42");
+    expect(state.executionEpoch).toEqual(expect.any(String));
+    expect(state.outputsByCellId).toEqual({
+      "node-m1": {
+        scope: "device",
+        provenance: {
+          workbookVersionId: "version-17",
+          executionEpoch: state.executionEpoch,
+        },
+        deviceResults: [
+          {
+            deviceId: "1002",
+            deviceLabel: "MultispeQ #1002",
+            data: { device_name: "MultispeQ v2.0", spad: [41.2, 39.8] },
+          },
+        ],
+      },
+      "node-a1": {
+        scope: "shared",
+        provenance: {
+          workbookVersionId: "version-17",
+          executionEpoch: state.executionEpoch,
+        },
+        data: { spad_avg: 40.5 },
+      },
+    });
+  });
+
+  it("keeps ambiguous legacy scans visible but non-resolvable", () => {
+    const fixture = JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> };
+    fixture.state.scanResults = [{ result: { sample: [{ phi2: 0.5 }] } }];
+    const migrated = migrateMeasurementFlowState(fixture.state, 1, () => "epoch-fixed") as {
+      scanResults: unknown[];
+      outputsByCellId: Record<string, unknown>;
+    };
+    expect(migrated.scanResults).toHaveLength(1);
+    expect(migrated.outputsByCellId).not.toHaveProperty("node-m1");
+    expect(migrated.outputsByCellId).toHaveProperty("node-a1");
+  });
+
+  it("migrates an attributed scan with an exact id even without a display name", () => {
+    const fixture = JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> };
+    fixture.state.scanResults = [
+      { device: { id: "device-exact" }, result: { sample: [{ phi2: 0.5 }] } },
+    ];
+    const migrated = migrateMeasurementFlowState(fixture.state, 1, () => "epoch-fixed") as {
+      outputsByCellId: Record<string, unknown>;
+    };
+    expect(migrated.outputsByCellId["node-m1"]).toEqual({
+      scope: "device",
+      provenance: { workbookVersionId: "version-17", executionEpoch: "epoch-fixed" },
+      deviceResults: [{ deviceId: "device-exact", data: { phi2: 0.5 } }],
+    });
+  });
+
+  it("preserves the active epoch and registry across a v2 restart", async () => {
+    const { partialize } = useMeasurementFlowStore.persist.getOptions();
+    if (!partialize) throw new Error("store no longer configures partialize");
+    const before = useMeasurementFlowStore.getState();
+    const envelope = JSON.stringify({ state: partialize(before), version: 2 });
+    await AsyncStorage.setItem(MEASUREMENT_KEY, envelope);
+
+    await useMeasurementFlowStore.persist.rehydrate();
+
+    expect(useMeasurementFlowStore.getState().executionEpoch).toBe(before.executionEpoch);
+    expect(useMeasurementFlowStore.getState().outputsByCellId).toEqual(before.outputsByCellId);
   });
 
   it("tolerates legacy payloads carrying the removed protocolId key", () => {
@@ -142,8 +213,10 @@ describe("measurement-flow-storage v1 wire format", () => {
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(1);
-    expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
+    expect(envelope.version).toBe(2);
+    const { partialize } = useMeasurementFlowStore.persist.getOptions();
+    if (!partialize) throw new Error("store no longer configures partialize");
+    expect(envelope.state).toEqual(partialize(useMeasurementFlowStore.getState()));
   });
 
   it("persists exactly the known field set", () => {
@@ -154,11 +227,11 @@ describe("measurement-flow-storage v1 wire format", () => {
     expect(Object.keys(persisted).sort()).toEqual([
       "branchReturnStack",
       "branchVisitCounts",
-      "cellOutputs",
       "cells",
       "currentFlowStep",
       "currentStep",
       "edges",
+      "executionEpoch",
       "experimentId",
       "experimentLabel",
       "flowNodes",
@@ -167,6 +240,8 @@ describe("measurement-flow-storage v1 wire format", () => {
       "isQuestionsSubmitPending",
       "iterationCount",
       "lastMatchedPath",
+      "loadedExperimentId",
+      "outputsByCellId",
       "producerCellId",
       "scanResult",
       "scanResults",
@@ -175,7 +250,7 @@ describe("measurement-flow-storage v1 wire format", () => {
   });
 });
 
-describe("flow-answers-storage v1 wire format", () => {
+describe("flow-answers-storage v1 -> v2 identity migration", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(ANSWERS_KEY, ANSWERS_FIXTURE);
     await useFlowAnswersStore.persist.rehydrate();
@@ -191,7 +266,7 @@ describe("flow-answers-storage v1 wire format", () => {
     useFlowAnswersStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(ANSWERS_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(1);
+    expect(envelope.version).toBe(2);
     expect(envelope.state).toEqual(ANSWERS_STATE);
   });
 

@@ -2,6 +2,7 @@ import type { Logger } from "@nestjs/common";
 import { ORPCError } from "@orpc/nest";
 
 import type { AppError, Failure } from "./fp-utils";
+import { projectPublicErrorDetails } from "./public-error-details";
 
 const ORPC_CODE_BY_STATUS: Record<number, string> = {
   400: "BAD_REQUEST",
@@ -10,8 +11,19 @@ const ORPC_CODE_BY_STATUS: Record<number, string> = {
   404: "NOT_FOUND",
   409: "CONFLICT",
   422: "UNPROCESSABLE_CONTENT",
+  426: "UPGRADE_REQUIRED",
   429: "TOO_MANY_REQUESTS",
 };
+
+// Choose the client-visible `details`. Public codes are projected into a fixed,
+// minimal shape (safe in production); other codes expose raw details only in
+// development and are stripped in production.
+function publicDetailsFor(error: AppError): unknown {
+  const projected = projectPublicErrorDetails(error.code, error.details);
+  if (projected !== undefined) return projected;
+  if (process.env.NODE_ENV !== "production" && error.details != null) return error.details;
+  return undefined;
+}
 
 export function throwOrpcError(
   error: AppError,
@@ -30,12 +42,14 @@ export function throwOrpcError(
     logger.warn(logObject);
   }
 
+  const details = publicDetailsFor(error);
+
   throw new ORPCError(ORPC_CODE_BY_STATUS[error.statusCode] ?? "INTERNAL_SERVER_ERROR", {
     status: error.statusCode,
     message: error.message,
     data: {
       code: error.code,
-      ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),
+      ...(details !== undefined ? { details } : {}),
     },
   });
 }

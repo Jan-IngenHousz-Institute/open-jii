@@ -9,6 +9,8 @@ import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookLis
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { orpc } from "@/lib/orpc";
+import { parseStructuralValidationError } from "@/lib/workbook/publish-error";
+import type { StructuralIssue } from "@/lib/workbook/publish-error";
 import { formatDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
@@ -46,6 +48,7 @@ import { Input } from "@repo/ui/components/input";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
+import { StructuralIssueList } from "../workbook/structural-issue-list";
 import { WorkbookUpgradeDialog } from "../workbook/upgrade/workbook-upgrade-dialog";
 import { WorkbookVersionHistoryDialog } from "../workbook/upgrade/workbook-version-history-dialog";
 import { WorkbookSelect } from "../workbook/workbook-select";
@@ -112,6 +115,12 @@ export function LinkedWorkbookCard({
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
   const { data: workbooks = [] } = useWorkbookList();
   const [isChanging, setIsChanging] = useState(false);
+  // Structural rejection of the change-attach: keep the picker open and show the
+  // repairable issues inline (keyed by commandCellId) instead of a generic toast.
+  const [attachIssues, setAttachIssues] = useState<{
+    workbookId: string;
+    issues: StructuralIssue[];
+  } | null>(null);
 
   const renameWorkbook = useWorkbookUpdate(workbookId);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -146,16 +155,26 @@ export function LinkedWorkbookCard({
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
+    const targetId = selectedWorkbookId;
+    setAttachIssues(null);
     attachWorkbook.mutate(
-      { id: experimentId, workbookId: selectedWorkbookId },
+      { id: experimentId, workbookId: targetId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
           setSelectedWorkbookId("");
           setIsChanging(false);
         },
-        onError: () => {
-          toast({ description: t("flow.attachFailed"), variant: "destructive" });
+        onError: (error) => {
+          // A structural rejection means the selected workbook has unresolved
+          // command references. Keep the picker open and surface the repairable
+          // issues inline; fall back to a generic toast for other failures.
+          const structural = parseStructuralValidationError(error);
+          if (structural) {
+            setAttachIssues({ workbookId: targetId, issues: structural });
+          } else {
+            toast({ description: t("flow.attachFailed"), variant: "destructive" });
+          }
         },
       },
     );
@@ -189,6 +208,21 @@ export function LinkedWorkbookCard({
     }
   }, [upgradeState]);
 
+  // Clear a retained mutation rejection on target change so the dialog's blocking
+  // server issues cannot permanently disable Confirm. `reset` is stable, so this
+  // fires only on mount and on workbook/version change, never on the failure.
+  const resetUpgrade = upgradeVersion.reset;
+  useEffect(() => {
+    resetUpgrade();
+  }, [resetUpgrade, workbookId, workbookVersionId]);
+
+  // Opening a fresh review clears any prior rejection so the author can retry
+  // after repairing the workbook (reject -> close -> reopen -> succeed).
+  const openReview = useCallback(() => {
+    resetUpgrade();
+    setReviewOpen(true);
+  }, [resetUpgrade]);
+
   const handleUpgrade = useCallback(() => {
     setUpgradeState("upgrading");
     upgradeVersion.mutate(
@@ -198,9 +232,13 @@ export function LinkedWorkbookCard({
           setReviewOpen(false);
           setUpgradeState("success");
         },
-        onError: () => {
+        onError: (error) => {
           setUpgradeState("idle");
-          toast({ description: t("flow.upgradeFailed"), variant: "destructive" });
+          // Keep the review dialog open on a structural rejection; it renders the
+          // allowlisted issues as repair guidance. Toast only for other errors.
+          if (!parseStructuralValidationError(error)) {
+            toast({ description: t("flow.upgradeFailed"), variant: "destructive" });
+          }
         },
       },
     );
@@ -261,6 +299,7 @@ export function LinkedWorkbookCard({
                     <NextLink
                       href={`/${locale}/platform/workbooks/${workbookId}`}
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="truncate text-sm font-semibold hover:underline"
                     >
                       {workbook?.name ?? t("flow.title")}
@@ -312,7 +351,14 @@ export function LinkedWorkbookCard({
           </div>
           {hasAccess && (
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsChanging(!isChanging)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAttachIssues(null);
+                  setIsChanging(!isChanging);
+                }}
+              >
                 {t("flow.changeWorkbook")}
               </Button>
               <AlertDialog>
@@ -366,21 +412,12 @@ export function LinkedWorkbookCard({
               )}
             />
             <p className="text-muted-foreground text-xs">
-              {hasNewerPublished ? (
-                <>
-                  v{latestVersion.version} is available{" "}
-                  <span className="text-muted-foreground/70">
-                    (currently on v{pinnedVersion.version})
-                  </span>
-                </>
-              ) : (
-                <>
-                  Workbook has updates available{" "}
-                  <span className="text-muted-foreground/70">
-                    (currently on v{pinnedVersion.version})
-                  </span>
-                </>
-              )}
+              {hasNewerPublished
+                ? t("flow.upgradeBanner.newVersion", { version: latestVersion.version })
+                : t("flow.upgradeBanner.updatesAvailable")}{" "}
+              <span className="text-muted-foreground/70">
+                {t("flow.upgradeBanner.currentVersion", { version: pinnedVersion.version })}
+              </span>
             </p>
           </div>
           <Button
@@ -388,7 +425,7 @@ export function LinkedWorkbookCard({
             variant="ghost"
             className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
             disabled={upgradeState === "upgrading"}
-            onClick={() => setReviewOpen(true)}
+            onClick={openReview}
           >
             {upgradeState === "upgrading" ? (
               <>
@@ -411,45 +448,57 @@ export function LinkedWorkbookCard({
             <Check className="h-3 w-3 text-white" />
           </div>
           <p className="text-xs font-medium text-emerald-800">
-            Upgraded to v{latestVersion.version}
+            {t("flow.upgradeBanner.upgraded", { version: latestVersion.version })}
           </p>
         </div>
       )}
 
       {isChanging && hasAccess && (
-        <div className="flex items-center gap-2 border-t px-4 py-3">
-          <WorkbookSelect
-            workbooks={workbooks}
-            value={selectedWorkbookId || undefined}
-            onChange={(id) => setSelectedWorkbookId(id ?? "")}
-            triggerPlaceholder={t("flow.selectWorkbook")}
-            searchPlaceholder={t("flow.searchWorkbook")}
-            emptyText={t("flow.noWorkbooksFound")}
-            triggerClassName="w-64"
-          />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button disabled={!selectedWorkbookId || attachWorkbook.isPending} size="sm">
-                <LinkIcon className="mr-1.5 h-4 w-4" />
-                {t("flow.attach")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("flow.confirmChangeTitle")}</AlertDialogTitle>
-                <AlertDialogDescription>{t("flow.confirmChangeMessage")}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleAttach}>
-                  {t("flow.confirmChange")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button variant="ghost" size="sm" onClick={() => setIsChanging(false)}>
-            {t("cancel")}
-          </Button>
+        <div className="flex flex-col gap-2 border-t px-4 py-3">
+          <div className="flex items-center gap-2">
+            <WorkbookSelect
+              workbooks={workbooks}
+              value={selectedWorkbookId || undefined}
+              onChange={(id) => {
+                setSelectedWorkbookId(id ?? "");
+                setAttachIssues(null);
+              }}
+              triggerPlaceholder={t("flow.selectWorkbook")}
+              searchPlaceholder={t("flow.searchWorkbook")}
+              emptyText={t("flow.noWorkbooksFound")}
+              triggerClassName="w-64"
+            />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={!selectedWorkbookId || attachWorkbook.isPending} size="sm">
+                  <LinkIcon className="mr-1.5 h-4 w-4" />
+                  {t("flow.attach")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("flow.confirmChangeTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("flow.confirmChangeMessage")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleAttach}>
+                    {t("flow.confirmChange")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button variant="ghost" size="sm" onClick={() => setIsChanging(false)}>
+              {t("cancel")}
+            </Button>
+          </div>
+          {attachIssues ? (
+            <StructuralIssueList
+              issues={attachIssues.issues}
+              workbookId={attachIssues.workbookId}
+              locale={locale}
+            />
+          ) : null}
         </div>
       )}
 
@@ -463,6 +512,7 @@ export function LinkedWorkbookCard({
           targetVersionLabel={`v${hasNewerPublished ? latestVersion.version : pinnedVersion.version + 1}`}
           onConfirm={handleUpgrade}
           isUpgrading={upgradeState === "upgrading"}
+          publishError={upgradeVersion.error}
         />
       )}
 

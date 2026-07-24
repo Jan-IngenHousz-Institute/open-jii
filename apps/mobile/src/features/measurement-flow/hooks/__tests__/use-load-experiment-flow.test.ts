@@ -66,6 +66,12 @@ describe("useLoadExperimentFlow", () => {
         question: { kind: "number", text: "q1", required: false },
         isAnswered: false,
       },
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { kind: "ref", ref: { sourceCellId: "q1", field: "answer" } },
+      },
     ];
     results.list = {
       data: [{ id: "e1", workbookId: "w1", workbookVersionId: "v1" }],
@@ -81,19 +87,20 @@ describe("useLoadExperimentFlow", () => {
     const { result } = renderHook(() => useLoadExperimentFlow("e1"));
 
     await waitFor(() => expect(setFlowGraph).toHaveBeenCalled());
-    const [nodesArg, edgesArg, cellsArg, versionIdArg] = setFlowGraph.mock.calls[0] as [
-      FlowNode[],
-      unknown,
-      unknown,
-      unknown,
-    ];
+    const [nodesArg, edgesArg, cellsArg, versionIdArg, experimentIdArg] = setFlowGraph.mock
+      .calls[0] as [FlowNode[], unknown, unknown, unknown, unknown];
     // Graph derived from the version's cells, with the protocol node hydrated
     // (assert the outcome directly, not via the helper under test).
     const measurement = nodesArg.find((n) => n.type === "measurement");
     expect(measurement?.content?.protocol).toBeDefined();
+    expect(nodesArg.find((node) => node.id === "c1")?.content?.command).toEqual({
+      kind: "ref",
+      ref: { sourceCellId: "q1", field: "answer" },
+    });
     expect(edgesArg).toEqual(cellsToFlowGraph(cells).edges);
     expect(cellsArg).toBe(cells);
     expect(versionIdArg).toBe("v1");
+    expect(experimentIdArg).toBe("e1");
     expect(setFlowNodes).not.toHaveBeenCalled();
     expect(result.current.isReady).toBe(true);
   });

@@ -7,10 +7,11 @@ import { getEnvVar } from "~/shared/stores/environment-store";
 import { contract } from "@repo/api/contract";
 
 import { orpcFetch } from "./orpc-fetch";
+import { orpcClientHeaders } from "./orpc-headers";
 
 const link = new OpenAPILink(contract, {
   url: () => getEnvVar("BACKEND_URI"),
-  headers: () => ({ "x-app-source": "orpc" }),
+  headers: () => orpcClientHeaders(),
   fetch: orpcFetch,
 });
 

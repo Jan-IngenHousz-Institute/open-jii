@@ -94,6 +94,8 @@
   },
   "cells": {
     "command": "Command",
+    "commandFormatAria": "Command format",
+    "commandCopyAria": "Copy command",
     "protocolReadOnly": "Read-only. Fork it to edit.",
     "macroReadOnly": "Read-only. Fork it to edit.",
     "fork": "Fork to edit",
@@ -102,6 +104,40 @@
     "renameSave": "Save name",
     "renameCancel": "Cancel",
     "renameConflict": "That name is already taken",
-    "renameFailed": "Rename failed"
+    "renameFailed": "Rename failed",
+    "commandDynamic": {
+      "modeGroup": "Command mode",
+      "modeStatic": "Static",
+      "modeDynamic": "Dynamic",
+      "tooltip": "Dynamic commands take their value from an earlier cell at run time.",
+      "readOnlyNote": "This command reads its value from an earlier cell.",
+      "sourceLabel": "Source",
+      "fieldLabel": "Field",
+      "none": "None",
+      "sourcePickerLabel": "Source (earlier cell)",
+      "sourceAria": "Source cell",
+      "sourcePlaceholder": "Select an earlier cell",
+      "sourceUnavailable": "{{id}} (unavailable)",
+      "questionNote": "Uses the answer field (shared across all devices).",
+      "fieldPlaceholder": "Top-level output field",
+      "fieldAria": "Output field",
+      "sourceType": {
+        "protocol": "Protocol",
+        "macro": "Macro",
+        "command": "Command",
+        "question": "Question",
+        "generic": "Cell"
+      },
+      "issue": {
+        "sourceMissing": "The referenced cell no longer exists. Pick an existing earlier cell.",
+        "sourceIneligible": "The referenced cell cannot supply a command value. Pick a protocol, command, macro, or question.",
+        "sourceNotEarlier": "The referenced cell must come before this command. Pick an earlier cell.",
+        "fieldEmpty": "Choose which output field supplies the command value.",
+        "nodeUnreachable": "This command is not reachable from the start of the flow. Connect it to the authored flow so it runs.",
+        "graphAmbiguous": "The reference is ambiguous across branch paths. Simplify the flow or pick a different source.",
+        "invalidCarrier": "This command cell cannot carry a dynamic reference.",
+        "generic": "This command reference needs attention before publishing."
+      }
+    }
   }
 }

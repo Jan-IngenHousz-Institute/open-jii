@@ -82,15 +82,20 @@ describe("edge transitions", () => {
 
   it("nextStep while finished still wraps the iteration", () => {
     const state = inFlow({ currentFlowStep: 2, isFlowFinished: true, iterationCount: 3 });
-    expect(nextStepState(state)).toEqual({
+    expect(nextStepState(state)).toMatchObject({
       currentFlowStep: 0,
       iterationCount: 4,
+      scanResult: undefined,
+      scanResults: undefined,
+      producerCellId: undefined,
+      outputsByCellId: {},
       branchVisitCounts: {},
       lastMatchedPath: undefined,
       branchReturnStack: [],
       devicePlan: undefined,
       consumedNodeIds: [],
     });
+    expect(nextStepState(state).executionEpoch).not.toBe(state.executionEpoch);
   });
 
   it("nextStep skips consumed dispatch targets exactly once", () => {

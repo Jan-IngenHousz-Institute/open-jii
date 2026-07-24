@@ -1,5 +1,6 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { DetachWorkbookUseCase } from "./detach-workbook";
@@ -33,6 +34,8 @@ describe("DetachWorkbookUseCase", () => {
 
     const workbook = await testApp.createWorkbook({
       name: "Test Workbook",
+      // Non-empty so attach materializes a real flow row that detach removes.
+      cells: [{ id: "md1", type: "markdown", content: "Hello", isCollapsed: false }],
       createdBy: adminUserId,
     });
     workbookId = workbook.id;
@@ -41,6 +44,7 @@ describe("DetachWorkbookUseCase", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
@@ -85,5 +89,23 @@ describe("DetachWorkbookUseCase", () => {
     const after = await flowRepo.getByExperimentId(experimentId);
     assertSuccess(after);
     expect(after.value).toBeNull();
+  });
+
+  it("rolls back the pointer AND keeps the flow when the flow delete fails", async () => {
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    vi.spyOn(flowRepo, "deleteByExperimentId").mockResolvedValue(
+      failure(AppError.internal("delete boom")),
+    );
+
+    const result = await detachUseCase.execute(experimentId, adminUserId);
+    assertFailure(result);
+
+    // Still attached and the flow row is intact (whole bind rolled back).
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookId).toBe(workbookId);
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    expect(flow.value).not.toBeNull();
   });
 });

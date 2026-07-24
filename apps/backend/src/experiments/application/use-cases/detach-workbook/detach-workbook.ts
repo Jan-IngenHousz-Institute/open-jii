@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
+import { FlowBindingRepository } from "../../../core/repositories/flow-binding.repository";
 
 @Injectable()
 export class DetachWorkbookUseCase {
@@ -11,7 +11,7 @@ export class DetachWorkbookUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly flowRepository: FlowRepository,
+    private readonly flowBindingRepository: FlowBindingRepository,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentDto>> {
@@ -26,20 +26,15 @@ export class DetachWorkbookUseCase {
         return failure(AppError.badRequest("Experiment does not have an attached workbook"));
       }
 
-      // Clear workbookId but keep workbookVersionId for historical reference
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookId: null,
+      // Clear workbookId (keep workbookVersionId for history) AND delete the
+      // materialised flow row atomically, rejecting a concurrent change.
+      const bindResult = await this.flowBindingRepository.bind({
+        experimentId,
+        expectedWorkbookId: experiment.workbookId,
+        pointer: { workbookId: null },
+        materialization: { kind: "none" },
       });
-
-      if (updateResult.isFailure()) {
-        return updateResult;
-      }
-
-      // Drop the materialised flow row so mobile stops seeing a graph for an experiment with no workbook.
-      const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
-      if (flowDeleteResult.isFailure()) {
-        return flowDeleteResult;
-      }
+      if (bindResult.isFailure()) return bindResult;
 
       this.logger.log({
         msg: "Workbook detached from experiment",
@@ -49,12 +44,7 @@ export class DetachWorkbookUseCase {
         previousWorkbookId: experiment.workbookId,
       });
 
-      return updateResult.chain((experiments: ExperimentDto[]) => {
-        if (experiments.length === 0) {
-          return failure(AppError.internal("Failed to detach workbook"));
-        }
-        return success(experiments[0]);
-      });
+      return success(bindResult.value.experiment);
     });
   }
 }

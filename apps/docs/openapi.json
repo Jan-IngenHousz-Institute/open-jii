@@ -4544,7 +4544,8 @@
                                     },
                                     "required": [
                                       "text"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -4560,36 +4561,75 @@
                                     },
                                     "required": [
                                       "protocolId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
                                     "properties": {
                                       "command": {
-                                        "type": "object",
-                                        "properties": {
-                                          "format": {
-                                            "enum": [
-                                              "string",
-                                              "json",
-                                              "yaml"
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "static"
+                                              },
+                                              "format": {
+                                                "enum": [
+                                                  "string",
+                                                  "json",
+                                                  "yaml"
+                                                ],
+                                                "type": "string"
+                                              },
+                                              "content": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            },
+                                            "required": [
+                                              "format",
+                                              "content"
                                             ],
-                                            "type": "string"
+                                            "additionalProperties": false
                                           },
-                                          "content": {
-                                            "type": "string",
-                                            "minLength": 1
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "ref"
+                                              },
+                                              "ref": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "sourceCellId",
+                                                  "field"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "ref"
+                                            ],
+                                            "additionalProperties": false
                                           }
-                                        },
-                                        "required": [
-                                          "format",
-                                          "content"
                                         ]
                                       }
                                     },
                                     "required": [
                                       "command"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -4605,7 +4645,8 @@
                                     },
                                     "required": [
                                       "macroId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -4625,13 +4666,57 @@
                                             },
                                             "color": {
                                               "type": "string"
+                                            },
+                                            "conditions": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "id": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                  },
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  },
+                                                  "operator": {
+                                                    "enum": [
+                                                      "eq",
+                                                      "neq",
+                                                      "gt",
+                                                      "lt",
+                                                      "gte",
+                                                      "lte"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "value": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "id",
+                                                  "sourceCellId",
+                                                  "field",
+                                                  "operator",
+                                                  "value"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "gotoCellId": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": [
                                             "id",
                                             "label",
                                             "color"
-                                          ]
+                                          ],
+                                          "additionalProperties": false
                                         },
                                         "minItems": 1
                                       },
@@ -4641,7 +4726,8 @@
                                     },
                                     "required": [
                                       "paths"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               },
@@ -4662,7 +4748,8 @@
                                 "required": [
                                   "x",
                                   "y"
-                                ]
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -4670,7 +4757,8 @@
                               "type",
                               "name",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           "minItems": 1
                         },
@@ -4718,14 +4806,16 @@
                               "id",
                               "source",
                               "target"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         }
                       },
                       "required": [
                         "nodes",
                         "edges"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "createdAt": {
                       "type": "string",
@@ -4904,7 +4994,8 @@
                               },
                               "required": [
                                 "text"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -4920,36 +5011,75 @@
                               },
                               "required": [
                                 "protocolId"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
                               "properties": {
                                 "command": {
-                                  "type": "object",
-                                  "properties": {
-                                    "format": {
-                                      "enum": [
-                                        "string",
-                                        "json",
-                                        "yaml"
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "static"
+                                        },
+                                        "format": {
+                                          "enum": [
+                                            "string",
+                                            "json",
+                                            "yaml"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "content": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "required": [
+                                        "format",
+                                        "content"
                                       ],
-                                      "type": "string"
+                                      "additionalProperties": false
                                     },
-                                    "content": {
-                                      "type": "string",
-                                      "minLength": 1
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "ref"
+                                        },
+                                        "ref": {
+                                          "type": "object",
+                                          "properties": {
+                                            "sourceCellId": {
+                                              "type": "string"
+                                            },
+                                            "field": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "sourceCellId",
+                                            "field"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "ref"
+                                      ],
+                                      "additionalProperties": false
                                     }
-                                  },
-                                  "required": [
-                                    "format",
-                                    "content"
                                   ]
                                 }
                               },
                               "required": [
                                 "command"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -4965,7 +5095,8 @@
                               },
                               "required": [
                                 "macroId"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -4985,13 +5116,57 @@
                                       },
                                       "color": {
                                         "type": "string"
+                                      },
+                                      "conditions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "sourceCellId": {
+                                              "type": "string"
+                                            },
+                                            "field": {
+                                              "type": "string"
+                                            },
+                                            "operator": {
+                                              "enum": [
+                                                "eq",
+                                                "neq",
+                                                "gt",
+                                                "lt",
+                                                "gte",
+                                                "lte"
+                                              ],
+                                              "type": "string"
+                                            },
+                                            "value": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "sourceCellId",
+                                            "field",
+                                            "operator",
+                                            "value"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "gotoCellId": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": [
                                       "id",
                                       "label",
                                       "color"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   "minItems": 1
                                 },
@@ -5001,7 +5176,8 @@
                               },
                               "required": [
                                 "paths"
-                              ]
+                              ],
+                              "additionalProperties": false
                             }
                           ]
                         },
@@ -5022,7 +5198,8 @@
                           "required": [
                             "x",
                             "y"
-                          ]
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -5030,7 +5207,8 @@
                         "type",
                         "name",
                         "content"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "minItems": 1
                   },
@@ -5078,14 +5256,16 @@
                         "id",
                         "source",
                         "target"
-                      ]
+                      ],
+                      "additionalProperties": false
                     }
                   }
                 },
                 "required": [
                   "nodes",
                   "edges"
-                ]
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -5243,7 +5423,8 @@
                                     },
                                     "required": [
                                       "text"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -5259,36 +5440,75 @@
                                     },
                                     "required": [
                                       "protocolId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
                                     "properties": {
                                       "command": {
-                                        "type": "object",
-                                        "properties": {
-                                          "format": {
-                                            "enum": [
-                                              "string",
-                                              "json",
-                                              "yaml"
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "static"
+                                              },
+                                              "format": {
+                                                "enum": [
+                                                  "string",
+                                                  "json",
+                                                  "yaml"
+                                                ],
+                                                "type": "string"
+                                              },
+                                              "content": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            },
+                                            "required": [
+                                              "format",
+                                              "content"
                                             ],
-                                            "type": "string"
+                                            "additionalProperties": false
                                           },
-                                          "content": {
-                                            "type": "string",
-                                            "minLength": 1
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "ref"
+                                              },
+                                              "ref": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "sourceCellId",
+                                                  "field"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "ref"
+                                            ],
+                                            "additionalProperties": false
                                           }
-                                        },
-                                        "required": [
-                                          "format",
-                                          "content"
                                         ]
                                       }
                                     },
                                     "required": [
                                       "command"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -5304,7 +5524,8 @@
                                     },
                                     "required": [
                                       "macroId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -5324,13 +5545,57 @@
                                             },
                                             "color": {
                                               "type": "string"
+                                            },
+                                            "conditions": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "id": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                  },
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  },
+                                                  "operator": {
+                                                    "enum": [
+                                                      "eq",
+                                                      "neq",
+                                                      "gt",
+                                                      "lt",
+                                                      "gte",
+                                                      "lte"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "value": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "id",
+                                                  "sourceCellId",
+                                                  "field",
+                                                  "operator",
+                                                  "value"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "gotoCellId": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": [
                                             "id",
                                             "label",
                                             "color"
-                                          ]
+                                          ],
+                                          "additionalProperties": false
                                         },
                                         "minItems": 1
                                       },
@@ -5340,7 +5605,8 @@
                                     },
                                     "required": [
                                       "paths"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               },
@@ -5361,7 +5627,8 @@
                                 "required": [
                                   "x",
                                   "y"
-                                ]
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -5369,7 +5636,8 @@
                               "type",
                               "name",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           "minItems": 1
                         },
@@ -5417,14 +5685,16 @@
                               "id",
                               "source",
                               "target"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         }
                       },
                       "required": [
                         "nodes",
                         "edges"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "createdAt": {
                       "type": "string",
@@ -5603,7 +5873,8 @@
                               },
                               "required": [
                                 "text"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -5619,36 +5890,75 @@
                               },
                               "required": [
                                 "protocolId"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
                               "properties": {
                                 "command": {
-                                  "type": "object",
-                                  "properties": {
-                                    "format": {
-                                      "enum": [
-                                        "string",
-                                        "json",
-                                        "yaml"
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "static"
+                                        },
+                                        "format": {
+                                          "enum": [
+                                            "string",
+                                            "json",
+                                            "yaml"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "content": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "required": [
+                                        "format",
+                                        "content"
                                       ],
-                                      "type": "string"
+                                      "additionalProperties": false
                                     },
-                                    "content": {
-                                      "type": "string",
-                                      "minLength": 1
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "ref"
+                                        },
+                                        "ref": {
+                                          "type": "object",
+                                          "properties": {
+                                            "sourceCellId": {
+                                              "type": "string"
+                                            },
+                                            "field": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "sourceCellId",
+                                            "field"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "ref"
+                                      ],
+                                      "additionalProperties": false
                                     }
-                                  },
-                                  "required": [
-                                    "format",
-                                    "content"
                                   ]
                                 }
                               },
                               "required": [
                                 "command"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -5664,7 +5974,8 @@
                               },
                               "required": [
                                 "macroId"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -5684,13 +5995,57 @@
                                       },
                                       "color": {
                                         "type": "string"
+                                      },
+                                      "conditions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "sourceCellId": {
+                                              "type": "string"
+                                            },
+                                            "field": {
+                                              "type": "string"
+                                            },
+                                            "operator": {
+                                              "enum": [
+                                                "eq",
+                                                "neq",
+                                                "gt",
+                                                "lt",
+                                                "gte",
+                                                "lte"
+                                              ],
+                                              "type": "string"
+                                            },
+                                            "value": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "sourceCellId",
+                                            "field",
+                                            "operator",
+                                            "value"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "gotoCellId": {
+                                        "type": "string"
                                       }
                                     },
                                     "required": [
                                       "id",
                                       "label",
                                       "color"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   "minItems": 1
                                 },
@@ -5700,7 +6055,8 @@
                               },
                               "required": [
                                 "paths"
-                              ]
+                              ],
+                              "additionalProperties": false
                             }
                           ]
                         },
@@ -5721,7 +6077,8 @@
                           "required": [
                             "x",
                             "y"
-                          ]
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -5729,7 +6086,8 @@
                         "type",
                         "name",
                         "content"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "minItems": 1
                   },
@@ -5777,14 +6135,16 @@
                         "id",
                         "source",
                         "target"
-                      ]
+                      ],
+                      "additionalProperties": false
                     }
                   }
                 },
                 "required": [
                   "nodes",
                   "edges"
-                ]
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -5942,7 +6302,8 @@
                                     },
                                     "required": [
                                       "text"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -5958,36 +6319,75 @@
                                     },
                                     "required": [
                                       "protocolId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
                                     "properties": {
                                       "command": {
-                                        "type": "object",
-                                        "properties": {
-                                          "format": {
-                                            "enum": [
-                                              "string",
-                                              "json",
-                                              "yaml"
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "static"
+                                              },
+                                              "format": {
+                                                "enum": [
+                                                  "string",
+                                                  "json",
+                                                  "yaml"
+                                                ],
+                                                "type": "string"
+                                              },
+                                              "content": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            },
+                                            "required": [
+                                              "format",
+                                              "content"
                                             ],
-                                            "type": "string"
+                                            "additionalProperties": false
                                           },
-                                          "content": {
-                                            "type": "string",
-                                            "minLength": 1
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "const": "ref"
+                                              },
+                                              "ref": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "sourceCellId",
+                                                  "field"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "ref"
+                                            ],
+                                            "additionalProperties": false
                                           }
-                                        },
-                                        "required": [
-                                          "format",
-                                          "content"
                                         ]
                                       }
                                     },
                                     "required": [
                                       "command"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -6003,7 +6403,8 @@
                                     },
                                     "required": [
                                       "macroId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "object",
@@ -6023,13 +6424,57 @@
                                             },
                                             "color": {
                                               "type": "string"
+                                            },
+                                            "conditions": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "id": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                  },
+                                                  "sourceCellId": {
+                                                    "type": "string"
+                                                  },
+                                                  "field": {
+                                                    "type": "string"
+                                                  },
+                                                  "operator": {
+                                                    "enum": [
+                                                      "eq",
+                                                      "neq",
+                                                      "gt",
+                                                      "lt",
+                                                      "gte",
+                                                      "lte"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "value": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "id",
+                                                  "sourceCellId",
+                                                  "field",
+                                                  "operator",
+                                                  "value"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            },
+                                            "gotoCellId": {
+                                              "type": "string"
                                             }
                                           },
                                           "required": [
                                             "id",
                                             "label",
                                             "color"
-                                          ]
+                                          ],
+                                          "additionalProperties": false
                                         },
                                         "minItems": 1
                                       },
@@ -6039,7 +6484,8 @@
                                     },
                                     "required": [
                                       "paths"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               },
@@ -6060,7 +6506,8 @@
                                 "required": [
                                   "x",
                                   "y"
-                                ]
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -6068,7 +6515,8 @@
                               "type",
                               "name",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           "minItems": 1
                         },
@@ -6116,14 +6564,16 @@
                               "id",
                               "source",
                               "target"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         }
                       },
                       "required": [
                         "nodes",
                         "edges"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "createdAt": {
                       "type": "string",
@@ -17103,7 +17553,8 @@
                                 "id",
                                 "type",
                                 "payload"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17120,36 +17571,76 @@
                                   "const": "command"
                                 },
                                 "payload": {
-                                  "type": "object",
-                                  "properties": {
-                                    "format": {
-                                      "enum": [
-                                        "string",
-                                        "json",
-                                        "yaml"
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "static"
+                                        },
+                                        "format": {
+                                          "enum": [
+                                            "string",
+                                            "json",
+                                            "yaml"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "content": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "name": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "format",
+                                        "content"
                                       ],
-                                      "type": "string"
+                                      "additionalProperties": false
                                     },
-                                    "content": {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    "name": {
-                                      "type": "string"
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "const": "ref"
+                                        },
+                                        "ref": {
+                                          "type": "object",
+                                          "properties": {
+                                            "sourceCellId": {
+                                              "type": "string"
+                                            },
+                                            "field": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "sourceCellId",
+                                            "field"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "name": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "ref"
+                                      ],
+                                      "additionalProperties": false
                                     }
-                                  },
-                                  "required": [
-                                    "format",
-                                    "content"
-                                  ],
-                                  "additionalProperties": false
+                                  ]
                                 }
                               },
                               "required": [
                                 "id",
                                 "type",
                                 "payload"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17195,7 +17686,8 @@
                                 "id",
                                 "type",
                                 "payload"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17327,7 +17819,8 @@
                                 "type",
                                 "name",
                                 "question"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17395,7 +17888,8 @@
                                             "field",
                                             "operator",
                                             "value"
-                                          ]
+                                          ],
+                                          "additionalProperties": false
                                         }
                                       },
                                       "gotoCellId": {
@@ -17407,7 +17901,8 @@
                                       "label",
                                       "color",
                                       "conditions"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   "minItems": 1
                                 },
@@ -17422,7 +17917,8 @@
                                 "id",
                                 "type",
                                 "paths"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17484,7 +17980,8 @@
                                     },
                                     "required": [
                                       "deviceId"
-                                    ]
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 }
                               },
@@ -17492,7 +17989,8 @@
                                 "id",
                                 "type",
                                 "producedBy"
-                              ]
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "object",
@@ -17516,7 +18014,8 @@
                                 "id",
                                 "type",
                                 "content"
-                              ]
+                              ],
+                              "additionalProperties": false
                             }
                           ]
                         }
@@ -17657,7 +18156,8 @@
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -17674,36 +18174,76 @@
                               "const": "command"
                             },
                             "payload": {
-                              "type": "object",
-                              "properties": {
-                                "format": {
-                                  "enum": [
-                                    "string",
-                                    "json",
-                                    "yaml"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "static"
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "string",
+                                        "json",
+                                        "yaml"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "content": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "format",
+                                    "content"
                                   ],
-                                  "type": "string"
+                                  "additionalProperties": false
                                 },
-                                "content": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "name": {
-                                  "type": "string"
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "ref"
+                                    },
+                                    "ref": {
+                                      "type": "object",
+                                      "properties": {
+                                        "sourceCellId": {
+                                          "type": "string"
+                                        },
+                                        "field": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "sourceCellId",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "ref"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "format",
-                                "content"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "required": [
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -17749,7 +18289,8 @@
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -17881,7 +18422,8 @@
                             "type",
                             "name",
                             "question"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -17949,7 +18491,8 @@
                                         "field",
                                         "operator",
                                         "value"
-                                      ]
+                                      ],
+                                      "additionalProperties": false
                                     }
                                   },
                                   "gotoCellId": {
@@ -17961,7 +18504,8 @@
                                   "label",
                                   "color",
                                   "conditions"
-                                ]
+                                ],
+                                "additionalProperties": false
                               },
                               "minItems": 1
                             },
@@ -17976,7 +18520,8 @@
                             "id",
                             "type",
                             "paths"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -18038,7 +18583,8 @@
                                 },
                                 "required": [
                                   "deviceId"
-                                ]
+                                ],
+                                "additionalProperties": false
                               }
                             }
                           },
@@ -18046,7 +18592,8 @@
                             "id",
                             "type",
                             "producedBy"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -18070,7 +18617,8 @@
                             "id",
                             "type",
                             "content"
-                          ]
+                          ],
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -18164,7 +18712,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18181,36 +18730,76 @@
                                 "const": "command"
                               },
                               "payload": {
-                                "type": "object",
-                                "properties": {
-                                  "format": {
-                                    "enum": [
-                                      "string",
-                                      "json",
-                                      "yaml"
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "static"
+                                      },
+                                      "format": {
+                                        "enum": [
+                                          "string",
+                                          "json",
+                                          "yaml"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "content": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "format",
+                                      "content"
                                     ],
-                                    "type": "string"
+                                    "additionalProperties": false
                                   },
-                                  "content": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  "name": {
-                                    "type": "string"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "ref"
+                                      },
+                                      "ref": {
+                                        "type": "object",
+                                        "properties": {
+                                          "sourceCellId": {
+                                            "type": "string"
+                                          },
+                                          "field": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "sourceCellId",
+                                          "field"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "ref"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "format",
-                                  "content"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             },
                             "required": [
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18256,7 +18845,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18388,7 +18978,8 @@
                               "type",
                               "name",
                               "question"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18456,7 +19047,8 @@
                                           "field",
                                           "operator",
                                           "value"
-                                        ]
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "gotoCellId": {
@@ -18468,7 +19060,8 @@
                                     "label",
                                     "color",
                                     "conditions"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 },
                                 "minItems": 1
                               },
@@ -18483,7 +19076,8 @@
                               "id",
                               "type",
                               "paths"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18545,7 +19139,8 @@
                                   },
                                   "required": [
                                     "deviceId"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 }
                               }
                             },
@@ -18553,7 +19148,8 @@
                               "id",
                               "type",
                               "producedBy"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18577,7 +19173,8 @@
                               "id",
                               "type",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -18740,7 +19337,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18757,36 +19355,76 @@
                                 "const": "command"
                               },
                               "payload": {
-                                "type": "object",
-                                "properties": {
-                                  "format": {
-                                    "enum": [
-                                      "string",
-                                      "json",
-                                      "yaml"
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "static"
+                                      },
+                                      "format": {
+                                        "enum": [
+                                          "string",
+                                          "json",
+                                          "yaml"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "content": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "format",
+                                      "content"
                                     ],
-                                    "type": "string"
+                                    "additionalProperties": false
                                   },
-                                  "content": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  "name": {
-                                    "type": "string"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "ref"
+                                      },
+                                      "ref": {
+                                        "type": "object",
+                                        "properties": {
+                                          "sourceCellId": {
+                                            "type": "string"
+                                          },
+                                          "field": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "sourceCellId",
+                                          "field"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "ref"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "format",
-                                  "content"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             },
                             "required": [
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18832,7 +19470,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -18964,7 +19603,8 @@
                               "type",
                               "name",
                               "question"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -19032,7 +19672,8 @@
                                           "field",
                                           "operator",
                                           "value"
-                                        ]
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "gotoCellId": {
@@ -19044,7 +19685,8 @@
                                     "label",
                                     "color",
                                     "conditions"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 },
                                 "minItems": 1
                               },
@@ -19059,7 +19701,8 @@
                               "id",
                               "type",
                               "paths"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -19121,7 +19764,8 @@
                                   },
                                   "required": [
                                     "deviceId"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 }
                               }
                             },
@@ -19129,7 +19773,8 @@
                               "id",
                               "type",
                               "producedBy"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -19153,7 +19798,8 @@
                               "id",
                               "type",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -19304,7 +19950,8 @@
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19321,36 +19968,76 @@
                               "const": "command"
                             },
                             "payload": {
-                              "type": "object",
-                              "properties": {
-                                "format": {
-                                  "enum": [
-                                    "string",
-                                    "json",
-                                    "yaml"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "static"
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "string",
+                                        "json",
+                                        "yaml"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "content": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "format",
+                                    "content"
                                   ],
-                                  "type": "string"
+                                  "additionalProperties": false
                                 },
-                                "content": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "name": {
-                                  "type": "string"
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "ref"
+                                    },
+                                    "ref": {
+                                      "type": "object",
+                                      "properties": {
+                                        "sourceCellId": {
+                                          "type": "string"
+                                        },
+                                        "field": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "sourceCellId",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "ref"
+                                  ],
+                                  "additionalProperties": false
                                 }
-                              },
-                              "required": [
-                                "format",
-                                "content"
-                              ],
-                              "additionalProperties": false
+                              ]
                             }
                           },
                           "required": [
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19396,7 +20083,8 @@
                             "id",
                             "type",
                             "payload"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19528,7 +20216,8 @@
                             "type",
                             "name",
                             "question"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19596,7 +20285,8 @@
                                         "field",
                                         "operator",
                                         "value"
-                                      ]
+                                      ],
+                                      "additionalProperties": false
                                     }
                                   },
                                   "gotoCellId": {
@@ -19608,7 +20298,8 @@
                                   "label",
                                   "color",
                                   "conditions"
-                                ]
+                                ],
+                                "additionalProperties": false
                               },
                               "minItems": 1
                             },
@@ -19623,7 +20314,8 @@
                             "id",
                             "type",
                             "paths"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19685,7 +20377,8 @@
                                 },
                                 "required": [
                                   "deviceId"
-                                ]
+                                ],
+                                "additionalProperties": false
                               }
                             }
                           },
@@ -19693,7 +20386,8 @@
                             "id",
                             "type",
                             "producedBy"
-                          ]
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "object",
@@ -19717,7 +20411,8 @@
                             "id",
                             "type",
                             "content"
-                          ]
+                          ],
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -19800,7 +20495,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -19817,36 +20513,76 @@
                                 "const": "command"
                               },
                               "payload": {
-                                "type": "object",
-                                "properties": {
-                                  "format": {
-                                    "enum": [
-                                      "string",
-                                      "json",
-                                      "yaml"
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "static"
+                                      },
+                                      "format": {
+                                        "enum": [
+                                          "string",
+                                          "json",
+                                          "yaml"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "content": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "format",
+                                      "content"
                                     ],
-                                    "type": "string"
+                                    "additionalProperties": false
                                   },
-                                  "content": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  "name": {
-                                    "type": "string"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "ref"
+                                      },
+                                      "ref": {
+                                        "type": "object",
+                                        "properties": {
+                                          "sourceCellId": {
+                                            "type": "string"
+                                          },
+                                          "field": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "sourceCellId",
+                                          "field"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "ref"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "format",
-                                  "content"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             },
                             "required": [
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -19892,7 +20628,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20024,7 +20761,8 @@
                               "type",
                               "name",
                               "question"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20092,7 +20830,8 @@
                                           "field",
                                           "operator",
                                           "value"
-                                        ]
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "gotoCellId": {
@@ -20104,7 +20843,8 @@
                                     "label",
                                     "color",
                                     "conditions"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 },
                                 "minItems": 1
                               },
@@ -20119,7 +20859,8 @@
                               "id",
                               "type",
                               "paths"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20181,7 +20922,8 @@
                                   },
                                   "required": [
                                     "deviceId"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 }
                               }
                             },
@@ -20189,7 +20931,8 @@
                               "id",
                               "type",
                               "producedBy"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20213,7 +20956,8 @@
                               "id",
                               "type",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -20473,7 +21217,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20490,36 +21235,76 @@
                                 "const": "command"
                               },
                               "payload": {
-                                "type": "object",
-                                "properties": {
-                                  "format": {
-                                    "enum": [
-                                      "string",
-                                      "json",
-                                      "yaml"
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "static"
+                                      },
+                                      "format": {
+                                        "enum": [
+                                          "string",
+                                          "json",
+                                          "yaml"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "content": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "format",
+                                      "content"
                                     ],
-                                    "type": "string"
+                                    "additionalProperties": false
                                   },
-                                  "content": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  "name": {
-                                    "type": "string"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "ref"
+                                      },
+                                      "ref": {
+                                        "type": "object",
+                                        "properties": {
+                                          "sourceCellId": {
+                                            "type": "string"
+                                          },
+                                          "field": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "sourceCellId",
+                                          "field"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "ref"
+                                    ],
+                                    "additionalProperties": false
                                   }
-                                },
-                                "required": [
-                                  "format",
-                                  "content"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             },
                             "required": [
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20565,7 +21350,8 @@
                               "id",
                               "type",
                               "payload"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20697,7 +21483,8 @@
                               "type",
                               "name",
                               "question"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20765,7 +21552,8 @@
                                           "field",
                                           "operator",
                                           "value"
-                                        ]
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "gotoCellId": {
@@ -20777,7 +21565,8 @@
                                     "label",
                                     "color",
                                     "conditions"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 },
                                 "minItems": 1
                               },
@@ -20792,7 +21581,8 @@
                               "id",
                               "type",
                               "paths"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20854,7 +21644,8 @@
                                   },
                                   "required": [
                                     "deviceId"
-                                  ]
+                                  ],
+                                  "additionalProperties": false
                                 }
                               }
                             },
@@ -20862,7 +21653,8 @@
                               "id",
                               "type",
                               "producedBy"
-                            ]
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "object",
@@ -20886,7 +21678,8 @@
                               "id",
                               "type",
                               "content"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }

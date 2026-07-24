@@ -95,7 +95,9 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Blank Details step shows the observed four-step wizard, name, description, and workbook picker; no account or experiment data entered.",
       "redactions": [],
-      "live_checks_observed": ["Four-step create wizard Details screen observed on dev."]
+      "live_checks_observed": [
+        "Four-step create wizard Details screen observed on dev."
+      ]
     },
     {
       "asset": "create-experiment-entry.png",
@@ -141,7 +143,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["Authenticated dashboard and experiment cards observed on dev."]
+      "live_checks_observed": [
+        "Authenticated dashboard and experiment cards observed on dev."
+      ]
     },
     {
       "asset": "data-first-measurement.png",
@@ -165,7 +169,9 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": ["Representative populated measurement table observed on dev."]
+      "live_checks_observed": [
+        "Representative populated measurement table observed on dev."
+      ]
     },
     {
       "asset": "experiments-list.png",
@@ -188,7 +194,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["Search/filter controls and experiment cards observed on dev."]
+      "live_checks_observed": [
+        "Search/filter controls and experiment cards observed on dev."
+      ]
     },
     {
       "asset": "export-dialog.png",
@@ -234,7 +242,9 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Public dev auth screen only; email and OTP fields are empty, no account data is visible, cookie banner dismissed, stable background selected, and GitHub/ORCID/email methods match the verified Guide copy.",
       "redactions": [],
-      "live_checks_observed": ["Dev login offers email, GitHub, and ORCID."]
+      "live_checks_observed": [
+        "Dev login offers email, GitHub, and ORCID."
+      ]
     },
     {
       "asset": "metadata-import.png",
@@ -258,7 +268,9 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": ["Metadata CSV preview and identifier mapping UI observed on dev."]
+      "live_checks_observed": [
+        "Metadata CSV preview and identifier mapping UI observed on dev."
+      ]
     },
     {
       "asset": "project-transfer-history.png",
@@ -277,7 +289,9 @@
       "reviewed_at": "2026-07-19T22:17:36.001541+00:00",
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Previous Requests view shows observed Completed statuses and dates; project identifiers and URLs hidden.",
-      "redactions": ["project identifiers and URLs hidden"],
+      "redactions": [
+        "project identifiers and URLs hidden"
+      ],
       "live_checks_observed": [
         "Previous Requests view and its current status labels/empty state observed on dev."
       ]
@@ -352,7 +366,9 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": ["Picker shows protocol name, creator, and sensor family on dev."]
+      "live_checks_observed": [
+        "Picker shows protocol name, creator, and sensor family on dev."
+      ]
     },
     {
       "asset": "quick-start-web.webm",
@@ -409,7 +425,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["In-product Report bug link observed on dev."]
+      "live_checks_observed": [
+        "In-product Report bug link observed on dev."
+      ]
     },
     {
       "asset": "visibility-embargo.png",
@@ -457,7 +475,9 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": ["Linked workbook and pinned version badge observed on dev."]
+      "live_checks_observed": [
+        "Linked workbook and pinned version badge observed on dev."
+      ]
     },
     {
       "asset": "workbook-version-history.png",
@@ -479,6 +499,66 @@
       "redactions": [],
       "live_checks_observed": [
         "Version history and current pinned version observed on dev; no restore performed."
+      ]
+    },
+    {
+      "asset": "dynamic-command-source-picker.png",
+      "sha256": "5fd251ca67cc77f4da8d7a9fdcbb4facb0e7c3e3802c3a6121dceb5f7b54705f",
+      "script": "local Playwright session (script not committed; see review_notes)",
+      "environment": "local dev stack (worktree web :3100 + backend :3120, seeded Postgres)",
+      "route": "/en-US/platform/workbooks/<workbook-id>",
+      "captured_at": "2026-07-24T09:21:29.056608+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "pending",
+      "review_notes": "Command cell in Dynamic mode with the earlier-source picker open, listing an eligible question, macro, and command cell. DYNAMIC_COMMAND_AUTHORING was enabled only inside the capture browser session by stubbing the PostHog flags response; no flag or code change was persisted.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Captured against the dynamic-command feature branch running locally; seed account only, no personal data on screen."
+      ]
+    },
+    {
+      "asset": "dynamic-command-configured.png",
+      "sha256": "a1873a4efda3ea71e6c88884fadddb84a1cbe5c7061917199d0c461dde1c0d1b",
+      "script": "local Playwright session (script not committed; see review_notes)",
+      "environment": "local dev stack (worktree web :3100 + backend :3120, seeded Postgres)",
+      "route": "/en-US/platform/workbooks/<workbook-id>",
+      "captured_at": "2026-07-24T09:21:29.056608+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "pending",
+      "review_notes": "Command cell in Dynamic mode with a macro source selected and the top-level field 'toDevice' entered; autosave settled before capture. DYNAMIC_COMMAND_AUTHORING was enabled only inside the capture browser session by stubbing the PostHog flags response; no flag or code change was persisted.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Captured against the dynamic-command feature branch running locally; seed account only, no personal data on screen."
+      ]
+    },
+    {
+      "asset": "dynamic-command-repair-guidance.png",
+      "sha256": "490554e67a1a1d39c5198f813668887565b46d603362e0b6121e9d66578cea57",
+      "script": "local Playwright session (script not committed; see review_notes)",
+      "environment": "local dev stack (worktree web :3100 + backend :3120, seeded Postgres)",
+      "route": "/en-US/platform/workbooks/<workbook-id>",
+      "captured_at": "2026-07-24T09:21:29.056608+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "pending",
+      "review_notes": "Command cell whose referenced source cell was deleted; the picker shows the preserved unavailable source id and the repair guidance below. DYNAMIC_COMMAND_AUTHORING was enabled only inside the capture browser session by stubbing the PostHog flags response; no flag or code change was persisted.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Captured against the dynamic-command feature branch running locally; seed account only, no personal data on screen."
       ]
     }
   ]

@@ -1,4 +1,4 @@
 {
   "title": "Experiments",
-  "pages": ["index", "creating", "workbooks", "metadata", "managing", "collaborators"]
+  "pages": ["index", "creating", "workbooks", "dynamic-commands", "metadata", "managing", "collaborators"]
 }

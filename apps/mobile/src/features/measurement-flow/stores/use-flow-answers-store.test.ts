@@ -149,6 +149,22 @@ describe("useFlowAnswersStore", () => {
     });
   });
 
+  describe("clearCycle", () => {
+    it("clears only the retried cycle", () => {
+      const { setAnswer, clearCycle } = useFlowAnswersStore.getState();
+      setAnswer(0, "plant", "rose");
+      setAnswer(1, "plant", "tulip");
+      clearCycle(1);
+      expect(useFlowAnswersStore.getState().answersHistory).toEqual([{ plant: "rose" }, {}]);
+    });
+
+    it("ignores a cycle outside the history", () => {
+      useFlowAnswersStore.getState().setAnswer(0, "plant", "rose");
+      useFlowAnswersStore.getState().clearCycle(2);
+      expect(useFlowAnswersStore.getState().answersHistory).toEqual([{ plant: "rose" }]);
+    });
+  });
+
   describe("autoincrement settings", () => {
     it("defaults to false for unknown names", () => {
       expect(useFlowAnswersStore.getState().isAutoincrementEnabled("plant")).toBe(false);

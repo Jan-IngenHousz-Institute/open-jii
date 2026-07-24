@@ -36,7 +36,10 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { CellTitle } from "../cell-title";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
-import { useWorkbookEntitySaved } from "../workbook-entity-saved-context";
+import {
+  useWorkbookEntitySaved,
+  useWorkbookExecutableEdit,
+} from "../workbook-entity-saved-context";
 
 interface MacroCellProps {
   cell: MacroCellType;
@@ -91,6 +94,7 @@ export function MacroCellComponent({
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
   const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
   const onEntitySaved = useWorkbookEntitySaved();
+  const onExecutableEdit = useWorkbookExecutableEdit();
 
   const [localCode, setLocalCode] = useState<string | null>(null);
 
@@ -99,6 +103,17 @@ export function MacroCellComponent({
       setLocalCode(macroCode);
     }
   }, [macroCode, localCode]);
+
+  // Editing macro code invalidates runtime freshness synchronously BEFORE the
+  // editor state changes, so an in-flight producer cannot commit against the old
+  // code. Runs ahead of debounced persistence.
+  const handleCodeChange = useCallback(
+    (code: string) => {
+      onExecutableEdit();
+      setLocalCode(code);
+    },
+    [onExecutableEdit],
+  );
 
   // Mirror the protocol cell: persist via the shared `useAutosave` hook so a
   // failed save surfaces a toast and the indicator flips to "error" instead of
@@ -141,6 +156,9 @@ export function MacroCellComponent({
         code: macroData.code,
         forkedFrom: macroData.id,
       });
+      // A successful fork repoints this cell at different executable code;
+      // invalidate synchronously before the cell payload changes.
+      onExecutableEdit();
       onUpdate({
         ...cell,
         payload: {
@@ -153,16 +171,19 @@ export function MacroCellComponent({
     } catch {
       // useMacroCreate already surfaces the error toast.
     }
-  }, [macroData, forkMacro, onUpdate, cell]);
+  }, [macroData, forkMacro, onUpdate, cell, onExecutableEdit]);
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
+      // Language change alters execution semantics; invalidate synchronously
+      // before the payload/persist changes.
+      onExecutableEdit();
       void saveMacro({ id: macroId, language: lang }).catch((err: unknown) => {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
       });
       onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
     },
-    [macroId, saveMacro, cell, onUpdate],
+    [macroId, saveMacro, cell, onUpdate, onExecutableEdit],
   );
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
@@ -339,7 +360,7 @@ export function MacroCellComponent({
       ) : localCode != null || macroCode != null ? (
         <WorkbookCodeEditor
           value={localCode ?? macroCode ?? ""}
-          onChange={isEditable ? setLocalCode : undefined}
+          onChange={isEditable ? handleCodeChange : undefined}
           language={macroLanguage ?? language}
           minHeight={isEditable ? "120px" : "80px"}
           maxHeight={isEditable ? "500px" : "400px"}

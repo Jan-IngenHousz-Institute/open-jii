@@ -40,8 +40,8 @@ function renderNode(currentNode: FlowNode, isDispatchTarget: boolean) {
         </ScrollableNode>
       );
     case "measurement":
-      // A measurement node carries either a protocol reference or an inline
-      // device command; the latter runs through the lightweight CommandNode,
+      // A measurement node carries either a protocol reference or an explicit
+      // static/dynamic device command; the latter runs through CommandNode,
       // except as a dispatch target, where the multi-device MeasurementNode
       // runs each device's own payload.
       if (currentNode.content?.command && !isDispatchTarget) {

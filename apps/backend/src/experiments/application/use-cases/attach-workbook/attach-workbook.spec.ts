@@ -1,6 +1,16 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { Logger } from "@nestjs/common";
+
+import {
+  assertFailure,
+  assertSuccess,
+  failure,
+  AppError,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
+import { GetFlowUseCase } from "../flows/get-flow";
 import { AttachWorkbookUseCase } from "./attach-workbook";
 
 describe("AttachWorkbookUseCase", () => {
@@ -36,11 +46,122 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("rolls back the pointer AND writes no flow when the flow upsert fails", async () => {
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    vi.spyOn(flowRepo, "upsert").mockResolvedValue(failure(AppError.internal("flow upsert boom")));
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertFailure(result);
+
+    // Pointer rolled back (still unattached) and no flow row written.
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookVersionId).toBeNull();
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    expect(flow.value).toBeNull();
+  });
+
+  it("rolls back and writes nothing when the pointer update fails", async () => {
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepo, "update").mockResolvedValue(
+      failure(AppError.internal("pointer boom")),
+    );
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertFailure(result);
+
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookVersionId).toBeNull();
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    expect(flow.value).toBeNull();
+  });
+
+  it("attaching an empty workbook sets the pointer but stores no flow row (GET 404)", async () => {
+    const empty = await testApp.createWorkbook({
+      name: "Empty",
+      cells: [],
+      createdBy: adminUserId,
+    });
+
+    const result = await useCase.execute(experimentId, empty.id, adminUserId);
+    assertSuccess(result);
+    expect(result.value.workbookId).toBe(empty.id);
+
+    // No flow row materialized for a node-less workbook.
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    expect(flow.value).toBeNull();
+
+    // GET flow then follows the existing not-found path.
+    const getFlow = testApp.module.get(GetFlowUseCase);
+    const read = await getFlow.execute(experimentId, adminUserId);
+    assertFailure(read);
+    expect(read.error.statusCode).toBe(404);
+  });
+
+  it("rejects a stale expected-workbook (concurrent change) with a rolled-back conflict", async () => {
+    const experimentRepo = testApp.module.get(ExperimentRepository);
+    // Simulate a concurrent change: the use case observes a workbook id that no
+    // longer matches the (still-null) row when the bind locks it.
+    const access = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(access);
+    const observed = access.value.experiment;
+    if (!observed) throw new Error("expected experiment in test setup");
+    vi.spyOn(experimentRepo, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...observed, workbookId: "stale-workbook-id" },
+        hasAccess: true,
+        hasArchiveAccess: true,
+        isAdmin: true,
+      }),
+    );
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(409);
+    expect(result.error.code).toBe("FLOW_BIND_WORKBOOK_CONFLICT");
+
+    // Pointer + flow unchanged.
+    vi.restoreAllMocks();
+    const after = await experimentRepo.checkAccess(experimentId, adminUserId);
+    assertSuccess(after);
+    expect(after.value.experiment?.workbookId).toBeNull();
+    const flow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(flow);
+    expect(flow.value).toBeNull();
+  });
+
+  it("sanitizes spoofed safe-code failures and never logs repository secrets", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const loggerSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    vi.spyOn(flowRepo, "upsert").mockResolvedValue(
+      failure(
+        AppError.repositoryError("SENTINEL_REPOSITORY_SECRET", "FLOW_BIND_WORKBOOK_CONFLICT", {
+          graph: "SENTINEL_GRAPH_SECRET",
+          cells: "SENTINEL_CELL_SECRET",
+        }),
+      ),
+    );
+
+    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    assertFailure(result);
+    expect(result.error.code).toBe("FLOW_BIND_FAILED");
+    expect(result.error.message).toBe("Failed to bind the workbook version and flow");
+    expect(JSON.stringify(result.error)).not.toContain("SENTINEL");
+    expect(loggerSpy).toHaveBeenCalled();
+    expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain("SENTINEL");
+    vi.unstubAllEnvs();
   });
 
   it("attaches a workbook and creates version 1", async () => {
@@ -49,6 +170,26 @@ describe("AttachWorkbookUseCase", () => {
     expect(result.value.workbookId).toBe(workbookId);
     expect(result.value.version).toBe(1);
     expect(result.value.workbookVersionId).toBeDefined();
+  });
+
+  it("returns a controlled failure and persists no flow when materialization is invalid", async () => {
+    // Duplicate cell ids materialize into duplicate node ids => strict fail.
+    const dupWorkbook = await testApp.createWorkbook({
+      name: "Dup",
+      cells: [
+        { id: "dup", type: "markdown", content: "a", isCollapsed: false },
+        { id: "dup", type: "markdown", content: "b", isCollapsed: false },
+      ],
+      createdBy: adminUserId,
+    });
+    const upsertSpy = vi.spyOn(flowRepo, "upsert");
+
+    const result = await useCase.execute(experimentId, dupWorkbook.id, adminUserId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FLOW_MATERIALIZATION_FAILED");
+    expect(upsertSpy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 
   it("returns failure when experiment not found", async () => {

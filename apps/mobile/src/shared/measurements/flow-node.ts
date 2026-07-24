@@ -1,3 +1,5 @@
+import type { CommandSource } from "@repo/api/domains/workbook/command-source.schema";
+
 export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis" | "branch";
 
 export type QuestionKind =
@@ -62,14 +64,12 @@ export interface ResolvedMacro {
 
 // An inline device command (raw string / JSON / YAML) carried on a measurement
 // node when the workbook cell is an inline command rather than a protocol ref.
-export interface InlineCommandContent {
-  format: "string" | "json" | "yaml";
-  content: string;
-}
+export type InlineCommandContent = CommandSource;
 
 export interface MeasurementContent {
   params?: Record<string, any>;
-  // A measurement node carries EITHER a protocol reference OR an inline command.
+  // A measurement node carries EITHER a protocol reference OR an explicit
+  // static/referenced command carrier.
   protocolId?: string;
   protocol?: ResolvedProtocol;
   command?: InlineCommandContent;

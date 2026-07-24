@@ -1,5 +1,7 @@
 import type { SensorFamily } from "../domains/protocol/protocol.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import { validateDynamicCommandReferences } from "./dynamic-command-refs";
+import type { DynamicCommandIssueCode } from "./dynamic-command-refs";
 
 export type WorkbookIssueLevel = "error" | "warning";
 
@@ -9,7 +11,8 @@ export type WorkbookIssueCode =
   | "dangling-branch-source"
   | "dangling-branch-goto"
   | "mixed-sensor-families"
-  | "macro-without-input";
+  | "macro-without-input"
+  | DynamicCommandIssueCode;
 
 export interface WorkbookIssue {
   level: WorkbookIssueLevel;
@@ -143,6 +146,19 @@ export function validateWorkbook(
       level: "warning",
       code: "mixed-sensor-families",
       detail: [...families].sort().join(", "),
+    });
+  }
+
+  // Blocking structural problems with dynamic command references. The backend
+  // publish path is the enforcement point; this surfaces the same codes to the
+  // editor. cellId/ref carry the command cell and its referenced source.
+  for (const issue of validateDynamicCommandReferences(cells)) {
+    issues.push({
+      level: "error",
+      code: issue.code,
+      cellId: issue.commandCellId,
+      ref: issue.sourceCellId,
+      detail: issue.field || undefined,
     });
   }
 

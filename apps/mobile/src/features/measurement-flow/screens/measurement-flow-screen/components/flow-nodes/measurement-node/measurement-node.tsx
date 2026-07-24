@@ -40,6 +40,7 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
     scanProgress,
     scanStartedAt,
     estimatedMs,
+    commandDispatchPreviews = [],
   } = useMeasurementCapture(content, nodeId);
 
   const renderState = () => {
@@ -150,5 +151,24 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
     );
   };
 
-  return <View className="flex-1 rounded-xl">{renderState()}</View>;
+  return (
+    <View className="flex-1 rounded-xl">
+      {commandDispatchPreviews.length > 0 ? (
+        <View className="gap-2 px-4 pt-3">
+          {commandDispatchPreviews.map((preview) => (
+            <View key={preview.deviceId} className="bg-muted rounded-lg p-2">
+              <Text className={clsx("text-sm font-semibold", classes.text)}>
+                {preview.deviceName}
+              </Text>
+              {preview.resolved ? (
+                <Text className={clsx("font-mono text-sm", classes.text)}>{preview.resolved}</Text>
+              ) : null}
+              {preview.error ? <Text className="text-sm text-red-500">{preview.error}</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {renderState()}
+    </View>
+  );
 }

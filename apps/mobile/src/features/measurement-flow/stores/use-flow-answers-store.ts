@@ -2,13 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-interface FlowAnswersStore {
+export interface FlowAnswersStore {
   answersHistory: Record<string, string>[];
   autoincrementSettings: Record<string, boolean>;
   rememberAnswerSettings: Record<string, boolean>;
 
   setAnswer: (cycle: number, name: string, value: string) => void;
   clearHistory: () => void;
+  clearCycle: (cycle: number) => void;
   getAnswer: (cycle: number, name: string) => string | undefined;
   getCycleAnswers: (cycle: number) => Record<string, string> | undefined;
   setAutoincrement: (name: string, enabled: boolean) => void;
@@ -25,6 +26,13 @@ const EMPTY_ANSWERS: Pick<
   autoincrementSettings: {},
   rememberAnswerSettings: {},
 };
+
+export function migrateFlowAnswersState(persisted: unknown, version: number): unknown {
+  // v0 was already intentionally incompatible. v1 -> v2 is an identity
+  // migration so valid paused-cycle answers survive the coordinated upgrade.
+  if (version < 1 || !persisted) return EMPTY_ANSWERS;
+  return persisted;
+}
 
 // Persisted alongside useMeasurementFlowStore: a paused flow needs its
 // answers to come back on resume after a kill/background.
@@ -54,6 +62,14 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
         set(EMPTY_ANSWERS);
       },
 
+      clearCycle: (cycle) =>
+        set((state) => {
+          if (cycle < 0 || cycle >= state.answersHistory.length) return state;
+          const answersHistory = [...state.answersHistory];
+          answersHistory[cycle] = {};
+          return { answersHistory };
+        }),
+
       getAnswer: (cycle, name) => get().answersHistory[cycle]?.[name],
       getCycleAnswers: (cycle) => get().answersHistory[cycle],
 
@@ -72,12 +88,9 @@ export const useFlowAnswersStore = create<FlowAnswersStore>()(
     {
       name: "flow-answers-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. Bumped in
-      // tandem with the flow store so a pre-fix (v0) answer history is
-      // discarded on upgrade instead of resuming against a reset flow.
-      version: 1,
+      version: 2,
       migrate: (persisted, version) =>
-        (version < 1 || !persisted ? EMPTY_ANSWERS : persisted) as FlowAnswersStore,
+        migrateFlowAnswersState(persisted, version) as FlowAnswersStore,
       partialize: (state) => ({
         answersHistory: state.answersHistory,
         autoincrementSettings: state.autoincrementSettings,

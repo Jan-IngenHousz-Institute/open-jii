@@ -4,6 +4,8 @@ import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttac
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
+import { parseStructuralValidationError } from "@/lib/workbook/publish-error";
+import type { StructuralIssue } from "@/lib/workbook/publish-error";
 import { BookOpen, LinkIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -12,6 +14,7 @@ import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { StructuralIssueList } from "../workbook/structural-issue-list";
 import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface EmptyWorkbookStateProps {
@@ -32,6 +35,12 @@ export function EmptyWorkbookState({
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
   const { data: workbooks = [] } = useWorkbookList();
+  // Structural rejection of the selected-existing attach: show the repairable
+  // issues inline (keyed by commandCellId) rather than a generic toast.
+  const [attachIssues, setAttachIssues] = useState<{
+    workbookId: string;
+    issues: StructuralIssue[];
+  } | null>(null);
 
   // Create + attach + open in one step: a fresh workbook is only useful once it
   // is linked to this experiment and the user can start adding cells.
@@ -53,15 +62,22 @@ export function EmptyWorkbookState({
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
+    const targetId = selectedWorkbookId;
+    setAttachIssues(null);
     attachWorkbook.mutate(
-      { id: experimentId, workbookId: selectedWorkbookId },
+      { id: experimentId, workbookId: targetId },
       {
         onSuccess: () => {
           toast({ description: t("flow.workbookAttached") });
           setSelectedWorkbookId("");
         },
-        onError: () => {
-          toast({ description: t("flow.attachFailed"), variant: "destructive" });
+        onError: (error) => {
+          const structural = parseStructuralValidationError(error);
+          if (structural) {
+            setAttachIssues({ workbookId: targetId, issues: structural });
+          } else {
+            toast({ description: t("flow.attachFailed"), variant: "destructive" });
+          }
         },
       },
     );
@@ -90,7 +106,10 @@ export function EmptyWorkbookState({
               <WorkbookSelect
                 workbooks={workbooks}
                 value={selectedWorkbookId || undefined}
-                onChange={(id) => setSelectedWorkbookId(id ?? "")}
+                onChange={(id) => {
+                  setSelectedWorkbookId(id ?? "");
+                  setAttachIssues(null);
+                }}
                 triggerPlaceholder={t("newExperiment.workbookPlaceholder")}
                 searchPlaceholder={t("flow.searchWorkbook")}
                 emptyText={t("flow.noWorkbooksFound")}
@@ -105,6 +124,15 @@ export function EmptyWorkbookState({
                 {t("flow.attach")}
               </Button>
             </div>
+
+            {attachIssues ? (
+              <StructuralIssueList
+                issues={attachIssues.issues}
+                workbookId={attachIssues.workbookId}
+                locale={locale}
+                className="w-full max-w-md"
+              />
+            ) : null}
 
             <div className="text-muted-foreground flex items-center gap-3 text-xs uppercase">
               <span className="bg-border h-px w-8" />

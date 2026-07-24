@@ -60,6 +60,10 @@
     "attach": "Verknüpfen",
     "workbookAttached": "Arbeitsbuch erfolgreich verknüpft",
     "attachFailed": "Arbeitsbuch konnte nicht verknüpft werden",
+    "structuralAttach": {
+      "title": "Dieses Arbeitsbuch hat ungelöste Befehlsreferenzen",
+      "openWorkbook": "Arbeitsbuch öffnen, um sie zu beheben"
+    },
     "versionUpgraded": "Arbeitsbuch-Version erfolgreich aktualisiert",
     "upgradeFailed": "Arbeitsbuch-Version konnte nicht aktualisiert werden",
     "upgradeToLatest": "Auf v{{version}} aktualisieren",
@@ -87,6 +91,12 @@
     "editIsolatedHint": "Wenn du Änderungen ausprobieren möchtest, ohne dieses Experiment zu beeinflussen, bearbeite über die Arbeitsbuch-Seite; diese Änderungen bleiben getrennt, bis du die Version aktualisierst.",
     "editOpenWorkbookLink": "Arbeitsbuch-Seite öffnen",
     "reviewAndUpgrade": "Prüfen & aktualisieren",
+    "upgradeBanner": {
+      "newVersion": "v{{version}} ist verfügbar",
+      "updatesAvailable": "Für das Arbeitsbuch sind Updates verfügbar",
+      "currentVersion": "(aktuell auf v{{version}})",
+      "upgraded": "Auf v{{version}} aktualisiert"
+    },
     "versionHistory": {
       "open": "Versionsverlauf",
       "title": "Versionsverlauf",
@@ -111,6 +121,7 @@
       "codeChanges": "Protokoll- & Makro-Änderungen",
       "viewDiff": "Unterschiede anzeigen",
       "macroCaveat": "Nur strukturelle Prüfungen. Makro-Logik wird nicht überprüft; testen Sie den Ablauf nach der Aktualisierung.",
+      "serverRejected": "Die Aktualisierung wurde abgelehnt. Behebe diese Befehlsreferenzen und versuche es erneut.",
       "lastChanged": "geändert {{when}}",
       "kind": { "protocol": "Protokoll", "macro": "Makro" },
       "status": {

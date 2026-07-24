@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 
+import { zExperimentFlowGraph } from "../domains/experiment/experiment.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "./cells-to-flow";
 
@@ -131,20 +132,17 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[1].isStart).toBe(false);
     expect(nodes[2].isStart).toBe(false);
 
-    expect(edges[0]).toEqual({
-      id: "e-md1-p1",
+    // Edge ids use a length-prefixed collision-free encoding; assert the
+    // routing fields exactly and that ids are unique + kind-tagged.
+    expect(edges[0]).toMatchObject({
       source: "md1",
       target: "p1",
       label: null,
       sourceHandle: null,
     });
-    expect(edges[1]).toEqual({
-      id: "e-p1-m1",
-      source: "p1",
-      target: "m1",
-      label: null,
-      sourceHandle: null,
-    });
+    expect(edges[1]).toMatchObject({ source: "p1", target: "m1", label: null, sourceHandle: null });
+    expect(edges[0].id).not.toEqual(edges[1].id);
+    expect(edges[0].id.startsWith("e2|seq|")).toBe(true);
 
     expect(nodes[0].position).toEqual({ x: -250, y: 240 });
     expect(nodes[1].position).toEqual({ x: 0, y: 240 });
@@ -283,5 +281,77 @@ describe("cellsToFlowGraph", () => {
     ];
     // Never an empty string: zFlowNode.name requires a minimum length of 1.
     expect(cellsToFlowGraph(cells).nodes[0].name).toBe("Command");
+  });
+
+  it("converts a dynamic command cell to a measurement node carrying the ref", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: uuidA, language: "python" },
+      },
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } },
+      },
+    ];
+    const node = cellsToFlowGraph(cells).nodes.find((n) => n.id === "c1");
+    expect(node?.type).toBe("measurement");
+    expect(node?.content).toEqual({
+      command: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" } },
+    });
+    // Derived, never-empty label; never dereferences absent static content.
+    expect(node?.name).toBe("Dynamic command · toDevice");
+  });
+
+  it("uses the author name as the dynamic node label when present", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "c1",
+        type: "command",
+        isCollapsed: false,
+        payload: { kind: "ref", ref: { sourceCellId: "m1", field: "toDevice" }, name: "Send LED" },
+      },
+    ];
+    expect(cellsToFlowGraph(cells).nodes[0].name).toBe("Send LED");
+  });
+
+  describe("collision-free edge ids", () => {
+    const uniqueIds = (edges: { id: string }[]) => new Set(edges.map((e) => e.id)).size;
+
+    it("does not collide ordinary vs goto edges that clashed under delimiter ids", () => {
+      // Old scheme: ordinary "a"->"b-c" and goto "a"/"b"->"c" both -> "e-a-b-c".
+      const cells: WorkbookCell[] = [
+        {
+          id: "a",
+          type: "branch",
+          isCollapsed: false,
+          paths: [{ id: "b", label: "goto", color: "#000", conditions: [], gotoCellId: "c" }],
+        },
+        { id: "b-c", type: "markdown", isCollapsed: false, content: "between" },
+        { id: "c", type: "markdown", isCollapsed: false, content: "target" },
+      ];
+      const { edges } = cellsToFlowGraph(cells);
+      expect(uniqueIds(edges)).toBe(edges.length);
+      // A collision would trip the duplicate-edge-id graph check; assert it parses.
+      const graph = cellsToFlowGraph(cells);
+      expect(zExperimentFlowGraph.safeParse(graph).success).toBe(true);
+    });
+
+    it("does not collide two ordinary edges that clashed under delimiter ids", () => {
+      // Old scheme: "a-b"->"c" and "a"->"b-c" both -> "e-a-b-c".
+      const cells: WorkbookCell[] = [
+        { id: "a-b", type: "markdown", isCollapsed: false, content: "1" },
+        { id: "c", type: "markdown", isCollapsed: false, content: "2" },
+        { id: "a", type: "markdown", isCollapsed: false, content: "3" },
+        { id: "b-c", type: "markdown", isCollapsed: false, content: "4" },
+      ];
+      const { edges } = cellsToFlowGraph(cells);
+      expect(uniqueIds(edges)).toBe(edges.length);
+      expect(zExperimentFlowGraph.safeParse(cellsToFlowGraph(cells)).success).toBe(true);
+    });
   });
 });

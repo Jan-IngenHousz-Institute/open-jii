@@ -92,6 +92,9 @@ export enum ErrorCodes {
   WORKBOOK_NOT_FOUND = "WORKBOOK_NOT_FOUND", // Workbook not found
   WORKBOOK_VERSION_NOT_FOUND = "WORKBOOK_VERSION_NOT_FOUND", // Workbook version not found
   WORKBOOK_VERSION_CREATE_FAILED = "WORKBOOK_VERSION_CREATE_FAILED", // Failed to create workbook version
+  WORKBOOK_STRUCTURAL_VALIDATION_FAILED = "WORKBOOK_STRUCTURAL_VALIDATION_FAILED", // Structural (e.g. dynamic-command-ref) validation blocked publish (400)
+  DYNAMIC_COMMAND_PUBLISH_DISABLED = "DYNAMIC_COMMAND_PUBLISH_DISABLED", // Publish gate off: workbook has a dynamic command ref (400)
+  DYNAMIC_COMMAND_CLIENT_UPGRADE_REQUIRED = "DYNAMIC_COMMAND_CLIENT_UPGRADE_REQUIRED", // Client lacks dynamic-command-ref capability (426)
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/
@@ -131,6 +134,11 @@ export enum ErrorCodes {
   EXPERIMENT_NOT_FOUND = "EXPERIMENT_NOT_FOUND", // Experiment not found
   EXPERIMENT_DUPLICATE_NAME = "EXPERIMENT_DUPLICATE_NAME", // Name already exists
   EXPERIMENT_INVALID_STATE = "EXPERIMENT_INVALID_STATE", // Invalid state for operation
+  FLOW_MATERIALIZATION_FAILED = "FLOW_MATERIALIZATION_FAILED", // Cells-derived flow graph failed strict validation; not persisted
+  FLOW_READ_INCOMPATIBLE = "FLOW_READ_INCOMPATIBLE", // Stored flow graph fails the current strict schema; controlled read refusal
+  FLOW_BIND_FAILED = "FLOW_BIND_FAILED", // Atomic experiment-pointer + flow bind transaction failed and rolled back (sanitized)
+  FLOW_BIND_EXPERIMENT_NOT_FOUND = "FLOW_BIND_EXPERIMENT_NOT_FOUND", // Bind target experiment no longer exists (404)
+  FLOW_BIND_WORKBOOK_CONFLICT = "FLOW_BIND_WORKBOOK_CONFLICT", // Experiment workbook changed concurrently since it was read (409)
 
   // ==================== Domain Operations - Experiments Data ====================
   // Location: src/experiments/application/use-cases/

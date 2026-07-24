@@ -9,7 +9,10 @@ import { contract } from "@repo/api/contract";
 import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useSession } from "@repo/auth/client";
 
-import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
+import {
+  WorkbookEntitySavedProvider,
+  WorkbookExecutableEditProvider,
+} from "../workbook-entity-saved-context";
 import { MacroCellComponent } from "./macro-cell";
 
 // The language picker is a Radix Select (portal + pointer events) that jsdom
@@ -311,6 +314,35 @@ describe("MacroCellComponent", () => {
 
     await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
     await waitFor(() => expect(onEntitySaved).toHaveBeenCalled());
+
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
+  it("fires the executable-edit invalidator immediately on a code edit and language change", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+    } as ReturnType<typeof useSession>);
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    server.mount(contract.macros.updateMacro, { body: baseMacro });
+    const onExecutableEdit = vi.fn();
+
+    const user = userEvent.setup();
+    render(
+      <WorkbookExecutableEditProvider onExecutableEdit={onExecutableEdit}>
+        <MacroCellComponent cell={cell} onUpdate={vi.fn()} onDelete={vi.fn()} onRun={vi.fn()} />
+      </WorkbookExecutableEditProvider>,
+    );
+
+    const textbox = await screen.findByRole("textbox");
+    await user.type(textbox, "x");
+    // Synchronous on the first keystroke, ahead of debounced persistence.
+    expect(onExecutableEdit).toHaveBeenCalled();
+
+    onExecutableEdit.mockClear();
+    await user.selectOptions(screen.getByTestId("language-select"), "r");
+    expect(onExecutableEdit).toHaveBeenCalledTimes(1);
 
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
       typeof useSession

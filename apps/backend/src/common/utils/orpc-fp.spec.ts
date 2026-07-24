@@ -77,6 +77,108 @@ describe("orpc-fp", () => {
       vi.unstubAllEnvs();
     });
 
+    it("keeps allowlisted structural-validation details in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+
+      const issues = [
+        {
+          code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+          commandCellId: "c1",
+          sourceCellId: "gone",
+          field: "toDevice",
+          index: 1,
+        },
+      ];
+      const error = AppError.badRequest(
+        "Workbook has structural validation errors",
+        "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        { issues },
+      );
+      const thrown = captureOrpcError(() => throwOrpcError(error, logger));
+
+      expect(thrown.data).toEqual({
+        code: "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        details: { issues },
+      });
+
+      vi.unstubAllEnvs();
+    });
+
+    it("still strips non-allowlisted details in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+
+      const error = AppError.badRequest("Nope", "DYNAMIC_COMMAND_PUBLISH_DISABLED", {
+        secret: "x",
+      });
+      const thrown = captureOrpcError(() => throwOrpcError(error, logger));
+
+      expect(thrown.data).toEqual({ code: "DYNAMIC_COMMAND_PUBLISH_DISABLED" });
+      expect(thrown.data).not.toHaveProperty("details");
+
+      vi.unstubAllEnvs();
+    });
+
+    it("projects away secrets and unknown codes from structural details in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+
+      const error = AppError.badRequest(
+        "Workbook has structural validation errors",
+        "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        {
+          secret: "top-level-leak",
+          issues: [
+            {
+              code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+              commandCellId: "c1",
+              sourceCellId: "gone",
+              field: "toDevice",
+              index: 1,
+              rawOutput: "sensitive-device-output",
+            },
+            { code: "SPOOFED_CODE", commandCellId: "c2", field: "f", index: 2 },
+          ],
+        },
+      );
+      const thrown = captureOrpcError(() => throwOrpcError(error, logger));
+
+      expect(thrown.data).toEqual({
+        code: "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        details: {
+          issues: [
+            {
+              code: "DYNAMIC_COMMAND_SOURCE_MISSING",
+              commandCellId: "c1",
+              sourceCellId: "gone",
+              field: "toDevice",
+              index: 1,
+            },
+          ],
+        },
+      });
+      const serialized = JSON.stringify(thrown.data);
+      expect(serialized).not.toContain("top-level-leak");
+      expect(serialized).not.toContain("sensitive-device-output");
+      expect(serialized).not.toContain("SPOOFED_CODE");
+
+      vi.unstubAllEnvs();
+    });
+
+    it("drops malformed structural details entirely in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+
+      const error = AppError.badRequest(
+        "Workbook has structural validation errors",
+        "WORKBOOK_STRUCTURAL_VALIDATION_FAILED",
+        { issues: "not-an-array", secret: "x" },
+      );
+      const thrown = captureOrpcError(() => throwOrpcError(error, logger));
+
+      expect(thrown.data).toEqual({ code: "WORKBOOK_STRUCTURAL_VALIDATION_FAILED" });
+      expect(thrown.data).not.toHaveProperty("details");
+
+      vi.unstubAllEnvs();
+    });
+
     it("falls back to INTERNAL_SERVER_ERROR for an unmapped 5xx status and logs at error level", () => {
       const error = new AppError("Service unavailable", "UNAVAILABLE", 503, {
         service: "external",
