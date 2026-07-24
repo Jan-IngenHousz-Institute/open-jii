@@ -1,69 +1,22 @@
-"use client";
+import { buildExperimentMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { FlowEditor } from "@/components/flow-editor/flow-editor";
-import type { FlowEditorHandle } from "@/components/flow-editor/flow-editor";
-import { PageContainer } from "@/components/page-container";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
-import { notFound } from "next/navigation";
-import { use, useRef } from "react";
+import ArchivedExperimentDesignContent from "./archived-experiment-design-content";
 
-import { useTranslation } from "@repo/i18n/client";
-
-interface ExperimentFlowPageProps {
-  params: Promise<{ id: string; locale: string }>;
+interface ArchivedExperimentDesignPageProps {
+  params: Promise<{ locale: string; id: string }>;
 }
 
-export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) {
-  const { id } = use(params);
-  const { data: experiment, isLoading, error } = useExperiment(id);
-  const {
-    data: accessData,
-    isLoading: accessLoading,
-    error: accessError,
-  } = useExperimentAccess(id);
-  const { t } = useTranslation("experiments");
+export function generateMetadata({ params }: ArchivedExperimentDesignPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildExperimentMetadata({ locale, id, section: "design", archived: true });
+  });
+}
 
-  // Get existing flow for this experiment
-  const experimentData = experiment;
-  const { data: existingFlow } = useExperimentFlow(id);
-
-  // Flow state / editor ref
-  const flowEditorRef = useRef<FlowEditorHandle | null>(null);
-
-  if (isLoading || accessLoading) {
-    return <div>{t("loading")}</div>;
-  }
-
-  if (error ?? accessError) {
-    return <ErrorDisplay error={error ?? accessError} title={t("failedToLoad")} />;
-  }
-
-  if (!experimentData || !accessData?.experiment) {
-    return <div>{t("notFound")}</div>;
-  }
-
-  // Check if experiment is archived - if not, redirect to not found
-  if (experimentData.status !== "archived") {
-    notFound();
-  }
-
-  return (
-    <PageContainer width="fluid" className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
-          <p className="text-muted-foreground text-sm">{t("flow.staticDescription")}</p>
-        </div>
-        <div className={`flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5`}>
-          <div className={`h-2 w-2 rounded-full bg-blue-500`}></div>
-          <span className={`text-sm font-medium text-blue-700`}>{t("previewMode")}</span>
-        </div>
-      </div>
-
-      <FlowEditor ref={flowEditorRef} initialFlow={existingFlow} isDisabled={true} />
-    </PageContainer>
-  );
+export default function ArchivedExperimentDesignPage({
+  params,
+}: ArchivedExperimentDesignPageProps) {
+  return <ArchivedExperimentDesignContent params={params} />;
 }

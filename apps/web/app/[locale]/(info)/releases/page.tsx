@@ -6,7 +6,7 @@ import { ReleasesChangelog } from "~/components/releases/releases-changelog";
 import { safeMetadata } from "~/lib/safe-metadata";
 
 import { Container } from "@repo/cms/container";
-import { locales } from "@repo/i18n/config";
+import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface ReleasesPageProps {
@@ -18,9 +18,8 @@ export function generateMetadata({ params }: ReleasesPageProps): Promise<Metadat
     const { locale } = await params;
     const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
 
-    // The proxy middleware redirects unprefixed paths to `/{defaultLocale}/…`, so every hreflang
-    // (including the default locale) and the canonical must carry the locale prefix.
-    const languages = Object.fromEntries(locales.map((l) => [l, `/${l}/releases`]));
+    // Only the default locale is guaranteed while locale availability is request-time flagged.
+    const languages = { [defaultLocale]: `/${defaultLocale}/releases` };
 
     return {
       title: t("releases.metaTitle"),

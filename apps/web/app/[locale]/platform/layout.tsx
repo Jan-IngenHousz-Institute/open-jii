@@ -7,6 +7,7 @@ import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
 import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
 import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -22,6 +23,10 @@ import {
 import { Toaster } from "@repo/ui/components/toaster";
 
 import { NavigationTopbar } from "../../../components/navigation/navigation-topbar/navigation-topbar";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 const getCallbackUrl = async () => {
   // Get the current path from the 'x-current-path' header.

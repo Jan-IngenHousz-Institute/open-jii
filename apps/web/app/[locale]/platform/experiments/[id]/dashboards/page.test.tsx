@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import ExperimentDashboardsPage from "./page";
+import ExperimentDashboardsPage from "./dashboards-list-content";
 
 const experimentId = "exp-123";
 

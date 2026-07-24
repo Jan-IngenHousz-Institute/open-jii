@@ -3,7 +3,7 @@ import { render, screen } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import DashboardPage from "./page";
+import DashboardPage from "./dashboard-detail-content";
 
 vi.mock("@/components/experiment-dashboards/dashboard-view-body", () => ({
   DashboardViewBody: ({

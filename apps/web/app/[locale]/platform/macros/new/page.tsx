@@ -5,12 +5,15 @@ import React from "react";
 
 import initTranslations from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  title: "New Macro",
-};
-
 interface NewMacroPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: NewMacroPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["macro"] });
+
+  return { title: t("macros.newMacro") };
 }
 
 export default async function NewMacroPage({ params }: NewMacroPageProps) {

@@ -1,11 +1,19 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+const logo = readFile(
+  join(process.cwd(), "public/img/openjii-logo-horizontal-yellow-transparent.png"),
+).then((buffer) => Uint8Array.from(buffer).buffer);
 
 export const dynamic = "force-static";
 export const alt = "openJII Documentation";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  const logoData = await logo;
+
   return new ImageResponse(
     (
       <div
@@ -20,8 +28,14 @@ export default function OpengraphImage() {
           color: "#ffffff",
         }}
       >
-        <div style={{ fontSize: 40, fontWeight: 700, color: "#49e06d" }}>openJII</div>
-        <div style={{ fontSize: 68, fontWeight: 700, marginTop: 24, lineHeight: 1.1 }}>
+        <img
+          src={logoData as unknown as string}
+          alt=""
+          width={500}
+          height={147}
+          style={{ objectFit: "contain" }}
+        />
+        <div style={{ fontSize: 68, fontWeight: 700, marginTop: 30, lineHeight: 1.1 }}>
           Documentation
         </div>
         <div style={{ fontSize: 34, marginTop: 24, color: "#cfeede", maxWidth: 900 }}>

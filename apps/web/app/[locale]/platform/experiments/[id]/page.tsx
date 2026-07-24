@@ -1,93 +1,20 @@
-"use client";
+import { buildExperimentMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { notFound } from "next/navigation";
-import { use, useRef } from "react";
-import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
-import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
-import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
-import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
-
-import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import { useTranslation } from "@repo/i18n";
-
-import ExperimentDashboardsDisplay from "../../../../../components/experiment-dashboards/list/experiment-dashboards-display";
+import ExperimentOverviewContent from "./experiment-overview-content";
 
 interface ExperimentOverviewPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
+}
+
+export function generateMetadata({ params }: ExperimentOverviewPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildExperimentMetadata({ locale, id, section: "overview" });
+  });
 }
 
 export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
-  const { id } = use(params);
-  const { t } = useTranslation("experiments");
-
-  // Experiment with access info
-  const { data: accessData, isLoading, error } = useExperimentAccess(id);
-  const experiment = accessData?.experiment;
-  const hasAccess = accessData?.isAdmin;
-
-  // Locations
-  const { data: locationsData } = useExperimentLocations(id);
-  const locations = locationsData ?? [];
-
-  // Members
-  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData ?? [];
-
-  const initialStatusRef = useRef<Experiment["status"] | null>(null);
-
-  if (isLoading) {
-    return <div>{t("loading")}</div>;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
-  }
-
-  if (!accessData) {
-    return <div>{t("notFound")}</div>;
-  }
-
-  if (!experiment) {
-    return <div>{t("notFound")}</div>;
-  }
-
-  initialStatusRef.current ??= experiment.status;
-
-  if (initialStatusRef.current === "archived") {
-    notFound();
-  }
-
-  return (
-    <div className="flex flex-col gap-6 md:flex-row">
-      {/* Right side: experiment details card (first on mobile). */}
-      <ExperimentDetailsCard
-        experimentId={id}
-        experiment={experiment}
-        locations={locations}
-        members={members}
-        isMembersLoading={isMembersLoading}
-        hasAccess={hasAccess}
-      />
-
-      {/* LEFT SIDE CONTENT (Second on mobile) */}
-      <div className="flex-1 space-y-10 md:order-1">
-        <ExperimentDescription
-          experimentId={id}
-          description={experiment.description ?? ""}
-          hasAccess={hasAccess}
-        />
-        <ExperimentLinkedWorkbook
-          workbookId={experiment.workbookId}
-          workbookVersionId={experiment.workbookVersionId}
-        />
-        <ExperimentMeasurements experimentId={id} />
-
-        <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
-      </div>
-    </div>
-  );
+  return <ExperimentOverviewContent params={params} />;
 }

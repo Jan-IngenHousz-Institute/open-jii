@@ -1,0 +1,94 @@
+"use client";
+
+import { ErrorDisplay } from "@/components/error-display";
+import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
+import { notFound } from "next/navigation";
+import { use, useRef } from "react";
+import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
+import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
+import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
+import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
+
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+import { useTranslation } from "@repo/i18n";
+
+interface ExperimentOverviewPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
+  const { id } = use(params);
+  const { t } = useTranslation("experiments");
+
+  // Experiment with access info
+  const { data: accessData, isLoading, error } = useExperimentAccess(id);
+  const experiment = accessData?.experiment;
+
+  // Locations
+  const { data: locationsData } = useExperimentLocations(id);
+  const locations = locationsData ?? [];
+
+  // Members
+  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
+  const members = membersData ?? [];
+
+  // Visualizations
+  const { data: visualizationsData, isLoading: visualizationsLoading } =
+    useExperimentVisualizations({ experimentId: id });
+
+  const initialStatusRef = useRef<Experiment["status"] | null>(null);
+
+  if (isLoading) return <div>{t("loading")}</div>;
+
+  if (error) return <ErrorDisplay error={error} title={t("failedToLoad")} />;
+
+  if (!accessData) return <div>{t("notFound")}</div>;
+
+  if (!experiment) return <div>{t("notFound")}</div>;
+
+  initialStatusRef.current ??= experiment.status;
+
+  if (initialStatusRef.current !== "archived") {
+    notFound();
+  }
+
+  return (
+    <div className="flex flex-col gap-6 md:flex-row">
+      {/* RIGHT SIDE — EXPERIMENT DETAILS CARD (First on mobile) */}
+      <ExperimentDetailsCard
+        experimentId={id}
+        experiment={experiment}
+        locations={locations}
+        members={members}
+        isMembersLoading={isMembersLoading}
+        isArchived
+      />
+
+      {/* LEFT SIDE CONTENT (Second on mobile) */}
+      <div className="flex-1 space-y-10 md:order-1">
+        <ExperimentDescription
+          experimentId={id}
+          description={experiment.description ?? ""}
+          isArchived
+        />
+        <ExperimentLinkedWorkbook
+          workbookId={experiment.workbookId}
+          workbookVersionId={experiment.workbookVersionId}
+        />
+
+        <ExperimentMeasurements experimentId={id} isArchived />
+
+        <ExperimentVisualizationsDisplay
+          experimentId={id}
+          visualizations={visualizationsData ?? []}
+          isLoading={visualizationsLoading}
+          isArchived
+        />
+      </div>
+    </div>
+  );
+}

@@ -4,12 +4,15 @@ import { TransferRequestForm } from "~/components/transfer-request-form";
 
 import initTranslations from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Request Project Transfer",
-};
-
 interface TransferRequestPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: TransferRequestPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["common"] });
+
+  return { title: t("transferRequest.title") };
 }
 
 export default async function TransferRequestPage({ params }: TransferRequestPageProps) {

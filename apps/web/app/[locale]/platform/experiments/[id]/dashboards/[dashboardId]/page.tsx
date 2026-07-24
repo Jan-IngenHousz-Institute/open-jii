@@ -1,17 +1,20 @@
-"use client";
+import { buildDashboardMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { useDashboardMode } from "@/components/experiment-dashboards/dashboard-mode-context";
-import { DashboardViewBody } from "@/components/experiment-dashboards/dashboard-view-body";
-import { DashboardEditorBody } from "@/components/experiment-dashboards/editor/dashboard-editor-body";
-import { useParams } from "next/navigation";
+import DashboardDetailContent from "./dashboard-detail-content";
+
+interface DashboardPageProps {
+  params: Promise<{ locale: string; id: string; dashboardId: string }>;
+}
+
+export function generateMetadata({ params }: DashboardPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id, dashboardId } = await params;
+    return buildDashboardMetadata({ locale, experimentId: id, dashboardId });
+  });
+}
 
 export default function DashboardPage() {
-  const { id: experimentId, dashboardId } = useParams<{ id: string; dashboardId: string }>();
-  const { mode } = useDashboardMode();
-
-  return mode === "edit" ? (
-    <DashboardEditorBody experimentId={experimentId} />
-  ) : (
-    <DashboardViewBody experimentId={experimentId} dashboardId={dashboardId} />
-  );
+  return <DashboardDetailContent />;
 }

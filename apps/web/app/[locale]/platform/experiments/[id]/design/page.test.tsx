@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import ExperimentDesignPage from "./page";
+import ExperimentDesignPage from "./experiment-design-content";
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (

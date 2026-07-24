@@ -207,6 +207,10 @@
     "embargoUntil": "Embargo bis",
     "visibilityCannotBeChanged": "Sobald öffentlich, kann die Sichtbarkeit nicht mehr auf privat geändert werden."
   },
+  "transferRequest": {
+    "title": "Projekttransfer beantragen",
+    "yourRequests": "Ihre Transferanfragen"
+  },
   "newExperiment": {
     "pickADate": "Datum auswählen",
     "embargoUntil": "Embargo bis",
