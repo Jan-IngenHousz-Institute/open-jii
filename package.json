@@ -28,7 +28,7 @@
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
     "db:setup": "turbo db:setup",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run check-types",
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web"
   },
