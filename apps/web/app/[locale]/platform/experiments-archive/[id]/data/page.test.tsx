@@ -8,7 +8,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { contract } from "@repo/api/contract";
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-import ExperimentDataPage from "./page";
+import ExperimentDataPage from "./archived-experiment-data-content";
 
 vi.mock("~/components/experiment-data/experiment-data-table", () => ({
   ExperimentDataTable: ({

@@ -1,5 +1,6 @@
 fragment sitemapPagesFields on Query {
-  pageBlogPostCollection(limit: 100, locale: $locale) {
+  pageBlogPostCollection(limit: $limit, skip: $skip, locale: $locale) {
+    total
     items {
       slug
       sys {
@@ -7,16 +8,8 @@ fragment sitemapPagesFields on Query {
       }
     }
   }
-  pageLandingCollection(limit: 1, locale: $locale) {
-    items {
-      sys {
-        publishedAt
-      }
-    }
-  }
 }
 
-
-query sitemapPages($locale: String!) {
+query sitemapPages($locale: String!, $limit: Int = 100, $skip: Int = 0) {
   ...sitemapPagesFields
 }

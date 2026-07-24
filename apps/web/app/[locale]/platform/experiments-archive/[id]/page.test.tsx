@@ -7,7 +7,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import ExperimentOverviewPage from "./page";
+import ExperimentOverviewPage from "./archived-experiment-overview-content";
 
 vi.mock("@/components/error-display", () => ({
   ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (

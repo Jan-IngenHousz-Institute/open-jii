@@ -6,12 +6,15 @@ import Link from "next/link";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components/button";
 
-export const metadata: Metadata = {
-  title: "Experiments",
-};
-
 interface ExperimentPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: ExperimentPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["common"] });
+
+  return { title: t("experiments.title") };
 }
 
 export default async function ExperimentPage({ params }: ExperimentPageProps) {

@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 
 import { locales, defaultLocale } from "@repo/i18n/config";
 
+const localeIndependentRoutes = new Set(["/opengraph-image", "/twitter-image"]);
+
 // Simple locale detection and redirection function
 function handleI18nRouting(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -27,6 +29,11 @@ function handleI18nRouting(request: NextRequest) {
 
 // Proxy function that handles i18n routing
 export function proxy(request: NextRequest) {
+  const normalizedPathname = request.nextUrl.pathname.replace(/\/+$/, "");
+  if (localeIndependentRoutes.has(normalizedPathname)) {
+    return NextResponse.next();
+  }
+
   // Handle i18n routing
   const i18nResponse = handleI18nRouting(request);
   if (i18nResponse) {

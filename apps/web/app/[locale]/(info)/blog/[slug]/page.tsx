@@ -7,7 +7,7 @@ import { safeMetadata } from "~/lib/safe-metadata";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
-import { defaultLocale, locales } from "@repo/i18n/config";
+import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface BlogPageProps {
@@ -37,16 +37,12 @@ export function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
     const { isEnabled: preview } = await draftMode();
     const { blogPost } = await getBlogDetailData(locale, slug, preview);
 
-    const languages = Object.fromEntries(
-      locales.map((locale) => [
-        locale,
-        locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`,
-      ]),
-    );
+    const canonical = `/${locale}/blog/${slug}`;
     const metadata: Metadata = {
       alternates: {
-        canonical: slug,
-        languages,
+        canonical,
+        // Only the default locale is guaranteed while locale availability is request-time flagged.
+        languages: { [defaultLocale]: `/${defaultLocale}/blog/${slug}` },
       },
     };
 

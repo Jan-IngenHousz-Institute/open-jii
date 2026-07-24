@@ -30,7 +30,15 @@ describe("RootLayout", () => {
   });
 
   it("exports correct metadata", () => {
-    expect(metadata.title).toBe("openJII - Open-science platform");
+    expect(metadata.title).toEqual({
+      default: "openJII - Open-science platform",
+      template: "%s | openJII",
+    });
     expect(metadata.description).toContain("Open-science platform");
+    expect(metadata.openGraph).toMatchObject({
+      siteName: "openJII",
+      type: "website",
+    });
+    expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
 });

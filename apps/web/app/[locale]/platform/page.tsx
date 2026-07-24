@@ -8,12 +8,15 @@ import { env } from "~/env";
 
 import initTranslations from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Dashboard - openJII",
-};
-
 interface PlatformPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: PlatformPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["dashboard"] });
+
+  return { title: t("title") };
 }
 
 export default async function PlatformDashboard({ params }: PlatformPageProps) {

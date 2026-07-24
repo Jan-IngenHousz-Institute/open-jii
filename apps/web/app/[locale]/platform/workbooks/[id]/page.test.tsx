@@ -8,7 +8,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import WorkbookOverviewPage from "./page";
+import WorkbookOverviewPage from "./workbook-overview-content";
 
 vi.mock("@/components/workbook/workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
