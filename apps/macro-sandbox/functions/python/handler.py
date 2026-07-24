@@ -8,13 +8,37 @@ import shutil
 import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "guards"))
-from guard import guard_batch, partition_items, merge_results  # noqa: E402
+try:
+    from guard import guard_batch, merge_results, partition_items  # noqa: E402
+except Exception:
+    guard_batch = None
+    merge_results = None
+    partition_items = None
+
+
+GUARD_CLASSIFICATION_ERROR_CODE = "guard-classification-unavailable"
 
 
 def _guard_mode() -> str:
     # Shadow (default) classifies + logs only; enforce rejects non-canonical
     # items. Shadow keeps execution unchanged for Ticket 02.
     return "enforce" if os.environ.get("MACRO_GUARD_MODE") == "enforce" else "shadow"
+
+
+def _guard_unavailable_telemetry(
+    input_contract: object, item_count: int, mode: str
+) -> dict[str, object]:
+    return {
+        "event": "macro-guard",
+        "mode": mode,
+        "markerPresent": isinstance(input_contract, str),
+        "markerValid": False,
+        "itemCount": item_count,
+        "counts": {"canonical": 0, "empty-envelope": 0, "non-canonical-envelope": 0},
+        "emptyEnvelopeIds": [],
+        "nonCanonicalIds": [],
+        "classificationUnavailable": True,
+    }
 
 
 # AWS Lambda sync responses are capped at 6 MB. Compress every response so
@@ -88,8 +112,24 @@ def _execute(event):
 
     # Contract guard. Shadow classifies + logs; execution is unchanged.
     mode = _guard_mode()
-    guard = guard_batch({"input_contract": event.get("input_contract"), "items": items}, mode)
-    print("[guard] " + json.dumps(guard["telemetry"]), file=sys.stderr)
+    guard = None
+    try:
+        if guard_batch is None:
+            raise RuntimeError("guard unavailable")
+        guard = guard_batch({"input_contract": event.get("input_contract"), "items": items}, mode)
+        print("[guard] " + json.dumps(guard["telemetry"]), file=sys.stderr)
+    except Exception:
+        print(
+            "[guard] "
+            + json.dumps(_guard_unavailable_telemetry(event.get("input_contract"), len(items), mode)),
+            file=sys.stderr,
+        )
+        if mode == "enforce":
+            return {
+                "status": "error",
+                "results": [],
+                "errors": [GUARD_CLASSIFICATION_ERROR_CODE],
+            }
 
     exec_items = items
     invalid_results = []

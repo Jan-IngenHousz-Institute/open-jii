@@ -4,14 +4,32 @@ const path = require("path");
 const os = require("os");
 const zlib = require("zlib");
 
-const { guardBatch, partitionItems, mergeResults } = require(
-  path.join(__dirname, "guards", "guard.js"),
-);
+const GUARD_CLASSIFICATION_ERROR_CODE = "guard-classification-unavailable";
+let guardModule;
+try {
+  guardModule = require(path.join(__dirname, "guards", "guard.js"));
+} catch {
+  guardModule = null;
+}
 
 // Shadow classifies and logs only; enforce rejects non-canonical items. Shadow
 // is the default so this release does not change execution (Ticket 02).
 function guardMode() {
   return process.env.MACRO_GUARD_MODE === "enforce" ? "enforce" : "shadow";
+}
+
+function guardUnavailableTelemetry(inputContract, itemCount, mode) {
+  return {
+    event: "macro-guard",
+    mode,
+    markerPresent: typeof inputContract === "string",
+    markerValid: false,
+    itemCount,
+    counts: { canonical: 0, "empty-envelope": 0, "non-canonical-envelope": 0 },
+    emptyEnvelopeIds: [],
+    nonCanonicalIds: [],
+    classificationUnavailable: true,
+  };
 }
 
 // AWS Lambda sync responses are capped at 6 MB. Compress every response so
@@ -92,8 +110,24 @@ async function _runMacroBatch(event) {
 
     // Contract guard. Shadow classifies + logs; execution is unchanged.
     const mode = guardMode();
-    const guard = guardBatch({ input_contract: event.input_contract, items }, mode);
-    console.error("[guard] " + JSON.stringify(guard.telemetry));
+    let guard;
+    try {
+      if (!guardModule) throw new Error("guard unavailable");
+      guard = guardModule.guardBatch({ input_contract: event.input_contract, items }, mode);
+      console.error("[guard] " + JSON.stringify(guard.telemetry));
+    } catch {
+      console.error(
+        "[guard] " +
+          JSON.stringify(guardUnavailableTelemetry(event.input_contract, items.length, mode)),
+      );
+      if (mode === "enforce") {
+        return {
+          status: "error",
+          results: [],
+          errors: [GUARD_CLASSIFICATION_ERROR_CODE],
+        };
+      }
+    }
 
     let execItems = items;
     let invalidResults = [];
@@ -101,7 +135,7 @@ async function _runMacroBatch(event) {
       if (!guard.markerValid) {
         return { status: "error", results: [], errors: [guard.markerError] };
       }
-      const partitioned = partitionItems(items, guard.decisions);
+      const partitioned = guardModule.partitionItems(items, guard.decisions);
       execItems = partitioned.validItems;
       invalidResults = partitioned.invalidResults;
     }
@@ -192,7 +226,7 @@ async function _runMacroBatch(event) {
       }
       return {
         status: "success",
-        results: mergeResults(guard.decisions, result.results, invalidResults),
+        results: guardModule.mergeResults(guard.decisions, result.results, invalidResults),
       };
     }
 

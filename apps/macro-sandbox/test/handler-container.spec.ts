@@ -22,6 +22,9 @@ interface LangSpec {
   dockerfile: string;
   shadowPort: number;
   enforcePort: number;
+  brokenShadowPort: number;
+  brokenEnforcePort: number;
+  guardFile: string;
   // Trivial macro that succeeds on any input.
   script: string;
   // Macro that echoes json.tag into output, to prove per-item output association.
@@ -37,6 +40,9 @@ const LANGS: LangSpec[] = [
     dockerfile: "functions/javascript/Dockerfile",
     shadowPort: 9101,
     enforcePort: 9201,
+    brokenShadowPort: 9301,
+    brokenEnforcePort: 9401,
+    guardFile: "/var/task/guards/guard.js",
     script: 'output["ok"] = 1',
     echoScript: 'output["tag"] = json["tag"]',
   },
@@ -46,6 +52,9 @@ const LANGS: LangSpec[] = [
     dockerfile: "functions/python/Dockerfile",
     shadowPort: 9102,
     enforcePort: 9202,
+    brokenShadowPort: 9302,
+    brokenEnforcePort: 9402,
+    guardFile: "/var/task/guards/guard.py",
     script: 'output["ok"] = 1',
     echoScript: 'output["tag"] = json["tag"]',
   },
@@ -55,6 +64,9 @@ const LANGS: LangSpec[] = [
     dockerfile: "functions/r/Dockerfile.local",
     shadowPort: 9103,
     enforcePort: 9203,
+    brokenShadowPort: 9303,
+    brokenEnforcePort: 9403,
+    guardFile: "/var/task/guards/guard.R",
     script: "output$ok <- 1",
     echoScript: "output$tag <- json$tag",
   },
@@ -80,10 +92,17 @@ function buildImage(spec: LangSpec): void {
   }
 }
 
-function runContainer(name: string, image: string, port: number, enforce: boolean): void {
+function runContainer(
+  name: string,
+  image: string,
+  port: number,
+  enforce: boolean,
+  brokenGuardFile?: string,
+): void {
   spawnSync("docker", ["rm", "-f", name], { encoding: "utf8" });
   const args = ["run", "-d", "--name", name, "-p", `${port}:8080`];
   if (enforce) args.push("-e", "MACRO_GUARD_MODE=enforce");
+  if (brokenGuardFile) args.push("-v", `/dev/null:${brokenGuardFile}:ro`);
   args.push(image);
   const res = spawnSync("docker", args, { encoding: "utf8" });
   if (res.status !== 0) throw new Error(`docker run ${name} failed: ${res.stderr}`);
@@ -153,11 +172,17 @@ describe.skipIf(!ENABLED)("handler container contract", () => {
       buildImage(spec);
       const shadowName = `mstest-${spec.language}-shadow`;
       const enforceName = `mstest-${spec.language}-enforce`;
+      const brokenShadowName = `mstest-${spec.language}-broken-shadow`;
+      const brokenEnforceName = `mstest-${spec.language}-broken-enforce`;
       runContainer(shadowName, spec.image, spec.shadowPort, false);
       runContainer(enforceName, spec.image, spec.enforcePort, true);
-      containers.push(shadowName, enforceName);
+      runContainer(brokenShadowName, spec.image, spec.brokenShadowPort, false, spec.guardFile);
+      runContainer(brokenEnforceName, spec.image, spec.brokenEnforcePort, true, spec.guardFile);
+      containers.push(shadowName, enforceName, brokenShadowName, brokenEnforceName);
       await waitReady(spec.shadowPort, warmup(spec));
       await waitReady(spec.enforcePort, warmup(spec));
+      await waitReady(spec.brokenShadowPort, warmup(spec));
+      await waitReady(spec.brokenEnforcePort, warmup(spec));
     }
   }, 900_000);
 
@@ -226,6 +251,30 @@ describe.skipIf(!ENABLED)("handler container contract", () => {
         });
         expect(res.status).toBe("error");
         expect(res.errors).toContain("unsupported-input-contract");
+      });
+
+      it("guard unavailable: shadow executes unchanged and enforce fails closed", async () => {
+        const event = {
+          input_contract: INPUT_CONTRACT,
+          script: b64(spec.script),
+          items: [{ id: "a", data: { phi2: 0.8 } }],
+          timeout: 10,
+        };
+
+        const shadow = await invoke(spec.brokenShadowPort, event);
+        expect(shadow).toEqual({
+          status: "success",
+          results: [{ id: "a", success: true, output: { ok: 1 } }],
+        });
+
+        const enforce = await invoke(spec.brokenEnforcePort, event);
+        expect(enforce.status).toBe("error");
+        expect(enforce.results).toEqual([]);
+        expect(enforce.errors).toContain("guard-classification-unavailable");
+
+        const logs = dockerLogs(`mstest-${spec.language}-broken-shadow`);
+        expect(logs).toMatch(/"classificationUnavailable"\s*:\s*true/);
+        expect(logs).not.toContain("phi2");
       });
 
       it("enforce: complete distinguishable positional rows (outputs, dup/empty IDs, failures, order)", async () => {
