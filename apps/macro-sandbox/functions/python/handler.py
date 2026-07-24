@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "gua
 from guard import guard_batch, partition_items, merge_results  # noqa: E402
 
 
-def _guard_mode():
+def _guard_mode() -> str:
     # Shadow (default) classifies + logs only; enforce rejects non-canonical
     # items. Shadow keeps execution unchanged for Ticket 02.
     return "enforce" if os.environ.get("MACRO_GUARD_MODE") == "enforce" else "shadow"
@@ -149,10 +149,19 @@ def _execute(event):
                 }
             # Reassemble pre-failed items with wrapper results in request order.
             if mode == "enforce" and parsed.get("status") == "success":
+                executed_results = parsed.get("results")
+                if not isinstance(executed_results, list) or len(executed_results) != len(
+                    exec_items
+                ):
+                    return {
+                        "status": "error",
+                        "results": [],
+                        "errors": ["Wrapper result count mismatch"],
+                    }
                 return {
                     "status": "success",
                     "results": merge_results(
-                        guard["decisions"], parsed.get("results", []), invalid_results
+                        guard["decisions"], executed_results, invalid_results
                     ),
                 }
             return parsed

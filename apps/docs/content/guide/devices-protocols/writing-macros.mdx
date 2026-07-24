@@ -56,8 +56,9 @@ operational metadata needed to identify the run, envelope source, and entry
 counts, never measurement content. Batch execution fails an empty item
 independently and still runs its valid siblings.
 
-Projection is shallow and happens exactly once: nested envelope shapes are not
-supported macro input. Raw protocol and output values remain unchanged in
+Projection is shallow and happens exactly once. After that single projection,
+any nested envelope object is passed to macro code unchanged; it is not
+projected recursively. Raw protocol and output values remain unchanged in
 storage and transport; the projection applies when the host exposes a value as
 `json`, as an entry in `ctx`, or to a workbook branch condition.
 

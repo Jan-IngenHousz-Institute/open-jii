@@ -183,6 +183,13 @@ async function _runMacroBatch(event) {
 
     // Reassemble pre-failed items with wrapper results in request order.
     if (mode === "enforce" && result.status === "success") {
+      if (!Array.isArray(result.results) || result.results.length !== execItems.length) {
+        return {
+          status: "error",
+          results: [],
+          errors: ["Wrapper result count mismatch"],
+        };
+      }
       return {
         status: "success",
         results: mergeResults(guard.decisions, result.results, invalidResults),

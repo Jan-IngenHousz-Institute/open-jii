@@ -22,11 +22,16 @@ handler_dir <- if (length(handler_file_arg) > 0) {
 } else {
   "/var/task"
 }
-source(file.path(handler_dir, "guards", "guard.R"))
 
 # Shadow (default) classifies + logs only; enforce rejects non-canonical items.
 GUARD_MODE <- if (identical(Sys.getenv("MACRO_GUARD_MODE"), "enforce")) "enforce" else "shadow"
 GUARD_CLASSIFICATION_ERROR_CODE <- "guard-classification-unavailable"
+guard_load_ok <- tryCatch({
+  source(file.path(handler_dir, "guards", "guard.R"))
+  TRUE
+}, error = function(e) {
+  FALSE
+})
 
 # Read event file path from command args
 args <- commandArgs(trailingOnly = TRUE)
@@ -80,20 +85,61 @@ if (length(items) > MAX_ITEM_COUNT) {
 
 timeout <- max(DEFAULT_TIMEOUT, min(as.numeric(ifelse(is.null(event$timeout), DEFAULT_TIMEOUT, event$timeout)), MAX_TIMEOUT))
 
-# Contract guard. Classify each item from the RAW event JSON so {} and [] differ,
-# emit content-free telemetry, and (enforce only) partition non-canonical items.
-raw_event <- paste(readLines(event_file, warn = FALSE), collapse = "\n")
-item_classifications <- guard_classify_event_items(raw_event)
-item_ids <- vapply(items, function(it) if (is.null(it$id)) NA_character_ else as.character(it$id), character(1))
-count_mismatch <- length(item_classifications) != length(item_ids)
-telemetry_classifications <- if (count_mismatch) rep("unavailable", length(item_ids)) else item_classifications
-marker_valid <- guard_marker_valid(event$input_contract)
-telemetry <- guard_build_telemetry(event$input_contract, marker_valid, item_ids, telemetry_classifications, GUARD_MODE)
-telemetry$countMismatch <- count_mismatch
-cat("[guard] ", toJSON(telemetry, auto_unbox = TRUE, null = "null"), "\n", sep = "", file = stderr())
+# Contract guard. Classify each item from the RAW event JSON so {} and [] differ.
+# Guard failures remain execution-neutral in shadow mode and fail closed in
+# enforce mode without exposing input or exception content in telemetry.
+guard_state <- if (guard_load_ok) tryCatch({
+  raw_event <- paste(readLines(event_file, warn = FALSE), collapse = "\n")
+  classifications <- guard_classify_event_items(raw_event)
+  ids <- vapply(items, function(it) if (is.null(it$id)) NA_character_ else as.character(it$id), character(1))
+  count_mismatch <- length(classifications) != length(ids)
+  telemetry_classifications <- if (count_mismatch) rep("unavailable", length(ids)) else classifications
+  marker_valid <- guard_marker_valid(event$input_contract)
+  telemetry <- guard_build_telemetry(event$input_contract, marker_valid, ids, telemetry_classifications, GUARD_MODE)
+  telemetry$countMismatch <- count_mismatch
+  list(
+    ok = TRUE,
+    classifications = classifications,
+    ids = ids,
+    count_mismatch = count_mismatch,
+    marker_valid = marker_valid,
+    telemetry = telemetry
+  )
+}, error = function(e) {
+  list(ok = FALSE)
+}) else {
+  list(ok = FALSE)
+}
 
 exec_items <- items
 invalid_results <- list()
+item_classifications <- rep("unavailable", length(items))
+
+if (!isTRUE(guard_state$ok)) {
+  fallback_telemetry <- list(
+    event = "macro-guard",
+    mode = GUARD_MODE,
+    markerPresent = is.character(event$input_contract) && length(event$input_contract) == 1,
+    markerValid = FALSE,
+    itemCount = length(items),
+    counts = list(canonical = 0, "empty-envelope" = 0, "non-canonical-envelope" = 0),
+    emptyEnvelopeIds = list(),
+    nonCanonicalIds = list(),
+    classificationUnavailable = TRUE
+  )
+  cat("[guard] ", toJSON(fallback_telemetry, auto_unbox = TRUE, null = "null"), "\n", sep = "", file = stderr())
+  if (GUARD_MODE == "enforce") {
+    cat(toJSON(list(status = "error", results = list(), errors = list(GUARD_CLASSIFICATION_ERROR_CODE)), auto_unbox = TRUE))
+    quit(status = 0)
+  }
+} else {
+  item_classifications <- guard_state$classifications
+  item_ids <- guard_state$ids
+  count_mismatch <- guard_state$count_mismatch
+  marker_valid <- guard_state$marker_valid
+  cat("[guard] ", toJSON(guard_state$telemetry, auto_unbox = TRUE, null = "null"), "\n", sep = "", file = stderr())
+}
+
 if (GUARD_MODE == "enforce") {
   if (count_mismatch) {
     cat(toJSON(list(status = "error", results = list(), errors = list(GUARD_CLASSIFICATION_ERROR_CODE)), auto_unbox = TRUE))
@@ -167,8 +213,12 @@ unlink(tmpdir, recursive = TRUE)
 
 # Reassemble by original position (never by id) so duplicate/empty IDs survive.
 if (GUARD_MODE == "enforce" && identical(result$status, "success")) {
-  merged <- guard_merge_positional(item_classifications, result$results, invalid_results)
-  result <- list(status = "success", results = merged)
+  if (is.null(result$results) || length(result$results) != length(exec_items)) {
+    result <- list(status = "error", results = list(), errors = list("Wrapper result count mismatch"))
+  } else {
+    merged <- guard_merge_positional(item_classifications, result$results, invalid_results)
+    result <- list(status = "success", results = merged)
+  }
 }
 
 # Produce true gzip bytes (with 0x1f 0x8b magic) for the given text.
