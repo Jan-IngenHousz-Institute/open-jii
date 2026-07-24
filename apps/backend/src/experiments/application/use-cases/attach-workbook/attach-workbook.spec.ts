@@ -114,17 +114,12 @@ describe("AttachWorkbookUseCase", () => {
     const experimentRepo = testApp.module.get(ExperimentRepository);
     // Simulate a concurrent change: the use case observes a workbook id that no
     // longer matches the (still-null) row when the bind locks it.
-    const access = await experimentRepo.checkAccess(experimentId, adminUserId);
-    assertSuccess(access);
-    const observed = access.value.experiment;
+    const found = await experimentRepo.findOne(experimentId);
+    assertSuccess(found);
+    const observed = found.value;
     if (!observed) throw new Error("expected experiment in test setup");
-    vi.spyOn(experimentRepo, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...observed, workbookId: "stale-workbook-id" },
-        hasAccess: true,
-        hasArchiveAccess: true,
-        isAdmin: true,
-      }),
+    vi.spyOn(experimentRepo, "findOne").mockResolvedValue(
+      success({ ...observed, workbookId: "stale-workbook-id" }),
     );
 
     const result = await useCase.execute(experimentId, workbookId, adminUserId);

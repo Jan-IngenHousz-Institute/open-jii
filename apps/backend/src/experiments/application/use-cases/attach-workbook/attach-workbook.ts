@@ -72,15 +72,6 @@ export class AttachWorkbookUseCase {
         );
       }
 
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookId,
-        workbookVersionId: version.id,
-      });
-
-      if (updateResult.isFailure()) {
-        return updateResult;
-      }
-
       // Materialise + strictly validate before any mutation, then re-point
       // and upsert/delete the flow atomically (rolls back together; rejects a
       // concurrent workbook change). The published version may end unreferenced.

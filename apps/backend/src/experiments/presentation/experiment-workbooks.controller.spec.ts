@@ -99,7 +99,7 @@ describe("ExperimentWorkbooksController", () => {
         ),
       );
 
-      const expId = faker.string.uuid();
+      const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.attachWorkbook, { id: expId });
       const response = await testApp
         .post(path)

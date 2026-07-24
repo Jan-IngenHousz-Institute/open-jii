@@ -3,8 +3,8 @@ import { flows } from "@repo/database";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
-import { UpdateFlowUseCase } from "./update-flow";
 import { invalidRefFlowGraphs, validRefFlowGraph } from "./dynamic-flow-fixtures";
+import { UpdateFlowUseCase } from "./update-flow";
 
 describe("UpdateFlowUseCase", () => {
   const testApp = TestHarness.App;
