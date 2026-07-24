@@ -4,15 +4,17 @@ import type { MetadataRoute } from "next";
 import { locales } from "@repo/i18n/config";
 
 export function createRobots(indexable: boolean, siteUrl: string): MetadataRoute.Robots {
+  const privateRoutes = ["/api/", ...locales.map((locale) => `/${locale}/platform`)];
+
   if (!indexable) {
-    return { rules: { userAgent: "*", disallow: "/" } };
+    return { rules: { userAgent: "*", allow: "/", disallow: privateRoutes } };
   }
 
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", ...locales.map((locale) => `/${locale}/platform`)],
+      disallow: privateRoutes,
     },
     sitemap: `${siteUrl}/sitemap.xml`,
   };

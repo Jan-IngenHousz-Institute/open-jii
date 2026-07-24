@@ -82,9 +82,13 @@ describe("public SEO routes", () => {
     expect(isIndexableSiteUrl("http://localhost:3000")).toBe(false);
   });
 
-  it("blocks non-production deployments and protects private routes in production", () => {
+  it("keeps non-production pages crawlable for noindex while protecting private routes", () => {
     expect(createRobots(false, "https://dev.openjii.org")).toEqual({
-      rules: { userAgent: "*", disallow: "/" },
+      rules: {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/", "/en-US/platform", "/de-DE/platform"],
+      },
     });
 
     expect(createRobots(true, "https://openjii.org")).toEqual({

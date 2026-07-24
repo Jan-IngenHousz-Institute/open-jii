@@ -40,5 +40,10 @@ describe("RootLayout", () => {
       type: "website",
     });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
+    expect(metadata.robots).toMatchObject({
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    });
   });
 });
