@@ -64,13 +64,22 @@ query activeReleaseNotes(
 # All active release notes (no surface filter) for the public openjii.org/releases changelog
 # page (OJD-1394). The public page shows everything, regardless of in-app `surfaces`, while
 # still honoring the `active` kill switch and the scheduled `publishedAt` reveal.
-query allReleaseNotes($preview: Boolean, $now: DateTime!, $locale: String) {
+query allReleaseNotes(
+  $preview: Boolean
+  $now: DateTime!
+  $locale: String
+  $limit: Int = 100
+  $skip: Int = 0
+) {
   componentReleaseNoteCollection(
     preview: $preview
     locale: $locale
+    limit: $limit
+    skip: $skip
     order: [publishedAt_DESC]
     where: { active: true, publishedAt_lte: $now }
   ) {
+    total
     items {
       ...ComponentReleaseNoteFields
     }

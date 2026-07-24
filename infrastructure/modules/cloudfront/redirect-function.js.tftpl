@@ -26,10 +26,10 @@ function handler(event) {
 
   // --- 2. Extensionless static objects -----------------------------------
   // Next exports a few real objects without a file extension: the Orama
-  // search index and the generated Open Graph image. They must bypass the
+  // search index and the generated Open Graph/Twitter images. They must bypass the
   // clean-page rewrite below, which would otherwise request a ".html" that
   // does not exist.
-  if (uri === "/api/search" || uri === "/opengraph-image") {
+  if (uri === "/api/search" || uri === "/opengraph-image" || uri === "/twitter-image") {
     return request;
   }
 

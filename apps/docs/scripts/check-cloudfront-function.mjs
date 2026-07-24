@@ -43,6 +43,7 @@ for (const [uri, expected] of [
   ["/guide/", "/guide.html"],
   ["/api/search", "/api/search"],
   ["/opengraph-image", "/opengraph-image"],
+  ["/twitter-image", "/twitter-image"],
   ["/guide.html", "/guide.html"],
   ["/img/logo.png", "/img/logo.png"],
 ]) {
@@ -59,5 +60,5 @@ if (failures.length) {
 }
 
 console.log(
-  `CloudFront routing checks passed: ${Object.keys(redirects).length} redirects (+ trailing slashes), clean URLs, extensionless search index, and assets; ${size} bytes rendered.`,
+  `CloudFront routing checks passed: ${Object.keys(redirects).length} redirects (+ trailing slashes), clean URLs, extensionless search index and preview images, and assets; ${size} bytes rendered.`,
 );

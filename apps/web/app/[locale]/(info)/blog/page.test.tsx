@@ -58,6 +58,10 @@ describe("BlogLandingPage", () => {
     const metadata = await generateMetadata(params);
     expect(metadata.title).toBe("Blog");
     expect(metadata.description).toBe("Our blog");
+    expect(metadata.alternates).toEqual({
+      canonical: "/en-US/blog",
+      languages: { "en-US": "/en-US/blog" },
+    });
   });
 
   it("calls notFound when landing page is missing", async () => {

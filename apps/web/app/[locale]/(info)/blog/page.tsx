@@ -10,7 +10,7 @@ import { safeMetadata } from "~/lib/safe-metadata";
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
-import { defaultLocale, locales } from "@repo/i18n/config";
+import { defaultLocale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface LandingPageProps {
@@ -40,13 +40,12 @@ export function generateMetadata({ params }: LandingPageProps): Promise<Metadata
     const { isEnabled: preview } = await draftMode();
     const { page } = await getBlogData(locale, preview);
 
-    const languages = Object.fromEntries(
-      locales.map((locale) => [locale, locale === defaultLocale ? "/" : `/${locale}`]),
-    );
+    const canonical = `/${locale}/blog`;
     const metadata: Metadata = {
       alternates: {
-        canonical: "/",
-        languages: languages,
+        canonical,
+        // Only the default locale is guaranteed while locale availability is request-time flagged.
+        languages: { [defaultLocale]: `/${defaultLocale}/blog` },
       },
     };
     if (page?.seoFields) {

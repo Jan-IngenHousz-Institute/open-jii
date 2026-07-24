@@ -9,7 +9,7 @@ import { env } from "~/env";
 import initTranslations from "@repo/i18n/server";
 
 export const metadata: Metadata = {
-  title: "Dashboard - openJII",
+  title: "Dashboard",
 };
 
 interface PlatformPageProps {

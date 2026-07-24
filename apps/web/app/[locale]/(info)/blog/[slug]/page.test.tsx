@@ -56,7 +56,10 @@ describe("BlogDetailPage", () => {
     const metadata = await generateMetadata(params);
     expect(metadata.title).toBe("SEO Title");
     expect(metadata.description).toBe("SEO Desc");
-    expect(metadata.alternates?.canonical).toBe("test-post");
+    expect(metadata.alternates).toEqual({
+      canonical: "/en-US/blog/test-post",
+      languages: { "en-US": "/en-US/blog/test-post" },
+    });
   });
 
   it("calls notFound when blog post does not exist", async () => {

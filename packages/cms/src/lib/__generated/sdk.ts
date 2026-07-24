@@ -8631,12 +8631,15 @@ export type AllReleaseNotesQueryVariables = Exact<{
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   now: Scalars["DateTime"]["input"];
   locale?: InputMaybe<Scalars["String"]["input"]>;
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
 }>;
 
 export type AllReleaseNotesQuery = {
   __typename?: "Query";
   componentReleaseNoteCollection?: {
     __typename?: "ComponentReleaseNoteCollection";
+    total: number;
     items: Array<
       ({ __typename?: "ComponentReleaseNote" } & ComponentReleaseNoteFieldsFragment) | null
     >;
@@ -8685,6 +8688,7 @@ export type SitemapPagesFieldsFragment = {
   __typename?: "Query";
   pageBlogPostCollection?: {
     __typename?: "PageBlogPostCollection";
+    total: number;
     items: Array<{
       __typename?: "PageBlogPost";
       slug?: string | null;
@@ -8702,6 +8706,8 @@ export type SitemapPagesFieldsFragment = {
 
 export type SitemapPagesQueryVariables = Exact<{
   locale: Scalars["String"]["input"];
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
 }>;
 
 export type SitemapPagesQuery = { __typename?: "Query" } & SitemapPagesFieldsFragment;
@@ -9312,7 +9318,8 @@ export const ComponentReleaseNoteDetailFieldsFragmentDoc = gql`
 `;
 export const SitemapPagesFieldsFragmentDoc = gql`
   fragment sitemapPagesFields on Query {
-    pageBlogPostCollection(limit: 100, locale: $locale) {
+    pageBlogPostCollection(limit: $limit, skip: $skip, locale: $locale) {
+      total
       items {
         slug
         sys {
@@ -9640,13 +9647,22 @@ export const ActiveReleaseNotesDocument = gql`
   ${ComponentReleaseNoteFieldsFragmentDoc}
 `;
 export const AllReleaseNotesDocument = gql`
-  query allReleaseNotes($preview: Boolean, $now: DateTime!, $locale: String) {
+  query allReleaseNotes(
+    $preview: Boolean
+    $now: DateTime!
+    $locale: String
+    $limit: Int = 100
+    $skip: Int = 0
+  ) {
     componentReleaseNoteCollection(
       preview: $preview
       locale: $locale
+      limit: $limit
+      skip: $skip
       order: [publishedAt_DESC]
       where: { active: true, publishedAt_lte: $now }
     ) {
+      total
       items {
         ...ComponentReleaseNoteFields
       }
@@ -9670,7 +9686,7 @@ export const ReleaseNoteBySlugDocument = gql`
   ${ComponentReleaseNoteDetailFieldsFragmentDoc}
 `;
 export const SitemapPagesDocument = gql`
-  query sitemapPages($locale: String!) {
+  query sitemapPages($locale: String!, $limit: Int = 100, $skip: Int = 0) {
     ...sitemapPagesFields
   }
   ${SitemapPagesFieldsFragmentDoc}
