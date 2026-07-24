@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { LogEntry } from "~/shared/observability/logger";
+import { addLogSink, getMinLogLevel, setMinLogLevel } from "~/shared/observability/logger";
 
 import { applyMacro } from "./process-scan";
 import { registerPythonMacroRunner } from "./python-macro-runner";
@@ -33,6 +35,10 @@ vi.mock("expo-file-system", () => ({
 }));
 
 const encode = (code: string) => Buffer.from(code, "utf8").toString("base64");
+
+afterEach(() => {
+  registerPythonMacroRunner(null);
+});
 
 describe("applyMacro: input isolation (OJD-1463)", () => {
   describe("JavaScript macros", () => {
@@ -90,7 +96,7 @@ describe("applyMacro: input isolation (OJD-1463)", () => {
       expect(sample.nested.deep).toEqual({ value: 42 });
     });
 
-    it("isolates mutations between sibling samples in a batch", async () => {
+    it("runs once for a multi-entry envelope and leaves both source entries isolated", async () => {
       const sample1 = { data_raw: [1, 2, 3] };
       const sample2 = { data_raw: [4, 5, 6] };
       const result = { sample: [sample1, sample2] };
@@ -102,7 +108,7 @@ describe("applyMacro: input isolation (OJD-1463)", () => {
 
       const outputs = await applyMacro(result, { code, language: "javascript" });
 
-      expect(outputs).toEqual([{ first: 999 }, { first: 999 }]);
+      expect(outputs).toEqual([{ first: 999 }]);
       expect(sample1.data_raw).toEqual([1, 2, 3]);
       expect(sample2.data_raw).toEqual([4, 5, 6]);
     });
@@ -154,24 +160,162 @@ describe("applyMacro: input isolation (OJD-1463)", () => {
       expect(sample).toEqual({ meta: "original", data_raw: [1, 2, 3] });
     });
 
-    it("isolates mutations between sibling Python samples in a batch", async () => {
+    it("runs once for a multi-entry envelope and leaves both source entries isolated", async () => {
       const sample1 = { data_raw: [1, 2, 3] };
       const sample2 = { data_raw: [4, 5, 6] };
       const result = { sample: [sample1, sample2] };
 
-      registerPythonMacroRunner((_code, json) => {
+      const runner = vi.fn((_code: string, json: unknown) => {
         (json as { data_raw: number[] }).data_raw[0] = 999;
         return Promise.resolve({ ok: true });
       });
+      registerPythonMacroRunner(runner);
 
       await applyMacro(result, {
         code: encode("# irrelevant"),
         language: "python",
       });
 
+      expect(runner).toHaveBeenCalledTimes(1);
       expect(sample1.data_raw).toEqual([1, 2, 3]);
       expect(sample2.data_raw).toEqual([4, 5, 6]);
     });
+  });
+});
+
+describe("applyMacro: canonical once-per-measurement execution", () => {
+  const jsRunnerCode = encode(`
+    globalThis.__mobileMacroRunnerCalls = (globalThis.__mobileMacroRunnerCalls || 0) + 1;
+    return { received: json };
+  `);
+
+  beforeEach(() => {
+    (globalThis as Record<string, unknown>).__mobileMacroRunnerCalls = 0;
+  });
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).__mobileMacroRunnerCalls;
+  });
+
+  it.each([
+    ["an empty direct object", {}, {}],
+    ["a direct measurement", { phi2: 0.8 }, { phi2: 0.8 }],
+    ["a sample object", { sample: { phi2: 0.7 } }, { phi2: 0.7 }],
+    ["a sample array", { sample: [{ phi2: 0.6 }] }, { phi2: 0.6 }],
+    ["an empty top-level array", [], []],
+    ["a single-item top-level array", [{ phi2: 0.5 }], [{ phi2: 0.5 }]],
+    [
+      "a multi-item top-level array",
+      [{ phi2: 0.5 }, { phi2: 0.2 }],
+      [{ phi2: 0.5 }, { phi2: 0.2 }],
+    ],
+    ["a nested top-level array", [[{ phi2: 0.8 }]], [[{ phi2: 0.8 }]]],
+    [
+      "a nested sample-array value",
+      { sample: [{ sample: [{ phi2: 0.8 }] }] },
+      { sample: [{ phi2: 0.8 }] },
+    ],
+    [
+      "a nested sample-object value",
+      { sample: { sample: { phi2: 0.8 } } },
+      { sample: { phi2: 0.8 } },
+    ],
+  ])("invokes JavaScript once for %s", async (_label, input, expected) => {
+    const outputs = await applyMacro(input, { code: jsRunnerCode, language: "javascript" });
+
+    expect(outputs).toEqual([{ received: expected }]);
+    expect((globalThis as Record<string, unknown>).__mobileMacroRunnerCalls).toBe(1);
+  });
+
+  it("selects only the first entry and emits content-free warning metadata", async () => {
+    const entries: LogEntry[] = [];
+    const previousLevel = getMinLogLevel();
+    setMinLogLevel("warn");
+    const removeSink = addLogSink({ write: (entry) => entries.push(entry) });
+
+    try {
+      const outputs = await applyMacro(
+        { sample: [{ phi2: 0.8, secret: "must-not-be-logged" }, { phi2: 0.2 }] },
+        { code: jsRunnerCode, language: "javascript" },
+      );
+
+      expect(outputs).toEqual([{ received: { phi2: 0.8, secret: "must-not-be-logged" } }]);
+      expect((globalThis as Record<string, unknown>).__mobileMacroRunnerCalls).toBe(1);
+      expect(entries).toContainEqual(
+        expect.objectContaining({
+          level: "warn",
+          ns: "macro",
+          msg: "input normalization warning",
+          fields: {
+            warning: "additional-items-discarded",
+            source: "sample-envelope",
+            sourceCount: 2,
+            discardedCount: 1,
+          },
+        }),
+      );
+      expect(JSON.stringify(entries.map((entry) => entry.fields))).not.toContain(
+        "must-not-be-logged",
+      );
+    } finally {
+      removeSink();
+      setMinLogLevel(previousLevel);
+    }
+  });
+
+  it("fails an empty sample envelope once without invoking JavaScript", async () => {
+    await expect(
+      applyMacro({ sample: [] }, { code: jsRunnerCode, language: "javascript" }),
+    ).rejects.toMatchObject({
+      name: "MacroInputNormalizationError",
+      code: "empty-envelope",
+    });
+    expect((globalThis as Record<string, unknown>).__mobileMacroRunnerCalls).toBe(0);
+  });
+
+  it.each([
+    ["an empty direct object", {}, {}],
+    ["a direct measurement", { phi2: 0.8 }, { phi2: 0.8 }],
+    ["a sample object", { sample: { phi2: 0.7 } }, { phi2: 0.7 }],
+    ["a non-empty sample array", { sample: [{ phi2: 0.6 }] }, { phi2: 0.6 }],
+    ["an empty top-level array", [], []],
+    ["a single-item top-level array", [{ phi2: 0.5 }], [{ phi2: 0.5 }]],
+    [
+      "a multi-item top-level array",
+      [{ phi2: 0.5 }, { phi2: 0.2 }],
+      [{ phi2: 0.5 }, { phi2: 0.2 }],
+    ],
+    ["a nested top-level array", [[{ phi2: 0.8 }]], [[{ phi2: 0.8 }]]],
+    [
+      "a nested sample-array value",
+      { sample: [{ sample: [{ phi2: 0.8 }] }] },
+      { sample: [{ phi2: 0.8 }] },
+    ],
+    [
+      "a nested sample-object value",
+      { sample: { sample: { phi2: 0.8 } } },
+      { sample: { phi2: 0.8 } },
+    ],
+  ])("invokes Python once with canonical data for %s", async (_label, input, expected) => {
+    const runner = vi.fn((_code: string, json: unknown) => {
+      return Promise.resolve({ received: json });
+    });
+    registerPythonMacroRunner(runner);
+
+    const outputs = await applyMacro(input, { code: encode("# irrelevant"), language: "python" });
+
+    expect(outputs).toEqual([{ received: expected }]);
+    expect(runner).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invoke Python for an empty sample envelope", async () => {
+    const runner = vi.fn(() => Promise.resolve({ unexpected: true }));
+    registerPythonMacroRunner(runner);
+
+    await expect(
+      applyMacro({ sample: [] }, { code: encode("# irrelevant"), language: "python" }),
+    ).rejects.toMatchObject({ code: "empty-envelope" });
+    expect(runner).not.toHaveBeenCalled();
   });
 });
 

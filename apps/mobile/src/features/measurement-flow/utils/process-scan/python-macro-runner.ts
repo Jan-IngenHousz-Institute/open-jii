@@ -2,7 +2,7 @@ import type { MacroOutput } from "./process-scan";
 
 export type RunPythonMacroFn = (
   code: string,
-  json: object,
+  json: unknown,
   ctx?: Record<string, unknown>,
 ) => Promise<MacroOutput>;
 

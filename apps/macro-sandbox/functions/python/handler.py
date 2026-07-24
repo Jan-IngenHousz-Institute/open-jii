@@ -118,13 +118,14 @@ def _execute(event):
             }
         if stdout:
             try:
-                return json.loads(stdout)
+                parsed = json.loads(stdout)
             except json.JSONDecodeError:
                 return {
                     "status": "error",
                     "results": [],
                     "errors": ["Wrapper returned invalid JSON"],
                 }
+            return parsed
         else:
             return {
                 "status": "error",

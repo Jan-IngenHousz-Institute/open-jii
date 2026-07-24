@@ -34,7 +34,7 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
   if (liveResults.length > 0 && producerCellId) {
     const producer = hydrated.find((c) => c.id === producerCellId);
     if (producer) {
-      const normalize = (result: unknown): unknown => {
+      const toOutputData = (result: unknown): unknown => {
         if (producer.type === "command") {
           // Mirror web's toOutputData so a branch reads the same shape on both hosts:
           // a plain object passes through; any scalar/array is wrapped as { response }.
@@ -42,17 +42,16 @@ export function hydrateCells(cells: WorkbookCell[], ctx: HydrationContext): Work
             ? result
             : { response: result };
         }
-        const sample = (result as { sample?: unknown }).sample;
-        return sample != null ? (Array.isArray(sample) ? sample : [sample]) : result;
+        return result;
       };
-      const data = normalize(liveResults[0].result);
+      const data = toOutputData(liveResults[0].result);
       const deviceResults = liveResults.flatMap((entry) =>
         entry.device
           ? [
               {
                 deviceId: entry.device.id,
                 deviceLabel: entry.device.name,
-                data: normalize(entry.result),
+                data: toOutputData(entry.result),
               },
             ]
           : [],

@@ -3,7 +3,7 @@ title: "Writing macros"
 description: "Read measurements and workbook context, then return analysis-ready values."
 ---
 
-{/* verified: code@5bec21dc9 2026-07-22 */}
+{/* verified: code@b92f75cb4 2026-07-23 */}
 
 A macro is a **data-processing script**: it turns a measurement or earlier
 workbook values into a JSON object of named results. openJII stores Python,
@@ -22,7 +22,7 @@ it needs, then run the workbook with representative data.
 
 | Name         | What the macro receives                                                                                                                                                                                           |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `json`       | The triggering measurement: normally the nearest preceding output, scoped to the device whose macro is running. A non-empty array is unwrapped to its first object by the web wrappers.                           |
+| `json`       | The canonical triggering measurement value: normally the nearest preceding output, scoped to the device whose macro is running. Compatibility envelopes are projected before macro code runs.                     |
 | `ctx`        | Completed upstream questions, protocols, commands, and macros keyed by canonical workbook name. Names are lowercased, punctuation becomes underscores, and duplicate names resolve to the nearest upstream value. |
 | Return value | A JSON-serializable object: a Python dictionary, JavaScript object, or R list. Its keys become the macro output available to later cells and data processing.                                                     |
 
@@ -30,6 +30,53 @@ Question values use an `{ answer: ... }` object. Named protocol, command, and
 macro entries contain their output object. Only upstream cells are included;
 the macro cannot read itself or a later cell. The host passes `ctx` itself to
 macro code; there is no `ctx.byId` API.
+
+### Treat `json` as one measurement
+
+Write macros against the direct measurement value. In particular, do **not**
+write `json.sample[0]`: the legacy transport envelope is not part of the macro
+authoring contract.
+
+The backend single and Databricks batch hosts, and the mobile JavaScript and
+Python host, call the shared normalizer for every input. The call is
+unconditional; the normalizer reshapes only a plain top-level object with its
+own `sample` property whose value is a JSON object or array:
+
+| Value presented to a host                    | Value macro code receives                          |
+| -------------------------------------------- | -------------------------------------------------- |
+| Direct object, scalar, or `null`             | The same value                                     |
+| `{ sample: [measurement] }`                  | `measurement`                                      |
+| `{ sample: measurement }`                    | `measurement` when it is a JSON object             |
+| Root array, including `[]` or multiple items | The complete, unchanged array                      |
+| `{ sample: [] }`                             | An `empty-envelope` failure; macro code is not run |
+| `{ sample: [first, second] }`                | `first`                                            |
+
+**Intentional root-array behavior change.** On generic backend calls, web
+workbooks, and mobile JavaScript or Python runs, a root array is no longer
+treated as a compatibility envelope. A macro now receives `[]` as an empty
+array and `[first, second]` as the complete two-item array. A macro that wants
+one element must select that element itself.
+
+Databricks Gold processing is the deliberate compatibility exception. Its
+legacy producer wraps a source root array as `{ sample: data }` before calling
+the backend batch host. The normalizer therefore sees a `sample` envelope and
+keeps the existing first-measurement behavior; an empty source array becomes
+`{ sample: [] }` and fails as an empty envelope. This adapter behavior preserves
+existing Gold results while the generic backend, web, and mobile contract moves
+to whole root arrays.
+
+For a multi-entry `sample` envelope, the host discards later entries and emits an
+operational `additional-items-discarded` warning. The warning contains only the
+operational metadata needed to identify the run, envelope source, and entry
+counts, never measurement content. Batch execution fails an empty item
+independently and still runs its valid siblings.
+
+Projection is shallow: the normalizer inspects only that own top-level `sample`
+property and never traverses nested values. A selected value that is itself
+sample-shaped passes unchanged rather than being projected again. Root arrays
+stay whole when exposed as `json`, as an entry in `ctx`, or to a workbook branch
+condition. Raw protocol and output values remain unchanged in storage and
+transport.
 
 ## Start with the triggering measurement in Python
 
@@ -109,8 +156,17 @@ return {
 ```
 
 R macros receive `json`, `ctx`, and an `output` environment in the web sandbox;
-return an R list. Use the web workbook runner to test R macros because the
-mobile runner currently selects only JavaScript or Python.
+return an R list. The direct-value form is the same:
+
+```r
+baseline <- ctx$baseline$value
+current <- json$value
+
+return(list(change_from_baseline = current - baseline))
+```
+
+Use the web workbook runner to test R macros because the mobile runner currently
+selects only JavaScript or Python.
 
 ## Runtimes and available libraries
 

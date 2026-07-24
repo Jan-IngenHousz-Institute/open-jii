@@ -180,15 +180,8 @@ for (item in batch_items) {
   assign(".GlobalEnv", NULL, envir = run_env)
   lockBinding(".GlobalEnv", run_env)
 
-  # Inject Data
-  # Macros expect `json` to be the single measurement object. Unwrap a
-  # non-empty, unnamed list (JSON array) down to its first element,
-  # matching the legacy multispeq R executor.
-  measurement <- item$data
-  if (is.list(measurement) && length(measurement) > 0 && is.null(names(measurement))) {
-    measurement <- measurement[[1]]
-  }
-  run_env$json <- measurement
+  # Inject the host-normalized value unchanged, preserving every JSON root type.
+  run_env$json <- item$data
   # Upstream cell outputs keyed by canonical name, read-only via a locked binding.
   # R copy-on-modify means nested reads are inherently isolated per item.
   run_env$ctx <- if (is.null(item$context)) list() else item$context
@@ -232,7 +225,12 @@ for (item in batch_items) {
 
 # 5. OUTPUT
 # Use digits=NA to preserve full floating-point precision (max 17 significant digits)
-json_output <- toJSON(list(status = "success", results = results), auto_unbox = TRUE, digits = NA)
+json_output <- toJSON(
+  list(status = "success", results = results),
+  auto_unbox = TRUE,
+  digits = NA,
+  null = "null"
+)
 
 # If output file path provided (Lambda mode), write to file to avoid stdout corruption.
 # Otherwise, write to stdout (for backward compatibility / testing).

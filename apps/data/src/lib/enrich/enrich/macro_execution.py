@@ -48,6 +48,30 @@ def _add_workbook_metadata(item: dict[str, Any], row) -> None:
         item["context"] = macro_context
 
 
+def _serialize_macro_data(data: Any) -> str:
+    """Serialize Databricks macro data, adapting its legacy root-array shape.
+
+    Databricks sample rows historically expose the measurement as a root array.
+    Wrap that adapter-specific shape in the shared ``sample`` envelope so the
+    backend selects its first measurement. Other JSON values remain direct.
+    """
+    if _VariantVal is not None and isinstance(data, _VariantVal):
+        data = data.toJson()  # pyright: ignore[reportOptionalMemberAccess]
+
+    if isinstance(data, str):
+        try:
+            parsed = json.loads(data)
+        except json.JSONDecodeError:
+            return data
+        if isinstance(parsed, list):
+            return json.dumps({"sample": parsed})
+        return data
+
+    if isinstance(data, list):
+        return json.dumps({"sample": data})
+    return json.dumps(data)
+
+
 # Schema returned by the pandas UDF
 MACRO_RESULT_SCHEMA = StructType(
     [
@@ -119,12 +143,7 @@ def make_execute_macro_udf(
                 errors[pos] = f"NULL macro_id or data for row {row_id}"
                 continue
 
-            # Send data as a JSON string. VariantVal is only present on DBR/PySpark 4;
-            # check via the local alias which is None when unavailable.
-            if _VariantVal is not None and isinstance(data, _VariantVal):
-                data = data.toJson()  # pyright: ignore[reportOptionalMemberAccess]
-            elif not isinstance(data, str):
-                data = json.dumps(data)
+            data = _serialize_macro_data(data)
 
             item: dict[str, Any] = {
                 "id": str(row_id),

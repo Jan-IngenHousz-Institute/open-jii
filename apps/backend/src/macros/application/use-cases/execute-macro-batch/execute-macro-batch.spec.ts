@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 
 import {
   assertSuccess,
@@ -421,7 +422,7 @@ describe("ExecuteMacroBatchUseCase", () => {
 
       const findScriptsSpy = vi.spyOn(macroRepository, "findScriptsByIds");
 
-      // First call — should hit repository (which handles caching internally)
+      // First call: should hit repository (which handles caching internally)
       await useCase.execute({
         items: [{ id: "item-1", macro_id: macro.id, data: {} }],
         timeout: 10,
@@ -429,7 +430,7 @@ describe("ExecuteMacroBatchUseCase", () => {
 
       expect(findScriptsSpy).toHaveBeenCalledTimes(1);
 
-      // Second call — repository called again, but internal cache serves the data
+      // Second call: repository called again, but internal cache serves the data
       await useCase.execute({
         items: [{ id: "item-2", macro_id: macro.id, data: {} }],
         timeout: 10,
@@ -463,6 +464,358 @@ describe("ExecuteMacroBatchUseCase", () => {
       });
 
       expect(findScriptsSpy).toHaveBeenCalledWith([macro.id]);
+    });
+  });
+
+  describe("canonical input normalization", () => {
+    // Mirror the sandbox positional-response contract: one result per valid
+    // item, in request order, echoing each request ID with a distinct output.
+    function mockEchoLambda() {
+      return vi.spyOn(lambdaPort, "invokeLambda").mockImplementation((_fn, payload) => {
+        const items = (payload as LambdaExecutionPayload).items;
+        return Promise.resolve(
+          success({
+            statusCode: 200,
+            payload: {
+              status: "success",
+              results: items.map((it) => ({
+                id: it.id,
+                success: true,
+                output: {
+                  echo: Array.isArray(it.data) ? it.data : (it.data as { phi2: number }).phi2,
+                },
+              })),
+            },
+          }),
+        );
+      });
+    }
+
+    it("normalizes a mixed valid/empty/wrapped batch, runs only valid siblings, and preserves order", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          { id: "item-a", macro_id: macro.id, data: { sample: [{ phi2: 0.1 }] } },
+          { id: "item-b", macro_id: macro.id, data: { sample: [] } },
+          { id: "item-c", macro_id: macro.id, data: { phi2: 0.3 } },
+          { id: "item-d", macro_id: macro.id, data: [{ phi2: 0.4 }] },
+          { id: "item-e", macro_id: macro.id, data: [] },
+        ],
+      });
+
+      // Lambda invoked once with every item except the empty sample envelope.
+      expect(invokeSpy).toHaveBeenCalledTimes(1);
+      const payload = invokeSpy.mock.calls[0][1] as LambdaExecutionPayload;
+      expect(payload.items).toEqual([
+        expect.objectContaining({ id: "item-a", data: { phi2: 0.1 } }),
+        expect.objectContaining({ id: "item-c", data: { phi2: 0.3 } }),
+        expect.objectContaining({ id: "item-d", data: [{ phi2: 0.4 }] }),
+        expect.objectContaining({ id: "item-e", data: [] }),
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.results.map((r) => r.id)).toEqual([
+        "item-a",
+        "item-b",
+        "item-c",
+        "item-d",
+        "item-e",
+      ]);
+      const [a, b, c, d, e] = result.value.results;
+      expect(a).toMatchObject({ id: "item-a", success: true, output: { echo: 0.1 } });
+      expect(b.success).toBe(false);
+      expect(b.error).toContain("empty-envelope");
+      expect(c).toMatchObject({ id: "item-c", success: true, output: { echo: 0.3 } });
+      expect(d).toMatchObject({
+        id: "item-d",
+        success: true,
+        output: { echo: [{ phi2: 0.4 }] },
+      });
+      expect(e).toMatchObject({ id: "item-e", success: true, output: { echo: [] } });
+      // A per-item empty envelope must not surface as a group-wide error.
+      expect(result.value.errors).toBeUndefined();
+    });
+
+    it("merges results by original position when item IDs are duplicated or empty", async () => {
+      const macro = await createTestMacro();
+      mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          { id: "dup", macro_id: macro.id, data: { phi2: 1 } },
+          { id: "dup", macro_id: macro.id, data: { phi2: 2 } },
+          { id: "", macro_id: macro.id, data: { phi2: 3 } },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.results).toHaveLength(3);
+      // Position is authoritative: duplicate and empty IDs still resolve to the
+      // correct per-position output even though ID cannot disambiguate them.
+      expect(result.value.results[0]).toMatchObject({ id: "dup", output: { echo: 1 } });
+      expect(result.value.results[1]).toMatchObject({ id: "dup", output: { echo: 2 } });
+      expect(result.value.results[2]).toMatchObject({ id: "", output: { echo: 3 } });
+    });
+
+    it("restores exact global order across interleaved live, snapshot, and failing groups", async () => {
+      const liveMacro = await createTestMacro({ language: "python" });
+      const snapshotMacroId = faker.string.uuid();
+      const versionId = faker.string.uuid();
+      const missingMacroId = faker.string.uuid();
+
+      vi.spyOn(macroSnapshotRepository, "findScriptsByVersionIds").mockResolvedValue(
+        success(
+          new Map([
+            [
+              macroSnapshotKey(versionId, snapshotMacroId),
+              { id: snapshotMacroId, name: "Pinned", language: "javascript", code: "snap-code" },
+            ],
+          ]),
+        ),
+      );
+      mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockImplementation(
+        (language) => `fn-${language}`,
+      );
+
+      // Interleave three groups so Promise.all group-array order cannot equal
+      // request order unless a positional global reassembly is performed.
+      const result = await useCase.execute({
+        items: [
+          { id: "A1", macro_id: liveMacro.id, data: { phi2: 1 } },
+          {
+            id: "S1",
+            macro_id: snapshotMacroId,
+            workbook_version_id: versionId,
+            data: { phi2: 2 },
+          },
+          { id: "A2", macro_id: liveMacro.id, data: { phi2: 3 } },
+          { id: "M1", macro_id: missingMacroId, data: { phi2: 4 } },
+          {
+            id: "S2",
+            macro_id: snapshotMacroId,
+            workbook_version_id: versionId,
+            data: { phi2: 5 },
+          },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.results.map((r) => r.id)).toEqual(["A1", "S1", "A2", "M1", "S2"]);
+      expect(result.value.results[0]).toMatchObject({
+        id: "A1",
+        success: true,
+        output: { echo: 1 },
+      });
+      expect(result.value.results[1]).toMatchObject({
+        id: "S1",
+        success: true,
+        output: { echo: 2 },
+      });
+      expect(result.value.results[2]).toMatchObject({
+        id: "A2",
+        success: true,
+        output: { echo: 3 },
+      });
+      expect(result.value.results[3].success).toBe(false);
+      expect(result.value.results[3].error).toContain("Macro not found");
+      expect(result.value.results[4]).toMatchObject({
+        id: "S2",
+        success: true,
+        output: { echo: 5 },
+      });
+    });
+
+    it("calls neither Lambda nor function-name resolution when every item is an empty sample envelope", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockEchoLambda();
+      const getFnSpy = vi
+        .spyOn(lambdaPort, "getFunctionNameForLanguage")
+        .mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          { id: "e1", macro_id: macro.id, data: { sample: [] } },
+          { id: "e2", macro_id: macro.id, data: { sample: [] } },
+        ],
+      });
+
+      expect(invokeSpy).not.toHaveBeenCalled();
+      expect(getFnSpy).not.toHaveBeenCalled();
+      assertSuccess(result);
+      expect(result.value.results).toHaveLength(2);
+      expect(result.value.results.every((r) => !r.success)).toBe(true);
+      expect(result.value.results.every((r) => r.error?.includes("empty-envelope"))).toBe(true);
+      expect(result.value.errors).toBeUndefined();
+    });
+
+    it("fails the whole group safely when Lambda returns too few results", async () => {
+      const macro = await createTestMacro();
+      vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            // Only one result for two valid items (missing trailing/middle).
+            results: [{ id: "v1", success: true, output: { echo: 1 } }],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          { id: "v1", macro_id: macro.id, data: { phi2: 1 } },
+          { id: "v2", macro_id: macro.id, data: { phi2: 2 } },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.results).toHaveLength(2);
+      expect(result.value.results.every((r) => !r.success)).toBe(true);
+      expect(result.value.results.every((r) => r.error?.includes("did not match"))).toBe(true);
+      expect(result.value.errors?.[0]).toContain("did not match");
+    });
+
+    it("fails the whole group safely when Lambda returns extra results", async () => {
+      const macro = await createTestMacro();
+      vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: [
+              { id: "v1", success: true, output: { echo: 1 } },
+              { id: "v2", success: true, output: { echo: 2 } },
+            ],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [{ id: "v1", macro_id: macro.id, data: { phi2: 1 } }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.results).toHaveLength(1);
+      expect(result.value.results[0].success).toBe(false);
+      expect(result.value.results[0].error).toContain("did not match");
+      expect(result.value.errors?.[0]).toContain("did not match");
+    });
+
+    it("fails the whole group safely when Lambda reorders unique results", async () => {
+      const macro = await createTestMacro();
+      vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            // Same count, unique IDs swapped: per-position identity check must
+            // catch this rather than shift outputs onto the wrong measurement.
+            results: [
+              { id: "v2", success: true, output: { echo: 2 } },
+              { id: "v1", success: true, output: { echo: 1 } },
+            ],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          { id: "v1", macro_id: macro.id, data: { phi2: 1 } },
+          { id: "v2", macro_id: macro.id, data: { phi2: 2 } },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.results).toHaveLength(2);
+      expect(result.value.results.every((r) => !r.success)).toBe(true);
+      expect(result.value.results.every((r) => r.error?.includes("did not match"))).toBe(true);
+      expect(result.value.errors?.[0]).toContain("did not match");
+    });
+
+    it("logs a content-free per-item warning when additional entries are discarded", async () => {
+      const macro = await createTestMacro();
+      const warnSpy = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          {
+            id: "multi",
+            macro_id: macro.id,
+            data: { sample: [{ phi2: 0.9, secretField: "do-not-log" }, { phi2: 0.1 }] },
+          },
+        ],
+      });
+
+      assertSuccess(result);
+      // First entry is used for execution.
+      expect(result.value.results[0]).toMatchObject({ id: "multi", output: { echo: 0.9 } });
+
+      const warnCall = warnSpy.mock.calls.find(
+        ([arg]) =>
+          typeof arg === "object" &&
+          arg !== null &&
+          (arg as { warning?: string }).warning === "additional-items-discarded",
+      );
+      expect(warnCall).toBeDefined();
+      expect(warnCall?.[0]).toMatchObject({
+        warning: "additional-items-discarded",
+        source: "sample-envelope",
+        sourceCount: 2,
+        discardedCount: 1,
+        itemId: "multi",
+        macroId: macro.id,
+      });
+
+      const serialized = JSON.stringify(warnSpy.mock.calls);
+      expect(serialized).not.toContain("secretField");
+      expect(serialized).not.toContain("phi2");
+    });
+
+    it("keeps published-snapshot resolution unchanged", async () => {
+      const macroId = faker.string.uuid();
+      const versionId = faker.string.uuid();
+      vi.spyOn(macroSnapshotRepository, "findScriptsByVersionIds").mockResolvedValue(
+        success(
+          new Map([
+            [
+              macroSnapshotKey(versionId, macroId),
+              { id: macroId, name: "Pinned", language: "python", code: "snapshot-code" },
+            ],
+          ]),
+        ),
+      );
+      const invokeSpy = mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const result = await useCase.execute({
+        items: [
+          {
+            id: "snap-1",
+            macro_id: macroId,
+            workbook_version_id: versionId,
+            data: { sample: [{ phi2: 0.6 }] },
+          },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          script: "snapshot-code",
+          items: [expect.objectContaining({ id: "snap-1", data: { phi2: 0.6 } })],
+        }),
+      );
     });
   });
 });

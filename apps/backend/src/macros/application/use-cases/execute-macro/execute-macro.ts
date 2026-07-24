@@ -4,12 +4,16 @@ import type {
   MacroExecutionRequestBody,
   MacroExecutionResponse,
 } from "@repo/api/domains/macro/macro.schema";
+import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
-import { LambdaExecutionResponseSchema } from "../../../core/models/macro-execution.model";
+import {
+  emptyEnvelopeError,
+  LambdaExecutionResponseSchema,
+} from "../../../core/models/macro-execution.model";
 import { LAMBDA_PORT, LambdaPort } from "../../../core/ports/lambda.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 
@@ -46,17 +50,50 @@ export class ExecuteMacroUseCase {
       return failure(AppError.notFound(`Macro not found: ${macroId}`, ErrorCodes.MACRO_NOT_FOUND));
     }
 
-    // 2. Resolve the Lambda function and build the payload
-    const functionName = this.lambdaPort.getFunctionNameForLanguage(macro.language);
+    // 2. Normalize the request data to the canonical measurement value before
+    // building the Lambda item. An empty recognized envelope fails this item
+    // without invoking Lambda; user code never runs on a missing measurement.
+    const normalized = normalizeMacroInput(request.data);
     const itemId = "single";
+
+    if (!normalized.ok) {
+      this.logger.log({
+        msg: "Empty measurement envelope; skipping Lambda invocation",
+        operation: "executeMacro",
+        macroId,
+        source: normalized.source,
+        sourceCount: normalized.sourceCount,
+      });
+
+      return success({
+        macro_id: macroId,
+        success: false,
+        error: emptyEnvelopeError(normalized.source),
+      });
+    }
+
+    if (normalized.warning) {
+      this.logger.warn({
+        msg: "Macro input projection discarded additional entries",
+        operation: "executeMacro",
+        macroId,
+        warning: normalized.warning,
+        source: normalized.source,
+        sourceCount: normalized.sourceCount,
+        discardedCount: normalized.discardedCount,
+      });
+    }
+
+    // 3. Resolve the Lambda function and build the payload
+    const functionName = this.lambdaPort.getFunctionNameForLanguage(macro.language);
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: [{ id: itemId, data: request.data, context: request.context }],
+      items: [{ id: itemId, data: normalized.value, context: request.context }],
       timeout: request.timeout ?? 30,
     };
 
-    // 3. Invoke Lambda
+    // 4. Invoke Lambda
     const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);
 
     if (lambdaResult.isFailure()) {
@@ -109,7 +146,7 @@ export class ExecuteMacroUseCase {
       });
     }
 
-    // 4. Extract the single result by matching the request item ID
+    // 5. Extract the single result by matching the request item ID
     const result = lambdaResponse.results.find((r) => r.id === itemId);
 
     if (!result) {

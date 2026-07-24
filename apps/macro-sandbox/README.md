@@ -24,7 +24,7 @@ flowchart TD
 Each invocation:
 
 1. **Handler** validates the event, base64-decodes the user script, writes it and the input items to temp files.
-2. **Wrapper** is spawned as a subprocess with a minimal environment (no AWS credentials). It loads helpers, compiles the user script once, then iterates over each item - injecting `json` (item data) and `output` (result dict) into the script's scope.
+2. **Wrapper** is spawned as a subprocess with a minimal environment (no AWS credentials). It loads helpers, compiles the user script once, then iterates over each item - injecting the item's `data` unchanged as `json` and a fresh `output` object into the script's scope.
 3. **Helpers** provide domain-specific functions (`MathMEAN`, `MathROUND`, `ArrayNth`, `TransformTrace`, etc.) mirroring the MultispeQ ecosystem.
 
 ### Limits
@@ -54,6 +54,8 @@ The per-item timeout prevents a single bad item from consuming the entire handle
 {
   "script": "<base64-encoded script>",
   "items": [
+    // The host owns normalization. The sandbox passes each already-normalized
+    // `data` value to the macro unchanged, including arrays, scalars, and null.
     { "id": "sample-1", "data": { "trace_1": [45.2, 46.8, 44.1] } },
     { "id": "sample-2", "data": { "trace_1": [38.1, 39.5, 37.8] } },
   ],
@@ -172,6 +174,13 @@ curl -XPOST http://localhost:9001/2015-03-31/functions/function/invocations \
 ```
 
 ## Testing
+
+Focused container tests build all three runtimes and verify unchanged `data`
+pass-through, per-item failure isolation, ordering, and duplicate IDs:
+
+```sh
+pnpm test:container
+```
 
 Integration tests spin up all three containers on isolated ports (9011–9013), run test suites against each language, then tear down.
 
