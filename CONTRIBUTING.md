@@ -1,9 +1,3 @@
----
-title: "Contributing to openJII"
-date: 2026-07-23
-generated_by: skills-for-architects
----
-
 # Contributing to openJII
 
 [![License](https://img.shields.io/github/license/Jan-IngenHousz-Institute/open-jii)](https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main/LICENSE)
