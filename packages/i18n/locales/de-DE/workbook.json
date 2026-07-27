@@ -102,6 +102,13 @@
     "renameSave": "Namen speichern",
     "renameCancel": "Abbrechen",
     "renameConflict": "Dieser Name ist bereits vergeben",
-    "renameFailed": "Umbenennen fehlgeschlagen"
+    "renameFailed": "Umbenennen fehlgeschlagen",
+    "live": "Live",
+    "liveStop": "Stopp",
+    "liveIntervalMs": "Intervall (ms)",
+    "liveSamples_one": "{{count}} Messwert",
+    "liveSamples_other": "{{count}} Messwerte",
+    "liveNoDevice": "Gerät verbinden, um die Live-Erfassung zu starten",
+    "liveXAxis": "Zeit (s)"
   }
 }

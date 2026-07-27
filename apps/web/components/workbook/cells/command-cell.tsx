@@ -2,14 +2,16 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { Check, Copy, Terminal } from "lucide-react";
-import { useMemo } from "react";
+import { useLiveCapture } from "@/hooks/workbook/useLiveCapture/useLiveCapture";
+import { Activity, Check, Copy, Square, Terminal } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { CommandFormat } from "@repo/api/domains/experiment/experiment.schema";
 import type { CommandCell as CommandCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { validateInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -22,6 +24,7 @@ import { buildCommandExtensions } from "../../shared/command-completions";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 import type { EditorLanguage } from "../workbook-code-editor";
+import { LiveCaptureChart } from "./live-capture-chart";
 
 const FORMAT_LABELS: Record<CommandFormat, string> = {
   string: "String",
@@ -35,11 +38,17 @@ const FORMAT_LANGUAGE: Record<CommandFormat, EditorLanguage> = {
   yaml: "yaml",
 };
 
+const LIVE_DEFAULT_INTERVAL_MS = 1000;
+const LIVE_MIN_INTERVAL_MS = 250;
+
 interface CommandCellProps {
   cell: CommandCellType;
   onUpdate: (cell: CommandCellType) => void;
   onDelete: () => void;
   onRun?: () => void;
+  /** One live-capture device read; absent when the host provides no device access. */
+  onLiveRead?: () => Promise<unknown>;
+  isDeviceConnected?: boolean;
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
@@ -50,6 +59,8 @@ export function CommandCellComponent({
   onUpdate,
   onDelete,
   onRun,
+  onLiveRead,
+  isDeviceConnected,
   executionStatus,
   executionError,
   readOnly,
@@ -60,6 +71,19 @@ export function CommandCellComponent({
   const { format, content } = cell.payload;
 
   const validation = useMemo(() => validateInlineCommand({ format, content }), [format, content]);
+
+  const [intervalMs, setIntervalMs] = useState(LIVE_DEFAULT_INTERVAL_MS);
+  // The hook is unconditional; hosts without device access never render Start,
+  // so this fallback read can only exist, never run.
+  const fallbackRead = useCallback(() => Promise.reject(new Error("Live capture unavailable")), []);
+  const live = useLiveCapture({
+    read: onLiveRead ?? fallbackRead,
+    intervalMs: Math.max(LIVE_MIN_INTERVAL_MS, intervalMs || LIVE_DEFAULT_INTERVAL_MS),
+  });
+  // Live capture loops a single scalar console command; structured JSON/YAML
+  // payloads produce envelopes, not points.
+  const canLiveCapture = format === "string" && !readOnly && onLiveRead !== undefined;
+  const latestPoint = live.points.at(-1);
 
   // Known-command autocomplete + hover hints only apply to the free-text `string`
   // format; json/yaml payloads are structured, not a single command word.
@@ -107,8 +131,47 @@ export function CommandCellComponent({
       executionStatus={executionStatus}
       executionError={executionError}
       readOnly={readOnly}
+      forceActionsVisible={live.isCapturing}
       headerActions={
         <div className="flex items-center gap-1">
+          {canLiveCapture &&
+            (live.isCapturing ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 px-2 text-xs text-red-500 hover:text-red-600"
+                onClick={live.stop}
+              >
+                <Square className="h-3 w-3 fill-current" />
+                {tWorkbook("cells.liveStop")}
+              </Button>
+            ) : (
+              <>
+                <Input
+                  type="number"
+                  min={LIVE_MIN_INTERVAL_MS}
+                  step={250}
+                  value={intervalMs}
+                  onChange={(e) => setIntervalMs(Number(e.target.value))}
+                  className="h-7 w-[76px] text-xs"
+                  aria-label={tWorkbook("cells.liveIntervalMs")}
+                  title={tWorkbook("cells.liveIntervalMs")}
+                />
+                <span title={!isDeviceConnected ? tWorkbook("cells.liveNoDevice") : undefined}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    style={{ color: "#119DA4" }}
+                    disabled={!isDeviceConnected || !validation.ok}
+                    onClick={live.start}
+                  >
+                    <Activity className="h-3 w-3" />
+                    {tWorkbook("cells.live")}
+                  </Button>
+                </span>
+              </>
+            ))}
           <DocsHelpLink
             iconOnly
             path="/guide/devices-protocols/commands"
@@ -153,6 +216,16 @@ export function CommandCellComponent({
           basicSetup={commandBasicSetup}
         />
         {!validation.ok ? <p className="text-xs text-red-500">{validation.error}</p> : null}
+        {(live.isCapturing || live.points.length > 0) && (
+          <div className="space-y-1" data-testid="live-capture-panel">
+            <div className="flex items-center justify-between text-[11px] tabular-nums text-[#68737B]">
+              <span>{tWorkbook("cells.liveSamples", { count: live.sampleCount })}</span>
+              {latestPoint !== undefined && <span>{latestPoint.value.toFixed(2)}</span>}
+            </div>
+            <LiveCaptureChart points={live.points} label={content.trim() || displayName} />
+          </div>
+        )}
+        {live.error ? <p className="text-xs text-red-500">{live.error}</p> : null}
       </div>
     </CellWrapper>
   );

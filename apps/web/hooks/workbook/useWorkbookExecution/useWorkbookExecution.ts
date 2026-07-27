@@ -824,6 +824,23 @@ export function useWorkbookExecution({
     setIsRunningAll(false);
   }, [dispatchCell]);
 
+  // One device round-trip for a command cell's live-capture loop: resolve the
+  // cell's current command and read the primary device. Deliberately bypasses
+  // execution state and the cells array so a 1 Hz loop never re-renders the
+  // whole notebook or triggers draft autosave.
+  const readCommandCell = useCallback(async (cellId: string): Promise<unknown> => {
+    const cell = cellsRef.current.find((c) => c.id === cellId);
+    if (cell?.type !== "command") {
+      throw new Error("Not a command cell");
+    }
+    const command = resolveInlineCommand(cell.payload);
+    const primary = connectionsRef.current.at(0);
+    if (!primary) {
+      throw new Error("No device connected - connect a device to start live capture");
+    }
+    return executeCommandWithDriver(primary.driver, command);
+  }, []);
+
   const stopExecution = useCallback(() => {
     abortRef.current = true;
   }, []);
@@ -860,6 +877,7 @@ export function useWorkbookExecution({
     isRunningAll,
     runCell,
     runAll,
+    readCommandCell,
     stopExecution,
     clearOutputs,
   };

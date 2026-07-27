@@ -102,6 +102,13 @@
     "renameSave": "Naam opslaan",
     "renameCancel": "Annuleren",
     "renameConflict": "Die naam is al in gebruik",
-    "renameFailed": "Naam wijzigen mislukt"
+    "renameFailed": "Naam wijzigen mislukt",
+    "live": "Live",
+    "liveStop": "Stop",
+    "liveIntervalMs": "Interval (ms)",
+    "liveSamples_one": "{{count}} meting",
+    "liveSamples_other": "{{count}} metingen",
+    "liveNoDevice": "Verbind een apparaat om live-opname te starten",
+    "liveXAxis": "Tijd (s)"
   }
 }

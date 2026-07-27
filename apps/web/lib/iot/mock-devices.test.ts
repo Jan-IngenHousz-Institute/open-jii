@@ -155,9 +155,28 @@ describe("per-family mock replies", () => {
     const adapter = new MockTransportAdapter(2, "minipar");
 
     expect(await sendAndReceive(adapter, "get_name\n")).toBe("Mock MiniPAR 2\n");
-    expect(await sendAndReceive(adapter, "par\n")).toBe("360.00\n");
     expect(await sendAndReceive(adapter, "battery\n")).toBe("NaN\n");
     expect(await sendAndReceive(adapter, "unknown\n")).toBe("error:unknown_command\n");
+  });
+
+  it("minipar par readings vary around the device baseline across reads", async () => {
+    // Pin the noise term to zero so only the deterministic sine drift remains.
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    try {
+      const adapter = new MockTransportAdapter(2, "minipar");
+
+      const first = Number((await sendAndReceive(adapter, "par\n")).trim());
+      const second = Number((await sendAndReceive(adapter, "par\n")).trim());
+
+      // Index 2 -> baseline 360, drifting at most ±15 (sine) ±2 (noise).
+      for (const value of [first, second]) {
+        expect(value).toBeGreaterThanOrEqual(360 - 17);
+        expect(value).toBeLessThanOrEqual(360 + 17);
+      }
+      expect(second).not.toBe(first);
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it("minipar answers protocol JSON with the envelope plus 7A1E3AA1 footer", async () => {

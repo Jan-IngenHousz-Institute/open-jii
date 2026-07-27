@@ -71,6 +71,8 @@ interface WorkbookEditorProps {
   onStopExecution?: () => void;
   onClearOutputs?: () => void;
   onRunCell?: (cellId: string) => void;
+  /** One live-capture device read for a command cell's 1 Hz loop. */
+  onCaptureRead?: (cellId: string) => Promise<unknown>;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
@@ -201,6 +203,8 @@ interface SortableCellGroupProps {
   readOnly?: boolean;
   entitySnapshots?: EntitySnapshots;
   onRunCell?: (cellId: string) => void;
+  onCaptureRead?: (cellId: string) => Promise<unknown>;
+  isConnected?: boolean;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
@@ -220,6 +224,8 @@ function SortableCellGroup({
   readOnly,
   entitySnapshots,
   onRunCell,
+  onCaptureRead,
+  isConnected,
   promptedQuestionId,
   onQuestionAnswered,
   registerRef,
@@ -286,6 +292,8 @@ function SortableCellGroup({
               onUpdate={(updated) => onUpdate(sourceIndex, updated)}
               onDelete={() => onDelete(sourceIndex)}
               onRun={onRunCell ? () => onRunCell(source.id) : undefined}
+              onLiveRead={onCaptureRead ? () => onCaptureRead(source.id) : undefined}
+              isDeviceConnected={isConnected}
               allCells={cells}
               executionStatus={cellState?.status}
               executionError={cellState?.error}
@@ -347,6 +355,7 @@ export function WorkbookEditor({
   onConnectionTypeChange,
   onClearOutputs,
   onRunCell,
+  onCaptureRead,
   promptedQuestionId,
   onQuestionAnswered,
   readOnly,
@@ -570,6 +579,8 @@ export function WorkbookEditor({
                   readOnly={readOnly}
                   entitySnapshots={entitySnapshots}
                   onRunCell={onRunCell}
+                  onCaptureRead={onCaptureRead}
+                  isConnected={isConnected}
                   promptedQuestionId={promptedQuestionId}
                   onQuestionAnswered={onQuestionAnswered}
                   registerRef={registerRef}

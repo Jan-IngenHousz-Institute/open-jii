@@ -106,6 +106,7 @@ export function WorkbookDraftEditor({
     isRunningAll,
     runCell,
     runAll,
+    readCommandCell,
     stopExecution,
     clearOutputs,
   } = useWorkbookExecution({
@@ -161,6 +162,7 @@ export function WorkbookDraftEditor({
       onStopExecution={stopExecution}
       onClearOutputs={handleClearOutputs}
       onRunCell={handleRunCell}
+      onCaptureRead={readCommandCell}
       promptedQuestionId={promptedQuestionId}
       onQuestionAnswered={handleQuestionAnswered}
     />

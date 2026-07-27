@@ -76,14 +76,14 @@ function multispeqDeviceInfo(index: number): Record<string, unknown> {
 }
 
 /** miniPAR JSON-mode measurement envelope, footer included (firmware appends `7A1E3AA1`). */
-function miniparEnvelope(index: number): string {
+function miniparEnvelope(index: number, par: number): string {
   const envelope = {
     device_name: `Mock MiniPAR ${index}`,
     device_version: "1.1",
     device_id: `mp:mock:${index}`,
     device_battery: "NaN",
     device_firmware: 1.04,
-    sample: [{ protocol_id: "NaN", set: [{ label: "par", par: 340 + index * 10 }] }],
+    sample: [{ protocol_id: "NaN", set: [{ label: "par", par: Number(par.toFixed(2)) }] }],
   };
   return `${JSON.stringify(envelope)}7A1E3AA1`;
 }
@@ -99,6 +99,7 @@ export class MockTransportAdapter implements ITransportAdapter {
   private dataCallback?: (data: string) => void;
   private statusCallback?: (connected: boolean, error?: Error) => void;
   private hasFailed = false;
+  private parSample = 0;
 
   constructor(
     private readonly index: number,
@@ -154,15 +155,27 @@ export class MockTransportAdapter implements ITransportAdapter {
       }
       case "minipar": {
         // JSON mode: protocol arrays/objects get the measurement envelope + footer.
-        if (isProtocol || payload.startsWith("{")) return `${miniparEnvelope(this.index)}\n`;
+        if (isProtocol || payload.startsWith("{")) {
+          return `${miniparEnvelope(this.index, this.nextParValue())}\n`;
+        }
         // Firmware replies to hello via Serial.print: no trailing newline.
         if (payload === "hello") return '{"device":"MiniPAR","version":"1.1"}';
         if (payload === "get_name") return `Mock MiniPAR ${this.index}\n`;
-        if (payload === "par") return `${(340 + this.index * 10).toFixed(2)}\n`;
+        if (payload === "par") return `${this.nextParValue().toFixed(2)}\n`;
         if (payload === "battery") return "NaN\n";
         return "error:unknown_command\n";
       }
     }
+  }
+
+  /**
+   * Time-varying PAR reading: a slow sine drift plus light noise around the
+   * per-device baseline, so repeated reads (the workbook's live capture)
+   * trace a moving curve instead of a flat line.
+   */
+  private nextParValue(): number {
+    const baseline = 340 + this.index * 10;
+    return baseline + Math.sin(this.parSample++ / 5) * 15 + (Math.random() - 0.5) * 4;
   }
 
   onDataReceived(callback: (data: string) => void): void {

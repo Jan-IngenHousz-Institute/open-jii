@@ -16,6 +16,9 @@ interface CellRendererProps {
   onUpdate: (cell: WorkbookCell) => void;
   onDelete: () => void;
   onRun?: () => void;
+  /** One live-capture device read for a command cell's 1 Hz loop. */
+  onLiveRead?: () => Promise<unknown>;
+  isDeviceConnected?: boolean;
   allCells?: WorkbookCell[];
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
@@ -32,6 +35,8 @@ export function CellRenderer({
   onUpdate,
   onDelete,
   onRun,
+  onLiveRead,
+  isDeviceConnected,
   allCells,
   executionStatus,
   executionError,
@@ -72,6 +77,8 @@ export function CellRenderer({
           onUpdate={onUpdate}
           onDelete={onDelete}
           onRun={onRun}
+          onLiveRead={onLiveRead}
+          isDeviceConnected={isDeviceConnected}
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}
