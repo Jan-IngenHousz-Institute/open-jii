@@ -121,6 +121,21 @@ describe("identifyDevice", () => {
     expect(identified.info.firmwareVersion).toBe("1.04");
   });
 
+  it("prefers the name key of a JSON hello and keeps it through enrichment", async () => {
+    const jsonHello = '{"device":"MiniPAR","version":"1.1","name":"Roof PAR"}';
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO) reply(jsonHello);
+      if (payload === "hello\n") reply(jsonHello + "\n");
+      if (payload === "get_name\n") reply("NoName\n");
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 50 });
+
+    expect(identified.family).toBe("minipar");
+    expect(identified.info.name).toBe("Roof PAR");
+    expect(identified.info.firmwareVersion).toBe("1.1");
+  });
+
   it("classifies the miniPAR CSV hello as minipar with the firmware column", async () => {
     const transport = createMockTransport((payload, reply) => {
       if (payload === HELLO) reply("MiniPAR,1.1,1.04");
@@ -149,6 +164,36 @@ describe("identifyDevice", () => {
     expect(identified.info.raw.helloReply).toBe("NEW Name Here Ready");
   });
 
+  it("classifies a JSON hello by its device key case-insensitively, capturing name and version", async () => {
+    const jsonHello = '{"device":"Ambit","version":"2.0","name":"Greenhouse A"}\nAmbit Ready\n';
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO || payload === "hello\n") reply(jsonHello);
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 50 });
+
+    expect(identified.family).toBe("ambit");
+    expect(identified.connector).toBeInstanceOf(AmbitDriver);
+    expect(identified.info.name).toBe("Greenhouse A");
+    expect(identified.info.firmwareVersion).toBe("2.0");
+  });
+
+  it("keeps a self-declared unknown device (CO2Dot) off the AmbitDriver and on the raw fallback", async () => {
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO)
+        reply('{"device":"CO2Dot","version":"0.4","name":"Bench CO2"}\nCO2Dot Ready\n');
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 30 });
+
+    expect(identified.family).toBe("generic");
+    expect(identified.connector).toBeInstanceOf(GenericCommandConnector);
+    expect(identified.info.name).toBe("Bench CO2");
+    expect(identified.info.firmwareVersion).toBe("0.4");
+    // The Ready line alone must not classify it as ambit; INFO was still tried.
+    expect(transport.sent).toContain(INFO);
+  });
+
   it("falls through to the INFO probe and picks the generic driver", async () => {
     const transport = createMockTransport(infoReply(GENERIC_INFO));
 
@@ -166,8 +211,8 @@ describe("identifyDevice", () => {
     expect(transport.sent.filter((p) => p === INFO)).toHaveLength(2);
   });
 
-  it("maps INFO device_type ambit onto the ambit family", async () => {
-    const answerInfo = infoReply({ ...GENERIC_INFO, device_type: "ambit" });
+  it("maps INFO device_type onto the family case-insensitively", async () => {
+    const answerInfo = infoReply({ ...GENERIC_INFO, device_type: "Ambit" });
     const transport = createMockTransport((payload, reply) => {
       answerInfo(payload, reply);
       if (payload === "hello\n") reply("NEW WeatherBox Ready\n");

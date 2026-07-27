@@ -192,7 +192,11 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
     } else {
       try {
         const parsed = JSON.parse(text) as Record<string, unknown>;
-        if (typeof parsed.device === "string") name = parsed.device;
+        if (typeof parsed.name === "string" && parsed.name.trim() !== "") {
+          name = parsed.name.trim();
+        } else if (typeof parsed.device === "string") {
+          name = parsed.device;
+        }
         if (typeof parsed.version === "string") firmwareVersion = parsed.version;
       } catch {
         // unrecognized hello; identity stays minimal

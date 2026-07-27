@@ -13,7 +13,7 @@ import type { ITransportAdapter } from "../transport/interface";
 import type { Logger } from "../utils/logger/logger";
 import { defaultLogger } from "../utils/logger/logger";
 import type { DeviceIdentity, SensorFamily } from "./families";
-import { isSensorFamily } from "./families";
+import { isSensorFamily, SENSOR_FAMILIES } from "./families";
 
 export interface IdentifyDeviceOptions {
   /** Per-probe reply timeout in ms (default 2000). */
@@ -89,42 +89,71 @@ function createProbeSession(transport: ITransportAdapter) {
   };
 }
 
+interface JsonHello {
+  family: SensorFamily | null;
+  name?: string;
+  firmwareVersion?: string;
+}
+
+/**
+ * JSON hello line carrying a string `device` key, lowercase-matched against
+ * the known families (family null when unrecognized, first recognized line
+ * wins). Every JSON hello carries `version`; some carry a persisted `name`.
+ */
+function parseJsonHello(text: string): JsonHello | null {
+  let unknown: JsonHello | null = null;
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      continue; // not JSON, keep scanning
+    }
+    if (parsed === null || typeof parsed !== "object") continue;
+    const record = parsed as Record<string, unknown>;
+    if (typeof record.device !== "string") continue;
+    const device = record.device.toLowerCase();
+    const hello: JsonHello = {
+      family: SENSOR_FAMILIES.find((candidate) => device.includes(candidate)) ?? null,
+      name:
+        typeof record.name === "string" && record.name.trim() !== ""
+          ? record.name.trim()
+          : record.device,
+      firmwareVersion: typeof record.version === "string" ? record.version : undefined,
+    };
+    if (hello.family) return hello;
+    unknown ??= hello;
+  }
+  return unknown;
+}
+
 /**
  * Classify a hello reply against the known firmware signatures, weakest
- * signature last:
- *  - miniPAR: `{"device":"MiniPAR","version":"1.1"}` (JSON mode) or
- *    `MiniPAR,1.1,1.04` (line mode)
+ * signature last. All matching is lowercase-normalized:
+ *  - JSON hello (e.g. `{"device":"MiniPAR","version":"1.1"}`): the `device`
+ *    key names the family
+ *  - miniPAR line mode: `MiniPAR,1.1,1.04`
  *  - MultispeQ: `MultispeQ Ready`, older firmware `Instrument Ready`
  *  - Ambit: any other `<name> Ready` line (firmware prints a hardcoded
- *    `NEW Name Here Ready`; never trust the name, only the sentinel)
+ *    `NEW Name Here Ready`; never trust the name, only the sentinel), skipped
+ *    when a JSON line self-declared an unrecognized device (e.g. CO2Dot):
+ *    that must fall through rather than be handed to the AmbitDriver
  */
 function classifyHelloReply(reply: string): DeviceIdentity | null {
   const text = reply.trim();
   if (!text) return null;
   const raw = { helloReply: text };
 
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("{")) continue;
-    try {
-      const parsed: unknown = JSON.parse(trimmed);
-      if (
-        parsed !== null &&
-        typeof parsed === "object" &&
-        typeof (parsed as Record<string, unknown>).device === "string" &&
-        /minipar/i.test((parsed as Record<string, unknown>).device as string)
-      ) {
-        const version = (parsed as Record<string, unknown>).version;
-        return {
-          family: "minipar",
-          name: (parsed as Record<string, unknown>).device as string,
-          firmwareVersion: typeof version === "string" ? version : undefined,
-          raw,
-        };
-      }
-    } catch {
-      // not JSON, keep scanning
-    }
+  const jsonHello = parseJsonHello(text);
+  if (jsonHello?.family) {
+    return {
+      family: jsonHello.family,
+      name: jsonHello.name,
+      firmwareVersion: jsonHello.firmwareVersion,
+      raw,
+    };
   }
 
   const csvMatch = /^minipar\s*,\s*(?<version>[^,\s]+)\s*(?:,\s*(?<firmware>[^,\s]+))?/im.exec(
@@ -142,6 +171,9 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
   if (/multispeq/i.test(text) || /instrument\s+ready/i.test(text)) {
     return { family: "multispeq", raw };
   }
+
+  // A self-declared unknown device outranks the weak Ready sentinel.
+  if (jsonHello) return null;
 
   const readyMatch = /^(.*?)\s*\bready\b\s*$/im.exec(text);
   if (readyMatch) {
@@ -223,6 +255,7 @@ export async function identifyDevice(
 
   let probeIdentity: DeviceIdentity | undefined;
   let connector: IDeviceDriver | undefined;
+  let helloReply = "";
 
   // Probe 1: every known console firmware answers "hello" with a signature.
   for (let attempt = 0; attempt <= helloRetries; attempt++) {
@@ -231,6 +264,7 @@ export async function identifyDevice(
       isComplete: (buffer) => buffer.includes("\n") || classifyHelloReply(buffer) !== null,
     });
     if (reply.trim() === "") continue;
+    helloReply = reply.trim();
     const classified = classifyHelloReply(reply);
     if (classified) {
       log.debug("identify: hello probe matched", { family: classified.family });
@@ -252,7 +286,9 @@ export async function identifyDevice(
         parsed.data !== null && typeof parsed.data === "object"
           ? (parsed.data as Record<string, unknown>)
           : {};
-      const family: SensorFamily = isSensorFamily(data.device_type) ? data.device_type : "generic";
+      const deviceType =
+        typeof data.device_type === "string" ? data.device_type.toLowerCase() : data.device_type;
+      const family: SensorFamily = isSensorFamily(deviceType) ? deviceType : "generic";
       log.debug("identify: INFO probe matched", { family });
       probeIdentity = {
         family,
@@ -266,10 +302,23 @@ export async function identifyDevice(
     }
   }
 
-  // Both probes silent: last-resort verbatim connector.
+  // Nothing classified: last-resort verbatim connector, keeping any identity
+  // an unrecognized device self-declared over hello.
   if (!connector || !probeIdentity) {
-    log.debug("identify: probes silent, falling back to raw command connector");
-    probeIdentity = { family: "generic", raw: {} };
+    const selfDeclared = parseJsonHello(helloReply);
+    log.debug(
+      selfDeclared
+        ? "identify: unrecognized hello device key, raw connector with self-declared identity"
+        : "identify: probes silent, falling back to raw command connector",
+    );
+    probeIdentity = selfDeclared
+      ? {
+          family: "generic",
+          name: selfDeclared.name,
+          firmwareVersion: selfDeclared.firmwareVersion,
+          raw: { helloReply },
+        }
+      : { family: "generic", raw: {} };
     connector = new GenericCommandConnector(undefined, options?.logger);
   }
 
