@@ -28,7 +28,11 @@ export type MountFn = <T extends AnyContractProcedure>(
   options?: {
     /** HTTP status. Defaults to the procedure's `successStatus`. */
     status?: number;
-    /** JSON response body. */
+    /**
+     * JSON response body. A `(call: SpyCall) => unknown` function is called per
+     * request instead, so search-style endpoints can answer per query rather than
+     * needing one handler per case.
+     */
     body?: unknown;
     /** Artificial delay in ms (or "infinite" to hang forever). */
     delay?: number | "infinite";
@@ -166,10 +170,14 @@ export function createMount(server: SetupServer): MountFn {
 
       // ── Response ────────────────────────────────────────────
       const status = options.status ?? route.successStatus ?? statusForMethod(method);
+      const responseBody =
+        typeof options.body === "function"
+          ? (options.body as (call: SpyCall) => unknown)(call)
+          : options.body;
 
       if (status === 204) return new HttpResponse(null, { status });
-      if (status >= 400) return HttpResponse.json(options.body ?? { message: "Error" }, { status });
-      return HttpResponse.json(options.body ?? null, { status });
+      if (status >= 400) return HttpResponse.json(responseBody ?? { message: "Error" }, { status });
+      return HttpResponse.json(responseBody ?? null, { status });
     });
 
     server.use(handler);
