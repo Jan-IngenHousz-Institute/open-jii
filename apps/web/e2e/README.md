@@ -83,6 +83,7 @@ scraping a mailbox. The `input-otp` field auto-submits on the 6th digit. See `he
 | --- | --- |
 | `helpers.py` | `login(page)`, `wait_for_fresh_otp()`, `seed_experiment_id()`, cookie banner dismissal. Build new specs on top of these. |
 | `smoke_chrome_refresh.py` | Chrome-refresh (OJD-1510) smoke: sidebar, command palette, shortcuts, breadcrumbs, activity bell, settings tabs, page container. |
+| `smoke_workbook_search.py` | Attach-workbook picker: server-side FTS matching (name, creator, linked experiment), rank order, in-flight states, attach flow. Seeds and removes its own workbooks. |
 
 Override defaults via env: `E2E_BASE_URL`, `E2E_EMAIL`, `E2E_PG_CONTAINER`, `E2E_PG_DB`, `E2E_OUT`.
 
