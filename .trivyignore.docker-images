@@ -32,6 +32,13 @@ CVE-2026-12151
 # Clears once the Node 24 base image bundles npm with brace-expansion >= 5.0.7.
 CVE-2026-13149
 
+# CVE-2026-14257: same brace-expansion ReDoS, different CVE ID, same bundled copy
+# (usr/local/lib/node_modules/npm/node_modules/brace-expansion@5.0.6). Not fixable via
+# this repo's pnpm overrides — the vulnerable copy is vendored inside the node:24
+# image's own npm CLI, which the containers never invoke.
+# Clears once the Node 24 base image bundles npm with brace-expansion >= 5.0.8.
+CVE-2026-14257
+
 # CVE-2026-59873 / CVE-2026-59874: node-tar DoS via crafted gzip bomb / malformed
 # tar header, in system npm (usr/local/lib/node_modules/npm/node_modules/tar@7.5.15).
 # Bundled with the node:24 image's npm CLI, not in either app's runtime; the containers
