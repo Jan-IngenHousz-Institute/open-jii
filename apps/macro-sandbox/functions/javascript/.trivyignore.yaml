@@ -76,6 +76,12 @@ vulnerabilities:
       ReDoS via exponential-time complexity. Bundled inside @aws-sdk's own
       dependency tree, not invoked by sandbox code; sandbox has no outbound
       HTTP and no IAM creds, so no attacker-controlled string ever reaches it.
+  - id: CVE-2026-14257
+    statement: >-
+      Same brace-expansion ReDoS, different CVE ID, same bundled copy.
+      Bundled inside @aws-sdk's own dependency tree, not invoked by sandbox
+      code; sandbox has no outbound HTTP and no IAM creds, so no
+      attacker-controlled string ever reaches it.
 
   # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
   # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
