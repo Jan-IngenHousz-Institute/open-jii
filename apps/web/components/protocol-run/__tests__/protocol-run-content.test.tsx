@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
@@ -91,7 +91,7 @@ vi.mock("@repo/ui/components/resizable", async (importOriginal) => {
 });
 
 describe("<ProtocolRunContent />", () => {
-  const mockProtocol = createProtocol({
+  const mockProtocol = createProtocolDetail({
     id: "proto-1",
     name: "Test Protocol",
     code: [{ averages: 1 }],
@@ -160,10 +160,7 @@ describe("<ProtocolRunContent />", () => {
     expect(screen.queryByTestId("iot-runner")).not.toBeInTheDocument();
   });
 
-  it("should show edit trigger for creators in read-only mode", async () => {
-    mockSession = { user: { id: "user-1" } };
-    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
-
+  it("should show edit trigger with update capability in read-only mode", async () => {
     render(<ProtocolRunContent protocolId="proto-1" />);
 
     await waitFor(() => {
@@ -171,9 +168,12 @@ describe("<ProtocolRunContent />", () => {
     });
   });
 
-  it("should not show edit trigger for non-creators", async () => {
-    mockSession = { user: { id: "other-user" } };
-    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
+  it("should not show edit trigger without update capability", async () => {
+    // Capability-based: the run view honours the same grant-derived
+    // permission as the detail page, not the creator's identity.
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ ...mockProtocol, capabilities: readOnlyCapabilities }),
+    });
 
     render(<ProtocolRunContent protocolId="proto-1" />);
 
@@ -184,8 +184,6 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should show code editor with header actions after the user clicks Edit", async () => {
-    mockSession = { user: { id: "user-1" } };
-    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     const user = userEvent.setup();
 
     render(<ProtocolRunContent protocolId="proto-1" />);
@@ -198,8 +196,6 @@ describe("<ProtocolRunContent />", () => {
   });
 
   it("should not show a separate save button when editing", async () => {
-    mockSession = { user: { id: "user-1" } };
-    vi.mocked(useSession).mockImplementation(() => ({ data: mockSession }) as never);
     const user = userEvent.setup();
 
     render(<ProtocolRunContent protocolId="proto-1" />);

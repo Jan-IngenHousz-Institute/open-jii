@@ -1,3 +1,4 @@
+import { experimentContributorsContract } from "./domains/experiment/contributors/experiment-contributors.contract";
 import { experimentDashboardsContract } from "./domains/experiment/dashboards/experiment-dashboards.contract";
 import { experimentDataAnnotationsContract } from "./domains/experiment/data-annotations/experiment-data-annotations.contract";
 import { experimentDataContract } from "./domains/experiment/data/experiment-data.contract";
@@ -6,9 +7,9 @@ import { experimentExportsContract } from "./domains/experiment/exports/experime
 import { experimentFlowsContract } from "./domains/experiment/flows/experiment-flows.contract";
 import { experimentJoinRequestsContract } from "./domains/experiment/join-requests/experiment-join-requests.contract";
 import { experimentLocationsContract } from "./domains/experiment/locations/experiment-locations.contract";
-import { experimentMembersContract } from "./domains/experiment/members/experiment-members.contract";
 import { experimentMetadataContract } from "./domains/experiment/metadata/experiment-metadata.contract";
 import { experimentProjectTransferWebhookContract } from "./domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
+import { experimentTransferAdminContract } from "./domains/experiment/transfer-admin/experiment-transfer-admin.contract";
 import { experimentTransferRequestsContract } from "./domains/experiment/transfer-requests/experiment-transfer-requests.contract";
 import { experimentUploadsContract } from "./domains/experiment/uploads/experiment-uploads.contract";
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
@@ -19,6 +20,7 @@ import { macroContract } from "./domains/macro/macro.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
 import { protocolContract } from "./domains/protocol/protocol.contract";
 import { searchContract } from "./domains/search/search.contract";
+import { sharingContract } from "./domains/sharing/sharing.contract";
 import { userContract } from "./domains/user/user.contract";
 import { workbookContract } from "./domains/workbook/workbook.contract";
 
@@ -34,7 +36,8 @@ export const contract = {
     ...experimentUploadsContract,
     ...experimentDataAnnotationsContract,
     ...experimentLocationsContract,
-    ...experimentMembersContract,
+    ...experimentContributorsContract,
+    ...experimentTransferAdminContract,
     ...experimentMetadataContract,
     ...experimentFlowsContract,
     ...experimentWorkbooksContract,
@@ -50,6 +53,7 @@ export const contract = {
   newsletter: newsletterContract,
   protocols: protocolContract,
   search: searchContract,
+  sharing: sharingContract,
   users: userContract,
   workbooks: workbookContract,
 };

@@ -4,6 +4,7 @@ import { and, eq, inArray, macros, protocolMacros } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { ProtocolMacroDto } from "../models/protocol-macro.model";
 
 @Injectable()
@@ -13,7 +14,10 @@ export class ProtocolMacroRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async listMacros(protocolId: string): Promise<Result<ProtocolMacroDto[]>> {
+  // Lists the macros compatible with a protocol, filtered to those the caller
+  // can read: a private macro the caller cannot access is never
+  // surfaced through the compatibility list, even if it is linked.
+  async listMacros(protocolId: string, userId?: string): Promise<Result<ProtocolMacroDto[]>> {
     return tryCatch(async () => {
       return this.database
         .select({
@@ -29,7 +33,19 @@ export class ProtocolMacroRepository {
         })
         .from(protocolMacros)
         .innerJoin(macros, eq(protocolMacros.macroId, macros.id))
-        .where(eq(protocolMacros.protocolId, protocolId))
+        .where(
+          and(
+            eq(protocolMacros.protocolId, protocolId),
+            accessibleResourceCondition({
+              database: this.database,
+              resourceType: "macro",
+              resourceIdColumn: macros.id,
+              organizationIdColumn: macros.organizationId,
+              visibilityColumn: macros.visibility,
+              userId,
+            }),
+          ),
+        )
         .orderBy(macros.name);
     });
   }

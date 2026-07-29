@@ -35,7 +35,9 @@ describe("UpdateExperimentUseCase", () => {
       userId: testUserId,
     });
 
-    // Define update data
+    // Define update data. `visibility: "public"` is included to prove the
+    // back door is closed: the update path must ignore it — publishing is
+    // only possible through the dedicated `setVisibility` route.
     const updateData = {
       name: "Updated Experiment Name",
       description: "Updated description",
@@ -51,15 +53,63 @@ describe("UpdateExperimentUseCase", () => {
     assertSuccess(result);
     const updatedExperiment = result.value;
 
-    // Verify all fields were updated correctly
+    // Verify content fields were updated but visibility was NOT flipped.
     expect(updatedExperiment).toMatchObject({
       id: experiment.id,
       name: updateData.name,
       description: updateData.description,
       status: updateData.status,
-      visibility: updateData.visibility,
+      visibility: "private",
       createdBy: testUserId,
     });
+  });
+
+  it("ignores a visibility change on the update path (back door closed)", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Back Door",
+      visibility: "public",
+      userId: testUserId,
+    });
+
+    // Attempting public → private alongside a legitimate content edit: the
+    // content change applies, but visibility is stripped and stays public.
+    const result = await useCase.execute(experiment.id, {
+      name: "Renamed",
+      visibility: "private",
+    });
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.name).toBe("Renamed");
+    expect(result.value.visibility).toBe("public");
+  });
+
+  it("allows changing the embargo date while the experiment is private", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Embargo Private",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    const embargoUntil = new Date("2999-01-01T00:00:00.000Z");
+    const result = await useCase.execute(experiment.id, { embargoUntil });
+
+    expect(result.isSuccess()).toBe(true);
+  });
+
+  it("rejects changing the embargo date once the experiment is public", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Embargo Public",
+      visibility: "public",
+      userId: testUserId,
+    });
+
+    const embargoUntil = new Date("2999-01-01T00:00:00.000Z");
+    const result = await useCase.execute(experiment.id, { embargoUntil });
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("EMBARGO_NOT_EDITABLE_WHEN_PUBLIC");
   });
 
   it("should update only specified fields", async () => {

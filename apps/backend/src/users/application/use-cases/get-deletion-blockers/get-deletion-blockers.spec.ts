@@ -65,7 +65,7 @@ describe("GetDeletionBlockersUseCase", () => {
       userId: testUserId,
     });
     const otherAdminId = await testApp.createTestUser({ email: "other-admin@example.com" });
-    await testApp.addExperimentMember(experiment.id, otherAdminId, "admin");
+    await testApp.addExperimentAdmin(experiment.id, otherAdminId);
 
     const result = await useCase.execute(testUserId);
 
@@ -79,7 +79,7 @@ describe("GetDeletionBlockersUseCase", () => {
       userId: testUserId,
     });
     const memberId = await testApp.createTestUser({ email: "member@example.com" });
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
+    await testApp.addExperimentCollaborator(experiment.id, memberId);
 
     const result = await useCase.execute(testUserId);
 
@@ -100,8 +100,8 @@ describe("GetDeletionBlockersUseCase", () => {
       email: "deactivated-member@example.com",
       activated: false,
     });
-    await testApp.addExperimentMember(experiment.id, activeMemberId, "member");
-    await testApp.addExperimentMember(experiment.id, deactivatedMemberId, "member");
+    await testApp.addExperimentCollaborator(experiment.id, activeMemberId);
+    await testApp.addExperimentCollaborator(experiment.id, deactivatedMemberId);
 
     const result = await useCase.execute(testUserId);
 

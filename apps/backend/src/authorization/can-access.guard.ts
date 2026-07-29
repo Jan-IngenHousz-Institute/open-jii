@@ -22,7 +22,12 @@ export const CAN_ACCESS_KEY = "can-access";
 export interface CanAccessMetadata {
   resource: ResourceType;
   action: ResourceAction;
-  /** Route param holding the resource id. Defaults to "id". */
+  /**
+   * Where the resource id is carried. Defaults to the route params; use `"body"`
+   * for routes that identify the resource in the payload rather than the path.
+   */
+  source?: "params" | "body";
+  /** Param or body field holding the resource id. Defaults to "id". */
   param?: string;
 }
 
@@ -31,11 +36,18 @@ interface AuthenticatedRequest extends Request {
   session?: { user?: { id?: string } } | null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
 /**
  * Declarative per-resource authorization. Reads the `@CanAccess` requirement
- * from route metadata, resolves the target resource id from the route params,
- * and delegates the decision to `AuthorizationService.can()`. Runs after the
- * global `AuthGuard` (which sets `request.session`), so the caller is known.
+ * from route metadata, resolves the target resource id from the route params (or
+ * the body, for routes that carry it there), and delegates the decision to
+ * `AuthorizationService.can()`. Runs after the global `AuthGuard` (which sets
+ * `request.session`), so the caller is known.
  *
  * Denials throw Nest HTTP exceptions (403 forbidden, 404 not-found) — the same
  * mechanism the global auth guard uses for 401 — rather than oRPC errors, which
@@ -68,9 +80,17 @@ export class CanAccessGuard implements CanActivate {
     }
 
     const param = meta.param ?? "id";
-    const rawId = request.params[param];
-    const resourceId = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!resourceId) {
+    const source = meta.source ?? "params";
+    const container = source === "body" ? asRecord(request.body) : request.params;
+    const rawId: unknown = container?.[param];
+    const candidateId: unknown = Array.isArray(rawId) ? (rawId as unknown[])[0] : rawId;
+    if (candidateId === undefined || candidateId === null || candidateId === "") {
+      // A body-sourced id is client-supplied, so its absence is a bad request; a
+      // missing route param means the route and the decorator disagree, which is
+      // our bug — log it and fail closed rather than blaming the caller.
+      if (source === "body") {
+        throw new BadRequestException(`A valid ${param} is required`);
+      }
       this.logger.error({
         msg: "CanAccess: route is missing the resource-id param",
         operation: "canAccess",
@@ -79,9 +99,11 @@ export class CanAccessGuard implements CanActivate {
       });
       throw new ForbiddenException("Forbidden");
     }
-    if (!z.string().uuid().safeParse(resourceId).success) {
+    const parsed = z.string().uuid().safeParse(candidateId);
+    if (!parsed.success) {
       throw new BadRequestException(`Invalid ${param}`);
     }
+    const resourceId = parsed.data;
 
     const decision = await this.authz.can(userId, {
       resourceType: meta.resource,

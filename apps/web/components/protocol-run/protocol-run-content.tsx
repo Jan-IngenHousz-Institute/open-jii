@@ -11,7 +11,6 @@ import { useCallback, useState } from "react";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { parseApiError } from "~/util/apiError";
 
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -21,7 +20,6 @@ interface ProtocolRunContentProps {
 
 export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const { data: protocolData, isLoading } = useProtocol(protocolId);
-  const { data: session } = useSession();
   const { t } = useTranslation();
 
   const family = protocolData?.family;
@@ -65,7 +63,9 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   };
 
   const protocol = protocolData;
-  const isCreator = session?.user.id === protocol?.createdBy;
+  // Capability, not ownership — the run view edits the same protocol code
+  // as the detail page, so it must honour the same grant-derived permission.
+  const canEditCode = protocol?.capabilities.canUpdate ?? false;
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -88,7 +88,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const codePanel = (
     <ProtocolCodePanel
       code={protocol.code}
-      isCreator={isCreator}
+      canEdit={canEditCode}
       isEditing={isEditing}
       editedCode={editedCode}
       handleChange={setEditedCode}

@@ -54,7 +54,7 @@ export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminO
           queryKey: orpc.users.getDeletionBlockers.key(),
         });
         await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperimentMembers.key(),
+          queryKey: orpc.experiments.listExperimentContributors.key(),
         });
         options?.onSettled?.(...args);
       },

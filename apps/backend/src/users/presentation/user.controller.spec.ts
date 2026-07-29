@@ -497,7 +497,7 @@ describe("UserController", () => {
         userId: testUserId,
       });
       const memberId = await testApp.createTestUser({ email: "member@example.com" });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,

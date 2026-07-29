@@ -5,11 +5,14 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
+import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { SetVisibilityUseCase } from "../../visibility/set-visibility";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
 import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook-version/get-workbook-version";
@@ -31,6 +34,8 @@ export class WorkbookController {
     private readonly deleteWorkbookUseCase: DeleteWorkbookUseCase,
     private readonly listWorkbookVersionsUseCase: ListWorkbookVersionsUseCase,
     private readonly getWorkbookVersionUseCase: GetWorkbookVersionUseCase,
+    private readonly setVisibilityUseCase: SetVisibilityUseCase,
+    private readonly authz: AuthorizationService,
   ) {}
 
   @CanCreateInOrg()
@@ -53,12 +58,19 @@ export class WorkbookController {
 
   @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbook)
-  getWorkbook() {
+  getWorkbook(@Session() session: UserSession) {
     return implement(workbookContract.getWorkbook).handler(async ({ input }) => {
       const result = await this.getWorkbookUseCase.execute(input.id);
 
       if (isSuccess(result)) {
-        return formatDates(result.value);
+        // See the macro controller: capabilities drive capability-gated UI.
+        const capabilities = await resolveResourceCapabilities(
+          this.authz,
+          session.user.id,
+          "workbook",
+          input.id,
+        );
+        return { ...formatDates(result.value), capabilities };
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -97,6 +109,22 @@ export class WorkbookController {
         return formatDates(result.value);
       }
 
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @CanAccess({ resource: "workbook", action: "manage" })
+  @Implement(workbookContract.setVisibility)
+  setVisibility() {
+    return implement(workbookContract.setVisibility).handler(async ({ input }) => {
+      const result = await this.setVisibilityUseCase.execute(
+        "workbook",
+        input.id,
+        input.visibility,
+      );
+      if (result.isSuccess()) {
+        return result.value;
+      }
       return throwOrpcFailure(result, this.logger);
     });
   }

@@ -34,7 +34,7 @@ export class ExperimentDataUploadsController {
   // without buffering, so it stays off the oRPC contract (oRPC drains the body to
   // materialise File parts). Form fields are validated in-flow against
   // zExperimentUploadFormFields inside UploadDataUseCase.
-  @CanAccess({ resource: "experiment", action: "manage" })
+  @CanAccess({ resource: "experiment", action: "contribute" })
   @Post("/api/v1/experiments/:id/data/uploads")
   @HttpCode(201)
   async uploadData(

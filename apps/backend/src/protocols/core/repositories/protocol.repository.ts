@@ -4,6 +4,7 @@ import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   eq,
   ilike,
@@ -24,6 +25,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
@@ -90,7 +92,24 @@ export class ProtocolRepository {
       }
 
       if (filter === "my" && userId) {
+        // "My protocols" is an ownership view: the creator sees exactly what they
+        // authored, unaffected by visibility (mirrors the experiment "member"
+        // filter, which likewise bypasses the public-OR access scoping).
         conditions.push(eq(protocols.createdBy, userId));
+      } else {
+        // Access scoping: a private protocol is only listed for
+        // owning-org members and grantees; public protocols are visible to all.
+        const scope = accessibleResourceCondition({
+          database: this.database,
+          resourceType: "protocol",
+          resourceIdColumn: protocols.id,
+          organizationIdColumn: protocols.organizationId,
+          visibilityColumn: protocols.visibility,
+          userId,
+        });
+        if (scope) {
+          conditions.push(scope);
+        }
       }
 
       if (conditions.length > 0) {
@@ -193,10 +212,16 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(protocols)
-        .where(eq(protocols.id, id))
-        .returning(protocolColumns);
+      // Grant cleanup and the protocol delete are one transaction: the grants
+      // table is polymorphic (no FK cascade), so it must be cleaned by hand —
+      // and if the protocol delete failed after a committed cleanup, the
+      // protocol would survive with every grant on it already gone, silently
+      // stripping collaborators' access while the API reported failure.
+      const results = await this.database.transaction(async (tx) => {
+        await deleteResourceGrants(tx, "protocol", id);
+
+        return tx.delete(protocols).where(eq(protocols.id, id)).returning(protocolColumns);
+      });
 
       return results as unknown as ProtocolDto[];
     });

@@ -355,7 +355,15 @@ export const experiments = pgTable("experiments", {
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
-// Experiment Members (Associative Table)
+/**
+ * Experiment Members (Associative Table) — **DORMANT**.
+ *
+ * Superseded by `resourceGrants`: who may read, contribute to, or administer an
+ * experiment is now decided entirely by grants, and no runtime code reads or
+ * writes this table. It is deliberately left physically intact, with its existing
+ * rows frozen, so the historical record survives until its fate is decided
+ * separately. Nothing should start using it again — add a grant instead.
+ */
 export const experimentMembers = pgTable(
   "experiment_members",
   {
@@ -390,6 +398,10 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
+    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin'
+    // ("Can edit") or the read-and-contribute tier, whose historical name here is
+    // 'member' and whose current name is 'viewer'. Both are accepted on read; see
+    // the invitation repository, which normalises them.
     role: text("role").default("member").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")
@@ -696,6 +708,9 @@ export const resourceGrants = pgTable(
     ...timestamps,
   },
   (t) => [
+    // One grant per (resource, grantee): re-sharing with someone updates their
+    // role rather than stacking a second row, and every write path upserts on
+    // this key.
     uniqueIndex("resource_grants_unique").on(
       t.resourceType,
       t.resourceId,

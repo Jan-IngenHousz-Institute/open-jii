@@ -3,8 +3,8 @@
 import { ErrorDisplay } from "@/components/error-display";
 import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/list/experiment-visualizations-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useExperimentContributors } from "@/hooks/experiment/useExperimentContributors/useExperimentContributors";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
@@ -32,9 +32,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const { data: locationsData } = useExperimentLocations(id);
   const locations = locationsData ?? [];
 
-  // Members
-  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData ?? [];
+  // Contributors (people with a grant that lets them add data here)
+  const { data: contributorsData, isLoading: isContributorsLoading } =
+    useExperimentContributors(id);
+  const contributors = contributorsData ?? [];
 
   // Visualizations
   const { data: visualizationsData, isLoading: visualizationsLoading } =
@@ -63,8 +64,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         experimentId={id}
         experiment={experiment}
         locations={locations}
-        members={members}
-        isMembersLoading={isMembersLoading}
+        contributors={contributors}
+        isContributorsLoading={isContributorsLoading}
+        canManage={accessData.isAdmin}
+        canContribute={accessData.capabilities.canContribute}
         isArchived
       />
 

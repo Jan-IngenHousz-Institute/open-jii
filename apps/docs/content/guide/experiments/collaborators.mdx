@@ -1,72 +1,111 @@
 ---
-title: "Adding collaborators & roles"
-description: "Invite people to your experiment as members or admins, understand what each role can do, and handle requests to join."
+title: "Collaborators & access levels"
+description: "Add people or organizations to your experiment, choose between Can view and Can edit, and handle requests to join."
 ---
 
-{/* verified: code@12a361a74 2026-07-19 */}
+{/* verified: code@42fda9cf1 2026-07-28 */}
 
-Experiments are meant to be shared. You can invite collaborators, give each of
-them a role, and manage everyone from one place.
+Experiments are meant to be shared. Everyone you share an experiment with directly
+appears in one list, and each row carries one setting: how much they can do.
 
-## The two roles
+The list is that set of direct shares — users and organizations someone added on
+purpose. It is not a full audit of who can open the experiment: members of the
+organization that owns it reach it through their organization role, and a public
+experiment is readable by anyone, in both cases with no row here.
 
-Within an experiment, each person has one of two roles:
+## The two access levels
 
-- **Admin** — sets up and owns the experiment. Admins can change its settings,
-  manage collaborators, and do everything a member can.
-- **Member** — contributes to the experiment: takes measurements with the mobile
-  app, and adds comments. This is usually the person in the field.
+- **Can view** — open the experiment, read its data and visualizations, **and
+  contribute**: take measurements with the mobile app, and add annotations and
+  comments. This is usually the person in the field.
+- **Can edit** — everything above, plus the experiment's settings, publishing,
+  archiving, and managing who else has access.
 
-An experiment can have several admins. Public experiments can be viewed by anyone,
-even people who are not members.
+### What each level can do
 
-### What each role can do
+| Action                                                   | Can view | Can edit |
+| :------------------------------------------------------- | :------: | :------: |
+| See the experiment, its data and visualizations          |    ✓     |    ✓     |
+| Take measurements with the mobile app                    |    ✓     |    ✓     |
+| Add annotations, comments and flags                      |    ✓     |    ✓     |
+| Upload data and metadata on the web                      |    ✓     |    ✓     |
+| Edit experiment settings (name, description, visibility) |    –     |    ✓     |
+| Create and edit visualizations                           |    –     |    ✓     |
+| Add or remove collaborators and change their level       |    –     |    ✓     |
+| Archive the experiment                                   |    –     |    ✓     |
 
-| Action                                                   | Member | Admin |
-| :------------------------------------------------------- | :----: | :---: |
-| See the experiment, its data and visualizations          |   ✓    |   ✓   |
-| Take measurements with the mobile app                    |   ✓    |   ✓   |
-| Add comments and flags                                   |   ✓    |   ✓   |
-| Edit experiment settings (name, description, visibility) |   –    |   ✓   |
-| Upload data and metadata on the web                      |   –    |   ✓   |
-| Create and edit visualizations                           |   –    |   ✓   |
-| Add or remove collaborators and change their roles       |   –    |   ✓   |
-| Archive the experiment                                   |   –    |   ✓   |
+<Callout type="info">
+  **Being added is what lets someone contribute.** Making an experiment public lets anyone *read* it
+  — it never lets a stranger add measurements or annotations. Only people who hold an access level
+  on the experiment can contribute, which is why the lowest level is still called "Can view" rather
+  than "read-only".
+</Callout>
 
-![The Collaborators tab with member roles and the Invite button](/img/guide/web/collaborators.png)
+![The Collaborators tab with access levels and the Invite button](/img/guide/web/collaborators.png)
 
 ## Invite a collaborator
 
 Open your experiment and go to the **Collaborators** tab, then select **Invite**.
-There are two ways to add someone, both from the same search field:
+One search field covers every way of adding someone:
 
-- **Add an existing user** — search by name or email and select them. They get
-  access immediately with the role you choose.
-- **Invite someone by email** — enter an email address that is not yet on openJII
-  and choose **Send invite by email**. They receive an email, and they join the
-  experiment automatically once they create an account.
+- **A user** — search by name or email and select them. They get access
+  immediately at the level you choose.
+- **An organization** — switch **Share with** to _Organization_ and pick one of
+  your own. Everyone in that organization gets the level you choose.
+- **Someone by email** — type an email address that is not yet on openJII and
+  choose **Send invite by email**. They receive an email, and they join the
+  experiment at the chosen level once they create an account.
 
-Choose the role (**Member** or **Admin**) as you invite. New collaborators are
-members by default.
+Choose the access level in the same dialog. New collaborators default to **Can
+view**, which is the level that lets them contribute.
 
 The Collaborators tab groups people into three sub-tabs:
 
-- **Members** — people who already have access.
-- **Invited** — pending email invitations. Admins can **Revoke** one before it is
-  accepted.
+- **Collaborators** — the users and organizations the experiment is shared with
+  directly, each with their level.
+- **Invited** — pending email invitations, each showing the level it will confer.
+  Revoke one before it is accepted and re-invite if you need to change that level.
 - **Requests** — pending requests to join (see below).
+
+The filter above the tabs narrows all three lists at once.
 
 ## Requests to join a public experiment
 
 Anyone viewing a **public** experiment they are not part of can select **Request
-to join**, with an optional message. Admins see these under the **Requests**
-sub-tab and can **Approve** or **Reject** them. Approved people join as members.
+to join**, with an optional message. People who can manage the experiment see
+these under the **Requests** sub-tab and can **Approve** or **Reject** them.
+Approved people join with **Can view**, so they can start contributing.
 
-## Changing roles and removing people
+## Changing a level, removing someone, leaving
 
-Admins can change a collaborator's role or remove them from the **Members**
-sub-tab. A member can also remove themselves with **Leave**.
+From the **Collaborators** sub-tab, change anyone's level with the dropdown on
+their row, or remove them with the bin button next to it. Your own row is marked
+**(you)** and its button is **Leave**, which gives up your own access.
+
+Some rows carry an **Outside Collaborator** label. That is information, not a
+restriction: it marks a person or organization from outside the organization that
+owns the experiment, so you can see at a glance who is external. What they can do
+still comes from their access level.
 
 <Callout type="info">
-  An experiment always needs at least one admin. You cannot remove or demote the last admin.
+  An experiment always needs at least one collaborator with **Can edit**. Removing or lowering the
+  last one is refused, and the reason is shown.
 </Callout>
+
+<Callout type="warn">
+  Removing someone takes away *this* access. They may still be able to reach the experiment another
+  way — through the organization that owns it, through an organization or team they belong to that
+  was also given access, or because the experiment is public. The confirmation dialog says so; check
+  those routes too if the intent is to remove access entirely.
+</Callout>
+
+## Who can see the list
+
+The collaborator list, the pending invitations and the access levels are only
+visible to people who can manage access — that is, holders of **Can edit** and
+admins of the owning organization. Everyone else sees the experiment's
+contributor credit (names and avatars) and nothing about who holds which level.
+
+For access to macros, protocols and workbooks, see
+[Sharing & Collaboration](/guide/sharing) — those resources use the same two
+levels on their own **Collaborators** tab.

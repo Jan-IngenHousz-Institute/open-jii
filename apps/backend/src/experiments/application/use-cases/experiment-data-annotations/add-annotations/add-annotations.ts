@@ -67,7 +67,7 @@ export class AddAnnotationsUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    // Experiment membership is enforced by @CanContributeToExperiment.
+    // The right to contribute here is enforced by @CanAccess.
     const userProfilesResult = await this.userRepository.findUsersByIds([userId]);
     if (userProfilesResult.isFailure()) {
       this.logger.warn({

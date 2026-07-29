@@ -150,6 +150,34 @@ export class AuthorizationService {
   }
 
   /**
+   * Whether the user holds a **direct user grant** on the resource — the row
+   * the leave endpoint (`DELETE …/collaborators/me`) would delete. This is
+   * deliberately not an access question (`can()` answers those): access held
+   * via org role, an organization grant, or public visibility has no row of
+   * the caller's own, so it cannot be "left". Feeds the `canLeave` rendering
+   * capability.
+   */
+  async hasDirectUserGrant(
+    userId: string,
+    resourceType: ResourceType,
+    resourceId: string,
+  ): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: resourceGrants.id })
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, resourceType),
+          eq(resourceGrants.resourceId, resourceId),
+          eq(resourceGrants.granteeType, "user"),
+          eq(resourceGrants.granteeId, userId),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /**
    * Whether the user is a member (any role) of the given organization. Gates
    * creating a resource into a specific org; the default create path targets the
    * user's personal org, where they are always the owner.

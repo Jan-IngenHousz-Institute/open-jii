@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
+import { Label } from "@repo/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ export function ListWorkbooks() {
   const locale = useLocale();
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newVisibility, setNewVisibility] = useState<"public" | "private">("public");
   const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
     onSuccess: (data) => {
       router.push(`/${locale}/platform/workbooks/${data.id}`);
@@ -44,7 +46,7 @@ export function ListWorkbooks() {
     if (isCreating) return;
     const name = newName.trim();
     if (!name) return;
-    createWorkbook({ name });
+    createWorkbook({ name, visibility: newVisibility });
   };
 
   return (
@@ -89,7 +91,10 @@ export function ListWorkbooks() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) setNewName("");
+          if (!open) {
+            setNewName("");
+            setNewVisibility("public");
+          }
         }}
       >
         <DialogContent>
@@ -110,6 +115,23 @@ export function ListWorkbooks() {
               }
             }}
           />
+          {/* Labelled like the macro/protocol create forms: the placeholder alone
+              left the control with no accessible name. */}
+          <div className="space-y-2">
+            <Label htmlFor="new-workbook-visibility">{t("workbooks.visibility")}</Label>
+            <Select
+              value={newVisibility}
+              onValueChange={(value) => setNewVisibility(value as "public" | "private")}
+            >
+              <SelectTrigger id="new-workbook-visibility">
+                <SelectValue placeholder={t("workbooks.selectVisibility")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">{t("workbooks.public")}</SelectItem>
+                <SelectItem value="private">{t("workbooks.private")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
               {t("workbooks.cancel")}

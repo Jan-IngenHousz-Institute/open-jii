@@ -1,5 +1,10 @@
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
-import { createMarkdownCell, createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
+import {
+  createMarkdownCell,
+  createWorkbook,
+  createWorkbookDetail,
+  createWorkbookVersionSummary,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -10,7 +15,7 @@ import { useSession } from "@repo/auth/client";
 import { WorkbookLayoutContent } from "./workbook-layout-content";
 
 describe("WorkbookLayoutContent", () => {
-  const workbook = createWorkbook({
+  const workbook = createWorkbookDetail({
     id: "wb-1",
     name: "Photosynthesis Lab",
     createdBy: "user-1",

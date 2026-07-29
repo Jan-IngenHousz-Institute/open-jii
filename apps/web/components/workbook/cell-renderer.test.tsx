@@ -7,7 +7,7 @@ import {
   createBranchCell,
   createCommandCell,
   createProtocol,
-  createMacro,
+  createMacroDetail,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
@@ -52,7 +52,7 @@ describe("CellRenderer", () => {
     const macroId = "m-1";
     const cell = createMacroCell({ payload: { macroId, language: "python" } });
     server.mount(contract.macros.getMacro, {
-      body: createMacro({ id: macroId, name: "Chlorophyll Calc" }),
+      body: createMacroDetail({ id: macroId, name: "Chlorophyll Calc" }),
     });
 
     render(<CellRenderer cell={cell} onUpdate={noop} onDelete={noop} />);

@@ -1,4 +1,4 @@
-import { createMacro } from "@/test/factories";
+import { createMacroDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useParams, notFound } from "next/navigation";
@@ -46,7 +46,7 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-const defaultMacro = createMacro({
+const defaultMacro = createMacroDetail({
   id: "test-macro-id",
   name: "Test Macro",
   language: "python",
@@ -80,21 +80,21 @@ describe("<MacroLayout />", () => {
 
   describe("Loading State", () => {
     it("renders loading indicator when isLoading is true", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(contract.macros.getMacro, { body: createMacroDetail(), delay: 999_999 });
       renderLayout();
 
       expect(screen.getByText("common.loading")).toBeInTheDocument();
     });
 
     it("does not render children when loading", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(contract.macros.getMacro, { body: createMacroDetail(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 
     it("does not render the inline editable title when loading", () => {
-      server.mount(contract.macros.getMacro, { body: createMacro(), delay: 999_999 });
+      server.mount(contract.macros.getMacro, { body: createMacroDetail(), delay: 999_999 });
       renderLayout();
 
       expect(screen.queryByTestId("inline-editable-title")).not.toBeInTheDocument();
@@ -193,7 +193,7 @@ describe("<MacroLayout />", () => {
   describe("InlineEditableTitle Props", () => {
     it("passes the macro name to InlineEditableTitle", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, name: "My Test Macro" }),
+        body: createMacroDetail({ ...defaultMacro, name: "My Test Macro" }),
       });
       renderLayout();
 
@@ -202,9 +202,9 @@ describe("<MacroLayout />", () => {
       });
     });
 
-    it("passes hasAccess=true when the session user is the creator", async () => {
+    it("passes hasAccess=true when the caller may update the macro", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, createdBy: "user-123" }),
+        body: createMacroDetail({ ...defaultMacro, createdBy: "user-123" }),
       });
       renderLayout({
         session: { data: { user: { id: "user-123" } } },
@@ -215,9 +215,14 @@ describe("<MacroLayout />", () => {
       });
     });
 
-    it("passes hasAccess=false when the session user is not the creator", async () => {
+    it("passes hasAccess=false when the caller may not update the macro", async () => {
+      // Capability-based: who created it no longer decides this.
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, createdBy: "other-user" }),
+        body: createMacroDetail({
+          ...defaultMacro,
+          createdBy: "other-user",
+          capabilities: readOnlyCapabilities,
+        }),
       });
       renderLayout({
         session: { data: { user: { id: "user-123" } } },
@@ -228,8 +233,10 @@ describe("<MacroLayout />", () => {
       });
     });
 
-    it("passes hasAccess=false when there is no session", async () => {
-      server.mount(contract.macros.getMacro, { body: defaultMacro });
+    it("passes hasAccess=false when the response carries no capabilities", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacroDetail({ ...defaultMacro, capabilities: readOnlyCapabilities }),
+      });
       renderLayout({
         session: { data: null },
       });
@@ -269,7 +276,7 @@ describe("<MacroLayout />", () => {
   describe("Preferred Badge", () => {
     it("renders preferred badge when sortOrder is not null", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, sortOrder: 1 }),
+        body: createMacroDetail({ ...defaultMacro, sortOrder: 1 }),
       });
       renderLayout();
 
@@ -281,7 +288,7 @@ describe("<MacroLayout />", () => {
 
     it("does not render preferred badge when sortOrder is null", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, sortOrder: null }),
+        body: createMacroDetail({ ...defaultMacro, sortOrder: null }),
       });
       renderLayout();
 
@@ -293,7 +300,7 @@ describe("<MacroLayout />", () => {
 
     it("renders preferred badge with correct classes when sortOrder is 0", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, sortOrder: 0 }),
+        body: createMacroDetail({ ...defaultMacro, sortOrder: 0 }),
       });
       renderLayout();
 
@@ -326,7 +333,7 @@ describe("<MacroLayout />", () => {
 
     it("uses the macro id from useParams when calling update", async () => {
       server.mount(contract.macros.getMacro, {
-        body: createMacro({ ...defaultMacro, id: "custom-macro-id" }),
+        body: createMacroDetail({ ...defaultMacro, id: "custom-macro-id" }),
       });
       const updateSpy = server.mount(contract.macros.updateMacro, { body: defaultMacro });
       const user = userEvent.setup();

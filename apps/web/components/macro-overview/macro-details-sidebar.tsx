@@ -11,8 +11,7 @@ import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Macro, MacroLanguage } from "@repo/api/domains/macro/macro.schema";
-import { useSession } from "@repo/auth/client";
+import type { MacroDetail, MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -36,20 +35,22 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
+import { ResourcePublishControl } from "../visibility/resource-publish-control";
 
 interface MacroDetailsSidebarProps {
   macroId: string;
-  macro: Macro;
+  macro: MacroDetail;
 }
 
 export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps) {
   const { t } = useTranslation(["macro", "common"]);
   const { t: tCommon } = useTranslation("common");
-  const { data: session } = useSession();
   const locale = useLocale();
   const router = useRouter();
 
-  const isCreator = session?.user.id === macro.createdBy;
+  // Capability, not ownership: an `admin` grantee edits, a `viewer` does
+  // not, and deletion/publishing follow `manage` — all decided by the backend.
+  const { canUpdate, canManage } = macro.capabilities;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION);
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
@@ -94,7 +95,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{t("macros.language")}</h4>
-        {isCreator ? (
+        {canUpdate ? (
           <Select value={macro.language} onValueChange={handleLanguageChange} disabled={isUpdating}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -137,6 +138,14 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         </div>
       ) : null}
 
+      {/* Visibility + the one-way publish action. */}
+      <ResourcePublishControl
+        resourceType="macro"
+        resourceId={macroId}
+        visibility={macro.visibility}
+        canManage={canManage}
+      />
+
       {/* Compatible Protocols Section */}
       <div
         role="separator"
@@ -144,7 +153,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         className="text-muted-foreground border-t"
       />
 
-      {isCreator ? (
+      {canUpdate ? (
         <MacroCompatibleProtocolsCard macroId={macroId} embedded />
       ) : (
         <div className="space-y-1">
@@ -158,7 +167,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       )}
 
       {/* Danger Zone */}
-      {isCreator && isDeletionEnabled && (
+      {canManage && isDeletionEnabled && (
         <>
           <div
             role="separator"

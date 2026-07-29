@@ -3,12 +3,13 @@ import { Injectable, Inject } from "@nestjs/common";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   ensurePersonalOrganization,
   eq,
   exists,
-  experimentMembers,
   experiments,
+  resourceGrants,
   getTableColumns,
   ilike,
   isNull,
@@ -28,6 +29,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { CreateWorkbookDto, UpdateWorkbookDto, WorkbookDto } from "../models/workbook.model";
 
 export interface WorkbookFilter {
@@ -122,11 +124,13 @@ export class WorkbookRepository {
                       exists(
                         this.database
                           .select()
-                          .from(experimentMembers)
+                          .from(resourceGrants)
                           .where(
                             and(
-                              eq(experimentMembers.experimentId, experiments.id),
-                              eq(experimentMembers.userId, filter.userId),
+                              eq(resourceGrants.resourceType, "experiment"),
+                              eq(resourceGrants.resourceId, experiments.id),
+                              eq(resourceGrants.granteeType, "user"),
+                              eq(resourceGrants.granteeId, filter.userId),
                             ),
                           ),
                       ),
@@ -138,7 +142,9 @@ export class WorkbookRepository {
         );
 
       // Match a protocol/macro referenced by a cell, by the LIVE entity name (cells store the id;
-      // the payload name is optional and can go stale). Both are globally readable — no access filter.
+      // the payload name is optional and can go stale). Scope each linked child to the caller's
+      // access (undiscoverability): a private child the caller can't read must not make its
+      // parent workbook surface for a name probe. Without a caller, only public children match.
       const linkedProtocolMatch = (term: string) =>
         exists(
           this.database
@@ -148,6 +154,14 @@ export class WorkbookRepository {
               and(
                 ftsMatch(protocols.searchVector, protocols.name, term),
                 sql`${protocols.id} IN ${cellRefIds("protocol", "protocolId")}`,
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "protocol",
+                  resourceIdColumn: protocols.id,
+                  organizationIdColumn: protocols.organizationId,
+                  visibilityColumn: protocols.visibility,
+                  userId: filter?.userId,
+                }),
               ),
             ),
         );
@@ -160,6 +174,14 @@ export class WorkbookRepository {
               and(
                 ftsMatch(macros.searchVector, macros.name, term),
                 sql`${macros.id} IN ${cellRefIds("macro", "macroId")}`,
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "macro",
+                  resourceIdColumn: macros.id,
+                  organizationIdColumn: macros.organizationId,
+                  visibilityColumn: macros.visibility,
+                  userId: filter?.userId,
+                }),
               ),
             ),
         );
@@ -171,7 +193,24 @@ export class WorkbookRepository {
       }
 
       if (filter?.filter === "my" && filter.userId) {
+        // "My workbooks" is an ownership view: the creator sees exactly what they
+        // authored, unaffected by visibility (mirrors the experiment "member"
+        // filter, which likewise bypasses the public-OR access scoping).
         conditions.push(eq(workbooks.createdBy, filter.userId));
+      } else {
+        // Access scoping: a private workbook is only listed for
+        // owning-org members and grantees; public workbooks are visible to all.
+        const scope = accessibleResourceCondition({
+          database: this.database,
+          resourceType: "workbook",
+          resourceIdColumn: workbooks.id,
+          organizationIdColumn: workbooks.organizationId,
+          visibilityColumn: workbooks.visibility,
+          userId: filter?.userId,
+        });
+        if (scope) {
+          conditions.push(scope);
+        }
       }
 
       if (conditions.length > 0) {
@@ -245,10 +284,17 @@ export class WorkbookRepository {
 
   async delete(id: string): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(workbooks)
-        .where(eq(workbooks.id, id))
-        .returning(workbookColumns);
+      // Grant cleanup and the workbook delete are one transaction: the grants
+      // table is polymorphic (no FK cascade), so it must be cleaned by hand —
+      // and if the workbook delete failed after a committed cleanup, the
+      // workbook would survive with every grant on it already gone, silently
+      // stripping collaborators' access while the API reported failure.
+      const results = await this.database.transaction(async (tx) => {
+        await deleteResourceGrants(tx, "workbook", id);
+
+        return tx.delete(workbooks).where(eq(workbooks.id, id)).returning(workbookColumns);
+      });
+
       return results as unknown as WorkbookDto[];
     });
   }

@@ -1,9 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { desc, eq, inArray, iotDevices, ensurePersonalOrganization } from "@repo/database";
+import { desc, eq, inArray, iotDevices, or, ensurePersonalOrganization } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
@@ -31,12 +32,28 @@ export class IotDeviceRepository {
     });
   }
 
-  async listByOwner(userId: string): Promise<Result<IotDeviceDto[]>> {
+  // Org-aware device listing: a device is visible when the caller
+  // created it, is a member of its owning organization, holds a grant on it, or
+  // it is public — mirroring the experiment `findAll` scoping. The `createdBy`
+  // tier is explicit (not covered by the shared predicate) so a creator who is
+  // later removed from a non-personal owning org still sees the devices they
+  // registered. The grant and public tiers are dormant for now (devices default
+  // private and no path writes device grants yet) but are wired so they light up
+  // when device sharing lands.
+  async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "device",
+        resourceIdColumn: iotDevices.id,
+        organizationIdColumn: iotDevices.organizationId,
+        visibilityColumn: iotDevices.visibility,
+        userId,
+      });
       const results = await this.database
         .select()
         .from(iotDevices)
-        .where(eq(iotDevices.createdBy, userId))
+        .where(or(eq(iotDevices.createdBy, userId), scope))
         .orderBy(desc(iotDevices.createdAt));
       return results;
     });

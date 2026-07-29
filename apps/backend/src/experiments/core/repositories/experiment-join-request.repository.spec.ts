@@ -165,13 +165,13 @@ describe("ExperimentJoinRequestRepository", () => {
         email: "second-admin@example.com",
         name: "Second Admin",
       });
-      await testApp.addExperimentMember(experiment.id, secondAdminId, "admin");
+      await testApp.addExperimentAdmin(experiment.id, secondAdminId);
 
       const nonAdminId = await testApp.createTestUser({
         email: "regular@example.com",
         name: "Regular Member",
       });
-      await testApp.addExperimentMember(experiment.id, nonAdminId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, nonAdminId);
 
       const result = await repository.listAdminEmails(experiment.id);
       assertSuccess(result);

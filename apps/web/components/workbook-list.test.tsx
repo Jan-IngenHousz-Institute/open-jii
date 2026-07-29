@@ -36,16 +36,11 @@ async function deleteAvailableFor(user: ReturnType<typeof userEvent.setup>, name
   return hasDelete;
 }
 
-describe("WorkbookList delete gating (workbook-deletion flag)", () => {
+describe("WorkbookList delete affordance", () => {
   const unused = makeWorkbook({
     id: "11111111-1111-1111-1111-111111111111",
     name: "Unused WB",
     experimentCount: 0,
-  });
-  const inUse = makeWorkbook({
-    id: "22222222-2222-2222-2222-222222222222",
-    name: "Attached WB",
-    experimentCount: 2,
   });
 
   beforeEach(() => {
@@ -57,23 +52,23 @@ describe("WorkbookList delete gating (workbook-deletion flag)", () => {
     expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
   });
 
-  it("hides Delete for an in-use workbook when the flag is off", async () => {
-    const user = userEvent.setup();
-    render(<WorkbookList workbooks={[inUse]} />);
-    expect(await deleteAvailableFor(user, "Attached WB")).toBe(false);
-  });
-
-  it("keeps Delete for an unused workbook even when the flag is off", async () => {
+  it("never offers Delete on a row, even for an unused workbook", async () => {
+    // Lists include other people's public and shared workbooks, and a
+    // row has no capability signal (they are detail-only, to avoid a `can()` per
+    // row) — so it cannot tell a manager from a plain reader. Deletion moved to
+    // the detail surface, gated on `can(manage)`.
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[unused]} />);
-    expect(await deleteAvailableFor(user, "Unused WB")).toBe(true);
+    expect(await deleteAvailableFor(user, "Unused WB")).toBe(false);
   });
 
-  it("shows Delete for an in-use workbook when the flag is on", async () => {
+  it("still offers Delete when the deletion flag is on", async () => {
+    // The flag never re-adds the row action; it only governs the in-use case on
+    // the detail surface.
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
     const user = userEvent.setup();
-    render(<WorkbookList workbooks={[inUse]} />);
-    expect(await deleteAvailableFor(user, "Attached WB")).toBe(true);
+    render(<WorkbookList workbooks={[unused]} />);
+    expect(await deleteAvailableFor(user, "Unused WB")).toBe(false);
   });
 });
 
@@ -119,22 +114,5 @@ describe("WorkbookList row actions", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
     );
-  });
-
-  it("confirms then deletes a workbook", async () => {
-    const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
-    const user = userEvent.setup();
-    render(<WorkbookList workbooks={[unused]} />);
-
-    const row = screen.getByText("Source WB").closest("tr");
-    if (!row) throw new Error("row not found");
-    await user.click(within(row).getByLabelText("workbooks.actions.more"));
-    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.delete" }));
-
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "workbooks.actions.delete" }));
-
-    await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.params).toMatchObject({ id: unused.id });
   });
 });

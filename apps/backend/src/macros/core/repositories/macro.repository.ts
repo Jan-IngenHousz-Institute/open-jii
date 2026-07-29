@@ -3,6 +3,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   eq,
   ilike,
@@ -22,6 +23,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import {
   CreateMacroDto,
   UpdateMacroDto,
@@ -110,7 +112,24 @@ export class MacroRepository {
       }
 
       if (filter?.filter === "my" && filter.userId) {
+        // "My macros" is an ownership view: the creator sees exactly what they
+        // authored, unaffected by visibility (mirrors the experiment "member"
+        // filter, which likewise bypasses the public-OR access scoping).
         conditions.push(eq(macros.createdBy, filter.userId));
+      } else {
+        // Access scoping: a private macro is only listed for owning-org
+        // members and grantees; public macros are visible to everyone.
+        const scope = accessibleResourceCondition({
+          database: this.database,
+          resourceType: "macro",
+          resourceIdColumn: macros.id,
+          organizationIdColumn: macros.organizationId,
+          visibilityColumn: macros.visibility,
+          userId: filter?.userId,
+        });
+        if (scope) {
+          conditions.push(scope);
+        }
       }
 
       // Apply all conditions with AND logic if there are any
@@ -239,12 +258,19 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(macros)
-        .where(eq(macros.id, id))
-        .returning(macroColumns);
+      // Grant cleanup and the macro delete are one transaction: the grants table
+      // is polymorphic (no FK cascade), so it must be cleaned by hand — and if
+      // the macro delete failed after a committed cleanup, the macro would
+      // survive with every grant on it already gone, silently stripping
+      // collaborators' access while the API reported failure.
+      const results = await this.database.transaction(async (tx) => {
+        await deleteResourceGrants(tx, "macro", id);
 
-      // Best-effort cache invalidation — must not mask a successful write
+        return tx.delete(macros).where(eq(macros.id, id)).returning(macroColumns);
+      });
+
+      // Best-effort cache invalidation — must not mask a successful write.
+      // Outside the transaction: only invalidate once the delete is committed.
       void this.cachePort.invalidate(id).catch(() => {
         // noop — best-effort
       });

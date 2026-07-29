@@ -77,7 +77,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   }
 
   const experiment = data.experiment;
+  // Two different questions: metadata and settings are the experiment's own
+  // configuration (`can(manage)`), while uploading data and annotating it is
+  // contributing (`can(contribute)`), which a collaborator may do without
+  // administering anything.
   const hasAccess = data.isAdmin;
+  const canContribute = data.capabilities.canContribute;
 
   // Check if experiment is archived - if so, redirect to not found (should use archive route)
   if (experiment.status === "archived") {
@@ -105,7 +110,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               )}
               {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
             </Button>
-            <Button onClick={() => setUploadDataOpen(true)} disabled={!hasAccess}>
+            <Button onClick={() => setUploadDataOpen(true)} disabled={!canContribute}>
               <Upload className="mr-2 h-4 w-4" />
               {t("experimentData.uploadData")}
             </Button>
@@ -158,7 +163,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
             )}
             {hasMetadata ? t("experimentData.editMetadata") : t("experimentData.uploadMetadata")}
           </Button>
-          <Button onClick={() => setUploadDataOpen(true)} disabled={!hasAccess}>
+          <Button onClick={() => setUploadDataOpen(true)} disabled={!canContribute}>
             <Upload className="mr-2 h-4 w-4" />
             {t("experimentData.uploadData")}
           </Button>
@@ -184,6 +189,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
               defaultSortColumn={table.defaultSortColumn}
               errorColumn={table.errorColumn}
               pageSize={10}
+              canContribute={canContribute}
             />
           </NavTabsContent>
         ))}

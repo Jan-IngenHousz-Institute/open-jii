@@ -1,10 +1,12 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zSetVisibilityBody, zSetVisibilityResponse } from "../visibility/visibility.schema";
 import {
   zAddCompatibleProtocolsBody,
   zCreateMacroRequestBody,
   zMacro,
+  zMacroDetail,
   zMacroBatchExecutionRequestBody,
   zMacroBatchExecutionResponse,
   zMacroExecutionRequestBody,
@@ -25,7 +27,7 @@ export const macroContract = {
   getMacro: oc
     .route({ method: "GET", path: "/api/v1/macros/{id}", successStatus: 200 })
     .input(zMacroIdPathParam)
-    .output(zMacro),
+    .output(zMacroDetail),
   createMacro: oc
     .route({ method: "POST", path: "/api/v1/macros", successStatus: 201 })
     .input(zCreateMacroRequestBody)
@@ -38,6 +40,11 @@ export const macroContract = {
     .route({ method: "DELETE", path: "/api/v1/macros/{id}", successStatus: 204 })
     .input(zMacroIdPathParam)
     .output(z.void()),
+  // Publish (monotonic private→public, gated on `manage`).
+  setVisibility: oc
+    .route({ method: "PATCH", path: "/api/v1/macros/{id}/visibility", successStatus: 200 })
+    .input(zMacroIdPathParam.merge(zSetVisibilityBody))
+    .output(zSetVisibilityResponse),
   listCompatibleProtocols: oc
     .route({ method: "GET", path: "/api/v1/macros/{id}/protocols", successStatus: 200 })
     .input(zMacroIdPathParam)

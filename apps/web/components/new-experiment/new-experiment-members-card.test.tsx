@@ -20,36 +20,6 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T): [T, boolean] => [v, true],
 }));
 
-vi.mock("../current-members-list/current-members-list", () => ({
-  MemberList: ({
-    membersWithUserInfo,
-    onRemoveMember,
-    adminCount,
-  }: {
-    membersWithUserInfo?: {
-      user: { userId: string; firstName?: string; avatarUrl?: string | null };
-    }[];
-    onRemoveMember: (userId: string) => void;
-    adminCount?: number;
-  }) => (
-    <div>
-      {membersWithUserInfo?.map((m) => (
-        <div key={m.user.userId}>
-          <span>{m.user.firstName}</span>
-          {m.user.avatarUrl && <span>{m.user.avatarUrl}</span>}
-          <button
-            aria-label={`remove member ${m.user.firstName}`}
-            onClick={() => onRemoveMember(m.user.userId)}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-      {adminCount !== undefined && <p>{adminCount} admin(s)</p>}
-    </div>
-  ),
-}));
-
 type FormMember = NonNullable<CreateExperimentBody["members"]>[number];
 
 function renderMembersCard(initialMembers: FormMember[] = []) {
@@ -82,8 +52,10 @@ describe("<NewExperimentMembersCard />", () => {
   it("renders title and description", () => {
     server.mount(contract.users.searchUsers, { body: [] });
     renderMembersCard([]);
-    expect(screen.getByText("newExperiment.addMembersTitle")).toBeInTheDocument();
-    expect(screen.getByText("newExperiment.addMembersDescription")).toBeInTheDocument();
+    expect(screen.getByText("newExperiment.addCollaboratorsTitle")).toBeInTheDocument();
+    expect(screen.getByText("newExperiment.addCollaboratorsDescription")).toBeInTheDocument();
+    // The tier every initial collaborator lands on is stated up front.
+    expect(screen.getByText("newExperiment.initialCollaboratorsTierNote")).toBeInTheDocument();
   });
 
   it("adds a member after selecting from popover and clicking Add", async () => {
@@ -107,32 +79,34 @@ describe("<NewExperimentMembersCard />", () => {
     await userEvent.click(screen.getByRole("button", { name: "common.add" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Alice/)).toBeInTheDocument();
-      expect(screen.getByText("https://example.com/alice.jpg")).toBeInTheDocument();
+      expect(screen.getByText("Alice Tester")).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: "AT" })).toBeInTheDocument();
     });
   });
 
   it("removes a member when remove button is clicked", async () => {
     server.mount(contract.users.searchUsers, { body: users });
-    renderMembersCard([{ userId: "user-1", role: "member", firstName: "Alice" }]);
+    renderMembersCard([{ userId: "user-1", firstName: "Alice" }]);
 
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByLabelText(/remove.*alice/i));
+    await userEvent.click(screen.getByRole("button", { name: "common.remove" }));
 
     await waitFor(() => {
       expect(screen.queryByText(/Alice/)).not.toBeInTheDocument();
     });
   });
 
-  it("computes adminCount correctly", () => {
+  it("lists every picked collaborator — the form carries no tier to choose", () => {
     server.mount(contract.users.searchUsers, { body: [] });
     renderMembersCard([
-      { userId: "u1", role: "admin", firstName: "Admin1" },
-      { userId: "u2", role: "admin", firstName: "Admin2" },
-      { userId: "u3", role: "member", firstName: "Member1" },
+      { userId: "u1", firstName: "First" },
+      { userId: "u2", firstName: "Second" },
+      { userId: "u3", firstName: "Third" },
     ]);
 
-    expect(screen.getByText("2 admin(s)")).toBeInTheDocument();
+    for (const name of ["First", "Second", "Third"]) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
   });
 });

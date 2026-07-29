@@ -5,13 +5,13 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
 import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
+import { ResourceOverviewTabs } from "@/components/sharing/resource-overview-tabs";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -23,7 +23,6 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
   const { t } = useTranslation();
-  const { data: session } = useSession();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
   // `isValid` skips saves while the editor is mid-keystroke with raw text.
@@ -75,7 +74,8 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   }
 
   const protocol = data;
-  const isCreator = session?.user.id === protocol.createdBy;
+  // Capability, not ownership: a "Can edit" grantee edits here too.
+  const { canUpdate, canShare, canLeave } = protocol.capabilities;
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateProtocol(
@@ -95,10 +95,17 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     <div className="flex flex-col gap-6 md:flex-row">
       <ProtocolDetailsSidebar protocolId={id} protocol={protocol} />
 
-      <div className="flex-1 space-y-10 md:order-1">
+      <ResourceOverviewTabs
+        resourceType="protocol"
+        resourceId={id}
+        canShare={canShare}
+        canLeave={canLeave}
+        className="min-w-0 flex-1 md:order-1"
+        overviewClassName="space-y-10"
+      >
         <InlineEditableDescription
           description={protocol.description ?? ""}
-          hasAccess={isCreator}
+          hasAccess={canUpdate}
           onSave={handleDescriptionSave}
           isPending={isUpdating}
           title={t("protocols.descriptionTitle")}
@@ -109,7 +116,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
 
         <ProtocolCodePanel
           code={protocol.code}
-          isCreator={isCreator}
+          canEdit={canUpdate}
           isEditing={isEditing}
           editedCode={editedCode}
           handleChange={setEditedCode}
@@ -119,7 +126,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           title={t("protocols.codeTitle")}
           placeholder={t("protocols.codePlaceholder")}
         />
-      </div>
+      </ResourceOverviewTabs>
     </div>
   );
 }

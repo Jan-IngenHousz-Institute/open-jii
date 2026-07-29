@@ -19,7 +19,14 @@ import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Form, FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@repo/ui/components/form";
 import {
   Select,
   SelectContent,
@@ -86,6 +93,7 @@ export function NewMacroForm() {
       description: "",
       language: "python",
       code: "",
+      visibility: "public",
     },
   });
 
@@ -102,6 +110,7 @@ export function NewMacroForm() {
       description: data.description,
       language: data.language,
       code: code,
+      visibility: data.visibility,
     });
   }
 
@@ -156,6 +165,29 @@ export function NewMacroForm() {
                       <SelectItem value="python">Python</SelectItem>
                       <SelectItem value="r">R</SelectItem>
                       <SelectItem value="javascript">JavaScript</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Visibility */}
+            <FormField
+              control={form.control}
+              name="visibility"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("newMacro.visibility")}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("newMacro.selectVisibility")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="public">{t("newMacro.public")}</SelectItem>
+                      <SelectItem value="private">{t("newMacro.private")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

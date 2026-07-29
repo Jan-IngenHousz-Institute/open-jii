@@ -7,12 +7,15 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
+import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { SetVisibilityUseCase } from "../../visibility/set-visibility";
 import { AddCompatibleMacrosUseCase } from "../application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
@@ -116,6 +119,8 @@ export class ProtocolController {
     private readonly listCompatibleMacrosUseCase: ListCompatibleMacrosUseCase,
     private readonly addCompatibleMacrosUseCase: AddCompatibleMacrosUseCase,
     private readonly removeCompatibleMacroUseCase: RemoveCompatibleMacroUseCase,
+    private readonly setVisibilityUseCase: SetVisibilityUseCase,
+    private readonly authz: AuthorizationService,
   ) {}
 
   @Implement(protocolContract.listProtocols)
@@ -142,7 +147,7 @@ export class ProtocolController {
 
   @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.getProtocol)
-  getProtocol() {
+  getProtocol(@Session() session: UserSession) {
     return implement(protocolContract.getProtocol).handler(async ({ input }) => {
       const result = await this.getProtocolUseCase.execute(input.id);
 
@@ -152,7 +157,14 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        return formatDates(protocol);
+        // See the macro controller: capabilities drive capability-gated UI.
+        const capabilities = await resolveResourceCapabilities(
+          this.authz,
+          session.user.id,
+          "protocol",
+          input.id,
+        );
+        return { ...formatDates(protocol), capabilities };
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -178,6 +190,8 @@ export class ProtocolController {
         code: JSON.stringify(input.code),
         family: input.family,
         forkedFrom: input.forkedFrom,
+        // Visibility at create (defaults to public via the column default when omitted).
+        visibility: input.visibility,
       };
 
       const result = await this.createProtocolUseCase.execute(
@@ -253,6 +267,22 @@ export class ProtocolController {
   }
 
   @CanAccess({ resource: "protocol", action: "manage" })
+  @Implement(protocolContract.setVisibility)
+  setVisibility() {
+    return implement(protocolContract.setVisibility).handler(async ({ input }) => {
+      const result = await this.setVisibilityUseCase.execute(
+        "protocol",
+        input.id,
+        input.visibility,
+      );
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @CanAccess({ resource: "protocol", action: "manage" })
   @Implement(protocolContract.deleteProtocol)
   deleteProtocol(@Session() session: UserSession) {
     return implement(protocolContract.deleteProtocol).handler(async ({ input }) => {
@@ -288,9 +318,9 @@ export class ProtocolController {
 
   @CanAccess({ resource: "protocol", action: "read" })
   @Implement(protocolContract.listCompatibleMacros)
-  listCompatibleMacros() {
+  listCompatibleMacros(@Session() session: UserSession) {
     return implement(protocolContract.listCompatibleMacros).handler(async ({ input }) => {
-      const result = await this.listCompatibleMacrosUseCase.execute(input.id);
+      const result = await this.listCompatibleMacrosUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
         return formatDatesList(result.value);

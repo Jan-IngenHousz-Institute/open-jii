@@ -5,15 +5,14 @@ import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtoco
 import { FileSliders } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
-import { useSession } from "@repo/auth/client";
+import type { ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 interface ProtocolLayoutContentProps {
   id: string;
-  protocol: Protocol;
+  protocol: ProtocolDetail;
   children: React.ReactNode;
   actions?: React.ReactNode;
 }
@@ -26,10 +25,10 @@ export function ProtocolLayoutContent({
 }: ProtocolLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
-  const { data: session } = useSession();
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
-  const isCreator = session?.user.id === protocol.createdBy;
+  // Renaming is a content edit → `canUpdate`.
+  const { canUpdate } = protocol.capabilities;
 
   const handleTitleSave = async (newName: string) => {
     await updateProtocol(
@@ -49,7 +48,7 @@ export function ProtocolLayoutContent({
     <div className="space-y-6">
       <InlineEditableTitle
         name={protocol.name}
-        hasAccess={isCreator}
+        hasAccess={canUpdate}
         onSave={handleTitleSave}
         isPending={isUpdating}
         icon={<FileSliders className="h-6 w-6" />}

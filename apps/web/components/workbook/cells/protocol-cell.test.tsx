@@ -1,5 +1,5 @@
 import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol-code-registry";
-import { createProtocol } from "@/test/factories";
+import { createProtocol, createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { useSession } from "@repo/auth/client";
 
 import { WorkbookEntitySavedProvider } from "../workbook-entity-saved-context";
 import { ProtocolCellComponent } from "./protocol-cell";
@@ -48,10 +47,6 @@ vi.mock("../workbook-code-editor", () => ({
   ),
 }));
 
-const mockedUseSession = vi.mocked(useSession);
-
-const OWNER_ID = "owner-user-id";
-
 function makeProtocolCell(overrides: Partial<ProtocolCell> = {}): ProtocolCell {
   return {
     id: "proto-1",
@@ -62,7 +57,7 @@ function makeProtocolCell(overrides: Partial<ProtocolCell> = {}): ProtocolCell {
   };
 }
 
-const protocol = createProtocol({
+const protocol = createProtocolDetail({
   id: "p1",
   name: "Light Sensor",
   code: [{ measurement: "light", duration: 5 }],
@@ -73,9 +68,6 @@ describe("ProtocolCellComponent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetProtocolCodeRegistry();
-    mockedUseSession.mockReturnValue({ data: null, isPending: false } as ReturnType<
-      typeof useSession
-    >);
     server.mount(contract.protocols.getProtocol, { body: protocol });
   });
 
@@ -148,7 +140,7 @@ describe("ProtocolCellComponent", () => {
 
   it("renders an empty array as an editable editor for newly-created protocols", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [] }),
+      body: createProtocolDetail({ id: "p1", code: [] }),
     });
 
     render(
@@ -170,15 +162,15 @@ describe("ProtocolCellComponent", () => {
     });
   });
 
-  it("renders the editor read-only when the viewer is not the protocol owner", async () => {
+  it("renders the editor read-only without update capability on the protocol", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+      body: createProtocolDetail({
+        id: "p1",
+        code: [{ measurement: "light" }],
+        createdBy: "someone",
+        capabilities: readOnlyCapabilities,
+      }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: "viewer" } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
@@ -189,15 +181,10 @@ describe("ProtocolCellComponent", () => {
     expect(screen.queryByTestId("simulate-change")).not.toBeInTheDocument();
   });
 
-  it("renders the editor as editable when the viewer owns the protocol", async () => {
+  it("renders the editor as editable with update capability on the protocol", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
@@ -208,15 +195,11 @@ describe("ProtocolCellComponent", () => {
     expect(screen.getByTestId("simulate-change")).toBeInTheDocument();
   });
 
-  it("debounces and persists protocol code edits when the owner types valid JSON", async () => {
+  it("debounces and persists protocol code edits when a user with update capability types valid JSON", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
@@ -240,12 +223,8 @@ describe("ProtocolCellComponent", () => {
     // signal via WorkbookEntitySavedProvider for the design page to auto-upgrade.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     server.mount(contract.protocols.updateProtocol, { body: createProtocol({ id: "p1" }) });
     const onEntitySaved = vi.fn();
 
@@ -264,15 +243,11 @@ describe("ProtocolCellComponent", () => {
     vi.useRealTimers();
   });
 
-  it("does not persist when the owner types unparseable JSON", async () => {
+  it("does not persist when a user with update capability types unparseable JSON", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
@@ -293,12 +268,8 @@ describe("ProtocolCellComponent", () => {
   it("does not persist when the parsed JSON is not an array", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
@@ -319,12 +290,8 @@ describe("ProtocolCellComponent", () => {
   it("skips persistence when the new code matches the saved snapshot", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
     const updateSpy = server.mount(contract.protocols.updateProtocol, {
       body: createProtocol({ id: "p1" }),
     });
@@ -347,13 +314,8 @@ describe("ProtocolCellComponent", () => {
     // server, so an edit is runnable straight away (no waiting out the 1000ms
     // autosave debounce), and never a stale saved version.
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
     const user = userEvent.setup();
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
@@ -384,13 +346,8 @@ describe("ProtocolCellComponent", () => {
 
   it("forces the editor read-only regardless of ownership when readOnly prop is set", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
-    mockedUseSession.mockReturnValue({
-      data: { user: { id: OWNER_ID } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
     render(
       <ProtocolCellComponent
         cell={makeProtocolCell()}
@@ -412,12 +369,8 @@ describe("ProtocolCellComponent", () => {
   describe("save status indicator", () => {
     function mountOwnedProtocol() {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+        body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: OWNER_ID } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
     }
 
     it("shows the saved state for the owner once the protocol loads", async () => {
@@ -496,13 +449,13 @@ describe("ProtocolCellComponent", () => {
 
     it("does not show a save status for non-owners", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+        body: createProtocolDetail({
+          id: "p1",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+          capabilities: readOnlyCapabilities,
+        }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: "viewer" } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
-
       render(
         <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
       );
@@ -517,13 +470,13 @@ describe("ProtocolCellComponent", () => {
       // A workbook owner editing their workbook passes readOnly={false} down to
       // every cell; a protocol they did not create must still be non-editable.
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+        body: createProtocolDetail({
+          id: "p1",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+          capabilities: readOnlyCapabilities,
+        }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: "viewer" } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
-
       render(
         <ProtocolCellComponent
           cell={makeProtocolCell()}
@@ -538,19 +491,16 @@ describe("ProtocolCellComponent", () => {
       );
     });
 
-    it("forks a non-owned protocol and points the cell at the editable copy", async () => {
+    it("forks a protocol the viewer cannot edit and points the cell at the editable copy", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({
+        body: createProtocolDetail({
           id: "p1",
           name: "Alice Proto",
           code: [{ measurement: "light" }],
           createdBy: "someone",
+          capabilities: readOnlyCapabilities,
         }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: "viewer" } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       const createSpy = server.mount(contract.protocols.createProtocol, {
         status: 201,
         body: createProtocol({ id: "p1-fork", createdBy: "viewer", forkedFrom: "p1" }),
@@ -572,14 +522,15 @@ describe("ProtocolCellComponent", () => {
       expect(forkedCell?.payload.protocolId).toBe("p1-fork");
     });
 
-    it("leaves the cell unchanged when forking a non-owned protocol fails", async () => {
+    it("leaves the cell unchanged when forking a protocol the viewer cannot edit fails", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+        body: createProtocolDetail({
+          id: "p1",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+          capabilities: readOnlyCapabilities,
+        }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: "viewer" } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       const createSpy = server.mount(contract.protocols.createProtocol, {
         status: 500,
         body: undefined,
@@ -601,7 +552,7 @@ describe("ProtocolCellComponent", () => {
 
   it("renders a link to the original when the protocol is itself a fork", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ id: "p1", forkedFrom: "p-src" }),
+      body: createProtocolDetail({ id: "p1", forkedFrom: "p-src" }),
     });
 
     render(
@@ -613,19 +564,14 @@ describe("ProtocolCellComponent", () => {
   });
 
   describe("inline rename", () => {
-    it("renames the protocol and repoints the cell label for the owner", async () => {
+    it("renames the protocol and repoints the cell label with update capability", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({
+        body: createProtocolDetail({
           id: "p1",
           name: "Light Sensor",
           code: [{ measurement: "light" }],
-          createdBy: OWNER_ID,
         }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: OWNER_ID } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       const updateSpy = server.mount(contract.protocols.updateProtocol, {
         body: createProtocol({ id: "p1", name: "Fluorescence" }),
       });
@@ -651,17 +597,12 @@ describe("ProtocolCellComponent", () => {
 
     it("merges a concurrent cell change into the resolved rename", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({
+        body: createProtocolDetail({
           id: "p1",
           name: "Light Sensor",
           code: [{ measurement: "light" }],
-          createdBy: OWNER_ID,
         }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: OWNER_ID } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       server.mount(contract.protocols.updateProtocol, {
         body: createProtocol({ id: "p1", name: "Fluorescence" }),
         delay: 100,
@@ -697,13 +638,13 @@ describe("ProtocolCellComponent", () => {
 
     it("does not offer rename to non-owners", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: "someone" }),
+        body: createProtocolDetail({
+          id: "p1",
+          code: [{ measurement: "light" }],
+          createdBy: "someone",
+          capabilities: readOnlyCapabilities,
+        }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: "viewer" } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
-
       render(
         <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
       );
@@ -716,12 +657,8 @@ describe("ProtocolCellComponent", () => {
 
     it("keeps the editor open and does not repoint the cell when the rename fails", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+        body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: OWNER_ID } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       const updateSpy = server.mount(contract.protocols.updateProtocol, {
         status: 500,
         body: { message: "boom", statusCode: 500 },
@@ -745,12 +682,8 @@ describe("ProtocolCellComponent", () => {
 
     it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {
       server.mount(contract.protocols.getProtocol, {
-        body: createProtocol({ id: "p1", code: [{ measurement: "light" }], createdBy: OWNER_ID }),
+        body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
       });
-      mockedUseSession.mockReturnValue({
-        data: { user: { id: OWNER_ID } },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
       // The update contract has no typed 409; the backend signals a name clash
       // via a REPOSITORY_DUPLICATE code on a 400 body.
       server.use(

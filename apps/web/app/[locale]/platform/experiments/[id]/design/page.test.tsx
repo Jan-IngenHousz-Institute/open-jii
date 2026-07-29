@@ -2,7 +2,8 @@ import {
   createExperiment,
   createExperimentAccess,
   createProtocolCell,
-  createWorkbook,
+  createWorkbookDetail,
+  readOnlyCapabilities,
   createWorkbookVersionSummary,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
@@ -121,19 +122,22 @@ function mountDefaults() {
 function mountWithWorkbook(overrides?: {
   versions?: (typeof versionSummary)[];
   isAdmin?: boolean;
+  /** `can(update)` on the linked workbook; defaults to full capability. */
+  canUpdateWorkbook?: boolean;
 }) {
   server.mount(contract.experiments.getExperiment, { body: experimentWithWorkbook });
   server.mount(contract.experiments.getExperimentAccess, {
     body: overrides?.isAdmin === false ? readOnlyAccessPayload : accessPayload,
   });
   server.mount(contract.workbooks.getWorkbook, {
-    body: createWorkbook({
+    body: createWorkbookDetail({
       id: WB_ID,
       name: "Test Workbook",
       description: "Measures canopy temperature",
       cells: [
         createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
       ],
+      ...(overrides?.canUpdateWorkbook === false ? { capabilities: readOnlyCapabilities } : {}),
     }),
   });
   server.mount(contract.workbooks.listWorkbooks, { body: [] });
@@ -320,19 +324,24 @@ describe("ExperimentDesignPage", () => {
     });
   });
 
-  it("does not show the edit toggle when the viewer is not the workbook owner", async () => {
-    mountWithWorkbook();
+  it("shows the read-only editor when the viewer may not update the workbook", async () => {
+    mountWithWorkbook({ canUpdateWorkbook: false });
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
     });
+    expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
   });
 
-  it("renders the editable draft editor for the workbook owner without a toggle", async () => {
+  it("renders the editable draft editor for an admin grantee who created nothing", async () => {
+    // The whole point of the capability signal: this user's session id does not
+    // match the workbook's `createdBy`, but their grant carries `can(update)`, so
+    // they edit in place. The gate this replaced compared identities and sent them
+    // to the read-only branch.
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: "grantee-not-the-creator" } },
       isPending: false,
     } as unknown as ReturnType<typeof useSession>);
     mountWithWorkbook();
@@ -341,18 +350,15 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
-    // No edit/view toggle anymore; owners edit in place.
+    // No edit/view toggle: anyone who may edit does so in place.
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
   });
 
-  it("shows the read-only editor (not the draft editor) for a non-admin workbook owner", async () => {
-    // Owner of the workbook, but NOT an experiment admin. Auto-apply on save is
-    // admin-only, so editing here must be blocked to avoid a failing upgrade.
-    vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "user-1" } },
-      isPending: false,
-    } as unknown as ReturnType<typeof useSession>);
+  it("shows the read-only editor for a non-admin who may update the workbook", async () => {
+    // May edit the workbook, but is NOT an experiment admin. Auto-apply on save is
+    // experiment-admin only, so editing here stays blocked to avoid a failing
+    // upgrade on every save — the `hasAccess` conjunct is deliberate.
     mountWithWorkbook({ isAdmin: false });
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
@@ -362,11 +368,7 @@ describe("ExperimentDesignPage", () => {
     expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
   });
 
-  it("auto-upgrades the experiment's pinned version when the owner saves a draft edit", async () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "user-1" } },
-      isPending: false,
-    } as unknown as ReturnType<typeof useSession>);
+  it("auto-upgrades the experiment's pinned version when a draft edit is saved", async () => {
     mountWithWorkbook();
     const upgradeSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: WB_ID, workbookVersionId: "ver-2", version: 2 },

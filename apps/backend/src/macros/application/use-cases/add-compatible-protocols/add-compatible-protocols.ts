@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { MacroProtocolDto } from "../../../core/models/macro-protocol.model";
@@ -13,6 +14,7 @@ export class AddCompatibleProtocolsUseCase {
   constructor(
     private readonly macroRepository: MacroRepository,
     private readonly macroProtocolRepository: MacroProtocolRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -37,15 +39,24 @@ export class AddCompatibleProtocolsUseCase {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
     }
 
-    // Validate that all protocols exist
-    for (const protocolId of protocolIds) {
-      const protocolResult = await this.macroProtocolRepository.findProtocolById(protocolId);
-      if (protocolResult.isFailure()) {
-        return failure(AppError.internal("Failed to verify protocol"));
-      }
-      if (!protocolResult.value) {
-        return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
-      }
+    // Validate that the caller can READ every protocol being linked — not just
+    // that it exists. Otherwise an editor of a public macro could link (and thus
+    // expose via the compatibility list) a private protocol they cannot access.
+    // Checks are independent and read-only, so run them in parallel.
+    const decisions = await Promise.all(
+      protocolIds.map((protocolId) =>
+        this.authz
+          .can(currentUserId, { resourceType: "protocol", resourceId: protocolId, action: "read" })
+          .then((decision) => ({ protocolId, decision })),
+      ),
+    );
+    const denied = decisions.find((d) => !d.decision.allow);
+    if (denied) {
+      return failure(
+        denied.decision.reason === "not-found"
+          ? AppError.notFound(`Protocol with ID ${denied.protocolId} not found`)
+          : AppError.forbidden(`You do not have access to protocol ${denied.protocolId}`),
+      );
     }
 
     // Add the compatibility links

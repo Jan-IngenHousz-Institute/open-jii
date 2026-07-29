@@ -18,6 +18,11 @@ export class UpdateExperimentUseCase {
       experimentId: id,
     });
 
+    // Publishing is a one-way action exposed only via `setVisibility`.
+    // Strip any `visibility` that reaches here defensively — the contract no
+    // longer carries it, so this closes the back door for good.
+    const { visibility: _visibility, ...updateData } = data;
+
     const experimentResult = await this.experimentRepository.findOne(id);
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
@@ -31,11 +36,30 @@ export class UpdateExperimentUseCase {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
+      // The embargo date is only meaningful while the experiment is still
+      // private — it can change only while the experiment is still private. Once the
+      // experiment is public there is nothing left to embargo, so reject the
+      // change rather than silently ignoring it.
+      if (updateData.embargoUntil !== undefined && experiment.visibility === "public") {
+        this.logger.warn({
+          msg: "Attempt to change embargo on a public experiment",
+          errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
+          operation: "updateExperiment",
+          experimentId: id,
+        });
+        return failure(
+          AppError.badRequest(
+            "Embargo can only be changed while the experiment is private",
+            "EMBARGO_NOT_EDITABLE_WHEN_PUBLIC",
+          ),
+        );
+      }
+
       // Authorization is enforced declaratively by @CanAccess on the route.
       // Archived-state handling remains here because it is a domain rule
       // describing which updates are legal, not who may update.
       if (experiment.status === "archived") {
-        const updateFields = Object.keys(data).filter((key) => data[key] !== undefined);
+        const updateFields = Object.keys(updateData).filter((key) => updateData[key] !== undefined);
         if (updateFields.length !== 1 || updateFields[0] !== "status") {
           this.logger.warn({
             msg: "Attempt to update fields other than status on archived experiment",
@@ -61,7 +85,7 @@ export class UpdateExperimentUseCase {
         });
       }
 
-      const updateResult = await this.experimentRepository.update(id, data);
+      const updateResult = await this.experimentRepository.update(id, updateData);
       return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
         if (updatedExperiments.length === 0) {
           this.logger.error({

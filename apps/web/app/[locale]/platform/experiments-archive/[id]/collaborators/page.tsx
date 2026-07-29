@@ -1,19 +1,19 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { ErrorDisplay } from "@/components/error-display";
-import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
-import { ExperimentMembersPanel } from "@/components/experiment-settings/collaborators/experiment-members-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
+import { CollaboratorsList } from "@/components/sharing/collaborators-list";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { useResourceCollaborators } from "@/hooks/sharing/useResourceCollaborators/useResourceCollaborators";
 import { Search, UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { use, useMemo, useState } from "react";
 import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useUserInvitations } from "~/hooks/user-invitation/useUserInvitations/useUserInvitations";
+import { matchesGrantee } from "~/util/collaborator-filter";
 
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -23,43 +23,41 @@ interface ExperimentCollaboratorsPageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * The archived twin of the collaborators surface: same layout, nothing writable.
+ * An archived experiment is read-only by definition, so the invite action and
+ * every row control are inert rather than hidden — who collaborated stays legible.
+ */
 export default function ExperimentCollaboratorsPage({ params }: ExperimentCollaboratorsPageProps) {
   const { id } = use(params);
   const { t } = useTranslation();
 
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
   const experiment = accessData?.experiment;
+  const canManage = accessData?.isAdmin ?? false;
+  const canShare = accessData?.capabilities.canShare ?? false;
 
-  const { data: membersData, isError: isMembersError } = useExperimentMembers(id);
-  const members = useMemo(() => membersData ?? [], [membersData]);
+  // Both endpoints are can(share)-gated (the grants list, and invitee emails):
+  // skip the request entirely when the capability signal already says it would 403.
+  const { data: grantsData, isError: isGrantsError } = useResourceCollaborators("experiment", id, {
+    enabled: canShare,
+  });
+  const grants = useMemo(() => grantsData ?? [], [grantsData]);
 
-  const { data: invitationsData } = useUserInvitations("experiment", id);
+  const { data: invitationsData } = useUserInvitations("experiment", id, { enabled: canShare });
   const invitations = useMemo(() => invitationsData ?? [], [invitationsData]);
 
   const { data: joinRequestsData } = useExperimentJoinRequests(id);
   const joinRequests = useMemo(() => joinRequestsData ?? [], [joinRequestsData]);
 
-  const { data: session } = useSession();
-  const currentUserId = session?.user.id;
-  const currentMember = members.find((m) => m.user.id === currentUserId);
-  const currentUserRole = currentMember?.role;
-  const isAdmin = currentUserRole === "admin";
-  const adminCount = members.filter((m) => m.role === "admin").length;
-
   const [filter, setFilter] = useState("");
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [isAddingMember, setIsAddingMember] = useState(false);
 
   const normalizedFilter = filter.trim().toLowerCase();
 
-  const filteredMembers = useMemo(() => {
-    if (!normalizedFilter) return members;
-    return members.filter((m) => {
-      const name = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
-      const email = (m.user.email ?? "").toLowerCase();
-      return name.includes(normalizedFilter) || email.includes(normalizedFilter);
-    });
-  }, [members, normalizedFilter]);
+  const filteredGrants = useMemo(() => {
+    if (!normalizedFilter) return grants;
+    return grants.filter((grant) => matchesGrantee(grant.grantee, normalizedFilter));
+  }, [grants, normalizedFilter]);
 
   const filteredInvitations = useMemo(() => {
     if (!normalizedFilter) return invitations;
@@ -114,6 +112,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         <p className="text-muted-foreground text-sm">
           {t("experimentSettings.collaboratorsDescription")}
         </p>
+        <DocsHelpLink path="/guide/experiments/collaborators" className="mt-1" />
       </div>
 
       <div className="flex items-center gap-3">
@@ -127,70 +126,61 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
             className="pl-9"
           />
         </div>
-        <Button onClick={() => setIsInviteOpen(true)} disabled>
+        <Button disabled>
           <UserPlus className="h-4 w-4" />
           {t("experimentSettings.invite")}
         </Button>
       </div>
 
-      <NavTabs defaultValue="members" className="w-full">
+      <NavTabs defaultValue={canShare ? "collaborators" : "requests"} className="w-full">
         <NavTabsList>
-          <NavTabsTrigger value="members" count={filteredMembers.length}>
-            {t("experimentSettings.membersTab")}
-          </NavTabsTrigger>
-          <NavTabsTrigger value="invited" count={filteredInvitations.length}>
-            {t("experimentSettings.invitedTab")}
-          </NavTabsTrigger>
+          {canShare && (
+            <NavTabsTrigger value="collaborators" count={filteredGrants.length}>
+              {t("experimentSettings.collaboratorsTab")}
+            </NavTabsTrigger>
+          )}
+          {canShare && (
+            <NavTabsTrigger value="invited" count={filteredInvitations.length}>
+              {t("experimentSettings.invitedTab")}
+            </NavTabsTrigger>
+          )}
           <NavTabsTrigger value="requests" count={filteredJoinRequests.length}>
             {t("experimentSettings.requestsTab")}
           </NavTabsTrigger>
         </NavTabsList>
 
-        <NavTabsContent value="members">
-          {isMembersError ? (
-            <p className="text-destructive text-sm">
-              {t("experimentSettings.memberManagementError")}
-            </p>
-          ) : (
-            <ExperimentMembersPanel
-              experimentId={id}
-              members={filteredMembers}
-              currentUserRole={currentUserRole}
-              currentUserId={currentUserId ?? ""}
-              isArchived
-              adminCount={adminCount}
-              isAddingMember={isAddingMember}
+        {canShare && (
+          <NavTabsContent value="collaborators">
+            <CollaboratorsList
+              resourceType="experiment"
+              resourceId={id}
+              grants={filteredGrants}
+              isError={isGrantsError}
+              readOnly
+              isFiltered={normalizedFilter.length > 0}
             />
-          )}
-        </NavTabsContent>
+          </NavTabsContent>
+        )}
 
-        <NavTabsContent value="invited">
-          <ExperimentPendingInvitationsPanel
-            invitations={filteredInvitations}
-            isArchived
-            isAdmin={isAdmin}
-          />
-        </NavTabsContent>
+        {canShare && (
+          <NavTabsContent value="invited">
+            <ExperimentPendingInvitationsPanel
+              invitations={filteredInvitations}
+              isArchived
+              canRevoke={canShare}
+            />
+          </NavTabsContent>
+        )}
 
         <NavTabsContent value="requests">
           <ExperimentJoinRequestsPanel
             experimentId={id}
             joinRequests={filteredJoinRequests}
-            isAdmin={isAdmin}
+            isAdmin={canManage}
             isArchived
           />
         </NavTabsContent>
       </NavTabs>
-
-      <ExperimentInviteModal
-        experimentId={id}
-        members={members}
-        invitations={invitations}
-        isArchived
-        open={isInviteOpen}
-        onOpenChange={setIsInviteOpen}
-        onIsAddingMemberChange={setIsAddingMember}
-      />
     </div>
   );
 }

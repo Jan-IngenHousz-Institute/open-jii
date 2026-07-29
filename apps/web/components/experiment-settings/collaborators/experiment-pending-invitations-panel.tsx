@@ -1,61 +1,46 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import { Mail, X } from "lucide-react";
 
-import type { ExperimentMemberRole } from "@repo/api/domains/experiment/experiment.schema";
 import type { Invitation } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
+import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useUserInvitationRevoke } from "../../../hooks/user-invitation/useUserInvitationRevoke/useUserInvitationRevoke";
-import { useUserInvitationRoleUpdate } from "../../../hooks/user-invitation/useUserInvitationRoleUpdate/useUserInvitationRoleUpdate";
+import { roleLabelKey } from "../../sharing/collaborator-roles";
 
 interface ExperimentPendingInvitationsPanelProps {
   invitations: Invitation[];
   isArchived?: boolean;
-  isAdmin: boolean;
+  /** `can(share)`: the capability that owns who gets access, invitations included. */
+  canRevoke: boolean;
 }
 
+/**
+ * Pending invitations: who was invited, and the access they get on acceptance.
+ *
+ * The tier is shown as a label, not a select — it is fixed once sent, because
+ * there is no endpoint to edit it, so the only way to change it is to revoke and
+ * re-invite.
+ */
 export function ExperimentPendingInvitationsPanel({
   invitations,
   isArchived = false,
-  isAdmin,
+  canRevoke,
 }: ExperimentPendingInvitationsPanelProps) {
   const { t } = useTranslation();
   const { mutate: revokeInvitation } = useUserInvitationRevoke();
-  const { mutate: updateInvitationRole } = useUserInvitationRoleUpdate();
 
-  const handleInvitationValueChange = (value: string, invitation: Invitation) => {
-    if (value === "revoke") {
-      revokeInvitation(
-        { invitationId: invitation.id },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.invitationRevoked") });
-          },
+  const handleRevoke = (invitation: Invitation) => {
+    revokeInvitation(
+      { invitationId: invitation.id },
+      {
+        onSuccess: () => {
+          toast({ description: t("experimentSettings.invitationRevoked") });
         },
-      );
-    } else {
-      updateInvitationRole(
-        {
-          invitationId: invitation.id,
-          role: value as ExperimentMemberRole,
-        },
-        {
-          onSuccess: () => {
-            toast({ description: t("experimentSettings.roleUpdated") });
-          },
-        },
-      );
-    }
+      },
+    );
   };
 
   if (invitations.length === 0) {
@@ -75,9 +60,12 @@ export function ExperimentPendingInvitationsPanel({
   }
 
   return (
-    <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
+    <div
+      role="list"
+      className="border-border divide-border divide-y overflow-hidden rounded-lg border"
+    >
       {invitations.map((invitation) => (
-        <div key={invitation.id} className="flex items-center gap-3 px-3 py-2.5">
+        <div key={invitation.id} role="listitem" className="flex items-center gap-3 px-3 py-2.5">
           <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
             <Mail className="text-muted-foreground h-4 w-4" />
           </div>
@@ -89,24 +77,20 @@ export function ExperimentPendingInvitationsPanel({
               {t("experimentSettings.pendingInvite")}
             </span>
           </div>
+          <span className="text-muted-foreground shrink-0 text-sm">
+            {t(roleLabelKey(invitation.tier))}
+          </span>
           <div className="flex shrink-0">
-            <Select
-              value={invitation.role}
-              disabled={isArchived || !isAdmin}
-              onValueChange={(value) => handleInvitationValueChange(value, invitation)}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={isArchived || !canRevoke}
+              onClick={() => handleRevoke(invitation)}
             >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
-                <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-                <SelectSeparator />
-                <SelectItem value="revoke" className="text-destructive focus:text-destructive">
-                  {t("experimentSettings.revoke")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <X className="h-4 w-4" />
+              {t("experimentSettings.revoke")}
+            </Button>
           </div>
         </div>
       ))}

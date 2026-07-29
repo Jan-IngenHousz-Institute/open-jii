@@ -5,7 +5,7 @@ description: "Create an experiment in a short guided wizard: name it, set visibi
 
 import { Step, Steps } from "fumadocs-ui/components/steps";
 
-{/* verified: code@12a361a74 2026-07-19 */}
+{/* verified: code@42fda9cf1 2026-07-28 */}
 
 You create an experiment through a short guided wizard. Only a name is required,
 so you can start simple and fill in the rest later.
@@ -34,10 +34,13 @@ nothing is created until the final step.
 </Step>
 
 <Step>
-### Members & Visibility
+### Collaborators & Visibility
 
-- **Add Members** — search for people to add now, and give each the **Member** or
-  **Admin** role. You can also do this later.
+- **Add collaborators** — search for people to add now. Everyone added here starts
+  on **Can view**, which lets them open the experiment and contribute
+  measurements and annotations. Raise someone to **Can edit** from the
+  Collaborators tab once the experiment exists, or skip this step and add people
+  later.
 - **Visibility** — choose **Public** or **Private**. New experiments are **public
   by default**. If you choose Private, set an **embargo** date on which the
   experiment becomes public automatically.

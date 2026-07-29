@@ -241,9 +241,9 @@ describe("ExperimentRepository", () => {
       });
 
       // Add main user as a member to all other experiments
-      await testApp.addExperimentMember(exp1.id, mainUserId, "member");
-      await testApp.addExperimentMember(exp2.id, mainUserId, "member");
-      await testApp.addExperimentMember(exp3.id, mainUserId, "member");
+      await testApp.addExperimentCollaborator(exp1.id, mainUserId);
+      await testApp.addExperimentCollaborator(exp2.id, mainUserId);
+      await testApp.addExperimentCollaborator(exp3.id, mainUserId);
 
       // Act - with no filter (should return all experiments user is a member of)
       const result = await repository.findAll(mainUserId);
@@ -325,7 +325,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Add mainUser as member
-      await testApp.addExperimentMember(privateExp.id, mainUserId, "member");
+      await testApp.addExperimentCollaborator(privateExp.id, mainUserId);
 
       // Act - query without filter as mainUser
       const result = await repository.findAll(mainUserId);
@@ -619,8 +619,8 @@ describe("ExperimentRepository", () => {
         userId: otherUserId,
         status: "archived",
       });
-      await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
-      await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+      await testApp.addExperimentCollaborator(memberExpActive.id, mainUserId);
+      await testApp.addExperimentCollaborator(memberExpArchived.id, mainUserId);
       await testApp.createExperiment({
         name: "Other Experiment",
         userId: otherUserId,
@@ -711,7 +711,7 @@ describe("ExperimentRepository", () => {
         userId: testUserId,
         visibility: "public",
       });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       const result = await repository.findAll(testUserId, undefined, undefined, "Zelkova");
       assertSuccess(result);
@@ -822,7 +822,7 @@ describe("ExperimentRepository", () => {
         userId: testUserId,
         visibility: "public",
       });
-      await testApp.addExperimentMember(experiment.id, deletedMemberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, deletedMemberId);
 
       const byCreator = await repository.findAll(
         testUserId,
@@ -989,7 +989,7 @@ describe("ExperimentRepository", () => {
       const memberId = await testApp.createTestUser({
         email: "member@example.com",
       });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       // Act
       const deleteResult = await repository.delete(experiment.id);
@@ -1056,7 +1056,7 @@ describe("ExperimentRepository", () => {
         userId: creatorId,
       });
 
-      await testApp.addExperimentMember(experiment.id, adminId, "admin");
+      await testApp.addExperimentAdmin(experiment.id, adminId);
 
       // Act
       const result = await repository.checkAccess(experiment.id, adminId);
@@ -1069,18 +1069,20 @@ describe("ExperimentRepository", () => {
       expect(result.value.hasAccess).toBe(true);
       expect(result.value.isAdmin).toBe(true);
 
-      // Verify relationship directly in database
-      const membership = await testApp.database
+      // isAdmin comes from the direct admin grant — the only place a tier lives.
+      const staffingGrant = await testApp.database
         .select()
-        .from(experimentMembers)
+        .from(resourceGrants)
         .where(
           and(
-            eq(experimentMembers.experimentId, experiment.id),
-            eq(experimentMembers.userId, adminId),
-            eq(experimentMembers.role, "admin"),
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, adminId),
+            eq(resourceGrants.role, "admin"),
           ),
         );
-      expect(membership.length).toBe(1);
+      expect(staffingGrant.length).toBe(1);
     });
 
     it("should return experiment and access info when user is a regular member", async () => {
@@ -1097,7 +1099,7 @@ describe("ExperimentRepository", () => {
         userId: creatorId,
       });
 
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       // Act
       const result = await repository.checkAccess(experiment.id, memberId);
@@ -1110,17 +1112,18 @@ describe("ExperimentRepository", () => {
       expect(result.value.hasAccess).toBe(true);
       expect(result.value.isAdmin).toBe(false);
 
-      // Verify relationship directly in database
-      const membership = await testApp.database
+      // The access came from a grant — the only place it can come from.
+      const grants = await testApp.database
         .select()
-        .from(experimentMembers)
+        .from(resourceGrants)
         .where(
           and(
-            eq(experimentMembers.experimentId, experiment.id),
-            eq(experimentMembers.userId, memberId),
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeId, memberId),
           ),
         );
-      expect(membership.length).toBe(1);
+      expect(grants.map((g) => g.role)).toEqual(["member"]);
     });
 
     it("should indicate no access when user has no relation to the experiment", async () => {
@@ -1145,17 +1148,18 @@ describe("ExperimentRepository", () => {
       expect(result.value.hasAccess).toBe(false);
       expect(result.value.isAdmin).toBe(false);
 
-      // Verify absence of relationship directly in database
-      const membership = await testApp.database
+      // ...and no grant to them exists.
+      const grants = await testApp.database
         .select()
-        .from(experimentMembers)
+        .from(resourceGrants)
         .where(
           and(
-            eq(experimentMembers.experimentId, experiment.id),
-            eq(experimentMembers.userId, nonMemberId),
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeId, nonMemberId),
           ),
         );
-      expect(membership.length).toBe(0);
+      expect(grants).toHaveLength(0);
     });
 
     it("should set hasArchiveAccess=false for all users when experiment is archived", async () => {
@@ -1168,7 +1172,7 @@ describe("ExperimentRepository", () => {
 
       // Create a member user and add them as a regular member
       const memberId = await testApp.createTestUser({ email: "archive-member@example.com" });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       // Act: check access for non-admin member
       const memberResult = await repository.checkAccess(experiment.id, memberId);
@@ -1181,18 +1185,8 @@ describe("ExperimentRepository", () => {
       expect(memberAccess.isAdmin).toBe(false);
       expect(memberAccess.hasArchiveAccess).toBe(false);
 
-      // Promote to admin directly (mirroring the grant, as the production
-      // ExperimentMemberRepository.updateMemberRole does) so can()-based isAdmin
-      // resolves.
-      await testApp.database
-        .update(experimentMembers)
-        .set({ role: "admin" })
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experiment.id),
-            eq(experimentMembers.userId, memberId),
-          ),
-        );
+      // Raise their grant to the admin tier — that grant is what can()-based
+      // isAdmin resolves from.
       await testApp.database
         .update(resourceGrants)
         .set({ role: "admin" })
@@ -1200,7 +1194,6 @@ describe("ExperimentRepository", () => {
           and(
             eq(resourceGrants.resourceType, "experiment"),
             eq(resourceGrants.resourceId, experiment.id),
-            eq(resourceGrants.granteeType, "user"),
             eq(resourceGrants.granteeId, memberId),
           ),
         );

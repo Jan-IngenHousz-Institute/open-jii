@@ -48,7 +48,7 @@ function mountDefaults(
     accessOverride ?? { body: archivedAccess },
   );
   server.mount(contract.experiments.getExperimentLocations, { body: [] });
-  server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentContributors, { body: [] });
   server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 }
 
@@ -70,7 +70,7 @@ describe("<ExperimentOverviewPage />", () => {
   it("renders ErrorDisplay when there is an error loading", async () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentContributors, { body: [] });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
@@ -87,7 +87,7 @@ describe("<ExperimentOverviewPage />", () => {
       body: { experiment: null, hasAccess: false, isAdmin: false },
     });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentContributors, { body: [] });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
@@ -103,7 +103,7 @@ describe("<ExperimentOverviewPage />", () => {
       body: { hasAccess: false, isAdmin: false },
     });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentContributors, { body: [] });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);
@@ -121,7 +121,7 @@ describe("<ExperimentOverviewPage />", () => {
       }),
     });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentContributors, { body: [] });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
     render(<ExperimentOverviewPage {...props} />);

@@ -6,6 +6,7 @@ import MacroCodeViewer from "@/components/macro-code-viewer";
 import { MacroDetailsSidebar } from "@/components/macro-overview/macro-details-sidebar";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
+import { ResourceOverviewTabs } from "@/components/sharing/resource-overview-tabs";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -14,7 +15,6 @@ import { CodeIcon } from "lucide-react";
 import { use, useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -26,7 +26,6 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useMacro(id);
   const { t } = useTranslation(["macro", "common"]);
-  const { data: session } = useSession();
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -73,7 +72,8 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   }
 
   const macro = data;
-  const isCreator = session?.user.id === macro.createdBy;
+  // Capability, not ownership: a "Can edit" grantee edits here too.
+  const { canUpdate, canShare, canLeave } = macro.capabilities;
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateMacro(
@@ -93,10 +93,17 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
     <div className="flex flex-col gap-6 md:flex-row">
       <MacroDetailsSidebar macroId={id} macro={macro} />
 
-      <div className="flex-1 space-y-10 md:order-1">
+      <ResourceOverviewTabs
+        resourceType="macro"
+        resourceId={id}
+        canShare={canShare}
+        canLeave={canLeave}
+        className="min-w-0 flex-1 md:order-1"
+        overviewClassName="space-y-10"
+      >
         <InlineEditableDescription
           description={macro.description ?? ""}
-          hasAccess={isCreator}
+          hasAccess={canUpdate}
           onSave={handleDescriptionSave}
           isPending={isUpdating}
           title={t("common.description")}
@@ -122,7 +129,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             language={macro.language}
             height="500px"
             title={t("macros.codeTitle")}
-            onEditStart={isCreator ? () => startEditing(decodeBase64(macro.code)) : undefined}
+            onEditStart={canUpdate ? () => startEditing(decodeBase64(macro.code)) : undefined}
           />
         ) : (
           <div className="py-8 text-center text-gray-500">
@@ -130,7 +137,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             <p>{t("macros.codeNotAvailable")}</p>
           </div>
         )}
-      </div>
+      </ResourceOverviewTabs>
     </div>
   );
 }

@@ -10,17 +10,17 @@ import {
   AppError,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ApproveJoinRequestUseCase } from "./approve-join-request";
 
 describe("ApproveJoinRequestUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: ApproveJoinRequestUseCase;
   let joinRequestRepository: ExperimentJoinRequestRepository;
-  let memberRepository: ExperimentMemberRepository;
+  let userRepository: UserRepository;
   let emailPort: EmailPort;
   let adminUserId: string;
   let requesterUserId: string;
@@ -38,7 +38,7 @@ describe("ApproveJoinRequestUseCase", () => {
     });
     useCase = testApp.module.get(ApproveJoinRequestUseCase);
     joinRequestRepository = testApp.module.get(ExperimentJoinRequestRepository);
-    memberRepository = testApp.module.get(ExperimentMemberRepository);
+    userRepository = testApp.module.get(UserRepository);
     emailPort = testApp.module.get(EMAIL_PORT);
     vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
   });
@@ -136,28 +136,15 @@ describe("ApproveJoinRequestUseCase", () => {
     expect(result.error.message).toContain("no longer pending");
   });
 
-  it("returns internal error when the membership check fails", async () => {
+  it("closes the stale request and returns conflict when the requester already has access", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(memberRepository, "getMemberRole").mockResolvedValue(
-      failure(AppError.internal("boom")),
-    );
-
-    const result = await useCase.execute(experiment.id, request.id, adminUserId);
-
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
-    expect(result.error.message).toContain("check requester membership");
-  });
-
-  it("closes the stale request and returns conflict when the requester is already a member", async () => {
-    const { experiment, request } = await seedPendingRequest();
-    await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
+    await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
-    expect(result.error.message).toContain("already a member");
+    expect(result.error.message).toContain("already has access");
     // No duplicate membership email.
     expect(emailPort.sendAddedUserNotification).not.toHaveBeenCalled();
     // The stale request was closed (cancelled).
@@ -168,7 +155,7 @@ describe("ApproveJoinRequestUseCase", () => {
 
   it("returns internal error when closing a stale request fails", async () => {
     const { experiment, request } = await seedPendingRequest();
-    await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
+    await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
     vi.spyOn(joinRequestRepository, "markDecided").mockResolvedValue(
       failure(AppError.internal("boom")),
     );
@@ -205,14 +192,15 @@ describe("ApproveJoinRequestUseCase", () => {
       experiment.id,
       experiment.name,
       "Adam Admin",
-      "member",
+      // Approval hands out the contributing tier, never an administering one.
+      "a contributor who can view and add data",
       "requester@example.com",
     );
   });
 
   it("falls back to a generic actor name when the approver profile lookup fails", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(memberRepository, "findUserFullNameFromProfile").mockResolvedValue(
+    vi.spyOn(userRepository, "findUserProfile").mockResolvedValue(
       failure(AppError.internal("boom")),
     );
 
@@ -223,7 +211,7 @@ describe("ApproveJoinRequestUseCase", () => {
       experiment.id,
       experiment.name,
       "An openJII admin",
-      "member",
+      "a contributor who can view and add data",
       "requester@example.com",
     );
   });

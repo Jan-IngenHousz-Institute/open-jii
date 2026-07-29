@@ -3,6 +3,7 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { ResourcePublishControl } from "@/components/visibility/resource-publish-control";
 import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useLocale } from "@/hooks/useLocale";
@@ -15,8 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseApiError } from "~/util/apiError";
 
-import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
-import { useSession } from "@repo/auth/client";
+import type { WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -24,14 +24,13 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookLayoutContentProps {
   id: string;
-  workbook: Workbook;
+  workbook: WorkbookDetail;
   children: React.ReactNode;
 }
 
 export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayoutContentProps) {
   const { t } = useTranslation(["workbook", "common"]);
   const { t: tCommon } = useTranslation("common");
-  const { data: session } = useSession();
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
   const {
     data: versionsData,
@@ -58,7 +57,8 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   // Versions are returned newest-first; the live page is the draft, so the
   // latest published version is the meaningful number to surface here.
   const latestVersion = versionsData?.[0]?.version;
-  const isCreator = session?.user.id === workbook.createdBy;
+  // Capability, not ownership: a "Can edit" grantee renames and edits.
+  const { canUpdate, canManage } = workbook.capabilities;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
@@ -83,7 +83,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
           <div className="flex flex-col gap-2">
             <InlineEditableTitle
               name={workbook.name}
-              hasAccess={isCreator}
+              hasAccess={canUpdate}
               onSave={handleTitleSave}
               isPending={isUpdating}
               icon={<BookOpen className="h-6 w-6" />}
@@ -94,7 +94,7 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
           <WorkbookDescription
             workbookId={id}
             description={workbook.description ?? ""}
-            hasAccess={isCreator}
+            hasAccess={canUpdate}
           />
         </div>
 
@@ -153,6 +153,16 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
               </Link>
             </div>
           ) : null}
+
+          {/* Visibility + the one-way publish action. */}
+          <div className="flex flex-col gap-1">
+            <ResourcePublishControl
+              resourceType="workbook"
+              resourceId={id}
+              visibility={workbook.visibility}
+              canManage={canManage}
+            />
+          </div>
 
           <div className="ml-auto self-center">
             <Button variant="outline" size="sm" onClick={handleFork} disabled={isForking}>

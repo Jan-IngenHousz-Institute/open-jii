@@ -21,7 +21,6 @@ import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-se
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
-import { UpdateInvitationRoleUseCase } from "./application/use-cases/update-invitation-role/update-invitation-role";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { InvitationRepository } from "./core/repositories/user-invitation.repository";
@@ -69,7 +68,6 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,
-    UpdateInvitationRoleUseCase,
 
     // Auth hooks
     UserAuthHook,
@@ -81,7 +79,6 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,
-    UpdateInvitationRoleUseCase,
   ],
 })
 export class UserModule {}

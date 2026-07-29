@@ -25,7 +25,6 @@ import { use, useCallback, useMemo } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -49,7 +48,6 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     isLoading: accessLoading,
     error: accessError,
   } = useExperimentAccess(id);
-  const { data: session } = useSession();
   const { t } = useTranslation("experiments");
 
   const experimentData = experiment;
@@ -66,14 +64,16 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   );
   const { data: workbookDraft } = useWorkbook(workbookId ?? "", { enabled: !!workbookId });
 
-  const isWorkbookOwner =
-    !!session?.user.id && !!workbookDraft && session.user.id === workbookDraft.createdBy;
+  // Capability, not ownership: an `admin`/"Can edit" grantee on the
+  // workbook may edit it even though they created nothing.
+  const canUpdateWorkbook = workbookDraft?.capabilities.canUpdate ?? false;
 
   // Editing auto-applies a new version on every save, and that upgrade is
-  // experiment-admin only. So editing requires admin AND ownership; a non-admin
-  // owner would otherwise save fine but hit a failing upgrade (error toast) on
-  // every save. Everyone else gets the read-only view.
-  const canEdit = isWorkbookOwner && hasAccess;
+  // experiment-admin only. So editing requires experiment admin AND update on
+  // the workbook itself; someone who may edit the workbook but is not an
+  // experiment admin would otherwise save fine but hit a failing upgrade (error
+  // toast) on every save. Everyone else gets the read-only view.
+  const canEdit = !!workbookDraft && canUpdateWorkbook && hasAccess;
 
   // Each autosave re-pins the experiment to the latest version (OJD-1626).
   const upgradeVersion = useUpgradeWorkbookVersion(id);
@@ -166,7 +166,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
           workbookId={workbookId}
           workbookVersionId={workbookVersionId}
           hasAccess={hasAccess}
-          isWorkbookOwner={isWorkbookOwner}
+          canUpdateWorkbook={canUpdateWorkbook}
         />
 
         <NavTabs defaultValue="list">
@@ -187,7 +187,8 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                 <WorkbookDraftEditor
                   id={workbookId}
                   initialCells={workbookDraft.cells}
-                  createdBy={workbookDraft.createdBy}
+                  // Same capability the branch above gated on.
+                  canEdit={canUpdateWorkbook}
                   name={workbookDraft.name}
                   onSaved={handleDraftSaved}
                 />

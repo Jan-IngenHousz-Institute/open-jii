@@ -6,7 +6,6 @@ import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experim
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -15,7 +14,6 @@ export class CreateExperimentUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly locationRepository: LocationRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
@@ -93,26 +91,57 @@ export class CreateExperimentUseCase {
 
         const experiment = experiments[0];
         this.logger.debug({
-          msg: "Adding admin member to experiment",
+          msg: "Seeding collaborator grants",
           operation: "createExperiment",
           experimentId: experiment.id,
           userId,
         });
 
-        // Filter out any member with the same userId as the admin
-        const filteredMembers = (Array.isArray(data.members) ? data.members : []).filter(
+        // The creator gets a direct `admin` grant. Without it a brand-new
+        // experiment would have no named steward: the owning-org role alone leaves
+        // nothing for the staffing queries (last-admin protection, the
+        // account-deletion blocker) to find.
+        const creatorGrantResult = await this.experimentRepository.ensureDirectAdminGrant(
+          experiment.id,
+          userId,
+          userId,
+        );
+        if (creatorGrantResult.isFailure()) {
+          this.logger.error({
+            msg: "Failed to grant the creator admin rights on the new experiment",
+            errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
+            operation: "createExperiment",
+            experimentId: experiment.id,
+            error: creatorGrantResult.error,
+          });
+          return failure(AppError.internal("Failed to grant the creator admin rights"));
+        }
+
+        // Anyone picked in the create form gets the read-and-contribute tier: they
+        // can open the experiment and add data to it, which is what being listed as
+        // a collaborator at creation time has always meant. The creator is filtered
+        // out — they already hold the stronger admin grant above.
+        const invitedCollaborators = (Array.isArray(data.members) ? data.members : []).filter(
           (member) => member.userId !== userId,
         );
 
-        // Add the user as an admin member + the rest of the members if provided
-        const allMembers = [{ userId, role: "admin" as const }, ...filteredMembers];
-
-        const addMembersResult = await this.experimentMemberRepository.addMembers(
+        const collaboratorGrantResult = await this.experimentRepository.grantCollaborators(
           experiment.id,
-          allMembers,
+          invitedCollaborators.map((member) => member.userId),
+          userId,
         );
+        if (collaboratorGrantResult.isFailure()) {
+          this.logger.error({
+            msg: "Failed to grant the initial collaborators access",
+            errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
+            operation: "createExperiment",
+            experimentId: experiment.id,
+            error: collaboratorGrantResult.error,
+          });
+          return failure(AppError.internal("Failed to grant the initial collaborators access"));
+        }
 
-        return addMembersResult.chain(async () => {
+        return collaboratorGrantResult.chain(async () => {
           // Associate locations if provided
           if (Array.isArray(data.locations) && data.locations.length > 0) {
             const locationsWithExperimentId = data.locations.map((location) => ({

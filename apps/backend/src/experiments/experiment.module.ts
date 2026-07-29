@@ -51,11 +51,6 @@ import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locat
 import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
 import { SearchPlacesUseCase } from "./application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/update-experiment-locations";
-import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
-import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
-import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
-import { TransferExperimentAdminUseCase } from "./application/use-cases/experiment-members/transfer-experiment-admin";
-import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
@@ -70,11 +65,13 @@ import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
 import { GetExperimentAccessUseCase } from "./application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
+import { ListExperimentContributorsUseCase } from "./application/use-cases/list-experiment-contributors/list-experiment-contributors";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { CreateTransferRequestUseCase } from "./application/use-cases/project-transfer-requests/create-transfer-request/create-transfer-request";
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
 import { SetWorkbookVersionUseCase } from "./application/use-cases/set-workbook-version/set-workbook-version";
+import { TransferExperimentAdminUseCase } from "./application/use-cases/transfer-experiment-admin/transfer-experiment-admin";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -91,12 +88,12 @@ import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
-import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 import { ProjectTransferRequestsRepository } from "./core/repositories/project-transfer-requests.repository";
+import { ExperimentContributorsController } from "./presentation/experiment-contributors.controller";
 import { ExperimentDashboardsController } from "./presentation/experiment-dashboards.controller";
 // Controllers
 import { ExperimentDataAnnotationsController } from "./presentation/experiment-data-annotations.controller";
@@ -106,8 +103,8 @@ import { ExperimentDataController } from "./presentation/experiment-data.control
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
-import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
+import { ExperimentTransferAdminController } from "./presentation/experiment-transfer-admin.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -130,7 +127,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataExportsController,
     ExperimentFlowsController,
     ExperimentWorkbooksController,
-    ExperimentMembersController,
+    ExperimentContributorsController,
+    ExperimentTransferAdminController,
     ExperimentJoinRequestsController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
@@ -162,7 +160,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Repositories
     ExperimentRepository,
-    ExperimentMemberRepository,
     ExperimentJoinRequestRepository,
     ExperimentMetadataRepository,
     ExperimentDataAnnotationsRepository,
@@ -205,11 +202,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ListExportsUseCase,
     DownloadExportUseCase,
 
-    // Experiment member use cases
-    ListExperimentMembersUseCase,
-    AddExperimentMembersUseCase,
-    RemoveExperimentMemberUseCase,
-    UpdateExperimentMemberRoleUseCase,
+    ListExperimentContributorsUseCase,
     TransferExperimentAdminUseCase,
 
     // Experiment join request use cases
@@ -269,6 +262,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
   ],
-  exports: [ExperimentRepository, ExperimentMemberRepository],
+  exports: [ExperimentRepository],
 })
 export class ExperimentModule {}

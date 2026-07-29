@@ -6,7 +6,6 @@ import {
   // Enums / small schemas
   zExperimentStatus,
   zExperimentVisibility,
-  zExperimentMemberRole,
   // Experiment core
   zExperiment,
   zExperimentList,
@@ -48,11 +47,6 @@ describe("Experiment Schema", () => {
       expect(zExperimentVisibility.parse("private")).toBe("private");
       expect(zExperimentVisibility.parse("public")).toBe("public");
       expect(() => zExperimentVisibility.parse("friends-only")).toThrow();
-    });
-
-    it("zExperimentMemberRole accepts valid values", () => {
-      expect(zExperimentMemberRole.parse("admin")).toBe("admin");
-      expect(zExperimentMemberRole.parse("member")).toBe("member");
     });
   });
 
@@ -149,6 +143,13 @@ describe("Experiment Schema", () => {
         experiment: exp,
         hasAccess: true,
         isAdmin: false,
+        capabilities: {
+          canContribute: false,
+          canUpdate: false,
+          canManage: false,
+          canShare: false,
+          canLeave: false,
+        },
       };
       expect(zExperimentAccess.parse(access)).toEqual(access);
     });
@@ -365,20 +366,61 @@ describe("Experiment Schema", () => {
       expect(zCreateExperimentBody.parse(body)).toEqual(body);
     });
 
-    it("zCreateExperimentBody full with members", () => {
+    it("zCreateExperimentBody full with a contributor roster", () => {
       const body = {
         name: "Big Exp",
         description: "optional",
         status: "active",
         visibility: "public",
-        members: [{ userId: uuidA, role: "admin" }, { userId: uuidB }],
+        members: [{ userId: uuidA, firstName: "Ada" }, { userId: uuidB }],
       };
       const parsed = zCreateExperimentBody.parse(body);
       expect(parsed).toEqual(body);
     });
 
+    it("zCreateExperimentBody drops a member role — the roster carries no tier", () => {
+      const parsed = zCreateExperimentBody.parse({
+        name: "Tiered Exp",
+        members: [{ userId: uuidA, role: "admin" }],
+      });
+      expect(parsed.members?.[0]).not.toHaveProperty("role");
+    });
+
     it("zCreateExperimentBody rejects empty name", () => {
       expect(() => zCreateExperimentBody.parse({ name: " " })).toThrow();
+    });
+
+    describe("zCreateExperimentBody embargo is private-only", () => {
+      const futureIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      it("accepts embargoUntil on a private experiment", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({
+            name: "Private Embargo",
+            visibility: "private",
+            embargoUntil: futureIso,
+          }),
+        ).not.toThrow();
+      });
+
+      it("rejects embargoUntil on an explicitly public experiment", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({
+            name: "Public Embargo",
+            visibility: "public",
+            embargoUntil: futureIso,
+          }),
+        ).toThrow();
+      });
+
+      it("rejects embargoUntil when visibility is omitted (defaults public)", () => {
+        expect(() =>
+          zCreateExperimentBody.parse({
+            name: "Defaulted Public Embargo",
+            embargoUntil: futureIso,
+          }),
+        ).toThrow();
+      });
     });
 
     it("zUpdateExperimentBody valid partials", () => {

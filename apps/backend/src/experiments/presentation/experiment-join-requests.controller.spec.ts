@@ -3,11 +3,11 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type {
   ExperimentJoinRequest,
   ExperimentJoinRequestList,
 } from "@repo/api/domains/experiment/join-requests/experiment-join-requests.schema";
-import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -149,13 +149,13 @@ describe("ExperimentJoinRequestsController", () => {
       await testApp.post(path).withAuth(requesterUserId).send({}).expect(StatusCodes.FORBIDDEN);
     });
 
-    it("returns 409 when the user is already a member", async () => {
+    it("returns 409 when the user already collaborates on the experiment", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Already member exp",
         userId: adminUserId,
         visibility: "public",
       });
-      await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
 
       const path = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
         id: experiment.id,
@@ -204,23 +204,24 @@ describe("ExperimentJoinRequestsController", () => {
       expect(approveResponse.body.status).toBe("approved");
       expect(approveResponse.body.decidedBy).toBe(adminUserId);
 
-      // Requester is now a member
-      const listMembersPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
-        id: experiment.id,
-      });
-      const listMembersResponse: SuperTestResponse<ExperimentMemberList> = await testApp
-        .get(listMembersPath)
+      // The requester now holds a grant, so they are credited as a contributor
+      const contributorsPath = testApp.resolveOrpcPath(
+        contract.experiments.listExperimentContributors,
+        { id: experiment.id },
+      );
+      const contributorsResponse: SuperTestResponse<ExperimentContributor[]> = await testApp
+        .get(contributorsPath)
         .withAuth(adminUserId)
         .expect(StatusCodes.OK);
-      const memberIds = listMembersResponse.body.map((m) => m.user.id);
-      expect(memberIds).toContain(requesterUserId);
+      expect(contributorsResponse.body.map((c) => c.userId)).toContain(requesterUserId);
 
       // Standard membership-change email fires
       expect(emailPort.sendAddedUserNotification).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         expect.any(String),
-        "member",
+        // Approval hands out the contributing tier, never an administering one.
+        "a contributor who can view and add data",
         "requester@example.com",
       );
     });
@@ -251,7 +252,7 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.FORBIDDEN);
     });
 
-    it("returns 409 and closes the request when the requester is already a member", async () => {
+    it("returns 409 and closes the request when the requester already has access", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Already member approve exp",
         userId: adminUserId,
@@ -266,7 +267,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
       vi.mocked(emailPort).sendAddedUserNotification.mockClear();
 
       const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
@@ -279,7 +280,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CONFLICT)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("already a member");
+          expect(body.message).toContain("already has access");
         });
 
       const mePath = testApp.resolveOrpcPath(contract.experiments.getMyJoinRequest, {
@@ -327,7 +328,7 @@ describe("ExperimentJoinRequestsController", () => {
       );
     });
 
-    it("returns 409 and closes the request when the requester is already a member", async () => {
+    it("returns 409 and closes the request when the requester already has access", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Already member reject exp",
         userId: adminUserId,
@@ -343,7 +344,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CREATED);
 
-      await testApp.addExperimentMember(experiment.id, requesterUserId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
       vi.mocked(emailPort).sendJoinRequestRejectedNotification.mockClear();
 
       const rejectPath = testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
@@ -356,7 +357,7 @@ describe("ExperimentJoinRequestsController", () => {
         .send({})
         .expect(StatusCodes.CONFLICT)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("already a member");
+          expect(body.message).toContain("already has access");
         });
 
       const mePath = testApp.resolveOrpcPath(contract.experiments.getMyJoinRequest, {

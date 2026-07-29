@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
+import { resolveVisibilityTransition } from "../../../visibility/visibility-transition";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -59,6 +60,28 @@ export class EmbargoProcessorService {
       let failureCount = 0;
 
       for (const experiment of experiments) {
+        // Route the publish through the single monotonic-visibility helper so
+        // the embargo cron obeys exactly the same rule as `setVisibility`.
+        // findExpiredEmbargoes only returns private experiments, so this always
+        // resolves to a valid private→public transition — belt-and-braces.
+        const transition = resolveVisibilityTransition(experiment.visibility, "public");
+        if (transition.isFailure()) {
+          failureCount++;
+          this.logger.error({
+            msg: "Skipped embargo publish — illegal visibility transition",
+            errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
+            operation: "processExpiredEmbargoes",
+            experimentId: experiment.id,
+            error: transition.error,
+          });
+          continue;
+        }
+        // Already public (no-op) — nothing to persist. Not expected given the
+        // private-only query, so skip silently without counting it either way.
+        if (!transition.value.changed) {
+          continue;
+        }
+
         const updateResult = await this.experimentRepository.update(experiment.id, {
           visibility: "public",
         });
@@ -126,6 +149,16 @@ export class EmbargoProcessorService {
     let failed = 0;
 
     for (const experiment of experiments) {
+      // Same single-implementation publish path as the scheduled run.
+      const transition = resolveVisibilityTransition(experiment.visibility, "public");
+      if (transition.isFailure()) {
+        failed++;
+        continue;
+      }
+      if (!transition.value.changed) {
+        continue;
+      }
+
       const updateResult = await this.experimentRepository.update(experiment.id, {
         visibility: "public",
       });

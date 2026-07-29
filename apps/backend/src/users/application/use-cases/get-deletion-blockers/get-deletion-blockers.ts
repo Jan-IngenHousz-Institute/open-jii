@@ -1,14 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
-import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
+import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import type { DeletionBlocker, UserProfileMetadata } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 /**
- * Lists the experiments where the user is the only admin (the blockers for account deletion),
- * each enriched with that experiment's other members as transfer candidates. The delete-account
- * dialog uses this to let the user hand admin off — per experiment — before deleting.
+ * Lists the experiments where the user is the only admin (the blockers for account
+ * deletion), each enriched with that experiment's other collaborators as transfer
+ * candidates. The delete-account dialog uses this to let the user hand admin off —
+ * per experiment — before deleting.
  */
 @Injectable()
 export class GetDeletionBlockersUseCase {
@@ -16,7 +17,7 @@ export class GetDeletionBlockersUseCase {
 
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly experimentMemberRepository: ExperimentMemberRepository,
+    private readonly experimentRepository: ExperimentRepository,
   ) {}
 
   async execute(userId: string): Promise<Result<DeletionBlocker[]>> {
@@ -35,23 +36,25 @@ export class GetDeletionBlockersUseCase {
     const result: DeletionBlocker[] = [];
 
     for (const blocker of blockers) {
-      // Only active members are transfer candidates — handing admin to a deactivated ("Unknown")
-      // account would re-orphan the experiment, and the transfer use case rejects them anyway.
-      const membersResult = await this.experimentMemberRepository.getMembers(blocker.id, {
-        activeOnly: true,
-      });
-      if (membersResult.isFailure()) {
-        return membersResult;
+      // Only the experiment's activated collaborators are candidates — handing admin
+      // to a deactivated ("Unknown") account would re-orphan the experiment, and the
+      // transfer use case rejects them anyway.
+      const collaboratorsResult = await this.experimentRepository.listCollaborators(blocker.id);
+      if (collaboratorsResult.isFailure()) {
+        return collaboratorsResult;
       }
 
-      // Ommit the sole admin from the candidates list
-      const candidates: UserProfileMetadata[] = membersResult.value
-        .filter((member) => member.user.id !== userId)
-        .map((member) => ({
-          userId: member.user.id,
-          firstName: member.user.firstName,
-          lastName: member.user.lastName,
-          avatarUrl: member.user.avatarUrl,
+      // Real identities on purpose, whatever `anonymizeContributors` says: this list
+      // is shown only to the experiment's sole admin, who has to recognise the person
+      // they are handing it to, and who already sees them on the sharing surface.
+      // Omit the sole admin themselves from the candidates list.
+      const candidates: UserProfileMetadata[] = collaboratorsResult.value.collaborators
+        .filter((collaborator) => collaborator.userId !== userId)
+        .map((collaborator) => ({
+          userId: collaborator.userId,
+          firstName: collaborator.firstName,
+          lastName: collaborator.lastName,
+          avatarUrl: collaborator.avatarUrl,
         }));
 
       result.push({

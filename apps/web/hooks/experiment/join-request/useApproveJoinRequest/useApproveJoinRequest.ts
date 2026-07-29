@@ -34,7 +34,12 @@ export const useApproveJoinRequest = (options?: UseApproveJoinRequestOptions) =>
           queryKey: orpc.experiments.listJoinRequests.key(),
         });
         await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperimentMembers.key(),
+          queryKey: orpc.experiments.listExperimentContributors.key(),
+        });
+        // Approval writes a viewer grant, so the Collaborators tab's list (and
+        // its count) changes too, not just the requests list.
+        await queryClient.invalidateQueries({
+          queryKey: orpc.sharing.listGrants.key(),
         });
         options?.onSettled?.(...args);
       },

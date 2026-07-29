@@ -36,6 +36,7 @@ import {
   experimentJoinRequests,
   resourceGrants,
   ensurePersonalOrganization,
+  eq,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -374,6 +375,7 @@ export class TestHarness {
     status?: "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoUntil?: Date;
+    anonymizeContributors?: boolean;
   }) {
     const organizationId = await ensurePersonalOrganization(this.database, { id: data.userId });
     const [experiment] = await this.database
@@ -384,48 +386,63 @@ export class TestHarness {
         status: data.status ?? "active",
         visibility: data.visibility ?? "private",
         embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        ...(data.anonymizeContributors === undefined
+          ? {}
+          : { anonymizeContributors: data.anonymizeContributors }),
         createdBy: data.userId,
         organizationId,
       })
       .returning();
 
-    const experimentAdmin = await this.addExperimentMember(experiment.id, data.userId, "admin");
+    const experimentAdmin = await this.addExperimentAdmin(experiment.id, data.userId);
 
     return { experiment, experimentAdmin };
   }
 
   /**
-   * Helper to create an experiment membership
+   * Give a user the read-and-contribute tier on an experiment: what being added as
+   * a collaborator means. Mirrors what the runtime paths write.
    */
-  public async addExperimentMember(
-    experimentId: string,
-    userId: string,
-    role: "admin" | "member" = "member",
-  ) {
-    const [membership] = await this.database
-      .insert(experimentMembers)
-      .values({
-        experimentId,
-        userId,
-        role,
-      })
+  public addExperimentCollaborator(experimentId: string, userId: string) {
+    return this.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experimentId,
+      granteeType: "user",
+      granteeId: userId,
+      role: "member",
+    });
+  }
+
+  /**
+   * Seed an experiment admin the way create-experiment does: an `admin` grant.
+   * That grant is what makes `can(manage)` resolve and what the staffing queries
+   * read.
+   */
+  public addExperimentAdmin(experimentId: string, userId: string) {
+    return this.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experimentId,
+      granteeType: "user",
+      granteeId: userId,
+      role: "admin",
+      createdBy: userId,
+    });
+  }
+
+  /**
+   * Create a standalone (non-personal) organization for testing. Returns its id.
+   */
+  public async createOrganization(name = `Org ${faker.string.uuid()}`): Promise<string> {
+    const [org] = await this.database
+      .insert(organizations)
+      .values({ name, slug: `org-${faker.string.uuid()}` })
       .returning();
+    return org.id;
+  }
 
-    // Mirror the membership into resource_grants (admin -> admin, member ->
-    // member), exactly as the production ExperimentMemberRepository does, so
-    // can()-based authorization (isAdmin) resolves for test-seeded members.
-    await this.database
-      .insert(resourceGrants)
-      .values({
-        resourceType: "experiment",
-        resourceId: experimentId,
-        granteeType: "user",
-        granteeId: userId,
-        role: role === "admin" ? "admin" : "member",
-      })
-      .onConflictDoNothing();
-
-    return membership;
+  /** The user's personal organization id, provisioning it if needed. */
+  public personalOrganizationId(userId: string): Promise<string> {
+    return ensurePersonalOrganization(this.database, { id: userId });
   }
 
   public async addOrganizationMember(
@@ -441,15 +458,22 @@ export class TestHarness {
     return membership;
   }
 
+  /** Seed a resource grant. */
   public async addResourceGrant(data: {
     resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device";
     resourceId: string;
     granteeType: "user" | "team" | "organization";
     granteeId: string;
     role: "owner" | "admin" | "member" | "viewer";
+    createdBy?: string;
   }) {
     const [grant] = await this.database.insert(resourceGrants).values(data).returning();
     return grant;
+  }
+
+  /** Remove a seeded resource grant by id (e.g. to reproduce a revocation). */
+  public async removeResourceGrant(grantId: string) {
+    await this.database.delete(resourceGrants).where(eq(resourceGrants.id, grantId));
   }
 
   /**
@@ -489,8 +513,12 @@ export class TestHarness {
     code?: Record<string, unknown>[];
     family?: "multispeq" | "ambyte" | "minipar" | "generic";
     createdBy: string;
+    visibility?: "private" | "public";
+    organizationId?: string;
   }) {
-    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
     const [protocol] = await this.database
       .insert(protocols)
       .values({
@@ -500,6 +528,7 @@ export class TestHarness {
         family: data.family ?? "multispeq",
         createdBy: data.createdBy,
         organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
       })
       .returning();
     return protocol;
@@ -517,12 +546,16 @@ export class TestHarness {
     status?: "pending" | "active" | "rotating" | "revoked";
     certificateId?: string;
     certificateArn?: string;
+    visibility?: "private" | "public";
+    organizationId?: string;
   }) {
     const serialNumber = data.serialNumber ?? faker.string.alphanumeric(12);
     const thingName = data.thingName ?? `test-device_${faker.string.uuid()}`;
     // Own the device with the creator's personal org (creator = owner member) so
     // the @CanAccess guard authorizes the creator, mirroring register-on-create.
-    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
     const [device] = await this.database
       .insert(iotDevices)
       .values({
@@ -536,6 +569,7 @@ export class TestHarness {
         certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,
         organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
       })
       .returning();
     return device;
@@ -550,9 +584,13 @@ export class TestHarness {
     language?: "python" | "r" | "javascript";
     code?: string;
     createdBy: string;
+    visibility?: "private" | "public";
+    organizationId?: string;
   }) {
     const macroId = crypto.randomUUID();
-    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
     const [macro] = await this.database
       .insert(macros)
       .values({
@@ -564,6 +602,7 @@ export class TestHarness {
         code: data.code ?? btoa("print('hello')"),
         createdBy: data.createdBy,
         organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
       })
       .returning();
     return macro;
@@ -575,8 +614,12 @@ export class TestHarness {
     cells?: unknown[];
     metadata?: Record<string, unknown>;
     createdBy: string;
+    visibility?: "private" | "public";
+    organizationId?: string;
   }) {
-    const organizationId = await ensurePersonalOrganization(this.database, { id: data.createdBy });
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
     const [workbook] = await this.database
       .insert(workbooks)
       .values({
@@ -586,6 +629,7 @@ export class TestHarness {
         metadata: data.metadata ?? {},
         createdBy: data.createdBy,
         organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
       })
       .returning();
     return workbook;

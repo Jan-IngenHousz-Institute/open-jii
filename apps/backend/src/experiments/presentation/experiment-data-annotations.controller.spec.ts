@@ -607,11 +607,10 @@ describe("ExperimentDataAnnotationsController", () => {
   });
 
   describe("contributor authorization", () => {
-    // These routes require experiment MEMBERSHIP (not mere read access),
-    // enforced by @CanContributeToExperiment: a non-member must be rejected even
-    // on a public experiment. `addAnnotation` is covered by the public-experiment
-    // test above; this pins the decorator on the remaining routes so removing any
-    // one of them fails here.
+    // These routes require can(contribute), not mere read access: someone who can
+    // only read a public experiment must still be rejected. `addAnnotation` is
+    // covered by the public-experiment test above; this pins the decorator on the
+    // remaining routes so removing any one of them fails here.
     it.each([
       {
         name: "add annotations (bulk)",

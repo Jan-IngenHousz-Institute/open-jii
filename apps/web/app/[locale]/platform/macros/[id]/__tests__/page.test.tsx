@@ -1,4 +1,4 @@
-import { createMacro } from "@/test/factories";
+import { createMacroDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { use } from "react";
@@ -134,7 +134,7 @@ vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 
-const mockMacroData = createMacro({
+const mockMacroData = createMacroDetail({
   id: "test-macro-id",
   name: "Test Macro",
   filename: "test_macro.py",
@@ -233,9 +233,15 @@ describe("MacroOverviewPage", () => {
       });
     });
 
-    it("should pass hasAccess=false to InlineEditableDescription when user is not creator", async () => {
-      const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "another-user" });
-      server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
+    it("should pass hasAccess=false to InlineEditableDescription without update capability", async () => {
+      // Gating is capability-based: a different creator is irrelevant; the
+      // absence of `canUpdate` is what makes the surface read-only.
+      const readOnlyMacro = createMacroDetail({
+        ...mockMacroData,
+        createdBy: "another-user",
+        capabilities: readOnlyCapabilities,
+      });
+      server.mount(contract.macros.getMacro, { body: readOnlyMacro });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -261,7 +267,7 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should display 'code not available' placeholder when macro has no code", async () => {
-      const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
+      const macroWithoutCode = createMacroDetail({ ...mockMacroData, code: "" });
       server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);
@@ -291,7 +297,7 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should not show edit trigger when there is no code", async () => {
-      const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
+      const macroWithoutCode = createMacroDetail({ ...mockMacroData, code: "" });
       server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);
@@ -303,7 +309,10 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should handle invalid base64 code gracefully", async () => {
-      const macroWithInvalidCode = createMacro({ ...mockMacroData, code: "invalid-base64!!!" });
+      const macroWithInvalidCode = createMacroDetail({
+        ...mockMacroData,
+        code: "invalid-base64!!!",
+      });
       server.mount(contract.macros.getMacro, { body: macroWithInvalidCode });
 
       render(<MacroOverviewPage params={mockParams} />);
@@ -441,9 +450,13 @@ describe("MacroOverviewPage", () => {
   });
 
   describe("Non-creator behavior", () => {
-    it("should not show edit trigger when user is not the creator", async () => {
-      const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "different-user-id" });
-      server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
+    it("should not show edit trigger without update capability", async () => {
+      const readOnlyMacro = createMacroDetail({
+        ...mockMacroData,
+        createdBy: "different-user-id",
+        capabilities: readOnlyCapabilities,
+      });
+      server.mount(contract.macros.getMacro, { body: readOnlyMacro });
 
       render(<MacroOverviewPage params={mockParams} />);
 
@@ -455,7 +468,10 @@ describe("MacroOverviewPage", () => {
     });
 
     it("should still render the code viewer for non-creators", async () => {
-      const macroOwnedByOther = createMacro({ ...mockMacroData, createdBy: "different-user-id" });
+      const macroOwnedByOther = createMacroDetail({
+        ...mockMacroData,
+        createdBy: "different-user-id",
+      });
       server.mount(contract.macros.getMacro, { body: macroOwnedByOther });
 
       render(<MacroOverviewPage params={mockParams} />);
@@ -468,7 +484,7 @@ describe("MacroOverviewPage", () => {
 
   describe("Empty description", () => {
     it("should pass empty string to InlineEditableDescription when description is null", async () => {
-      const macroWithNullDescription = createMacro({
+      const macroWithNullDescription = createMacroDetail({
         ...mockMacroData,
         description: null as unknown as string,
       });
@@ -520,7 +536,7 @@ describe("MacroOverviewPage", () => {
 
   describe("CodeIcon fallback", () => {
     it("should render CodeIcon in the code not available placeholder", async () => {
-      const macroWithoutCode = createMacro({ ...mockMacroData, code: "" });
+      const macroWithoutCode = createMacroDetail({ ...mockMacroData, code: "" });
       server.mount(contract.macros.getMacro, { body: macroWithoutCode });
 
       render(<MacroOverviewPage params={mockParams} />);

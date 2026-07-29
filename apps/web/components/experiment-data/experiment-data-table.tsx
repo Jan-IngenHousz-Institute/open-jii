@@ -71,6 +71,7 @@ export function ExperimentDataTable({
   displayName,
   defaultSortColumn,
   errorColumn,
+  canContribute = false,
 }: {
   experimentId: string;
   tableName: string;
@@ -78,6 +79,12 @@ export function ExperimentDataTable({
   displayName?: string;
   defaultSortColumn?: string;
   errorColumn?: string;
+  /**
+   * `can(contribute)` from the experiment's access response. Annotating is a write,
+   * so without it the annotation controls are not offered — the routes refuse them
+   * anyway, and offering a button that 403s is worse than not showing it.
+   */
+  canContribute?: boolean;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
@@ -181,8 +188,10 @@ export function ExperimentDataTable({
     filters: activeFilters,
     formatFunction: formatValue,
     onChartClick: toggleChartPin,
-    onAddAnnotation: openAddAnnotationDialog,
-    onDeleteAnnotations: openDeleteAnnotationsDialog,
+    // Withheld without `can(contribute)`: the cells hide their add/remove controls
+    // when the handler is absent.
+    onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
+    onDeleteAnnotations: canContribute ? openDeleteAnnotationsDialog : undefined,
     onToggleCellExpansion: toggleCellExpansion,
     isCellExpanded,
     errorColumn,
@@ -368,6 +377,7 @@ export function ExperimentDataTable({
           downloadTable={() => setDownloadModalOpen(true)}
           onAddAnnotation={openAddAnnotationDialog}
           onDeleteAnnotations={openDeleteAnnotationsDialog}
+          canContribute={canContribute}
         />
         <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
           <Table className="w-max min-w-full">

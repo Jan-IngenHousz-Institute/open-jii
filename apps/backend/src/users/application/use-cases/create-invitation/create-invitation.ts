@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { describeAccess } from "../../../../common/utils/access-wording";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -7,6 +8,7 @@ import type { InvitationDto } from "../../../core/models/user-invitation.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
+import type { InvitationTerms } from "../../../core/repositories/user-invitation.repository";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
@@ -29,7 +31,7 @@ export class CreateInvitationUseCase {
     resourceType: "experiment",
     resourceId: string,
     email: string,
-    role: string,
+    invite: InvitationTerms,
     invitedBy: string,
   ): Promise<Result<InvitationDto>> {
     const accessResult = await this.experimentRepository.checkAccess(resourceId, invitedBy);
@@ -66,27 +68,27 @@ export class CreateInvitationUseCase {
       return success(existingResult.value);
     }
 
-    // Check if the email belongs to an existing experiment member
-    const alreadyMemberResult = await this.invitationRepository.isEmailAlreadyMember(
+    // Check whether the email already holds a grant on the experiment
+    const alreadyMemberResult = await this.invitationRepository.isEmailAlreadyGranted(
       resourceId,
       email,
     );
 
     if (alreadyMemberResult.isFailure()) {
       this.logger.error({
-        msg: "Failed to check existing membership",
+        msg: "Failed to check existing access",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "create-invitation",
         resourceType,
         resourceId,
         email,
       });
-      return failure(AppError.internal("Failed to check existing membership"));
+      return failure(AppError.internal("Failed to check existing access"));
     }
 
     if (alreadyMemberResult.value) {
       return failure(
-        AppError.conflict("Invitee is already a member of this experiment", ErrorCodes.CONFLICT),
+        AppError.conflict("Invitee already has access to this experiment", ErrorCodes.CONFLICT),
       );
     }
 
@@ -94,7 +96,7 @@ export class CreateInvitationUseCase {
       resourceType,
       resourceId,
       email,
-      role,
+      invite,
       invitedBy,
     );
 
@@ -145,7 +147,7 @@ export class CreateInvitationUseCase {
       resourceId,
       resourceNameResult.value,
       actor,
-      invitation.role,
+      describeAccess({ tier: invite.tier }),
       invitation.email,
     );
 

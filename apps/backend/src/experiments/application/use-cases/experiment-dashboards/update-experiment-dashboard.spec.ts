@@ -83,6 +83,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -131,6 +132,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: true,
+          canContribute: true,
         }),
       );
 
@@ -166,6 +168,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -190,6 +193,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -221,6 +225,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -247,6 +252,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: false,
           hasArchiveAccess: false,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -275,6 +281,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: true,
+          canContribute: true,
         }),
       );
 
@@ -315,6 +322,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -348,6 +356,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 

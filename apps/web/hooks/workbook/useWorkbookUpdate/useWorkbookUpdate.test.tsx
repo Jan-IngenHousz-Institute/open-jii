@@ -1,5 +1,5 @@
 import { orpc } from "@/lib/orpc";
-import { createWorkbook } from "@/test/factories";
+import { createWorkbook, createWorkbookDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -51,7 +51,7 @@ describe("useWorkbookUpdate", () => {
 
     const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-1", name: "Original" }));
+    queryClient.setQueryData(detailKey, createWorkbookDetail({ id: "wb-1", name: "Original" }));
 
     const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
 
@@ -69,7 +69,7 @@ describe("useWorkbookUpdate", () => {
 
     const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-1", name: "Original" }));
+    queryClient.setQueryData(detailKey, createWorkbookDetail({ id: "wb-1", name: "Original" }));
 
     const { result } = renderHook(() => useWorkbookUpdate("wb-1"), { queryClient });
 

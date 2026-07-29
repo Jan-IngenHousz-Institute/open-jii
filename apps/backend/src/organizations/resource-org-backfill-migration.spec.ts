@@ -26,6 +26,11 @@ import { TestHarness } from "../test/test-harness";
  * Owners resolve via the deterministic personal-org slug `personal-<created_by>`
  * provisioned in 0035. All statements are idempotent (IS NULL / ON CONFLICT DO
  * NOTHING).
+ *
+ * The member mirror below reads `experiment_members.role`. Nothing at runtime
+ * does that any more — the table went dormant when membership was folded into
+ * `resource_grants` — but it is still physically there, so this spec keeps
+ * exercising 0038's SQL exactly as 0038 ran it.
  */
 const OWN_EXPERIMENTS_SQL = sql`
   UPDATE "experiments" e

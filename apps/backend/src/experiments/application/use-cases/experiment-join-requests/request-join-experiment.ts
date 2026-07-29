@@ -34,7 +34,13 @@ export class RequestJoinExperimentUseCase {
     const accessCheckResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessCheckResult.chain(
-      async ({ experiment, isMember }: { experiment: ExperimentDto | null; isMember: boolean }) => {
+      async ({
+        experiment,
+        canContribute,
+      }: {
+        experiment: ExperimentDto | null;
+        canContribute: boolean;
+      }) => {
         if (!experiment) {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
@@ -49,9 +55,11 @@ export class RequestJoinExperimentUseCase {
           return failure(AppError.forbidden("This experiment is not open to join requests"));
         }
 
-        if (isMember) {
+        // Already a collaborator (an explicit grant, or an owning-org admin role):
+        // there is nothing to request. A public reader has no grant and can ask.
+        if (canContribute) {
           return failure(
-            AppError.conflict("You are already a member of this experiment", ErrorCodes.CONFLICT),
+            AppError.conflict("You already have access to this experiment", ErrorCodes.CONFLICT),
           );
         }
 

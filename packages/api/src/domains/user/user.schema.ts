@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zExperimentMemberRole, zExperimentStatus } from "../experiment/experiment.schema";
+import { zExperimentStatus } from "../experiment/experiment.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -136,12 +136,21 @@ export type DeletionBlockersResponse = z.infer<typeof zDeletionBlockersResponse>
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
 export const zInvitationResourceType = z.enum(["platform", "experiment"]);
 
+/**
+ * The access tier an invitation confers on acceptance — the two tiers the
+ * collaborators UI offers, expressed as the `resource_grants` roles they map to:
+ * `viewer` ("Can view") is read plus data contribution, `admin` ("Can edit") is
+ * full control.
+ */
+export const zInvitationTier = z.enum(["admin", "viewer"]);
+
 export const zInvitation = z.object({
   id: z.string().uuid(),
   resourceType: zInvitationResourceType,
   resourceId: z.string().uuid().nullable(),
   email: z.string().email(),
-  role: z.string(),
+  /** Access tier granted on acceptance. */
+  tier: zInvitationTier,
   status: zInvitationStatus,
   invitedBy: z.string().uuid(),
   invitedByName: z.string().optional(),
@@ -152,15 +161,16 @@ export const zInvitation = z.object({
 
 export const zInvitationList = z.array(zInvitation);
 
+/**
+ * An invitation carries exactly one choice: the access tier the invitee gets on
+ * acceptance. It defaults to the lower of the two, so an invite always confers
+ * something without having to grant full control.
+ */
 export const zCreateInvitationBody = z.object({
   resourceType: zInvitationResourceType,
   resourceId: z.string().uuid(),
   email: z.string().email("Must be a valid email address"),
-  role: zExperimentMemberRole.optional().default("member"),
-});
-
-export const zUpdateInvitationRoleBody = z.object({
-  role: zExperimentMemberRole.describe("New role to assign to the invitation"),
+  tier: zInvitationTier.default("viewer").describe("Access tier to grant on acceptance"),
 });
 
 export const zInvitationIdPathParam = z.object({
@@ -185,9 +195,9 @@ export const zMarkWhatsNewSeenBody = z.object({});
 // Invitation types
 export type InvitationStatus = z.infer<typeof zInvitationStatus>;
 export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
+export type InvitationTier = z.infer<typeof zInvitationTier>;
 export type Invitation = z.infer<typeof zInvitation>;
 export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
-export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
 export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
 export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;
 export type WhatsNewSeenResponse = z.infer<typeof zWhatsNewSeenResponse>;

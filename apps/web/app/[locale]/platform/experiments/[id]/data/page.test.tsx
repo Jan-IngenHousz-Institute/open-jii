@@ -82,6 +82,8 @@ describe("ExperimentDataPage", () => {
   const accessPayload = createExperimentAccess({
     experiment: { id: experimentId, name: "Test Experiment", status: "active" },
     isAdmin: true,
+    // An admin contributes too; uploading data is gated on that, not on isAdmin.
+    capabilities: { canContribute: true, canUpdate: true, canManage: true, canShare: true, canLeave: false },
   });
 
   const mockTablesData = [
@@ -321,6 +323,49 @@ describe("ExperimentDataPage", () => {
     await waitFor(() => {
       expect(screen.getByText("experimentData.uploadMetadata")).toBeInTheDocument();
     });
+  });
+
+  it("disables Upload Data for a reader who cannot contribute, while metadata stays admin-gated", async () => {
+    // Reading an experiment is not permission to add data to it. The route refuses
+    // it either way, so the button says so up front.
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: experimentId, name: "Test Experiment", status: "active" },
+        isAdmin: false,
+        capabilities: { canContribute: false, canUpdate: false, canManage: false, canShare: false, canLeave: false },
+      }),
+    });
+    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.uploadData")).toBeInTheDocument();
+    });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect(screen.getByText("experimentData.uploadData").closest("button")!).toBeDisabled();
+  });
+
+  it("enables Upload Data for a contributor who is not an admin", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: experimentId, name: "Test Experiment", status: "active" },
+        isAdmin: false,
+        capabilities: { canContribute: true, canUpdate: false, canManage: false, canShare: false, canLeave: false },
+      }),
+    });
+    server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
+
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.uploadData")).toBeInTheDocument();
+    });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect(screen.getByText("experimentData.uploadData").closest("button")!).toBeEnabled();
+    // ...and the experiment's own configuration stays out of reach.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect(screen.getByText("experimentData.uploadMetadata").closest("button")!).toBeDisabled();
   });
 
   it("opens metadata upload modal when clicking metadata button", async () => {

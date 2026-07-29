@@ -56,8 +56,8 @@ interface LinkedWorkbookCardProps {
   workbookId: string;
   workbookVersionId: string;
   hasAccess: boolean;
-  /** Whether the current user owns the workbook (renaming is owner-only). */
-  isWorkbookOwner?: boolean;
+  /** `can(update)` on the linked workbook — capability, not ownership. */
+  canUpdateWorkbook?: boolean;
 }
 
 export function LinkedWorkbookCard({
@@ -66,7 +66,7 @@ export function LinkedWorkbookCard({
   workbookId,
   workbookVersionId,
   hasAccess,
-  isWorkbookOwner = false,
+  canUpdateWorkbook = false,
 }: LinkedWorkbookCardProps) {
   const { t } = useTranslation("experiments");
   const { t: tWorkbook } = useTranslation("workbook");
@@ -116,7 +116,7 @@ export function LinkedWorkbookCard({
   const renameWorkbook = useWorkbookUpdate(workbookId);
   const [isRenaming, setIsRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-  const canRename = hasAccess && isWorkbookOwner;
+  const canRename = hasAccess && canUpdateWorkbook;
   const plainDescription = workbook?.description ? stripHtml(workbook.description) : "";
 
   const startRename = () => {

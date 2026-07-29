@@ -152,7 +152,7 @@ describe("ExperimentDataUploadsController", () => {
     it.each([
       {
         name: "upload data",
-        action: "manage",
+        action: "contribute",
         request: (experimentId: string, userId: string) =>
           testApp.post(`/api/v1/experiments/${experimentId}/data/uploads`).withAuth(userId),
       },
@@ -174,6 +174,48 @@ describe("ExperimentDataUploadsController", () => {
         resourceId: readableExperimentId,
         action,
       });
+    });
+
+    it("lets a contributing collaborator upload, without any admin tier", async () => {
+      // The reclassification's whole point: adding data is what a collaborator was
+      // invited to do, so it must not require the tier that administers sharing.
+      const collaboratorId = await testApp.createTestUser({});
+      await testApp.addExperimentCollaborator(readableExperimentId, collaboratorId);
+      vi.spyOn(uploadDataUseCase, "execute").mockResolvedValue(
+        success({
+          uploadId: "u-3",
+          sourceKind: "csv",
+          uploadTableName: "leaf_traits",
+          runId: 7,
+          files: [{ fileName: "data.csv", filePath: "/Volumes/x/y" }],
+        }),
+      );
+
+      await testApp
+        .post(`/api/v1/experiments/${readableExperimentId}/data/uploads`)
+        .withAuth(collaboratorId)
+        .field("sourceKind", "csv")
+        .field("targetKind", "new")
+        .field("targetName", "leaf_traits")
+        .attach("files", Buffer.from("a,b\n1,2\n"), "data.csv")
+        .expect(201);
+    });
+
+    it("refuses a plain member of the owning organization", async () => {
+      // Read access through org membership is not an invitation to write data into
+      // someone else's experiment.
+      const orgId = await testApp.personalOrganizationId(testUserId);
+      const orgMemberId = await testApp.createTestUser({});
+      await testApp.addOrganizationMember(orgId, orgMemberId, "member");
+
+      await testApp
+        .post(`/api/v1/experiments/${readableExperimentId}/data/uploads`)
+        .withAuth(orgMemberId)
+        .field("sourceKind", "csv")
+        .field("targetKind", "new")
+        .field("targetName", "leaf_traits")
+        .attach("files", Buffer.from("a,b\n1,2\n"), "data.csv")
+        .expect(403);
     });
   });
 });

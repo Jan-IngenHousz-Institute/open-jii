@@ -13,10 +13,14 @@ import {
   personalOrgSlug,
   personalOrgName,
   ensurePersonalOrganization,
+  and,
+  createSecondaryDatabase,
   eq,
+  inArray,
+  resourceGrants,
 } from "@repo/database";
 
-import { assertSuccess } from "../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { UserRepository } from "./user.repository";
 
@@ -359,6 +363,29 @@ describe("UserRepository", () => {
       expect(inactiveResult.value.some((user) => user.firstName === "Ghosty")).toBe(false);
       expect(deletedResult.value.some((user) => user.firstName === "Removed")).toBe(false);
     });
+
+    it("excludes deactivated and soft-deleted users from the no-query listing too", async () => {
+      const inactive = await testApp.createTestUser({
+        name: "Ghosty Inactive",
+        email: "inactive-noquery@example.com",
+        activated: false,
+      });
+      const removed = await testApp.createTestUser({
+        name: "Removed Person",
+        email: "removed-noquery@example.com",
+        deletedAt: new Date(),
+      });
+
+      // The empty-query branch previously applied no visibility predicates at
+      // all, listing every profile including deactivated/soft-deleted ones.
+      const result = await repository.search({ limit: 100 });
+
+      assertSuccess(result);
+      const ids = result.value.map((u) => u.userId);
+      expect(ids).not.toContain(inactive);
+      expect(ids).not.toContain(removed);
+      expect(ids).toContain(testUserId);
+    });
   });
 
   describe("update", () => {
@@ -422,7 +449,7 @@ describe("UserRepository", () => {
       });
 
       // Add second admin (first admin is added automatically by createExperiment)
-      await testApp.addExperimentMember(experiment.id, admin2Id, "admin");
+      await testApp.addExperimentAdmin(experiment.id, admin2Id);
 
       // Act
       const result = await repository.isOnlyAdminOfAnyExperiments(admin1Id);
@@ -448,7 +475,7 @@ describe("UserRepository", () => {
       });
 
       // Add a regular member (solo admin is already added by createExperiment)
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       // Act
       const result = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
@@ -479,7 +506,7 @@ describe("UserRepository", () => {
         name: "Shared Admin Experiment",
         userId: userId,
       });
-      await testApp.addExperimentMember(experiment2.id, otherAdminId, "admin");
+      await testApp.addExperimentAdmin(experiment2.id, otherAdminId);
 
       // Act
       const result = await repository.isOnlyAdminOfAnyExperiments(userId);
@@ -507,7 +534,7 @@ describe("UserRepository", () => {
 
       // A second admin exists but is deactivated, so the active user is effectively the sole
       // admin and deletion must stay blocked.
-      await testApp.addExperimentMember(experiment.id, deactivatedAdminId, "admin");
+      await testApp.addExperimentAdmin(experiment.id, deactivatedAdminId);
 
       // Act
       const result = await repository.isOnlyAdminOfAnyExperiments(activeAdminId);
@@ -533,7 +560,7 @@ describe("UserRepository", () => {
       });
 
       // Add member (admin is already added by createExperiment)
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       // Act
       const result = await repository.isOnlyAdminOfAnyExperiments(memberId);
@@ -542,6 +569,59 @@ describe("UserRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toBe(false);
+    });
+
+    // The query moved from `experiment_members.role='admin'` to direct admin/owner
+    // user grants. These pin down the edges of that source.
+    it("ignores an organization grant — it is not an answerable owner", async () => {
+      const soloAdminId = await testApp.createTestUser({ email: "solo-org@example.com" });
+      const orgMemberId = await testApp.createTestUser({ email: "org-member@example.com" });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Org-granted Experiment",
+        userId: soloAdminId,
+      });
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, orgMemberId, "admin");
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "organization",
+        granteeId: orgId,
+        role: "admin",
+      });
+
+      // The org grant confers admin capability through can(), but it does not make
+      // any individual accountable, so the sole admin stays blocked.
+      const soleAdmin = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
+      assertSuccess(soleAdmin);
+      expect(soleAdmin.value).toBe(true);
+
+      // ...and it does not turn the org's members into blocked admins either.
+      const viaOrg = await repository.isOnlyAdminOfAnyExperiments(orgMemberId);
+      assertSuccess(viaOrg);
+      expect(viaOrg.value).toBe(false);
+    });
+
+    it("does not count a contributing collaborator as an admin", async () => {
+      const soloAdminId = await testApp.createTestUser({ email: "solo-mirror@example.com" });
+      const contributorId = await testApp.createTestUser({ email: "mirror@example.com" });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Contributor Only Experiment",
+        userId: soloAdminId,
+      });
+      // A `member` grant contributes; only `admin`/`owner` staff an experiment, so
+      // this collaborator is not what stands between it and having no admin.
+      await testApp.addExperimentCollaborator(experiment.id, contributorId);
+
+      const result = await repository.isOnlyAdminOfAnyExperiments(contributorId);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+
+      const soleAdmin = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
+      assertSuccess(soleAdmin);
+      expect(soleAdmin.value).toBe(true);
     });
   });
 
@@ -1064,6 +1144,138 @@ describe("UserRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toBeNull();
+    });
+  });
+
+  /**
+   * The sole-admin blocker in `DeleteUserUseCase` runs *outside* the deletion
+   * transaction, so on its own it is raceable: the last two admins of an experiment
+   * deleting concurrently would both observe a second admin and both commit, leaving
+   * the experiment unstaffed. `delete` re-checks inside its transaction under the
+   * same `SELECT … FOR UPDATE` the sharing guard uses.
+   *
+   * Verified to have teeth: removing the in-transaction guard makes three of the
+   * four cases below fail, the race included.
+   */
+  describe("delete re-checks the sole-admin invariant inside its transaction", () => {
+    const staffingGrantCount = async (experimentId: string) => {
+      const rows = await testApp.database
+        .select({ id: resourceGrants.id })
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+            eq(resourceGrants.granteeType, "user"),
+            inArray(resourceGrants.role, ["owner", "admin"]),
+          ),
+        );
+      return rows.length;
+    };
+
+    it("refuses a deletion that would leave an experiment with no admin", async () => {
+      const soloAdmin = await testApp.createTestUser({ email: "solo-n2@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Solo Admin N2",
+        userId: soloAdmin,
+      });
+
+      // The pre-flight blocker is bypassed here on purpose — this asserts the
+      // in-transaction guard is itself sufficient.
+      const result = await repository.delete(soloAdmin);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only admin");
+      // Nothing was applied: the whole transaction rolled back.
+      expect(await staffingGrantCount(experiment.id)).toBe(1);
+      const [stillThere] = await testApp.database
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, soloAdmin));
+      expect(stillThere.name).not.toBe("Deleted User");
+    });
+
+    it("allows a deletion while another activated admin remains", async () => {
+      const leaving = await testApp.createTestUser({ email: "leaving-n2@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Co-admin N2",
+        userId: leaving,
+      });
+      const coAdmin = await testApp.createTestUser({ email: "co-admin-n2@example.com" });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: coAdmin,
+        role: "admin",
+      });
+
+      assertSuccess(await repository.delete(leaving));
+
+      // The remaining admin keeps the experiment staffed.
+      expect(await staffingGrantCount(experiment.id)).toBe(1);
+    });
+
+    it("refuses when the only other admin is deactivated", async () => {
+      const activeAdmin = await testApp.createTestUser({ email: "active-n2@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Deactivated Co-admin N2",
+        userId: activeAdmin,
+      });
+      const deactivated = await testApp.createTestUser({
+        email: "deactivated-n2@example.com",
+        activated: false,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: deactivated,
+        role: "admin",
+      });
+
+      // Same rule as the pre-flight check: a deactivated account cannot administer
+      // an experiment, so it does not keep one staffed.
+      const result = await repository.delete(activeAdmin);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only admin");
+    });
+
+    it("survives two of the last two admins deleting concurrently", async () => {
+      // Across two connections so the deletions genuinely overlap and the row lock
+      // is what serializes them.
+      const secondary = createSecondaryDatabase();
+      try {
+        const secondaryRepo = new UserRepository(secondary.database);
+
+        const adminA = await testApp.createTestUser({ email: "race-a-n2@example.com" });
+        const { experiment } = await testApp.createExperiment({
+          name: "Deletion Race N2",
+          userId: adminA,
+        });
+        const adminB = await testApp.createTestUser({ email: "race-b-n2@example.com" });
+        await testApp.addResourceGrant({
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          granteeType: "user",
+          granteeId: adminB,
+          role: "admin",
+        });
+        expect(await staffingGrantCount(experiment.id)).toBe(2);
+
+        const outcomes = await Promise.all([
+          secondaryRepo.delete(adminA),
+          repository.delete(adminB),
+        ]);
+
+        // Exactly one deletion may win; the other must be refused so the experiment
+        // keeps an admin.
+        expect(outcomes.filter((r) => r.isSuccess())).toHaveLength(1);
+        expect(await staffingGrantCount(experiment.id)).toBe(1);
+      } finally {
+        await secondary.close();
+      }
     });
   });
 });

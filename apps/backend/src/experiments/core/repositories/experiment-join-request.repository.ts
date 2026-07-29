@@ -5,9 +5,11 @@ import {
   desc,
   eq,
   experimentJoinRequests,
-  experimentMembers,
+  inArray,
   profiles,
   resourceGrants,
+  STAFFING_GRANT_ROLES,
+  upsertGrant,
   users,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -19,10 +21,18 @@ import {
   getAnonymizedEmail,
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
+import { assertExperimentStaysStaffed } from "../../../sharing/experiment-staffing";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
 } from "../models/experiment-join-request.model";
+
+/**
+ * The tier an approved join request confers: read plus data contribution —
+ * "viewer", the same role the sharing UI writes for "Can view", so approved
+ * requesters are indistinguishable from directly-added collaborators.
+ */
+const JOIN_APPROVAL_GRANT_ROLE = "viewer";
 
 const joinRequestSelectFields = {
   id: experimentJoinRequests.id,
@@ -131,8 +141,18 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Approve a join request: mark approved AND insert into experimentMembers atomically.
-   * If the user is somehow already a member, the member insert is a no-op.
+   * Approve a join request: mark it approved AND grant the requester access,
+   * atomically.
+   *
+   * Approval hands out the **read-and-contribute tier** ("Can view"), which is
+   * what joining an experiment means: the requester can open it and add
+   * measurements and annotations, but not change the experiment or share it.
+   *
+   * The staffing guard runs inside this transaction rather than through the
+   * sharing repository's own guarded write, because that would open a second
+   * transaction and cost the approve its atomicity. Same guard, same locked row
+   * set — the upsert can in principle lower an existing role, so it passes the
+   * check like every other direct-grant write.
    */
   async approve(
     requestId: string,
@@ -151,27 +171,21 @@ export class ExperimentJoinRequestRepository {
           })
           .where(eq(experimentJoinRequests.id, requestId));
 
-        await tx
-          .insert(experimentMembers)
-          .values({
-            experimentId,
-            userId: requesterUserId,
-            role: "member",
-          })
-          .onConflictDoNothing();
+        await assertExperimentStaysStaffed(tx, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          target: { by: "grantee", granteeType: "user", granteeId: requesterUserId },
+          nextRole: JOIN_APPROVAL_GRANT_ROLE,
+        });
 
-        // Mirror the membership into resource_grants so can() authorizes the
-        // new member (read). experiment_members stays the contributor layer.
-        await tx
-          .insert(resourceGrants)
-          .values({
-            resourceType: "experiment",
-            resourceId: experimentId,
-            granteeType: "user",
-            granteeId: requesterUserId,
-            role: "member",
-          })
-          .onConflictDoNothing();
+        await upsertGrant(tx, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          granteeType: "user",
+          granteeId: requesterUserId,
+          role: JOIN_APPROVAL_GRANT_ROLE,
+          createdBy: decidedBy,
+        });
       });
 
       const result = await this.database
@@ -214,18 +228,25 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Returns email addresses of all admins of the experiment.
+   * Returns email addresses of all admins of the experiment — the people who can
+   * decide a join request, so they are the ones notified when one arrives.
+   *
+   * Sourced from user grants with role `admin`/`owner`.
+   * Team/organization grants are excluded on purpose — there is no individual
+   * mailbox behind them.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
       const result = await this.database
         .select({ email: users.email })
-        .from(experimentMembers)
-        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .from(resourceGrants)
+        .innerJoin(users, eq(resourceGrants.granteeId, users.id))
         .where(
           and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.role, "admin"),
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+            eq(resourceGrants.granteeType, "user"),
+            inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
           ),
         );
 

@@ -24,10 +24,29 @@ import {
  */
 export type ResourceType = "experiment" | "protocol" | "macro" | "workbook" | "device";
 
-/** Actions a role may hold on a resource. */
-const ACTIONS = ["read", "update", "share", "manage"] as const;
+/**
+ * Actions a role may hold on a resource.
+ *
+ * `contribute` means "add or alter the resource's data" — for an experiment,
+ * measurements and annotations. It is deliberately weaker than `update` (which
+ * covers the resource's own content and settings) and stronger than `read`:
+ * contributing is what a collaborator is invited to an experiment to do, while
+ * merely being able to see an experiment must never imply writing data into it.
+ *
+ * Only experiments have data to contribute to, so only they hand `contribute` out
+ * at the read tier. It stays in the statement for every resource type — Better Auth
+ * needs one literal action list, and full-control roles hold every verb regardless —
+ * in the same way devices carry a `share` action with no sharing surface yet.
+ */
+const ACTIONS = ["read", "contribute", "update", "share", "manage"] as const;
 
 export type ResourceAction = (typeof ACTIONS)[number];
+
+/** Read-only: see the resource, write nothing. */
+const READ_ONLY = ["read"] as const;
+
+/** Read plus data contribution, but no control over the resource itself. */
+const READ_AND_CONTRIBUTE = ["read", "contribute"] as const;
 
 /**
  * Better Auth's default org statement (`organization`/`member`/`invitation`/
@@ -72,15 +91,48 @@ export const roles = {
   }),
   member: ac.newRole({
     ...memberAc.statements,
-    experiment: ["read"],
-    protocol: ["read"],
-    macro: ["read"],
-    workbook: ["read"],
-    device: ["read"],
+    experiment: READ_ONLY,
+    protocol: READ_ONLY,
+    macro: READ_ONLY,
+    workbook: READ_ONLY,
+    device: READ_ONLY,
   }),
 } as const;
 
 export type OrgRole = keyof typeof roles;
+
+/**
+ * Per-resource **grant** roles — a separate matrix from the org roles above,
+ * because the two disagree about the middle tier on purpose.
+ *
+ * A grant is somebody deliberately handing you a resource, so on an experiment the
+ * lowest grant tier ("Can view") carries `contribute`: being added to an experiment
+ * is what makes you a contributor to it. Belonging to the owning organization is not
+ * the same act — an org `member` gets read only, and so does a public experiment's
+ * passer-by. Both of those tiers must stay unable to write data, which is exactly
+ * why grant `member`/`viewer` cannot be aliased onto the org `member` role the way
+ * it was when both meant read-only.
+ *
+ * `owner`/`admin` mean full control in both matrices, so they are shared.
+ */
+const grantRoles = {
+  owner: roles.owner,
+  admin: roles.admin,
+  member: ac.newRole({
+    ...memberAc.statements,
+    experiment: READ_AND_CONTRIBUTE,
+    // Only experiments have data to contribute. The read tier says "may add data"
+    // where that means something and stays silent elsewhere, so a future generic
+    // surface cannot read a promise out of it that nothing enforces. `owner`/
+    // `admin` carry the verb everywhere simply because they carry every verb.
+    protocol: READ_ONLY,
+    macro: READ_ONLY,
+    workbook: READ_ONLY,
+    device: READ_ONLY,
+  }),
+} as const;
+
+type GrantRoleKey = keyof typeof grantRoles;
 
 /**
  * Whether an org `role` (as stored on `organization_members.role`, possibly a
@@ -109,10 +161,14 @@ export function orgRoleCan(
 
 /**
  * Whether a per-resource **grant** role permits `action` on `resourceType`.
- * Grant roles are binary: `owner`/`admin` = full control (read/update/share/
- * manage), `member`/`viewer` = read-only. Evaluated against the same `ac`
- * matrix (grant `viewer` maps to the read-only `member` role). This is the
- * grant-tier logic Better Auth can't model, kept out of the org-role matrix.
+ *
+ * Two tiers, as the collaborators picker presents them:
+ * - `member`/`viewer` ("Can view") → `read`, plus `contribute` on an experiment;
+ * - `owner`/`admin` ("Can edit") → everything.
+ *
+ * Evaluated against {@link grantRoles}, not the org matrix — see the note there
+ * for why the middle tier has to differ. This is the grant-tier logic Better Auth
+ * cannot model, kept out of the org-role matrix.
  */
 export function grantRoleCan(
   role: string | null | undefined,
@@ -120,6 +176,16 @@ export function grantRoleCan(
   action: ResourceAction,
 ): boolean {
   if (!role) return false;
-  const normalized = role === "viewer" ? "member" : role;
-  return orgRoleCan(normalized, resourceType, action);
+  const request = { [resourceType]: [action] } as Record<ResourceType, ResourceAction[]>;
+  return role
+    .split(",")
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .some((token) => {
+      // `viewer` is the picker's name for the read+contribute tier.
+      const normalized = token === "viewer" ? "member" : token;
+      // Ignore unknown tokens (e.g. a stale or renamed role).
+      if (!(normalized in grantRoles)) return false;
+      return grantRoles[normalized as GrantRoleKey].authorize(request).success;
+    });
 }
