@@ -57,7 +57,13 @@ export function mobileDeviceAttributedLabel(
 }
 
 interface SecondaryLabels {
-  measurementDevice: string;
+  /**
+   * Role label for the measurement-device role. Omit it to suppress the role
+   * line entirely — pre-identity surfaces (the nearby scan list) shouldn't
+   * assert a role that hasn't been confirmed, and dropping it keeps the
+   * identifier fully visible instead of pushed off-screen.
+   */
+  measurementDevice?: string;
   identifier: (id: string) => string;
 }
 
@@ -75,7 +81,9 @@ export function mobileDeviceSecondaryParts(
   ) {
     parts.push(presentation.productName);
   }
-  if (presentation.roles.includes("measurement-device")) parts.push(labels.measurementDevice);
+  if (labels.measurementDevice && presentation.roles.includes("measurement-device")) {
+    parts.push(labels.measurementDevice);
+  }
   if (presentation.id) parts.push(labels.identifier(presentation.id));
   return parts;
 }
