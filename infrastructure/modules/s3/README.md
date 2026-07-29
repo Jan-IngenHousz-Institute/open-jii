@@ -165,6 +165,7 @@ For even higher security requirements:
 | `tags`                        | Tags to apply to all resources                             | `map(string)` | `{}`    |  ❌ No   |
 | `cloudfront_distribution_arn` | Optional: ARN of CloudFront distribution for bucket access | `string`      | `null`  |  ❌ No   |
 | `custom_policy_json`          | Optional: A custom bucket policy JSON document             | `string`      | `null`  |  ❌ No   |
+| `elb_log_delivery_prefixes`   | Optional: key prefixes (one per ELB) to grant ELB log-delivery write access | `list(string)` | `[]`  |  ❌ No   |
 
 ## 📤 Outputs
 

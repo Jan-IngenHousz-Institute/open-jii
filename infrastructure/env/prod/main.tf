@@ -40,6 +40,9 @@ module "logs_bucket" {
   # Configure for logging purposes
   enable_versioning = false
 
+  # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
+  elb_log_delivery_prefixes = ["backend-alb-logs"]
+
   tags = {
     Environment = "prod"
     Project     = "open-jii"
@@ -1609,7 +1612,7 @@ module "backend_alb" {
   cloudfront_header_value = var.api_cloudfront_header_value
 
   # Enable access logs for better security and troubleshooting
-  enable_access_logs = false
+  enable_access_logs = true
   access_logs_bucket = module.logs_bucket.bucket_id
 
   tags = {

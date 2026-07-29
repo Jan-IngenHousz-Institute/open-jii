@@ -33,6 +33,12 @@ variable "custom_policy_json" {
   default     = null
 }
 
+variable "elb_log_delivery_prefixes" {
+  description = "Optional: S3 key prefixes (one per ELB) to grant the ELB log-delivery service write access under. Empty list skips the policy."
+  type        = list(string)
+  default     = []
+}
+
 variable "enable_crr" {
   description = "Enable Cross-Region Replication to a DR region bucket"
   type        = bool
