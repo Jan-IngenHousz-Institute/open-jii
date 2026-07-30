@@ -4,6 +4,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { sharingContract } from "@repo/api/domains/sharing/sharing.contract";
+import { sharingTransferAdminContract } from "@repo/api/domains/sharing/transfer-admin/sharing-transfer-admin.contract";
 
 import { formatDatesList } from "../common/utils/date-formatter";
 import { throwOrpcFailure } from "../common/utils/orpc-fp";
@@ -12,6 +13,7 @@ import { LeaveResourceUseCase } from "./use-cases/leave-resource";
 import { ListGrantsUseCase } from "./use-cases/list-grants";
 import { RevokeGrantUseCase } from "./use-cases/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "./use-cases/search-grantee-organizations";
+import { TransferResourceAdminUseCase } from "./use-cases/transfer-resource-admin";
 import { UpdateGrantUseCase } from "./use-cases/update-grant";
 
 /**
@@ -29,6 +31,7 @@ export class SharingController {
     private readonly updateGrantUseCase: UpdateGrantUseCase,
     private readonly leaveResourceUseCase: LeaveResourceUseCase,
     private readonly revokeGrantUseCase: RevokeGrantUseCase,
+    private readonly transferResourceAdminUseCase: TransferResourceAdminUseCase,
     private readonly searchGranteeOrganizationsUseCase: SearchGranteeOrganizationsUseCase,
   ) {}
 
@@ -113,6 +116,28 @@ export class SharingController {
       }
       return throwOrpcFailure(result, this.logger);
     });
+  }
+
+  /**
+   * Bulk admin hand-off, used to clear account-deletion blockers. Authorization is
+   * per-transfer inside the use case (the caller must be able to share each
+   * resource named), so there is no route-level `@CanAccess`: one request spans
+   * several resources, of several types.
+   */
+  @Implement(sharingTransferAdminContract.transferResourceAdmin)
+  transferResourceAdmin(@Session() session: UserSession) {
+    return implement(sharingTransferAdminContract.transferResourceAdmin).handler(
+      async ({ input }) => {
+        const result = await this.transferResourceAdminUseCase.execute(
+          input.transfers,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return { results: result.value };
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   /**

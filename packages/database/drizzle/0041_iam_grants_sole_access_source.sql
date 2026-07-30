@@ -1,6 +1,6 @@
 -- ============================================================================
--- Data migration: make `resource_grants` the sole source of access to an
--- experiment.
+-- Data migration: make `resource_grants` the sole source of *explicit* access to
+-- a shared resource.
 --
 -- Until now two things could confer experiment access: a row in
 -- `experiment_members` (mirrored into `resource_grants` by 0039 and by the runtime
@@ -9,21 +9,26 @@
 -- has to get one now, or they would silently lose access the moment the roster
 -- stops being consulted.
 --
+-- Answerability for a resource comes from **owning it**, not from holding a grant
+-- on it: the owning organization's owners are the people responsible for it, and
+-- they are resolved from `organization_id` at read time. A creator therefore gets
+-- no grant of their own — see statement 2.
+--
 -- No DDL: `resource_grants` already has the shape this model needs (one row per
 -- resource + grantee, carrying a role). This migration only moves data.
 --
 -- Folded into the migration rather than a hand-run script so it applies
--- automatically and atomically on db:migrate in every environment. Both
--- statements are set-based and safe to re-apply *immediately* — a half-applied
--- migration can be run again and lands in the same place (ON CONFLICT DO NOTHING
--- on the insert, a predicate the delete narrows to nothing once it has run).
+-- automatically and atomically on db:migrate in every environment. Statement 1 is
+-- a set-based INSERT with ON CONFLICT DO NOTHING and statement 2 is a set-based
+-- DELETE, so a half-applied migration can be run again and lands in exactly the
+-- same place.
 --
--- That is not the same as being a no-op forever. Step 1 inserts where a grant is
--- absent, so if it were re-run long after the app went live it would restore a
--- grant that had since been revoked, for anyone still sitting in the dormant
--- roster. Nothing here prevents that: what does is drizzle's journal, which
--- applies each migration exactly once per database. Re-application requires
--- editing that journal by hand, and whoever does that owns the consequence.
+-- That is not the same as being a no-op forever. Statement 1 inserts where a grant
+-- is absent, so if it were re-run long after the app went live it would restore a
+-- roster member's access that had since been revoked. Nothing here prevents that:
+-- what does is drizzle's journal, which applies each migration exactly once per
+-- database. Re-application requires editing that journal by hand, and whoever does
+-- that owns the consequence.
 --
 -- `experiment_members` is only ever READ here. The table and its rows are left
 -- physically untouched, with their data frozen.
@@ -54,17 +59,52 @@ WHERE NOT EXISTS (
     AND p."deleted_at" IS NOT NULL
 )
 ON CONFLICT DO NOTHING;--> statement-breakpoint
--- 2. Delete the creator self-grants 0039 wrote on macro/protocol/workbook. Those
---    rows have grantee_id = created_by and role 'admin' (the creator granting
---    themselves). They are redundant with the personal-org owner role and would
---    otherwise surface as a phantom "collaborator" in the sharing UI — old
---    resources would show a collaborator that newly created ones never get. Safe
---    because the only grants that exist on these three types are exactly these
---    creator self-grants: no sharing write-path existed when they were written.
---    Devices are left untouched — device sharing has no surface yet, so nothing
---    lists their grants.
-DELETE FROM "resource_grants"
-WHERE "resource_type" IN ('macro', 'protocol', 'workbook')
-  AND "grantee_type" = 'user'
-  AND "role" = 'admin'
-  AND "grantee_id" = "created_by";
+-- 2. Delete the creators' own grants on the four shareable types, so no creator is
+--    a collaborator on their own resource. Access and answerability both follow
+--    from the owning organization: its owners hold every action through the org
+--    role, and the collaborators surface renders them as a synthesized "Owner"
+--    row. A creator grant on top of that conferred nothing and rendered twice —
+--    once as the owner, once as an ordinary "Can edit" collaborator.
+--
+--    Covers all four types so they behave identically. On experiments this also
+--    removes the creator's admin grant that statement 1 just re-created from the
+--    dormant roster (the creator was a roster admin), which is why the order
+--    matters: insert the roster first, then strip the creator back out.
+--
+--    The `organization_members` guard is what makes this provably access-neutral,
+--    and it is not a formality: `organization_id` is nullable, and rows predating
+--    the 0039/0040 org backfill still carry NULL. On those the creator's grant is
+--    their *only* access — there is no owning org to inherit it from and no owner
+--    row to render — so the guard leaves it in place. Same for a creator who
+--    holds only `member` in a shared owning org: `member` is read-only, so their
+--    grant is doing real work and is kept. Only a creator who already has full
+--    control through the org (`owner`/`admin`, the two roles the access matrix
+--    gives every action) loses the redundant row.
+--
+--    No role filter on the grant itself: whatever tier it carries, it is
+--    redundant once the org role covers everything, and leaving a creator behind
+--    as a "Can view" collaborator on their own resource is exactly the phantom
+--    row this removes.
+--
+--    Devices are left untouched — they have no sharing surface, so nothing lists
+--    their grants.
+DELETE FROM "resource_grants" g
+USING (
+  SELECT 'experiment'::"resource_type" AS "resource_type", e."id", e."created_by", e."organization_id" FROM "experiments" e
+  UNION ALL
+  SELECT 'macro'::"resource_type", m."id", m."created_by", m."organization_id" FROM "macros" m
+  UNION ALL
+  SELECT 'protocol'::"resource_type", p."id", p."created_by", p."organization_id" FROM "protocols" p
+  UNION ALL
+  SELECT 'workbook'::"resource_type", w."id", w."created_by", w."organization_id" FROM "workbooks" w
+) r
+WHERE g."resource_type" = r."resource_type"
+  AND g."resource_id" = r."id"
+  AND g."grantee_type" = 'user'
+  AND g."grantee_id" = r."created_by"
+  AND EXISTS (
+    SELECT 1 FROM "organization_members" om
+    WHERE om."organization_id" = r."organization_id"
+      AND om."user_id" = r."created_by"
+      AND om."role" IN ('owner', 'admin')
+  );

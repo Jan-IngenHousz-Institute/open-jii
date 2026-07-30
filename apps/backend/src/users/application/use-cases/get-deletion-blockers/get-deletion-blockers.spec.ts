@@ -42,7 +42,81 @@ describe("GetDeletionBlockersUseCase", () => {
 
     assertSuccess(result);
     expect(result.value).toHaveLength(1);
-    expect(result.value[0]).toMatchObject({ id: experiment.id, name: experiment.name });
+    expect(result.value[0]).toMatchObject({
+      resourceType: "experiment",
+      id: experiment.id,
+      name: experiment.name,
+    });
+  });
+
+  // All four types are created with a creator admin grant, so all four can end up
+  // with a single named admin and block the deletion.
+  it.each([
+    [
+      "macro" as const,
+      () => testApp.createMacro({ name: `Macro ${crypto.randomUUID()}`, createdBy: testUserId }),
+    ],
+    [
+      "protocol" as const,
+      () =>
+        testApp.createProtocol({ name: `Protocol ${crypto.randomUUID()}`, createdBy: testUserId }),
+    ],
+    [
+      "workbook" as const,
+      () =>
+        testApp.createWorkbook({ name: `Workbook ${crypto.randomUUID()}`, createdBy: testUserId }),
+    ],
+  ])("returns a %s where the user is the only admin", async (resourceType, create) => {
+    const resource = await create();
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      {
+        resourceType,
+        id: resource.id,
+        name: resource.name,
+        // Only experiments carry a lifecycle status.
+        status: null,
+        candidates: [],
+      },
+    ]);
+  });
+
+  it("does not block a macro that has a second admin", async () => {
+    const macro = await testApp.createMacro({
+      name: `Co-owned Macro ${crypto.randomUUID()}`,
+      createdBy: testUserId,
+    });
+    const otherAdminId = await testApp.createTestUser({ email: "macro-admin@example.com" });
+    await testApp.addResourceAdmin("macro", macro.id, otherAdminId);
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([]);
+  });
+
+  it("offers a macro's other collaborators as transfer candidates", async () => {
+    const macro = await testApp.createMacro({
+      name: `Shared Macro ${crypto.randomUUID()}`,
+      createdBy: testUserId,
+    });
+    const viewerId = await testApp.createTestUser({ email: "macro-viewer@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "user",
+      granteeId: viewerId,
+      role: "viewer",
+    });
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0].candidates.map((c) => c.userId)).toEqual([viewerId]);
   });
 
   it("includes archived experiments as blockers", async () => {

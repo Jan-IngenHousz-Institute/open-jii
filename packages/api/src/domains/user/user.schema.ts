@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { zExperimentStatus } from "../experiment/experiment.schema";
+import { zSharingResourceType } from "../sharing/sharing.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -116,18 +117,21 @@ export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookRes
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 
-// An experiment blocks account deletion when the user is its only admin. Each blocker carries
-// that experiment's other members (as user metadata) so the delete dialog can suggest who to
-// hand admin to, per experiment.
+// A shared resource blocks account deletion when the user is its only admin — any of the four
+// types, since every one of them is created with a creator admin grant. Each blocker carries that
+// resource's other collaborators (as user metadata) so the delete dialog can suggest who to hand
+// admin to, per resource.
 export const zDeletionBlocker = z.object({
+  resourceType: zSharingResourceType,
   id: z.string().uuid(),
   name: z.string(),
-  status: zExperimentStatus,
+  // Only experiments have a lifecycle status; the delete dialog badges it when present.
+  status: zExperimentStatus.nullable(),
   candidates: z.array(zUserMetadata),
 });
 
 export const zDeletionBlockersResponse = z.object({
-  experiments: z.array(zDeletionBlocker),
+  resources: z.array(zDeletionBlocker),
 });
 
 export type DeletionBlocker = z.infer<typeof zDeletionBlocker>;

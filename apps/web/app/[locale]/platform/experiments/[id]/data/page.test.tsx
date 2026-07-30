@@ -83,7 +83,13 @@ describe("ExperimentDataPage", () => {
     experiment: { id: experimentId, name: "Test Experiment", status: "active" },
     isAdmin: true,
     // An admin contributes too; uploading data is gated on that, not on isAdmin.
-    capabilities: { canContribute: true, canUpdate: true, canManage: true, canShare: true, canLeave: false },
+    capabilities: {
+      canContribute: true,
+      canUpdate: true,
+      canManage: true,
+      canShare: true,
+      canLeave: false,
+    },
   });
 
   const mockTablesData = [
@@ -332,7 +338,13 @@ describe("ExperimentDataPage", () => {
       body: createExperimentAccess({
         experiment: { id: experimentId, name: "Test Experiment", status: "active" },
         isAdmin: false,
-        capabilities: { canContribute: false, canUpdate: false, canManage: false, canShare: false, canLeave: false },
+        capabilities: {
+          canContribute: false,
+          canUpdate: false,
+          canManage: false,
+          canShare: false,
+          canLeave: false,
+        },
       }),
     });
     server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });
@@ -351,7 +363,13 @@ describe("ExperimentDataPage", () => {
       body: createExperimentAccess({
         experiment: { id: experimentId, name: "Test Experiment", status: "active" },
         isAdmin: false,
-        capabilities: { canContribute: true, canUpdate: false, canManage: false, canShare: false, canLeave: false },
+        capabilities: {
+          canContribute: true,
+          canUpdate: false,
+          canManage: false,
+          canShare: false,
+          canLeave: false,
+        },
       }),
     });
     server.mount(contract.experiments.getExperimentTables, { body: mockTablesData });

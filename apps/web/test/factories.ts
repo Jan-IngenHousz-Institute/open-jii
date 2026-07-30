@@ -40,7 +40,7 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
-import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
@@ -263,8 +263,10 @@ export function createCapabilities(
     canUpdate: true,
     canManage: true,
     canShare: true,
-    // Full control usually comes from an org role, not a grant row of one's own.
-    canLeave: false,
+    // Creation seeds the creator's own admin grant on every shareable type, so the
+    // common case does have a row to give up (the leave affordance still only shows
+    // below `share`, and the server refuses a last admin's departure).
+    canLeave: true,
     ...overrides,
   };
 }
@@ -302,6 +304,7 @@ let grantSeq = 0;
 export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): ResourceGrantDto {
   grantSeq++;
   return {
+    kind: "grant",
     id: `grant-${grantSeq}`,
     resourceType: "experiment",
     resourceId: "resource-1",
@@ -315,6 +318,27 @@ export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): 
       type: "user",
       displayName: "Grace Hopper",
       email: "grace@example.com",
+      avatarUrl: null,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * An owner row as the collaborators endpoint synthesizes it from the resource's
+ * owning organization. Carries no grant id and no role — there is nothing to
+ * change or revoke on it.
+ */
+export function createResourceOwner(overrides: Partial<ResourceOwnerDto> = {}): ResourceOwnerDto {
+  grantSeq++;
+  return {
+    kind: "owner",
+    granteeType: "user",
+    granteeId: `owner-${grantSeq}`,
+    grantee: {
+      type: "user",
+      displayName: "Ada Lovelace",
+      email: "ada@example.com",
       avatarUrl: null,
     },
     ...overrides,

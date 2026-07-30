@@ -21,7 +21,10 @@ import {
   getAnonymizedEmail,
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
-import { assertExperimentStaysStaffed } from "../../../sharing/experiment-staffing";
+import {
+  assertResourceStaysStaffed,
+  findOwningOrgOwnerIds,
+} from "../../../sharing/resource-staffing";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
@@ -171,7 +174,7 @@ export class ExperimentJoinRequestRepository {
           })
           .where(eq(experimentJoinRequests.id, requestId));
 
-        await assertExperimentStaysStaffed(tx, {
+        await assertResourceStaysStaffed(tx, {
           resourceType: "experiment",
           resourceId: experimentId,
           target: { by: "grantee", granteeType: "user", granteeId: requesterUserId },
@@ -228,29 +231,48 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Returns email addresses of all admins of the experiment — the people who can
-   * decide a join request, so they are the ones notified when one arrives.
+   * Returns email addresses of everyone who can decide a join request, so they are
+   * the ones notified when one arrives: the holders of an admin/owner user grant
+   * **plus the living owners of the experiment's owning organization**.
    *
-   * Sourced from user grants with role `admin`/`owner`.
+   * The owners are not an embellishment — they are usually the only recipients.
+   * A creator holds no grant on what they create, so an experiment sitting in its
+   * creator's personal workspace has no admin grants at all, and sourcing this
+   * from grants alone would silently notify nobody about every join request.
+   *
    * Team/organization grants are excluded on purpose — there is no individual
    * mailbox behind them.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
-      const result = await this.database
-        .select({ email: users.email })
-        .from(resourceGrants)
-        .innerJoin(users, eq(resourceGrants.granteeId, users.id))
-        .where(
-          and(
-            eq(resourceGrants.resourceType, "experiment"),
-            eq(resourceGrants.resourceId, experimentId),
-            eq(resourceGrants.granteeType, "user"),
-            inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
+      const [granted, ownerIds] = await Promise.all([
+        this.database
+          .select({ userId: resourceGrants.granteeId })
+          .from(resourceGrants)
+          .where(
+            and(
+              eq(resourceGrants.resourceType, "experiment"),
+              eq(resourceGrants.resourceId, experimentId),
+              eq(resourceGrants.granteeType, "user"),
+              inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
+            ),
           ),
-        );
+        findOwningOrgOwnerIds(this.database, "experiment", experimentId),
+      ]);
 
-      return result.map((row) => row.email);
+      // One mailbox per person: an owner who also holds an admin grant is in both
+      // sets and must not be mailed twice.
+      const recipientIds = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+      if (recipientIds.length === 0) {
+        return [];
+      }
+
+      const rows = await this.database
+        .select({ email: users.email })
+        .from(users)
+        .where(inArray(users.id, recipientIds));
+
+      return rows.map((row) => row.email);
     });
   }
 }

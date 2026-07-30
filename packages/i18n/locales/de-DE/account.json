@@ -114,21 +114,27 @@
       "buttonConfirm": "Konto löschen",
       "successMessage": "Konto gelöscht. Ihre persönlichen Daten wurden gelöscht, aber Ihre veröffentlichten Beiträge bleiben einem Systemkonto zugeordnet.",
       "blockers": {
-        "title": "Übergeben Sie zuerst Ihre Experimente",
-        "description": "Sie sind die einzige Administratorin bzw. der einzige Administrator der unten aufgeführten Experimente – ohne Übergabe blieben sie ohne Eigentümer. Wählen Sie, wer die Administratorrechte übernehmen soll, und übertragen Sie sie – alles hier an einem Ort.",
-        "loading": "Ihre Experimente werden geprüft…",
+        "title": "Übergeben Sie zuerst Ihre Inhalte",
+        "description": "Sie sind die einzige Administratorin bzw. der einzige Administrator der unten aufgeführten Einträge – ohne Übergabe blieben sie ohne Eigentümer. Wählen Sie, wer die Administratorrechte übernehmen soll, und übertragen Sie sie – alles hier an einem Ort.",
+        "loading": "Ihre Einträge werden geprüft…",
         "applyToAllLabel": "Alle an eine Person übertragen",
         "applyToAllPlaceholder": "Person suchen, die alles übernimmt…",
         "rowPlaceholder": "Person suchen…",
-        "noCandidatesHint": "Noch keine Mitarbeitenden – suchen Sie oben nach einer beliebigen Person oder laden Sie jemanden über die Mitarbeitenden-Seite des Experiments ein.",
+        "noCandidatesHint": "Noch keine Mitarbeitenden – suchen Sie oben nach einer beliebigen Person oder laden Sie jemanden über die Mitarbeitenden-Seite des Eintrags ein.",
         "manageLink": "Mitarbeitende öffnen",
         "transferAll": "Administratorrechte übertragen",
         "transferring": "Wird übertragen…",
         "transferSuccess": "Administratorrechte übertragen.",
-        "transferPartial": "Einige Experimente konnten nicht aktualisiert werden. Bitte prüfen und erneut versuchen.",
+        "transferPartial": "Einige Einträge konnten nicht aktualisiert werden. Bitte prüfen und erneut versuchen.",
         "transferError": "Administratorrechte konnten nicht übertragen werden. Bitte versuchen Sie es erneut.",
         "expand": "Auf Vollbild erweitern",
-        "collapse": "Vollbild verlassen"
+        "collapse": "Vollbild verlassen",
+        "resourceType": {
+          "experiment": "Experiment",
+          "macro": "Makro",
+          "protocol": "Protokoll",
+          "workbook": "Arbeitsmappe"
+        }
       }
     },
     "cancel": "Abbrechen"

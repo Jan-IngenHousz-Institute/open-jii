@@ -710,6 +710,7 @@
     "revokeForLabel": "{{name}} entfernen",
     "you": "(Sie)",
     "outsideCollaborator": "Externe Mitwirkende",
+    "ownerBadge": "Eigentümer",
     "experimentTierHint": "„Kann ansehen“ erlaubt es, das Experiment zu öffnen sowie Messungen und Anmerkungen hinzuzufügen. „Kann bearbeiten“ umfasst zusätzlich Einstellungen, Veröffentlichung und Teilen.",
     "publicExperimentTierHint": "Dieses öffentliche Experiment kann bereits jeder ansehen. „Kann ansehen“ erlaubt zusätzlich das Hinzufügen von Messungen und Anmerkungen; „Kann bearbeiten“ umfasst darüber hinaus Einstellungen, Veröffentlichung und Teilen.",
     "noCollaboratorsYet": "Noch keine Mitwirkenden",

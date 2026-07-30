@@ -3,7 +3,7 @@
 import { UserAvatar } from "@/components/user-avatar";
 import { Building2, LogOut, Trash2 } from "lucide-react";
 
-import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -13,7 +13,7 @@ import { collapseRole } from "./collaborator-roles";
 import { RoleSelect } from "./role-select";
 
 interface CollaboratorRowProps {
-  grant: ResourceGrantDto;
+  collaborator: ResourceCollaboratorDto;
   onRoleChange: (role: ShareableRole) => void;
   onRevoke: () => void;
   isBusy: boolean;
@@ -28,9 +28,16 @@ function nameParts(displayName: string): { firstName: string; lastName: string }
   return { firstName: first, lastName: rest.join(" ") };
 }
 
-/** One direct grant: grantee, outside-collaborator label, role select, revoke. */
+/**
+ * One row of the collaborators list.
+ *
+ * Grant rows carry the two-tier role select and a revoke action. Owner rows carry
+ * neither: an owner holds full control through the organization that owns the
+ * resource, so there is no tier to move them between, nothing to revoke, and no
+ * way to leave — they get a static "Owner" badge instead.
+ */
 export function CollaboratorRow({
-  grant,
+  collaborator,
   onRoleChange,
   onRevoke,
   isBusy,
@@ -39,9 +46,11 @@ export function CollaboratorRow({
 }: CollaboratorRowProps) {
   const { t } = useTranslation();
 
-  const displayName = grant.grantee.displayName ?? grant.grantee.email ?? grant.granteeId;
+  const displayName =
+    collaborator.grantee.displayName ?? collaborator.grantee.email ?? collaborator.granteeId;
   const { firstName, lastName } = nameParts(displayName);
-  const isOrganization = grant.granteeType === "organization";
+  const isOrganization = collaborator.granteeType === "organization";
+  const isOwner = collaborator.kind === "owner";
 
   return (
     <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
@@ -51,7 +60,7 @@ export function CollaboratorRow({
         </div>
       ) : (
         <UserAvatar
-          avatarUrl={grant.grantee.avatarUrl}
+          avatarUrl={collaborator.grantee.avatarUrl}
           firstName={firstName}
           lastName={lastName}
           className="h-9 w-9"
@@ -67,36 +76,46 @@ export function CollaboratorRow({
             <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
           )}
           {/* Doc 009: informational only — capability comes from the role. */}
-          {grant.isOutsideCollaborator && (
+          {collaborator.kind === "grant" && collaborator.isOutsideCollaborator && (
             <Badge variant="outline" className="shrink-0 text-xs font-normal">
               {t("sharing.outsideCollaborator")}
             </Badge>
           )}
         </div>
         <span className="text-muted-foreground truncate text-xs">
-          {isOrganization ? t("sharing.granteeTypeOrganization") : grant.grantee.email}
+          {isOrganization ? t("sharing.granteeTypeOrganization") : collaborator.grantee.email}
         </span>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <RoleSelect
-          value={collapseRole(grant.role)}
-          onChange={onRoleChange}
-          disabled={disabled || isBusy}
-          ariaLabel={t("sharing.roleForLabel", { name: displayName })}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onRevoke}
-          disabled={disabled || isBusy}
-          aria-label={
-            isSelf ? t("sharing.leaveAction") : t("sharing.revokeForLabel", { name: displayName })
-          }
-          className="text-muted-foreground hover:text-destructive"
-        >
-          {isSelf ? <LogOut className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
-        </Button>
+        {isOwner ? (
+          <Badge variant="secondary" className="shrink-0 text-xs font-normal">
+            {t("sharing.ownerBadge")}
+          </Badge>
+        ) : (
+          <>
+            <RoleSelect
+              value={collapseRole(collaborator.role)}
+              onChange={onRoleChange}
+              disabled={disabled || isBusy}
+              ariaLabel={t("sharing.roleForLabel", { name: displayName })}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onRevoke}
+              disabled={disabled || isBusy}
+              aria-label={
+                isSelf
+                  ? t("sharing.leaveAction")
+                  : t("sharing.revokeForLabel", { name: displayName })
+              }
+              className="text-muted-foreground hover:text-destructive"
+            >
+              {isSelf ? <LogOut className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

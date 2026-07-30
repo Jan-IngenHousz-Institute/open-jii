@@ -9,7 +9,7 @@ import { encodeBase64 } from "@/util/base64";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
@@ -38,6 +38,7 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
+import { getMacroCodeTemplate } from "../macro-code-template";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
@@ -96,6 +97,20 @@ export function NewMacroForm() {
       visibility: "public",
     },
   });
+
+  const language = form.watch("language");
+  const authorName = [userProfile?.firstName, userProfile?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  // The editor starts from a language-specific template. It has to live in form state, not
+  // just in the editor, so submitting without touching it saves exactly what was shown.
+  const codeEditedRef = useRef(false);
+  useEffect(() => {
+    if (codeEditedRef.current || isLoadingUserProfile) return;
+    form.setValue("code", getMacroCodeTemplate(language, authorName || undefined));
+  }, [form, language, authorName, isLoadingUserProfile]);
 
   function cancel() {
     router.back();
@@ -249,9 +264,11 @@ export function NewMacroForm() {
             render={({ field }) => (
               <MacroCodeEditor
                 value={field.value}
-                onChange={field.onChange}
-                language={form.watch("language")}
-                username={`${userProfile?.firstName} ${userProfile?.lastName}`}
+                onChange={(next) => {
+                  codeEditedRef.current = true;
+                  field.onChange(next);
+                }}
+                language={language}
                 label=""
                 error={form.formState.errors.code?.message?.toString()}
                 height="500px"

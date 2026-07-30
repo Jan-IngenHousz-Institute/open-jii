@@ -3,7 +3,7 @@ import { collaboratorsQueryKey } from "@/hooks/sharing/sharing-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 
 /**
@@ -37,16 +37,21 @@ export const useCollaboratorRevoke = () => {
         const listKey = collaboratorsQueryKey(userId, variables.resourceType, variables.id);
         await queryClient.cancelQueries({ queryKey: listKey });
 
-        const previousGrants = queryClient.getQueryData<ResourceGrantDto[]>(listKey);
+        // The cache holds owner rows as well as grants, and only grants carry an
+        // id — narrowing on `kind` is what keeps the lookup from matching an owner
+        // row whose `id` is simply absent.
+        const previousGrants = queryClient.getQueryData<ResourceCollaboratorDto[]>(listKey);
         // Decided before the optimistic removal, while the row is still here.
-        const revoked = previousGrants?.find((grant) => grant.id === variables.grantId);
+        const revoked = previousGrants?.find(
+          (row) => row.kind === "grant" && row.id === variables.grantId,
+        );
         const revokedSelf =
           !!userId && revoked?.granteeType === "user" && revoked.granteeId === userId;
 
         if (previousGrants) {
           queryClient.setQueryData(
             listKey,
-            previousGrants.filter((grant) => grant.id !== variables.grantId),
+            previousGrants.filter((row) => row.kind !== "grant" || row.id !== variables.grantId),
           );
         }
 

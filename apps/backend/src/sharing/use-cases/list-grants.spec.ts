@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { eq, macros, organizations, organizationMembers } from "@repo/database";
+import { eq, macros, organizations, organizationMembers, profiles } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -53,8 +53,71 @@ describe("listGrants", () => {
 
     const result = await listGrants.execute(owner, "macro", macro.id);
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0].granteeId).toBe(outsider);
+    // The owner is synthesized from the owning org, not read from a grant; the
+    // outsider is the only actual grant row.
+    expect(result.value.map((row) => [row.kind, row.granteeId])).toEqual([
+      ["owner", owner],
+      ["grant", outsider],
+    ]);
+  });
+
+  describe("synthesized owner rows", () => {
+    it("lists the owner first, with no grant id or role to act on", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // A macro nobody has been given still has somebody on its collaborators
+      // surface: the person who owns it. Under a grants-only list it would look
+      // ownerless.
+      expect(result.value).toEqual([
+        expect.objectContaining({
+          kind: "owner",
+          granteeType: "user",
+          granteeId: owner,
+        }),
+      ]);
+      // No grant id and no role: there is nothing on an owner row to act on.
+      expect(result.value[0]).not.toHaveProperty("id");
+      expect(result.value[0]).not.toHaveProperty("role");
+    });
+
+    it("shows an owner who also holds a grant exactly once, as the owner", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: owner,
+        role: "admin",
+      });
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // The grant repeats access the org role already gives, so rendering both
+      // would put one person on two rows with contradictory affordances.
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0].kind).toBe("owner");
+    });
+
+    it("omits an owner whose account has been closed", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const keeper = await testApp.createTestUser({ name: "Keeper" });
+      await testApp.addResourceAdmin("macro", macro.id, keeper);
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, owner));
+
+      const result = await listGrants.execute(keeper, "macro", macro.id);
+      assertSuccess(result);
+
+      // A closed account is nobody to escalate to, so it is not offered as the
+      // resource's owner.
+      expect(result.value.map((row) => [row.kind, row.granteeId])).toEqual([["grant", keeper]]);
+    });
   });
 
   it("denies a viewer-grant holder (no collaborator enumeration)", async () => {

@@ -22,7 +22,6 @@ import {
   deleteResourceGrants,
   upsertGrant,
   resourceGrants,
-  STAFFING_GRANT_ROLES,
   organizationMembers,
   teamMembers,
 } from "@repo/database";
@@ -36,6 +35,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/resource-staffing";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -90,63 +90,19 @@ export class ExperimentRepository {
       // creator's personal org so there is never an org-less resource.
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      return this.database
-        .insert(experiments)
-        .values({
-          ...createExperimentDto,
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(experimentColumns);
-    });
-  }
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(experiments)
+          .values({
+            ...createExperimentDto,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(experimentColumns);
 
-  /**
-   * Ensure `userId` holds a grant that **staffs** this
-   * experiment. Used to seed the creator at create time and to hand admin rights
-   * to a transfer target — the two paths that mint an admin tier outside the
-   * sharing endpoints.
-   *
-   * Idempotent, and never lowers anyone's access: a grantee who already holds a
-   * staffing role (`owner` or `admin`) is left alone, so re-running can't demote
-   * an `owner` to `admin`; a `viewer`/`member` grant is promoted to `admin`.
-   *
-   * That "raises only" property is why this path needs no staffing guard: it can
-   * only ever add a staffing grant, never remove the last one.
-   */
-  async ensureDirectAdminGrant(
-    experimentId: string,
-    userId: string,
-    createdBy: string,
-  ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      const existing = await this.database
-        .select({ role: resourceGrants.role })
-        .from(resourceGrants)
-        .where(
-          and(
-            eq(resourceGrants.resourceType, "experiment"),
-            eq(resourceGrants.resourceId, experimentId),
-            eq(resourceGrants.granteeType, "user"),
-            eq(resourceGrants.granteeId, userId),
-          ),
-        )
-        .limit(1);
+        await seedCreatorControl(tx, "experiment", results[0].id, organizationId, userId);
 
-      if (
-        existing.length > 0 &&
-        (STAFFING_GRANT_ROLES as readonly string[]).includes(existing[0].role)
-      ) {
-        return;
-      }
-
-      await upsertGrant(this.database, {
-        resourceType: "experiment",
-        resourceId: experimentId,
-        granteeType: "user",
-        granteeId: userId,
-        role: "admin",
-        createdBy,
+        return results;
       });
     });
   }
@@ -196,10 +152,15 @@ export class ExperimentRepository {
 
   /**
    * The activated users who hold a grant on the experiment — its named
-   * collaborators — plus the experiment's `anonymizeContributors` setting.
-   * Deactivated and soft-deleted accounts are excluded: they can neither
-   * contribute nor take over an experiment, so they are neither credit-worthy nor
-   * a valid hand-off target.
+   * collaborators — **plus the owners of the organization that owns it**, and the
+   * experiment's `anonymizeContributors` setting. Deactivated and soft-deleted
+   * accounts are excluded: they can neither contribute nor take over an
+   * experiment, so they are neither credit-worthy nor a valid hand-off target.
+   *
+   * The owners are not a garnish: a creator holds no grant on what they create, so
+   * sourcing credit from grants alone would drop the one person most responsible
+   * for the experiment — and on a personal-workspace experiment would credit
+   * nobody at all.
    *
    * The flag comes back with the rows because the two are only meaningful
    * together: an experiment that anonymizes its contributors must not have these
@@ -209,9 +170,11 @@ export class ExperimentRepository {
    */
   async listCollaborators(experimentId: string): Promise<Result<ExperimentCollaborators>> {
     return tryCatch(async () => {
+      const ownerIds = await findOwningOrgOwnerIds(this.database, "experiment", experimentId);
       const rows = await this.database
         .select({
           anonymizeContributors: experiments.anonymizeContributors,
+          createdBy: experiments.createdBy,
           userId: resourceGrants.granteeId,
           // Whether the profile join matched at all. The anonymized name columns
           // below cannot answer that: they are CASE expressions that fall back to
@@ -242,22 +205,56 @@ export class ExperimentRepository {
         )
         .where(eq(experiments.id, experimentId));
 
+      // A row without a matched profile is either a grant to an excluded account
+      // or the experiment on its own with nobody granted.
+      const granted = rows
+        .filter(
+          (r): r is typeof r & { userId: string; role: string } =>
+            r.userId !== null && r.profileUserId !== null,
+        )
+        .map(({ userId, role, firstName, lastName, avatarUrl }) => ({
+          userId,
+          role,
+          firstName,
+          lastName,
+          avatarUrl,
+        }));
+
+      // The people credited by their relationship to the experiment rather than by
+      // a grant row: the owners of the owning org, plus **the creator**.
+      //
+      // The creator is listed in their own right, not folded into the owners. They
+      // are not always an owner — someone who creates into an organization they are
+      // an `admin` of holds full control without owning it — and crediting the org's
+      // owner in their place would put the wrong name on somebody else's work.
+      const createdBy = rows[0]?.createdBy;
+      const relatedIds = [...new Set([...ownerIds, ...(createdBy ? [createdBy] : [])])].filter(
+        (id) => !granted.some((collaborator) => collaborator.userId === id),
+      );
+      const related =
+        relatedIds.length === 0
+          ? []
+          : (
+              await this.database
+                .select({
+                  userId: profiles.userId,
+                  firstName: getAnonymizedFirstName(),
+                  lastName: getAnonymizedLastName(),
+                  avatarUrl: getAnonymizedAvatarUrl(),
+                })
+                .from(profiles)
+                .where(
+                  and(
+                    inArray(profiles.userId, relatedIds),
+                    eq(profiles.activated, true),
+                    isNull(profiles.deletedAt),
+                  ),
+                )
+            ).map((person) => ({ ...person, role: "owner" }));
+
       return {
         anonymizeContributors: rows[0]?.anonymizeContributors ?? false,
-        // A row without a matched profile is either a grant to an excluded account
-        // or the experiment on its own with nobody granted.
-        collaborators: rows
-          .filter(
-            (r): r is typeof r & { userId: string; role: string } =>
-              r.userId !== null && r.profileUserId !== null,
-          )
-          .map(({ userId, role, firstName, lastName, avatarUrl }) => ({
-            userId,
-            role,
-            firstName,
-            lastName,
-            avatarUrl,
-          })),
+        collaborators: [...related, ...granted],
       };
     });
   }
@@ -310,11 +307,7 @@ export class ExperimentRepository {
           ),
       );
 
-      if (filter === "member") {
-        // "My experiments": the ones I was explicitly given, rather than every one
-        // I can merely see. A grant to me is what makes an experiment mine.
-        conditions.push(userGrantExists);
-      } else {
+      {
         const teamGrantExists = exists(
           this.database
             .select()
@@ -357,6 +350,12 @@ export class ExperimentRepository {
               ),
             ),
         );
+        // Access scoping is unconditional — it applies to every filter, including
+        // "member". A view may narrow what the caller can see; it must never widen
+        // it. Authorship is not an access path (`can()` does not consult
+        // `created_by`), so a creator since removed from the owning org, holding no
+        // grant, can no longer read the experiment and must not get its body back
+        // through a listing.
         conditions.push(
           or(
             eq(experiments.visibility, "public"),
@@ -366,6 +365,14 @@ export class ExperimentRepository {
             owningOrgMemberExists,
           ),
         );
+      }
+
+      if (filter === "member") {
+        // "My experiments": the ones I made or was explicitly given, narrowed out
+        // of what I can already see. Authorship is one of the two ways in because a
+        // creator holds no grant on what they create — without it this view would
+        // hide exactly the experiments most obviously the caller's.
+        conditions.push(or(userGrantExists, eq(experiments.createdBy, userId)));
       }
 
       if (status) {

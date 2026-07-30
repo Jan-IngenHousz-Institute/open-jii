@@ -179,19 +179,7 @@ export class ExecuteProjectTransferUseCase {
 
     const experiment = experimentResult.value[0];
 
-    // 4. Seed the creator exactly as create-experiment does: a direct `admin`
-    //    grant, which is both their access tier and what the staffing queries read.
-    const creatorGrantResult = await this.experimentRepository.ensureDirectAdminGrant(
-      experiment.id,
-      data.experiment.createdBy,
-      data.experiment.createdBy,
-    );
-
-    if (creatorGrantResult.isFailure()) {
-      return creatorGrantResult;
-    }
-
-    // 5. Add locations if provided
+    // 4. Add locations if provided
     if (data.experiment.locations && data.experiment.locations.length > 0) {
       const locations: CreateLocationDto[] = data.experiment.locations.map((loc) => ({
         ...loc,
@@ -214,7 +202,7 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 6. Create flow (non-fatal, requires both protocol and macro)
+    // 5. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
     if (protocolId && macroId) {
       const questionNodes: ExperimentFlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
@@ -284,7 +272,7 @@ export class ExecuteProjectTransferUseCase {
         });
       }
 
-      // 7. Materialise a workbook from the same nodes (non-fatal).
+      // 6. Materialise a workbook from the same nodes (non-fatal).
       const cells = flowNodesToWorkbookCells(allNodes, edges);
       if (cells.length > 0) {
         const workbookResult = await this.workbookRepository.create(
@@ -347,7 +335,7 @@ export class ExecuteProjectTransferUseCase {
       flowId,
     });
 
-    // 8. Send project transfer complete email (non-fatal)
+    // 7. Send project transfer complete email (non-fatal)
     const userResult = await this.userRepository.findOne(data.experiment.createdBy);
 
     if (userResult.isSuccess() && userResult.value?.email) {

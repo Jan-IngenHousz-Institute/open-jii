@@ -5,23 +5,24 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-export type UseTransferExperimentAdminOptions = Pick<
-  ReturnType<typeof orpc.experiments.transferExperimentAdmin.mutationOptions>,
+export type UseTransferResourceAdminOptions = Pick<
+  ReturnType<typeof orpc.sharing.transferResourceAdmin.mutationOptions>,
   "onSuccess" | "onError" | "onSettled"
 >;
 
 /**
- * Bulk-transfers experiment admin rights to other users (one target per experiment). Used to clear
- * account-deletion blockers in a single call. Surfaces success/partial/error toasts itself and
- * invalidates the deletion-blocker and member caches so resolved experiments drop out of the delete
- * dialog automatically.
+ * Bulk-transfers admin rights to other users (one target per resource), across any
+ * of the shareable resource types. Used to clear account-deletion blockers in a
+ * single call. Surfaces success/partial/error toasts itself and invalidates the
+ * deletion-blocker, collaborator and contributor caches so resolved resources drop
+ * out of the delete dialog automatically.
  */
-export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminOptions) => {
+export const useTransferResourceAdmin = (options?: UseTransferResourceAdminOptions) => {
   const queryClient = useQueryClient();
   const { t } = useTranslation("account");
 
   return useMutation(
-    orpc.experiments.transferExperimentAdmin.mutationOptions({
+    orpc.sharing.transferResourceAdmin.mutationOptions({
       ...options,
       onSuccess: (...args) => {
         const [data] = args;
@@ -48,10 +49,13 @@ export const useTransferExperimentAdmin = (options?: UseTransferExperimentAdminO
         }
       },
       onSettled: async (...args) => {
-        // Bulk transfer spans multiple experiments/users, so invalidate every
+        // Bulk transfer spans several resources and users, so invalidate every
         // instance of each query (prefix match, no input) rather than one id.
         await queryClient.invalidateQueries({
           queryKey: orpc.users.getDeletionBlockers.key(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: orpc.sharing.listGrants.key(),
         });
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.listExperimentContributors.key(),

@@ -26,6 +26,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { seedCreatorControl } from "../../../sharing/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
@@ -47,15 +48,20 @@ export class ProtocolRepository {
       // Own the protocol with the requested target org (fallback: the creator's personal org).
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(protocols)
-        .values({
-          ...createProtocolDto,
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(protocolColumns);
-      return results as ProtocolDto[];
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(protocols)
+          .values({
+            ...createProtocolDto,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(protocolColumns);
+
+        await seedCreatorControl(tx, "protocol", results[0].id, organizationId, userId);
+
+        return results as ProtocolDto[];
+      });
     });
   }
 
@@ -91,25 +97,26 @@ export class ProtocolRepository {
         );
       }
 
+      // Access scoping is unconditional — it applies to the "my" view too. A view
+      // may narrow what the caller can see; it must never widen it. Authorship is
+      // not an access path (`can()` does not consult `created_by`), so a creator
+      // since removed from the owning organization, holding no grant, can no longer
+      // read the protocol and must not get its body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "protocol",
+        resourceIdColumn: protocols.id,
+        organizationIdColumn: protocols.organizationId,
+        visibilityColumn: protocols.visibility,
+        userId: userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter === "my" && userId) {
-        // "My protocols" is an ownership view: the creator sees exactly what they
-        // authored, unaffected by visibility (mirrors the experiment "member"
-        // filter, which likewise bypasses the public-OR access scoping).
+        // "My protocols" narrows that down to what the caller authored.
         conditions.push(eq(protocols.createdBy, userId));
-      } else {
-        // Access scoping: a private protocol is only listed for
-        // owning-org members and grantees; public protocols are visible to all.
-        const scope = accessibleResourceCondition({
-          database: this.database,
-          resourceType: "protocol",
-          resourceIdColumn: protocols.id,
-          organizationIdColumn: protocols.organizationId,
-          visibilityColumn: protocols.visibility,
-          userId,
-        });
-        if (scope) {
-          conditions.push(scope);
-        }
       }
 
       if (conditions.length > 0) {

@@ -1,10 +1,14 @@
-import { createResourceGrant } from "@/test/factories";
+import { createResourceGrant, createResourceOwner } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  ResourceCollaboratorDto,
+  ResourceGrantDto,
+  ResourceOwnerDto,
+} from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -19,7 +23,7 @@ function mockSession(user: { id: string } | null) {
 }
 
 function renderList(
-  grants: ResourceGrantDto[],
+  grants: ResourceCollaboratorDto[],
   overrides: Partial<React.ComponentProps<typeof CollaboratorsList>> = {},
 ) {
   return render(
@@ -63,6 +67,47 @@ describe("<CollaboratorsList />", () => {
 
     expect(screen.getByText("sharing.noCollaboratorsYet")).toBeInTheDocument();
     expect(screen.getByText("sharing.noCollaboratorsHint")).toBeInTheDocument();
+  });
+
+  describe("owner rows", () => {
+    function ownerFor(name: string): ResourceOwnerDto {
+      return createResourceOwner({
+        grantee: { type: "user", displayName: name, email: null, avatarUrl: null },
+      });
+    }
+
+    it("renders an owner as a static badge with nothing to change or revoke", () => {
+      renderList([ownerFor("Ada Owner")]);
+
+      const row = rowFor("Ada Owner");
+      expect(within(row).getByText("sharing.ownerBadge")).toBeInTheDocument();
+      // An owner holds full control through the organization, so there is no tier
+      // to move them between and no grant to take away.
+      expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
+      expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+    });
+
+    it("sorts owners above grants, including above the signed-in user's own row", () => {
+      mockSession({ id: "me" });
+      renderList([
+        grantFor("Lin Zhao", { granteeId: "me" }),
+        grantFor("Other Person"),
+        ownerFor("Ada Owner"),
+      ]);
+
+      const names = screen
+        .getAllByRole("listitem")
+        .map((row) => within(row).getByRole("heading").textContent);
+      expect(names).toEqual(["Ada Owner", "Lin Zhao", "Other Person"]);
+    });
+
+    it("gives an owner no leave affordance even when they are the signed-in user", () => {
+      mockSession({ id: "me" });
+      renderList([createResourceOwner({ granteeId: "me" })]);
+
+      // Leaving what you own is an organization matter, not a resource one.
+      expect(screen.queryByRole("button", { name: "sharing.leaveAction" })).not.toBeInTheDocument();
+    });
   });
 
   it("distinguishes an empty filter result from an empty resource", () => {

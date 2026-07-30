@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, resourceGrants } from "@repo/database";
+import { and, eq, profiles, resourceGrants } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
@@ -130,35 +130,122 @@ describe("leaveResource", () => {
     expect(stillThere).toHaveLength(1);
   });
 
-  it("refuses the last admin's departure from an experiment (staffing invariant)", async () => {
-    const experiment = (
-      await testApp.createExperiment({ name: `Exp ${crypto.randomUUID()}`, userId: owner })
-    ).experiment;
+  it.each(["experiment", "macro"] as const)(
+    "gives an owner of a %s the uniform 404: they hold no grant to give up",
+    async (resourceType) => {
+      const resourceId =
+        resourceType === "experiment"
+          ? (
+              await testApp.createExperiment({
+                name: `Exp ${crypto.randomUUID()}`,
+                userId: owner,
+              })
+            ).experiment.id
+          : (await testApp.createMacro({ name: "M", createdBy: owner })).id;
 
-    // The creator holds the only admin grant.
-    const result = await leave.execute(owner, "experiment", experiment.id);
+      // Owning is not a grant, so there is nothing for leave to delete — and the
+      // route must not disclose that by answering anything other than its uniform
+      // 404. Leaving what you own is a matter of the organization, not the resource.
+      const result = await leave.execute(owner, resourceType, resourceId);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.NOT_FOUND);
+    },
+  );
+
+  it("lets the only admin grantee leave while the owning org still has a living owner", async () => {
+    const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+    const keeper = await testApp.createTestUser({ name: "Keeper" });
+    await testApp.addResourceAdmin("macro", macro.id, keeper);
+
+    // The owner is answerable for the macro regardless, so the last admin *grant*
+    // is not load-bearing and its holder may walk away.
+    assertSuccess(await leave.execute(keeper, "macro", macro.id));
+    expect(await grantsFor("macro", macro.id, keeper)).toHaveLength(0);
+  });
+
+  it("refuses the last admin's departure once the owner's account is closed", async () => {
+    const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+    const keeper = await testApp.createTestUser({ name: "Keeper" });
+    await testApp.addResourceAdmin("macro", macro.id, keeper);
+    // The husk case: no living owner, so the admin grant is the only thing left.
+    await testApp.database
+      .update(profiles)
+      .set({ deletedAt: new Date() })
+      .where(eq(profiles.userId, owner));
+
+    const result = await leave.execute(keeper, "macro", macro.id);
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
-    expect(await grantsFor("experiment", experiment.id, owner)).toHaveLength(1);
+    expect(result.error.message).toContain("macro");
+    expect(await grantsFor("macro", macro.id, keeper)).toHaveLength(1);
   });
 
   it("lets a non-last admin leave an experiment", async () => {
     const experiment = (
       await testApp.createExperiment({ name: `Exp ${crypto.randomUUID()}`, userId: owner })
     ).experiment;
+    const firstAdmin = await testApp.createTestUser({ name: "First Admin" });
     const secondAdmin = await testApp.createTestUser({ name: "Second Admin" });
-    await testApp.addResourceGrant({
-      resourceType: "experiment",
-      resourceId: experiment.id,
-      granteeType: "user",
-      granteeId: secondAdmin,
-      role: "admin",
-    });
+    for (const granteeId of [firstAdmin, secondAdmin]) {
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId,
+        role: "admin",
+      });
+    }
 
     assertSuccess(await leave.execute(secondAdmin, "experiment", experiment.id));
     expect(await grantsFor("experiment", experiment.id, secondAdmin)).toHaveLength(0);
-    // The creator's admin grant is untouched.
-    expect(await grantsFor("experiment", experiment.id, owner)).toHaveLength(1);
+    // The other admin's grant is untouched.
+    expect(await grantsFor("experiment", experiment.id, firstAdmin)).toHaveLength(1);
+  });
+
+  // Leaving is a grant write like any other, so an archived experiment refuses it —
+  // the disabled leave card is not the enforcement. The refusal must not become an
+  // existence oracle either: this is the one grant route with no authorization check,
+  // so a caller with nothing to leave still gets the uniform 404.
+  describe("archived experiments", () => {
+    it("refuses a grantee's departure and keeps their grant", async () => {
+      const experiment = (
+        await testApp.createExperiment({
+          name: `Exp ${crypto.randomUUID()}`,
+          userId: owner,
+          status: "archived",
+        })
+      ).experiment;
+      const viewer = await testApp.createTestUser({ name: "Viewer" });
+      await testApp.addExperimentCollaborator(experiment.id, viewer);
+
+      const result = await leave.execute(viewer, "experiment", experiment.id);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(StatusCodes.FORBIDDEN);
+      expect(result.error.message).toBe("Cannot modify an archived experiment");
+      expect(await grantsFor("experiment", experiment.id, viewer)).toHaveLength(1);
+    });
+
+    it("still answers 404 to someone who holds no grant on it", async () => {
+      const experiment = (
+        await testApp.createExperiment({
+          name: `Exp ${crypto.randomUUID()}`,
+          userId: owner,
+          status: "archived",
+          visibility: "private",
+        })
+      ).experiment;
+      const outsider = await testApp.createTestUser({ name: "Outsider" });
+
+      const onArchived = await leave.execute(outsider, "experiment", experiment.id);
+      const onMissing = await leave.execute(outsider, "experiment", crypto.randomUUID());
+
+      // "It is archived" would be a fact about an experiment they cannot see.
+      assertFailure(onArchived);
+      assertFailure(onMissing);
+      expect(onArchived.error.statusCode).toBe(StatusCodes.NOT_FOUND);
+      expect(onArchived.error.message).toBe(onMissing.error.message);
+    });
   });
 
   it("lets a viewer grantee leave an experiment (the regression case: self-removal without share)", async () => {

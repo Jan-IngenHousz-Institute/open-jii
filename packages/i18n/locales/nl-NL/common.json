@@ -501,6 +501,7 @@
     "revokeForLabel": "{{name}} verwijderen",
     "you": "(u)",
     "outsideCollaborator": "Externe medewerker",
+    "ownerBadge": "Eigenaar",
     "experimentTierHint": "Met „Kan bekijken” kan iemand het experiment openen en metingen en annotaties toevoegen. „Kan bewerken” voegt instellingen, publiceren en delen toe.",
     "publicExperimentTierHint": "Iedereen kan dit openbare experiment al bekijken. „Kan bekijken” maakt het mogelijk om metingen en annotaties toe te voegen; „Kan bewerken” voegt daarbovenop instellingen, publiceren en delen toe.",
     "noCollaboratorsYet": "Nog geen medewerkers",

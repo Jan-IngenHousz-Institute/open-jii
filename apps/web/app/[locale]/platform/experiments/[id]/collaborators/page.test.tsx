@@ -229,11 +229,10 @@ describe("ExperimentCollaboratorsPage", () => {
       const invitationsSpy = server.mount(contract.users.listInvitations, { body: [] });
       server.mount(contract.experiments.getExperimentAccess, {
         body: accessPayload({
-          isAdmin: false,
           capabilities: {
             canContribute: true,
-            canUpdate: false,
-            canManage: false,
+            canUpdate: true,
+            canManage: true,
             canShare: false,
             canLeave: false,
           },
@@ -363,9 +362,9 @@ describe("ExperimentCollaboratorsPage", () => {
       expect(screen.queryByText("invitee-of-a@uni.edu")).not.toBeInTheDocument();
       expect(screen.queryByText("Asha Okafor")).not.toBeInTheDocument();
 
-      // ...and once B's own access settles, only the requests tab remains.
-      await waitFor(() => expect(tabStrips()[0]).toBeInTheDocument());
-      await waitFor(() => expect(within(tabStrips()[0]).getAllByRole("tab")).toHaveLength(1));
+      // ...and once B's own access settles, B holds neither capability, so no tab
+      // strip survives the switch at all.
+      await waitFor(() => expect(screen.queryAllByRole("tablist")).toHaveLength(0));
       expect(screen.queryByText("invitee-of-a@uni.edu")).not.toBeInTheDocument();
       expect(screen.queryByText("Asha Okafor")).not.toBeInTheDocument();
     });
@@ -400,6 +399,100 @@ describe("ExperimentCollaboratorsPage", () => {
       await waitFor(() =>
         expect(screen.getByRole("button", { name: /experimentSettings.invite/ })).toBeDisabled(),
       );
+    });
+  });
+
+  describe("manage gate", () => {
+    it("hides the requests tab — and fetches nothing — without can(manage)", async () => {
+      const joinRequestsSpy = server.mount(contract.experiments.listJoinRequests, { body: [] });
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          isAdmin: false,
+          capabilities: {
+            canContribute: false,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: false,
+          },
+        }),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+
+      expect(screen.queryByText("experimentSettings.requestsTab")).not.toBeInTheDocument();
+      // A 403 read as an empty list is the failure this guards: the request must
+      // not be filed at all.
+      expect(joinRequestsSpy.called).toBe(false);
+    });
+
+    it("leaves a viewer with no capability an empty strip, filter or invite action", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          isAdmin: false,
+          capabilities: {
+            canContribute: false,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: false,
+          },
+        }),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+
+      // No tab strip at all rather than a bare strip, and nothing to drive it with.
+      expect(screen.queryAllByRole("tablist")).toHaveLength(0);
+      expect(
+        screen.queryByPlaceholderText("experimentSettings.filterCollaboratorsPlaceholder"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /experimentSettings.invite/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the leave card for a viewer grantee once the tabs are gone", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          isAdmin: false,
+          capabilities: {
+            canContribute: true,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: true,
+          },
+        }),
+      });
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText("sharing.yourAccessTitle")).toBeInTheDocument());
+      expect(screen.queryAllByRole("tablist")).toHaveLength(0);
+      expect(screen.getByRole("button", { name: /sharing.leaveAction/ })).toBeInTheDocument();
+    });
+
+    it("shows the requests tab — and fetches it — with can(manage)", async () => {
+      const joinRequestsSpy = server.mount(contract.experiments.listJoinRequests, { body: [] });
+      server.mount(contract.experiments.getExperimentAccess, { body: accessPayload() });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(
+          within(tabStrips()[0]).getByRole("tab", { name: /experimentSettings.requestsTab/ }),
+        ).toBeInTheDocument(),
+      );
+      await waitFor(() => expect(joinRequestsSpy.called).toBe(true));
     });
   });
 
@@ -452,13 +545,13 @@ describe("ExperimentCollaboratorsPage", () => {
       expect(screen.getByLabelText("sharing.granteeSearchLabel")).toBeInTheDocument();
 
       // A demotion elsewhere lands on the next access refetch while the form is up.
+      // Only can(share) is lost here, so the surface itself stays up around it.
       server.mount(contract.experiments.getExperimentAccess, {
         body: accessPayload({
-          isAdmin: false,
           capabilities: {
             canContribute: true,
-            canUpdate: false,
-            canManage: false,
+            canUpdate: true,
+            canManage: true,
             canShare: false,
             canLeave: false,
           },

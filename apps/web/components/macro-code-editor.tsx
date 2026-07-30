@@ -23,67 +23,9 @@ interface MacroCodeEditorProps {
   label?: string;
   error?: string;
   height?: string;
-  username?: string;
   title?: React.ReactNode;
   headerActions?: React.ReactNode;
 }
-
-const getDefaultContent = (language: CodeLanguage, username?: string): string => {
-  const date = new Date().toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "2-digit",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  switch (language) {
-    case "python":
-      return `# Macro for data evaluation on openjii.org
-# by: ${username}
-# created: ${date}
-
-# Define Output Dictionary (required)
-output = {}
-
-# Insert your macro code here
-
-# Return Output Dictionary (required)
-return output
-    `;
-    case "r":
-      return `# Macro for data evaluation on openjii.org
-# by: ${username}
-# created: ${date}
-
-# Define Output List (required)
-output <- list()
-
-# Insert your macro code here
-
-# Return Output List (required)
-output
-`;
-    case "javascript":
-      return `/**
- * Macro for data evaluation on openjii.org
- * by: ${username}
- * created: ${date}
- */
-
- // Define Output Object (required)
-var output = {};
-
-// Insert your macro code here
-
-// Return Output Object (required)
-return output;
-`;
-    default:
-      return "";
-  }
-};
 
 const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   value,
@@ -91,22 +33,19 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   language,
   label,
   error,
-  username,
   height = "400px",
   title,
   headerActions,
 }) => {
   const { copy: copyToClipboard, copied } = useCopyToClipboard();
 
-  const editorValue = value || getDefaultContent(language, username);
-
   const handleCopy = async () => {
-    await copyToClipboard(editorValue);
+    await copyToClipboard(value);
   };
 
   const getCodeStats = () => {
-    const lines = editorValue.split("\n").length;
-    const size = new Blob([editorValue]).size;
+    const lines = value.split("\n").length;
+    const size = new Blob([value]).size;
     const formatSize = (bytes: number) => {
       if (bytes < 1024) return `${bytes} B`;
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -157,7 +96,7 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
         {/* Editor */}
         <div style={{ height }}>
           <CodeEditor
-            value={editorValue}
+            value={value}
             onChange={onChange}
             language={language}
             height={height}

@@ -114,21 +114,27 @@
       "buttonConfirm": "Delete Account",
       "successMessage": "Account deleted. Your personal data has been erased.",
       "blockers": {
-        "title": "Hand over your experiments first",
-        "description": "You're the only admin of the experiments below, so they'd be left without an owner. Choose who should take over admin rights, then transfer. You can do it all here.",
-        "loading": "Checking your experiments…",
+        "title": "Hand over your work first",
+        "description": "You're the only admin of the items below, so they'd be left without an owner. Choose who should take over admin rights, then transfer. You can do it all here.",
+        "loading": "Checking what you administer…",
         "applyToAllLabel": "Transfer all to one person",
         "applyToAllPlaceholder": "Search someone to take over everything…",
         "rowPlaceholder": "Search a person…",
-        "noCandidatesHint": "No collaborators yet. Search anyone above, or invite someone via the experiment's collaborators page.",
+        "noCandidatesHint": "No collaborators yet. Search anyone above, or invite someone from the item's collaborators page.",
         "manageLink": "Open collaborators",
         "transferAll": "Transfer admin rights",
         "transferring": "Transferring…",
         "transferSuccess": "Admin rights transferred.",
-        "transferPartial": "Some experiments couldn't be updated. Please review and try again.",
+        "transferPartial": "Some items couldn't be updated. Please review and try again.",
         "transferError": "Couldn't transfer admin rights. Please try again.",
         "expand": "Expand to full screen",
-        "collapse": "Exit full screen"
+        "collapse": "Exit full screen",
+        "resourceType": {
+          "experiment": "Experiment",
+          "macro": "Macro",
+          "protocol": "Protocol",
+          "workbook": "Workbook"
+        }
       }
     },
     "cancel": "Cancel"

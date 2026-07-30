@@ -1,3 +1,5 @@
+import { eq, profiles } from "@repo/database";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "./experiment-join-request.repository";
@@ -177,6 +179,62 @@ describe("ExperimentJoinRequestRepository", () => {
       assertSuccess(result);
       expect(result.value).toEqual(expect.arrayContaining(["second-admin@example.com"]));
       expect(result.value).not.toContain("regular@example.com");
+    });
+
+    it("notifies the owning org's owner, who holds no grant", async () => {
+      const soleOwner = await testApp.createTestUser({
+        email: "sole-owner@example.com",
+        name: "Sole Owner",
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Personal workspace experiment",
+        userId: soleOwner,
+        visibility: "public",
+      });
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      // Sourced from grants alone this would be empty and every join request on a
+      // personal-workspace experiment would notify nobody.
+      expect(result.value).toEqual(["sole-owner@example.com"]);
+    });
+
+    it("mails an owner who also holds an admin grant exactly once", async () => {
+      const soleOwner = await testApp.createTestUser({
+        email: "double-counted@example.com",
+        name: "Owner And Grantee",
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Owner with a grant",
+        userId: soleOwner,
+        visibility: "public",
+      });
+      await testApp.addExperimentAdmin(experiment.id, soleOwner);
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      expect(result.value).toEqual(["double-counted@example.com"]);
+    });
+
+    it("leaves out an owner whose account has been closed", async () => {
+      const gone = await testApp.createTestUser({ email: "gone@example.com", name: "Gone" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Husk experiment",
+        userId: gone,
+        visibility: "public",
+      });
+      const keeper = await testApp.createTestUser({ email: "keeper@example.com", name: "Keeper" });
+      await testApp.addExperimentAdmin(experiment.id, keeper);
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, gone));
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      // A closed account's mailbox is scrubbed; the admin grant holder is who is
+      // left to decide the request.
+      expect(result.value).toEqual(["keeper@example.com"]);
     });
   });
 });

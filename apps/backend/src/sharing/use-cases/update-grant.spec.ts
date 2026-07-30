@@ -62,4 +62,36 @@ describe("updateGrant", () => {
       .where(eq(resourceGrants.id, elsewhere.id));
     expect(untouched.role).toBe("viewer");
   });
+
+  // An archived experiment is immutable everywhere else — the read-only row controls
+  // are not the enforcement, the server is.
+  it("refuses a role change on an archived experiment, leaving the grant alone", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: `Exp ${crypto.randomUUID()}`,
+      userId: owner,
+      status: "archived",
+    });
+    const collaborator = await testApp.createTestUser({ name: "Collaborator" });
+    const grant = await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+      createdBy: owner,
+    });
+
+    const updated = await updateGrant.execute(owner, "experiment", experiment.id, grant.id, {
+      role: "admin",
+    });
+
+    assertFailure(updated);
+    expect(updated.error.statusCode).toBe(StatusCodes.FORBIDDEN);
+    expect(updated.error.message).toBe("Cannot modify an archived experiment");
+    const [unchanged] = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(eq(resourceGrants.id, grant.id));
+    expect(unchanged.role).toBe("viewer");
+  });
 });

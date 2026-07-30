@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type {
+  ResourceCollaboratorDto,
   ResourceGrantDto,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
@@ -21,8 +22,8 @@ import { RevokeCollaboratorDialog } from "./revoke-collaborator-dialog";
 interface CollaboratorsListProps {
   resourceType: SharingResourceType;
   resourceId: string;
-  /** The grants to render — already filtered by the host, if it filters. */
-  grants: ResourceGrantDto[];
+  /** The rows to render — owners and grants, already filtered by the host, if it filters. */
+  grants: ResourceCollaboratorDto[];
   /** The list request failed; rows are unknown rather than absent. */
   isError?: boolean;
   /** Blocks every mutation (e.g. an archived experiment) while still listing grants. */
@@ -32,18 +33,22 @@ interface CollaboratorsListProps {
 }
 
 /**
- * The collaborators list: one row per direct grant, with the two-tier access
- * dropdown and revoke on each.
+ * The collaborators list: the resource's owners, then one row per direct grant
+ * with the two-tier access dropdown and revoke on each.
+ *
+ * Owners come from the owning organization rather than from a grant, so they sort
+ * to the top and carry no controls — there is nothing to demote or revoke. Among
+ * the grants the signed-in user's own sorts first and its revoke becomes "leave",
+ * which is the only way a grantee gives up their own access; an owner has no such
+ * affordance, because leaving is a matter of the organization.
  *
  * Rows carry no card chrome of their own — this is the body of a tab, so the host
- * page owns the heading, the filter and the invite action. The signed-in user's
- * own grant sorts first and its revoke becomes "leave", which is the only way a
- * grantee gives up their own access.
+ * page owns the heading, the filter and the invite action.
  *
  * Refusals stay server-side and are surfaced verbatim: the staffing invariant
- * (a resource always keeps one direct admin) is enforced by the backend, so the
- * last admin's demotion or removal comes back as an error whose message is what
- * the toast shows.
+ * (a resource with no living owner keeps its last direct admin) is enforced by
+ * the backend, so a refused demotion or removal comes back as an error whose
+ * message is what the toast shows.
  */
 export function CollaboratorsList({
   resourceType,
@@ -71,11 +76,15 @@ export function CollaboratorsList({
     if (readOnly) setPendingRevoke(null);
   }, [readOnly]);
 
-  const isOwnGrant = (grant: ResourceGrantDto) =>
-    !!currentUserId && grant.granteeType === "user" && grant.granteeId === currentUserId;
+  const isSelfRow = (row: ResourceCollaboratorDto) =>
+    !!currentUserId && row.granteeType === "user" && row.granteeId === currentUserId;
 
-  // "You" first, as on every other people list in the app.
-  const sortedGrants = [...grants].sort((a, b) => Number(isOwnGrant(b)) - Number(isOwnGrant(a)));
+  // Owners first — they are the resource's, not somebody it was shared with — then
+  // "you", as on every other people list in the app.
+  const sortedGrants = [...grants].sort((a, b) => {
+    const byOwner = Number(b.kind === "owner") - Number(a.kind === "owner");
+    return byOwner !== 0 ? byOwner : Number(isSelfRow(b)) - Number(isSelfRow(a));
+  });
 
   const handleRoleChange = async (grant: ResourceGrantDto, role: ShareableRole) => {
     setBusyGrantId(grant.id);
@@ -102,7 +111,7 @@ export function CollaboratorsList({
     try {
       await revoke({ resourceType, id: resourceId, grantId: grant.id });
       toast({
-        description: isOwnGrant(grant)
+        description: isSelfRow(grant)
           ? t("sharing.leftResource")
           : t("sharing.collaboratorRevoked"),
       });
@@ -145,15 +154,21 @@ export function CollaboratorsList({
         role="list"
         className="border-border divide-border divide-y overflow-hidden rounded-lg border"
       >
-        {sortedGrants.map((grant) => (
+        {sortedGrants.map((row) => (
           <CollaboratorRow
-            key={grant.id}
-            grant={grant}
-            isSelf={isOwnGrant(grant)}
-            isBusy={busyGrantId === grant.id}
+            // Owner rows have no grant id — they are keyed by who they are, and a
+            // person can hold at most one owner row and one grant row here.
+            key={row.kind === "owner" ? `owner-${row.granteeId}` : row.id}
+            collaborator={row}
+            isSelf={isSelfRow(row)}
+            isBusy={row.kind === "grant" && busyGrantId === row.id}
             disabled={readOnly}
-            onRoleChange={(role) => void handleRoleChange(grant, role)}
-            onRevoke={() => setPendingRevoke(grant)}
+            onRoleChange={(role) => {
+              if (row.kind === "grant") void handleRoleChange(row, role);
+            }}
+            onRevoke={() => {
+              if (row.kind === "grant") setPendingRevoke(row);
+            }}
           />
         ))}
       </div>
@@ -169,7 +184,7 @@ export function CollaboratorsList({
           pendingRevoke?.granteeId ??
           ""
         }
-        isSelf={pendingRevoke !== null && isOwnGrant(pendingRevoke)}
+        isSelf={pendingRevoke !== null && isSelfRow(pendingRevoke)}
         isRevoking={isRevoking}
         confirmDisabled={readOnly}
         onConfirm={() => void confirmRevoke()}

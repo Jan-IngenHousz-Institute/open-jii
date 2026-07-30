@@ -97,30 +97,11 @@ export class CreateExperimentUseCase {
           userId,
         });
 
-        // The creator gets a direct `admin` grant. Without it a brand-new
-        // experiment would have no named steward: the owning-org role alone leaves
-        // nothing for the staffing queries (last-admin protection, the
-        // account-deletion blocker) to find.
-        const creatorGrantResult = await this.experimentRepository.ensureDirectAdminGrant(
-          experiment.id,
-          userId,
-          userId,
-        );
-        if (creatorGrantResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to grant the creator admin rights on the new experiment",
-            errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-            operation: "createExperiment",
-            experimentId: experiment.id,
-            error: creatorGrantResult.error,
-          });
-          return failure(AppError.internal("Failed to grant the creator admin rights"));
-        }
-
         // Anyone picked in the create form gets the read-and-contribute tier: they
         // can open the experiment and add data to it, which is what being listed as
         // a collaborator at creation time has always meant. The creator is filtered
-        // out — they already hold the stronger admin grant above.
+        // out — full control already follows from their role in the owning org, and
+        // a grant can only raise access, never lower it.
         const invitedCollaborators = (Array.isArray(data.members) ? data.members : []).filter(
           (member) => member.userId !== userId,
         );

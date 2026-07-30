@@ -71,7 +71,6 @@ import { CreateTransferRequestUseCase } from "./application/use-cases/project-tr
 import { ListTransferRequestsUseCase } from "./application/use-cases/project-transfer-requests/list-transfer-requests/list-transfer-requests";
 import { ExecuteProjectTransferUseCase } from "./application/use-cases/project-transfer/execute-project-transfer";
 import { SetWorkbookVersionUseCase } from "./application/use-cases/set-workbook-version/set-workbook-version";
-import { TransferExperimentAdminUseCase } from "./application/use-cases/transfer-experiment-admin/transfer-experiment-admin";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-workbook-version/upgrade-workbook-version";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
@@ -104,7 +103,6 @@ import { ExperimentFlowsController } from "./presentation/experiment-flows.contr
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
-import { ExperimentTransferAdminController } from "./presentation/experiment-transfer-admin.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
@@ -128,7 +126,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentFlowsController,
     ExperimentWorkbooksController,
     ExperimentContributorsController,
-    ExperimentTransferAdminController,
     ExperimentJoinRequestsController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
@@ -203,7 +200,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     DownloadExportUseCase,
 
     ListExperimentContributorsUseCase,
-    TransferExperimentAdminUseCase,
 
     // Experiment join request use cases
     RequestJoinExperimentUseCase,

@@ -4,7 +4,7 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { EnrichedGrant, SharingRepository } from "../sharing.repository";
+import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
 
 /**
  * List the direct collaborators on a resource. Gated on `share` (not `read`) so
@@ -21,7 +21,7 @@ export class ListGrantsUseCase {
     userId: string,
     resourceType: SharingResourceType,
     resourceId: string,
-  ): Promise<Result<EnrichedGrant[]>> {
+  ): Promise<Result<ResourceCollaborator[]>> {
     const decision = await this.authz.can(userId, { resourceType, resourceId, action: "share" });
     if (!decision.allow) {
       return failure(

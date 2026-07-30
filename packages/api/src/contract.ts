@@ -9,7 +9,6 @@ import { experimentJoinRequestsContract } from "./domains/experiment/join-reques
 import { experimentLocationsContract } from "./domains/experiment/locations/experiment-locations.contract";
 import { experimentMetadataContract } from "./domains/experiment/metadata/experiment-metadata.contract";
 import { experimentProjectTransferWebhookContract } from "./domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.contract";
-import { experimentTransferAdminContract } from "./domains/experiment/transfer-admin/experiment-transfer-admin.contract";
 import { experimentTransferRequestsContract } from "./domains/experiment/transfer-requests/experiment-transfer-requests.contract";
 import { experimentUploadsContract } from "./domains/experiment/uploads/experiment-uploads.contract";
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
@@ -21,6 +20,7 @@ import { newsletterContract } from "./domains/newsletter/newsletter.contract";
 import { protocolContract } from "./domains/protocol/protocol.contract";
 import { searchContract } from "./domains/search/search.contract";
 import { sharingContract } from "./domains/sharing/sharing.contract";
+import { sharingTransferAdminContract } from "./domains/sharing/transfer-admin/sharing-transfer-admin.contract";
 import { userContract } from "./domains/user/user.contract";
 import { workbookContract } from "./domains/workbook/workbook.contract";
 
@@ -37,7 +37,6 @@ export const contract = {
     ...experimentDataAnnotationsContract,
     ...experimentLocationsContract,
     ...experimentContributorsContract,
-    ...experimentTransferAdminContract,
     ...experimentMetadataContract,
     ...experimentFlowsContract,
     ...experimentWorkbooksContract,
@@ -53,7 +52,7 @@ export const contract = {
   newsletter: newsletterContract,
   protocols: protocolContract,
   search: searchContract,
-  sharing: sharingContract,
+  sharing: { ...sharingContract, ...sharingTransferAdminContract },
   users: userContract,
   workbooks: workbookContract,
 };

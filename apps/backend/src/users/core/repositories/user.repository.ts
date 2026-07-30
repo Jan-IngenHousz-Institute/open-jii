@@ -1,15 +1,18 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { z } from "zod";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import {
   eq,
   asc,
+  ne,
   or,
   and,
-  count,
   ilike,
   inArray,
+  macros,
   profiles,
+  protocols,
   users,
   accounts,
   apiKeys,
@@ -19,6 +22,7 @@ import {
   experiments,
   experimentMembers,
   organizations,
+  organizationMembers,
   sql,
   isNull,
   syncPersonalOrganizationName,
@@ -26,7 +30,7 @@ import {
   personalOrgName,
   deleteGranteeGrants,
   resourceGrants,
-  STAFFING_GRANT_ROLES,
+  workbooks,
 } from "@repo/database";
 import type { DatabaseInstance, Transaction } from "@repo/database";
 
@@ -39,7 +43,13 @@ import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
-import { lockStaffingGrants } from "../../../sharing/experiment-staffing";
+import {
+  livingOrgOwnerIdsSql,
+  lockOrgOwnerships,
+  lockStaffingGrants,
+  lockUserAccount,
+  orgRoleIsOwnerSql,
+} from "../../../sharing/resource-staffing";
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -48,7 +58,7 @@ import {
   UserProfileDto,
   CreateUserProfileDto,
   UserProfileMetadata,
-  SoleAdminExperiment,
+  SoleAdminResource,
 } from "../models/user.model";
 
 /**
@@ -56,7 +66,114 @@ import {
  * the caller sees the same message whichever one catches it.
  */
 export const SOLE_ADMIN_DELETE_MESSAGE =
-  "Cannot delete account - you are the only admin of one or more experiments. Please assign other admins before deleting.";
+  "Cannot delete account - you are the only admin of one or more experiments, macros, protocols or workbooks. Please assign other admins before deleting.";
+
+/** Every staffed resource with its owning org, as one polymorphic row set. */
+const ALL_STAFFED_RESOURCES = sql`
+  SELECT 'experiment'::"resource_type" AS "resource_type", e."id", e."organization_id" FROM "experiments" e
+  UNION ALL
+  SELECT 'macro'::"resource_type", m."id", m."organization_id" FROM "macros" m
+  UNION ALL
+  SELECT 'protocol'::"resource_type", p."id", p."organization_id" FROM "protocols" p
+  UNION ALL
+  SELECT 'workbook'::"resource_type", w."id", w."organization_id" FROM "workbooks" w
+`;
+
+/**
+ * The resources whose last answerable person is `userId`, so closing that account
+ * would orphan them. Two prongs, because answerability has two sources:
+ *
+ * - **(a) ownership.** The resource belongs to an organization `userId` is the
+ *   *sole living owner* of. Deleting the account leaves the org a husk, so unless
+ *   somebody else holds a full-control grant the resource has nobody.
+ * - **(b) the husk case.** The owning org already has no living owner (its owner
+ *   closed their account earlier, or there is no owning org at all), and `userId`
+ *   holds the only full-control grant left. This is what keeps the hand-off chain
+ *   from breaking: a transferee who accepted admin on a husk-org resource is
+ *   themselves blocked until they pass it on.
+ *
+ * Both prongs share the same escape hatch — somebody *else* living holds an
+ * admin/owner grant — which is why it is factored out as the leading condition.
+ * "Living" is a closed account (`deleted_at`); grantees must also be `activated`,
+ * since a deactivated account cannot administer anything.
+ *
+ * One statement rather than four typed queries: the predicate is polymorphic over
+ * four tables and is re-run verbatim inside the deletion transaction, and having
+ * exactly one copy of it is what stops the pre-flight blocker and the
+ * in-transaction guard from drifting apart.
+ */
+function blockingResourcesQuery(userId: string) {
+  return sql`
+    WITH r AS (${ALL_STAFFED_RESOURCES})
+    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
+    FROM r
+    WHERE NOT EXISTS (
+            SELECT 1 FROM "resource_grants" g
+            JOIN "profiles" p ON p."user_id" = g."grantee_id"
+            WHERE g."resource_type" = r."resource_type"
+              AND g."resource_id" = r."id"
+              AND g."grantee_type" = 'user'
+              AND g."role" IN ('owner', 'admin')
+              AND g."grantee_id" <> ${userId}
+              AND p."activated" = true
+              AND p."deleted_at" IS NULL
+          )
+      AND (
+            (
+              (SELECT count(*) FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o) = 1
+              AND EXISTS (
+                SELECT 1 FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o
+                WHERE o."user_id" = ${userId}
+              )
+            )
+            OR (
+              EXISTS (
+                SELECT 1 FROM "resource_grants" g
+                WHERE g."resource_type" = r."resource_type"
+                  AND g."resource_id" = r."id"
+                  AND g."grantee_type" = 'user'
+                  AND g."grantee_id" = ${userId}
+                  AND g."role" IN ('owner', 'admin')
+              )
+              AND NOT EXISTS (${livingOrgOwnerIdsSql(sql`r."organization_id"`)})
+            )
+          )
+  `;
+}
+
+/**
+ * Everything the deletion guard has to lock before it decides: the resources
+ * either prong could name. Locking these serializes the guard against a
+ * concurrent sharing write on the same resource — see {@link assertNotSoleAdmin}.
+ */
+function lockCandidatesQuery(userId: string) {
+  return sql`
+    WITH r AS (${ALL_STAFFED_RESOURCES})
+    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
+    FROM r
+    WHERE EXISTS (
+            SELECT 1 FROM "organization_members" om
+            WHERE om."organization_id" = r."organization_id"
+              AND om."user_id" = ${userId}
+              AND ${orgRoleIsOwnerSql(sql`om."role"`)}
+          )
+       OR EXISTS (
+            SELECT 1 FROM "resource_grants" g
+            WHERE g."resource_type" = r."resource_type"
+              AND g."resource_id" = r."id"
+              AND g."grantee_type" = 'user'
+              AND g."grantee_id" = ${userId}
+              AND g."role" IN ('owner', 'admin')
+          )
+    ORDER BY r."resource_type", r."id"
+  `;
+}
+
+/** One row of the polymorphic blocking-resource queries above. */
+type BlockingResourceKey = Record<string, unknown> & {
+  resource_type: SharingResourceType;
+  id: string;
+};
 
 @Injectable()
 export class UserRepository {
@@ -191,125 +308,175 @@ export class UserRepository {
   }
 
   /**
-   * Returns the experiments where this user is the *only* admin. These block account deletion,
-   * since deleting the user would leave the experiment without an admin.
+   * Returns the resources this user is the last answerable person for, across all
+   * four shareable types. These block account deletion.
    *
-   * Sourced from user grants with role `admin`/`owner` — the
-   * surface that owns access tiers since `experiment_members` became a pure
-   * contributor roster. Team and organization grants deliberately do not
-   * count: "someone in that org could administer it" is not an answerable owner.
+   * See {@link blockingResourcesQuery} for the two prongs. This is the pre-flight
+   * check that drives the delete dialog's blocker list and hand-off flow; the
+   * authoritative re-check runs inside the deletion transaction.
    */
-  async findSoleAdminExperiments(userId: string): Promise<Result<SoleAdminExperiment[]>> {
+  async findSoleAdminResources(userId: string): Promise<Result<SoleAdminResource[]>> {
     return tryCatch(async () => {
-      const isDirectStaffingGrant = and(
-        eq(resourceGrants.resourceType, "experiment"),
-        eq(resourceGrants.granteeType, "user"),
-        inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
-      );
+      const keys = await this.database.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
+      return this.hydrateResources(keys);
+    });
+  }
 
-      // 1. Find all experiments where this user holds a direct admin/owner grant
-      const adminExperiments = await this.database
+  /**
+   * Put names (and, for experiments, the lifecycle status) on the polymorphic
+   * `{type, id}` keys the blocking query returns — that is what the delete dialog
+   * lists. One query per type present, rather than per resource.
+   */
+  private async hydrateResources(keys: BlockingResourceKey[]): Promise<SoleAdminResource[]> {
+    if (keys.length === 0) {
+      return [];
+    }
+
+    const idsByType = new Map<SharingResourceType, string[]>();
+    for (const key of keys) {
+      idsByType.set(key.resource_type, [...(idsByType.get(key.resource_type) ?? []), key.id]);
+    }
+
+    const tables = { macro: macros, protocol: protocols, workbook: workbooks } as const;
+    const hydrated = await Promise.all(
+      [...idsByType].map(async ([resourceType, ids]): Promise<SoleAdminResource[]> => {
+        if (resourceType === "experiment") {
+          const rows = await this.database
+            .select({ id: experiments.id, name: experiments.name, status: experiments.status })
+            .from(experiments)
+            .where(inArray(experiments.id, ids));
+          return rows.map((row) => ({ resourceType, ...row }));
+        }
+        const table = tables[resourceType];
+        const rows = await this.database
+          .select({ id: table.id, name: table.name })
+          .from(table)
+          .where(inArray(table.id, ids));
+        return rows.map((row) => ({ resourceType, id: row.id, name: row.name, status: null }));
+      }),
+    );
+
+    return hydrated.flat();
+  }
+
+  async isOnlyAdminOfAnyResources(userId: string): Promise<Result<boolean>> {
+    const result = await this.findSoleAdminResources(userId);
+    return result.map((soleAdminResources: SoleAdminResource[]) => soleAdminResources.length > 0);
+  }
+
+  /**
+   * Transactional counterpart of {@link findSoleAdminResources}: refuse the
+   * deletion if it would leave any resource with nobody answerable for it. Runs
+   * the *same* two-pronged predicate, so the pre-flight blocker and this guard
+   * cannot disagree.
+   *
+   * Locks first, decides second. The locks are taken via the shared
+   * {@link lockStaffingGrants} — the same row-set definition the sharing write
+   * guard uses — over every resource either prong could name, which is what
+   * serializes this against a concurrent grant revoke on the same resource.
+   * Without them a revoke (owning-org owner still alive, so its own invariant
+   * stands down) and that owner's deletion (another admin grant still present, so
+   * this guard stands down) would both see a safe world and both commit, leaving
+   * the resource with neither an owner nor an admin. Holding the locks means
+   * whichever transaction commits second re-reads the world the first one left.
+   *
+   * @throws AppError (403) when the user is the last answerable person for a resource
+   */
+  private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
+    // 1. Lock the owner-membership rows of every organization this user owns, in a
+    //    fixed order. This is the anchor the grant rows cannot provide: a resource
+    //    owned outright has no staffing grants to lock, so without this two owners
+    //    of the same organization would each see the other still there and both
+    //    commit — and an in-flight create would slip in between this check and the
+    //    profile being stamped, landing a resource in an org that no longer has
+    //    anybody. Resource creation takes the same lock, which is what orders the
+    //    two against each other.
+    const ownedOrgs = await tx
+      .selectDistinct({ organizationId: organizationMembers.organizationId })
+      .from(organizationMembers)
+      .where(
+        and(
+          eq(organizationMembers.userId, userId),
+          orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
+        ),
+      )
+      .orderBy(organizationMembers.organizationId);
+
+    for (const { organizationId } of ownedOrgs) {
+      await lockOrgOwnerships(tx, organizationId);
+    }
+
+    // 2. Then the per-resource staffing rows. A fixed global order, not whatever
+    //    order the plan happens to return: the loop takes one lock per resource, so
+    //    two concurrent deletions that share two or more of these resources could
+    //    otherwise take the same locks in opposite orders and deadlock. Postgres
+    //    would abort one of them (40P01), surfacing as a 500 on account deletion
+    //    instead of the intended refusal. Organizations are always locked before
+    //    grants, so the two lock classes cannot cycle either.
+    const candidates = await tx.execute<BlockingResourceKey>(lockCandidatesQuery(userId));
+
+    for (const { resource_type, id } of candidates) {
+      await lockStaffingGrants(tx, resource_type, id);
+    }
+
+    // 3. Decide only now, on a world nothing else can still be changing.
+    const blocking = await tx.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
+
+    if (blocking.length > 0) {
+      throw AppError.forbidden(SOLE_ADMIN_DELETE_MESSAGE);
+    }
+  }
+
+  /**
+   * The activated people who hold a direct grant on a resource, minus one user —
+   * the transfer candidates the delete dialog offers for a blocking resource.
+   * Deactivated and soft-deleted accounts are excluded: handing admin to one would
+   * re-orphan the resource, and the transfer use case rejects them anyway.
+   */
+  async findGranteeProfiles(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    excludeUserId: string,
+  ): Promise<Result<UserProfileMetadata[]>> {
+    return tryCatch(() =>
+      this.database
         .select({
-          id: experiments.id,
-          name: experiments.name,
-          status: experiments.status,
-        })
-        .from(resourceGrants)
-        .innerJoin(experiments, eq(experiments.id, resourceGrants.resourceId))
-        .where(and(isDirectStaffingGrant, eq(resourceGrants.granteeId, userId)));
-
-      if (adminExperiments.length === 0) {
-        return [];
-      }
-
-      // 2. Active-admin count per experiment. Deactivated admins can't own an experiment (the same
-      //    rule the transfer flow enforces on its targets), so they don't count toward keeping one
-      //    staffed — otherwise a sole active admin could delete their account and orphan it.
-      const experimentIds = adminExperiments.map((e) => e.id);
-      const adminCounts = await this.database
-        .select({
-          experimentId: resourceGrants.resourceId,
-          total: count(),
+          userId: profiles.userId,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          avatarUrl: profiles.avatarUrl,
         })
         .from(resourceGrants)
         .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
         .where(
           and(
-            isDirectStaffingGrant,
-            inArray(resourceGrants.resourceId, experimentIds),
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceId),
+            eq(resourceGrants.granteeType, "user"),
+            ne(resourceGrants.granteeId, excludeUserId),
             eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
           ),
-        )
-        .groupBy(resourceGrants.resourceId);
-
-      const soleAdminIds = new Set(
-        adminCounts.filter((c) => Number(c.total) === 1).map((c) => c.experimentId),
-      );
-
-      return adminExperiments.filter((e) => soleAdminIds.has(e.id));
-    });
-  }
-
-  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
-    const result = await this.findSoleAdminExperiments(userId);
-    return result.map(
-      (soleAdminExperiments: SoleAdminExperiment[]) => soleAdminExperiments.length > 0,
-    );
-  }
-
-  /**
-   * Transactional counterpart of {@link findSoleAdminExperiments}: refuse the
-   * deletion if it would leave any experiment without an activated admin.
-   *
-   * Locks each affected experiment's staffing rows via the shared
-   * {@link lockStaffingGrants} — the same row-set definition the sharing write guard
-   * uses, so the two cannot drift — which serializes concurrent deletions that both
-   * target the same experiment's last admins.
-   *
-   * "Another admin" means another *activated* grantee, matching the pre-flight
-   * check: a deactivated account cannot administer an experiment, so it does not keep
-   * one staffed. The deleting user is excluded explicitly — soft deletion leaves
-   * their `activated` flag alone, so they would otherwise count themselves.
-   *
-   * @throws AppError (403) when the user is the sole admin of some experiment
-   */
-  private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
-    const heldExperiments = await tx
-      .selectDistinct({ experimentId: resourceGrants.resourceId })
-      .from(resourceGrants)
-      .where(
-        and(
-          eq(resourceGrants.resourceType, "experiment"),
-          eq(resourceGrants.granteeType, "user"),
-          eq(resourceGrants.granteeId, userId),
-          inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
         ),
-      );
-
-    for (const { experimentId } of heldExperiments) {
-      const staffing = await lockStaffingGrants(tx, experimentId);
-      const otherGranteeIds = staffing
-        .map((g) => g.granteeId)
-        .filter((granteeId) => granteeId !== userId);
-
-      if (otherGranteeIds.length === 0) {
-        throw AppError.forbidden(SOLE_ADMIN_DELETE_MESSAGE);
-      }
-
-      const activeOthers = await tx
-        .select({ userId: profiles.userId })
-        .from(profiles)
-        .where(and(inArray(profiles.userId, otherGranteeIds), eq(profiles.activated, true)));
-
-      if (activeOthers.length === 0) {
-        throw AppError.forbidden(SOLE_ADMIN_DELETE_MESSAGE);
-      }
-    }
+    );
   }
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
+        // 0. Claim this account exclusively, first and before anything is torn
+        //    down. Resource creation takes the same row (shared) before deciding
+        //    whether to seed the creator a grant, so the two orders are the only
+        //    two possible: a create that got here first commits and its grant is
+        //    swept up by the teardown below, or it queues behind this and then
+        //    sees a closed account and refuses. Without it a create could land a
+        //    fresh grant *after* the teardown, stranding it forever — nothing
+        //    revisits a deleted account's grants.
+        //
+        //    Taken before the organization and grant locks, matching the order
+        //    creation uses, so the two can never deadlock.
+        await lockUserAccount(tx, id, "update");
+
         // 1. Revoke every credential and browser session. The user row is kept
         //    for referential integrity, so its credential FKs never cascade.
         await tx.delete(apiKeys).where(eq(apiKeys.referenceId, id));
@@ -332,17 +499,35 @@ export class UserRepository {
         await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
         await deleteGranteeGrants(tx, id, "user");
 
-        // 3. Anonymize profile: scrub PII and mark deleted
+        // 3. Anonymize profile: scrub PII and mark deleted.
+        //
+        //    An **upsert**, because `deleted_at` is the only marker that an account
+        //    is closed and an UPDATE quietly does nothing when there is no profile
+        //    row. Someone who signed up but never onboarded has none — so without
+        //    this they would stay indistinguishable from a living person forever:
+        //    still counted as a living organization owner, still eligible to be
+        //    seeded grants. The inserted row is a tombstone, scrubbed from the
+        //    start; it exists to be found, not read.
         await tx
-          .update(profiles)
-          .set({
+          .insert(profiles)
+          .values({
+            userId: id,
             firstName: "Deleted",
             lastName: "User",
             bio: null,
             avatarUrl: null,
             deletedAt: sql`now() AT TIME ZONE 'UTC'`,
           })
-          .where(eq(profiles.userId, id));
+          .onConflictDoUpdate({
+            target: profiles.userId,
+            set: {
+              firstName: "Deleted",
+              lastName: "User",
+              bio: null,
+              avatarUrl: null,
+              deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+            },
+          });
 
         // 4. Soft-delete user: scrub PII
         await tx

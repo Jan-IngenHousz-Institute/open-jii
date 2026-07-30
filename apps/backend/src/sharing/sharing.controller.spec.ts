@@ -55,9 +55,11 @@ describe("SharingController", () => {
       .send({ granteeType: "user", granteeId: grantee, role: "admin" })
       .expect(StatusCodes.CREATED);
 
+    // The list comes back with the creator's own grant beside the new one.
     const grants = createRes.body as ResourceGrantDto[];
-    expect(grants).toHaveLength(1);
-    expect(grants[0].granteeId).toBe(grantee);
+    const granteeGrants = grants.filter((grant) => grant.granteeId === grantee);
+    expect(granteeGrants).toHaveLength(1);
+    expect(grants.map((grant) => grant.granteeId).sort()).toEqual([owner, grantee].sort());
 
     // After sharing: the admin grant lets the grantee update.
     expect(
@@ -70,7 +72,7 @@ describe("SharingController", () => {
         testApp.resolveOrpcPath(contract.sharing.revokeGrant, {
           resourceType: "macro",
           id: macro.id,
-          grantId: grants[0].id,
+          grantId: granteeGrants[0].id,
         }),
       )
       .withAuth(owner)

@@ -7,6 +7,7 @@ import { LeaveResourceUseCase } from "./use-cases/leave-resource";
 import { ListGrantsUseCase } from "./use-cases/list-grants";
 import { RevokeGrantUseCase } from "./use-cases/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "./use-cases/search-grantee-organizations";
+import { TransferResourceAdminUseCase } from "./use-cases/transfer-resource-admin";
 import { UpdateGrantUseCase } from "./use-cases/update-grant";
 
 /**
@@ -22,6 +23,7 @@ import { UpdateGrantUseCase } from "./use-cases/update-grant";
     UpdateGrantUseCase,
     LeaveResourceUseCase,
     RevokeGrantUseCase,
+    TransferResourceAdminUseCase,
     SearchGranteeOrganizationsUseCase,
   ],
 })

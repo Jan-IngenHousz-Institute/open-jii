@@ -394,9 +394,10 @@ export class TestHarness {
       })
       .returning();
 
-    const experimentAdmin = await this.addExperimentAdmin(experiment.id, data.userId);
-
-    return { experiment, experimentAdmin };
+    // No creator grant: full control follows from owning the experiment (the
+    // creator owns the personal org above), and seeding one here would build a
+    // state the create path cannot produce.
+    return { experiment };
   }
 
   /**
@@ -414,14 +415,27 @@ export class TestHarness {
   }
 
   /**
-   * Seed an experiment admin the way create-experiment does: an `admin` grant.
-   * That grant is what makes `can(manage)` resolve and what the staffing queries
-   * read.
+   * Give a user a direct `admin` grant on an experiment — someone the resource was
+   * deliberately shared with at the full-control tier, not its creator (creators
+   * hold no grant; their control comes from the owning org).
    */
   public addExperimentAdmin(experimentId: string, userId: string) {
+    return this.addResourceAdmin("experiment", experimentId, userId);
+  }
+
+  /**
+   * Seed a direct `admin` grant, authored by the grantee. This is a *shared-with*
+   * admin: the `create*` helpers deliberately do not call it, because a creator
+   * grant is a state no create path produces.
+   */
+  public addResourceAdmin(
+    resourceType: "experiment" | "protocol" | "macro" | "workbook",
+    resourceId: string,
+    userId: string,
+  ) {
     return this.addResourceGrant({
-      resourceType: "experiment",
-      resourceId: experimentId,
+      resourceType,
+      resourceId,
       granteeType: "user",
       granteeId: userId,
       role: "admin",

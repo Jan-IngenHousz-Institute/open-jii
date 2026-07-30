@@ -24,7 +24,7 @@ describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     server.mount(contract.users.getDeletionBlockers, {
-      body: { experiments: [] },
+      body: { resources: [] },
       status: 200,
     });
   });

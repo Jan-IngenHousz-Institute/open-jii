@@ -60,6 +60,7 @@ describe("resource grant teardown on resource delete", () => {
       granteeId: grantee,
       role: "viewer",
     });
+    // Only the share above: a creator holds no grant on what they create.
     expect(await grantsFor("macro", macro.id)).toHaveLength(1);
 
     assertSuccess(await testApp.module.get(MacroRepository).delete(macro.id));
@@ -76,6 +77,7 @@ describe("resource grant teardown on resource delete", () => {
       granteeId: grantee,
       role: "viewer",
     });
+    // Only the share above: a creator holds no grant on what they create.
     expect(await grantsFor("protocol", protocol.id)).toHaveLength(1);
 
     assertSuccess(await testApp.module.get(ProtocolRepository).delete(protocol.id));
@@ -92,6 +94,7 @@ describe("resource grant teardown on resource delete", () => {
       granteeId: grantee,
       role: "viewer",
     });
+    // Only the share above: a creator holds no grant on what they create.
     expect(await grantsFor("workbook", workbook.id)).toHaveLength(1);
 
     assertSuccess(await testApp.module.get(WorkbookRepository).delete(workbook.id));
@@ -104,8 +107,7 @@ describe("resource grant teardown on resource delete", () => {
       name: `Exp ${crypto.randomUUID()}`,
       userId: owner,
     });
-    // createExperiment seeds the creator's direct admin grant; add a direct
-    // share to a third party on top.
+    // The creator holds no grant, so the only row is this direct share.
     await testApp.addResourceGrant({
       resourceType: "experiment",
       resourceId: experiment.id,
@@ -114,7 +116,7 @@ describe("resource grant teardown on resource delete", () => {
       role: "admin",
     });
     const before = await grantsFor("experiment", experiment.id);
-    expect(before.map((g) => g.granteeId).sort()).toEqual([owner, grantee].sort());
+    expect(before.map((g) => g.granteeId)).toEqual([grantee]);
 
     assertSuccess(await testApp.module.get(ExperimentRepository).delete(experiment.id));
 
@@ -137,6 +139,7 @@ describe("resource grant teardown on resource delete", () => {
     assertSuccess(await testApp.module.get(MacroRepository).delete(doomed.id));
 
     expect(await grantsFor("macro", doomed.id)).toHaveLength(0);
+    // The survivor keeps its share.
     expect(await grantsFor("macro", survivor.id)).toHaveLength(1);
   });
 
@@ -244,15 +247,15 @@ describe("resource grant teardown on resource delete", () => {
       await testApp.database
         .insert(experimentMembers)
         .values({ experimentId: experiment.id, userId: owner });
-      // The creator's direct admin grant + the share above.
+      // Just the share above — creators hold no grant.
       const grantsBefore = await grantsFor("experiment", experiment.id);
-      expect(grantsBefore).toHaveLength(2);
+      expect(grantsBefore).toHaveLength(1);
 
       await withDeleteBlocked("experiments", async () => {
         const result = await testApp.module.get(ExperimentRepository).delete(experiment.id);
         assertFailure(result);
 
-        expect(await grantsFor("experiment", experiment.id)).toHaveLength(2);
+        expect(await grantsFor("experiment", experiment.id)).toHaveLength(1);
         const members = await testApp.database
           .select()
           .from(experimentMembers)

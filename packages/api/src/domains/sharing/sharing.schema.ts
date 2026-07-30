@@ -59,7 +59,39 @@ export const zResourceGrant = z.object({
   grantee: zGrantee,
 });
 
-export const zResourceGrantList = z.array(zResourceGrant);
+/**
+ * A row of the collaborators surface backed by an actual grant.
+ *
+ * The `kind` discriminator is what separates it from an owner row: only grant
+ * rows have an id, a role, and therefore something to change or revoke.
+ */
+export const zResourceGrantRow = zResourceGrant.extend({ kind: z.literal("grant") });
+
+/**
+ * A synthesized row for somebody who **owns** the resource, derived from its
+ * organization's living owners rather than from any grant.
+ *
+ * Owners are not collaborators — GitHub's shape, and ours since answerability
+ * comes from ownership. They hold every action through the org role, so there is
+ * no tier to display or change, nothing to revoke, and no way to leave (leaving is
+ * a matter of the organization, not the resource). Consequently the row carries no
+ * grant id, no role, and no outside-collaborator flag: an owner is by definition
+ * inside the owning org.
+ */
+export const zResourceOwnerRow = z.object({
+  kind: z.literal("owner"),
+  granteeType: z.literal("user"),
+  granteeId: z.string().uuid(),
+  grantee: zGrantee,
+});
+
+export const zResourceCollaborator = z.discriminatedUnion("kind", [
+  zResourceOwnerRow,
+  zResourceGrantRow,
+]);
+
+/** Everyone the collaborators surface lists: the owners, then the grantees. */
+export const zResourceGrantList = z.array(zResourceCollaborator);
 
 export const zCreateCollaboratorBody = z.object({
   granteeType: zGranteeType,
@@ -102,7 +134,9 @@ export const zGranteeOrganizationList = z.array(zGranteeOrganization);
 export type SharingResourceType = z.infer<typeof zSharingResourceType>;
 export type SharingGranteeType = z.infer<typeof zGranteeType>;
 export type GrantRole = z.infer<typeof zGrantRole>;
-export type ResourceGrantDto = z.infer<typeof zResourceGrant>;
+export type ResourceGrantDto = z.infer<typeof zResourceGrantRow>;
+export type ResourceOwnerDto = z.infer<typeof zResourceOwnerRow>;
+export type ResourceCollaboratorDto = z.infer<typeof zResourceCollaborator>;
 export type GranteeDto = z.infer<typeof zGrantee>;
 export type CreateCollaboratorBody = z.infer<typeof zCreateCollaboratorBody>;
 export type UpdateCollaboratorBody = z.infer<typeof zUpdateCollaboratorBody>;

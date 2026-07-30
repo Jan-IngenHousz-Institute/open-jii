@@ -1,4 +1,11 @@
-import { and, createSecondaryDatabase, eq, experiments, resourceGrants } from "@repo/database";
+import {
+  and,
+  createSecondaryDatabase,
+  eq,
+  experiments,
+  profiles,
+  resourceGrants,
+} from "@repo/database";
 
 import {
   assertFailure,
@@ -341,16 +348,13 @@ describe("AcceptPendingInvitationsUseCase", () => {
         granteeId: inviteeId,
         role: "admin",
       });
-      // Drop the owner's creator grant so the invitee holds the only staffing grant.
+      // Close the owner's account so the experiment's org has no living owner. Only
+      // then is the invitee's admin grant the last thing keeping it answerable, and
+      // only then does the invariant refuse the demotion.
       await testApp.database
-        .delete(resourceGrants)
-        .where(
-          and(
-            eq(resourceGrants.resourceType, "experiment"),
-            eq(resourceGrants.resourceId, experiment.id),
-            eq(resourceGrants.granteeId, ownerId),
-          ),
-        );
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, ownerId));
 
       const result = await useCase.execute(inviteeId, inviteeEmail);
 

@@ -91,6 +91,35 @@ describe("revokeGrant", () => {
     assertSuccess(await revokeGrant.execute(owner, "macro", macro.id, grant.id));
     const after = await listGrants.execute(owner, "macro", macro.id);
     assertSuccess(after);
-    expect(after.value).toHaveLength(0);
+    // Only the creator's own grant is left.
+    expect(after.value.map((grant) => grant.granteeId)).toEqual([owner]);
+  });
+
+  // An archived experiment is immutable everywhere else — the read-only row controls
+  // are not the enforcement, the server is.
+  it("refuses a revoke on an archived experiment, keeping the grant", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: `Exp ${crypto.randomUUID()}`,
+      userId: owner,
+      status: "archived",
+    });
+    const collaborator = await testApp.createTestUser({ name: "Collaborator" });
+    const grant = await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+      createdBy: owner,
+    });
+
+    const revoked = await revokeGrant.execute(owner, "experiment", experiment.id, grant.id);
+
+    assertFailure(revoked);
+    expect(revoked.error.statusCode).toBe(StatusCodes.FORBIDDEN);
+    expect(revoked.error.message).toBe("Cannot modify an archived experiment");
+    expect(
+      await testApp.database.select().from(resourceGrants).where(eq(resourceGrants.id, grant.id)),
+    ).toHaveLength(1);
   });
 });

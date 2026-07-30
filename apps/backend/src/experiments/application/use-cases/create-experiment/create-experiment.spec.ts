@@ -100,10 +100,10 @@ describe("CreateExperimentUseCase", () => {
     expect(result.value.organizationId).toBe(personalOrganizationId);
   });
 
-  it("seeds the creator with an admin grant", async () => {
+  it("seeds the creator with no grant at all", async () => {
     const experimentData = {
       name: "Member Test Experiment",
-      description: "Testing the creator's seeded access",
+      description: "Testing the creator's access",
     };
 
     const experimentResult = await useCase.execute(experimentData, testUserId);
@@ -111,9 +111,9 @@ describe("CreateExperimentUseCase", () => {
     assertSuccess(experimentResult);
     const createdExperiment = experimentResult.value;
 
-    // The creator's access is an explicit direct admin grant. Without it the
-    // experiment would start with no named steward and the staffing queries
-    // would find nothing to protect.
+    // The creator's access comes from owning the experiment — they own the
+    // personal org it lands in — so a grant would only repeat it, and would put
+    // them on the collaborators list as a collaborator on their own experiment.
     const grants = await testApp.database
       .select()
       .from(resourceGrants)
@@ -124,13 +124,7 @@ describe("CreateExperimentUseCase", () => {
           eq(resourceGrants.granteeType, "user"),
         ),
       );
-    expect(grants).toEqual([
-      expect.objectContaining({
-        granteeId: testUserId,
-        role: "admin",
-        createdBy: testUserId,
-      }),
-    ]);
+    expect(grants).toEqual([]);
   });
 
   it("gives each inline collaborator the contributing tier, and nothing more", async () => {
@@ -153,9 +147,8 @@ describe("CreateExperimentUseCase", () => {
           eq(resourceGrants.granteeType, "user"),
         ),
       );
-    // The creator administers; the person they listed contributes.
+    // Only the person they listed gets a grant; the creator needs none.
     expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
-      [testUserId]: "admin",
       [contributorId]: "member",
     });
   });

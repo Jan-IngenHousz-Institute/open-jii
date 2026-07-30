@@ -14,7 +14,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { assertExperimentStaysStaffed } from "../../../sharing/experiment-staffing";
+import { assertResourceStaysStaffed } from "../../../sharing/resource-staffing";
 import type { InvitationDto } from "../models/user-invitation.model";
 
 /**
@@ -295,7 +295,7 @@ export class InvitationRepository {
         // already holds a direct `admin` grant would *demote* them. Run the shared
         // staffing guard inside this transaction so every path that can lower a
         // direct grant's role passes through one check.
-        await assertExperimentStaysStaffed(tx, {
+        await assertResourceStaysStaffed(tx, {
           resourceType: "experiment",
           resourceId,
           target: { by: "grantee", granteeType: "user", granteeId: userId },

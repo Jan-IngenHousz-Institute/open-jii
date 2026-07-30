@@ -24,6 +24,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { seedCreatorControl } from "../../../sharing/resource-staffing";
 import {
   CreateMacroDto,
   UpdateMacroDto,
@@ -64,17 +65,22 @@ export class MacroRepository {
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
 
-      const results = await this.database
-        .insert(macros)
-        .values({
-          ...data,
-          id: macroId,
-          filename: generateHashedFilename(macroId),
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(macroColumns);
-      return results;
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(macros)
+          .values({
+            ...data,
+            id: macroId,
+            filename: generateHashedFilename(macroId),
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(macroColumns);
+
+        await seedCreatorControl(tx, "macro", macroId, organizationId, userId);
+
+        return results;
+      });
     });
   }
 
@@ -111,25 +117,26 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
+      // Access scoping is unconditional — it applies to the "my" view too. A view
+      // may narrow what the caller can see; it must never widen it. Authorship is
+      // not an access path (`can()` does not consult `created_by`), so a creator
+      // since removed from the owning organization, holding no grant, can no longer
+      // read the macro and must not get its body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "macro",
+        resourceIdColumn: macros.id,
+        organizationIdColumn: macros.organizationId,
+        visibilityColumn: macros.visibility,
+        userId: filter?.userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter?.filter === "my" && filter.userId) {
-        // "My macros" is an ownership view: the creator sees exactly what they
-        // authored, unaffected by visibility (mirrors the experiment "member"
-        // filter, which likewise bypasses the public-OR access scoping).
+        // "My macros" narrows that down to what the caller authored.
         conditions.push(eq(macros.createdBy, filter.userId));
-      } else {
-        // Access scoping: a private macro is only listed for owning-org
-        // members and grantees; public macros are visible to everyone.
-        const scope = accessibleResourceCondition({
-          database: this.database,
-          resourceType: "macro",
-          resourceIdColumn: macros.id,
-          organizationIdColumn: macros.organizationId,
-          visibilityColumn: macros.visibility,
-          userId: filter?.userId,
-        });
-        if (scope) {
-          conditions.push(scope);
-        }
       }
 
       // Apply all conditions with AND logic if there are any

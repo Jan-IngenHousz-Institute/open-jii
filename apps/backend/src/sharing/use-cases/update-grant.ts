@@ -7,7 +7,7 @@ import type {
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { EnrichedGrant, SharingRepository } from "../sharing.repository";
+import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
 
 /**
  * Change the role of an existing grant, identified by id and scoped to its
@@ -29,7 +29,7 @@ export class UpdateGrantUseCase {
     resourceId: string,
     grantId: string,
     body: UpdateCollaboratorBody,
-  ): Promise<Result<EnrichedGrant[]>> {
+  ): Promise<Result<ResourceCollaborator[]>> {
     const decision = await this.authz.can(userId, { resourceType, resourceId, action: "share" });
     if (!decision.allow) {
       return failure(

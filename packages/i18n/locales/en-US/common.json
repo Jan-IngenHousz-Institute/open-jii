@@ -392,6 +392,7 @@
     "revokeForLabel": "Remove {{name}}",
     "you": "(you)",
     "outsideCollaborator": "Outside Collaborator",
+    "ownerBadge": "Owner",
     "experimentTierHint": "\"Can view\" lets someone open the experiment and add measurements and annotations. \"Can edit\" adds settings, publishing and sharing.",
     "publicExperimentTierHint": "Everyone can already view this public experiment. \"Can view\" is what lets someone add measurements and annotations; \"Can edit\" adds settings, publishing and sharing on top.",
     "noCollaboratorsYet": "No collaborators yet",

@@ -53,8 +53,10 @@ describe("resource capabilities on detail responses", () => {
       const macro = await testApp.createMacro({ name: "M", createdBy: owner });
       const path = testApp.resolveOrpcPath(contract.macros.getMacro, { id: macro.id });
 
-      // canLeave is false: the creator's control comes from their personal-org
-      // owner role, not a grant row — there is nothing of their own to give up.
+      // canLeave is false, and falls out rather than being special-cased: it asks
+      // whether the caller holds a direct grant to give up, and an owner holds none
+      // — their control comes from the owning org. Owners cannot leave their own
+      // resources, which is why the surface offers them no such affordance.
       expect(await capabilitiesFor(path, owner)).toEqual({
         canContribute: true,
         canUpdate: true,

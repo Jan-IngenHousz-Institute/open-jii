@@ -488,16 +488,21 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toEqual({ experiments: [] });
+      expect(response.body).toEqual({ resources: [] });
     });
 
-    it("lists experiments where the user is the only admin, with their members as candidates", async () => {
+    it("lists resources where the user is the only admin, with their collaborators as candidates", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Sole Admin Experiment",
         userId: testUserId,
       });
       const memberId = await testApp.createTestUser({ email: "member@example.com" });
       await testApp.addExperimentCollaborator(experiment.id, memberId);
+      // A macro blocks the same way, and carries no lifecycle status.
+      const macro = await testApp.createMacro({
+        name: `Sole Admin Macro ${crypto.randomUUID()}`,
+        createdBy: testUserId,
+      });
 
       const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
@@ -508,12 +513,17 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body.experiments).toHaveLength(1);
-      expect(response.body.experiments[0]).toMatchObject({
+      expect(response.body.resources).toHaveLength(2);
+      const byType = Object.fromEntries(
+        response.body.resources.map((resource) => [resource.resourceType, resource]),
+      );
+      expect(byType.experiment).toMatchObject({
         id: experiment.id,
         name: experiment.name,
+        status: "active",
       });
-      expect(response.body.experiments[0].candidates.map((c) => c.userId)).toEqual([memberId]);
+      expect(byType.experiment.candidates.map((c) => c.userId)).toEqual([memberId]);
+      expect(byType.macro).toMatchObject({ id: macro.id, name: macro.name, status: null });
     });
 
     it("returns 403 when requesting another user's deletion blockers", async () => {

@@ -5,6 +5,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
 import { CollaboratorsList } from "@/components/sharing/collaborators-list";
+import { LeaveResourceCard } from "@/components/sharing/leave-resource-card";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useResourceCollaborators } from "@/hooks/sharing/useResourceCollaborators/useResourceCollaborators";
 import { Search, UserPlus } from "lucide-react";
@@ -36,6 +37,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const experiment = accessData?.experiment;
   const canManage = accessData?.isAdmin ?? false;
   const canShare = accessData?.capabilities.canShare ?? false;
+  const canLeave = accessData?.capabilities.canLeave ?? false;
 
   // Both endpoints are can(share)-gated (the grants list, and invitee emails):
   // skip the request entirely when the capability signal already says it would 403.
@@ -47,8 +49,13 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
   const { data: invitationsData } = useUserInvitations("experiment", id, { enabled: canShare });
   const invitations = useMemo(() => invitationsData ?? [], [invitationsData]);
 
-  const { data: joinRequestsData } = useExperimentJoinRequests(id);
+  // Same for join requests, which the server guards on can(manage).
+  const { data: joinRequestsData } = useExperimentJoinRequests(id, { enabled: canManage });
   const joinRequests = useMemo(() => joinRequestsData ?? [], [joinRequestsData]);
+
+  // With neither capability there is no tab to show, which also leaves the filter
+  // nothing to filter and the (already inert) invite action nothing to stand for.
+  const hasTabs = canShare || canManage;
 
   const [filter, setFilter] = useState("");
 
@@ -115,72 +122,88 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         <DocsHelpLink path="/guide/experiments/collaborators" className="mt-1" />
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-          <Input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder={t("experimentSettings.filterCollaboratorsPlaceholder")}
-            className="pl-9"
-          />
+      {hasTabs && (
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <Input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={t("experimentSettings.filterCollaboratorsPlaceholder")}
+              className="pl-9"
+            />
+          </div>
+          <Button disabled>
+            <UserPlus className="h-4 w-4" />
+            {t("experimentSettings.invite")}
+          </Button>
         </div>
-        <Button disabled>
-          <UserPlus className="h-4 w-4" />
-          {t("experimentSettings.invite")}
-        </Button>
-      </div>
+      )}
 
-      <NavTabs defaultValue={canShare ? "collaborators" : "requests"} className="w-full">
-        <NavTabsList>
+      {hasTabs && (
+        <NavTabs defaultValue={canShare ? "collaborators" : "requests"} className="w-full">
+          <NavTabsList>
+            {canShare && (
+              <NavTabsTrigger value="collaborators" count={filteredGrants.length}>
+                {t("experimentSettings.collaboratorsTab")}
+              </NavTabsTrigger>
+            )}
+            {canShare && (
+              <NavTabsTrigger value="invited" count={filteredInvitations.length}>
+                {t("experimentSettings.invitedTab")}
+              </NavTabsTrigger>
+            )}
+            {canManage && (
+              <NavTabsTrigger value="requests" count={filteredJoinRequests.length}>
+                {t("experimentSettings.requestsTab")}
+              </NavTabsTrigger>
+            )}
+          </NavTabsList>
+
           {canShare && (
-            <NavTabsTrigger value="collaborators" count={filteredGrants.length}>
-              {t("experimentSettings.collaboratorsTab")}
-            </NavTabsTrigger>
+            <NavTabsContent value="collaborators">
+              <CollaboratorsList
+                resourceType="experiment"
+                resourceId={id}
+                grants={filteredGrants}
+                isError={isGrantsError}
+                readOnly
+                isFiltered={normalizedFilter.length > 0}
+              />
+            </NavTabsContent>
           )}
+
           {canShare && (
-            <NavTabsTrigger value="invited" count={filteredInvitations.length}>
-              {t("experimentSettings.invitedTab")}
-            </NavTabsTrigger>
+            <NavTabsContent value="invited">
+              <ExperimentPendingInvitationsPanel
+                invitations={filteredInvitations}
+                isArchived
+                canRevoke={canShare}
+              />
+            </NavTabsContent>
           )}
-          <NavTabsTrigger value="requests" count={filteredJoinRequests.length}>
-            {t("experimentSettings.requestsTab")}
-          </NavTabsTrigger>
-        </NavTabsList>
 
-        {canShare && (
-          <NavTabsContent value="collaborators">
-            <CollaboratorsList
-              resourceType="experiment"
-              resourceId={id}
-              grants={filteredGrants}
-              isError={isGrantsError}
-              readOnly
-              isFiltered={normalizedFilter.length > 0}
-            />
-          </NavTabsContent>
-        )}
+          {canManage && (
+            <NavTabsContent value="requests">
+              <ExperimentJoinRequestsPanel
+                experimentId={id}
+                joinRequests={filteredJoinRequests}
+                isAdmin={canManage}
+                isArchived
+              />
+            </NavTabsContent>
+          )}
+        </NavTabs>
+      )}
 
-        {canShare && (
-          <NavTabsContent value="invited">
-            <ExperimentPendingInvitationsPanel
-              invitations={filteredInvitations}
-              isArchived
-              canRevoke={canShare}
-            />
-          </NavTabsContent>
-        )}
-
-        <NavTabsContent value="requests">
-          <ExperimentJoinRequestsPanel
-            experimentId={id}
-            joinRequests={filteredJoinRequests}
-            isAdmin={canManage}
-            isArchived
-          />
-        </NavTabsContent>
-      </NavTabs>
+      {/* The live page's leave card, rendered inert like everything else here:
+          leaving an archived experiment is refused server-side, and showing the
+          disabled affordance says so — omitting it reads as the feature not
+          existing. Share-capable users leave via their own row instead. */}
+      {!canShare && canLeave && (
+        <LeaveResourceCard resourceType="experiment" resourceId={id} disabled />
+      )}
     </div>
   );
 }

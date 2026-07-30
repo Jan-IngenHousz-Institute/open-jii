@@ -3609,89 +3609,6 @@
         }
       }
     },
-    "/api/v1/experiments/transfer-admin": {
-      "post": {
-        "operationId": "experiments.transferExperimentAdmin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "transfers": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "experimentId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "Experiment to transfer admin rights on"
-                        },
-                        "targetUserId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "User to make an admin of the experiment"
-                        }
-                      },
-                      "required": [
-                        "experimentId",
-                        "targetUserId"
-                      ]
-                    },
-                    "minItems": 1,
-                    "description": "Per-experiment admin assignments"
-                  }
-                },
-                "required": [
-                  "transfers"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "experimentId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "success": {
-                            "type": "boolean"
-                          },
-                          "error": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "experimentId",
-                          "success"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "results"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/experiments/{id}/metadata": {
       "get": {
         "operationId": "experiments.listExperimentMetadata",
@@ -15964,122 +15881,199 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "resourceType": {
-                        "enum": [
-                          "experiment",
-                          "macro",
-                          "protocol",
-                          "workbook"
-                        ],
-                        "type": "string"
-                      },
-                      "resourceId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "granteeType": {
-                        "enum": [
-                          "user",
-                          "organization"
-                        ],
-                        "type": "string"
-                      },
-                      "granteeId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "role": {
-                        "enum": [
-                          "owner",
-                          "admin",
-                          "member",
-                          "viewer"
-                        ],
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "anyOf": [
-                          {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "owner"
+                          },
+                          "granteeType": {
+                            "const": "user"
+                          },
+                          "granteeId": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
+                            ]
                           }
+                        },
+                        "required": [
+                          "kind",
+                          "granteeType",
+                          "granteeId",
+                          "grantee"
                         ]
                       },
-                      "isOutsideCollaborator": {
-                        "type": "boolean"
-                      },
-                      "grantee": {
+                      {
                         "type": "object",
                         "properties": {
-                          "type": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook"
+                            ],
+                            "type": "string"
+                          },
+                          "resourceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "granteeType": {
                             "enum": [
                               "user",
                               "organization"
                             ],
                             "type": "string"
                           },
-                          "displayName": {
+                          "granteeId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member",
+                              "viewer"
+                            ],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "createdBy": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "uuid"
                               },
                               {
                                 "type": "null"
                               }
                             ]
                           },
-                          "email": {
-                            "anyOf": [
-                              {
+                          "isOutsideCollaborator": {
+                            "type": "boolean"
+                          },
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
                                 "type": "string"
                               },
-                              {
-                                "type": "null"
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
                             ]
                           },
-                          "avatarUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                          "kind": {
+                            "const": "grant"
                           }
                         },
                         "required": [
-                          "type",
-                          "displayName",
-                          "email",
-                          "avatarUrl"
+                          "id",
+                          "resourceType",
+                          "resourceId",
+                          "granteeType",
+                          "granteeId",
+                          "role",
+                          "createdAt",
+                          "createdBy",
+                          "isOutsideCollaborator",
+                          "grantee",
+                          "kind"
                         ]
                       }
-                    },
-                    "required": [
-                      "id",
-                      "resourceType",
-                      "resourceId",
-                      "granteeType",
-                      "granteeId",
-                      "role",
-                      "createdAt",
-                      "createdBy",
-                      "isOutsideCollaborator",
-                      "grantee"
                     ]
                   }
                 }
@@ -16161,122 +16155,199 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "resourceType": {
-                        "enum": [
-                          "experiment",
-                          "macro",
-                          "protocol",
-                          "workbook"
-                        ],
-                        "type": "string"
-                      },
-                      "resourceId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "granteeType": {
-                        "enum": [
-                          "user",
-                          "organization"
-                        ],
-                        "type": "string"
-                      },
-                      "granteeId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "role": {
-                        "enum": [
-                          "owner",
-                          "admin",
-                          "member",
-                          "viewer"
-                        ],
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "anyOf": [
-                          {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "owner"
+                          },
+                          "granteeType": {
+                            "const": "user"
+                          },
+                          "granteeId": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
+                            ]
                           }
+                        },
+                        "required": [
+                          "kind",
+                          "granteeType",
+                          "granteeId",
+                          "grantee"
                         ]
                       },
-                      "isOutsideCollaborator": {
-                        "type": "boolean"
-                      },
-                      "grantee": {
+                      {
                         "type": "object",
                         "properties": {
-                          "type": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook"
+                            ],
+                            "type": "string"
+                          },
+                          "resourceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "granteeType": {
                             "enum": [
                               "user",
                               "organization"
                             ],
                             "type": "string"
                           },
-                          "displayName": {
+                          "granteeId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member",
+                              "viewer"
+                            ],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "createdBy": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "uuid"
                               },
                               {
                                 "type": "null"
                               }
                             ]
                           },
-                          "email": {
-                            "anyOf": [
-                              {
+                          "isOutsideCollaborator": {
+                            "type": "boolean"
+                          },
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
                                 "type": "string"
                               },
-                              {
-                                "type": "null"
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
                             ]
                           },
-                          "avatarUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                          "kind": {
+                            "const": "grant"
                           }
                         },
                         "required": [
-                          "type",
-                          "displayName",
-                          "email",
-                          "avatarUrl"
+                          "id",
+                          "resourceType",
+                          "resourceId",
+                          "granteeType",
+                          "granteeId",
+                          "role",
+                          "createdAt",
+                          "createdBy",
+                          "isOutsideCollaborator",
+                          "grantee",
+                          "kind"
                         ]
                       }
-                    },
-                    "required": [
-                      "id",
-                      "resourceType",
-                      "resourceId",
-                      "granteeType",
-                      "granteeId",
-                      "role",
-                      "createdAt",
-                      "createdBy",
-                      "isOutsideCollaborator",
-                      "grantee"
                     ]
                   }
                 }
@@ -16357,122 +16428,199 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "resourceType": {
-                        "enum": [
-                          "experiment",
-                          "macro",
-                          "protocol",
-                          "workbook"
-                        ],
-                        "type": "string"
-                      },
-                      "resourceId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "granteeType": {
-                        "enum": [
-                          "user",
-                          "organization"
-                        ],
-                        "type": "string"
-                      },
-                      "granteeId": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "role": {
-                        "enum": [
-                          "owner",
-                          "admin",
-                          "member",
-                          "viewer"
-                        ],
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "anyOf": [
-                          {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "owner"
+                          },
+                          "granteeType": {
+                            "const": "user"
+                          },
+                          "granteeId": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
+                            ]
                           }
+                        },
+                        "required": [
+                          "kind",
+                          "granteeType",
+                          "granteeId",
+                          "grantee"
                         ]
                       },
-                      "isOutsideCollaborator": {
-                        "type": "boolean"
-                      },
-                      "grantee": {
+                      {
                         "type": "object",
                         "properties": {
-                          "type": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook"
+                            ],
+                            "type": "string"
+                          },
+                          "resourceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "granteeType": {
                             "enum": [
                               "user",
                               "organization"
                             ],
                             "type": "string"
                           },
-                          "displayName": {
+                          "granteeId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member",
+                              "viewer"
+                            ],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "createdBy": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "uuid"
                               },
                               {
                                 "type": "null"
                               }
                             ]
                           },
-                          "email": {
-                            "anyOf": [
-                              {
+                          "isOutsideCollaborator": {
+                            "type": "boolean"
+                          },
+                          "grantee": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "user",
+                                  "organization"
+                                ],
                                 "type": "string"
                               },
-                              {
-                                "type": "null"
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "email": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "avatarUrl": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
+                            },
+                            "required": [
+                              "type",
+                              "displayName",
+                              "email",
+                              "avatarUrl"
                             ]
                           },
-                          "avatarUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                          "kind": {
+                            "const": "grant"
                           }
                         },
                         "required": [
-                          "type",
-                          "displayName",
-                          "email",
-                          "avatarUrl"
+                          "id",
+                          "resourceType",
+                          "resourceId",
+                          "granteeType",
+                          "granteeId",
+                          "role",
+                          "createdAt",
+                          "createdBy",
+                          "isOutsideCollaborator",
+                          "grantee",
+                          "kind"
                         ]
                       }
-                    },
-                    "required": [
-                      "id",
-                      "resourceType",
-                      "resourceId",
-                      "granteeType",
-                      "granteeId",
-                      "role",
-                      "createdAt",
-                      "createdBy",
-                      "isOutsideCollaborator",
-                      "grantee"
                     ]
                   }
                 }
@@ -16652,6 +16800,110 @@
                       "slug"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/collaborators/transfer-admin": {
+      "post": {
+        "operationId": "sharing.transferResourceAdmin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "transfers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "resourceType": {
+                          "enum": [
+                            "experiment",
+                            "macro",
+                            "protocol",
+                            "workbook"
+                          ],
+                          "type": "string",
+                          "description": "Type of resource to transfer admin on"
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Resource to transfer admin rights on"
+                        },
+                        "targetUserId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "User to make an admin of the resource"
+                        }
+                      },
+                      "required": [
+                        "resourceType",
+                        "resourceId",
+                        "targetUserId"
+                      ]
+                    },
+                    "minItems": 1,
+                    "description": "Per-resource admin assignments"
+                  }
+                },
+                "required": [
+                  "transfers"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook"
+                            ],
+                            "type": "string"
+                          },
+                          "resourceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "success": {
+                            "type": "boolean"
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "resourceType",
+                          "resourceId",
+                          "success"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "results"
+                  ]
                 }
               }
             }
@@ -17054,11 +17306,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "experiments": {
+                    "resources": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook"
+                            ],
+                            "type": "string"
+                          },
                           "id": {
                             "type": "string",
                             "format": "uuid"
@@ -17067,13 +17328,20 @@
                             "type": "string"
                           },
                           "status": {
-                            "enum": [
-                              "active",
-                              "stale",
-                              "archived",
-                              "published"
-                            ],
-                            "type": "string"
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "active",
+                                  "stale",
+                                  "archived",
+                                  "published"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "candidates": {
                             "type": "array",
@@ -17111,6 +17379,7 @@
                           }
                         },
                         "required": [
+                          "resourceType",
                           "id",
                           "name",
                           "status",
@@ -17120,7 +17389,7 @@
                     }
                   },
                   "required": [
-                    "experiments"
+                    "resources"
                   ]
                 }
               }

@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
 
-import { macros as macrosTable, eq } from "@repo/database";
+import { and, macros as macrosTable, eq, organizationMembers } from "@repo/database";
 
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { CreateMacroDto } from "../models/macro.model";
@@ -132,6 +133,58 @@ describe("MacroRepository", () => {
 
       // Assert
       expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("findAll 'my' filter is scoped by access, not just authorship", () => {
+    it("drops a private macro whose creator has lost access to it", async () => {
+      const org = await testApp.createOrganization();
+      const orgOwner = await testApp.createTestUser({ name: "Org Owner" });
+      await testApp.addOrganizationMember(org, orgOwner, "owner");
+      const author = await testApp.createTestUser({ name: "Former Member" });
+      await testApp.addOrganizationMember(org, author, "admin");
+
+      const created = await repository.create(
+        {
+          name: `Departed ${crypto.randomUUID()}`,
+          description: "d",
+          language: "python",
+          code: "eA==",
+        },
+        author,
+        org,
+      );
+      assertSuccess(created);
+      const macro = created.value[0];
+      await testApp.database
+        .update(macrosTable)
+        .set({ visibility: "private" })
+        .where(eq(macrosTable.id, macro.id));
+
+      // They can still see it while they belong to the organization...
+      const before = await repository.findAll({ filter: "my", userId: author });
+      assertSuccess(before);
+      expect(before.value.map((m) => m.id)).toContain(macro.id);
+
+      // ...and once they are removed, with no grant of their own, they cannot.
+      await testApp.database
+        .delete(organizationMembers)
+        .where(
+          and(eq(organizationMembers.organizationId, org), eq(organizationMembers.userId, author)),
+        );
+
+      const after = await repository.findAll({ filter: "my", userId: author });
+      assertSuccess(after);
+      // Authorship is not an access path: "My macros" must narrow what the caller
+      // can already read, never hand back a body `can(read)` would refuse.
+      expect(after.value.map((m) => m.id)).not.toContain(macro.id);
+      expect(
+        (
+          await testApp.module
+            .get(AuthorizationService)
+            .can(author, { resourceType: "macro", resourceId: macro.id, action: "read" })
+        ).allow,
+      ).toBe(false);
     });
   });
 

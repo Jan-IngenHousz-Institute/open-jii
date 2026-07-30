@@ -2,10 +2,11 @@
 
 import { AlertTriangle, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useTransferExperimentAdmin } from "~/hooks/experiment/useTransferExperimentAdmin/useTransferExperimentAdmin";
+import { useTransferResourceAdmin } from "~/hooks/sharing/useTransferResourceAdmin/useTransferResourceAdmin";
 import { useDebounce } from "~/hooks/useDebounce";
 import { useUserSearch } from "~/hooks/useUserSearch";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import type {
   DeletionBlocker,
   UserMetadata,
@@ -18,6 +19,20 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { UserAvatar } from "../../user-avatar";
 import { UserSearchPopover } from "../../user-search-popover";
+
+/**
+ * Where each blocking resource's collaborators live. Experiments have a dedicated
+ * Collaborators route; the other three carry it as a tab on the detail page.
+ */
+const COLLABORATORS_PATH: Record<SharingResourceType, (id: string) => string> = {
+  experiment: (id) => `platform/experiments/${id}/collaborators`,
+  macro: (id) => `platform/macros/${id}`,
+  protocol: (id) => `platform/protocols/${id}`,
+  workbook: (id) => `platform/workbooks/${id}`,
+};
+
+/** One blocker's identity: its type + id, which is what a transfer is keyed on. */
+const blockerKey = (blocker: DeletionBlocker) => `${blocker.resourceType}:${blocker.id}`;
 
 interface DeleteAccountBlockersProps {
   blockers: DeletionBlocker[];
@@ -44,9 +59,11 @@ function candidateToUserProfile(candidate: UserMetadata): UserProfile {
 
 /**
  * Shown inside the Delete Account dialog when the user is the only admin of one or more
- * experiments. Lets them hand admin off — per experiment, with existing collaborators suggested,
- * or one person for all — in a single "Transfer" action. Deletion stays blocked until the list
- * clears (the transfer invalidates the deletion-blocker query, so resolved experiments drop off).
+ * resources — an experiment, macro, protocol or workbook, all of which are created with a
+ * creator admin grant and so can be left with nobody answerable for them. Lets them hand admin
+ * off — per resource, with existing collaborators suggested, or one person for all — in a single
+ * "Transfer" action. Deletion stays blocked until the list clears (the transfer invalidates the
+ * deletion-blocker query, so resolved resources drop off).
  */
 export function DeleteAccountBlockers({
   blockers,
@@ -58,15 +75,15 @@ export function DeleteAccountBlockers({
   const { t } = useTranslation("account");
   const [assignments, setAssignments] = useState<Record<string, UserProfile | null>>({});
   const [applyAllUser, setApplyAllUser] = useState<UserProfile | null>(null);
-  const { mutate: transferAdmin, isPending } = useTransferExperimentAdmin({
+  const { mutate: transferAdmin, isPending } = useTransferResourceAdmin({
     onSuccess: () => {
-      // Resolved experiments leave the refetched list; clear local selections.
+      // Resolved resources leave the refetched list; clear local selections.
       setAssignments({});
       setApplyAllUser(null);
     },
   });
 
-  // Candidates who belong to every blocking experiment — the clean picks for "transfer all".
+  // Candidates who belong to every blocking resource — the clean picks for "transfer all".
   const sharedCandidates = useMemo<UserMetadata[]>(() => {
     if (blockers.length === 0) return [];
 
@@ -84,8 +101,8 @@ export function DeleteAccountBlockers({
     });
   }, [blockers]);
 
-  const setAssignment = (experimentId: string, user: UserProfile | null) => {
-    setAssignments((prev) => ({ ...prev, [experimentId]: user }));
+  const setAssignment = (key: string, user: UserProfile | null) => {
+    setAssignments((prev) => ({ ...prev, [key]: user }));
   };
 
   const applyToAll = (user: UserProfile | null) => {
@@ -93,7 +110,7 @@ export function DeleteAccountBlockers({
 
     setApplyAllUser(user);
     if (user) {
-      setAssignments(Object.fromEntries(blockers.map((blocker) => [blocker.id, user])));
+      setAssignments(Object.fromEntries(blockers.map((blocker) => [blockerKey(blocker), user])));
       return;
     }
 
@@ -103,8 +120,8 @@ export function DeleteAccountBlockers({
       const next = { ...prev };
 
       for (const blocker of blockers) {
-        if (next[blocker.id]?.userId === previousApplyAllUserId) {
-          delete next[blocker.id];
+        if (next[blockerKey(blocker)]?.userId === previousApplyAllUserId) {
+          delete next[blockerKey(blocker)];
         }
       }
 
@@ -116,11 +133,18 @@ export function DeleteAccountBlockers({
     () =>
       blockers
         .map((blocker) => ({
-          experimentId: blocker.id,
-          targetUserId: assignments[blocker.id]?.userId,
+          resourceType: blocker.resourceType,
+          resourceId: blocker.id,
+          targetUserId: assignments[blockerKey(blocker)]?.userId,
         }))
-        .filter((transfer): transfer is { experimentId: string; targetUserId: string } =>
-          Boolean(transfer.targetUserId),
+        .filter(
+          (
+            transfer,
+          ): transfer is {
+            resourceType: SharingResourceType;
+            resourceId: string;
+            targetUserId: string;
+          } => Boolean(transfer.targetUserId),
         ),
     [assignments, blockers],
   );
@@ -209,11 +233,12 @@ export function DeleteAccountBlockers({
 
       <ul className="space-y-2 sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:pr-1 sm:[scrollbar-gutter:stable]">
         {blockers.map((blocker) => {
-          const selectedUser = assignments[blocker.id] ?? null;
+          const key = blockerKey(blocker);
+          const selectedUser = assignments[key] ?? null;
 
           return (
             <li
-              key={blocker.id}
+              key={key}
               className={cn(
                 "border-border bg-background space-y-2 rounded-md border p-3 shadow-sm transition-colors",
                 selectedUser && "border-primary/30 bg-quaternary/40",
@@ -221,18 +246,29 @@ export function DeleteAccountBlockers({
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Badge
-                    className={cn(
-                      `bg-badge-${blocker.status}`,
-                      "shrink-0 px-1.5 py-0.5 text-[11px] font-medium",
-                    )}
-                  >
-                    {t(`experiments:status.${blocker.status}`)}
-                  </Badge>
+                  {/* An experiment's lifecycle status; the other types have none, so
+                      they are labelled by type instead. */}
+                  {blocker.status ? (
+                    <Badge
+                      className={cn(
+                        `bg-badge-${blocker.status}`,
+                        "shrink-0 px-1.5 py-0.5 text-[11px] font-medium",
+                      )}
+                    >
+                      {t(`experiments:status.${blocker.status}`)}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 px-1.5 py-0.5 text-[11px] font-medium"
+                    >
+                      {t(`dangerZone.delete.blockers.resourceType.${blocker.resourceType}`)}
+                    </Badge>
+                  )}
                   <span className="min-w-0 truncate font-medium">{blocker.name}</span>
                 </div>
                 <a
-                  href={`/${locale}/platform/experiments/${blocker.id}/collaborators`}
+                  href={`/${locale}/${COLLABORATORS_PATH[blocker.resourceType](blocker.id)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
@@ -245,7 +281,7 @@ export function DeleteAccountBlockers({
               <TransferUserPicker
                 suggestions={blocker.candidates}
                 selectedUser={selectedUser}
-                onSelect={(user) => setAssignment(blocker.id, user)}
+                onSelect={(user) => setAssignment(key, user)}
                 placeholder={t("dangerZone.delete.blockers.rowPlaceholder")}
                 excludeUserId={currentUserId}
                 disabled={isPending}
@@ -288,7 +324,7 @@ interface TransferUserPickerProps {
 
 /**
  * A user picker for handing over admin: full platform search via the shared popover, plus the
- * experiment's existing collaborators offered as one-click suggestion chips.
+ * resource's existing collaborators offered as one-click suggestion chips.
  */
 function TransferUserPicker({
   suggestions,

@@ -17,7 +17,8 @@ import { TestHarness } from "../test/test-harness";
 /**
  * These statements mirror the data migration hand-written in
  * `packages/database/drizzle/0041_iam_grants_sole_access_source.sql`, which makes
- * `resource_grants` the only thing that confers access to an experiment. They are
+ * `resource_grants` the only thing that confers *explicit* access to a shared
+ * resource, and strips the creator grants that ownership makes redundant. They are
  * duplicated here so the migration's data ops are locked by tests — update both
  * together if the migration changes.
  *
@@ -37,17 +38,32 @@ const GRANT_EVERY_MEMBER_THEIR_ROLE_SQL = sql`
   ON CONFLICT DO NOTHING;
 `;
 
-const DELETE_CREATOR_SELF_GRANTS_SQL = sql`
-  DELETE FROM "resource_grants"
-  WHERE "resource_type" IN ('macro', 'protocol', 'workbook')
-    AND "grantee_type" = 'user'
-    AND "role" = 'admin'
-    AND "grantee_id" = "created_by";
+const DELETE_CREATOR_GRANTS_SQL = sql`
+  DELETE FROM "resource_grants" g
+  USING (
+    SELECT 'experiment'::"resource_type" AS "resource_type", e."id", e."created_by", e."organization_id" FROM "experiments" e
+    UNION ALL
+    SELECT 'macro'::"resource_type", m."id", m."created_by", m."organization_id" FROM "macros" m
+    UNION ALL
+    SELECT 'protocol'::"resource_type", p."id", p."created_by", p."organization_id" FROM "protocols" p
+    UNION ALL
+    SELECT 'workbook'::"resource_type", w."id", w."created_by", w."organization_id" FROM "workbooks" w
+  ) r
+  WHERE g."resource_type" = r."resource_type"
+    AND g."resource_id" = r."id"
+    AND g."grantee_type" = 'user'
+    AND g."grantee_id" = r."created_by"
+    AND EXISTS (
+      SELECT 1 FROM "organization_members" om
+      WHERE om."organization_id" = r."organization_id"
+        AND om."user_id" = r."created_by"
+        AND om."role" IN ('owner', 'admin')
+    );
 `;
 
 async function runDataMigration(db: DatabaseInstance): Promise<void> {
   await db.execute(GRANT_EVERY_MEMBER_THEIR_ROLE_SQL);
-  await db.execute(DELETE_CREATOR_SELF_GRANTS_SQL);
+  await db.execute(DELETE_CREATOR_GRANTS_SQL);
 }
 
 describe("grants-as-sole-access-source migration data ops (0041)", () => {
@@ -80,10 +96,10 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
   }
 
   async function seedExperiment(owner: string) {
-    await ensurePersonalOrganization(testApp.database, { id: owner });
+    const organizationId = await ensurePersonalOrganization(testApp.database, { id: owner });
     const [experiment] = await testApp.database
       .insert(experiments)
-      .values({ name: `Exp ${crypto.randomUUID()}`, createdBy: owner })
+      .values({ name: `Exp ${crypto.randomUUID()}`, createdBy: owner, organizationId })
       .returning();
     return experiment;
   }
@@ -148,10 +164,15 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     expect(await grantsFor("experiment", experiment.id)).toEqual([]);
   });
 
-  it("deletes creator self-grants on macro/protocol/workbook but keeps every other grant", async () => {
-    const creator = await testApp.createTestUser({ name: "Creator" });
-    const other = await testApp.createTestUser({ name: "Other" });
-    await ensurePersonalOrganization(testApp.database, { id: creator });
+  /**
+   * A macro/protocol/workbook/device authored by `creator`, each already carrying
+   * the creator self-grant that 0039 wrote — the rows statement 2 exists to remove.
+   * `organizationId` defaults to the creator's personal org (which they own); pass
+   * `null` to reproduce a row that predates the org backfill.
+   */
+  async function seedAuthoredResources(creator: string, organizationId?: string | null) {
+    const personalOrg = await ensurePersonalOrganization(testApp.database, { id: creator });
+    const owningOrg = organizationId === undefined ? personalOrg : organizationId;
     const tag = crypto.randomUUID();
 
     const [macro] = await testApp.database
@@ -162,6 +183,7 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
         language: "python",
         code: "cHk=",
         createdBy: creator,
+        organizationId: owningOrg,
       })
       .returning();
     const [protocol] = await testApp.database
@@ -171,24 +193,23 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
         code: { steps: [] },
         family: "multispeq",
         createdBy: creator,
+        organizationId: owningOrg,
       })
       .returning();
     const [workbook] = await testApp.database
       .insert(workbooks)
-      .values({ name: `Workbook ${tag}`, createdBy: creator })
+      .values({ name: `Workbook ${tag}`, createdBy: creator, organizationId: owningOrg })
       .returning();
     const device = await testApp.createIotDevice({ createdBy: creator, name: `Device ${tag}` });
 
-    // The creator self-grants the earlier backfill wrote: grantee = created_by,
-    // role 'admin'.
-    for (const [type, id] of [
+    for (const [resourceType, id] of [
       ["macro", macro.id],
       ["protocol", protocol.id],
       ["workbook", workbook.id],
       ["device", device.id],
     ] as const) {
       await testApp.addResourceGrant({
-        resourceType: type,
+        resourceType,
         resourceId: id,
         granteeType: "user",
         granteeId: creator,
@@ -196,7 +217,60 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
         createdBy: creator,
       });
     }
-    // A real share to somebody else must survive.
+
+    return { macro, protocol, workbook, device };
+  }
+
+  it("strips the creator's own grant from every macro, protocol and workbook", async () => {
+    const creator = await testApp.createTestUser({ name: "Creator" });
+    const { macro, protocol, workbook } = await seedAuthoredResources(creator);
+
+    await runDataMigration(testApp.database);
+
+    // The creator owns the personal org each of these sits in, so the grant conferred
+    // nothing — and left them rendering as a collaborator on their own resource
+    // beside the synthesized Owner row.
+    for (const [type, id] of [
+      ["macro", macro.id],
+      ["protocol", protocol.id],
+      ["workbook", workbook.id],
+    ] as const) {
+      expect(await grantsFor(type, id)).toEqual([]);
+    }
+  });
+
+  it("strips the experiment creator grant statement 1 just revived from the roster", async () => {
+    const owner = await testApp.createTestUser({ name: "Owner" });
+    const experiment = await seedExperiment(owner);
+    // The creator was an admin on the dormant roster, so statement 1 re-inserts
+    // their grant — statement 2 has to take it back out, or experiments would keep
+    // a creator grant the other three types no longer have.
+    await testApp.database
+      .insert(experimentMembers)
+      .values({ experimentId: experiment.id, userId: owner, role: "admin" });
+
+    await runDataMigration(testApp.database);
+
+    expect(await grantsFor("experiment", experiment.id)).toEqual([]);
+  });
+
+  it("leaves device grants untouched", async () => {
+    const creator = await testApp.createTestUser({ name: "Creator" });
+    const { device } = await seedAuthoredResources(creator);
+
+    await runDataMigration(testApp.database);
+
+    // Devices have no sharing surface, so nothing lists their grants and the
+    // migration has no reason to touch them.
+    expect(await grantsFor("device", device.id)).toEqual([
+      expect.objectContaining({ granteeId: creator, role: "admin" }),
+    ]);
+  });
+
+  it("keeps everyone else's grants", async () => {
+    const creator = await testApp.createTestUser({ name: "Creator" });
+    const other = await testApp.createTestUser({ name: "Other" });
+    const { macro } = await seedAuthoredResources(creator);
     await testApp.addResourceGrant({
       resourceType: "macro",
       resourceId: macro.id,
@@ -208,16 +282,59 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
 
     await runDataMigration(testApp.database);
 
-    expect(await grantsFor("protocol", protocol.id)).toEqual([]);
-    expect(await grantsFor("workbook", workbook.id)).toEqual([]);
+    // Only the creator's row goes; a real collaborator is untouched.
     expect(await grantsFor("macro", macro.id)).toEqual([
       expect.objectContaining({ granteeId: other, role: "viewer" }),
     ]);
-    // Devices are deliberately out of scope: nothing lists their grants, so the
-    // phantom-collaborator problem does not arise and the row stays.
-    expect(await grantsFor("device", device.id)).toEqual([
+  });
+
+  it("keeps a creator's grant when the resource has no owning organization", async () => {
+    const creator = await testApp.createTestUser({ name: "Orphan Creator" });
+    const { macro, protocol, workbook } = await seedAuthoredResources(creator, null);
+
+    await runDataMigration(testApp.database);
+
+    // `organization_id` is nullable and rows predating the org backfill still carry
+    // NULL. There is no owning org to inherit access from and no Owner row to
+    // render, so the creator's grant is their *only* access — deleting it would
+    // lock them out of their own resource.
+    for (const [type, id] of [
+      ["macro", macro.id],
+      ["protocol", protocol.id],
+      ["workbook", workbook.id],
+    ] as const) {
+      expect(await grantsFor(type, id)).toEqual([
+        expect.objectContaining({ granteeId: creator, role: "admin" }),
+      ]);
+    }
+  });
+
+  it("keeps a creator's grant when they are only a member of the owning organization", async () => {
+    const creator = await testApp.createTestUser({ name: "Member Creator" });
+    const sharedOrg = await testApp.createOrganization();
+    await testApp.addOrganizationMember(sharedOrg, creator, "member");
+    const { macro } = await seedAuthoredResources(creator, sharedOrg);
+
+    await runDataMigration(testApp.database);
+
+    // An org `member` gets read only, so the creator's admin grant is doing real
+    // work here — it is not redundant with the org role and must survive.
+    expect(await grantsFor("macro", macro.id)).toEqual([
       expect.objectContaining({ granteeId: creator, role: "admin" }),
     ]);
+  });
+
+  it("strips the creator's grant when they are an admin of the owning organization", async () => {
+    const creator = await testApp.createTestUser({ name: "Admin Creator" });
+    const sharedOrg = await testApp.createOrganization();
+    await testApp.addOrganizationMember(sharedOrg, creator, "admin");
+    const { macro } = await seedAuthoredResources(creator, sharedOrg);
+
+    await runDataMigration(testApp.database);
+
+    // Org `admin` carries every action, exactly like `owner`, so the grant is as
+    // redundant as it is in a personal workspace.
+    expect(await grantsFor("macro", macro.id)).toEqual([]);
   });
 
   it("re-applies cleanly onto its own output (an interrupted run can be resumed)", async () => {
@@ -228,14 +345,36 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
       { experimentId: experiment.id, userId: owner, role: "admin" },
       { experimentId: experiment.id, userId: joiner, role: "member" },
     ]);
+    // Both statements have to be re-runnable, so the creator-grant delete needs a
+    // resource of each authored type in the fixture too — the roster rows above only
+    // exercise the first one.
+    const { macro, protocol, workbook } = await seedAuthoredResources(owner);
+
+    const authoredGrants = async () =>
+      Object.fromEntries(
+        await Promise.all(
+          (
+            [
+              ["macro", macro.id],
+              ["protocol", protocol.id],
+              ["workbook", workbook.id],
+            ] as const
+          ).map(async ([type, id]) => [type, await grantsFor(type, id)] as const),
+        ),
+      );
 
     await runDataMigration(testApp.database);
     const afterFirst = await grantsFor("experiment", experiment.id);
+    const authoredAfterFirst = await authoredGrants();
     await runDataMigration(testApp.database);
     const afterSecond = await grantsFor("experiment", experiment.id);
+    const authoredAfterSecond = await authoredGrants();
 
-    // Same rows, same ids: the second pass inserts nothing and rewrites nothing, so
-    // a run interrupted half-way can simply be run again.
+    // The same end state either way, so a run interrupted half-way can simply be
+    // run again. The owner's roster row is re-inserted by statement 1 on the second
+    // pass and removed again by statement 2 — churn that nets to nothing, which is
+    // what "idempotent" has to mean for a pair whose halves pull in opposite
+    // directions.
     //
     // This is *not* a claim that re-running is safe at any later time: step 1
     // inserts where a grant is absent, so on a live database it would restore a
@@ -243,11 +382,20 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     // Drizzle's journal is what prevents that — each migration applies exactly once
     // per database — and the case below pins the failure mode so nobody mistakes
     // this test for a licence to re-run it by hand.
-    expect(afterSecond.map((g) => g.id).sort()).toEqual(afterFirst.map((g) => g.id).sort());
+    expect(Object.fromEntries(afterSecond.map((g) => [g.granteeId, g.role]))).toEqual(
+      Object.fromEntries(afterFirst.map((g) => [g.granteeId, g.role])),
+    );
+    // The creator is gone; only the joiner's roster-derived grant remains.
     expect(Object.fromEntries(afterSecond.map((g) => [g.granteeId, g.role]))).toEqual({
-      [owner]: "admin",
       [joiner]: "member",
     });
+
+    // The creator-grant delete is naturally idempotent: the second pass finds
+    // nothing left to delete.
+    expect(authoredAfterSecond).toEqual(authoredAfterFirst);
+    for (const grants of Object.values(authoredAfterFirst)) {
+      expect(grants).toEqual([]);
+    }
   });
 
   it("would restore a revoked grant if re-run after a revoke — which is why it runs once", async () => {

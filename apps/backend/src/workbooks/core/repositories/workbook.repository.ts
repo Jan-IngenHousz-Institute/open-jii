@@ -9,13 +9,11 @@ import {
   eq,
   exists,
   experiments,
-  resourceGrants,
   getTableColumns,
   ilike,
   isNull,
   macros,
   ne,
-  or,
   profiles,
   protocols,
   sql,
@@ -30,6 +28,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { seedCreatorControl } from "../../../sharing/resource-staffing";
 import { CreateWorkbookDto, UpdateWorkbookDto, WorkbookDto } from "../models/workbook.model";
 
 export interface WorkbookFilter {
@@ -74,15 +73,20 @@ export class WorkbookRepository {
       // Own the workbook with the requested target org (fallback: the creator's personal org).
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(workbooks)
-        .values({
-          ...data,
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(workbookColumns);
-      return results as WorkbookDto[];
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(workbooks)
+          .values({
+            ...data,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(workbookColumns);
+
+        await seedCreatorControl(tx, "workbook", results[0].id, organizationId, userId);
+
+        return results as WorkbookDto[];
+      });
     });
   }
 
@@ -107,8 +111,12 @@ export class WorkbookRepository {
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
         sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
-      // Match the name/description of a linked, non-archived experiment. Private experiment text
-      // is only searchable by members; without a requesting user, only public experiments match.
+      // Match the name/description of a linked, non-archived experiment. Scoped
+      // through the same shared predicate as the protocol/macro matches below, so
+      // "which experiments may this caller discover" has one definition: public, a
+      // grant of any kind, or membership of the owning org. The owning-org arm is
+      // what covers the caller's *own* private experiments — they hold no grant on
+      // what they own.
       const linkedExperimentMatch = (term: string) =>
         exists(
           this.database
@@ -118,24 +126,14 @@ export class WorkbookRepository {
               and(
                 eq(experiments.workbookId, workbooks.id),
                 ne(experiments.status, "archived"),
-                filter?.userId
-                  ? or(
-                      eq(experiments.visibility, "public"),
-                      exists(
-                        this.database
-                          .select()
-                          .from(resourceGrants)
-                          .where(
-                            and(
-                              eq(resourceGrants.resourceType, "experiment"),
-                              eq(resourceGrants.resourceId, experiments.id),
-                              eq(resourceGrants.granteeType, "user"),
-                              eq(resourceGrants.granteeId, filter.userId),
-                            ),
-                          ),
-                      ),
-                    )
-                  : eq(experiments.visibility, "public"),
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "experiment",
+                  resourceIdColumn: experiments.id,
+                  organizationIdColumn: experiments.organizationId,
+                  visibilityColumn: experiments.visibility,
+                  userId: filter?.userId,
+                }),
                 ftsMatch(experiments.searchVector, experiments.name, term),
               ),
             ),
@@ -192,25 +190,26 @@ export class WorkbookRepository {
         );
       }
 
+      // Access scoping is unconditional — it applies to the "my" view too. A view
+      // may narrow what the caller can see; it must never widen it. Authorship is
+      // not an access path (`can()` does not consult `created_by`), so a creator
+      // since removed from the owning organization, holding no grant, can no longer
+      // read the workbook and must not get its body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "workbook",
+        resourceIdColumn: workbooks.id,
+        organizationIdColumn: workbooks.organizationId,
+        visibilityColumn: workbooks.visibility,
+        userId: filter?.userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter?.filter === "my" && filter.userId) {
-        // "My workbooks" is an ownership view: the creator sees exactly what they
-        // authored, unaffected by visibility (mirrors the experiment "member"
-        // filter, which likewise bypasses the public-OR access scoping).
+        // "My workbooks" narrows that down to what the caller authored.
         conditions.push(eq(workbooks.createdBy, filter.userId));
-      } else {
-        // Access scoping: a private workbook is only listed for
-        // owning-org members and grantees; public workbooks are visible to all.
-        const scope = accessibleResourceCondition({
-          database: this.database,
-          resourceType: "workbook",
-          resourceIdColumn: workbooks.id,
-          organizationIdColumn: workbooks.organizationId,
-          visibilityColumn: workbooks.visibility,
-          userId: filter?.userId,
-        });
-        if (scope) {
-          conditions.push(scope);
-        }
       }
 
       if (conditions.length > 0) {

@@ -21,7 +21,8 @@ import { SharingRepository } from "../sharing.repository";
  * org grant, public read); the UI says so rather than promising otherwise.
  *
  * The last-admin staffing invariant still applies (inside `repo.leave`'s
- * transaction): an experiment's last admin cannot leave it.
+ * transaction): a resource's last admin cannot leave it — including its creator,
+ * who holds a direct admin grant from create time on all four resource types.
  */
 @Injectable()
 export class LeaveResourceUseCase {

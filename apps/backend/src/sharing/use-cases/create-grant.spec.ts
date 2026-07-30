@@ -1,5 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
+import { and, eq, resourceGrants } from "@repo/database";
+
 import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateGrantUseCase } from "./create-grant";
@@ -55,9 +57,11 @@ describe("createGrant", () => {
       role: "admin",
     });
     assertSuccess(second);
-    expect(second.value).toHaveLength(1);
-    expect(second.value[0].role).toBe("admin");
-    expect(second.value[0].isOutsideCollaborator).toBe(true);
+    // One row for the grantee, not two — beside the creator's own grant.
+    const granteeRows = second.value.filter((grant) => grant.granteeId === outsider);
+    expect(granteeRows).toHaveLength(1);
+    expect(granteeRows[0].role).toBe("admin");
+    expect(granteeRows[0].isOutsideCollaborator).toBe(true);
   });
 
   // Grantees are validated against the same visibility rules the grantee
@@ -152,5 +156,37 @@ describe("createGrant", () => {
     });
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.FORBIDDEN);
+  });
+
+  // An archived experiment is immutable everywhere else — the disabled invite button
+  // is not the enforcement, the server is.
+  it("refuses a new grant on an archived experiment, writing nothing", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: `Exp ${crypto.randomUUID()}`,
+      userId: owner,
+      status: "archived",
+    });
+    const collaborator = await testApp.createTestUser({ name: "Collaborator" });
+
+    const result = await createGrant.execute(owner, "experiment", experiment.id, {
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+    });
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(StatusCodes.FORBIDDEN);
+    expect(result.error.message).toBe("Cannot modify an archived experiment");
+    expect(
+      await testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeId, collaborator),
+          ),
+        ),
+    ).toEqual([]);
   });
 });

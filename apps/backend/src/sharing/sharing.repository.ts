@@ -11,6 +11,7 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   isNull,
   like,
   listResourceGrants,
@@ -21,6 +22,8 @@ import {
   profiles,
   resourceGrants,
   deleteGrant,
+  ensureDirectAdminGrant,
+  experiments,
   sql,
   updateGrantRole,
   upsertGrant,
@@ -29,7 +32,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
-import { Result, tryCatch } from "../common/utils/fp-utils";
+import { AppError, Result, tryCatch } from "../common/utils/fp-utils";
 import { escapeLike } from "../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
@@ -37,8 +40,31 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../common/utils/profile-anonymization";
-import { assertExperimentStaysStaffed } from "./experiment-staffing";
-import type { StaffingGuardedWrite } from "./experiment-staffing";
+import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "./resource-staffing";
+import type { StaffingGuardedWrite } from "./resource-staffing";
+
+/**
+ * Archived experiments are immutable server-side, grant writes included — but only
+ * experiments carry a status, reads stay allowed, and the account-deletion hand-off
+ * (`ensureDirectAdminGrant`) deliberately bypasses this so an archived experiment can
+ * still be transferred. A missing experiment is not refused here: leave's uniform 404
+ * depends on that.
+ */
+async function assertResourceIsUnarchived(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+): Promise<void> {
+  if (resourceType !== "experiment") return;
+  const rows = await tx
+    .select({ status: experiments.status })
+    .from(experiments)
+    .where(eq(experiments.id, resourceId))
+    .limit(1);
+  if (rows.length > 0 && rows[0].status === "archived") {
+    throw AppError.forbidden("Cannot modify an archived experiment");
+  }
+}
 
 /** Display info for a grant's grantee (user or organization). */
 export interface GranteeInfo {
@@ -50,6 +76,7 @@ export interface GranteeInfo {
 
 /** A grant enriched with its grantee's display info + the outside-collaborator flag. */
 export interface EnrichedGrant {
+  kind: "grant";
   id: string;
   resourceType: SharingResourceType;
   resourceId: string;
@@ -61,6 +88,17 @@ export interface EnrichedGrant {
   isOutsideCollaborator: boolean;
   grantee: GranteeInfo;
 }
+
+/** A synthesized row for a living owner of the resource's owning organization. */
+export interface OwnerRow {
+  kind: "owner";
+  granteeType: "user";
+  granteeId: string;
+  grantee: GranteeInfo;
+}
+
+/** Everything the collaborators surface lists. */
+export type ResourceCollaborator = OwnerRow | EnrichedGrant;
 
 /** An organization the caller may pick as a grantee in the collaborators UI. */
 export interface GranteeOrganizationRow {
@@ -100,8 +138,14 @@ export class SharingRepository {
     resourceType: SharingResourceType,
     resourceId: string,
     owningOrganizationId: string | null,
-  ): Promise<Result<EnrichedGrant[]>> {
+  ): Promise<Result<ResourceCollaborator[]>> {
     return tryCatch(async () => {
+      // The owners come first and are not grants: they are synthesized from the
+      // owning org, which is where answerability lives. A creator therefore appears
+      // here without ever having been granted anything.
+      const owners = await this.listOwnerRows(owningOrganizationId);
+      const ownerIds = new Set(owners.map((o) => o.granteeId));
+
       // Membership probe for the outside-collaborator label: a user grantee is
       // an org member when they hold a membership row in the owning org. With no
       // owning org the join is false → every grantee counts as outside.
@@ -164,48 +208,114 @@ export class SharingRepository {
         )
         .orderBy(desc(resourceGrants.createdAt));
 
-      return rows.map((r) => {
-        const granteeType = r.granteeType as SharingGranteeType;
-        const isOutsideCollaborator =
-          granteeType === "organization"
-            ? r.granteeId !== owningOrganizationId
-            : r.orgMemberId == null;
-        return {
-          id: r.id,
-          resourceType: r.resourceType as SharingResourceType,
-          resourceId: r.resourceId,
-          granteeType,
-          granteeId: r.granteeId,
-          role: r.role as GrantRole,
-          createdAt: r.createdAt,
-          createdBy: r.createdBy,
-          isOutsideCollaborator,
-          grantee: buildGrantee(granteeType, r),
-        };
-      });
+      const grants = rows
+        // An owner who also happens to hold a grant is still shown once, as the
+        // owner: the grant can only repeat access they already have through the
+        // org, and rendering both would put the same person on two rows with
+        // contradictory affordances.
+        .filter((r) => !(r.granteeType === "user" && ownerIds.has(r.granteeId)))
+        .map((r): EnrichedGrant => {
+          const granteeType = r.granteeType as SharingGranteeType;
+          const isOutsideCollaborator =
+            granteeType === "organization"
+              ? r.granteeId !== owningOrganizationId
+              : r.orgMemberId == null;
+          return {
+            kind: "grant",
+            id: r.id,
+            resourceType: r.resourceType as SharingResourceType,
+            resourceId: r.resourceId,
+            granteeType,
+            granteeId: r.granteeId,
+            role: r.role as GrantRole,
+            createdAt: r.createdAt,
+            createdBy: r.createdBy,
+            isOutsideCollaborator,
+            grantee: buildGrantee(granteeType, r),
+          };
+        });
+
+      return [...owners, ...grants];
     });
   }
 
   /**
-   * The single write path for grants: assert the experiment staffing
-   * invariant and perform the mutation in **one transaction**, with the staffing
-   * rows locked (see {@link assertExperimentStaysStaffed}).
+   * The living owners of an organization, as collaborator rows. "Living" is an
+   * open account: a closed one is nobody to escalate to, and an org whose last
+   * owner closed their account leaves its resources relying on admin grants
+   * instead (which is exactly when the last-admin invariant starts biting).
    *
-   * Every mutating method below funnels through here rather than each calling the
-   * assertion for itself — that is what stops a fourth path (or a future one) from
-   * silently skipping it, which is exactly how the create-upsert slipped past the
-   * invariant while only PATCH and DELETE consulted it.
+   * Display info is anonymized on the same terms as grantee info, so a deactivated
+   * owner renders as "Unknown User" rather than leaking their identity.
+   */
+  private async listOwnerRows(owningOrganizationId: string | null): Promise<OwnerRow[]> {
+    if (!owningOrganizationId) return [];
+
+    // Who counts as an owner is not decided here: it comes from the one shared
+    // fragment the staffing invariant and the deletion blocker also read, so the
+    // surface cannot show somebody the rules would not treat as answerable (or
+    // hide somebody they would). This query only puts faces on the ids it returns.
+    const owners = await this.db.execute<{ user_id: string }>(
+      livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`),
+    );
+    const ownerIds = owners.map((o) => o.user_id);
+    if (ownerIds.length === 0) return [];
+
+    const rows = await this.db
+      .select({
+        userId: users.id,
+        profileFirstName: getAnonymizedFirstName(),
+        profileLastName: getAnonymizedLastName(),
+        profileAvatarUrl: getAnonymizedAvatarUrl(),
+        userEmail: getAnonymizedEmail(),
+        userName: sql<
+          string | null
+        >`CASE WHEN ${profiles.activated} = true THEN ${users.name} ELSE NULL END`,
+        userImage: sql<
+          string | null
+        >`CASE WHEN ${profiles.activated} = true THEN ${users.image} ELSE NULL END`,
+      })
+      .from(users)
+      .leftJoin(profiles, eq(profiles.userId, users.id))
+      .where(inArray(users.id, ownerIds))
+      .orderBy(asc(users.createdAt), asc(users.id));
+
+    return rows.map((r) => ({
+      kind: "owner",
+      granteeType: "user",
+      granteeId: r.userId,
+      grantee: buildGrantee("user", { ...r, orgName: null }),
+    }));
+  }
+
+  /**
+   * The single write path for grants: archived-experiment refusal + staffing
+   * invariant + mutation, one transaction, staffing rows locked. Every mutation
+   * funnels through here so no write path can skip the guards.
    */
   private guardedWrite<T>(
     write: StaffingGuardedWrite,
     mutate: (tx: DbOrTx) => Promise<T>,
+    /**
+     * Defer the archived refusal until `mutate` proved the caller had something to
+     * write (the transaction rolls it back). Self-leave needs this — it carries no
+     * authorization check, so an up-front "it is archived" would disclose the
+     * experiment to callers who hold no grant on it.
+     */
+    refuseArchivedAfterWriting?: (written: T) => boolean,
   ): Promise<Result<T>> {
     return tryCatch(() =>
       this.db.transaction(async (tx) => {
-        // Throws AppError(400) on violation, which rolls the transaction back and
-        // is passed through unchanged by the default repository error mapper.
-        await assertExperimentStaysStaffed(tx, write);
-        return mutate(tx);
+        const assertUnarchived = () =>
+          assertResourceIsUnarchived(tx, write.resourceType, write.resourceId);
+
+        // Guard throws (403 archived / 400 staffing) roll the transaction back.
+        if (!refuseArchivedAfterWriting) await assertUnarchived();
+        await assertResourceStaysStaffed(tx, write);
+
+        const written = await mutate(tx);
+        if (refuseArchivedAfterWriting?.(written)) await assertUnarchived();
+        return written;
       }),
     );
   }
@@ -214,7 +324,7 @@ export class SharingRepository {
    * Upsert a grant (re-sharing with the same grantee updates their role).
    *
    * Guarded: the upsert's `ON CONFLICT DO UPDATE` can *demote* an existing grant,
-   * so re-sharing an experiment's sole admin as a viewer is a staffing change and
+   * so re-sharing a resource's sole admin as a viewer is a staffing change and
    * is refused like any other demotion.
    */
   create(input: CreateGrantInput): Promise<Result<DirectGrantRow>> {
@@ -279,8 +389,10 @@ export class SharingRepository {
    * grantee because the caller cannot know their grant's id — the grants list
    * is share-gated. Resolves to null when the caller holds no grant here.
    *
-   * Guarded like every other grant mutation: an experiment's last admin
-   * leaving would unstaff it, so the staffing invariant refuses it.
+   * Guarded like every other grant mutation: a resource's last admin
+   * leaving would unstaff it, so the staffing invariant refuses it, and an archived
+   * experiment refuses it too — deferred until the caller's own grant is known to
+   * exist, so a caller with no grant here still learns nothing about the resource.
    */
   leave(params: {
     resourceType: SharingResourceType;
@@ -301,7 +413,25 @@ export class SharingRepository {
           granteeType: "user",
           granteeId: params.userId,
         })) ?? null,
+      (removed) => removed !== null,
     );
+  }
+
+  /**
+   * Give a user a direct `admin` grant on a resource, for the account-deletion
+   * hand-off. Not routed through {@link guardedWrite}: `ensureDirectAdminGrant`
+   * only ever raises a grantee's tier, so it cannot unstaff anything and has
+   * nothing for the invariant to check. That is also what keeps the hand-off working
+   * on an archived experiment, whose sole admin would otherwise be unable to close
+   * their account.
+   */
+  ensureDirectAdminGrant(params: {
+    resourceType: SharingResourceType;
+    resourceId: string;
+    userId: string;
+    createdBy: string;
+  }): Promise<Result<void>> {
+    return tryCatch(() => ensureDirectAdminGrant(this.db, params));
   }
 
   /** Plain (unenriched) grants on a resource. */

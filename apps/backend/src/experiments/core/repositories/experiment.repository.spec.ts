@@ -78,6 +78,33 @@ describe("ExperimentRepository", () => {
     });
   });
 
+  describe("listCollaborators credit", () => {
+    it("credits the creator themselves, not the org owner in their place", async () => {
+      const org = await testApp.createOrganization();
+      const orgOwner = await testApp.createTestUser({ name: "Olive Owner" });
+      await testApp.addOrganizationMember(org, orgOwner, "owner");
+      const author = await testApp.createTestUser({ name: "Adam Author" });
+      await testApp.addOrganizationMember(org, author, "admin");
+
+      const created = await repository.create(
+        { name: `Credit ${crypto.randomUUID()}` },
+        author,
+        org,
+      );
+      assertSuccess(created);
+
+      const result = await repository.listCollaborators(created.value[0].id);
+      assertSuccess(result);
+
+      // An org `admin` creator holds full control without owning the org, so they
+      // get no grant — crediting only the owners would put somebody else's name on
+      // their work and leave the author off their own experiment entirely.
+      const credited = result.value.collaborators.map((c) => c.userId);
+      expect(credited).toContain(author);
+      expect(credited).toContain(orgOwner);
+    });
+  });
+
   describe("findAll", () => {
     it("should return all experiments without filter", async () => {
       // Arrange
