@@ -13167,6 +13167,33 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "canContribute": {
+                          "type": "boolean"
+                        },
+                        "canUpdate": {
+                          "type": "boolean"
+                        },
+                        "canManage": {
+                          "type": "boolean"
+                        },
+                        "canShare": {
+                          "type": "boolean"
+                        },
+                        "canLeave": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canContribute",
+                        "canUpdate",
+                        "canManage",
+                        "canShare",
+                        "canLeave"
+                      ]
                     }
                   },
                   "required": [
@@ -13183,7 +13210,8 @@
                     "organizationId",
                     "visibility",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "capabilities"
                   ]
                 }
               }
@@ -15857,7 +15885,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device"
               ],
               "type": "string"
             }
@@ -15963,7 +15992,8 @@
                               "experiment",
                               "macro",
                               "protocol",
-                              "workbook"
+                              "workbook",
+                              "device"
                             ],
                             "type": "string"
                           },
@@ -16094,7 +16124,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device"
               ],
               "type": "string"
             }
@@ -16237,7 +16268,8 @@
                               "experiment",
                               "macro",
                               "protocol",
-                              "workbook"
+                              "workbook",
+                              "device"
                             ],
                             "type": "string"
                           },
@@ -16370,7 +16402,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device"
               ],
               "type": "string"
             }
@@ -16510,7 +16543,8 @@
                               "experiment",
                               "macro",
                               "protocol",
-                              "workbook"
+                              "workbook",
+                              "device"
                             ],
                             "type": "string"
                           },
@@ -16641,7 +16675,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device"
               ],
               "type": "string"
             }
@@ -16701,7 +16736,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device"
               ],
               "type": "string"
             }
@@ -16827,7 +16863,8 @@
                             "experiment",
                             "macro",
                             "protocol",
-                            "workbook"
+                            "workbook",
+                            "device"
                           ],
                           "type": "string",
                           "description": "Type of resource to transfer admin on"
@@ -16878,7 +16915,8 @@
                               "experiment",
                               "macro",
                               "protocol",
-                              "workbook"
+                              "workbook",
+                              "device"
                             ],
                             "type": "string"
                           },
@@ -17316,7 +17354,8 @@
                               "experiment",
                               "macro",
                               "protocol",
-                              "workbook"
+                              "workbook",
+                              "device"
                             ],
                             "type": "string"
                           },
