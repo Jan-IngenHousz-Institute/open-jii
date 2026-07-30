@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zSharingResourceType } from "../sharing/sharing.schema";
+
 /**
  * Visibility of an org-scoped resource. `private|public` for every shareable
  * type (experiment/macro/protocol/workbook share this two-value model — the DB
@@ -7,6 +9,22 @@ import { z } from "zod";
  * both `private|public`).
  */
 export const zVisibility = z.enum(["private", "public"]);
+
+/**
+ * The resource types that can actually be published — the shareable types minus
+ * devices.
+ *
+ * Devices carry a `visibility` column like everything else, but nothing may write
+ * it: a device is a piece of hardware registered to an organization, and its
+ * AWS Thing, certificates and ingest topic are not artifacts anyone can publish.
+ * Deriving this from {@link zSharingResourceType} rather than listing four
+ * literals is what makes the exclusion load-bearing — the publish use-case and
+ * repository take *this* type, so a device cannot be routed into them even by
+ * mistake, and a future type added to sharing has to state its position here.
+ */
+export const zPublishableResourceType = zSharingResourceType.exclude(["device"]);
+
+export type PublishableResourceType = z.infer<typeof zPublishableResourceType>;
 
 /**
  * Body of the dedicated `setVisibility` route (a `PATCH .../{id}/visibility`

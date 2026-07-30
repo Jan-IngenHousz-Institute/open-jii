@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { zResourceGrant } from "./sharing.schema";
+import { zPublishableResourceType } from "../visibility/visibility.schema";
+import { zResourceGrant, zSharingResourceType } from "./sharing.schema";
+
+describe("zSharingResourceType", () => {
+  it("covers every resource type that can hold a grant, devices included", () => {
+    expect([...zSharingResourceType.options].sort()).toEqual([
+      "device",
+      "experiment",
+      "macro",
+      "protocol",
+      "workbook",
+    ]);
+  });
+
+  it("is the publishable set plus devices — shareable and publishable are not the same question", () => {
+    // A device can be shared but never published: it stays private for good, so no
+    // route may write its visibility.
+    expect([...zPublishableResourceType.options].sort()).toEqual([
+      "experiment",
+      "macro",
+      "protocol",
+      "workbook",
+    ]);
+    expect(zPublishableResourceType.safeParse("device").success).toBe(false);
+  });
+});
 
 describe("zResourceGrant response schema", () => {
   const base = {

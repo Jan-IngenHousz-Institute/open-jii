@@ -2,6 +2,7 @@ import { and, eq, experimentMembers, resourceGrants, sql } from "@repo/database"
 
 import { assertFailure, assertSuccess } from "../common/utils/fp-utils";
 import { ExperimentRepository } from "../experiments/core/repositories/experiment.repository";
+import { IotDeviceRepository } from "../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../test/test-harness";
@@ -10,8 +11,8 @@ import { WorkbookRepository } from "../workbooks/core/repositories/workbook.repo
 /**
  * `resource_grants` is polymorphic, so no FK cascade cleans it up: every delete
  * path must tear down its own grants. Orphaned rows would otherwise linger and
- * could be re-associated with a future resource that reuses the id. Covers all
- * four shareable types.
+ * could be re-associated with a future resource that reuses the id. Covers every
+ * shareable type.
  */
 describe("resource grant teardown on resource delete", () => {
   const testApp = TestHarness.App;
@@ -37,7 +38,7 @@ describe("resource grant teardown on resource delete", () => {
   });
 
   function grantsFor(
-    resourceType: "experiment" | "macro" | "protocol" | "workbook",
+    resourceType: "experiment" | "macro" | "protocol" | "workbook" | "device",
     resourceId: string,
   ) {
     return testApp.database
@@ -100,6 +101,25 @@ describe("resource grant teardown on resource delete", () => {
     assertSuccess(await testApp.module.get(WorkbookRepository).delete(workbook.id));
 
     expect(await grantsFor("workbook", workbook.id)).toHaveLength(0);
+  });
+
+  it("deletes a device's grants along with the device", async () => {
+    const device = await testApp.createIotDevice({ createdBy: owner });
+    await testApp.addResourceGrant({
+      resourceType: "device",
+      resourceId: device.id,
+      granteeType: "user",
+      granteeId: grantee,
+      role: "viewer",
+    });
+    // Only the share above: a creator holds no grant on what they create.
+    expect(await grantsFor("device", device.id)).toHaveLength(1);
+
+    // Straight to the repository: the use case would call AWS to tear down the
+    // Thing and its certificate first, which is not what this is about.
+    assertSuccess(await testApp.module.get(IotDeviceRepository).delete(device.id));
+
+    expect(await grantsFor("device", device.id)).toHaveLength(0);
   });
 
   it("deletes every grant on an experiment along with it", async () => {
@@ -226,6 +246,24 @@ describe("resource grant teardown on resource delete", () => {
         assertFailure(result);
 
         expect(await grantsFor("workbook", workbook.id)).toHaveLength(1);
+      });
+    });
+
+    it("keeps a device's grants when the device delete fails", async () => {
+      const device = await testApp.createIotDevice({ createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: device.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+
+      await withDeleteBlocked("iot_devices", async () => {
+        const result = await testApp.module.get(IotDeviceRepository).delete(device.id);
+        assertFailure(result);
+
+        expect(await grantsFor("device", device.id)).toHaveLength(1);
       });
     });
 

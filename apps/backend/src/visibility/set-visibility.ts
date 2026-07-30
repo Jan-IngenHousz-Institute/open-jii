@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { PublishableResourceType } from "@repo/api/domains/visibility/visibility.schema";
 
 import { AuthorizationService } from "../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../common/utils/fp-utils";
@@ -16,8 +16,9 @@ export interface SetVisibilityResult {
 
 /**
  * Change a resource's visibility, enforcing the monotonic private→public rule via
- * the shared `visibility-transition` helper. Generic across the four shareable
- * resource types.
+ * the shared `visibility-transition` helper. Generic across the publishable
+ * resource types — devices are shareable but have no publish path at all, so they
+ * are excluded from the parameter type rather than refused at runtime.
  *
  * Authorization (`can(manage)`) is enforced *declaratively* on the route by
  * `@CanAccess`, so this use-case carries no authz itself — which also lets
@@ -35,7 +36,7 @@ export class SetVisibilityUseCase {
   ) {}
 
   async execute(
-    resourceType: SharingResourceType,
+    resourceType: PublishableResourceType,
     resourceId: string,
     target: Visibility,
   ): Promise<Result<SetVisibilityResult>> {

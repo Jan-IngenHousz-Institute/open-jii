@@ -8,6 +8,7 @@ import {
   eq,
   experiments,
   inArray,
+  iotDevices,
   isNotNull,
   macros,
   organizationMembers,
@@ -28,25 +29,64 @@ export function isStaffingRole(role: string): boolean {
   return (STAFFING_GRANT_ROLES as readonly string[]).includes(role);
 }
 
-/**
- * The resource types the staffing rules govern — the four with a sharing surface.
- * Devices are absent: they have no collaborators list, so there is no admin to be
- * the last of, and a device must never block an account deletion.
- */
-export const STAFFED_RESOURCE_TYPES = [
-  "experiment",
-  "macro",
-  "protocol",
-  "workbook",
-] as const satisfies readonly SharingResourceType[];
+/** A table the staffing rules can read an id and an owning organization from. */
+type StaffedResourceTable =
+  | typeof experiments
+  | typeof macros
+  | typeof protocols
+  | typeof workbooks
+  | typeof iotDevices;
 
-/** Where each staffed type keeps its id and owning organization. */
-const STAFFED_RESOURCE_TABLES = {
+/**
+ * Where each staffed type keeps its id and owning organization.
+ *
+ * **The single enumeration of the types the staffing rules govern.** Everything
+ * else derives from it: `owningOrgIdSql` reads a table out of it, and
+ * {@link ALL_STAFFED_RESOURCES} — which is what the account-deletion blocker
+ * actually queries — is built from it. Typed as a total `Record` over
+ * `SharingResourceType` deliberately: a type added to the sharing enum then fails
+ * to compile until it appears here, which is the only mechanism that stops a new
+ * shareable type from being silently exempt from the deletion blocker while every
+ * spec stays green.
+ *
+ * Devices are governed on exactly the same terms as the rest — a device whose
+ * owning org has no living owner keeps its last direct admin, and being that last
+ * answerable person blocks account deletion until the device is handed over or
+ * deleted. That is the point rather than an edge case: a device nobody can
+ * administer is live AWS infrastructure (a Thing, a certificate, an ingest topic)
+ * that nobody can tear down.
+ */
+const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable> = {
   experiment: experiments,
   macro: macros,
   protocol: protocols,
   workbook: workbooks,
-} as const;
+  device: iotDevices,
+};
+
+/**
+ * Every staffed resource with its type and owning organization, as one
+ * polymorphic row set — the account-deletion blocker's `FROM`.
+ *
+ * Generated from {@link STAFFED_RESOURCE_TABLES} rather than written out, so the
+ * set of tables the blocker sweeps cannot drift from the set the last-admin
+ * invariant governs. Hand-written, the two agreed only by discipline: a sixth type
+ * added to the map but not to the SQL would keep its last-admin protection and
+ * silently never block an account deletion, with nothing failing.
+ *
+ * Every branch names its own output columns instead of leaning on the first
+ * branch's, so the column names do not depend on object key order.
+ */
+export const ALL_STAFFED_RESOURCES: SQL = sql.join(
+  Object.entries(STAFFED_RESOURCE_TABLES).map(
+    ([resourceType, table]) =>
+      sql`SELECT ${resourceType}::"resource_type" AS "resource_type",
+                 ${table.id} AS "id",
+                 ${table.organizationId} AS "organization_id"
+          FROM ${table}`,
+  ),
+  sql` UNION ALL `,
+);
 
 /**
  * The organization role that makes someone answerable for everything the org owns.

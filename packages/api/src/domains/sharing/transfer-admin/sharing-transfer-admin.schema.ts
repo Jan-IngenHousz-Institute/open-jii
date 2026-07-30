@@ -5,8 +5,9 @@ import { zSharingResourceType } from "../sharing.schema";
 /**
  * Bulk hand-off of admin rights, used by the account-deletion flow: each entry
  * gives the target user a direct `admin` grant on one resource the caller is
- * currently the sole admin of, clearing that deletion blocker. Any of the four
- * shareable types can block a deletion, so each entry names its own resource type.
+ * currently the sole admin of, clearing that deletion blocker. Any shareable type
+ * can block a deletion — a device as much as an experiment — so each entry names
+ * its own resource type.
  */
 export const zTransferResourceAdminBody = z.object({
   transfers: z

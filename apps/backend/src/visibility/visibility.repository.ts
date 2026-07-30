@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { PublishableResourceType } from "@repo/api/domains/visibility/visibility.schema";
 import { eq, experiments, macros, protocols, workbooks } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -15,8 +15,11 @@ export interface VisibilityRow {
 /**
  * Persists a resource's visibility. The read side (current visibility) is
  * served by `AuthorizationService.getOwnership`; this repository owns only the
- * write, keyed by resource type. Devices are excluded — they have no publish
- * surface yet — so only the four shareable types are handled.
+ * write, keyed by resource type.
+ *
+ * Devices are excluded at the type level (`PublishableResourceType`), not merely
+ * unhandled: they are shareable but never publishable, so a device that reached
+ * this switch would be a bug the compiler should have caught.
  *
  * Each type is updated in its own branch (rather than a single union-typed
  * query) so Drizzle keeps the row type exact — `visibility` narrows to
@@ -27,7 +30,7 @@ export class VisibilityRepository {
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   setVisibility(
-    resourceType: SharingResourceType,
+    resourceType: PublishableResourceType,
     resourceId: string,
     visibility: Visibility,
   ): Promise<Result<VisibilityRow[]>> {

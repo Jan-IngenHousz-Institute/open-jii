@@ -133,7 +133,8 @@
           "experiment": "Experiment",
           "macro": "Macro",
           "protocol": "Protocol",
-          "workbook": "Workbook"
+          "workbook": "Workbook",
+          "device": "Device"
         }
       }
     },

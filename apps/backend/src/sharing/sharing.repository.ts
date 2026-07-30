@@ -223,7 +223,9 @@ export class SharingRepository {
           return {
             kind: "grant",
             id: r.id,
-            resourceType: r.resourceType as SharingResourceType,
+            // No cast: now that devices are shareable, the column's enum and the
+            // sharing type are the same set.
+            resourceType: r.resourceType,
             resourceId: r.resourceId,
             granteeType,
             granteeId: r.granteeId,

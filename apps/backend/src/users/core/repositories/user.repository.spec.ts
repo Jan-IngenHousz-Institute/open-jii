@@ -39,14 +39,15 @@ describe("UserRepository", () => {
   let repository: UserRepository;
   let testUserId: string;
 
-  /** A macro/protocol/workbook authored by `creatorId` (seeded with its creator grant). */
+  /** A macro/protocol/workbook/device authored by `creatorId`, owned by their personal org. */
   const createAuthoredResource = (
-    resourceType: "macro" | "protocol" | "workbook",
+    resourceType: "macro" | "protocol" | "workbook" | "device",
     creatorId: string,
   ) => {
     const name = `${resourceType} ${faker.string.uuid()}`;
     if (resourceType === "macro") return testApp.createMacro({ name, createdBy: creatorId });
     if (resourceType === "protocol") return testApp.createProtocol({ name, createdBy: creatorId });
+    if (resourceType === "device") return testApp.createIotDevice({ name, createdBy: creatorId });
     return testApp.createWorkbook({ name, createdBy: creatorId });
   };
 
@@ -645,9 +646,9 @@ describe("UserRepository", () => {
       expect(soleAdmin.value).toBe(true);
     });
 
-    // The blocker covers all four shareable types: each is created with a creator
-    // admin grant, so each can be left with nobody answerable for it.
-    it.each(["macro", "protocol", "workbook"] as const)(
+    // The blocker covers every shareable type: each is owned by an organization, so
+    // each can be left with nobody answerable for it.
+    it.each(["macro", "protocol", "workbook", "device"] as const)(
       "blocks on a sole-admin %s, and stops blocking once a second admin exists",
       async (resourceType) => {
         const creatorId = await testApp.createTestUser({ email: `${resourceType}@example.com` });
@@ -687,22 +688,34 @@ describe("UserRepository", () => {
       expect(result.value).toBe(true);
     });
 
-    it("does not let a device grant block a deletion", async () => {
-      const ownerId = await testApp.createTestUser({ email: "device-owner@example.com" });
-      const device = await testApp.createIotDevice({ createdBy: ownerId });
-      // Devices have no sharing surface and no staffing rules, so an admin grant on
-      // one must never stand between a user and closing their account.
-      await testApp.addResourceGrant({
-        resourceType: "device",
-        resourceId: device.id,
-        granteeType: "user",
-        granteeId: ownerId,
-        role: "admin",
+    it("blocks on a device whose owning org has no living owner but which the user administers", async () => {
+      // The husk prong, on a device: the owning org's owner is gone, so the admin
+      // grant is the only thing keeping the device administrable — and an
+      // unadministrable device is a live AWS Thing and certificate nobody can
+      // revoke.
+      const org = await testApp.createOrganization();
+      const adminId = await testApp.createTestUser({ email: "device-husk-admin@example.com" });
+      const device = await testApp.createIotDevice({ createdBy: adminId, organizationId: org });
+      await testApp.addResourceAdmin("device", device.id, adminId);
+
+      const result = await repository.isOnlyAdminOfAnyResources(adminId);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("names the device by its serial number when it was never given a name", async () => {
+      const ownerId = await testApp.createTestUser({ email: "unnamed-device@example.com" });
+      const device = await testApp.createIotDevice({
+        createdBy: ownerId,
+        name: null,
+        serialNumber: "SN-UNNAMED-1",
       });
 
-      const result = await repository.isOnlyAdminOfAnyResources(ownerId);
+      const result = await repository.findSoleAdminResources(ownerId);
       assertSuccess(result);
-      expect(result.value).toBe(false);
+      expect(result.value).toEqual([
+        { resourceType: "device", id: device.id, name: "SN-UNNAMED-1", status: null },
+      ]);
     });
   });
 

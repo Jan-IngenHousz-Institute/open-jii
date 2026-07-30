@@ -6,6 +6,7 @@ import {
   zDeviceRegistryWebhookResponse,
   zIotCredentials,
   zIotDevice,
+  zIotDeviceDetail,
   zIotDeviceList,
   zIotDevicePathParam,
   zIotUploadUrl,
@@ -41,7 +42,7 @@ export const iotContract = {
   getIotDevice: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}", successStatus: 200 })
     .input(zIotDevicePathParam)
-    .output(zIotDevice),
+    .output(zIotDeviceDetail),
   deleteIotDevice: oc
     .route({ method: "DELETE", path: "/api/v1/devices/{deviceId}", successStatus: 204 })
     .input(zIotDevicePathParam)

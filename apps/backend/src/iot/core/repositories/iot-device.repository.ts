@@ -1,10 +1,19 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { desc, eq, inArray, iotDevices, or, ensurePersonalOrganization } from "@repo/database";
+import {
+  desc,
+  deleteResourceGrants,
+  eq,
+  inArray,
+  iotDevices,
+  or,
+  ensurePersonalOrganization,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { seedCreatorControl } from "../../../sharing/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
@@ -24,11 +33,23 @@ export class IotDeviceRepository {
       // personal org so there is never an org-less device.
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(iotDevices)
-        .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
-        .returning();
-      return results;
+
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(iotDevices)
+          .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
+          .returning();
+
+        // Same access-neutral seeding the other shareable types get: nothing is
+        // written when registering into an org whose role already confers full
+        // control, and an `admin` grant is written when it does not — a plain
+        // `member` may register a device into a shared org, and `member` is
+        // read-only, so without this they could not rotate or revoke the
+        // certificates of the device they just brought online.
+        await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
+
+        return results;
+      });
     });
   }
 
@@ -37,9 +58,9 @@ export class IotDeviceRepository {
   // it is public — mirroring the experiment `findAll` scoping. The `createdBy`
   // tier is explicit (not covered by the shared predicate) so a creator who is
   // later removed from a non-personal owning org still sees the devices they
-  // registered. The grant and public tiers are dormant for now (devices default
-  // private and no path writes device grants yet) but are wired so they light up
-  // when device sharing lands.
+  // registered. The grant tier is what makes a shared device show up in the
+  // grantee's registry; the public tier stays unreachable, since devices are
+  // permanently private and no path writes their visibility.
   async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       const scope = accessibleResourceCondition({
@@ -110,12 +131,17 @@ export class IotDeviceRepository {
   }
 
   async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
-    return tryCatch(async () => {
-      const results = await this.database
-        .delete(iotDevices)
-        .where(eq(iotDevices.id, deviceId))
-        .returning();
-      return results;
-    });
+    return tryCatch(() =>
+      // Grant cleanup and the device delete are one transaction: the grants table
+      // is polymorphic (no FK cascade), so it must be cleaned by hand — and if the
+      // device delete failed after a committed cleanup, the device would survive
+      // with every grant on it already gone, silently stripping its collaborators'
+      // access while the API reported failure.
+      this.database.transaction(async (tx) => {
+        await deleteResourceGrants(tx, "device", deviceId);
+
+        return tx.delete(iotDevices).where(eq(iotDevices.id, deviceId)).returning();
+      }),
+    );
   }
 }

@@ -36,5 +36,10 @@ export function resourceCacheKeys(
         orpc.workbooks.getWorkbook.queryKey({ input: { id: resourceId } }),
         orpc.workbooks.listWorkbooks.key(),
       ];
+    case "device":
+      return [
+        orpc.iot.getIotDevice.queryKey({ input: { deviceId: resourceId } }),
+        orpc.iot.listIotDevices.key(),
+      ];
   }
 }

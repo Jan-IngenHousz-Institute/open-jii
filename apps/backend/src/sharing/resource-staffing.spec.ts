@@ -13,6 +13,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { AuthorizationService } from "../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../common/utils/fp-utils";
+import { IotDeviceRepository } from "../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../macros/core/repositories/macro.repository";
 import { TestHarness } from "../test/test-harness";
 import { SharingRepository } from "./sharing.repository";
@@ -198,6 +199,38 @@ describe("last-admin invariant (sharing use-cases)", () => {
           (await authz.can(subject, { resourceType: "macro", resourceId: macro.id, action })).allow,
         ).toBe(true);
       }
+    });
+
+    it("seeds a member registering a device an admin grant, so they can revoke its certificate", async () => {
+      const { org, subject } = await sharedOrgWith("member");
+
+      const result = await testApp.module.get(IotDeviceRepository).create(
+        {
+          thingName: `test-device_${crypto.randomUUID()}`,
+          thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/test-device",
+          serialNumber: crypto.randomUUID(),
+          name: "Registered device",
+          deviceType: "generic",
+        },
+        subject,
+        org,
+      );
+      assertSuccess(result);
+      const device = result.value[0];
+
+      // Registering into an org you are merely a member of would otherwise leave you
+      // read-only on your own hardware — unable to issue, rotate or revoke the
+      // certificate it needs to talk to the broker, all of which gate on `manage`.
+      expect((await directGrant(device.id, subject, "device")).role).toBe("admin");
+      expect(
+        (
+          await authz.can(subject, {
+            resourceType: "device",
+            resourceId: device.id,
+            action: "manage",
+          })
+        ).allow,
+      ).toBe(true);
     });
 
     it("seeds an admin creator nothing — their org role already covers it", async () => {
@@ -669,7 +702,7 @@ describe("last-admin invariant (sharing use-cases)", () => {
     });
   });
 
-  // All four shareable types behave identically: the invariant stands down while
+  // Every shareable type behaves identically: the invariant stands down while
   // the owning org has a living owner and bites once it does not.
   describe.each([
     [
@@ -686,6 +719,13 @@ describe("last-admin invariant (sharing use-cases)", () => {
       "workbook" as const,
       (userId: string) =>
         testApp.createWorkbook({ name: `Workbook ${crypto.randomUUID()}`, createdBy: userId }),
+    ],
+    [
+      // A device is the case with the sharpest consequence: the last admin of a
+      // husk-org device is the last person who can revoke its AWS certificate.
+      "device" as const,
+      (userId: string) =>
+        testApp.createIotDevice({ name: `Device ${crypto.randomUUID()}`, createdBy: userId }),
     ],
   ])("on a %s", (resourceType, create) => {
     it("creates without any grant, the creator included", async () => {

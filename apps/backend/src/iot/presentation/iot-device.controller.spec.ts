@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { IotDevice, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
+import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -159,16 +159,72 @@ describe("IotDeviceController", () => {
   });
 
   describe("getIotDevice / deleteIotDevice", () => {
-    it("gets the user's device (200)", async () => {
+    it("gets the user's device (200) with the owner's full capabilities", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
       const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
 
-      const response: SuperTestResponse<IotDevice> = await testApp
+      const response: SuperTestResponse<IotDeviceDetail> = await testApp
         .get(path)
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
       expect(response.body.id).toBe(device.id);
+      // The owner of the device's org holds every action through that role, and no
+      // grant of their own — so there is nothing for them to leave.
+      expect(response.body.capabilities).toEqual({
+        canContribute: true,
+        canUpdate: true,
+        canManage: true,
+        canShare: true,
+        canLeave: false,
+      });
+    });
+
+    it("reports a 'Can view' grantee as read-only, with a grant of their own to leave", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const viewer = await testApp.createTestUser({});
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: device.id,
+        granteeType: "user",
+        granteeId: viewer,
+        role: "viewer",
+      });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
+
+      const response: SuperTestResponse<IotDeviceDetail> = await testApp
+        .get(path)
+        .withAuth(viewer)
+        .expect(StatusCodes.OK);
+
+      // "Can view" on a device is read and nothing else: no rename, no delete, and
+      // no certificate operations, all of which the credential routes gate on
+      // `manage`. `canLeave` is what surfaces their own Leave affordance.
+      expect(response.body.capabilities).toEqual({
+        canContribute: false,
+        canUpdate: false,
+        canManage: false,
+        canShare: false,
+        canLeave: true,
+      });
+    });
+
+    it("gives a 'Can edit' grantee full control, certificates included", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const editor = await testApp.createTestUser({});
+      await testApp.addResourceAdmin("device", device.id, editor);
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id });
+
+      const response: SuperTestResponse<IotDeviceDetail> = await testApp
+        .get(path)
+        .withAuth(editor)
+        .expect(StatusCodes.OK);
+
+      // Deliberate and accepted: "Can edit" on a device confers `manage`, so the
+      // grantee can delete the device and issue, rotate or revoke its real AWS
+      // certificate on hardware they do not own.
+      expect(response.body.capabilities.canManage).toBe(true);
+      expect(response.body.capabilities.canShare).toBe(true);
     });
 
     it("returns 403 for another user's private device", async () => {

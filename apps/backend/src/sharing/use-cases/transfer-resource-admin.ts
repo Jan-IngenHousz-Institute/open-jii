@@ -21,8 +21,10 @@ export interface AdminTransferResult {
 
 /**
  * Hands admin rights off in bulk so a user can clear their account-deletion
- * blockers in one step. Any of the four shareable types can be a blocker, so this
- * takes them all. For each (resource, target):
+ * blockers in one step. Any shareable type can be a blocker, so this takes them
+ * all — including devices, which is what keeps a device from dead-ending the
+ * chain: its only exits are handing it over here or deleting it. For each
+ * (resource, target):
  *   - the caller must be able to share the resource (authorization);
  *   - the target receives a direct `admin` grant, the surface that owns access
  *     tiers.

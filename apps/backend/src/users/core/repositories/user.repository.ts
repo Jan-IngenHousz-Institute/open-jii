@@ -10,6 +10,7 @@ import {
   and,
   ilike,
   inArray,
+  iotDevices,
   macros,
   profiles,
   protocols,
@@ -44,6 +45,7 @@ import {
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
 import {
+  ALL_STAFFED_RESOURCES,
   livingOrgOwnerIdsSql,
   lockOrgOwnerships,
   lockStaffingGrants,
@@ -66,18 +68,7 @@ import {
  * the caller sees the same message whichever one catches it.
  */
 export const SOLE_ADMIN_DELETE_MESSAGE =
-  "Cannot delete account - you are the only admin of one or more experiments, macros, protocols or workbooks. Please assign other admins before deleting.";
-
-/** Every staffed resource with its owning org, as one polymorphic row set. */
-const ALL_STAFFED_RESOURCES = sql`
-  SELECT 'experiment'::"resource_type" AS "resource_type", e."id", e."organization_id" FROM "experiments" e
-  UNION ALL
-  SELECT 'macro'::"resource_type", m."id", m."organization_id" FROM "macros" m
-  UNION ALL
-  SELECT 'protocol'::"resource_type", p."id", p."organization_id" FROM "protocols" p
-  UNION ALL
-  SELECT 'workbook'::"resource_type", w."id", w."organization_id" FROM "workbooks" w
-`;
+  "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.";
 
 /**
  * The resources whose last answerable person is `userId`, so closing that account
@@ -97,8 +88,8 @@ const ALL_STAFFED_RESOURCES = sql`
  * "Living" is a closed account (`deleted_at`); grantees must also be `activated`,
  * since a deactivated account cannot administer anything.
  *
- * One statement rather than four typed queries: the predicate is polymorphic over
- * four tables and is re-run verbatim inside the deletion transaction, and having
+ * One statement rather than one typed query per type: the predicate is polymorphic
+ * over every staffed table and is re-run verbatim inside the deletion transaction, and having
  * exactly one copy of it is what stops the pre-flight blocker and the
  * in-transaction guard from drifting apart.
  */
@@ -308,8 +299,8 @@ export class UserRepository {
   }
 
   /**
-   * Returns the resources this user is the last answerable person for, across all
-   * four shareable types. These block account deletion.
+   * Returns the resources this user is the last answerable person for, across every
+   * shareable type. These block account deletion.
    *
    * See {@link blockingResourcesQuery} for the two prongs. This is the pre-flight
    * check that drives the delete dialog's blocker list and hand-off flow; the
@@ -346,6 +337,21 @@ export class UserRepository {
             .from(experiments)
             .where(inArray(experiments.id, ids));
           return rows.map((row) => ({ resourceType, ...row }));
+        }
+        if (resourceType === "device") {
+          // A device's `name` is optional — it is a label somebody may never have
+          // typed — so it falls back to the serial number, which always exists and
+          // is how the device identifies itself physically. Same order the detail
+          // page's title uses; its third fallback is a localized string, which has
+          // no place in a repository.
+          const rows = await this.database
+            .select({
+              id: iotDevices.id,
+              name: sql<string>`coalesce(${iotDevices.name}, ${iotDevices.serialNumber})`,
+            })
+            .from(iotDevices)
+            .where(inArray(iotDevices.id, ids));
+          return rows.map((row) => ({ resourceType, id: row.id, name: row.name, status: null }));
         }
         const table = tables[resourceType];
         const rows = await this.database

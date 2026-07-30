@@ -7,7 +7,10 @@ import { Info } from "lucide-react";
 import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { Visibility } from "@repo/api/domains/visibility/visibility.schema";
+import type {
+  PublishableResourceType,
+  Visibility,
+} from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -33,8 +36,18 @@ import {
 } from "@repo/ui/components/tooltip";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-/** Resource types that have a publish surface. Devices are out of scope. */
-export type PublishableResourceType = "macro" | "protocol" | "workbook";
+/**
+ * The types **this control** publishes — deliberately not the same set as
+ * `PublishableResourceType` from `@repo/api/domains/visibility/visibility.schema`,
+ * which is every publishable type and includes experiments.
+ *
+ * Experiments are excluded because they have their own settings card, and mixing
+ * the two up is a real hazard rather than a theoretical one: the dispatch below is
+ * keyed on this type, so an `experiment` reaching it would be published through
+ * the wrong route. Derived with `Exclude` rather than written out, so the shared
+ * set stays the source of truth and the difference is exactly one named exception.
+ */
+export type PublishSelectResourceType = Exclude<PublishableResourceType, "experiment">;
 
 /**
  * Where the explanatory copy goes. `block` is the experiment card's treatment —
@@ -44,7 +57,7 @@ export type PublishableResourceType = "macro" | "protocol" | "workbook";
 export type PublishControlInfoPlacement = "block" | "tooltip";
 
 interface ResourcePublishControlProps {
-  resourceType: PublishableResourceType;
+  resourceType: PublishSelectResourceType;
   resourceId: string;
   visibility: Visibility;
   /** `can(manage)` from the detail response — publishing is manage-gated. */
@@ -85,12 +98,15 @@ export function ResourcePublishControl({
   const setProtocolVisibility = useSetProtocolVisibility();
   const setWorkbookVisibility = useSetWorkbookVisibility();
 
-  const mutation =
-    resourceType === "macro"
-      ? setMacroVisibility
-      : resourceType === "protocol"
-        ? setProtocolVisibility
-        : setWorkbookVisibility;
+  // A lookup rather than a ternary chain, because a chain needs a final `else` and
+  // that `else` silently swallows anything the chain does not name — a type added
+  // to the publishable set would have been published as a workbook. Here it is a
+  // missing key, which does not compile.
+  const mutation: typeof setMacroVisibility = {
+    macro: setMacroVisibility,
+    protocol: setProtocolVisibility,
+    workbook: setWorkbookVisibility,
+  }[resourceType];
 
   // Show the published state immediately on confirm, before the refetch lands.
   // Visibility is monotonic, so OR-ing with the prop is safe: if it is published

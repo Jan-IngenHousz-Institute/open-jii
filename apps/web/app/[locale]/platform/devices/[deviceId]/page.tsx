@@ -1,15 +1,20 @@
-import { IotDeviceDetail } from "@/components/iot-devices/iot-device-detail";
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Device",
-};
+import { IotDeviceOverview } from "@/components/iot-devices/iot-device-overview";
+import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
+import { use } from "react";
 
-export default async function DeviceDetailPage({
-  params,
-}: {
+interface DeviceOverviewPageProps {
   params: Promise<{ deviceId: string }>;
-}) {
-  const { deviceId } = await params;
-  return <IotDeviceDetail deviceId={deviceId} />;
+}
+
+/**
+ * A device's Overview tab. The layout has already loaded the device (and gated on
+ * it) before this renders, so the hook resolves from cache and adds no request.
+ */
+export default function DeviceOverviewPage({ params }: DeviceOverviewPageProps) {
+  const { deviceId } = use(params);
+  const { data } = useIotDevice(deviceId);
+
+  return data ? <IotDeviceOverview device={data} /> : null;
 }

@@ -36,7 +36,7 @@ export type ResourceType = "experiment" | "protocol" | "macro" | "workbook" | "d
  * Only experiments have data to contribute to, so only they hand `contribute` out
  * at the read tier. It stays in the statement for every resource type — Better Auth
  * needs one literal action list, and full-control roles hold every verb regardless —
- * in the same way devices carry a `share` action with no sharing surface yet.
+ * in the same way devices carry `contribute` with nothing to contribute to.
  */
 const ACTIONS = ["read", "contribute", "update", "share", "manage"] as const;
 

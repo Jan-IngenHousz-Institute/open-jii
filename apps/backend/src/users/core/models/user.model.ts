@@ -56,9 +56,10 @@ export interface SearchUsersParams {
   offset?: number;
 }
 
-// A resource for which the user is the sole admin — i.e. a blocker for account
-// deletion. Any of the four shareable types can be one: each is created with a
-// creator admin grant, so each can end up with exactly one named admin.
+// A resource for which the user is the last answerable person — i.e. a blocker for
+// account deletion. Any shareable type can be one, devices included: every one of
+// them is owned by an organization and can end up with a single living person able
+// to administer it.
 export interface SoleAdminResource {
   resourceType: SharingResourceType;
   id: string;

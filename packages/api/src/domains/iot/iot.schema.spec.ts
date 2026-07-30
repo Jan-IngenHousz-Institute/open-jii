@@ -3,6 +3,8 @@ import { describe, it, expect } from "vitest";
 import {
   zIotCredentials,
   zIotDevice,
+  zIotDeviceDetail,
+  zIotDeviceList,
   zRegisterIotDeviceBody,
   zIssueIotCredentialsResponse,
 } from "./iot.schema";
@@ -153,6 +155,45 @@ describe("Iot Schema", () => {
 
     it("rejects a non-uuid id", () => {
       expect(zIotDevice.safeParse({ ...validDevice, id: "not-a-uuid" }).success).toBe(false);
+    });
+  });
+
+  describe("zIotDeviceDetail", () => {
+    const validDevice = {
+      id: "11111111-1111-4111-8111-111111111111",
+      thingName: "ambyte_1",
+      thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/ambyte_1",
+      serialNumber: "SN-1",
+      name: "Device 1",
+      deviceType: "ambyte" as const,
+      status: "pending" as const,
+      certificateId: null,
+      certificateArn: null,
+      createdBy: "22222222-2222-4222-8222-222222222222",
+      organizationId: "33333333-3333-4333-8333-333333333333",
+      visibility: "private" as const,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-10T00:00:00.000Z",
+    };
+    const capabilities = {
+      canContribute: false,
+      canUpdate: true,
+      canManage: true,
+      canShare: true,
+      canLeave: false,
+    };
+
+    it("accepts a device with its caller capabilities", () => {
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(true);
+    });
+
+    it("requires the capabilities object — the Collaborators tab is gated on it", () => {
+      expect(zIotDeviceDetail.safeParse(validDevice).success).toBe(false);
+    });
+
+    it("keeps the list response free of capabilities, which cost a resolution per row", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, capabilities }).success).toBe(true);
+      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(true);
     });
   });
 

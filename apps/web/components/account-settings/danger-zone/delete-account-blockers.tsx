@@ -17,19 +17,13 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
+import { resourceCollaboratorsPath } from "../../sharing/resource-routes";
 import { UserAvatar } from "../../user-avatar";
 import { UserSearchPopover } from "../../user-search-popover";
 
-/**
- * Where each blocking resource's collaborators live. Experiments have a dedicated
- * Collaborators route; the other three carry it as a tab on the detail page.
- */
-const COLLABORATORS_PATH: Record<SharingResourceType, (id: string) => string> = {
-  experiment: (id) => `platform/experiments/${id}/collaborators`,
-  macro: (id) => `platform/macros/${id}`,
-  protocol: (id) => `platform/protocols/${id}`,
-  workbook: (id) => `platform/workbooks/${id}`,
-};
+// Each blocker links at its own Collaborators route, built by the shared
+// `resourceCollaboratorsPath` rather than assembled here — a type whose route moved
+// would otherwise send this link somewhere that no longer exists.
 
 /** One blocker's identity: its type + id, which is what a transfer is keyed on. */
 const blockerKey = (blocker: DeletionBlocker) => `${blocker.resourceType}:${blocker.id}`;
@@ -58,12 +52,13 @@ function candidateToUserProfile(candidate: UserMetadata): UserProfile {
 }
 
 /**
- * Shown inside the Delete Account dialog when the user is the only admin of one or more
- * resources — an experiment, macro, protocol or workbook, all of which are created with a
- * creator admin grant and so can be left with nobody answerable for them. Lets them hand admin
- * off — per resource, with existing collaborators suggested, or one person for all — in a single
- * "Transfer" action. Deletion stays blocked until the list clears (the transfer invalidates the
- * deletion-blocker query, so resolved resources drop off).
+ * Shown inside the Delete Account dialog when the user is the last person answerable for one or
+ * more resources — an experiment, macro, protocol, workbook or device, any of which can be left
+ * with nobody in control. A blocking device is the sharpest case: it is live AWS hardware, so its
+ * only exits are handing it over here or deleting it. Lets them hand admin off — per resource,
+ * with existing collaborators suggested, or one person for all — in a single "Transfer" action.
+ * Deletion stays blocked until the list clears (the transfer invalidates the deletion-blocker
+ * query, so resolved resources drop off).
  */
 export function DeleteAccountBlockers({
   blockers,
@@ -268,7 +263,7 @@ export function DeleteAccountBlockers({
                   <span className="min-w-0 truncate font-medium">{blocker.name}</span>
                 </div>
                 <a
-                  href={`/${locale}/${COLLABORATORS_PATH[blocker.resourceType](blocker.id)}`}
+                  href={resourceCollaboratorsPath(locale, blocker.resourceType, blocker.id)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"

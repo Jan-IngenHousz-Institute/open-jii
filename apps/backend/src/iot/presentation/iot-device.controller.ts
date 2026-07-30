@@ -6,8 +6,10 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
+import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -35,6 +37,7 @@ export class IotDeviceController {
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
     private readonly revokeIotCredentialsUseCase: RevokeIotCredentialsUseCase,
     private readonly rotateIotCredentialsUseCase: RotateIotCredentialsUseCase,
+    private readonly authz: AuthorizationService,
   ) {}
 
   private devicesEnabled(session: UserSession): Promise<boolean> {
@@ -96,7 +99,17 @@ export class IotDeviceController {
       const result = await this.getIotDeviceUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
-        return formatDates(result.value);
+        // The caller's effective capabilities ride along so the web app can gate the
+        // Collaborators tab, the credentials surface and the danger zone on
+        // capability rather than on `createdBy` — a "Can edit" grantee holds all
+        // three. Resolved after the fetch succeeded, so a 404 stays a 404.
+        const capabilities = await resolveResourceCapabilities(
+          this.authz,
+          session.user.id,
+          "device",
+          input.deviceId,
+        );
+        return { ...formatDates(result.value), capabilities };
       }
 
       return throwOrpcFailure(result, this.logger, "getIotDevice");

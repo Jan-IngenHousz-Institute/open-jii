@@ -429,7 +429,7 @@ export class TestHarness {
    * grant is a state no create path produces.
    */
   public addResourceAdmin(
-    resourceType: "experiment" | "protocol" | "macro" | "workbook",
+    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device",
     resourceId: string,
     userId: string,
   ) {
@@ -555,7 +555,8 @@ export class TestHarness {
     createdBy: string;
     serialNumber?: string;
     thingName?: string;
-    name?: string;
+    /** Explicit `null` seeds a nameless device — the column is nullable in reality. */
+    name?: string | null;
     deviceType?: "multispeq" | "ambyte" | "minipar" | "generic";
     status?: "pending" | "active" | "rotating" | "revoked";
     certificateId?: string;
@@ -576,7 +577,7 @@ export class TestHarness {
         thingName,
         thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
         serialNumber,
-        name: data.name ?? "Test device",
+        name: data.name === undefined ? "Test device" : data.name,
         deviceType: data.deviceType ?? "generic",
         status: data.status ?? "pending",
         certificateId: data.certificateId ?? null,

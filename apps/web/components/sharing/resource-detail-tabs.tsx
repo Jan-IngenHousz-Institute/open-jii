@@ -8,7 +8,7 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
-import { resourceDetailPath } from "./resource-routes";
+import { resourceCollaboratorsPath, resourceDetailPath } from "./resource-routes";
 
 interface ResourceDetailTabsProps {
   resourceType: SharingResourceType;
@@ -65,7 +65,9 @@ export function ResourceDetailTabs({
           <Link href={detailPath}>{t("common.overview")}</Link>
         </NavTabsTrigger>
         <NavTabsTrigger value="collaborators" asChild>
-          <Link href={`${detailPath}/collaborators`}>{t("sharing.collaboratorsTab")}</Link>
+          <Link href={resourceCollaboratorsPath(locale, resourceType, resourceId)}>
+            {t("sharing.collaboratorsTab")}
+          </Link>
         </NavTabsTrigger>
       </NavTabsList>
 

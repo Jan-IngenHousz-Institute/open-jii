@@ -16,7 +16,7 @@ import {
  * `resource_grants` table and gated inside each use-case by
  * `can(userId, { resourceType, resourceId, action: "share" })` — no static guard,
  * since `resourceType` is a runtime path value. One contract serves
- * every shareable resource type (experiment/macro/protocol/workbook).
+ * every shareable resource type (experiment/macro/protocol/workbook/device).
  *
  * Every operation is scoped to its resource, so a grant id from elsewhere cannot be
  * read or edited through it. listGrants is gated on `share` (not `read`) so

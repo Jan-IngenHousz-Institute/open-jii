@@ -37,7 +37,7 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDevice, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
@@ -856,6 +856,19 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
     visibility: "private",
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+/**
+ * A device as its detail route returns it: the registry row plus the caller's
+ * capabilities. Defaults to the owner's view — full control, and no grant of their
+ * own to leave, because owning is not a grant.
+ */
+export function createIotDeviceDetail(overrides: Partial<IotDeviceDetail> = {}): IotDeviceDetail {
+  return {
+    ...createIotDevice(overrides),
+    capabilities: createCapabilities({ canContribute: false, canLeave: false }),
     ...overrides,
   };
 }

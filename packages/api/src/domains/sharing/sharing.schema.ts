@@ -1,11 +1,20 @@
 import { z } from "zod";
 
 /**
- * Resource types that expose a sharing (collaborators) surface. A subset of the
- * `resource_grants.resource_type` enum: devices are intentionally excluded for now
- * — they get scoped listing only, no share or publish surface yet.
+ * Resource types that expose a sharing (collaborators) surface — every value of
+ * the `resource_grants.resource_type` enum.
+ *
+ * Devices are in here, but *sharing* a device is a different question from
+ * *publishing* one: they stay permanently private, with no write path to their
+ * visibility (see `zPublishableResourceType`, which is this set minus devices).
  */
-export const zSharingResourceType = z.enum(["experiment", "macro", "protocol", "workbook"]);
+export const zSharingResourceType = z.enum([
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device",
+]);
 
 /**
  * Who a share can be granted to: individual users and whole organizations. Team

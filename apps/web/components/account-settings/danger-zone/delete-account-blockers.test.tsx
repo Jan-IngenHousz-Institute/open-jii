@@ -113,14 +113,15 @@ describe("DeleteAccountBlockers", () => {
       expect(progress).toHaveAttribute("aria-valuetext", "0/2");
     });
 
-    // Macros, protocols and workbooks block deletion too. They carry no lifecycle
-    // status, so the badge names the type, and their collaborators live on the
-    // detail page rather than a route of their own.
+    // Every other type blocks deletion too. They carry no lifecycle status, so the
+    // badge names the type, and each links at its own Collaborators route — the
+    // place the hand-off actually happens, on all of them.
     it.each([
-      ["macro" as const, `platform/macros/${ID_2}`],
-      ["protocol" as const, `platform/protocols/${ID_2}`],
-      ["workbook" as const, `platform/workbooks/${ID_2}`],
-    ])("labels a %s blocker by type and links to its detail page", (resourceType, path) => {
+      ["macro" as const, `platform/macros/${ID_2}/collaborators`],
+      ["protocol" as const, `platform/protocols/${ID_2}/collaborators`],
+      ["workbook" as const, `platform/workbooks/${ID_2}/collaborators`],
+      ["device" as const, `platform/devices/${ID_2}/collaborators`],
+    ])("labels a %s blocker by type and links to its collaborators route", (resourceType, path) => {
       renderBlockers({
         blockers: [makeBlocker({ resourceType, id: ID_2, name: "Leaf Area", status: null })],
       });

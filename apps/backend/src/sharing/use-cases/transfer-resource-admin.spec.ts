@@ -114,9 +114,10 @@ describe("TransferResourceAdminUseCase", () => {
     expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBe("admin");
   });
 
-  // Macros, protocols and workbooks block account deletion exactly as experiments
-  // do, so the hand-off has to clear them too — otherwise a sole-admin macro would
-  // be a blocker with no way out.
+  // Every other shareable type blocks account deletion exactly as experiments do,
+  // so the hand-off has to clear them too — otherwise a sole-admin macro would be a
+  // blocker with no way out, and a device would dead-end the chain entirely (its
+  // only other exit is deleting real AWS hardware).
   it.each([
     [
       "macro" as const,
@@ -132,6 +133,11 @@ describe("TransferResourceAdminUseCase", () => {
       "workbook" as const,
       (userId: string) =>
         testApp.createWorkbook({ name: `Workbook ${crypto.randomUUID()}`, createdBy: userId }),
+    ],
+    [
+      "device" as const,
+      (userId: string) =>
+        testApp.createIotDevice({ name: `Device ${crypto.randomUUID()}`, createdBy: userId }),
     ],
   ])("hands a %s over to another user", async (resourceType, create) => {
     const resource = await create(testUserId);
