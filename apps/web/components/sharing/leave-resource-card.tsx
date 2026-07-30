@@ -12,14 +12,8 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { RESOURCE_ROUTE_SEGMENTS } from "./resource-routes";
 import { RevokeCollaboratorDialog } from "./revoke-collaborator-dialog";
-
-const LIST_ROUTES: Record<SharingResourceType, string> = {
-  experiment: "experiments",
-  macro: "macros",
-  protocol: "protocols",
-  workbook: "workbooks",
-};
 
 interface LeaveResourceCardProps {
   resourceType: SharingResourceType;
@@ -58,7 +52,7 @@ export function LeaveResourceCard({
       await leave({ resourceType, id: resourceId });
       setIsConfirmOpen(false);
       toast({ description: t("sharing.leftResource") });
-      router.push(`/${locale}/platform/${LIST_ROUTES[resourceType]}`);
+      router.push(`/${locale}/platform/${RESOURCE_ROUTE_SEGMENTS[resourceType]}`);
     } catch (err) {
       toast({
         description: parseApiError(err)?.message ?? t("sharing.leaveFailed"),

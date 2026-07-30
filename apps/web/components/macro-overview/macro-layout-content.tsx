@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { ResourceDetailTabs } from "@/components/sharing/resource-detail-tabs";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { Code } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
@@ -22,7 +23,7 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
   // Renaming is a content edit → `canUpdate`, not ownership.
-  const { canUpdate } = macro.capabilities;
+  const { canUpdate, canShare, canLeave } = macro.capabilities;
 
   const handleTitleSave = async (newName: string) => {
     await updateMacro(
@@ -52,7 +53,17 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
           ) : undefined
         }
       />
-      {children}
+
+      {/* The strip sits in the layout, so Overview and Collaborators are routes
+          under the same title rather than two states of one page. */}
+      <ResourceDetailTabs
+        resourceType="macro"
+        resourceId={id}
+        canShare={canShare}
+        canLeave={canLeave}
+      >
+        {children}
+      </ResourceDetailTabs>
     </div>
   );
 }

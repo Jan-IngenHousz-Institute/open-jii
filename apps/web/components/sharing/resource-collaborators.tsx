@@ -2,12 +2,14 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { useResourceCollaborators } from "@/hooks/sharing/useResourceCollaborators/useResourceCollaborators";
-import { UserPlus } from "lucide-react";
-import { useState } from "react";
+import { Search, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { matchesGrantee } from "~/util/collaborator-filter";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
 
 import { CollaboratorInviteDialog } from "./collaborator-invite-dialog";
 import { CollaboratorsList } from "./collaborators-list";
@@ -25,14 +27,12 @@ interface ResourceCollaboratorsProps {
    * remains the fallback.
    */
   canShare?: boolean;
-  /** Heading overrides for hosts that word the surface differently. */
-  title?: string;
-  description?: string;
 }
 
 /**
  * The collaborators surface for macros, protocols and workbooks — the body of
- * their Collaborators tab: an add action, then the grant rows.
+ * their Collaborators route: a heading, one row carrying the filter and the
+ * invite action, then the grant rows.
  *
  * Experiments compose the same pieces themselves, because there the list shares a
  * filter and a tab strip with pending invitations and join requests.
@@ -49,8 +49,6 @@ export function ResourceCollaborators({
   resourceId,
   readOnly = false,
   canShare,
-  title,
-  description,
 }: ResourceCollaboratorsProps) {
   const { t } = useTranslation();
 
@@ -61,6 +59,18 @@ export function ResourceCollaborators({
   } = useResourceCollaborators(resourceType, resourceId, { enabled: canShare !== false });
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+
+  const collaborators = useMemo(() => grants ?? [], [grants]);
+  const normalizedFilter = filter.trim().toLowerCase();
+
+  // Filtering is local, as on the experiment surface: the list is a roster, not a
+  // paged query. Owner and grant rows both carry a `grantee`, so one predicate
+  // covers the whole union.
+  const filteredCollaborators = useMemo(() => {
+    if (!normalizedFilter) return collaborators;
+    return collaborators.filter((row) => matchesGrantee(row.grantee, normalizedFilter));
+  }, [collaborators, normalizedFilter]);
 
   // Not authorized to share (403) or the resource is gone (404) → no surface.
   // Same while the probe is in flight: showing nothing beats flashing a heading
@@ -70,30 +80,38 @@ export function ResourceCollaborators({
     return null;
   }
 
-  const collaborators = grants ?? [];
-
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h3 className="text-base font-medium">{title ?? t("sharing.cardTitle")}</h3>
-          <p className="text-muted-foreground text-sm">
-            {description ?? t("sharing.cardDescription")}
-          </p>
-          <DocsHelpLink path="/guide/sharing" className="mt-1" />
+    <section className="flex flex-col gap-6">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold">{t("sharing.cardTitle")}</h2>
+        <p className="text-muted-foreground text-sm">{t("sharing.cardDescription")}</p>
+        <DocsHelpLink path="/guide/sharing" className="mt-1" />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder={t("sharing.filterCollaboratorsPlaceholder")}
+            className="pl-9"
+          />
         </div>
         <Button onClick={() => setIsInviteOpen(true)} disabled={readOnly}>
           <UserPlus className="h-4 w-4" />
-          {t("sharing.addCollaborator")}
+          {t("sharing.invite")}
         </Button>
       </div>
 
       <CollaboratorsList
         resourceType={resourceType}
         resourceId={resourceId}
-        grants={collaborators}
+        grants={filteredCollaborators}
         isError={!!error}
         readOnly={readOnly}
+        isFiltered={normalizedFilter.length > 0}
       />
 
       <CollaboratorInviteDialog
@@ -104,6 +122,8 @@ export function ResourceCollaborators({
         title={t("sharing.addCollaboratorTitle")}
         description={t("sharing.addCollaboratorDescription")}
         disabled={readOnly}
+        // The dialog dedupes against everyone already on the resource, which the
+        // filter must not be able to narrow.
         existingGranteeIds={collaborators.map((grant) => grant.granteeId)}
       />
     </section>

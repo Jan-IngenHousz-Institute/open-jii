@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { ResourceDetailTabs } from "@/components/sharing/resource-detail-tabs";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { FileSliders } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
@@ -15,6 +16,11 @@ interface ProtocolLayoutContentProps {
   protocol: ProtocolDetail;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * The tester subroute renders through this same shell, but it is a full-page
+   * tool with its own Back action — no tab strip belongs above it.
+   */
+  showTabs?: boolean;
 }
 
 export function ProtocolLayoutContent({
@@ -22,13 +28,14 @@ export function ProtocolLayoutContent({
   protocol,
   children,
   actions,
+  showTabs = true,
 }: ProtocolLayoutContentProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(id);
 
   // Renaming is a content edit → `canUpdate`.
-  const { canUpdate } = protocol.capabilities;
+  const { canUpdate, canShare, canLeave } = protocol.capabilities;
 
   const handleTitleSave = async (newName: string) => {
     await updateProtocol(
@@ -59,7 +66,21 @@ export function ProtocolLayoutContent({
         }
         actions={actions}
       />
-      {children}
+
+      {/* The strip sits in the layout, so Overview and Collaborators are routes
+          under the same title rather than two states of one page. */}
+      {showTabs ? (
+        <ResourceDetailTabs
+          resourceType="protocol"
+          resourceId={id}
+          canShare={canShare}
+          canLeave={canLeave}
+        >
+          {children}
+        </ResourceDetailTabs>
+      ) : (
+        children
+      )}
     </div>
   );
 }

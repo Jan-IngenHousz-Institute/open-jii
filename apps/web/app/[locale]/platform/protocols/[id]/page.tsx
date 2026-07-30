@@ -5,7 +5,6 @@ import { ProtocolDetailsSidebar } from "@/components/protocol-overview/protocol-
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { ProtocolCodePanel } from "@/components/shared/protocol-code-panel";
 import type { ProtocolCode } from "@/components/shared/protocol-code-panel";
-import { ResourceOverviewTabs } from "@/components/sharing/resource-overview-tabs";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -75,7 +74,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
 
   const protocol = data;
   // Capability, not ownership: a "Can edit" grantee edits here too.
-  const { canUpdate, canShare, canLeave } = protocol.capabilities;
+  const { canUpdate } = protocol.capabilities;
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateProtocol(
@@ -95,14 +94,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
     <div className="flex flex-col gap-6 md:flex-row">
       <ProtocolDetailsSidebar protocolId={id} protocol={protocol} />
 
-      <ResourceOverviewTabs
-        resourceType="protocol"
-        resourceId={id}
-        canShare={canShare}
-        canLeave={canLeave}
-        className="min-w-0 flex-1 md:order-1"
-        overviewClassName="space-y-10"
-      >
+      <div className="min-w-0 flex-1 space-y-10 md:order-1">
         <InlineEditableDescription
           description={protocol.description ?? ""}
           hasAccess={canUpdate}
@@ -126,7 +118,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           title={t("protocols.codeTitle")}
           placeholder={t("protocols.codePlaceholder")}
         />
-      </ResourceOverviewTabs>
+      </div>
     </div>
   );
 }

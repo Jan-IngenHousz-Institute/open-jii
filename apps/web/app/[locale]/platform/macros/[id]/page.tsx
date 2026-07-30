@@ -6,7 +6,6 @@ import MacroCodeViewer from "@/components/macro-code-viewer";
 import { MacroDetailsSidebar } from "@/components/macro-overview/macro-details-sidebar";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
-import { ResourceOverviewTabs } from "@/components/sharing/resource-overview-tabs";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -73,7 +72,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
 
   const macro = data;
   // Capability, not ownership: a "Can edit" grantee edits here too.
-  const { canUpdate, canShare, canLeave } = macro.capabilities;
+  const { canUpdate } = macro.capabilities;
 
   const handleDescriptionSave = async (newDescription: string) => {
     await updateMacro(
@@ -93,14 +92,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
     <div className="flex flex-col gap-6 md:flex-row">
       <MacroDetailsSidebar macroId={id} macro={macro} />
 
-      <ResourceOverviewTabs
-        resourceType="macro"
-        resourceId={id}
-        canShare={canShare}
-        canLeave={canLeave}
-        className="min-w-0 flex-1 md:order-1"
-        overviewClassName="space-y-10"
-      >
+      <div className="min-w-0 flex-1 space-y-10 md:order-1">
         <InlineEditableDescription
           description={macro.description ?? ""}
           hasAccess={canUpdate}
@@ -137,7 +129,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             <p>{t("macros.codeNotAvailable")}</p>
           </div>
         )}
-      </ResourceOverviewTabs>
+      </div>
     </div>
   );
 }

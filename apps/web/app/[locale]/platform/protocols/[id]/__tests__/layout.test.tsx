@@ -85,15 +85,18 @@ function renderLayout({
   protocolId = "test-id",
   session = defaultSession,
   children = <div>Children Content</div>,
+  pathname,
 }: {
   protocolId?: string;
   session?:
     | { data: { user: { id: string } }; isPending: boolean }
     | { data: null; isPending: boolean };
   children?: React.ReactNode;
+  /** Defaults to the protocol's overview route; pass `/run` for the tester. */
+  pathname?: string;
 } = {}) {
   vi.mocked(useParams).mockReturnValue({ id: protocolId, locale: "en" });
-  vi.mocked(usePathname).mockReturnValue(`/en/platform/protocols/${protocolId}`);
+  vi.mocked(usePathname).mockReturnValue(pathname ?? `/en/platform/protocols/${protocolId}`);
   vi.mocked(useSession).mockReturnValue(session as ReturnType<typeof useSession>);
 
   return render(<ProtocolLayout>{children}</ProtocolLayout>);
@@ -305,6 +308,38 @@ describe("ProtocolLayout", () => {
         expect(screen.getByText("Children Content")).toBeInTheDocument();
       });
       expect(document.querySelector(".space-y-6")).toBeInTheDocument();
+    });
+  });
+
+  describe("Overview / Collaborators strip", () => {
+    it("renders the strip under the title, linked at the protocol's own routes", async () => {
+      server.mount(contract.protocols.getProtocol, { body: createProtocolDetail(defaultProtocol) });
+      renderLayout();
+
+      const overview = await screen.findByRole("tab", { name: "common.overview" });
+      expect(overview).toHaveAttribute("href", "/en-US/platform/protocols/test-id");
+      expect(screen.getByRole("tab", { name: "sharing.collaboratorsTab" })).toHaveAttribute(
+        "href",
+        "/en-US/platform/protocols/test-id/collaborators",
+      );
+    });
+
+    it("renders no strip for a reader who can neither share nor leave", async () => {
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocolDetail({ ...defaultProtocol, capabilities: readOnlyCapabilities }),
+      });
+      renderLayout();
+
+      await waitFor(() => expect(screen.getByText("Children Content")).toBeInTheDocument());
+      expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    });
+
+    it("leaves the strip off the tester, which is a full-page tool with its own Back", async () => {
+      server.mount(contract.protocols.getProtocol, { body: createProtocolDetail(defaultProtocol) });
+      renderLayout({ pathname: "/en/platform/protocols/test-id/run" });
+
+      await waitFor(() => expect(screen.getByText("Children Content")).toBeInTheDocument());
+      expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     });
   });
 

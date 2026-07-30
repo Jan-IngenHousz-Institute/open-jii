@@ -3,23 +3,13 @@
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
-import { ResourcePublishControl } from "@/components/visibility/resource-publish-control";
-import { WorkbookDescription } from "@/components/workbook/workbook-description";
-import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
-import { useLocale } from "@/hooks/useLocale";
-import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
+import { ResourceDetailTabs } from "@/components/sharing/resource-detail-tabs";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
-import { formatDate } from "@/util/date";
-import { BookOpen, GitFork, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { BookOpen } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
 import type { WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookLayoutContentProps {
@@ -30,35 +20,11 @@ interface WorkbookLayoutContentProps {
 
 export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayoutContentProps) {
   const { t } = useTranslation(["workbook", "common"]);
-  const { t: tCommon } = useTranslation("common");
   const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
-  const {
-    data: versionsData,
-    isLoading: isLoadingVersions,
-    isError: isVersionsError,
-  } = useWorkbookVersions(id);
   const autosave = useAutosaveStatus();
-  const router = useRouter();
-  const locale = useLocale();
-  const { mutate: createWorkbook, isPending: isForking } = useWorkbookCreate({
-    onSuccess: (created) => router.push(`/${locale}/platform/workbooks/${created.id}`),
-  });
 
-  const handleFork = () => {
-    createWorkbook({
-      name: t("workbooks.duplicateName", { name: workbook.name }),
-      description: workbook.description ?? undefined,
-      cells: workbook.cells,
-      metadata: workbook.metadata,
-      forkedFrom: workbook.id,
-    });
-  };
-
-  // Versions are returned newest-first; the live page is the draft, so the
-  // latest published version is the meaningful number to surface here.
-  const latestVersion = versionsData?.[0]?.version;
   // Capability, not ownership: a "Can edit" grantee renames and edits.
-  const { canUpdate, canManage } = workbook.capabilities;
+  const { canUpdate, canShare, canLeave } = workbook.capabilities;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (newName: string) => {
@@ -76,113 +42,30 @@ export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayout
   };
 
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Title + metadata (fluid; the parent PageContainer controls overall width). */}
-      <div className="flex w-full flex-col gap-8">
-        <div className="space-y-5">
-          <div className="flex flex-col gap-2">
-            <InlineEditableTitle
-              name={workbook.name}
-              hasAccess={canUpdate}
-              onSave={handleTitleSave}
-              isPending={isUpdating}
-              icon={<BookOpen className="h-6 w-6" />}
-            />
-            <AutosaveIndicator status={indicatorStatus} />
-          </div>
-
-          <WorkbookDescription
-            workbookId={id}
-            description={workbook.description ?? ""}
-            hasAccess={canUpdate}
-          />
-        </div>
-
-        <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
-              {tCommon("common.created")}
-            </span>
-            <span className="text-sm leading-[21px] text-[#68737B]">
-              {formatDate(workbook.createdAt)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
-              {tCommon("common.updated")}
-            </span>
-            <span className="text-sm leading-[21px] text-[#68737B]">
-              {formatDate(workbook.updatedAt)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
-              {tCommon("common.createdBy")}
-            </span>
-            <span className="text-sm leading-[21px] text-[#68737B]">
-              {workbook.createdByName ?? "-"}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
-              {t("workbooks.version")}
-            </span>
-            {isLoadingVersions ? (
-              <Skeleton className="h-[21px] w-10" />
-            ) : isVersionsError ? (
-              // Don't claim "Draft" when the version state is simply unknown.
-              <span className="text-sm leading-[21px] text-[#68737B]">-</span>
-            ) : latestVersion != null ? (
-              <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
-            ) : (
-              <span className="text-sm leading-[21px] text-[#68737B]">
-                {t("workbooks.draftVersion")}
-              </span>
-            )}
-          </div>
-          {workbook.forkedFrom ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
-                {t("workbooks.forkedFrom")}
-              </span>
-              <Link
-                href={`/platform/workbooks/${workbook.forkedFrom}`}
-                className="text-sm leading-[21px] text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
-              >
-                {tCommon("common.viewOriginal")}
-              </Link>
-            </div>
-          ) : null}
-
-          {/* Visibility + the one-way publish action. */}
-          <div className="flex flex-col gap-1">
-            <ResourcePublishControl
-              resourceType="workbook"
-              resourceId={id}
-              visibility={workbook.visibility}
-              canManage={canManage}
-            />
-          </div>
-
-          <div className="ml-auto self-center">
-            <Button variant="outline" size="sm" onClick={handleFork} disabled={isForking}>
-              {isForking ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <GitFork className="mr-2 h-4 w-4" />
-              )}
-              {t("workbooks.actions.fork")}
-            </Button>
-          </div>
-        </div>
+    // Only the title stays above the strip. The description, the provenance row
+    // and the editor's canvas all belong to the Overview route, so switching to
+    // Collaborators leaves the workbook's own chrome behind — the same as on an
+    // experiment. (Fluid; the parent PageContainer controls overall width.)
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <InlineEditableTitle
+          name={workbook.name}
+          hasAccess={canUpdate}
+          onSave={handleTitleSave}
+          isPending={isUpdating}
+          icon={<BookOpen className="h-6 w-6" />}
+        />
+        <AutosaveIndicator status={indicatorStatus} />
       </div>
 
-      <div
-        className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
-        style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
+      <ResourceDetailTabs
+        resourceType="workbook"
+        resourceId={id}
+        canShare={canShare}
+        canLeave={canLeave}
       >
-        <div className="w-full">{children}</div>
-      </div>
+        {children}
+      </ResourceDetailTabs>
     </div>
   );
 }

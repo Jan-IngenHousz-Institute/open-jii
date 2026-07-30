@@ -1,10 +1,5 @@
 import { AutosaveStatusProvider } from "@/components/shared/autosave/autosave-status-context";
-import {
-  createMarkdownCell,
-  createWorkbook,
-  createWorkbookDetail,
-  createWorkbookVersionSummary,
-} from "@/test/factories";
+import { createWorkbook, createWorkbookDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -28,9 +23,6 @@ describe("WorkbookLayoutContent", () => {
       data: { user: { id: "user-1", name: "Test User", email: "test@test.com" } },
       isPending: false,
     } as ReturnType<typeof useSession>);
-    // Default: an unpublished workbook (no versions). Tests that need a
-    // published version re-mount the handler.
-    server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
   });
 
   function renderContent(overrides: Partial<typeof workbook> = {}) {
@@ -43,10 +35,9 @@ describe("WorkbookLayoutContent", () => {
     );
   }
 
-  it("displays the workbook title, metadata, and save indicator", () => {
+  it("displays the workbook title and save indicator", () => {
     renderContent();
     expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
-    expect(screen.getByText("Test User")).toBeInTheDocument();
     // Indicator now reads from the unified autosave context; default
     // (no edits reported) is "all saved".
     expect(screen.getByText("autosave.saved")).toBeInTheDocument();
@@ -57,11 +48,37 @@ describe("WorkbookLayoutContent", () => {
     expect(screen.getByTestId("children")).toBeInTheDocument();
   });
 
-  it("displays the workbook description", () => {
+  it("keeps only the title above the tab strip", () => {
     renderContent({ description: "Measures photosynthetic efficiency" });
 
-    expect(screen.getByText("Measures photosynthetic efficiency")).toBeInTheDocument();
-    expect(screen.getByText("workbooks.descriptionTitle")).toBeInTheDocument();
+    // Description, provenance and the fork action belong to the Overview route,
+    // so switching to Collaborators leaves them behind rather than hiding them.
+    expect(screen.queryByText("Measures photosynthetic efficiency")).not.toBeInTheDocument();
+    expect(screen.queryByText("workbooks.descriptionTitle")).not.toBeInTheDocument();
+    expect(screen.queryByText("Test User")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "workbooks.actions.fork" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("links the Overview and Collaborators routes under the title", () => {
+    renderContent();
+
+    expect(screen.getByRole("tab", { name: "common.overview" })).toHaveAttribute(
+      "href",
+      "/en-US/platform/workbooks/wb-1",
+    );
+    expect(screen.getByRole("tab", { name: "sharing.collaboratorsTab" })).toHaveAttribute(
+      "href",
+      "/en-US/platform/workbooks/wb-1/collaborators",
+    );
+  });
+
+  it("renders no tab strip for a reader who can neither share nor leave", () => {
+    renderContent({ capabilities: readOnlyCapabilities });
+
+    expect(screen.getByTestId("children")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
 
   it("lets the creator rename the workbook by clicking the title", async () => {
@@ -83,107 +100,5 @@ describe("WorkbookLayoutContent", () => {
     await waitFor(() => {
       expect(updateSpy.body).toEqual({ name: "Soil Analysis" });
     });
-  });
-
-  it("shows a dash when createdByName is null", () => {
-    renderContent({ createdByName: undefined });
-    expect(screen.getByText("-")).toBeInTheDocument();
-  });
-
-  it("shows a link to the source workbook when it is a fork", () => {
-    renderContent({ forkedFrom: "wb-src" });
-    expect(screen.getByText("workbooks.forkedFrom")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "common.viewOriginal" });
-    expect(link).toHaveAttribute("href", "/platform/workbooks/wb-src");
-  });
-
-  it("does not show the fork link for a non-fork workbook", () => {
-    renderContent();
-    expect(screen.queryByText("workbooks.forkedFrom")).not.toBeInTheDocument();
-  });
-
-  it("shows the latest published version number", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, {
-      body: [
-        createWorkbookVersionSummary({ workbookId: "wb-1", version: 3 }),
-        createWorkbookVersionSummary({ workbookId: "wb-1", version: 2 }),
-      ],
-    });
-
-    renderContent();
-
-    expect(await screen.findByText("v3")).toBeInTheDocument();
-  });
-
-  it("shows a draft label when the workbook has no published versions", async () => {
-    renderContent();
-    expect(await screen.findByText("workbooks.draftVersion")).toBeInTheDocument();
-  });
-
-  it("falls back to a dash (not 'Draft') when the versions fetch fails", async () => {
-    server.mount(contract.workbooks.listWorkbookVersions, { status: 500 });
-
-    renderContent({ createdByName: "Test User" });
-
-    // The version cell shows "-" rather than wrongly claiming the workbook is a draft.
-    expect(await screen.findByText("-")).toBeInTheDocument();
-    expect(screen.queryByText("workbooks.draftVersion")).not.toBeInTheDocument();
-  });
-
-  it("forks the workbook and posts forkedFrom", async () => {
-    const sourceCells = [
-      createMarkdownCell({ id: "source-cell", content: "<p>Source instructions</p>" }),
-    ];
-    const sourceMetadata = { crop: "maize", trialYear: 2026 };
-    const spy = server.mount(contract.workbooks.createWorkbook, {
-      status: 201,
-      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
-    });
-    const user = userEvent.setup();
-    renderContent({
-      name: "Distinctive field workbook",
-      description: "A workbook description that must survive forking.",
-      cells: sourceCells,
-      metadata: sourceMetadata,
-    });
-
-    await user.click(await screen.findByRole("button", { name: "workbooks.actions.fork" }));
-
-    await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({
-      name: "Fork of Distinctive field workbook",
-      description: "A workbook description that must survive forking.",
-      cells: sourceCells,
-      metadata: sourceMetadata,
-      forkedFrom: "wb-1",
-    });
-  });
-
-  it("shows the fork button to viewers who are not the creator", async () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "someone-else" } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
-    renderContent({ createdBy: "user-1" });
-
-    expect(
-      await screen.findByRole("button", { name: "workbooks.actions.fork" }),
-    ).toBeInTheDocument();
-  });
-
-  it("disables the Fork button while a fork is in flight", async () => {
-    server.mount(contract.workbooks.createWorkbook, {
-      status: 201,
-      body: createWorkbook({ id: "99999999-9999-9999-9999-999999999999" }),
-      delay: "infinite",
-    });
-    const user = userEvent.setup();
-    renderContent();
-
-    const forkButton = await screen.findByRole("button", { name: "workbooks.actions.fork" });
-    await user.click(forkButton);
-
-    await waitFor(() => expect(forkButton).toBeDisabled());
   });
 });

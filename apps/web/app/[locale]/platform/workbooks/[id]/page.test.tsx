@@ -26,6 +26,8 @@ beforeEach(() => {
   // Pickers fetch lists at mount even when their popovers stay closed.
   server.mount(contract.protocols.listProtocols, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
+  // The provenance row lives on this page now, and asks for the version list.
+  server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
 });
 
 function renderPage() {
@@ -45,6 +47,26 @@ describe("WorkbookOverviewPage", () => {
     server.mount(contract.workbooks.getWorkbook, { status: 500 });
     renderPage();
     await waitFor(() => expect(screen.getByText("workbooks.errorLoading")).toBeInTheDocument());
+  });
+
+  it("carries the description and the provenance row, which the layout no longer does", async () => {
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbookDetail({
+        id: "wb-1",
+        description: "Measures photosynthetic efficiency",
+        createdByName: "Test User",
+        cells: [],
+      }),
+    });
+
+    renderPage();
+
+    // Everything the Collaborators route must *not* show now belongs here.
+    await waitFor(() =>
+      expect(screen.getByText("Measures photosynthetic efficiency")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Test User")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "workbooks.actions.fork" })).toBeInTheDocument();
   });
 
   it("renders the workbook's cells in the editor once data loads", async () => {

@@ -1,8 +1,9 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { ResourceOverviewTabs } from "@/components/sharing/resource-overview-tabs";
 import { WorkbookDangerZone } from "@/components/workbook-overview/workbook-danger-zone";
+import { WorkbookMetaRow } from "@/components/workbook-overview/workbook-meta-row";
+import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { use } from "react";
@@ -29,33 +30,45 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
   }
 
   // Mount the editor only after data loads so `useAutosave` sees the
-  // persisted state as its first value. The Fork action lives in the workbook
-  // layout header, next to the version/created-by metadata.
+  // persisted state as its first value.
   return (
-    <ResourceOverviewTabs
-      resourceType="workbook"
-      resourceId={id}
-      canShare={data.capabilities.canShare}
-      canLeave={data.capabilities.canLeave}
-      className="flex flex-1 flex-col"
-      overviewClassName="flex flex-1 flex-col gap-6"
-    >
-      <WorkbookDraftEditor
-        id={id}
-        initialCells={data.cells}
-        canEdit={data.capabilities.canUpdate}
-        name={data.name}
-      />
+    <div className="flex flex-1 flex-col">
+      <div className="flex w-full flex-col gap-8">
+        <WorkbookDescription
+          workbookId={id}
+          description={data.description ?? ""}
+          hasAccess={data.capabilities.canUpdate}
+        />
 
-      {/* Renders nothing unless the viewer may manage this workbook. Deletion
-          lives here rather than on list rows: capabilities are detail-only, so a
-          row could not tell a manager from a plain reader. */}
-      <WorkbookDangerZone
-        workbookId={id}
-        workbookName={data.name}
-        usedBy={data.experimentCount ?? 0}
-        canManage={data.capabilities.canManage}
-      />
-    </ResourceOverviewTabs>
+        <WorkbookMetaRow id={id} workbook={data} />
+      </div>
+
+      {/* The tinted canvas is the editor's, so it bleeds to the container edges
+          here rather than in the layout — the Collaborators route renders on
+          plain background, like the experiment collaborators page. */}
+      <div
+        className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
+        style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
+      >
+        <div className="flex w-full flex-1 flex-col gap-6">
+          <WorkbookDraftEditor
+            id={id}
+            initialCells={data.cells}
+            canEdit={data.capabilities.canUpdate}
+            name={data.name}
+          />
+
+          {/* Renders nothing unless the viewer may manage this workbook. Deletion
+              lives here rather than on list rows: capabilities are detail-only, so a
+              row could not tell a manager from a plain reader. */}
+          <WorkbookDangerZone
+            workbookId={id}
+            workbookName={data.name}
+            usedBy={data.experimentCount ?? 0}
+            canManage={data.capabilities.canManage}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

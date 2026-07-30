@@ -352,6 +352,36 @@ describe("<MacroLayout />", () => {
     });
   });
 
+  describe("Overview / Collaborators strip", () => {
+    it("renders the strip under the title, linked at the macro's own routes", async () => {
+      server.mount(contract.macros.getMacro, { body: defaultMacro });
+      renderLayout();
+
+      const overview = await screen.findByRole("tab", { name: "common.overview" });
+      expect(overview).toHaveAttribute("href", "/en-US/platform/macros/test-macro-id");
+      expect(screen.getByRole("tab", { name: "sharing.collaboratorsTab" })).toHaveAttribute(
+        "href",
+        "/en-US/platform/macros/test-macro-id/collaborators",
+      );
+
+      // The strip belongs to the layout, so it sits between the title and the page.
+      const title = screen.getByTestId("inline-editable-title");
+      expect(
+        title.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("renders no strip for a reader who can neither share nor leave", async () => {
+      server.mount(contract.macros.getMacro, {
+        body: createMacroDetail({ ...defaultMacro, capabilities: readOnlyCapabilities }),
+      });
+      renderLayout();
+
+      await waitFor(() => expect(screen.getByText("Child Content")).toBeInTheDocument());
+      expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    });
+  });
+
   describe("Component Structure", () => {
     it("renders InlineEditableTitle before children", async () => {
       server.mount(contract.macros.getMacro, { body: defaultMacro });

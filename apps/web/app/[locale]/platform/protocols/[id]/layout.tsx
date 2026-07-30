@@ -70,7 +70,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       errorDescription={t("protocols.notFoundDescription")}
     >
       {data && (
-        <ProtocolLayoutContent id={id} protocol={data} actions={actions}>
+        <ProtocolLayoutContent id={id} protocol={data} actions={actions} showTabs={!isRun}>
           {children}
         </ProtocolLayoutContent>
       )}
