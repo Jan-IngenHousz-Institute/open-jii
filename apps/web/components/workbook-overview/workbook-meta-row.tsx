@@ -116,13 +116,18 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
         </div>
       ) : null}
 
-      {/* Visibility + the one-way publish action. */}
-      <div className="flex flex-col gap-1">
+      {/* Visibility. The cell needs a floor width of its own: the select sizes to
+          its container, and this container would otherwise shrink to the width of
+          the word above it. Even so it is one short cell in a horizontal row, so
+          the explanatory copy goes on the info icon — a block would wrap here and
+          push the row out of line. */}
+      <div className="flex min-w-[9rem] flex-col gap-1">
         <ResourcePublishControl
           resourceType="workbook"
           resourceId={id}
           visibility={workbook.visibility}
           canManage={canManage}
+          infoPlacement="tooltip"
         />
       </div>
 

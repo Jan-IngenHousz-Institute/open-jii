@@ -2,7 +2,6 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Info } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -40,12 +39,13 @@ interface EmbargoFormValues {
 }
 
 /**
- * Experiment visibility settings, reworked to the one-way publish flow:
- * - while **private**: an embargo date editor plus an explicit, irreversible
- *   "Publish" action (confirmed via dialog) that calls the dedicated
- *   `setVisibility` route;
- * - once **public**: a static state with no controls — visibility can never be
- *   made private again.
+ * Experiment visibility settings: the visibility select, and — while private —
+ * the embargo date that schedules the automatic transition.
+ *
+ * Choosing "public" is irreversible, so it is confirmed in a dialog and written
+ * through the dedicated `setVisibility` route rather than the general update
+ * body, which does not accept `visibility` at all. The select never submits; it
+ * reflects the persisted value and goes inert once public.
  */
 export function ExperimentVisibilityCard({
   experimentId,
@@ -57,7 +57,7 @@ export function ExperimentVisibilityCard({
   const { mutateAsync: updateExperiment } = useExperimentUpdate();
   const { mutateAsync: setVisibility, isPending: isPublishing } = useSetExperimentVisibility();
   const { t } = useTranslation();
-  // Track a local publish so the static state shows immediately on confirm,
+  // Track a local publish so the select reads "Public" immediately on confirm,
   // before the query refetches. Visibility is monotonic (private→public only),
   // so `isPublic` is derived from the prop OR this flag — if the experiment is
   // published elsewhere (embargo cron, another tab) and the query refetches to
@@ -90,6 +90,12 @@ export function ExperimentVisibilityCard({
     toast({ description: t("experiments.experimentUpdated") });
   };
 
+  // The select is the only way in, and it is disabled once public, so the sole
+  // reachable change is private → public — which needs confirming, not writing.
+  const handleVisibilityChange = (next: ExperimentVisibility) => {
+    if (next === "public") setShowPublishDialog(true);
+  };
+
   const confirmPublish = async () => {
     await setVisibility({ id: experimentId, visibility: "public" });
     setPublishedLocally(true);
@@ -105,35 +111,13 @@ export function ExperimentVisibilityCard({
         <DocsHelpLink path="/guide/sharing/visibility-embargo" className="mt-1" />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <div className="text-sm font-medium">{t("experimentVisibility.statusLabel")}</div>
-          <div className="text-muted-foreground text-sm">
-            {isPublic
-              ? t("experimentVisibility.publicStatus")
-              : t("experimentVisibility.privateStatus")}
-          </div>
-        </div>
-
-        {isPublic ? (
-          <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
-            <Info className="text-primary h-4 w-4" />
-            <div className="leading-tight">{t("experimentVisibility.publishedDescription")}</div>
-          </div>
-        ) : (
-          <>
-            <ExperimentVisibilityForm
-              form={form}
-              isArchived={isArchived}
-              onEmbargoDateSelect={handleEmbargoDateSelect}
-            />
-            <Button
-              onClick={() => setShowPublishDialog(true)}
-              disabled={isArchived || isPublishing}
-            >
-              {t("experimentVisibility.publishAction")}
-            </Button>
-          </>
-        )}
+        <ExperimentVisibilityForm
+          form={form}
+          currentVisibility={isPublic ? "public" : "private"}
+          isArchived={isArchived}
+          onVisibilityChange={handleVisibilityChange}
+          onEmbargoDateSelect={handleEmbargoDateSelect}
+        />
 
         <ExperimentAnonymizeToggle
           experimentId={experimentId}
