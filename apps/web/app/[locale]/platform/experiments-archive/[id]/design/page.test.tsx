@@ -7,7 +7,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import ExperimentFlowPage from "./page";
+import ExperimentFlowPage from "./archived-experiment-design-content";
 
 const mockGetFlowData = vi.fn(() => ({ nodes: [{ id: "n1" }] }));
 

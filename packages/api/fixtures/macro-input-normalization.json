@@ -1,0 +1,175 @@
+{
+  "fixtureVersion": 1,
+  "vocabulary": {
+    "sources": ["direct", "sample-envelope"],
+    "warnings": ["additional-items-discarded"],
+    "errors": ["empty-envelope"]
+  },
+  "cases": [
+    {
+      "name": "direct object",
+      "input": { "value": 1 },
+      "expected": {
+        "ok": true,
+        "value": { "value": 1 },
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "direct empty object",
+      "input": {},
+      "expected": { "ok": true, "value": {}, "source": "direct", "discardedCount": 0 }
+    },
+    {
+      "name": "direct scalar",
+      "input": "device-ready",
+      "expected": {
+        "ok": true,
+        "value": "device-ready",
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "direct null",
+      "input": null,
+      "expected": { "ok": true, "value": null, "source": "direct", "discardedCount": 0 }
+    },
+    {
+      "name": "nested sample lookalike",
+      "input": { "reading": { "sample": [{ "value": 2 }] } },
+      "expected": {
+        "ok": true,
+        "value": { "reading": { "sample": [{ "value": 2 }] } },
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "scalar sample property is direct",
+      "input": { "sample": 3, "unit": "count" },
+      "expected": {
+        "ok": true,
+        "value": { "sample": 3, "unit": "count" },
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "null sample property is direct",
+      "input": { "sample": null },
+      "expected": {
+        "ok": true,
+        "value": { "sample": null },
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "sample object envelope",
+      "input": { "sample": { "value": 4 }, "transport": "legacy" },
+      "expected": {
+        "ok": true,
+        "value": { "value": 4 },
+        "source": "sample-envelope",
+        "sourceCount": 1,
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "single sample array envelope",
+      "input": { "sample": [{ "value": 5 }] },
+      "expected": {
+        "ok": true,
+        "value": { "value": 5 },
+        "source": "sample-envelope",
+        "sourceCount": 1,
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "multiple sample array envelope",
+      "input": { "sample": [{ "value": 6 }, { "value": 7 }, { "value": 8 }] },
+      "expected": {
+        "ok": true,
+        "value": { "value": 6 },
+        "source": "sample-envelope",
+        "sourceCount": 3,
+        "discardedCount": 2,
+        "warning": "additional-items-discarded"
+      }
+    },
+    {
+      "name": "empty sample array envelope",
+      "input": { "sample": [] },
+      "expected": {
+        "ok": false,
+        "source": "sample-envelope",
+        "sourceCount": 0,
+        "error": "empty-envelope"
+      }
+    },
+    {
+      "name": "direct single top-level array",
+      "input": [{ "value": 9 }],
+      "expected": {
+        "ok": true,
+        "value": [{ "value": 9 }],
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "direct multiple top-level array",
+      "input": [{ "value": 10 }, { "value": 11 }],
+      "expected": {
+        "ok": true,
+        "value": [{ "value": 10 }, { "value": 11 }],
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "direct empty top-level array",
+      "input": [],
+      "expected": {
+        "ok": true,
+        "value": [],
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "direct scalar top-level values",
+      "input": [12, 13],
+      "expected": {
+        "ok": true,
+        "value": [12, 13],
+        "source": "direct",
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "sample envelope unwraps only once",
+      "input": { "sample": [{ "sample": [{ "value": 14 }] }] },
+      "expected": {
+        "ok": true,
+        "value": { "sample": [{ "value": 14 }] },
+        "source": "sample-envelope",
+        "sourceCount": 1,
+        "discardedCount": 0
+      }
+    },
+    {
+      "name": "nested top-level array is direct",
+      "input": [[{ "value": 15 }]],
+      "expected": {
+        "ok": true,
+        "value": [[{ "value": 15 }]],
+        "source": "direct",
+        "discardedCount": 0
+      }
+    }
+  ]
+}

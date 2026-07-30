@@ -1,20 +1,20 @@
-"use client";
+import { buildDeviceMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { IotDeviceOverview } from "@/components/iot-devices/iot-device-overview";
-import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
-import { use } from "react";
+import DeviceOverviewContent from "./device-overview-content";
 
 interface DeviceOverviewPageProps {
-  params: Promise<{ deviceId: string }>;
+  params: Promise<{ locale: string; deviceId: string }>;
 }
 
-/**
- * A device's Overview tab. The layout has already loaded the device (and gated on
- * it) before this renders, so the hook resolves from cache and adds no request.
- */
-export default function DeviceOverviewPage({ params }: DeviceOverviewPageProps) {
-  const { deviceId } = use(params);
-  const { data } = useIotDevice(deviceId);
+export function generateMetadata({ params }: DeviceOverviewPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, deviceId } = await params;
+    return buildDeviceMetadata({ locale, deviceId });
+  });
+}
 
-  return data ? <IotDeviceOverview device={data} /> : null;
+export default function DeviceOverviewPage({ params }: DeviceOverviewPageProps) {
+  return <DeviceOverviewContent params={params} />;
 }

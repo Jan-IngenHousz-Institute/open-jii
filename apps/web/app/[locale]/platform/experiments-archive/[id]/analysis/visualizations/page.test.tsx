@@ -6,7 +6,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import ExperimentVisualizationsPage from "./page";
+import ExperimentVisualizationsPage from "./archived-visualizations-list-content";
 
 vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-list", () => ({
   default: ({

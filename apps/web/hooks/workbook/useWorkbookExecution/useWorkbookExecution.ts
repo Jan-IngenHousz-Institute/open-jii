@@ -26,7 +26,10 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { buildCellNamespace } from "@repo/api/transforms/build-cell-namespace";
+import {
+  buildCellNamespace,
+  isOutputDataNormalizationError,
+} from "@repo/api/transforms/build-cell-namespace";
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
 import { presentDevice } from "@repo/api/transforms/device-presentation";
@@ -391,16 +394,21 @@ export function useWorkbookExecution({
   const runMacroCell = useCallback(
     async (cell: MacroCell, cellIndex: number, currentCells: WorkbookCell[]) => {
       const input = findPrecedingOutput(currentCells, cellIndex);
-      const namespace = buildCellNamespace(currentCells, cellIndex);
       // A macro can run from ctx alone; error only when there is neither a
       // nearest measurement nor any upstream output to read.
-      if (!input && Object.keys(namespace.byId).length === 0) {
-        setCellState(cell.id, { status: "error", error: "No input data available" });
-        return insertOutputAfterCell(
-          currentCells,
-          cell.id,
-          makeErrorOutputCell(cell.id, "No measurement data available - run a protocol cell first"),
-        );
+      if (!input) {
+        const namespace = buildCellNamespace(currentCells, cellIndex);
+        if (Object.keys(namespace.byId).length === 0) {
+          setCellState(cell.id, { status: "error", error: "No input data available" });
+          return insertOutputAfterCell(
+            currentCells,
+            cell.id,
+            makeErrorOutputCell(
+              cell.id,
+              "No measurement data available - run a protocol cell first",
+            ),
+          );
+        }
       }
 
       setCellState(cell.id, { status: "running" });
@@ -664,10 +672,31 @@ export function useWorkbookExecution({
       }
 
       if (isDeviceScopedBranch(cell)) {
-        return runDeviceDispatchBranch(cell, currentCells);
+        try {
+          return await runDeviceDispatchBranch(cell, currentCells);
+        } catch (err) {
+          if (!isOutputDataNormalizationError(err)) throw err;
+          setCellState(cell.id, { status: "error", error: err.message });
+          return insertOutputAfterCell(
+            currentCells,
+            cell.id,
+            makeErrorOutputCell(cell.id, err.message),
+          );
+        }
       }
 
-      const matchedPath = evaluateBranch(cell, currentCells);
+      let matchedPath: ReturnType<typeof evaluateBranch>;
+      try {
+        matchedPath = evaluateBranch(cell, currentCells);
+      } catch (err) {
+        if (!isOutputDataNormalizationError(err)) throw err;
+        setCellState(cell.id, { status: "error", error: err.message });
+        return insertOutputAfterCell(
+          currentCells,
+          cell.id,
+          makeErrorOutputCell(cell.id, err.message),
+        );
+      }
       setCellState(cell.id, { status: "completed" });
 
       const passLabel = pass != null ? ` (pass ${pass})` : "";

@@ -6,12 +6,15 @@ import Link from "next/link";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components/button";
 
-export const metadata: Metadata = {
-  title: "Macros",
-};
-
 interface MacroPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: MacroPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { t } = await initTranslations({ locale, namespaces: ["macro"] });
+
+  return { title: t("macros.title") };
 }
 
 export default async function MacroPage({ params }: MacroPageProps) {

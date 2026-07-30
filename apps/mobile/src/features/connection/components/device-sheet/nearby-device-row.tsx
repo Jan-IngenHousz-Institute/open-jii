@@ -41,8 +41,10 @@ export function NearbyDeviceRow({ device, isConnecting, onConnect, isLast }: Nea
 
   const presentation = presentMobileDevice(device);
   const title = mobileDevicePrimaryLabel(presentation, t("identity.unknownDevice"));
+  // Omit the "Measurement device" role label here: before the identity
+  // handshake completes the role is only assumed, and dropping it keeps the
+  // device's identifier (often a full MAC) fully visible instead of truncated.
   const subParts = mobileDeviceSecondaryParts(presentation, {
-    measurementDevice: t("identity.measurementDevice"),
     identifier: (id) => t("identity.identifier", { id }),
   });
   if (sigKey) subParts.push(t("deviceList.signal", { strength: t(`deviceList.${sigKey}`) }));

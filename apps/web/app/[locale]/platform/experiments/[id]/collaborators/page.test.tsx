@@ -20,7 +20,7 @@ import { contract } from "@repo/api/contract";
 import type { Experiment, ExperimentAccess } from "@repo/api/domains/experiment/experiment.schema";
 import { useSession } from "@repo/auth/client";
 
-import ExperimentCollaboratorsPage from "./page";
+import ExperimentCollaboratorsPage from "./experiment-collaborators-content";
 
 const experimentId = "exp-123";
 

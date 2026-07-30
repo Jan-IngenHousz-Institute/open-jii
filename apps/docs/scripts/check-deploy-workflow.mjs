@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(appRoot, "../..");
 const deployWorkflowPath = path.join(repoRoot, ".github/workflows/deploy-docs.yml");
+const orchestratorWorkflowPath = path.join(repoRoot, ".github/workflows/deploy.yml");
 const prWorkflowPath = path.join(repoRoot, ".github/workflows/pr.yml");
 
 function workflowSteps(workflow, job) {
@@ -199,6 +200,21 @@ assert.match(summaryStep.run, /steps\.rollback-archive\.outputs\.artifact_name/)
 await probeArchiveScript(renderRunScript(archiveStep.run));
 await probeUploadScript(renderRunScript(uploadStep.run));
 
+const orchestratorWorkflow = load(await readFile(orchestratorWorkflowPath, "utf8"));
+const orchestratorJobs = orchestratorWorkflow.jobs;
+const databricksJob = orchestratorJobs?.["deploy-databricks"];
+assert.ok(databricksJob?.needs?.includes("deploy-backend"));
+assert.match(databricksJob.if, /contains\('success,skipped', needs\.deploy-backend\.result\)/);
+
+const sandboxJob = orchestratorJobs?.["deploy-macro-sandbox"];
+for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databricks"]) {
+  assert.ok(sandboxJob?.needs?.includes(prerequisite));
+  assert.match(
+    sandboxJob.if,
+    new RegExp(`contains\\('success,skipped', needs\\.${prerequisite}\\.result\\)`),
+  );
+}
+
 const prWorkflow = load(await readFile(prWorkflowPath, "utf8"));
 const driftStep = stepByName(
   workflowSteps(prWorkflow, "docs_spec_drift"),
@@ -233,5 +249,5 @@ for (const [index, shellBlock] of shellBlocks.entries()) {
 }
 
 console.log(
-  "Deployment workflow checks passed: rollback mirror failure blocks upload; empty and populated mirrors are handled; cache/delete classes, artifact summary, drift inputs, and rollback runbook are valid.",
+  "Deployment workflow checks passed: macro rollout order, rollback safety, cache classes, drift inputs, and rollback runbook are valid.",
 );

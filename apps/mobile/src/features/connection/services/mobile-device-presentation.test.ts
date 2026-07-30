@@ -55,6 +55,14 @@ describe("presentMobileDevice", () => {
     ]);
   });
 
+  it("omits the role label when no measurement-device label is provided", () => {
+    const presentation = presentMobileDevice(device, identity({}));
+
+    expect(mobileDeviceSecondaryParts(presentation, { identifier: labels.identifier })).toEqual([
+      "ID AA:BB:CC:DD:EE:FF",
+    ]);
+  });
+
   it("does not fabricate MultispeQ while identity is unavailable or failed", () => {
     const presentation = presentMobileDevice(device);
 

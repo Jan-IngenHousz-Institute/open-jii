@@ -58,27 +58,38 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "q1", "answer")).toBeUndefined();
   });
 
-  it("attaches the latest measurement as an output cell keyed to its producer", () => {
+  it("stores the raw latest measurement on the output cell keyed to its producer", () => {
+    const raw = { sample: [{ phi2: 0.8 }] };
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: [{ phi2: 0.8 }] }, producerCellId: "p1" }),
+      ctx({ scanResult: raw, producerCellId: "p1" }),
     );
+    const output = hydrated.find((cell): cell is OutputCell => cell.type === "output");
+    expect(output?.data).toBe(raw);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
   });
 
-  it("hydrates and scopes every device's live measurement", () => {
+  it("stores each device's raw live measurement without protocol-specific reshaping", () => {
+    const first = { sample: [{ phi2: 0.8 }] };
+    const second = { sample: [{ phi2: 0.6 }] };
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
       ctx({
-        scanResult: { sample: [{ phi2: 0.8 }] },
+        scanResult: first,
         scanResults: [
-          { device: { id: "usb-a", name: "A" }, result: { sample: [{ phi2: 0.8 }] } },
-          { device: { id: "usb-b", name: "B" }, result: { sample: [{ phi2: 0.6 }] } },
+          { device: { id: "usb-a", name: "A" }, result: first },
+          { device: { id: "usb-b", name: "B" }, result: second },
         ],
         producerCellId: "p1",
       }),
     );
 
+    const output = hydrated.find((cell): cell is OutputCell => cell.type === "output");
+    expect(output?.data).toBe(first);
+    expect(output?.deviceResults).toEqual([
+      { deviceId: "usb-a", deviceLabel: "A", data: first },
+      { deviceId: "usb-b", deviceLabel: "B", data: second },
+    ]);
     expect(resolveConditionValue(hydrated, "p1", "phi2", { deviceId: "usb-a" })).toBe(0.8);
     expect(resolveConditionValue(hydrated, "p1", "phi2", { deviceId: "usb-b" })).toBe(0.6);
   });
@@ -96,11 +107,14 @@ describe("hydrateCells", () => {
     expect(resolveConditionValue(hydrated, "c1", "voltage")).toBe(3.9);
   });
 
-  it("wraps a non-array sample", () => {
+  it("keeps a non-array sample envelope raw", () => {
+    const raw = { sample: { phi2: 0.5 } };
     const hydrated = hydrateCells(
       [pCell("p1", "proto-1")],
-      ctx({ scanResult: { sample: { phi2: 0.5 } }, producerCellId: "p1" }),
+      ctx({ scanResult: raw, producerCellId: "p1" }),
     );
+    const output = hydrated.find((cell): cell is OutputCell => cell.type === "output");
+    expect(output?.data).toBe(raw);
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.5);
   });
 
@@ -132,6 +146,8 @@ describe("hydrateCells", () => {
       ctx({ scanResult: { sample: [{ phi2: 0.9 }] }, producerCellId: "p1" }),
     );
     expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
+    const output = hydrated.find((cell): cell is OutputCell => cell.type === "output");
+    expect(output?.data).toEqual({ sample: [{ phi2: 0.9 }] });
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);
   });
 
@@ -155,6 +171,10 @@ describe("hydrateCells", () => {
         cellOutputs: { m1: { fvfm: 0.72 } },
       }),
     );
+    const protocolOutput = hydrated.find(
+      (cell): cell is OutputCell => cell.type === "output" && cell.producedBy === "p1",
+    );
+    expect(protocolOutput?.data).toEqual({ sample: [{ phi2: 0.8 }] });
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.8);
     expect(resolveConditionValue(hydrated, "m1", "fvfm")).toBe(0.72);
   });
@@ -169,6 +189,8 @@ describe("hydrateCells", () => {
       }),
     );
     expect(hydrated.filter((c) => c.type === "output")).toHaveLength(1);
+    const output = hydrated.find((cell): cell is OutputCell => cell.type === "output");
+    expect(output?.data).toEqual({ sample: [{ phi2: 0.9 }] });
     expect(resolveConditionValue(hydrated, "p1", "phi2")).toBe(0.9);
   });
 });

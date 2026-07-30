@@ -9,7 +9,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import ProtocolOverviewPage from "../page";
+import ProtocolOverviewPage from "../protocol-overview-content";
 
 vi.mock("~/util/apiError", () => ({
   parseApiError: (err: unknown) => ({ message: String(err) }),

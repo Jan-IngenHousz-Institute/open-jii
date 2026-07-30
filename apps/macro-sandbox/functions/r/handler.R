@@ -79,7 +79,7 @@ input_path <- file.path(tmpdir, "input.json")
 output_path <- file.path(tmpdir, "output.json")
 
 writeLines(script_content, script_path)
-writeLines(toJSON(items, auto_unbox = TRUE), input_path)
+writeLines(toJSON(items, auto_unbox = TRUE, null = "null"), input_path)
 
 # Run wrapper in a subprocess with stripped environment (env -i).
 # Output file (3rd arg) prevents user cat()/print() from corrupting JSON.
@@ -137,5 +137,5 @@ gzip_text <- function(text) {
 # AWS Lambda sync responses are capped at 6 MB. Compress every response so
 # macro outputs of ~25-50 MB raw can still fit. Callers detect the
 # {encoding, payload} wrapper and decompress.
-payload <- jsonlite::base64_enc(gzip_text(toJSON(result, auto_unbox = TRUE)))
+payload <- jsonlite::base64_enc(gzip_text(toJSON(result, auto_unbox = TRUE, null = "null")))
 cat(toJSON(list(encoding = "gzip+base64", payload = payload), auto_unbox = TRUE))

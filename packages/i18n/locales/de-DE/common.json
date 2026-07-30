@@ -197,6 +197,10 @@
     "inviteCollaborators": "Mitwirkende einladen",
     "inviteCollaboratorsDescription": "Fügen Sie eine bestehende Person oder eine Ihrer Organisationen hinzu oder laden Sie jemanden per E-Mail ein. Bestehende Konten erhalten sofort Zugriff; Eingeladene erhalten eine E-Mail und treten nach dem Annehmen bei."
   },
+  "transferRequest": {
+    "title": "Projekttransfer beantragen",
+    "yourRequests": "Ihre Transferanfragen"
+  },
   "newExperiment": {
     "pickADate": "Datum auswählen",
     "embargoUntil": "Embargo bis",

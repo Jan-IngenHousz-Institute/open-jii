@@ -34,7 +34,7 @@ export interface TestCase {
   name: string;
   language: string;
   script: string; // base64
-  items: { id: string; data: Record<string, unknown> | unknown[] }[];
+  items: { id: string; data: unknown }[];
   timeout: number;
   protocol_id: string;
   expect: TestExpectation;
@@ -76,7 +76,9 @@ export async function invokeLambda(
   testCase: TestCase,
   options?: { timeoutMs?: number },
 ): Promise<{ response: LambdaResponse; status: number; durationMs: number }> {
-  const { name: _, language, expect: _expect, ...payload } = testCase;
+  const { name: _, language, expect: _expect, ...rest } = testCase;
+
+  const payload = rest;
 
   // Decrypt script
   const aesKey = Buffer.from(process.env.MACRO_SB_TEST_KEY ?? "", "base64");

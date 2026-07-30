@@ -1,3 +1,4 @@
+import { INDEXABLE, SITE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -5,11 +6,51 @@ import { CookieBanner } from "../components/cookie-banner";
 import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
+const title = "openJII - Open-science platform";
+const description =
+  "Open-science platform by the Jan Ingenhousz Institute for real-time analysis and visualization of photosynthesis data from IoT sensors, enabling collaborative plant science research.";
+
 // Global fallback metadata used when a page does not define its own (via CMS or locally).
 export const metadata: Metadata = {
-  title: "openJII - Open-science platform",
-  description:
-    "Open-science platform by the Jan Ingenhousz Institute for real-time analysis and visualization of photosynthesis data from IoT sensors, enabling collaborative plant science research.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: "openJII",
+  title: {
+    default: title,
+    template: "%s | openJII",
+  },
+  description,
+  keywords: [
+    "photosynthesis research",
+    "open science",
+    "plant science",
+    "IoT sensors",
+    "research data visualization",
+  ],
+  creator: "Jan Ingenhousz Institute",
+  publisher: "Jan Ingenhousz Institute",
+  category: "science",
+  openGraph: {
+    title,
+    description,
+    siteName: "openJII",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
+  robots: {
+    index: INDEXABLE,
+    follow: INDEXABLE,
+    googleBot: {
+      index: INDEXABLE,
+      follow: INDEXABLE,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 interface RootLayoutProps {

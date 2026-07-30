@@ -1,16 +1,8 @@
 /**
- * Inline HTML for a hidden WebView that runs Python macros via Pyodide.
- * Listens for postMessage({ requestId, code, json, ctx }), wraps code in a function
- * that receives json and ctx, runs it, and posts back { requestId, result } or { requestId, error }.
+ * Inline listener for the hidden WebView that runs Python macros via Pyodide.
+ * Exported separately so tests can execute the same source without parsing HTML.
  */
-export const pythonMacroSandboxHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"/><title>Python Macro</title></head>
-<body>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
-<script>
-(function() {
+export const pythonMacroSandboxScript = `(function() {
   var pyodideReady = false;
   var pending = [];
 
@@ -56,7 +48,8 @@ export const pythonMacroSandboxHtml = `
       var payload = typeof data === 'string' ? JSON.parse(data) : data;
       if (!payload || payload.requestId === undefined || payload.code === undefined) return;
       if (pyodideReady) {
-        runMacro(payload.requestId, payload.code, payload.json || {}, payload.ctx || {});
+        var macroJson = Object.prototype.hasOwnProperty.call(payload, 'json') ? payload.json : {};
+        runMacro(payload.requestId, payload.code, macroJson, payload.ctx || {});
       } else {
         pending.push(payload);
       }
@@ -69,7 +62,10 @@ export const pythonMacroSandboxHtml = `
     window.pyodide = pyodide;
     pyodideReady = true;
     send({ type: 'ready' });
-    pending.forEach(function(p) { runMacro(p.requestId, p.code, p.json || {}, p.ctx || {}); });
+    pending.forEach(function(p) {
+      var macroJson = Object.prototype.hasOwnProperty.call(p, 'json') ? p.json : {};
+      runMacro(p.requestId, p.code, macroJson, p.ctx || {});
+    });
     pending.length = 0;
   }).catch(function(err) {
     send({ type: 'error', message: err.message || String(err) });
@@ -78,7 +74,21 @@ export const pythonMacroSandboxHtml = `
     });
     pending.length = 0;
   });
-})();
+})();`;
+
+/**
+ * Inline HTML for a hidden WebView that runs Python macros via Pyodide.
+ * Listens for postMessage({ requestId, code, json, ctx }), wraps code in a function
+ * that receives json and ctx, runs it, and posts back { requestId, result } or { requestId, error }.
+ */
+export const pythonMacroSandboxHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/><title>Python Macro</title></head>
+<body>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+<script>
+${pythonMacroSandboxScript}
 </script>
 </body>
 </html>

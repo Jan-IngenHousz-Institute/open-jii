@@ -321,6 +321,56 @@ describe("evaluateAndRoute", () => {
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1); // sequential fall-through
   });
 
+  it("stops routing on an empty sample envelope instead of taking another path", () => {
+    flowState.producerCellId = "p1";
+    flowState.scanResult = { sample: [] };
+    flowState.cells = [
+      pCell("p1", "proto-1"),
+      branch(
+        "b1",
+        [path("dependent", [cond("p1", "gt", "0.5", "phi2")], "tgt"), path("pdef", [])],
+        "pdef",
+      ),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("default"), plainFlowNode("tgt")];
+    flowState.currentFlowStep = 0;
+
+    const error = evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(error).toMatchObject({
+      name: "OutputDataNormalizationError",
+      code: "empty-envelope",
+    });
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith(undefined);
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(undefined, []);
+    expect(mockSetCurrentFlowStep).not.toHaveBeenCalled();
+    expect(mockRecordBranchJump).not.toHaveBeenCalled();
+    expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it("evaluates a multi-item root array as a whole branch value", () => {
+    const rootArray = [{ phi2: 0.8 }, { phi2: 0.2 }];
+    flowState.producerCellId = "p1";
+    flowState.scanResult = rootArray;
+    flowState.cells = [
+      pCell("p1", "proto-1"),
+      branch(
+        "b1",
+        [path("whole", [cond("p1", "eq", "2", "length")], "tgt"), path("pdef", [])],
+        "pdef",
+      ),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("default"), plainFlowNode("tgt")];
+    flowState.currentFlowStep = 0;
+
+    const error = evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(error).toBeUndefined();
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith({ label: "WHOLE", color: "#abcdef" });
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
+    expect(flowState.scanResult).toBe(rootArray);
+  });
+
   it("clears the chip and falls through when nothing matches and there is no default", () => {
     mockGetAnswer.mockReturnValue("no");
     flowState.cells = [qCell("q1"), branch("b1", [path("pa", [cond("q1", "eq", "yes")], "tgt")])];
@@ -542,6 +592,43 @@ describe("$device branch = dispatcher", () => {
       [],
     );
     expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
+  it("stops device dispatch when a dependent measurement envelope is empty", () => {
+    connectDevice("usb-1", "MultispeQ A", {
+      family: "multispeq",
+      deviceId: "aa",
+      raw: {},
+    });
+    flowState.producerCellId = "p1";
+    flowState.scanResult = { sample: [] };
+    flowState.cells = [
+      pCell("p1", "proto-source"),
+      branch(
+        "b1",
+        [
+          path(
+            "dependent",
+            [cond("$device", "eq", "multispeq", "family"), cond("p1", "gt", "0.5", "phi2")],
+            "pm",
+          ),
+        ],
+        undefined,
+      ),
+      pCell("pm", "proto-target"),
+    ];
+    flowState.flowNodes = [branchFlowNode("b1"), measurementFlowNode("pm", "proto-target")];
+    flowState.currentFlowStep = 0;
+
+    const error = evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(error).toMatchObject({
+      name: "OutputDataNormalizationError",
+      code: "empty-envelope",
+    });
+    expect(mockSetDevicePlan).toHaveBeenCalledWith(undefined, []);
+    expect(mockSetCurrentFlowStep).not.toHaveBeenCalled();
+    expect(mockRecordBranchJump).not.toHaveBeenCalled();
   });
 
   it("leaves non-device branches untouched (no plan writes)", () => {

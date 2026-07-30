@@ -6,11 +6,23 @@
  */
 import { z } from "zod";
 
+/**
+ * Stable failed-result message for a recognized-but-empty measurement envelope.
+ * The macro is not invoked; only this item fails. `source` attributes the
+ * envelope shape without exposing any measurement content.
+ */
+export function emptyEnvelopeError(source: string): string {
+  return `empty-envelope: recognized ${source} contained no measurement; macro not invoked`;
+}
+
 // ── Lambda payload shape, matching macro sandbox handlers ──
 
 export interface LambdaExecutionItem {
   id: string;
-  data: Record<string, unknown> | unknown[];
+  // Measurement value produced by the shared normalizer. Direct JSON values
+  // and root arrays pass unchanged; a sample envelope can select any JSON
+  // value. The public request schema is not broadened.
+  data: unknown;
   // Upstream cell outputs keyed by canonical name; injected into the sandbox as
   // read-only `ctx`. Absent for legacy/batch callers that send only `data`.
   context?: Record<string, unknown>;
