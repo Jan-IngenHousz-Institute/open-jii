@@ -61,8 +61,8 @@
       "deleteConfirm": "Permanently delete “{{name}}”? This cannot be undone.",
       "deleteInUseConfirm_one": "“{{name}}” is attached to {{count}} experiment. Deleting it will unlink that experiment, which will lose its measurement flow. This cannot be undone.",
       "deleteInUseConfirm_other": "“{{name}}” is attached to {{count}} experiments. Deleting it will unlink those experiments, which will lose their measurement flow. This cannot be undone.",
-    "deleteInUseWarning_one": "This workbook is attached to {{count}} experiment. Deleting it will unlink that experiment and lose its measurement flow.",
-    "deleteInUseWarning_other": "This workbook is attached to {{count}} experiments. Deleting them will unlink those experiments and lose their measurement flow."
+      "deleteInUseWarning_one": "This workbook is attached to {{count}} experiment. Deleting it will unlink that experiment and lose its measurement flow.",
+      "deleteInUseWarning_other": "This workbook is attached to {{count}} experiments. Deleting them will unlink those experiments and lose their measurement flow."
     },
     "cellSummary": {
       "protocol_one": "{{count}} Protocol",

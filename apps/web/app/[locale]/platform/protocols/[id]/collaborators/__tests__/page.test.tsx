@@ -7,11 +7,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import ProtocolCollaboratorsPage from "../page";
+import { generateMetadata } from "../page";
+import ProtocolCollaboratorsPage from "../protocol-collaborators-content";
+
+vi.mock("@/lib/platform-metadata", () => ({
+  buildProtocolMetadata: vi.fn(({ id, section }: { id: string; section: string }) => ({
+    title: `${section}:${id}`,
+  })),
+}));
 
 function renderPage() {
   return render(<ProtocolCollaboratorsPage params={Promise.resolve({ id: "proto-1" })} />);
 }
+
+describe("generateMetadata", () => {
+  it("titles the route by its collaborators section", async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US", id: "proto-1" }),
+    });
+
+    expect(metadata.title).toBe("collaborators:proto-1");
+  });
+});
 
 describe("ProtocolCollaboratorsPage", () => {
   beforeEach(() => {

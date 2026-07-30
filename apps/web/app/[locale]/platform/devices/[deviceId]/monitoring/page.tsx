@@ -1,16 +1,20 @@
-"use client";
+import { buildDeviceMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ComingSoonPanel } from "@/components/iot-devices/coming-soon-panel";
+import DeviceMonitoringContent from "./device-monitoring-content";
 
-import { useTranslation } from "@repo/i18n";
+interface DeviceMonitoringPageProps {
+  params: Promise<{ locale: string; deviceId: string }>;
+}
 
-/**
- * Placeholder tab. A route rather than an in-page panel so the strip behaves the
- * same way whichever tab is clicked — and so this becomes a real page by filling
- * it in, not by rewiring the strip.
- */
+export function generateMetadata({ params }: DeviceMonitoringPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, deviceId } = await params;
+    return buildDeviceMetadata({ locale, deviceId, section: "monitoring" });
+  });
+}
+
 export default function DeviceMonitoringPage() {
-  const { t } = useTranslation("iot");
-
-  return <ComingSoonPanel description={t("iot.devices.comingSoon.monitoring")} />;
+  return <DeviceMonitoringContent />;
 }

@@ -7,11 +7,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import WorkbookCollaboratorsPage from "../page";
+import { generateMetadata } from "../page";
+import WorkbookCollaboratorsPage from "../workbook-collaborators-content";
+
+vi.mock("@/lib/platform-metadata", () => ({
+  buildWorkbookMetadata: vi.fn(({ id, section }: { id: string; section: string }) => ({
+    title: `${section}:${id}`,
+  })),
+}));
 
 function renderPage() {
   return render(<WorkbookCollaboratorsPage params={Promise.resolve({ id: "wb-1" })} />);
 }
+
+describe("generateMetadata", () => {
+  it("titles the route by its collaborators section", async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US", id: "wb-1" }),
+    });
+
+    expect(metadata.title).toBe("collaborators:wb-1");
+  });
+});
 
 describe("WorkbookCollaboratorsPage", () => {
   beforeEach(() => {

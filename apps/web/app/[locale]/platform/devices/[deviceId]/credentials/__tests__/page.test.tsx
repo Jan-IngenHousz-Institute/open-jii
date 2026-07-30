@@ -6,13 +6,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import DeviceCredentialsPage from "../page";
+import DeviceCredentialsPage from "../device-credentials-content";
+import { generateMetadata } from "../page";
+
+vi.mock("@/lib/platform-metadata", () => ({
+  buildDeviceMetadata: vi.fn(({ deviceId, section }: { deviceId: string; section: string }) => ({
+    title: `${section}:${deviceId}`,
+  })),
+}));
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 
 function renderPage() {
   return render(<DeviceCredentialsPage params={Promise.resolve({ deviceId: DEVICE_ID })} />);
 }
+
+describe("generateMetadata", () => {
+  it("titles the route by its credentials section", async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US", deviceId: DEVICE_ID }),
+    });
+
+    expect(metadata.title).toBe(`credentials:${DEVICE_ID}`);
+  });
+});
 
 describe("DeviceCredentialsPage", () => {
   beforeEach(() => {

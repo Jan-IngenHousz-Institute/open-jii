@@ -1,30 +1,20 @@
-"use client";
+import { buildWorkbookMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ResourceCollaboratorsRoute } from "@/components/sharing/resource-collaborators-route";
-import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { use } from "react";
+import WorkbookCollaboratorsContent from "./workbook-collaborators-content";
 
 interface WorkbookCollaboratorsPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }
 
-/**
- * Who this workbook is shared with — a route of its own, so reaching it leaves
- * the notebook editor, its metadata and the danger zone behind rather than
- * hiding them.
- *
- * The layout has already loaded the workbook (and gated on it) before this
- * renders, so the hook resolves from cache and adds no request.
- */
-export default function WorkbookCollaboratorsPage({ params }: WorkbookCollaboratorsPageProps) {
-  const { id } = use(params);
-  const { data } = useWorkbook(id);
+export function generateMetadata({ params }: WorkbookCollaboratorsPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildWorkbookMetadata({ locale, id, section: "collaborators" });
+  });
+}
 
-  return (
-    <ResourceCollaboratorsRoute
-      resourceType="workbook"
-      resourceId={id}
-      capabilities={data?.capabilities}
-    />
-  );
+export default function WorkbookCollaboratorsPage({ params }: WorkbookCollaboratorsPageProps) {
+  return <WorkbookCollaboratorsContent params={params} />;
 }

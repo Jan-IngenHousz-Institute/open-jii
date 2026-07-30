@@ -7,13 +7,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
-import DeviceCollaboratorsPage from "../page";
+import DeviceCollaboratorsPage from "../device-collaborators-content";
+import { generateMetadata } from "../page";
+
+vi.mock("@/lib/platform-metadata", () => ({
+  buildDeviceMetadata: vi.fn(({ deviceId, section }: { deviceId: string; section: string }) => ({
+    title: `${section}:${deviceId}`,
+  })),
+}));
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 
 function renderPage() {
   return render(<DeviceCollaboratorsPage params={Promise.resolve({ deviceId: DEVICE_ID })} />);
 }
+
+describe("generateMetadata", () => {
+  it("titles the route by its collaborators section", async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US", deviceId: DEVICE_ID }),
+    });
+
+    expect(metadata.title).toBe(`collaborators:${DEVICE_ID}`);
+  });
+});
 
 describe("DeviceCollaboratorsPage", () => {
   beforeEach(() => {

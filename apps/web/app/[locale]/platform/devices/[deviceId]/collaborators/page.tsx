@@ -1,30 +1,20 @@
-"use client";
+import { buildDeviceMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ResourceCollaboratorsRoute } from "@/components/sharing/resource-collaborators-route";
-import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
-import { use } from "react";
+import DeviceCollaboratorsContent from "./device-collaborators-content";
 
 interface DeviceCollaboratorsPageProps {
-  params: Promise<{ deviceId: string }>;
+  params: Promise<{ locale: string; deviceId: string }>;
 }
 
-/**
- * Who this device is shared with — the same surface the other resource types have,
- * on the same terms. Sharing is the only way a device reaches anybody outside its
- * owning organization, since it is permanently private.
- *
- * The layout has already loaded the device (and gated on it) before this renders,
- * so the hook resolves from cache and adds no request.
- */
-export default function DeviceCollaboratorsPage({ params }: DeviceCollaboratorsPageProps) {
-  const { deviceId } = use(params);
-  const { data } = useIotDevice(deviceId);
+export function generateMetadata({ params }: DeviceCollaboratorsPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, deviceId } = await params;
+    return buildDeviceMetadata({ locale, deviceId, section: "collaborators" });
+  });
+}
 
-  return (
-    <ResourceCollaboratorsRoute
-      resourceType="device"
-      resourceId={deviceId}
-      capabilities={data?.capabilities}
-    />
-  );
+export default function DeviceCollaboratorsPage({ params }: DeviceCollaboratorsPageProps) {
+  return <DeviceCollaboratorsContent params={params} />;
 }

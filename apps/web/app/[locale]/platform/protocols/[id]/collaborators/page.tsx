@@ -1,29 +1,20 @@
-"use client";
+import { buildProtocolMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ResourceCollaboratorsRoute } from "@/components/sharing/resource-collaborators-route";
-import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
-import { use } from "react";
+import ProtocolCollaboratorsContent from "./protocol-collaborators-content";
 
 interface ProtocolCollaboratorsPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }
 
-/**
- * Who this protocol is shared with — a route of its own, so reaching it leaves
- * the details sidebar and the steps behind rather than hiding them.
- *
- * The layout has already loaded the protocol (and gated on it) before this
- * renders, so the hook resolves from cache and adds no request.
- */
-export default function ProtocolCollaboratorsPage({ params }: ProtocolCollaboratorsPageProps) {
-  const { id } = use(params);
-  const { data } = useProtocol(id);
+export function generateMetadata({ params }: ProtocolCollaboratorsPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildProtocolMetadata({ locale, id, section: "collaborators" });
+  });
+}
 
-  return (
-    <ResourceCollaboratorsRoute
-      resourceType="protocol"
-      resourceId={id}
-      capabilities={data?.capabilities}
-    />
-  );
+export default function ProtocolCollaboratorsPage({ params }: ProtocolCollaboratorsPageProps) {
+  return <ProtocolCollaboratorsContent params={params} />;
 }

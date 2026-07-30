@@ -1,29 +1,20 @@
-"use client";
+import { buildMacroMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
+import type { Metadata } from "next";
 
-import { ResourceCollaboratorsRoute } from "@/components/sharing/resource-collaborators-route";
-import { useMacro } from "@/hooks/macro/useMacro/useMacro";
-import { use } from "react";
+import MacroCollaboratorsContent from "./macro-collaborators-content";
 
 interface MacroCollaboratorsPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }
 
-/**
- * Who this macro is shared with — a route of its own, so reaching it leaves the
- * details sidebar and the code behind rather than hiding them.
- *
- * The layout has already loaded the macro (and gated on it) before this renders,
- * so the hook resolves from cache and adds no request.
- */
-export default function MacroCollaboratorsPage({ params }: MacroCollaboratorsPageProps) {
-  const { id } = use(params);
-  const { data } = useMacro(id);
+export function generateMetadata({ params }: MacroCollaboratorsPageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, id } = await params;
+    return buildMacroMetadata({ locale, id, section: "collaborators" });
+  });
+}
 
-  return (
-    <ResourceCollaboratorsRoute
-      resourceType="macro"
-      resourceId={id}
-      capabilities={data?.capabilities}
-    />
-  );
+export default function MacroCollaboratorsPage({ params }: MacroCollaboratorsPageProps) {
+  return <MacroCollaboratorsContent params={params} />;
 }
