@@ -692,12 +692,30 @@ describe("MacroController", () => {
             .send({ name: "Blocked update" }),
       },
       {
+        name: "execute macro",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.macros.executeMacro, { id }))
+            .withAuth(userId)
+            .send({ data: {} }),
+      },
+      {
         name: "delete macro",
         action: "manage",
         request: (id: string, userId: string) =>
           testApp
             .delete(testApp.resolveOrpcPath(contract.macros.deleteMacro, { id }))
             .withAuth(userId),
+      },
+      {
+        name: "set macro visibility",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id }))
+            .withAuth(userId)
+            .send({ visibility: "public" }),
       },
       {
         name: "list compatible protocols",

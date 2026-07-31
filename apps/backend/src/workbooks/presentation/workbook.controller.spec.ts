@@ -371,6 +371,15 @@ describe("WorkbookController", () => {
             .withAuth(userId),
       },
       {
+        name: "set workbook visibility",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.workbooks.setVisibility, { id }))
+            .withAuth(userId)
+            .send({ visibility: "public" }),
+      },
+      {
         name: "list workbook versions",
         action: "read",
         request: (id: string, userId: string) =>

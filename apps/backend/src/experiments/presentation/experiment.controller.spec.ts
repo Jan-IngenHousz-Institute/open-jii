@@ -924,8 +924,15 @@ describe("ExperimentController", () => {
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
         id: experiment.id,
       });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
 
       await testApp.get(path).withAuth(strangerId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(strangerId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "read",
+      });
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -988,6 +995,19 @@ describe("ExperimentController", () => {
               }),
             )
             .withAuth(userId),
+      },
+      {
+        name: "set experiment visibility",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.setVisibility, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ visibility: "public" }),
       },
     ])("requires $action access to $name", async ({ action, request }) => {
       const { experiment } = await testApp.createExperiment({

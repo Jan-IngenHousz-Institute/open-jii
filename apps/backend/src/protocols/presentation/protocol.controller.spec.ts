@@ -190,6 +190,15 @@ describe("ProtocolController - read and update endpoints", () => {
             .withAuth(userId),
       },
       {
+        name: "set protocol visibility",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.protocols.setVisibility, { id }))
+            .withAuth(userId)
+            .send({ visibility: "public" }),
+      },
+      {
         name: "list compatible macros",
         action: "read",
         request: (id: string, userId: string) =>

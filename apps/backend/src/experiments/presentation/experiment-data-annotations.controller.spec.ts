@@ -10,6 +10,7 @@ import type {
   ExperimentUpdateAnnotationBody,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -176,7 +177,6 @@ describe("ExperimentDataAnnotationsController", () => {
           content: { type: "comment", text: "This is a test comment" },
         },
       };
-
       await testApp
         .post(path)
         .withAuth(testUserId)
@@ -205,6 +205,7 @@ describe("ExperimentDataAnnotationsController", () => {
           content: { type: "comment", text: "This is a test comment" },
         },
       };
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
 
       await testApp
         .post(path)
@@ -213,6 +214,11 @@ describe("ExperimentDataAnnotationsController", () => {
         .expect(StatusCodes.FORBIDDEN);
 
       expect(executeSpy).not.toHaveBeenCalled();
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "contribute",
+      });
     });
   });
 
@@ -660,8 +666,15 @@ describe("ExperimentDataAnnotationsController", () => {
         userId: ownerId,
         visibility: "public",
       });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
 
       await request(experiment.id, testUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "contribute",
+      });
     });
   });
 });
