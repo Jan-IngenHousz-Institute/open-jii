@@ -158,13 +158,14 @@ For even higher security requirements:
 
 ## 🔑 Inputs
 
-| Name                          | Description                                                | Type          | Default | Required |
-| ----------------------------- | ---------------------------------------------------------- | ------------- | ------- | :------: |
-| `bucket_name`                 | The name of the S3 bucket to create                        | `string`      | n/a     |  ✅ Yes  |
-| `enable_versioning`           | Enable versioning on the S3 bucket                         | `bool`        | `true`  |  ❌ No   |
-| `tags`                        | Tags to apply to all resources                             | `map(string)` | `{}`    |  ❌ No   |
-| `cloudfront_distribution_arn` | Optional: ARN of CloudFront distribution for bucket access | `string`      | `null`  |  ❌ No   |
-| `custom_policy_json`          | Optional: A custom bucket policy JSON document             | `string`      | `null`  |  ❌ No   |
+| Name                          | Description                                                                 | Type           | Default | Required |
+| ----------------------------- | --------------------------------------------------------------------------- | -------------- | ------- | :------: |
+| `bucket_name`                 | The name of the S3 bucket to create                                         | `string`       | n/a     |  ✅ Yes  |
+| `enable_versioning`           | Enable versioning on the S3 bucket                                          | `bool`         | `true`  |  ❌ No   |
+| `tags`                        | Tags to apply to all resources                                              | `map(string)`  | `{}`    |  ❌ No   |
+| `cloudfront_distribution_arn` | Optional: ARN of CloudFront distribution for bucket access                  | `string`       | `null`  |  ❌ No   |
+| `custom_policy_json`          | Optional: A custom bucket policy JSON document                              | `string`       | `null`  |  ❌ No   |
+| `elb_log_delivery_prefixes`   | Optional: key prefixes (one per ELB) to grant ELB log-delivery write access | `list(string)` | `[]`    |  ❌ No   |
 
 ## 📤 Outputs
 
