@@ -7,7 +7,9 @@ export const zExperimentMember = z.object({
     id: z.string().uuid(),
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().email().nullable(),
+    // Stored value returned as-is: format-validating on output would 500 the whole
+    // member list whenever one account's email doesn't match zod's email regex.
+    email: z.string().nullable(),
     avatarUrl: z.string().nullable(),
   }),
   role: zExperimentMemberRole,

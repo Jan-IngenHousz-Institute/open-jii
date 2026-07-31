@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result } from "../../../../common/utils/fp-utils";
-import { WorkbookDto } from "../../../core/models/workbook.model";
+import { WorkbookListItemDto } from "../../../core/models/workbook.model";
 import { WorkbookRepository, WorkbookFilter } from "../../../core/repositories/workbook.repository";
 
 @Injectable()
@@ -10,7 +10,7 @@ export class ListWorkbooksUseCase {
 
   constructor(private readonly workbookRepository: WorkbookRepository) {}
 
-  async execute(filter?: WorkbookFilter): Promise<Result<WorkbookDto[]>> {
+  async execute(filter?: WorkbookFilter): Promise<Result<WorkbookListItemDto[]>> {
     this.logger.log({
       msg: "Listing workbooks",
       operation: "listWorkbooks",

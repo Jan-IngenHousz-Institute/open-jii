@@ -128,7 +128,13 @@ export const zWorkbookCell = z.union([
   zMarkdownCell,
 ]);
 
-export const zWorkbookCellArray = z.array(zWorkbookCell).superRefine((cells, ctx) => {
+// Plain cell array for OUTPUT schemas. Read paths must accept whatever is persisted:
+// rows written before a rule was added (or under an older contract) still have to
+// serialize, otherwise oRPC output validation turns one legacy row into a 500.
+export const zWorkbookCellArray = z.array(zWorkbookCell);
+
+// Input-side variant with cross-cell rules; use wherever clients submit cells.
+export const zWorkbookCellArrayInput = zWorkbookCellArray.superRefine((cells, ctx) => {
   // Canonicalised duplicate names collide as column keys in `questions_data` and lose answers. Mirrors zFlowGraph.
   const seen = new Map<string, number>();
   cells.forEach((cell, index) => {

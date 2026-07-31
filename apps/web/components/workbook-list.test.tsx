@@ -90,6 +90,8 @@ describe("WorkbookList row actions", () => {
   });
 
   it("duplicates a workbook from the row menu", async () => {
+    // List rows carry no cells, so duplication first fetches the full workbook.
+    server.mount(contract.workbooks.getWorkbook, { status: 200, body: unused });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: makeWorkbook({ id: "99999999-9999-9999-9999-999999999999", name: "Copy of Source WB" }),
@@ -107,6 +109,7 @@ describe("WorkbookList row actions", () => {
   });
 
   it("shows an error toast when duplicate fails", async () => {
+    server.mount(contract.workbooks.getWorkbook, { status: 200, body: unused });
     server.mount(contract.workbooks.createWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[unused]} />);

@@ -5,7 +5,8 @@ import { zExperimentMemberRole, zExperimentStatus } from "../experiment/experime
 export const zUser = z.object({
   id: z.string().uuid(),
   name: z.string().nullable(),
-  email: z.string().email().nullable(),
+  // Stored value returned as-is; format-validating on output can 500 the endpoint.
+  email: z.string().nullable(),
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   createdAt: z.string().datetime(),
@@ -53,7 +54,8 @@ export const zUserProfile = z.object({
   lastName: z.string(),
   bio: z.string().nullable(),
   activated: z.boolean().nullable(),
-  email: z.string().email().nullable(),
+  // Stored value returned as-is; format-validating on output can 500 user search.
+  email: z.string().nullable(),
   avatarUrl: z.string().nullable().optional(),
 });
 

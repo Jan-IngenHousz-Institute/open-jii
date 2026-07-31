@@ -38,9 +38,9 @@ describe("zExperimentMember", () => {
     expect(zExperimentMember.parse(nulled)).toEqual(nulled);
   });
 
-  it("rejects a malformed email", () => {
-    const bad = { ...member, user: { ...member.user, email: "not-an-email" } };
-    expect(() => zExperimentMember.parse(bad)).toThrow();
+  it("accepts a stored non-email value (ORCID signups have placeholder emails)", () => {
+    const orcid = { ...member, user: { ...member.user, email: "0000-0002-1825-0097" } };
+    expect(zExperimentMember.parse(orcid).user.email).toBe("0000-0002-1825-0097");
   });
 
   it("rejects an unknown role", () => {

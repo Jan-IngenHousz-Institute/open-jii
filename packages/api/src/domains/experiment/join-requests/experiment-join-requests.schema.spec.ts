@@ -54,9 +54,9 @@ describe("zExperimentJoinRequest", () => {
     expect(zExperimentJoinRequest.parse(decided)).toEqual(decided);
   });
 
-  it("rejects a malformed email", () => {
-    const bad = { ...request, user: { ...request.user, email: "nope" } };
-    expect(() => zExperimentJoinRequest.parse(bad)).toThrow();
+  it("accepts a stored non-email value (ORCID signups have placeholder emails)", () => {
+    const orcid = { ...request, user: { ...request.user, email: "0000-0002-1825-0097" } };
+    expect(zExperimentJoinRequest.parse(orcid).user.email).toBe("0000-0002-1825-0097");
   });
 
   it("accepts a list of requests", () => {

@@ -54,18 +54,18 @@ describe("User Schema", () => {
       expect(() => zUser.parse(invalidUser)).toThrow();
     });
 
-    it("should reject invalid email format", () => {
-      const invalidUser = {
+    it("accepts a stored non-email value (ORCID signups have placeholder emails)", () => {
+      const orcidUser = {
         id: "123e4567-e89b-12d3-a456-426614174000",
         name: "John Doe",
-        email: "invalid-email",
+        email: "0000-0002-1825-0097",
         emailVerified: false,
         image: null,
         createdAt: "2024-01-15T10:00:00Z",
         registered: true,
       };
 
-      expect(() => zUser.parse(invalidUser)).toThrow();
+      expect(zUser.parse(orcidUser).email).toBe("0000-0002-1825-0097");
     });
   });
 
