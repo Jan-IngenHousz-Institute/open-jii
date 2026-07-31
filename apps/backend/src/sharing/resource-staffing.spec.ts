@@ -16,6 +16,7 @@ import { assertFailure, assertSuccess } from "../common/utils/fp-utils";
 import { IotDeviceRepository } from "../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../macros/core/repositories/macro.repository";
 import { TestHarness } from "../test/test-harness";
+import { UserRepository } from "../users/core/repositories/user.repository";
 import { SharingRepository } from "./sharing.repository";
 import { CreateGrantUseCase } from "./use-cases/create-grant";
 import { ListGrantsUseCase } from "./use-cases/list-grants";
@@ -532,6 +533,94 @@ describe("last-admin invariant (sharing use-cases)", () => {
 
       expect(await directGrant(experiment.id, keeper)).toBeUndefined();
       expect((await directGrant(experiment.id, second)).role).toBe("admin");
+    });
+
+    /**
+     * Grants that exist but cannot be acted on. Invitation acceptance seeds a grant
+     * at registration — *before* onboarding writes the profile — so an admin grant
+     * held by somebody who never finished signing up is a state the app really
+     * reaches, and it must not stand in for the resource's last real admin.
+     */
+    describe("a grant its holder cannot administer with", () => {
+      /** Seed the grant directly: the sharing surface would reject the grantee. */
+      async function seedRawAdminGrant(resourceId: string, granteeId: string) {
+        return testApp.addResourceGrant({
+          resourceType: "experiment",
+          resourceId,
+          granteeType: "user",
+          granteeId,
+          role: "admin",
+          createdBy: owner,
+        });
+      }
+
+      it("does not let a never-onboarded grantee stand in for the last admin", async () => {
+        const { experiment, keeper, grant } = await seedHusk();
+        const neverOnboarded = await testApp.createTestUser({
+          name: "Never Onboarded",
+          createProfile: false,
+        });
+        await seedRawAdminGrant(experiment.id, neverOnboarded);
+
+        const result = await revokeGrant.execute(keeper, "experiment", experiment.id, grant.id);
+
+        // Two admin-tier rows, one answerable person. Counting the rows would let
+        // the keeper walk away from a resource nobody can then administer.
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+        expect(result.error.message).toContain("last admin");
+        expect(await directGrant(experiment.id, keeper)).toBeDefined();
+      });
+
+      it("does not let a deactivated grantee stand in for the last admin", async () => {
+        const { experiment, keeper, grant } = await seedHusk();
+        const deactivated = await testApp.createTestUser({
+          name: "Deactivated",
+          activated: false,
+        });
+        await seedRawAdminGrant(experiment.id, deactivated);
+
+        const result = await updateGrant.execute(keeper, "experiment", experiment.id, grant.id, {
+          role: "viewer",
+        });
+
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+        expect(result.error.message).toContain("last admin");
+        expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+      });
+
+      it("agrees with the deletion blocker about who counts as a replacement", async () => {
+        const { experiment, keeper } = await seedHusk();
+        const neverOnboarded = await testApp.createTestUser({
+          name: "Never Onboarded",
+          createProfile: false,
+        });
+        await seedRawAdminGrant(experiment.id, neverOnboarded);
+
+        // The blocker refuses to let the keeper close their account because that
+        // grantee is no replacement. The staffing invariant has to say the same, or
+        // the keeper simply leaves instead and reaches the state the blocker exists
+        // to prevent.
+        const blocked = await testApp.module.get(UserRepository).isOnlyAdminOfAnyResources(keeper);
+        assertSuccess(blocked);
+        expect(blocked.value).toBe(true);
+      });
+
+      it("still allows revoking the unusable grant itself", async () => {
+        const { experiment, keeper } = await seedHusk();
+        const neverOnboarded = await testApp.createTestUser({
+          name: "Never Onboarded",
+          createProfile: false,
+        });
+        const unusable = await seedRawAdminGrant(experiment.id, neverOnboarded);
+
+        // Taking away a grant nobody could act on leaves the resource exactly as
+        // administered as it already was, so there is nothing to refuse.
+        assertSuccess(await revokeGrant.execute(keeper, "experiment", experiment.id, unusable.id));
+        expect(await directGrant(experiment.id, neverOnboarded)).toBeUndefined();
+        expect(await staffingGrantCount(experiment.id)).toBe(1);
+      });
     });
 
     it("still allows re-sharing the last admin at the same or a higher role", async () => {

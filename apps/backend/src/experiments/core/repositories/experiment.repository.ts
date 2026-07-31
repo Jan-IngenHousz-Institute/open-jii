@@ -25,16 +25,17 @@ import {
   organizationMembers,
   teamMembers,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { userIsSelectableGrantee } from "../../../sharing/grantee-selectability";
 import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/resource-staffing";
 import {
   CreateExperimentDto,
@@ -80,10 +81,23 @@ export class ExperimentRepository {
     private readonly authz: AuthorizationService,
   ) {}
 
+  /**
+   * Create the experiment, put its creator in control of it, and give anyone
+   * picked in the create form the read-and-contribute tier — **all in one
+   * transaction**, so a failure anywhere leaves no experiment rather than an
+   * experiment with half its collaborators and a 500.
+   *
+   * @param collaboratorUserIds Users to seed a `member` grant for. Each is
+   *   validated against the same rule the sharing surface applies
+   *   ({@link userIsSelectableGrantee}); an unselectable one fails the whole
+   *   create with a 400. `resource_grants` carries no foreign key on `grantee_id`,
+   *   so without that check a uuid naming nobody would simply become a grant row.
+   */
   async create(
     createExperimentDto: CreateExperimentDto,
     userId: string,
     targetOrganizationId?: string | null,
+    collaboratorUserIds: string[] = [],
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       // Own the experiment with the requested target org, falling back to the
@@ -101,6 +115,7 @@ export class ExperimentRepository {
           .returning(experimentColumns);
 
         await seedCreatorControl(tx, "experiment", results[0].id, organizationId, userId);
+        await this.grantCollaborators(tx, results[0].id, collaboratorUserIds, userId);
 
         return results;
       });
@@ -111,43 +126,53 @@ export class ExperimentRepository {
    * Give each user the read-and-contribute tier on the experiment, as a direct
    * grant. Used when an experiment is created with collaborators already picked.
    *
-   * Deliberately non-destructive: a grantee who already holds a direct grant is
-   * left alone, so this can never lower someone's access and therefore needs no
-   * staffing guard.
+   * Every grantee is checked first, and the whole create is refused if any of them
+   * is not someone the creator could have picked — the same 400 the sharing
+   * surface answers with, rather than a grant row for a user who does not exist,
+   * has been deactivated, or has closed their account.
+   *
+   * Runs on the caller's transaction, and deliberately non-destructive: a grantee
+   * who already holds a direct grant is left alone, so this can never lower
+   * someone's access and therefore needs no staffing guard.
    */
-  async grantCollaborators(
+  private async grantCollaborators(
+    tx: DbOrTx,
     experimentId: string,
     userIds: string[],
     createdBy: string,
-  ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      if (userIds.length === 0) return;
+  ): Promise<void> {
+    if (userIds.length === 0) return;
 
-      const existing = await this.database
-        .select({ granteeId: resourceGrants.granteeId })
-        .from(resourceGrants)
-        .where(
-          and(
-            eq(resourceGrants.resourceType, "experiment"),
-            eq(resourceGrants.resourceId, experimentId),
-            eq(resourceGrants.granteeType, "user"),
-            inArray(resourceGrants.granteeId, userIds),
-          ),
-        );
-      const alreadyGranted = new Set(existing.map((row) => row.granteeId));
-
-      for (const userId of userIds) {
-        if (alreadyGranted.has(userId)) continue;
-        await upsertGrant(this.database, {
-          resourceType: "experiment",
-          resourceId: experimentId,
-          granteeType: "user",
-          granteeId: userId,
-          role: COLLABORATOR_GRANT_ROLE,
-          createdBy,
-        });
+    for (const userId of userIds) {
+      if (!(await userIsSelectableGrantee(tx, userId))) {
+        throw AppError.badRequest("Grantee not found");
       }
-    });
+    }
+
+    const existing = await tx
+      .select({ granteeId: resourceGrants.granteeId })
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          eq(resourceGrants.resourceId, experimentId),
+          eq(resourceGrants.granteeType, "user"),
+          inArray(resourceGrants.granteeId, userIds),
+        ),
+      );
+    const alreadyGranted = new Set(existing.map((row) => row.granteeId));
+
+    for (const userId of userIds) {
+      if (alreadyGranted.has(userId)) continue;
+      await upsertGrant(tx, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        granteeType: "user",
+        granteeId: userId,
+        role: COLLABORATOR_GRANT_ROLE,
+        createdBy,
+      });
+    }
   }
 
   /**

@@ -13,6 +13,7 @@ import type {
 } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { ShareableRole } from "./collaborator-roles";
@@ -26,6 +27,12 @@ interface CollaboratorsListProps {
   grants: ResourceCollaboratorDto[];
   /** The list request failed; rows are unknown rather than absent. */
   isError?: boolean;
+  /**
+   * The list request has not answered yet, so an empty `grants` means "not known"
+   * rather than "none". Without it the empty state renders for the whole round
+   * trip and "No collaborators yet" flashes on a resource that has plenty.
+   */
+  isPending?: boolean;
   /** Blocks every mutation (e.g. an archived experiment) while still listing grants. */
   readOnly?: boolean;
   /** An empty list is the filter's doing, not the resource's state. */
@@ -55,6 +62,7 @@ export function CollaboratorsList({
   resourceId,
   grants,
   isError = false,
+  isPending = false,
   readOnly = false,
   isFiltered = false,
 }: CollaboratorsListProps) {
@@ -128,6 +136,29 @@ export function CollaboratorsList({
 
   if (isError) {
     return <p className="text-destructive text-sm">{t("sharing.loadFailed")}</p>;
+  }
+
+  // Placeholder rows rather than the empty state: "No collaborators yet" is a
+  // statement about the resource, and it is not one this component can make until
+  // the list has actually answered.
+  if (isPending) {
+    return (
+      <div
+        aria-busy="true"
+        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
+      >
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="flex items-center gap-3 px-3 py-2.5">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <Skeleton className="h-8 w-28" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (sortedGrants.length === 0) {

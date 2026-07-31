@@ -46,6 +46,7 @@ import {
 } from "../../../common/utils/profile-anonymization";
 import {
   ALL_STAFFED_RESOURCES,
+  granteeCanAdministerSql,
   livingOrgOwnerIdsSql,
   lockOrgOwnerships,
   lockStaffingGrants,
@@ -83,10 +84,11 @@ export const SOLE_ADMIN_DELETE_MESSAGE =
  *   from breaking: a transferee who accepted admin on a husk-org resource is
  *   themselves blocked until they pass it on.
  *
- * Both prongs share the same escape hatch — somebody *else* living holds an
- * admin/owner grant — which is why it is factored out as the leading condition.
- * "Living" is a closed account (`deleted_at`); grantees must also be `activated`,
- * since a deactivated account cannot administer anything.
+ * Both prongs share the same escape hatch — somebody *else* who can administer
+ * holds an admin/owner grant — which is why it is factored out as the leading
+ * condition. Who that is comes from {@link granteeCanAdministerSql}, the same
+ * definition the staffing invariant counts with, so a grantee this blocker would
+ * not accept as a replacement cannot be counted as one there either.
  *
  * One statement rather than one typed query per type: the predicate is polymorphic
  * over every staffed table and is re-run verbatim inside the deletion transaction, and having
@@ -100,14 +102,12 @@ function blockingResourcesQuery(userId: string) {
     FROM r
     WHERE NOT EXISTS (
             SELECT 1 FROM "resource_grants" g
-            JOIN "profiles" p ON p."user_id" = g."grantee_id"
             WHERE g."resource_type" = r."resource_type"
               AND g."resource_id" = r."id"
               AND g."grantee_type" = 'user'
               AND g."role" IN ('owner', 'admin')
               AND g."grantee_id" <> ${userId}
-              AND p."activated" = true
-              AND p."deleted_at" IS NULL
+              AND ${granteeCanAdministerSql(sql`g."grantee_id"`)}
           )
       AND (
             (

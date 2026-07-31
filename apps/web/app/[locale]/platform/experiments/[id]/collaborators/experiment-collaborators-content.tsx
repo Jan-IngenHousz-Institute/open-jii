@@ -51,7 +51,11 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
 
   // Both endpoints below are can(share)-gated: skip the request entirely when the
   // capability signal already says it would 403.
-  const { data: grantsData, isError: isGrantsError } = useResourceCollaborators("experiment", id, {
+  const {
+    data: grantsData,
+    isError: isGrantsError,
+    isPending: isGrantsPending,
+  } = useResourceCollaborators("experiment", id, {
     enabled: canShare,
   });
   const grants = useMemo(() => grantsData ?? [], [grantsData]);
@@ -156,7 +160,13 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         <NavTabs defaultValue={canShare ? "collaborators" : "requests"} className="w-full">
           <NavTabsList>
             {canShare && (
-              <NavTabsTrigger value="collaborators" count={filteredGrants.length}>
+              // No badge until the list has answered: a `0` is a claim about the
+              // resource, and rendering it from an empty placeholder array shows
+              // "0" on an experiment that has collaborators.
+              <NavTabsTrigger
+                value="collaborators"
+                count={isGrantsPending ? undefined : filteredGrants.length}
+              >
                 {t("experimentSettings.collaboratorsTab")}
               </NavTabsTrigger>
             )}
@@ -179,6 +189,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
                 resourceId={id}
                 grants={filteredGrants}
                 isError={isGrantsError}
+                isPending={isGrantsPending}
                 readOnly={isArchived}
                 isFiltered={normalizedFilter.length > 0}
               />

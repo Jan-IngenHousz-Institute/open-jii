@@ -4,6 +4,7 @@ import {
   granteeOrganizationsQueryKey,
 } from "@/hooks/sharing/sharing-query-keys";
 import { invitationsQueryKey } from "@/hooks/user-invitation/useUserInvitations/useUserInvitations";
+import { orpc } from "@/lib/orpc";
 import { createExperimentAccess } from "@/test/factories";
 import { renderHook, createTestQueryClient } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
@@ -49,5 +50,38 @@ describe("useSignOut", () => {
     expect(queryClient.getQueryData(orgsKey)).toBeUndefined();
     expect(queryClient.getQueryData(invitationsKey)).toBeUndefined();
     expect(queryClient.getQueryData(accessKey)).toBeUndefined();
+  });
+
+  it("drops the resource detail and list caches, which carry no principal at all", async () => {
+    vi.mocked(authClient.signOut).mockResolvedValue({ data: { success: true }, error: null });
+
+    const queryClient = createTestQueryClient();
+    // Keyed by the resource alone, yet each response carries private content and
+    // the asking user's own `capabilities`. Left behind, the next person to sign in
+    // on this browser reads them as a settled answer meant for them.
+    const detailKeys = [
+      orpc.macros.getMacro.queryKey({ input: { id: "macro-1" } }),
+      orpc.protocols.getProtocol.queryKey({ input: { id: "protocol-1" } }),
+      orpc.workbooks.getWorkbook.queryKey({ input: { id: "workbook-1" } }),
+      orpc.iot.getIotDevice.queryKey({ input: { deviceId: "device-1" } }),
+      orpc.experiments.getExperiment.queryKey({ input: { id: "exp-1" } }),
+    ];
+    const listKeys = [
+      orpc.macros.listMacros.key(),
+      orpc.protocols.listProtocols.key(),
+      orpc.workbooks.listWorkbooks.key(),
+      orpc.iot.listIotDevices.key(),
+      orpc.experiments.listExperiments.key(),
+    ];
+    for (const key of [...detailKeys, ...listKeys]) {
+      queryClient.setQueryData(key, { secret: "user-a only" });
+    }
+
+    const { result } = renderHook(() => useSignOut(), { queryClient });
+    await result.current.mutateAsync();
+
+    for (const key of [...detailKeys, ...listKeys]) {
+      expect(queryClient.getQueryData(key)).toBeUndefined();
+    }
   });
 });

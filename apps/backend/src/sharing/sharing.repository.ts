@@ -40,6 +40,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../common/utils/profile-anonymization";
+import { userIsSelectableGrantee } from "./grantee-selectability";
 import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "./resource-staffing";
 import type { StaffingGuardedWrite } from "./resource-staffing";
 
@@ -488,7 +489,9 @@ export class SharingRepository {
    * (or an organization's name) back to them.
    *
    * - user → must be discoverable in the people search: an activated,
-   *   non-soft-deleted profile (mirrors `UserRepository.search`).
+   *   non-soft-deleted profile (mirrors `UserRepository.search`). Shared with
+   *   experiment creation, which seeds its picked collaborators on the same terms
+   *   — see {@link userIsSelectableGrantee}.
    * - organization → must be one the sharer is a member of, excluding personal
    *   workspaces (mirrors {@link searchGranteeOrganizations}).
    */
@@ -498,15 +501,7 @@ export class SharingRepository {
     sharerUserId: string,
   ): Promise<boolean> {
     if (granteeType === "user") {
-      const rows = await this.db
-        .select({ id: users.id })
-        .from(users)
-        .innerJoin(profiles, eq(profiles.userId, users.id))
-        .where(
-          and(eq(users.id, granteeId), eq(profiles.activated, true), isNull(profiles.deletedAt)),
-        )
-        .limit(1);
-      return rows.length > 0;
+      return userIsSelectableGrantee(this.db, granteeId);
     }
     const rows = await this.db
       .select({ id: organizations.id })

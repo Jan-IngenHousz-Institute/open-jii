@@ -106,6 +106,47 @@ describe("ExperimentCollaboratorsPage", () => {
       expect(screen.queryByText("sharing.experimentCardTitle")).not.toBeInTheDocument();
     });
 
+    it("shows neither an empty state nor a zero badge while the grants list is in flight", async () => {
+      let release: () => void = () => undefined;
+      const inFlight = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.mount(contract.sharing.listGrants, {
+        unblock: inFlight,
+        body: [
+          createResourceGrant({
+            resourceType: "experiment",
+            resourceId: experimentId,
+            grantee: {
+              type: "user",
+              displayName: "Lin Zhao",
+              email: "lin@uni.edu",
+              avatarUrl: null,
+            },
+          }),
+        ],
+      });
+      server.mount(contract.experiments.getExperimentAccess, { body: accessPayload() });
+
+      renderPage();
+
+      const collaboratorsTab = async () =>
+        within((await screen.findAllByRole("tablist"))[0]).getByRole("tab", {
+          name: /experimentSettings.collaboratorsTab/,
+        });
+
+      // The experiment answered, the grants list has not. Rendering `[]` as if it
+      // were the answer would claim this experiment has no collaborators — and it
+      // has one.
+      expect((await collaboratorsTab()).textContent).toBe("experimentSettings.collaboratorsTab");
+      expect(screen.queryByText("sharing.noCollaboratorsYet")).not.toBeInTheDocument();
+
+      release();
+
+      await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+      expect((await collaboratorsTab()).textContent).toContain("1");
+    });
+
     it("defaults to the Collaborators tab", async () => {
       server.mount(contract.sharing.listGrants, {
         body: [

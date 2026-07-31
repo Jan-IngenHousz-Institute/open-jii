@@ -69,6 +69,15 @@ describe("<CollaboratorsList />", () => {
     expect(screen.getByText("sharing.noCollaboratorsHint")).toBeInTheDocument();
   });
 
+  it("shows placeholders rather than the empty state while the list is still loading", () => {
+    const { container } = renderList([], { isPending: true });
+
+    // "No collaborators yet" is a claim about the resource, and an empty `grants`
+    // array does not support it until the request has answered.
+    expect(screen.queryByText("sharing.noCollaboratorsYet")).not.toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  });
+
   describe("owner rows", () => {
     function ownerFor(name: string): ResourceOwnerDto {
       return createResourceOwner({

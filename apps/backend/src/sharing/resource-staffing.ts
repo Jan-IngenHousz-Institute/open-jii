@@ -446,18 +446,58 @@ export interface StaffingGuardedWrite {
   nextRole: string | null;
 }
 
-/** One staffing grant row, as the invariant sees it. */
+/**
+ * Whether the holder of a user grant can actually administer with it: an
+ * `activated` account that has not been closed.
+ *
+ * **The single definition of an answerable grantee**, shared by the staffing
+ * invariant and the account-deletion blocker's escape hatch. The two answer the
+ * same question from opposite ends — "is anyone left who can administer this?" —
+ * and had drifted: the blocker required activation while the staffing count took
+ * any admin-tier grant row. Invitation acceptance seeds grants at registration,
+ * *before* onboarding writes the profile, so on a husk-org resource a
+ * never-onboarded grantee padded the staffing count and let the last real admin
+ * walk away from a resource nobody could then administer.
+ *
+ * A missing `profiles` row therefore reads as "cannot administer", which is the
+ * opposite of {@link livingOrgOwnerIdsSql}'s LEFT JOIN — deliberately. That one
+ * answers who *owns* an organization, and a pre-onboarding owner is a real person
+ * answerable for their work; this one answers who can act through a *grant*, and
+ * an account that has not been activated can act through nothing.
+ *
+ * Written as an `EXISTS` subquery rather than a join so a caller can add it to a
+ * `SELECT … FOR UPDATE` without widening what gets locked.
+ */
+export function granteeCanAdministerSql(granteeIdRef: SQL | AnyColumn): SQL<boolean> {
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM ${profiles}
+    WHERE ${profiles.userId} = ${granteeIdRef}
+      AND ${profiles.activated} = true
+      AND ${profiles.deletedAt} IS NULL
+  )`;
+}
+
+/** One staffing-tier grant row, as the invariant sees it. */
 export interface StaffingGrantRow {
   id: string;
   granteeType: string;
   granteeId: string;
+  /** Whether this row's holder can administer at all — see {@link granteeCanAdministerSql}. */
+  canAdminister: boolean;
 }
 
 /**
- * The single definition of "the rows that staff a resource" (user grants with an
- * admin/owner role), read with `SELECT … FOR UPDATE` so concurrent staffing
- * reductions serialize instead of both committing. Must run inside a transaction —
- * outside one the lock is released immediately and buys nothing.
+ * The single definition of "the rows that could staff a resource" (user grants
+ * with an admin/owner role), read with `SELECT … FOR UPDATE` so concurrent
+ * staffing reductions serialize instead of both committing. Must run inside a
+ * transaction — outside one the lock is released immediately and buys nothing.
+ *
+ * Every admin-tier row is returned and locked, including those whose holder cannot
+ * administer: whether a row *counts* is {@link assertResourceStaysStaffed}'s
+ * question, but a caller still has to find — and lock — the row it is about to
+ * write. `canAdminister` rides along as a scalar subquery precisely so this stays
+ * one table in the `FROM`, and `FOR UPDATE` therefore still locks nothing but the
+ * grant rows.
  */
 export async function lockStaffingGrants(
   tx: DbOrTx,
@@ -469,6 +509,7 @@ export async function lockStaffingGrants(
       id: resourceGrants.id,
       granteeType: resourceGrants.granteeType,
       granteeId: resourceGrants.granteeId,
+      canAdminister: granteeCanAdministerSql(resourceGrants.granteeId).mapWith(Boolean),
     })
     .from(resourceGrants)
     .where(
@@ -485,7 +526,8 @@ export async function lockStaffingGrants(
 /**
  * The **last-admin invariant**, in the only case where it still bites: a resource
  * whose owning organization has no living owner must not lose its last user grant
- * with an admin/owner role, so revoking or demoting it is refused (400).
+ * with an admin/owner role *that somebody can actually administer with*, so
+ * revoking or demoting it is refused (400).
  *
  * While a living org owner exists there is already somebody answerable for the
  * resource with full control, so grants are freely revocable — including the last
@@ -503,6 +545,9 @@ export async function lockStaffingGrants(
  * after the first commits and sees the husk.
  *
  * Team/org grants never count as staffing — a named person has to be answerable.
+ * Nor does a grant its holder cannot administer with: the count is over
+ * {@link granteeCanAdministerSql}, the same rule the deletion blocker applies, so
+ * a never-onboarded or deactivated grantee cannot stand in for the last admin.
  * Must run in the same transaction as the write it guards.
  */
 export async function assertResourceStaysStaffed(
@@ -515,19 +560,25 @@ export async function assertResourceStaysStaffed(
 
   const staffing = await lockStaffingGrants(tx, resourceType, resourceId);
 
-  const targetsStaffingGrant = staffing.some((g) =>
+  // Matched against every admin-tier row, answerable or not: this is about which
+  // row the write is aimed at, not about whether it counts.
+  const targetGrant = staffing.find((g) =>
     target.by === "grant"
       ? g.id === target.grantId
       : g.granteeType === target.granteeType && g.granteeId === target.granteeId,
   );
 
   // The grant being written doesn't staff the resource, so the count is unaffected.
-  if (!targetsStaffingGrant) return;
+  if (!targetGrant) return;
 
   // Somebody living owns this resource independently of any grant.
   if (await hasLivingOwningOrgOwner(tx, resourceType, resourceId)) return;
 
-  if (staffing.length <= 1) {
+  // Taking away a grant nobody could act on cannot leave the resource any less
+  // administered than it already is.
+  if (!targetGrant.canAdminister) return;
+
+  if (staffing.filter((g) => g.canAdminister).length <= 1) {
     throw AppError.badRequest(
       nextRole === null
         ? `Cannot remove the last admin from the ${resourceType}`

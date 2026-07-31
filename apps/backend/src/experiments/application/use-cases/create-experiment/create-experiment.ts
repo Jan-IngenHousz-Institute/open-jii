@@ -71,11 +71,26 @@ export class CreateExperimentUseCase {
         operation: "createExperiment",
         userId,
       });
+
+      // Anyone picked in the create form gets the read-and-contribute tier: they
+      // can open the experiment and add data to it, which is what being listed as
+      // a collaborator at creation time has always meant. The creator is filtered
+      // out — full control already follows from their role in the owning org, and
+      // a grant can only raise access, never lower it.
+      //
+      // Seeded by `create` itself, inside the same transaction as the experiment:
+      // an unselectable grantee refuses the create outright (400) rather than
+      // leaving an experiment behind with some of its collaborators attached.
+      const invitedCollaborators = (Array.isArray(data.members) ? data.members : [])
+        .filter((member) => member.userId !== userId)
+        .map((member) => member.userId);
+
       // Create the experiment
       const experimentResult = await this.experimentRepository.create(
         data,
         userId,
         targetOrganizationId,
+        invitedCollaborators,
       );
 
       return experimentResult.chain(async (experiments: ExperimentDto[]) => {
@@ -90,73 +105,40 @@ export class CreateExperimentUseCase {
         }
 
         const experiment = experiments[0];
-        this.logger.debug({
-          msg: "Seeding collaborator grants",
+
+        // Associate locations if provided
+        if (Array.isArray(data.locations) && data.locations.length > 0) {
+          const locationsWithExperimentId = data.locations.map((location) => ({
+            ...location,
+            experimentId: experiment.id,
+          }));
+
+          const addLocationsResult =
+            await this.locationRepository.createMany(locationsWithExperimentId);
+          if (addLocationsResult.isFailure()) {
+            this.logger.error({
+              msg: "Failed to associate locations with experiment",
+              errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
+              operation: "createExperiment",
+              experimentId: experiment.id,
+              error: addLocationsResult.error,
+            });
+            return failure(
+              AppError.badRequest(
+                `Failed to associate locations: ${addLocationsResult.error.message}`,
+              ),
+            );
+          }
+        }
+
+        this.logger.log({
+          msg: "Experiment created successfully",
           operation: "createExperiment",
           experimentId: experiment.id,
           userId,
+          status: "success",
         });
-
-        // Anyone picked in the create form gets the read-and-contribute tier: they
-        // can open the experiment and add data to it, which is what being listed as
-        // a collaborator at creation time has always meant. The creator is filtered
-        // out — full control already follows from their role in the owning org, and
-        // a grant can only raise access, never lower it.
-        const invitedCollaborators = (Array.isArray(data.members) ? data.members : []).filter(
-          (member) => member.userId !== userId,
-        );
-
-        const collaboratorGrantResult = await this.experimentRepository.grantCollaborators(
-          experiment.id,
-          invitedCollaborators.map((member) => member.userId),
-          userId,
-        );
-        if (collaboratorGrantResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to grant the initial collaborators access",
-            errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-            operation: "createExperiment",
-            experimentId: experiment.id,
-            error: collaboratorGrantResult.error,
-          });
-          return failure(AppError.internal("Failed to grant the initial collaborators access"));
-        }
-
-        return collaboratorGrantResult.chain(async () => {
-          // Associate locations if provided
-          if (Array.isArray(data.locations) && data.locations.length > 0) {
-            const locationsWithExperimentId = data.locations.map((location) => ({
-              ...location,
-              experimentId: experiment.id,
-            }));
-
-            const addLocationsResult =
-              await this.locationRepository.createMany(locationsWithExperimentId);
-            if (addLocationsResult.isFailure()) {
-              this.logger.error({
-                msg: "Failed to associate locations with experiment",
-                errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-                operation: "createExperiment",
-                experimentId: experiment.id,
-                error: addLocationsResult.error,
-              });
-              return failure(
-                AppError.badRequest(
-                  `Failed to associate locations: ${addLocationsResult.error.message}`,
-                ),
-              );
-            }
-          }
-
-          this.logger.log({
-            msg: "Experiment created successfully",
-            operation: "createExperiment",
-            experimentId: experiment.id,
-            userId,
-            status: "success",
-          });
-          return success(experiment);
-        });
+        return success(experiment);
       });
     });
   }

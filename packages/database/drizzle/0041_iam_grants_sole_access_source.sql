@@ -59,17 +59,17 @@ WHERE NOT EXISTS (
     AND p."deleted_at" IS NOT NULL
 )
 ON CONFLICT DO NOTHING;--> statement-breakpoint
--- 2. Delete the creators' own grants on the four shareable types, so no creator is
+-- 2. Delete the creators' own grants on every shareable type, so no creator is
 --    a collaborator on their own resource. Access and answerability both follow
 --    from the owning organization: its owners hold every action through the org
 --    role, and the collaborators surface renders them as a synthesized "Owner"
 --    row. A creator grant on top of that conferred nothing and rendered twice —
 --    once as the owner, once as an ordinary "Can edit" collaborator.
 --
---    Covers all four types so they behave identically. On experiments this also
---    removes the creator's admin grant that statement 1 just re-created from the
---    dormant roster (the creator was a roster admin), which is why the order
---    matters: insert the roster first, then strip the creator back out.
+--    Covers all five shareable types so they behave identically. On experiments
+--    this also removes the creator's admin grant that statement 1 just re-created
+--    from the dormant roster (the creator was a roster admin), which is why the
+--    order matters: insert the roster first, then strip the creator back out.
 --
 --    The `organization_members` guard is what makes this provably access-neutral,
 --    and it is not a formality: `organization_id` is nullable, and rows predating
@@ -86,8 +86,10 @@ ON CONFLICT DO NOTHING;--> statement-breakpoint
 --    as a "Can view" collaborator on their own resource is exactly the phantom
 --    row this removes.
 --
---    Devices are left untouched — they have no sharing surface, so nothing lists
---    their grants.
+--    Devices are in. They now carry the same collaborators surface as the other
+--    four — 0039 backfilled creator admin grants on them — so a device creator
+--    left behind here would render beside the Owner row exactly like the phantom
+--    rows this statement removes everywhere else.
 DELETE FROM "resource_grants" g
 USING (
   SELECT 'experiment'::"resource_type" AS "resource_type", e."id", e."created_by", e."organization_id" FROM "experiments" e
@@ -97,6 +99,8 @@ USING (
   SELECT 'protocol'::"resource_type", p."id", p."created_by", p."organization_id" FROM "protocols" p
   UNION ALL
   SELECT 'workbook'::"resource_type", w."id", w."created_by", w."organization_id" FROM "workbooks" w
+  UNION ALL
+  SELECT 'device'::"resource_type", d."id", d."created_by", d."organization_id" FROM "iot_devices" d
 ) r
 WHERE g."resource_type" = r."resource_type"
   AND g."resource_id" = r."id"

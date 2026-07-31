@@ -48,6 +48,8 @@ const DELETE_CREATOR_GRANTS_SQL = sql`
     SELECT 'protocol'::"resource_type", p."id", p."created_by", p."organization_id" FROM "protocols" p
     UNION ALL
     SELECT 'workbook'::"resource_type", w."id", w."created_by", w."organization_id" FROM "workbooks" w
+    UNION ALL
+    SELECT 'device'::"resource_type", d."id", d."created_by", d."organization_id" FROM "iot_devices" d
   ) r
   WHERE g."resource_type" = r."resource_type"
     AND g."resource_id" = r."id"
@@ -169,6 +171,10 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
    * the creator self-grant that 0039 wrote — the rows statement 2 exists to remove.
    * `organizationId` defaults to the creator's personal org (which they own); pass
    * `null` to reproduce a row that predates the org backfill.
+   *
+   * The `null` case reaches only the first three: a device's organization is set
+   * at registration and the harness has no way to seed one without it, so the
+   * pre-backfill case is asserted on the other types.
    */
   async function seedAuthoredResources(creator: string, organizationId?: string | null) {
     const personalOrg = await ensurePersonalOrganization(testApp.database, { id: creator });
@@ -200,7 +206,11 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
       .insert(workbooks)
       .values({ name: `Workbook ${tag}`, createdBy: creator, organizationId: owningOrg })
       .returning();
-    const device = await testApp.createIotDevice({ createdBy: creator, name: `Device ${tag}` });
+    const device = await testApp.createIotDevice({
+      createdBy: creator,
+      name: `Device ${tag}`,
+      ...(owningOrg ? { organizationId: owningOrg } : {}),
+    });
 
     for (const [resourceType, id] of [
       ["macro", macro.id],
@@ -254,17 +264,16 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     expect(await grantsFor("experiment", experiment.id)).toEqual([]);
   });
 
-  it("leaves device grants untouched", async () => {
+  it("strips the creator's own grant from a device too", async () => {
     const creator = await testApp.createTestUser({ name: "Creator" });
     const { device } = await seedAuthoredResources(creator);
 
     await runDataMigration(testApp.database);
 
-    // Devices have no sharing surface, so nothing lists their grants and the
-    // migration has no reason to touch them.
-    expect(await grantsFor("device", device.id)).toEqual([
-      expect.objectContaining({ granteeId: creator, role: "admin" }),
-    ]);
+    // Devices carry the same collaborators surface as everything else, and 0039
+    // backfilled a creator admin grant on each of them — left in place it would
+    // render the creator as a collaborator beside their own Owner row.
+    expect(await grantsFor("device", device.id)).toEqual([]);
   });
 
   it("keeps everyone else's grants", async () => {

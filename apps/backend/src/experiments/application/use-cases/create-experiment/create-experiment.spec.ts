@@ -2,6 +2,7 @@ import {
   and,
   ensurePersonalOrganization,
   eq,
+  experiments,
   organizationMembers,
   organizations,
   resourceGrants,
@@ -150,6 +151,87 @@ describe("CreateExperimentUseCase", () => {
     // Only the person they listed gets a grant; the creator needs none.
     expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
       [contributorId]: "member",
+    });
+  });
+
+  /**
+   * `resource_grants` has no foreign key on `grantee_id`, so nothing at the
+   * database level stops the create form's `members[]` from becoming grant rows for
+   * people who cannot be shared with. The check is the same one the sharing surface
+   * applies, and it refuses the whole create — a half-built experiment with some of
+   * its collaborators attached is worse than none.
+   */
+  describe("inline collaborators who cannot be shared with", () => {
+    async function grantsOn(experimentId: string) {
+      return testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+          ),
+        );
+    }
+
+    it.each([
+      ["a user id that names nobody", () => Promise.resolve(crypto.randomUUID())],
+      [
+        "a deactivated account",
+        async () => testApp.createTestUser({ name: "Gone User", activated: false }),
+      ],
+      [
+        "a closed account",
+        async () => testApp.createTestUser({ name: "Closed User", deletedAt: new Date() }),
+      ],
+    ])("refuses the create for %s", async (_label, seedGrantee) => {
+      const granteeId = await seedGrantee();
+
+      const result = await useCase.execute(
+        { name: `Unselectable ${crypto.randomUUID()}`, members: [{ userId: granteeId }] },
+        testUserId,
+      );
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.message).toBe("Grantee not found");
+    });
+
+    it("leaves no experiment behind when a grantee is rejected", async () => {
+      const good = await testApp.createTestUser({ email: "good@example.com" });
+      const name = `Rolled Back ${crypto.randomUUID()}`;
+
+      const result = await useCase.execute(
+        { name, members: [{ userId: good }, { userId: crypto.randomUUID() }] },
+        testUserId,
+      );
+
+      assertFailure(result);
+      // The whole create is one transaction, so the experiment, the creator's
+      // control and the first grantee's grant all roll back together — the name is
+      // free again rather than taken by a row nobody asked to keep.
+      const rows = await testApp.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.name, name));
+      expect(rows).toEqual([]);
+    });
+
+    it("keeps seeding valid collaborators in the same transaction as the experiment", async () => {
+      const first = await testApp.createTestUser({ email: "first@example.com" });
+      const second = await testApp.createTestUser({ email: "second@example.com" });
+
+      const result = await useCase.execute(
+        { name: `Both ${crypto.randomUUID()}`, members: [{ userId: first }, { userId: second }] },
+        testUserId,
+      );
+
+      assertSuccess(result);
+      const grants = await grantsOn(result.value.id);
+      expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
+        [first]: "member",
+        [second]: "member",
+      });
     });
   });
 
