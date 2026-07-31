@@ -78,6 +78,28 @@ resource "aws_s3_bucket_policy" "custom_policy" {
   policy = var.custom_policy_json
 }
 
+# Grants the ELB log-delivery service write access so an ALB with
+# access_logs.enabled = true can actually deliver to this bucket.
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket_policy" "elb_log_delivery" {
+  count  = length(var.elb_log_delivery_prefixes) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      for prefix in var.elb_log_delivery_prefixes : {
+        Sid       = "AllowELBLogDelivery${replace(prefix, "/[^a-zA-Z0-9]/", "")}"
+        Effect    = "Allow"
+        Principal = { Service = "logdelivery.elasticloadbalancing.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.bucket.arn}/${prefix}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+      }
+    ]
+  })
+}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Cross-Region Replication — only created when enable_crr = true
 # Continuously replicates all objects to a DR region bucket.
