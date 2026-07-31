@@ -7,20 +7,9 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { useSession } from "@repo/auth/client";
 
 /**
- * Direct collaborators (grants) on a resource.
- *
- * The endpoint is gated on `can(share)`, not `read`, which makes it the
- * capability probe for the sharing surface as well as its data source: a caller
- * who may not share gets a 403 and the UI hides the surface entirely. 4xx are
- * not retried, so the 403 settles immediately instead of flickering.
- *
- * Two things keep that probe from ever answering for the wrong principal:
- * - the cache key carries the session user id (see `sharing-query-keys`), so a
- *   different user on the same browser starts from `pending`, not from the
- *   previous user's cached list;
- * - nothing is fetched until the session itself has resolved, so a request is
- *   never filed — and its result never cached — under a principal we don't know
- *   yet. Until then the query reports `pending` and callers fail closed.
+ * The share-gated endpoint doubles as the surface's capability probe, and 4xx
+ * responses are not retried. Principal-scoped keys plus waiting for the session
+ * prevent a new user from briefly seeing the previous user's collaborator list.
  */
 export const useResourceCollaborators = (
   resourceType: SharingResourceType,
@@ -35,8 +24,7 @@ export const useResourceCollaborators = (
       input: { resourceType, id: resourceId },
       queryKey: collaboratorsQueryKey(userId, resourceType, resourceId),
       retry: shouldRetryQuery,
-      // Callers pass `enabled: false` when a capability signal already told them
-      // the user cannot share, which skips a request that could only 403.
+      // A known capability denial skips a request guaranteed to 403.
       enabled: (options?.enabled ?? true) && !isSessionPending,
     }),
   );

@@ -18,7 +18,7 @@ function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
 }
 
-export interface UserSearchPopoverProps {
+interface UserSearchPopoverProps {
   availableUsers: UserProfile[];
   searchValue: string;
   onSearchChange: (value: string) => void;

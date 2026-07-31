@@ -40,11 +40,9 @@ export class IotDeviceRepository {
           .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
           .returning();
 
-        // Same access-neutral seeding the other shareable types get: nothing is
-        // written when registering into an org whose role already confers full
-        // control, and an `admin` grant is written when it does not — a plain
+        // Access-neutral seeding, as for every other shareable type: a plain
         // `member` may register a device into a shared org, and `member` is
-        // read-only, so without this they could not rotate or revoke the
+        // read-only, so without a grant they could not rotate or revoke the
         // certificates of the device they just brought online.
         await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
 
@@ -53,14 +51,11 @@ export class IotDeviceRepository {
     });
   }
 
-  // Org-aware device listing: a device is visible when the caller
-  // created it, is a member of its owning organization, holds a grant on it, or
-  // it is public — mirroring the experiment `findAll` scoping. The `createdBy`
-  // tier is explicit (not covered by the shared predicate) so a creator who is
-  // later removed from a non-personal owning org still sees the devices they
-  // registered. The grant tier is what makes a shared device show up in the
-  // grantee's registry; the public tier stays unreachable, since devices are
-  // permanently private and no path writes their visibility.
+  // Org-aware device listing, over the shared access predicate. `createdBy` is an
+  // extra tier on top of it, so a creator later removed from a non-personal owning
+  // org still sees the devices they registered. The predicate's public tier stays
+  // unreachable: devices are permanently private and no path writes their
+  // visibility.
   async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       const scope = accessibleResourceCondition({
@@ -132,11 +127,10 @@ export class IotDeviceRepository {
 
   async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(() =>
-      // Grant cleanup and the device delete are one transaction: the grants table
-      // is polymorphic (no FK cascade), so it must be cleaned by hand — and if the
-      // device delete failed after a committed cleanup, the device would survive
-      // with every grant on it already gone, silently stripping its collaborators'
-      // access while the API reported failure.
+      // One transaction: the grants table is polymorphic (no FK cascade) so it must
+      // be cleaned by hand, and a delete that failed after a committed cleanup
+      // would leave the device alive with every grant on it gone — silently
+      // stripping collaborators' access while the API reported failure.
       this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "device", deviceId);
 

@@ -13,13 +13,7 @@ interface VisibilityBadgeProps {
   className?: string;
 }
 
-/**
- * "Private" / "Public" indicator.
- *
- * Macros/protocols/workbooks can be created private, but nothing in the app said
- * so — a private resource looked identical to a public one, which left both the
- * state and the reason it is undiscoverable invisible.
- */
+/** Private / Public resource indicator. */
 export function VisibilityBadge({
   visibility,
   privateOnly = false,

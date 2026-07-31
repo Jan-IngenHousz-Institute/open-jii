@@ -8,13 +8,7 @@ interface ProtocolCollaboratorsPageProps {
   params: Promise<{ id: string }>;
 }
 
-/**
- * Who this protocol is shared with — a route of its own, so reaching it leaves
- * the details sidebar and the steps behind rather than hiding them.
- *
- * The layout has already loaded the protocol (and gated on it) before this
- * renders, so the hook resolves from cache and adds no request.
- */
+/** Protocol collaborators route; the layout's detail query supplies cached access. */
 export default function ProtocolCollaboratorsPage({ params }: ProtocolCollaboratorsPageProps) {
   const { id } = use(params);
   const { data } = useProtocol(id);

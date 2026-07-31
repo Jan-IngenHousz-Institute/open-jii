@@ -31,17 +31,9 @@ interface WorkbookMetaRowProps {
 }
 
 /**
- * The workbook's provenance row: created / updated / created by / version /
- * forked-from / visibility, plus the Publish and Fork actions.
- *
- * It belongs to the workbook's Overview, not to the title block above the tab
- * strip — the Collaborators route is about who has access, and none of this
- * answers that. The version fetch and the fork mutation travel with it so
- * neither runs on the route that does not show them.
- *
- * Visibility is shown as a field rather than a control: it reads as provenance
- * like everything else in the row, and the one thing you can do to it — publish,
- * once, irreversibly — is an action, so it sits with the other actions.
+ * Keeping provenance and its version fetch on Overview avoids work on the
+ * Collaborators route. Visibility stays a field like the other provenance; its
+ * only mutation is irreversible publish, so that remains a separate action.
  */
 export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   const { t } = useTranslation(["workbook", "common"]);

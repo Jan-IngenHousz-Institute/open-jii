@@ -22,8 +22,6 @@ import {
   deleteResourceGrants,
   upsertGrant,
   resourceGrants,
-  organizationMembers,
-  teamMembers,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
@@ -35,6 +33,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/grantee-selectability";
 import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/resource-staffing";
 import {
@@ -82,16 +81,14 @@ export class ExperimentRepository {
   ) {}
 
   /**
-   * Create the experiment, put its creator in control of it, and give anyone
-   * picked in the create form the read-and-contribute tier — **all in one
-   * transaction**, so a failure anywhere leaves no experiment rather than an
-   * experiment with half its collaborators and a 500.
+   * Create the experiment, put its creator in control of it, and give anyone picked
+   * in the create form the read-and-contribute tier — **all in one transaction**, so
+   * a failure anywhere leaves no experiment rather than one with half its
+   * collaborators.
    *
-   * @param collaboratorUserIds Users to seed a `member` grant for. Each is
-   *   validated against the same rule the sharing surface applies
-   *   ({@link userIsSelectableGrantee}); an unselectable one fails the whole
-   *   create with a 400. `resource_grants` carries no foreign key on `grantee_id`,
-   *   so without that check a uuid naming nobody would simply become a grant row.
+   * @param collaboratorUserIds Users to seed a `member` grant for. Validated against
+   *   {@link userIsSelectableGrantee}; an unselectable one fails the whole create
+   *   with a 400.
    */
   async create(
     createExperimentDto: CreateExperimentDto,
@@ -124,16 +121,12 @@ export class ExperimentRepository {
 
   /**
    * Give each user the read-and-contribute tier on the experiment, as a direct
-   * grant. Used when an experiment is created with collaborators already picked.
+   * grant, when an experiment is created with collaborators already picked.
    *
-   * Every grantee is checked first, and the whole create is refused if any of them
-   * is not someone the creator could have picked — the same 400 the sharing
-   * surface answers with, rather than a grant row for a user who does not exist,
-   * has been deactivated, or has closed their account.
-   *
-   * Runs on the caller's transaction, and deliberately non-destructive: a grantee
-   * who already holds a direct grant is left alone, so this can never lower
-   * someone's access and therefore needs no staffing guard.
+   * Every grantee is checked first — `resource_grants` has no FK on `grantee_id`, so
+   * an unchecked write would happily store a row for a uuid naming nobody. Runs on
+   * the caller's transaction and is deliberately non-destructive: an existing direct
+   * grant is left alone, so this can never lower access and needs no staffing guard.
    */
   private async grantCollaborators(
     tx: DbOrTx,
@@ -179,19 +172,14 @@ export class ExperimentRepository {
    * The activated users who hold a grant on the experiment — its named
    * collaborators — **plus the owners of the organization that owns it**, and the
    * experiment's `anonymizeContributors` setting. Deactivated and soft-deleted
-   * accounts are excluded: they can neither contribute nor take over an
-   * experiment, so they are neither credit-worthy nor a valid hand-off target.
+   * accounts are excluded: they can neither contribute nor take an experiment over.
    *
    * The owners are not a garnish: a creator holds no grant on what they create, so
-   * sourcing credit from grants alone would drop the one person most responsible
-   * for the experiment — and on a personal-workspace experiment would credit
-   * nobody at all.
+   * grants alone would credit nobody at all on a personal-workspace experiment.
    *
-   * The flag comes back with the rows because the two are only meaningful
-   * together: an experiment that anonymizes its contributors must not have these
-   * names published, and the join is what makes that decidable without a second
-   * query. Driven from `experiments` with outer joins so the flag is still
-   * readable when the experiment has no collaborators at all.
+   * The flag rides along because callers cannot safely publish the names without it.
+   * Driven from `experiments` with outer joins so it is still readable when the
+   * experiment has no collaborators.
    */
   async listCollaborators(experimentId: string): Promise<Result<ExperimentCollaborators>> {
     return tryCatch(async () => {
@@ -245,13 +233,10 @@ export class ExperimentRepository {
           avatarUrl,
         }));
 
-      // The people credited by their relationship to the experiment rather than by
-      // a grant row: the owners of the owning org, plus **the creator**.
-      //
-      // The creator is listed in their own right, not folded into the owners. They
-      // are not always an owner — someone who creates into an organization they are
-      // an `admin` of holds full control without owning it — and crediting the org's
-      // owner in their place would put the wrong name on somebody else's work.
+      // Credited by their relationship to the experiment rather than by a grant row:
+      // the owning org's owners, plus the creator in their own right — someone who
+      // creates into an org they merely administer is not an owner, and crediting
+      // the org's owner in their place would put the wrong name on their work.
       const createdBy = rows[0]?.createdBy;
       const relatedIds = [...new Set([...ownerIds, ...(createdBy ? [createdBy] : [])])].filter(
         (id) => !granted.some((collaborator) => collaborator.userId === id),
@@ -315,9 +300,6 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      // Accessibility scoping, aligned with can(): a user sees an experiment when
-      // it is public, they hold a grant (directly, via a team, or via an org
-      // grant), or they are a member of the experiment's owning organization.
       const userGrantExists = exists(
         this.database
           .select()
@@ -332,64 +314,21 @@ export class ExperimentRepository {
           ),
       );
 
-      {
-        const teamGrantExists = exists(
-          this.database
-            .select()
-            .from(resourceGrants)
-            .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
-            .where(
-              and(
-                eq(resourceGrants.resourceType, "experiment"),
-                eq(resourceGrants.resourceId, experiments.id),
-                eq(resourceGrants.granteeType, "team"),
-                eq(teamMembers.userId, userId),
-              ),
-            ),
-        );
-        const orgGrantExists = exists(
-          this.database
-            .select()
-            .from(resourceGrants)
-            .innerJoin(
-              organizationMembers,
-              eq(organizationMembers.organizationId, resourceGrants.granteeId),
-            )
-            .where(
-              and(
-                eq(resourceGrants.resourceType, "experiment"),
-                eq(resourceGrants.resourceId, experiments.id),
-                eq(resourceGrants.granteeType, "organization"),
-                eq(organizationMembers.userId, userId),
-              ),
-            ),
-        );
-        const owningOrgMemberExists = exists(
-          this.database
-            .select()
-            .from(organizationMembers)
-            .where(
-              and(
-                eq(organizationMembers.organizationId, experiments.organizationId),
-                eq(organizationMembers.userId, userId),
-              ),
-            ),
-        );
-        // Access scoping is unconditional — it applies to every filter, including
-        // "member". A view may narrow what the caller can see; it must never widen
-        // it. Authorship is not an access path (`can()` does not consult
-        // `created_by`), so a creator since removed from the owning org, holding no
-        // grant, can no longer read the experiment and must not get its body back
-        // through a listing.
-        conditions.push(
-          or(
-            eq(experiments.visibility, "public"),
-            userGrantExists,
-            teamGrantExists,
-            orgGrantExists,
-            owningOrgMemberExists,
-          ),
-        );
+      // Access scoping is unconditional — it applies to every filter, including
+      // "member". A view may narrow what the caller can see; it must never widen it.
+      // Authorship is not an access path (`can()` does not consult `created_by`), so
+      // a creator since removed from the owning org, holding no grant, must not get
+      // the experiment's body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        visibilityColumn: experiments.visibility,
+        userId,
+      });
+      if (scope) {
+        conditions.push(scope);
       }
 
       if (filter === "member") {
@@ -531,17 +470,14 @@ export class ExperimentRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      // Grants, the dormant membership rows and the experiment go in one
-      // transaction. Both side tables must be cleaned by hand (the grants table is
+      // One transaction: both side tables must be cleaned by hand (grants are
       // polymorphic, so no FK cascade; `experiment_members` has a plain FK with no
       // cascade), and a partial failure would leave the experiment alive with its
-      // access rows already gone — silently stripping collaborators while the API
-      // reported failure. Same pattern as the macro/protocol/workbook delete paths.
+      // access rows gone — silently stripping collaborators while the API reported
+      // failure. Same pattern as the macro/protocol/workbook delete paths.
       await this.database.transaction(async (tx) => {
-        // The single remaining write to `experiment_members`, and the only one
-        // anywhere: it is referential cleanup of child rows for an experiment being
-        // destroyed, not use of the table. The rows carry no access any more, but
-        // the FK still refuses to let the parent go while they exist.
+        // Referential cleanup only: the roster rows carry no access any more, but the
+        // FK still refuses to let the parent go while they exist.
         await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
         await deleteResourceGrants(tx, "experiment", id);
@@ -601,12 +537,10 @@ export class ExperimentRepository {
 
       const { experiment } = result[0];
 
-      // Every signal comes from the unified can() (owning-org role → resource
-      // grants → public read), so there is one place where access is decided.
-      // `canContribute` is the "is effectively a collaborator" signal: it gates
-      // field measurements and annotations, and only an explicit grant (or an
-      // owning-org admin/owner role) confers it — public visibility and a plain
-      // org membership grant read alone.
+      // Every signal comes from the unified can(), so access is decided in one place.
+      // `canContribute` gates field measurements and annotations: only an explicit
+      // grant (or an owning-org admin/owner role) confers it — public visibility and
+      // plain org membership grant read alone.
       const [read, contribute, manage] = await Promise.all([
         this.authz.can(userId, {
           resourceType: "experiment",

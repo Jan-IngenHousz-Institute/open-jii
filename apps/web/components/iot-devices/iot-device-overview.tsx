@@ -31,14 +31,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
 
-/**
- * A device's Overview route: its registry metadata and the danger zone.
- *
- * The delete affordance is gated on `canManage`, which on a device is the same
- * capability the certificate operations sit behind — deleting a device tears down
- * a real AWS Thing and revokes its certificate, so a reader shared the device
- * "Can view" must not be offered it.
- */
+/** Device registry metadata and its manage-gated danger zone. */
 export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");

@@ -26,24 +26,20 @@ export interface InvitationTerms {
   tier: InvitationTier;
 }
 
-/** The tier an invitation grants when the caller did not choose one. */
-export const DEFAULT_INVITATION_TIER: InvitationTier = "viewer";
-
 /**
- * Read a stored tier. Anything that is not `admin` is the read-and-contribute
- * tier: that covers `viewer`, the historical name `member` written before the
- * tier was renamed (same meaning, so no backfill was needed), and any unexpected
- * value — for which the lower tier is also the safe answer.
+ * Read a stored tier. Anything other than `admin` is the read-and-contribute tier:
+ * that covers `viewer`, the historical name `member` written before the rename
+ * (same meaning, so no backfill was needed), and any unexpected value — for which
+ * the lower tier is also the safe answer.
  */
 function normaliseTier(stored: string | null): InvitationTier {
   return stored === "admin" ? "admin" : "viewer";
 }
 
 /**
- * The DTO's `tier` is stored in the `invitations.role` column, kept under its
- * original name so no column rename was needed. Every read goes through this
- * projection and {@link normaliseTier}, so the rest of the app only ever sees the
- * current tier names.
+ * The DTO's `tier` lives in the `invitations.role` column, kept under its original
+ * name so no rename was needed. Every read goes through this projection and
+ * {@link normaliseTier}, so the rest of the app only sees the current tier names.
  */
 const invitationColumns = {
   id: invitations.id,
@@ -253,11 +249,8 @@ export class InvitationRepository {
 
   /**
    * Accept an invitation and apply its terms to the associated resource in one
-   * transaction. Currently only supports experiment resources.
-   *
-   * Acceptance grants the invitation's tier as a grant, which
-   * is the whole of what an invitation confers: the read-and-contribute tier lets
-   * the invitee open the experiment and add data to it.
+   * transaction. Currently only supports experiment resources. Writing the tier as a
+   * grant is the whole of what an invitation confers.
    *
    * Resolves to `false` when the invitation was no longer pending, in which case
    * nothing at all was applied.
@@ -277,9 +270,8 @@ export class InvitationRepository {
         // Claim the invitation as the FIRST statement: flipping the status is only
         // allowed from `pending`, so a concurrent revoke (or a duplicate acceptance)
         // that commits first leaves this claim matching zero rows. Applying the terms
-        // afterwards inside the same transaction is what makes "terms applied ⇔
-        // status accepted" hold — previously both sides updated by id alone, so an
-        // acceptance could overwrite `revoked` and still grant access (N1).
+        // afterwards in the same transaction is what makes "terms applied ⇔ status
+        // accepted" hold.
         const claimed = await tx
           .update(invitations)
           .set({ status: "accepted" })

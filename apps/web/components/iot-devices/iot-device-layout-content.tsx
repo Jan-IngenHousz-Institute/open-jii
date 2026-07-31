@@ -17,11 +17,7 @@ interface IotDeviceLayoutContentProps {
   children: React.ReactNode;
 }
 
-/**
- * Everything a device's routes share: the back link, the title with its status
- * badge, and the tab strip. Lives in the layout so all six tabs render under one
- * heading instead of each route rebuilding it.
- */
+/** Shared heading and tab strip for all device routes. */
 export function IotDeviceLayoutContent({
   deviceId,
   device,
@@ -30,8 +26,7 @@ export function IotDeviceLayoutContent({
   const { t } = useTranslation("iot");
   const locale = useLocale();
 
-  // Registry identity hierarchy: name, then canonical product name, then a
-  // localized unknown-device fallback.
+  // Prefer the registry name, then product name, then the localized fallback.
   const displayName = resolveDevicePrimaryLabel(
     presentDevice({ name: device.name, family: device.deviceType, id: device.serialNumber }),
     t,

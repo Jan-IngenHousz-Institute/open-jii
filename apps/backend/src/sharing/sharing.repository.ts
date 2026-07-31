@@ -45,11 +45,14 @@ import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "./resource-sta
 import type { StaffingGuardedWrite } from "./resource-staffing";
 
 /**
- * Archived experiments are immutable server-side, grant writes included — but only
- * experiments carry a status, reads stay allowed, and the account-deletion hand-off
- * (`ensureDirectAdminGrant`) deliberately bypasses this so an archived experiment can
- * still be transferred. A missing experiment is not refused here: leave's uniform 404
- * depends on that.
+ * Archived experiments are immutable server-side, grant writes included. Only
+ * experiments carry a status, and a missing experiment is deliberately not refused
+ * here — leave's uniform 404 depends on that.
+ *
+ * The account-deletion hand-off reaches `ensureDirectAdminGrant` directly rather
+ * than through the guarded write, so an archived experiment can still be
+ * transferred; routing it through here would strand anyone whose deletion blocker
+ * is an archived experiment.
  */
 async function assertResourceIsUnarchived(
   tx: DbOrTx,
@@ -123,6 +126,30 @@ export interface CreateGrantInput {
   createdBy: string;
 }
 
+/**
+ * Display columns for a user grantee/owner, anonymized like every other
+ * profile-display surface (see profile-anonymization): a grantee who is later
+ * deactivated renders as "Unknown User" rather than leaking their identity through
+ * a grant that predates the deactivation. `users.name`/`users.image` are the
+ * fallbacks when there is no profile row, so they need the same gate.
+ */
+const granteeDisplayColumns = () => ({
+  profileFirstName: getAnonymizedFirstName(),
+  profileLastName: getAnonymizedLastName(),
+  profileAvatarUrl: getAnonymizedAvatarUrl(),
+  userEmail: getAnonymizedEmail(),
+  userName: sql<
+    string | null
+  >`CASE WHEN ${profiles.activated} = true THEN ${users.name} ELSE NULL END`,
+  userImage: sql<
+    string | null
+  >`CASE WHEN ${profiles.activated} = true THEN ${users.image} ELSE NULL END`,
+});
+
+/** `slug` is nullable; a null slug can never be a personal-org slug. */
+const isNotPersonalOrg = () =>
+  or(isNull(organizations.slug), not(like(organizations.slug, "personal-%")));
+
 /** Data access for the sharing module, over the shared `@repo/database` helpers. */
 @Injectable()
 export class SharingRepository {
@@ -141,9 +168,8 @@ export class SharingRepository {
     owningOrganizationId: string | null,
   ): Promise<Result<ResourceCollaborator[]>> {
     return tryCatch(async () => {
-      // The owners come first and are not grants: they are synthesized from the
-      // owning org, which is where answerability lives. A creator therefore appears
-      // here without ever having been granted anything.
+      // Owners come first and are not grants: they are synthesized from the owning
+      // org, so a creator appears here without ever having been granted anything.
       const owners = await this.listOwnerRows(owningOrganizationId);
       const ownerIds = new Set(owners.map((o) => o.granteeId));
 
@@ -167,23 +193,7 @@ export class SharingRepository {
           role: resourceGrants.role,
           createdAt: resourceGrants.createdAt,
           createdBy: resourceGrants.createdBy,
-          // Anonymized like every other profile-display surface (see
-          // profile-anonymization): a grantee who is later deactivated renders
-          // as "Unknown User" with no email/avatar rather than leaking their
-          // identity through a grant that predates the deactivation.
-          profileFirstName: getAnonymizedFirstName(),
-          profileLastName: getAnonymizedLastName(),
-          profileAvatarUrl: getAnonymizedAvatarUrl(),
-          userEmail: getAnonymizedEmail(),
-          // `users.name`/`users.image` are the fallbacks when a grantee has no
-          // profile row, so they need the same gate — otherwise a deactivated
-          // grantee's name/avatar would leak through the fallback path.
-          userName: sql<
-            string | null
-          >`CASE WHEN ${profiles.activated} = true THEN ${users.name} ELSE NULL END`,
-          userImage: sql<
-            string | null
-          >`CASE WHEN ${profiles.activated} = true THEN ${users.image} ELSE NULL END`,
+          ...granteeDisplayColumns(),
           orgName: organizations.name,
           orgMemberId: organizationMembers.id,
         })
@@ -210,10 +220,9 @@ export class SharingRepository {
         .orderBy(desc(resourceGrants.createdAt));
 
       const grants = rows
-        // An owner who also happens to hold a grant is still shown once, as the
-        // owner: the grant can only repeat access they already have through the
-        // org, and rendering both would put the same person on two rows with
-        // contradictory affordances.
+        // An owner who also holds a grant is shown once, as the owner: the grant can
+        // only repeat access they already have, and rendering both would put the
+        // same person on two rows with contradictory affordances.
         .filter((r) => !(r.granteeType === "user" && ownerIds.has(r.granteeId)))
         .map((r): EnrichedGrant => {
           const granteeType = r.granteeType as SharingGranteeType;
@@ -243,21 +252,16 @@ export class SharingRepository {
   }
 
   /**
-   * The living owners of an organization, as collaborator rows. "Living" is an
-   * open account: a closed one is nobody to escalate to, and an org whose last
-   * owner closed their account leaves its resources relying on admin grants
-   * instead (which is exactly when the last-admin invariant starts biting).
-   *
-   * Display info is anonymized on the same terms as grantee info, so a deactivated
-   * owner renders as "Unknown User" rather than leaking their identity.
+   * The living owners of an organization, as collaborator rows. "Living" is an open
+   * account: a closed one is nobody to escalate to, and an org whose last owner
+   * closed their account leaves its resources relying on admin grants instead.
    */
   private async listOwnerRows(owningOrganizationId: string | null): Promise<OwnerRow[]> {
     if (!owningOrganizationId) return [];
 
-    // Who counts as an owner is not decided here: it comes from the one shared
-    // fragment the staffing invariant and the deletion blocker also read, so the
-    // surface cannot show somebody the rules would not treat as answerable (or
-    // hide somebody they would). This query only puts faces on the ids it returns.
+    // Who counts as an owner comes from the one shared fragment the staffing
+    // invariant and the deletion blocker also read, so this surface cannot show
+    // somebody the rules would not treat as answerable. This only puts faces on ids.
     const owners = await this.db.execute<{ user_id: string }>(
       livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`),
     );
@@ -267,16 +271,7 @@ export class SharingRepository {
     const rows = await this.db
       .select({
         userId: users.id,
-        profileFirstName: getAnonymizedFirstName(),
-        profileLastName: getAnonymizedLastName(),
-        profileAvatarUrl: getAnonymizedAvatarUrl(),
-        userEmail: getAnonymizedEmail(),
-        userName: sql<
-          string | null
-        >`CASE WHEN ${profiles.activated} = true THEN ${users.name} ELSE NULL END`,
-        userImage: sql<
-          string | null
-        >`CASE WHEN ${profiles.activated} = true THEN ${users.image} ELSE NULL END`,
+        ...granteeDisplayColumns(),
       })
       .from(users)
       .leftJoin(profiles, eq(profiles.userId, users.id))
@@ -389,13 +384,12 @@ export class SharingRepository {
 
   /**
    * Delete the caller's own user grant on a resource (self-leave). Keyed by the
-   * grantee because the caller cannot know their grant's id — the grants list
-   * is share-gated. Resolves to null when the caller holds no grant here.
+   * grantee because the caller cannot know their grant's id — the grants list is
+   * share-gated. Resolves to null when the caller holds no grant here.
    *
-   * Guarded like every other grant mutation: a resource's last admin
-   * leaving would unstaff it, so the staffing invariant refuses it, and an archived
-   * experiment refuses it too — deferred until the caller's own grant is known to
-   * exist, so a caller with no grant here still learns nothing about the resource.
+   * Guarded like every other grant mutation. The archived refusal is deferred until
+   * the caller's own grant is known to exist, so a caller with no grant here still
+   * learns nothing about the resource.
    */
   leave(params: {
     resourceType: SharingResourceType;
@@ -422,11 +416,10 @@ export class SharingRepository {
 
   /**
    * Give a user a direct `admin` grant on a resource, for the account-deletion
-   * hand-off. Not routed through {@link guardedWrite}: `ensureDirectAdminGrant`
-   * only ever raises a grantee's tier, so it cannot unstaff anything and has
-   * nothing for the invariant to check. That is also what keeps the hand-off working
-   * on an archived experiment, whose sole admin would otherwise be unable to close
-   * their account.
+   * hand-off. Not routed through {@link guardedWrite}: it only ever raises a
+   * grantee's tier, so there is nothing for the invariant to check — which is also
+   * what keeps the hand-off working on an archived experiment, whose sole admin
+   * would otherwise be unable to close their account.
    */
   ensureDirectAdminGrant(params: {
     resourceType: SharingResourceType;
@@ -444,11 +437,10 @@ export class SharingRepository {
 
   /**
    * Organizations the caller may offer as a grantee in the collaborators picker.
-   * Read-scoped to the caller's own memberships — an org the caller does not
-   * belong to is not enumerable here, so this route cannot be used to probe for
-   * organization names. Personal workspaces (`personal-<userId>` slug) are
-   * excluded: granting to someone's personal org is just granting to that user,
-   * and surfacing them would leak every user's workspace as a share target.
+   * Read-scoped to the caller's own memberships, so this route cannot be used to
+   * probe for organization names. Personal workspaces are excluded: granting to
+   * someone's personal org is just granting to that user, and surfacing them would
+   * leak every user's workspace as a share target.
    */
   searchGranteeOrganizations(
     userId: string,
@@ -471,8 +463,7 @@ export class SharingRepository {
         )
         .where(
           and(
-            // `slug` is nullable; a null slug can never be a personal-org slug.
-            or(isNull(organizations.slug), not(like(organizations.slug, "personal-%"))),
+            isNotPersonalOrg(),
             params.query ? ilike(organizations.name, `%${escapeLike(params.query)}%`) : undefined,
           ),
         )
@@ -482,18 +473,14 @@ export class SharingRepository {
   }
 
   /**
-   * Whether `sharerUserId` may grant to this grantee, using the **same
-   * visibility rules as the grantee pickers** — existence alone is not enough.
-   * A grantee the sharer could never have discovered must not become a grant,
-   * because the collaborators list then discloses that grantee's email/profile
-   * (or an organization's name) back to them.
+   * Whether `sharerUserId` may grant to this grantee, using the **same visibility
+   * rules as the grantee pickers** — existence alone is not enough. A grantee the
+   * sharer could never have discovered must not become a grant, because the
+   * collaborators list then discloses that grantee's email/profile (or an
+   * organization's name) back to them.
    *
-   * - user → must be discoverable in the people search: an activated,
-   *   non-soft-deleted profile (mirrors `UserRepository.search`). Shared with
-   *   experiment creation, which seeds its picked collaborators on the same terms
-   *   — see {@link userIsSelectableGrantee}.
-   * - organization → must be one the sharer is a member of, excluding personal
-   *   workspaces (mirrors {@link searchGranteeOrganizations}).
+   * - user → {@link userIsSelectableGrantee}, mirroring the people search;
+   * - organization → {@link searchGranteeOrganizations}'s rule.
    */
   async granteeIsSelectable(
     granteeType: SharingGranteeType,
@@ -513,13 +500,7 @@ export class SharingRepository {
           eq(organizationMembers.userId, sharerUserId),
         ),
       )
-      .where(
-        and(
-          eq(organizations.id, granteeId),
-          // `slug` is nullable; a null slug can never be a personal-org slug.
-          or(isNull(organizations.slug), not(like(organizations.slug, "personal-%"))),
-        ),
-      )
+      .where(and(eq(organizations.id, granteeId), isNotPersonalOrg()))
       .limit(1);
     return rows.length > 0;
   }

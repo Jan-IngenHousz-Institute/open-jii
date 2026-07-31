@@ -15,28 +15,15 @@ interface ResourceDetailTabsProps {
   resourceId: string;
   /** `can(share)` from the detail response — earns the full collaborators route. */
   canShare: boolean;
-  /**
-   * `capabilities.canLeave` from the detail response. Without `share` it still
-   * earns the Collaborators tab, holding only the self-leave card — a grantee
-   * below `share` has no other surface to give up their access from.
-   */
+  /** Below `share`, this route is still the only place to give up a direct grant. */
   canLeave?: boolean;
   children: React.ReactNode;
 }
 
 /**
- * Overview / Collaborators strip for a macro, protocol or workbook detail page —
- * the same shape experiments have, and route-linked for the same reason.
- *
- * Sharing being a route rather than in-page tab state is what makes the switch
- * swap the *whole* surface: the details sidebar, the description and the editor
- * belong to the Overview route, so on Collaborators they are simply not
- * rendered, with no page having to hide them. It also makes the surface
- * linkable and the back button work.
- *
- * A reader with neither `share` nor a grant of their own has nothing to put in a
- * second tab, so for them the content renders bare — a lone "Overview" tab is
- * not a strip worth showing.
+ * Making collaborators a route swaps the entire detail surface, rather than
+ * conditionally hiding editors and metadata, and preserves links/history. Readers
+ * with neither share nor leave access get bare content instead of a lone tab.
  */
 export function ResourceDetailTabs({
   resourceType,
@@ -54,8 +41,6 @@ export function ResourceDetailTabs({
   }
 
   const detailPath = resourceDetailPath(locale, resourceType, resourceId);
-  // Read off the URL rather than kept in state: the route is the source of truth,
-  // so a direct visit and the back button both land on the right tab.
   const activeTab = pathname.endsWith("/collaborators") ? "collaborators" : "overview";
 
   return (

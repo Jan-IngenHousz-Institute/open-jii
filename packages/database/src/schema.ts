@@ -358,11 +358,11 @@ export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin",
 /**
  * Experiment Members (Associative Table) — **DORMANT**.
  *
- * Superseded by `resourceGrants`: who may read, contribute to, or administer an
- * experiment is now decided entirely by grants, and no runtime code reads or
- * writes this table. It is deliberately left physically intact, with its existing
- * rows frozen, so the historical record survives until its fate is decided
- * separately. Nothing should start using it again — add a grant instead.
+ * Superseded by `resourceGrants`: access is decided entirely by grants and nothing
+ * reads this table. The only remaining writes are referential cleanup (experiment
+ * delete and account deletion), because the FKs have no cascade. Left physically
+ * intact with its rows frozen until its fate is decided separately — nothing should
+ * start using it again; add a grant instead.
  */
 export const experimentMembers = pgTable(
   "experiment_members",
@@ -398,10 +398,9 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
-    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin'
-    // ("Can edit") or the read-and-contribute tier, whose historical name here is
-    // 'member' and whose current name is 'viewer'. Both are accepted on read; see
-    // the invitation repository, which normalises them.
+    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin', or
+    // the read-and-contribute tier under either its historical name 'member' or its
+    // current name 'viewer' (the invitation repository normalises both on read).
     role: text("role").default("member").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")

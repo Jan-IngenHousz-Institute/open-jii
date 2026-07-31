@@ -8,18 +8,12 @@ import type { AuthorizationService } from "./authorization.service";
  * responses that drive capability-gated UI.
  *
  * Every boolean comes from the same `can()` the guards use, so the web app never
- * re-implements precedence — it only renders what the server already decided.
- * This is a rendering signal: the mutating routes remain guarded independently,
- * so a client that ignores these flags is still refused.
+ * re-implements precedence. This is a rendering signal only: the mutating routes
+ * stay guarded independently.
  *
- * Each boolean is one resolution of the same ownership + grant tiers. They run
- * concurrently, so the added latency is roughly one query round rather than one
- * per action, and `can()` is left untouched — deliberately, since
- * reworking the precedence walk to evaluate several actions in one pass would
- * mean editing the most security-sensitive function in the codebase for a
- * detail-view optimization. If this shows up in profiles, the fix is a batched
- * `capabilities()` method *inside* `AuthorizationService` (one walk, many
- * actions), not a second precedence implementation out here.
+ * Each boolean is a separate precedence walk, run concurrently. If that ever shows
+ * up in profiles, the fix is a batched `capabilities()` method *inside*
+ * `AuthorizationService`, not a second precedence implementation out here.
  */
 export async function resolveResourceCapabilities(
   authz: AuthorizationService,

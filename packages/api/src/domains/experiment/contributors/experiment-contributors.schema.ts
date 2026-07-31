@@ -1,16 +1,14 @@
 import { z } from "zod";
 
 /**
- * A person credited as a contributor on an experiment: someone who holds a grant
- * on it, and can therefore add measurements and annotations.
+ * A person credited as a contributor on an experiment: someone who holds a grant on
+ * it, and can therefore add measurements and annotations.
  *
- * Deliberately narrower than the collaborators list the sharing routes return —
- * no email and no tier. This is the public-facing credit, readable by anyone who
- * can read the experiment, whereas enumerating who holds *what* access requires
- * `can(share)`.
- *
- * On an experiment that anonymizes its contributors, every field here is the
- * pseudonym the measurement rows already carry instead of the real identity.
+ * Deliberately narrower than the sharing routes' collaborators list — no email and
+ * no tier — because this is the public-facing credit, readable by anyone who can
+ * read the experiment, whereas enumerating who holds *what* access needs
+ * `can(share)`. On an experiment that anonymizes contributors, every field is the
+ * pseudonym the measurement rows already carry.
  */
 export const zExperimentContributor = z.object({
   /**

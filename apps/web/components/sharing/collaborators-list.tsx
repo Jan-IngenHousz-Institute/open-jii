@@ -23,15 +23,11 @@ import { RevokeCollaboratorDialog } from "./revoke-collaborator-dialog";
 interface CollaboratorsListProps {
   resourceType: SharingResourceType;
   resourceId: string;
-  /** The rows to render — owners and grants, already filtered by the host, if it filters. */
+  /** Owners and grants, already filtered by the host when applicable. */
   grants: ResourceCollaboratorDto[];
   /** The list request failed; rows are unknown rather than absent. */
   isError?: boolean;
-  /**
-   * The list request has not answered yet, so an empty `grants` means "not known"
-   * rather than "none". Without it the empty state renders for the whole round
-   * trip and "No collaborators yet" flashes on a resource that has plenty.
-   */
+  /** Whether the list is unresolved rather than empty. */
   isPending?: boolean;
   /** Blocks every mutation (e.g. an archived experiment) while still listing grants. */
   readOnly?: boolean;
@@ -40,22 +36,10 @@ interface CollaboratorsListProps {
 }
 
 /**
- * The collaborators list: the resource's owners, then one row per direct grant
- * with the two-tier access dropdown and revoke on each.
- *
- * Owners come from the owning organization rather than from a grant, so they sort
- * to the top and carry no controls — there is nothing to demote or revoke. Among
- * the grants the signed-in user's own sorts first and its revoke becomes "leave",
- * which is the only way a grantee gives up their own access; an owner has no such
- * affordance, because leaving is a matter of the organization.
- *
- * Rows carry no card chrome of their own — this is the body of a tab, so the host
- * page owns the heading, the filter and the invite action.
- *
- * Refusals stay server-side and are surfaced verbatim: the staffing invariant
- * (a resource with no living owner keeps its last direct admin) is enforced by
- * the backend, so a refused demotion or removal comes back as an error whose
- * message is what the toast shows.
+ * Owners come from the owning organization, not grants, so they have no role or
+ * revoke controls. A grantee's own revoke becomes their only self-leave action.
+ * Staffing refusals remain server-enforced, and their message is surfaced verbatim
+ * so the client does not duplicate or obscure that invariant.
  */
 export function CollaboratorsList({
   resourceType,
@@ -76,10 +60,7 @@ export function CollaboratorsList({
   const [busyGrantId, setBusyGrantId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<ResourceGrantDto | null>(null);
 
-  // The surface can go read-only mid-session (an experiment archived in another
-  // tab, a role downgrade landing on a refetch). Rows lock on their own via the
-  // prop, but an already-open revoke dialog would otherwise remain a live
-  // confirm path, so close it.
+  // Close the live revoke path if the surface becomes read-only mid-session.
   useEffect(() => {
     if (readOnly) setPendingRevoke(null);
   }, [readOnly]);
@@ -87,8 +68,7 @@ export function CollaboratorsList({
   const isSelfRow = (row: ResourceCollaboratorDto) =>
     !!currentUserId && row.granteeType === "user" && row.granteeId === currentUserId;
 
-  // Owners first — they are the resource's, not somebody it was shared with — then
-  // "you", as on every other people list in the app.
+  // Owners first, then the signed-in user's grant.
   const sortedGrants = [...grants].sort((a, b) => {
     const byOwner = Number(b.kind === "owner") - Number(a.kind === "owner");
     return byOwner !== 0 ? byOwner : Number(isSelfRow(b)) - Number(isSelfRow(a));
@@ -110,9 +90,7 @@ export function CollaboratorsList({
   };
 
   const confirmRevoke = async () => {
-    // Guarded as well as disabled: the dialog is closed the moment `readOnly`
-    // flips, but a confirm already in flight when it does must not issue the
-    // DELETE either.
+    // Guard against a confirm racing with a read-only transition.
     if (readOnly || !pendingRevoke) return;
     const grant = pendingRevoke;
     setBusyGrantId(grant.id);
@@ -138,9 +116,7 @@ export function CollaboratorsList({
     return <p className="text-destructive text-sm">{t("sharing.loadFailed")}</p>;
   }
 
-  // Placeholder rows rather than the empty state: "No collaborators yet" is a
-  // statement about the resource, and it is not one this component can make until
-  // the list has actually answered.
+  // Do not show an empty-state claim until the list has answered.
   if (isPending) {
     return (
       <div
@@ -187,8 +163,7 @@ export function CollaboratorsList({
       >
         {sortedGrants.map((row) => (
           <CollaboratorRow
-            // Owner rows have no grant id — they are keyed by who they are, and a
-            // person can hold at most one owner row and one grant row here.
+            // Owner rows have no grant id.
             key={row.kind === "owner" ? `owner-${row.granteeId}` : row.id}
             collaborator={row}
             isSelf={isSelfRow(row)}

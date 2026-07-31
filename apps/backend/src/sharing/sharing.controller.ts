@@ -81,11 +81,10 @@ export class SharingController {
   }
 
   /**
-   * Self-leave. Must stay declared before `revokeGrant`: both are DELETEs under
+   * Self-leave, authorized by the caller's own grant rather than `can(share)` — see
+   * the use-case. Must stay declared before `revokeGrant`: both are DELETEs under
    * `/collaborators/…` and routes match in declaration order, so `me` has to be
-   * taken literally here before `{grantId}` can swallow it (where it would fail
-   * uuid validation). Authorized by the caller's own grant, not `can(share)` —
-   * see the use-case.
+   * taken literally before `{grantId}` swallows it.
    */
   @Implement(sharingContract.leaveResource)
   leaveResource(@Session() session: UserSession) {
@@ -119,10 +118,9 @@ export class SharingController {
   }
 
   /**
-   * Bulk admin hand-off, used to clear account-deletion blockers. Authorization is
-   * per-transfer inside the use case (the caller must be able to share each
-   * resource named), so there is no route-level `@CanAccess`: one request spans
-   * several resources, of several types.
+   * Bulk admin hand-off, used to clear account-deletion blockers. One request spans
+   * several resources of several types, so there is no route-level `@CanAccess` —
+   * authorization is per-transfer inside the use case.
    */
   @Implement(sharingTransferAdminContract.transferResourceAdmin)
   transferResourceAdmin(@Session() session: UserSession) {

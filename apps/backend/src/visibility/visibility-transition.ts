@@ -5,21 +5,12 @@ import type { Result } from "../common/utils/fp-utils";
 export type Visibility = "private" | "public";
 
 /**
- * The **sole** implementation of the monotonic visibility rule. Every
- * write path that can change a resource's visibility — the `setVisibility`
- * use-case and the embargo cron — routes through here so the rule has exactly
- * one home.
+ * The **sole** implementation of the monotonic visibility rule: `private → public`
+ * publishes, same-state is a no-op, and `public → private` is rejected for every
+ * caller (owners, admins and the embargo cron alike).
  *
- * Allowed transitions:
- * - `private → public` — publish (the one real change).
- * - `private → private` / `public → public` — same-state no-ops.
- *
- * Rejected for **every** caller (owners, admins, and the automated embargo
- * cron alike):
- * - `public → private` — visibility is one-way; a published resource stays
- *   published.
- *
- * Returns `{ changed }` so callers can skip a redundant write on a no-op.
+ * Every write path that can change visibility routes through here, so the rule has
+ * exactly one home. Returns `{ changed }` so callers can skip a redundant write.
  */
 export function resolveVisibilityTransition(
   current: Visibility,

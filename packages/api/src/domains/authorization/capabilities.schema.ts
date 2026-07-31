@@ -5,21 +5,13 @@ import { z } from "zod";
  * backend's `can()` (owning-org role → user grant → team grant → org grant →
  * public-read).
  *
- * This exists so the web app can gate UI on *capability* rather than on
- * ownership. Before it, the macro/protocol/workbook pages gated editing on
- * `createdBy === session.user.id`, which meant a collaborator holding an `admin`
- * grant — labelled "Can edit" by the collaborators picker — was read-only in the
- * UI even though `can(update)` allowed it.
+ * Exists so the web app gates UI on *capability* rather than ownership: gating on
+ * `createdBy === session.user.id` made an "admin"-granted collaborator read-only in
+ * the UI even though `can(update)` allowed it. Because these are computed
+ * server-side, precedence is never re-implemented client-side.
  *
- * **The precedence rules are never re-implemented client-side.** These booleans
- * are computed server-side from the one `can()` implementation and the UI simply
- * obeys them, so there is exactly one place where "who may do what" is decided.
- * They are a *rendering* signal, not enforcement: every mutating route stays
- * guarded on its own, and a hand-crafted request is rejected regardless of what
- * the UI chose to show.
- *
- * `read` is deliberately absent: holding the detail response at all already
- * implies it.
+ * A *rendering* signal, not enforcement — every mutating route stays guarded on its
+ * own. `read` is absent: holding the detail response already implies it.
  */
 export const zResourceCapabilities = z.object({
   /**

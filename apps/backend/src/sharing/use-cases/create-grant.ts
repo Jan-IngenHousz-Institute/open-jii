@@ -14,9 +14,8 @@ import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
  * existing grantee updates their role (upsert); self/duplicate grants are
  * idempotent. Returns the updated collaborators list.
  *
- * Because re-sharing is an upsert it can *lower* an existing role, so this path is
- * subject to the experiment last-admin invariant too — enforced inside
- * `repo.create`, in the same transaction as the write.
+ * The upsert can *lower* an existing role, so the last-admin invariant applies here
+ * too — enforced inside `repo.create`, in the same transaction as the write.
  */
 @Injectable()
 export class CreateGrantUseCase {
@@ -40,17 +39,14 @@ export class CreateGrantUseCase {
       );
     }
 
-    // Validated against the grantee pickers' own visibility rules, not mere
-    // existence: a deactivated/soft-deleted user, or an organization the sharer
-    // does not belong to, is not a selectable grantee (its details would
-    // otherwise be disclosed back through the collaborators list).
+    // Validated against the grantee pickers' visibility rules, not mere existence:
+    // a grantee the sharer could not have discovered would otherwise have their
+    // details disclosed back through the collaborators list.
     const granteeOk = await this.repo.granteeIsSelectable(body.granteeType, body.granteeId, userId);
     if (!granteeOk) {
       return failure(AppError.badRequest("Grantee not found"));
     }
 
-    // Guarded: re-sharing the experiment's sole admin as a viewer is a demotion
-    // and is refused.
     const created = await this.repo.create({
       resourceType,
       resourceId,

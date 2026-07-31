@@ -31,9 +31,9 @@ import type {
 } from "../models/experiment-join-request.model";
 
 /**
- * The tier an approved join request confers: read plus data contribution —
- * "viewer", the same role the sharing UI writes for "Can view", so approved
- * requesters are indistinguishable from directly-added collaborators.
+ * The tier an approved join request confers — the same role the sharing UI writes
+ * for "Can view", so approved requesters are indistinguishable from
+ * directly-added collaborators.
  */
 const JOIN_APPROVAL_GRANT_ROLE = "viewer";
 
@@ -144,18 +144,13 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Approve a join request: mark it approved AND grant the requester access,
-   * atomically.
+   * Approve a join request: mark it approved AND grant the requester the
+   * read-and-contribute tier, atomically.
    *
-   * Approval hands out the **read-and-contribute tier** ("Can view"), which is
-   * what joining an experiment means: the requester can open it and add
-   * measurements and annotations, but not change the experiment or share it.
-   *
-   * The staffing guard runs inside this transaction rather than through the
-   * sharing repository's own guarded write, because that would open a second
-   * transaction and cost the approve its atomicity. Same guard, same locked row
-   * set — the upsert can in principle lower an existing role, so it passes the
-   * check like every other direct-grant write.
+   * The staffing guard runs inside this transaction rather than through the sharing
+   * repository's guarded write, which would open a second transaction and cost the
+   * approve its atomicity. Same guard, same locked row set — the upsert can lower an
+   * existing role, so it is checked like every other direct-grant write.
    */
   async approve(
     requestId: string,
@@ -231,17 +226,13 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Returns email addresses of everyone who can decide a join request, so they are
-   * the ones notified when one arrives: the holders of an admin/owner user grant
-   * **plus the living owners of the experiment's owning organization**.
+   * Email addresses of everyone who can decide a join request: holders of an
+   * admin/owner user grant **plus the living owners of the owning organization**.
    *
-   * The owners are not an embellishment — they are usually the only recipients.
-   * A creator holds no grant on what they create, so an experiment sitting in its
-   * creator's personal workspace has no admin grants at all, and sourcing this
-   * from grants alone would silently notify nobody about every join request.
-   *
-   * Team/organization grants are excluded on purpose — there is no individual
-   * mailbox behind them.
+   * The owners are usually the only recipients — a creator holds no grant on what
+   * they create, so an experiment in its creator's personal workspace has no admin
+   * grants at all and grants alone would silently notify nobody. Team/organization
+   * grants are excluded: there is no individual mailbox behind them.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {

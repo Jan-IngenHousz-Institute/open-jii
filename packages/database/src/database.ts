@@ -61,19 +61,13 @@ export const db = drizzle({ client: getClient(), schema });
 export type DatabaseInstance = typeof db;
 
 /**
- * A **second, independent** database handle on its own connection, plus the
- * function that closes it.
+ * A second, independent database handle on its own connection, plus its closer.
  *
- * The shared {@link db} pools a single connection (`max: 1`), which means two
- * "concurrent" operations issued through it are serialized by the driver and never
- * actually contend in Postgres. That is fine for the app — requests are serialized
- * per connection anyway — but it makes row-locking behaviour untestable through
- * `db` alone: `SELECT … FOR UPDATE` can never block, so a race spec would pass even
- * if the lock were absent.
- *
- * Tests that need to prove a lock or an atomic claim actually holds open one of
- * these and drive one side of the race through it. Always `close()` it, or the spec
- * run leaks a connection.
+ * The shared {@link db} pools a single connection (`max: 1`), so two "concurrent"
+ * operations through it are serialized by the driver and never contend in Postgres
+ * — which makes row locking untestable: `SELECT … FOR UPDATE` can never block, so a
+ * race spec would pass even with the lock absent. Specs that need to prove a lock
+ * drive one side of the race through one of these. Always `close()` it.
  */
 export const createSecondaryDatabase = (): {
   database: DatabaseInstance;

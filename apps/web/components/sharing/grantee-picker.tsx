@@ -23,22 +23,16 @@ import {
 
 const emailSchema = z.string().email();
 
-/** A grantee the user has picked, ready to be shared with. */
-export interface SelectedGrantee {
+interface SelectedGrantee {
   type: SharingGranteeType;
   id: string;
   displayName: string;
 }
 
-/**
- * What the picker resolved to: an account/organization that can be granted access
- * right now, or an email address that has to be invited first.
- */
 export type GranteeSelection =
   | { kind: "grantee"; grantee: SelectedGrantee }
   | { kind: "email"; email: string };
 
-/** A search result: a selectable grantee plus the extras used to render its row. */
 interface GranteeResultRow extends SelectedGrantee {
   email?: string | null;
   avatarUrl?: string | null;
@@ -49,10 +43,7 @@ interface GranteeResultRow extends SelectedGrantee {
 interface GranteePickerProps {
   selection: GranteeSelection | null;
   onSelectionChange: (selection: GranteeSelection | null) => void;
-  /**
-   * Offer "invite by email" for a typed address that matches no account. Only the
-   * experiment surface has somewhere to put such an invitation, so it is opt-in.
-   */
+  /** Only hosts that can persist pending invitations opt into email results. */
   allowEmailInvite?: boolean;
   /** Grantee ids already on the resource — filtered out of the results. */
   existingGranteeIds?: string[];
@@ -62,12 +53,9 @@ interface GranteePickerProps {
 }
 
 /**
- * Grantee search for a new share: individual users, whole organizations, and —
- * where the host allows it — an email address that has no account yet.
- *
- * Team grantees wait on team management, so they are not offered here. The access
- * tier is chosen by the host next to this field, which keeps this the only search
- * surface on any collaborators page.
+ * Team grants wait on team management, so this searches users, organizations, and
+ * optionally unregistered email addresses. The host owns the tier selector so all
+ * collaborator pages share one search surface.
  */
 export function GranteePicker({
   selection,
@@ -85,9 +73,7 @@ export function GranteePicker({
 
   const [debouncedSearch, isDebounced] = useDebounce(search);
 
-  // Only the active grantee type's query runs. User search needs a term (the whole
-  // user table is not browsable); org search is scoped to the caller's own
-  // memberships, so an empty term usefully lists them all.
+  // User search needs a term; an empty organization search lists memberships.
   const { data: users, isFetching: isFetchingUsers } = useUserSearch(
     granteeType === "user" ? debouncedSearch : "",
   );
@@ -123,17 +109,10 @@ export function GranteePicker({
   const isEmailTerm = emailSchema.safeParse(typedEmail).success;
   const isEmailAlreadyInvited =
     isEmailTerm && existingEmails.some((e) => e.toLowerCase() === typedEmail.toLowerCase());
-  // An invitation is only the right instrument for an address with no account
-  // behind it: acceptance is what turns one into a grant, and an already-registered
-  // invitee never goes through that step, so the invitation would sit pending
-  // forever. Matched against the *unfiltered* results on purpose — someone who
-  // already holds a grant is filtered out of the rows below, and offering their
-  // address as an invitation would be the only thing left on screen.
+  // Check unfiltered results so an existing grantee is not re-offered by email.
   const isRegisteredAddress =
     isEmailTerm &&
     (users ?? []).some((u) => (u.email ?? "").toLowerCase() === typedEmail.toLowerCase());
-  // Email invitations only make sense for the user side of the picker: an
-  // organization is either on the platform or not addressable at all.
   const canInviteByEmail =
     allowEmailInvite &&
     granteeType === "user" &&
@@ -196,9 +175,7 @@ export function GranteePicker({
               aria-label={t("sharing.granteeSearchLabel")}
               className="pl-9 pr-9"
               onFocus={() => {
-                // Organizations are browsable (the caller's own), so opening on
-                // focus is useful; users need a term before there is anything
-                // to show.
+                // Organizations are browsable without a search term.
                 if (selection === null && granteeType === "organization") setOpen(true);
               }}
               onChange={(e) => {
@@ -255,11 +232,6 @@ export function GranteePicker({
   );
 }
 
-/**
- * Why nothing is offered for the current term. A registered address with no row is
- * a grantee that was filtered out — they already hold a grant — which is worth
- * saying rather than reporting it as "no matching users".
- */
 type EmptyReason = "alreadyInvited" | "alreadyCollaborator" | "noMatch";
 
 function GranteeResults({

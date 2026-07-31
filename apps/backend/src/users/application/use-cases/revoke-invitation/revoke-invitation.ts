@@ -55,7 +55,7 @@ export class RevokeInvitationUseCase {
     // The status read above is advisory — an acceptance can commit between it and
     // here. `revoke` claims the row atomically (`WHERE status='pending'`), so a lost
     // claim means someone accepted it in the meantime and we report that rather than
-    // stamping `revoked` over a terminal status (amend-02 N1).
+    // stamping `revoked` over a terminal status.
     const revokeResult = await this.invitationRepository.revoke(invitationId);
     if (revokeResult.isFailure()) {
       return failure(revokeResult.error);

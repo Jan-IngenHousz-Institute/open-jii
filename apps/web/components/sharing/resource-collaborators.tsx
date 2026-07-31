@@ -20,29 +20,16 @@ interface ResourceCollaboratorsProps {
   /** Blocks every mutation (e.g. an archived resource) while still listing grants. */
   readOnly?: boolean;
   /**
-   * `can(share)` from a detail response that already carries the capability
-   * signal. When explicitly `false` the surface renders nothing and skips the list
-   * request altogether, sparing a request whose only purpose was to come back 403.
-   * Omit it where no capability signal is delivered to the page — the 403 probe
-   * remains the fallback.
+   * A known `false` skips a request guaranteed to 403. Omit when no capability
+   * signal exists and let the share-gated list endpoint act as the probe.
    */
   canShare?: boolean;
 }
 
 /**
- * The collaborators surface for macros, protocols and workbooks — the body of
- * their Collaborators route: a heading, one row carrying the filter and the
- * invite action, then the grant rows.
- *
- * Experiments compose the same pieces themselves, because there the list shares a
- * filter and a tab strip with pending invitations and join requests.
- *
- * **Visibility is driven by the list endpoint itself.** `listGrants` is gated on
- * `can(share)`, so a caller who may not share gets a 403 — the component renders
- * nothing at all in that case, and likewise while the probe is still in flight, so
- * a heading never appears and then disappears. Pages that already receive that
- * capability signal pass `canShare` instead, which short-circuits to the same
- * outcome without spending the request.
+ * The share-gated list endpoint also decides whether this surface may exist.
+ * Pending and denied probes render nothing so most viewers never see a heading
+ * flash before the server's answer hides it.
  */
 export function ResourceCollaborators({
   resourceType,
@@ -64,17 +51,12 @@ export function ResourceCollaborators({
   const collaborators = useMemo(() => grants ?? [], [grants]);
   const normalizedFilter = filter.trim().toLowerCase();
 
-  // Filtering is local, as on the experiment surface: the list is a roster, not a
-  // paged query. Owner and grant rows both carry a `grantee`, so one predicate
-  // covers the whole union.
   const filteredCollaborators = useMemo(() => {
     if (!normalizedFilter) return collaborators;
     return collaborators.filter((row) => matchesGrantee(row.grantee, normalizedFilter));
   }, [collaborators, normalizedFilter]);
 
-  // Not authorized to share (403) or the resource is gone (404) → no surface.
-  // Same while the probe is in flight: showing nothing beats flashing a heading
-  // that then vanishes for most viewers.
+  // Hide the capability probe until it resolves, and on access/not-found errors.
   const status = getErrorStatus(error);
   if (canShare === false || isPending || status === 403 || status === 404) {
     return null;
@@ -122,8 +104,7 @@ export function ResourceCollaborators({
         title={t("sharing.addCollaboratorTitle")}
         description={t("sharing.addCollaboratorDescription")}
         disabled={readOnly}
-        // The dialog dedupes against everyone already on the resource, which the
-        // filter must not be able to narrow.
+        // Deduplicate against the unfiltered list.
         existingGranteeIds={collaborators.map((grant) => grant.granteeId)}
       />
     </section>

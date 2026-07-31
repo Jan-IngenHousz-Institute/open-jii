@@ -22,18 +22,9 @@ export function useSignOut() {
       queryClient.setQueryData(["auth", "session"], null);
       void queryClient.invalidateQueries({ queryKey: ["auth"] });
 
-      // Drop the authorization-sensitive caches outright rather than leaving the
-      // signed-out user's grants, organizations, invitee emails, private resource
-      // content and resolved capabilities resident in a module-level QueryClient
-      // that survives sign-out → sign-in.
-      //
-      // For the sharing and access queries the principal is already in the key
-      // (see `principal-query-key`), so the next user could not have read them
-      // anyway and this only stops them lingering. The resource detail and list
-      // caches are the case that actually bites: they are keyed by the resource
-      // alone, yet carry private content and a per-caller `capabilities` block, so
-      // within `gcTime` a second user on the same browser would be served the
-      // first user's answer as a settled `success`.
+      // The module-level QueryClient survives sign-out, while resource detail
+      // caches are not principal-scoped and carry private content/capabilities.
+      // Remove them so the next user cannot receive the old user's settled data.
       const authorizationSensitiveKeys = [
         orpc.sharing.listGrants.key(),
         orpc.sharing.searchGranteeOrganizations.key(),

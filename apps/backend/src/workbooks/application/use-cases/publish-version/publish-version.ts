@@ -40,12 +40,11 @@ export class PublishVersionUseCase {
       return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
     }
 
-    // Minting a version snapshots the workbook's cells into durable, later-
-    // readable state, so the publisher must be able to read the workbook itself
-    // — not just the entities its cells reference (checked below). This is the
-    // choke point for every minting caller (attach/upgrade/transfer), so a
-    // revoked grantee cannot capture post-revocation workbook state through a
-    // path that only authorized some other resource.
+    // Minting a version snapshots the cells into durable, later-readable state, so
+    // the publisher must be able to read the workbook itself — not just the entities
+    // its cells reference (checked below). This is the choke point for every minting
+    // caller (attach/upgrade/transfer), so a revoked grantee cannot capture
+    // post-revocation state through a path that authorized some other resource.
     const workbookAccess = await this.authz.can(userId, {
       resourceType: "workbook",
       resourceId: workbookId,
@@ -78,17 +77,14 @@ export class PublishVersionUseCase {
       ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
 
-    // A version snapshots the full code of every referenced protocol/macro, and
-    // the snapshot is later readable through the workbook. Cells can reference
-    // arbitrary UUIDs, so a caller could otherwise exfiltrate a private
-    // macro/protocol's code by referencing its UUID. Verify the publishing user
-    // can `read` each referenced entity and fail closed when one exists but is
-    // inaccessible (`forbidden`). A dangling ref (`not-found`) is tolerated as
-    // before — there is no code to snapshot and nothing to leak.
+    // A version snapshots the full code of every referenced protocol/macro, and the
+    // snapshot is later readable through the workbook. Cells can name arbitrary
+    // UUIDs, so without this a caller could exfiltrate a private macro/protocol's
+    // code just by referencing it. A dangling ref (`not-found`) is tolerated —
+    // nothing to snapshot, nothing to leak.
     //
-    // The checks are independent and read-only, so run the (deduped) set in
-    // parallel — a large workbook would otherwise serialize hundreds of
-    // multi-query authorization checks.
+    // Run in parallel: the checks are independent and read-only, and a large
+    // workbook would otherwise serialize hundreds of multi-query authorizations.
     const refChecks = await Promise.all([
       ...protocolIds.map((id) =>
         this.authz

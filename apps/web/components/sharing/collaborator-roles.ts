@@ -1,17 +1,6 @@
 import type { GrantRole } from "@repo/api/domains/sharing/sharing.schema";
 
-/**
- * The two capabilities the sharing UI offers. The API accepts four grant roles,
- * but owner/admin and member/viewer are pairwise equivalent in what they let a
- * grantee do, so the UI collapses them:
- *
- * - `admin`  → "Can edit"  (read, contribute, edit, manage, re-share)
- * - `viewer` → "Can view"  (read, plus adding measurements and annotations)
- *
- * Grants created here always carry `admin` or `viewer`; `owner`/`member` still
- * arrive from other sources (seeds, a grant made before this UI existed) and are
- * displayed under their collapsed label rather than as a fifth and sixth option.
- */
+/** UI roles; API `owner`/`member` values collapse to `admin`/`viewer`. */
 export type ShareableRole = "admin" | "viewer";
 
 /** Options offered in the role selects, most access first. */

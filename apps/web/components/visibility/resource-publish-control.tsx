@@ -29,24 +29,13 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
- * The types **this control** publishes — deliberately not the same set as
- * `PublishableResourceType` from `@repo/api/domains/visibility/visibility.schema`,
- * which is every publishable type and includes experiments.
- *
- * Experiments are excluded because they have their own settings card, and mixing
- * the two up is a real hazard rather than a theoretical one: the dispatch below is
- * keyed on this type, so an `experiment` reaching it would be published through
- * the wrong route. Derived with `Exclude` rather than written out, so the shared
- * set stays the source of truth and the difference is exactly one named exception.
+ * Experiments use their own settings card, so exclude them from this route
+ * dispatch. Deriving the type keeps a newly publishable resource a compile error.
  */
-export type PublishSelectResourceType = Exclude<PublishableResourceType, "experiment">;
+type PublishSelectResourceType = Exclude<PublishableResourceType, "experiment">;
 
-/**
- * Where the explanatory copy goes. `block` is the experiment card's treatment —
- * a tinted box under the select. `tooltip` puts it on an info icon beside the
- * heading, for a host too narrow to give it a line.
- */
-export type PublishControlInfoPlacement = "block" | "tooltip";
+/** Narrow horizontal hosts use a tooltip; full-width hosts keep the copy visible. */
+type PublishControlInfoPlacement = "block" | "tooltip";
 
 interface ResourcePublishControlProps {
   resourceType: PublishSelectResourceType;
@@ -58,23 +47,9 @@ interface ResourcePublishControlProps {
 }
 
 /**
- * Visibility select for macros / protocols / workbooks — the same control the
- * experiment settings card has, so all four types are set the same way.
- *
- * The backend had monotonic `setVisibility` routes for all three types and they were
- * creatable as private, but the only publish control in the app was the experiment
- * card — so a private macro/protocol/workbook could never be published from the UI
- * and the private → share → publish lifecycle could not be completed. This is the
- * missing control. Choosing "Public" is confirmed before it is written, and the
- * select goes inert once public, because visibility never goes back.
- *
- * The explanatory copy defaults to the experiment card's block, which is what the
- * details sidebars want: they stack full-width rows, so a couple of wrapped lines
- * cost nothing. A host laying its fields out horizontally has no room for that —
- * a block there wraps and breaks the row — so it asks for `tooltip` instead.
- *
- * Gated on `canManage` rather than on `createdBy`, so an admin grantee can
- * publish and a viewer cannot — the same decision the backend route enforces.
+ * Completes the private → share → publish flow for non-experiment resources.
+ * Publishing is irreversible, so it requires confirmation and becomes inert once
+ * public; `canManage` mirrors the backend gate instead of relying on ownership.
  */
 export function ResourcePublishControl({
   resourceType,
@@ -90,19 +65,14 @@ export function ResourcePublishControl({
   const setProtocolVisibility = useSetProtocolVisibility();
   const setWorkbookVisibility = useSetWorkbookVisibility();
 
-  // A lookup rather than a ternary chain, because a chain needs a final `else` and
-  // that `else` silently swallows anything the chain does not name — a type added
-  // to the publishable set would have been published as a workbook. Here it is a
-  // missing key, which does not compile.
+  // The exhaustive lookup makes a newly publishable type a compile error.
   const mutation: typeof setMacroVisibility = {
     macro: setMacroVisibility,
     protocol: setProtocolVisibility,
     workbook: setWorkbookVisibility,
   }[resourceType];
 
-  // Show the published state immediately on confirm, before the refetch lands.
-  // Visibility is monotonic, so OR-ing with the prop is safe: if it is published
-  // elsewhere the prop wins, and nothing can move it back to private.
+  // Visibility is monotonic, so optimistic local publication cannot go stale.
   const [publishedLocally, setPublishedLocally] = useState(false);
   const isPublic = visibility === "public" || publishedLocally;
 
@@ -132,8 +102,7 @@ export function ResourcePublishControl({
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* The copy is the icon's accessible name too, so it is readable
-                    without hovering. */}
+                {/* Keep the help copy available without hover. */}
                 <button type="button" className="text-muted-foreground" aria-label={helpText}>
                   <Info className="h-3.5 w-3.5" />
                 </button>
@@ -148,8 +117,7 @@ export function ResourcePublishControl({
 
       <Select
         value={isPublic ? "public" : "private"}
-        // Only private → public is reachable, and it is irreversible, so the
-        // choice opens the confirmation instead of writing.
+        // Publishing is irreversible, so selecting it opens confirmation.
         onValueChange={(value) => {
           if (value === "public") setShowConfirm(true);
         }}
@@ -165,9 +133,6 @@ export function ResourcePublishControl({
       </Select>
 
       {infoPlacement === "block" && (
-        // The experiment card's box, verbatim, so the two surfaces read alike.
-        // `mt-2` because the heading→select gap here is the sidebar's tighter
-        // `space-y-1`, and the copy still wants the card's breathing room.
         <div className="bg-surface-light text-muted-foreground mt-2 flex items-center gap-2 rounded-md p-2 text-xs">
           <Info className="text-primary h-4 w-4 shrink-0" />
           <div className="leading-tight">{helpText}</div>

@@ -28,14 +28,7 @@ function nameParts(displayName: string): { firstName: string; lastName: string }
   return { firstName: first, lastName: rest.join(" ") };
 }
 
-/**
- * One row of the collaborators list.
- *
- * Grant rows carry the two-tier role select and a revoke action. Owner rows carry
- * neither: an owner holds full control through the organization that owns the
- * resource, so there is no tier to move them between, nothing to revoke, and no
- * way to leave — they get a static "Owner" badge instead.
- */
+/** Grant controls or a static owning-organization owner row. */
 export function CollaboratorRow({
   collaborator,
   onRoleChange,

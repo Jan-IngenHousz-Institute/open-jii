@@ -32,20 +32,10 @@ interface WorkbookDangerZoneProps {
 }
 
 /**
- * Delete a workbook, on its detail surface.
- *
- * This used to live on every list row, where its only gate was
- * experiment-usage + a feature flag. Once lists started including other people's
- * public and shared workbooks, that meant a plain reader was offered Delete on a
- * workbook they had no rights to — it 403'd at the API, but offering it at all
- * breaks "a viewer gains no control". The action moved here because
- * `can(manage)` is only delivered on the detail response (deliberately: list
- * rows would cost one `can()` resolution each), and it is gated the same way as
- * the macro and protocol danger zones.
- *
- * The feature flag is a *separate* safety concern and is kept: deleting a
- * workbook that experiments depend on unlinks them and loses their measurement
- * flow, so that path stays flagged even for someone who may manage it.
+ * Delete moved off list rows because only detail responses carry `canManage`;
+ * otherwise readers of public/shared workbooks saw an action that could only 403.
+ * The separate feature flag remains because deleting an in-use workbook unlinks
+ * experiments and loses their measurement flow.
  */
 export function WorkbookDangerZone({
   workbookId,

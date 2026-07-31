@@ -1,12 +1,9 @@
+import { ANONYMOUS_PRINCIPAL } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { matchQuery } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
-import {
-  ANONYMOUS_PRINCIPAL,
-  collaboratorsQueryKey,
-  granteeOrganizationsQueryKey,
-} from "./sharing-query-keys";
+import { collaboratorsQueryKey, granteeOrganizationsQueryKey } from "./sharing-query-keys";
 
 describe("sharing query keys", () => {
   describe("collaboratorsQueryKey", () => {

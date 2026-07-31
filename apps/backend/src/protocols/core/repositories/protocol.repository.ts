@@ -97,11 +97,10 @@ export class ProtocolRepository {
         );
       }
 
-      // Access scoping is unconditional — it applies to the "my" view too. A view
-      // may narrow what the caller can see; it must never widen it. Authorship is
-      // not an access path (`can()` does not consult `created_by`), so a creator
-      // since removed from the owning organization, holding no grant, can no longer
-      // read the protocol and must not get its body back through a listing.
+      // Unconditional, the "my" view included: a view may narrow what the caller
+      // sees but must never widen it. Authorship is not an access path (`can()`
+      // does not consult `created_by`), so a creator since removed from the owning
+      // org, holding no grant, must not get the protocol's body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "protocol",
@@ -219,10 +218,9 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      // Grant cleanup and the protocol delete are one transaction: the grants
-      // table is polymorphic (no FK cascade), so it must be cleaned by hand —
-      // and if the protocol delete failed after a committed cleanup, the
-      // protocol would survive with every grant on it already gone, silently
+      // One transaction: the grants table is polymorphic (no FK cascade) so it must
+      // be cleaned by hand, and a delete that failed after a committed cleanup
+      // would leave the protocol alive with every grant on it gone — silently
       // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "protocol", id);

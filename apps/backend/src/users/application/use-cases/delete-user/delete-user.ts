@@ -45,7 +45,7 @@ export class DeleteUserUseCase {
 
       // Pre-flight blocker: surfaces the hand-off UX before anything is touched.
       // `UserRepository.delete` re-checks this inside its transaction under row
-      // locks, which is what actually makes the invariant hold (amend-02 N2).
+      // locks, which is what actually makes the invariant hold.
       const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyResources(id);
 
       return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {

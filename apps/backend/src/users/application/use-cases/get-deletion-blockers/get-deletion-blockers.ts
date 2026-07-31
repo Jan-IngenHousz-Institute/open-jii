@@ -10,10 +10,9 @@ import { UserRepository } from "../../../core/repositories/user.repository";
  * candidates. The delete-account dialog uses this to let the user hand admin off —
  * per resource — before deleting.
  *
- * Every shareable type can block, because every one of them is owned by an
- * organization somebody has to answer for. A macro nobody else administers blocks
- * deletion exactly as an experiment does — and so does a device, whose orphaning
- * would leave live AWS hardware nobody can tear down.
+ * Every shareable type can block, because every one is owned by an organization
+ * somebody has to answer for — including devices, whose orphaning would leave live
+ * AWS hardware nobody can tear down.
  */
 @Injectable()
 export class GetDeletionBlockersUseCase {

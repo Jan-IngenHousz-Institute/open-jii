@@ -28,15 +28,10 @@ export type ResourceType = "experiment" | "protocol" | "macro" | "workbook" | "d
  * Actions a role may hold on a resource.
  *
  * `contribute` means "add or alter the resource's data" — for an experiment,
- * measurements and annotations. It is deliberately weaker than `update` (which
- * covers the resource's own content and settings) and stronger than `read`:
- * contributing is what a collaborator is invited to an experiment to do, while
- * merely being able to see an experiment must never imply writing data into it.
- *
- * Only experiments have data to contribute to, so only they hand `contribute` out
- * at the read tier. It stays in the statement for every resource type — Better Auth
- * needs one literal action list, and full-control roles hold every verb regardless —
- * in the same way devices carry `contribute` with nothing to contribute to.
+ * measurements and annotations. Deliberately between `read` and `update`: being
+ * able to see an experiment must never imply writing data into it. Only experiments
+ * have data to contribute to, but the verb stays in the statement for every type
+ * because Better Auth needs one literal action list.
  */
 const ACTIONS = ["read", "contribute", "update", "share", "manage"] as const;
 
@@ -106,12 +101,10 @@ export type OrgRole = keyof typeof roles;
  * because the two disagree about the middle tier on purpose.
  *
  * A grant is somebody deliberately handing you a resource, so on an experiment the
- * lowest grant tier ("Can view") carries `contribute`: being added to an experiment
- * is what makes you a contributor to it. Belonging to the owning organization is not
- * the same act — an org `member` gets read only, and so does a public experiment's
- * passer-by. Both of those tiers must stay unable to write data, which is exactly
- * why grant `member`/`viewer` cannot be aliased onto the org `member` role the way
- * it was when both meant read-only.
+ * lowest grant tier ("Can view") carries `contribute`. Belonging to the owning
+ * organization is not the same act: an org `member` gets read only, as does a public
+ * experiment's passer-by. That is why grant `member`/`viewer` can no longer be
+ * aliased onto the org `member` role the way it was when both meant read-only.
  *
  * `owner`/`admin` mean full control in both matrices, so they are shared.
  */
@@ -121,10 +114,9 @@ const grantRoles = {
   member: ac.newRole({
     ...memberAc.statements,
     experiment: READ_AND_CONTRIBUTE,
-    // Only experiments have data to contribute. The read tier says "may add data"
-    // where that means something and stays silent elsewhere, so a future generic
-    // surface cannot read a promise out of it that nothing enforces. `owner`/
-    // `admin` carry the verb everywhere simply because they carry every verb.
+    // Silent on the other types rather than generous: only experiments have data to
+    // contribute to, so a future generic surface cannot read a promise out of this
+    // that nothing enforces.
     protocol: READ_ONLY,
     macro: READ_ONLY,
     workbook: READ_ONLY,

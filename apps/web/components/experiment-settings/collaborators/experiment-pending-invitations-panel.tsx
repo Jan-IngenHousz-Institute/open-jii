@@ -17,13 +17,7 @@ interface ExperimentPendingInvitationsPanelProps {
   canRevoke: boolean;
 }
 
-/**
- * Pending invitations: who was invited, and the access they get on acceptance.
- *
- * The tier is shown as a label, not a select — it is fixed once sent, because
- * there is no endpoint to edit it, so the only way to change it is to revoke and
- * re-invite.
- */
+/** Pending invitations with their fixed acceptance tier. */
 export function ExperimentPendingInvitationsPanel({
   invitations,
   isArchived = false,

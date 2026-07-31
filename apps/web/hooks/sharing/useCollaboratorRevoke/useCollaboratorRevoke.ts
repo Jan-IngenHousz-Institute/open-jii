@@ -7,24 +7,10 @@ import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.
 import { useSession } from "@repo/auth/client";
 
 /**
- * Revoke a direct grant. Unlike the other sharing mutations this returns 204
- * (no body), so the row is dropped from the cache optimistically and the list is
- * refetched on settle. Cache reads and writes use the principal-scoped key.
- *
- * Revoking removes only this grant — the grantee may still reach the resource
- * through their organization role, another grant, or public visibility (doc
- * 008). That caveat is surfaced in the confirmation dialog, not here.
- *
- * **Self-revoke.** A direct admin may revoke their own grant, which can remove
- * the very access that is rendering the page they are on. Invalidating only the
- * collaborator list would leave a private resource sitting on screen with stale
- * data until the user happened to navigate. So when the revoked grantee is the
- * current user, the resource's own detail and list caches are dropped too — the
- * refetch then either succeeds (access survived via another precedence tier) or
- * fails as the route already knows how to handle. The decision stays server-side:
- * we re-ask rather than predict what access is left. Only *user* grantees can be
- * matched here; a self-affecting organization-grant revoke is invisible to the
- * client, and the list refetch remains the backstop.
+ * Revoke returns no list, so the row is removed optimistically and restored on
+ * failure. Self-revoke can remove the access rendering the current page; refresh
+ * the resource caches so stale private content does not remain mounted. The server
+ * then decides whether another access path survives instead of the client guessing.
  */
 export const useCollaboratorRevoke = () => {
   const queryClient = useQueryClient();
@@ -37,11 +23,8 @@ export const useCollaboratorRevoke = () => {
         const listKey = collaboratorsQueryKey(userId, variables.resourceType, variables.id);
         await queryClient.cancelQueries({ queryKey: listKey });
 
-        // The cache holds owner rows as well as grants, and only grants carry an
-        // id — narrowing on `kind` is what keeps the lookup from matching an owner
-        // row whose `id` is simply absent.
+        // Owner rows have no grant id, so narrow before matching.
         const previousGrants = queryClient.getQueryData<ResourceCollaboratorDto[]>(listKey);
-        // Decided before the optimistic removal, while the row is still here.
         const revoked = previousGrants?.find(
           (row) => row.kind === "grant" && row.id === variables.grantId,
         );
@@ -67,8 +50,6 @@ export const useCollaboratorRevoke = () => {
       },
       onSuccess: async (_data, variables, context) => {
         if (!context.revokedSelf) return;
-        // Only on success: a failed revoke changed nothing, so the page is still
-        // backed by real access.
         await Promise.all(
           resourceCacheKeys(variables.resourceType, variables.id).map((queryKey) =>
             queryClient.invalidateQueries({ queryKey }),

@@ -4,12 +4,10 @@ import { Result } from "../../common/utils/fp-utils";
 import { GranteeOrganizationRow, SharingRepository } from "../sharing.repository";
 
 /**
- * Organization lookup for the collaborators grantee picker.
- *
- * Authorization is the scoping itself rather than a `can()` check: the query
- * only ever returns organizations the caller is a member of, so there is no
- * per-resource decision to make and nothing is enumerable that the caller
- * cannot already see. Personal workspaces are excluded in the repository.
+ * Organization lookup for the collaborators grantee picker. Authorization is the
+ * scoping itself rather than a `can()` check: the query only ever returns
+ * organizations the caller is a member of, so nothing is enumerable that they
+ * cannot already see.
  */
 @Injectable()
 export class SearchGranteeOrganizationsUseCase {

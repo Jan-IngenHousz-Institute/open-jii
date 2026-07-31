@@ -21,18 +21,12 @@ export interface AdminTransferResult {
 
 /**
  * Hands admin rights off in bulk so a user can clear their account-deletion
- * blockers in one step. Any shareable type can be a blocker, so this takes them
- * all — including devices, which is what keeps a device from dead-ending the
- * chain: its only exits are handing it over here or deleting it. For each
- * (resource, target):
- *   - the caller must be able to share the resource (authorization);
- *   - the target receives a direct `admin` grant, the surface that owns access
- *     tiers.
+ * blockers in one step. Any shareable type can be a blocker, so this takes them all
+ * — including devices, whose only exits are being handed over here or deleted.
  *
- * This is intentionally allowed on archived experiments — it is the single
- * controlled path for ownership hand-off during account deletion, and it talks to
- * the repository directly rather than going through the guarded sharing use cases.
- * Archived experiments stay immutable everywhere else.
+ * Intentionally allowed on archived experiments (which stay immutable everywhere
+ * else): this is the single controlled hand-off path during account deletion, so it
+ * talks to the repository directly rather than through the guarded use cases.
  *
  * Each transfer succeeds or fails independently; the caller gets a per-resource
  * result so the UI can keep any rows that could not be resolved.
@@ -95,25 +89,22 @@ export class TransferResourceAdminUseCase {
       return { resourceType, resourceId, success: false, error };
     };
 
-    // Managing collaborators is what handing admin rights off is, so `share` is the
-    // authorization — and a missing resource denies here (`can()` answers
-    // "not-found"), so nothing else needs to look it up.
+    // `share` is the authorization, and a missing resource denies here (`can()`
+    // answers "not-found"), so nothing else needs to look it up.
     const decision = await this.authz.can(currentUserId, {
       resourceType,
       resourceId,
       action: "share",
     });
     if (!decision.allow) {
-      // One answer for both of `can()`'s negatives. Telling "no such resource" apart
-      // from "exists, but not yours" would let any authenticated caller confirm that a
-      // uuid names a real resource of a given type, with no grant or membership
-      // needed — the same uniform posture the leave route takes.
+      // One answer for both of `can()`'s negatives: telling "no such resource" apart
+      // from "exists, but not yours" would let any authenticated caller confirm a
+      // uuid names a real resource, with no grant or membership needed.
       return fail("You have no access to transfer admin rights on this resource");
     }
 
-    // The target must be someone the caller could have shared with in the first
-    // place: an activated, non-deleted account. Handing admin to a closed account
-    // would leave the resource unstaffed again.
+    // The target must be someone the caller could have shared with: handing admin to
+    // a closed or deactivated account would leave the resource unstaffed again.
     if (!(await this.repo.granteeIsSelectable("user", targetUserId, currentUserId))) {
       return fail("Target user is not available");
     }

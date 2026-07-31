@@ -1,14 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/**
- * Publishes an experiment (private → public) via the dedicated one-way
- * `setVisibility` route. This is a deliberate, irreversible action, kept
- * separate from the general experiment update mutation: the update path
- * no longer carries `visibility`. On success the experiment, its access
- * summary, and the experiment list are invalidated so the now-public state is
- * reflected everywhere.
- */
+/** Publishes an experiment and invalidates its detail, access, and list caches. */
 export const useSetExperimentVisibility = () => {
   const queryClient = useQueryClient();
 

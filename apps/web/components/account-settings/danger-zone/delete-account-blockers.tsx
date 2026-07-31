@@ -21,10 +21,6 @@ import { resourceCollaboratorsPath } from "../../sharing/resource-routes";
 import { UserAvatar } from "../../user-avatar";
 import { UserSearchPopover } from "../../user-search-popover";
 
-// Each blocker links at its own Collaborators route, built by the shared
-// `resourceCollaboratorsPath` rather than assembled here — a type whose route moved
-// would otherwise send this link somewhere that no longer exists.
-
 /** One blocker's identity: its type + id, which is what a transfer is keyed on. */
 const blockerKey = (blocker: DeletionBlocker) => `${blocker.resourceType}:${blocker.id}`;
 
@@ -52,13 +48,9 @@ function candidateToUserProfile(candidate: UserMetadata): UserProfile {
 }
 
 /**
- * Shown inside the Delete Account dialog when the user is the last person answerable for one or
- * more resources — an experiment, macro, protocol, workbook or device, any of which can be left
- * with nobody in control. A blocking device is the sharpest case: it is live AWS hardware, so its
- * only exits are handing it over here or deleting it. Lets them hand admin off — per resource,
- * with existing collaborators suggested, or one person for all — in a single "Transfer" action.
- * Deletion stays blocked until the list clears (the transfer invalidates the deletion-blocker
- * query, so resolved resources drop off).
+ * Account deletion must not orphan resources—especially live device hardware.
+ * This lets the last responsible admin transfer each blocker or hand all of them
+ * to one eligible user; cache invalidation removes resolved rows after transfer.
  */
 export function DeleteAccountBlockers({
   blockers,
@@ -72,13 +64,12 @@ export function DeleteAccountBlockers({
   const [applyAllUser, setApplyAllUser] = useState<UserProfile | null>(null);
   const { mutate: transferAdmin, isPending } = useTransferResourceAdmin({
     onSuccess: () => {
-      // Resolved resources leave the refetched list; clear local selections.
       setAssignments({});
       setApplyAllUser(null);
     },
   });
 
-  // Candidates who belong to every blocking resource — the clean picks for "transfer all".
+  // Only users present on every blocker can receive all resources.
   const sharedCandidates = useMemo<UserMetadata[]>(() => {
     if (blockers.length === 0) return [];
 
@@ -241,8 +232,7 @@ export function DeleteAccountBlockers({
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {/* An experiment's lifecycle status; the other types have none, so
-                      they are labelled by type instead. */}
+                  {/* Only experiments have a lifecycle status. */}
                   {blocker.status ? (
                     <Badge
                       className={cn(
@@ -317,10 +307,7 @@ interface TransferUserPickerProps {
   disabled?: boolean;
 }
 
-/**
- * A user picker for handing over admin: full platform search via the shared popover, plus the
- * resource's existing collaborators offered as one-click suggestion chips.
- */
+/** User search plus existing-collaborator suggestions for admin transfer. */
 function TransferUserPicker({
   suggestions,
   selectedUser,

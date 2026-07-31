@@ -8,13 +8,7 @@ interface MacroCollaboratorsPageProps {
   params: Promise<{ id: string }>;
 }
 
-/**
- * Who this macro is shared with — a route of its own, so reaching it leaves the
- * details sidebar and the code behind rather than hiding them.
- *
- * The layout has already loaded the macro (and gated on it) before this renders,
- * so the hook resolves from cache and adds no request.
- */
+/** Macro collaborators route; the layout's detail query supplies cached access. */
 export default function MacroCollaboratorsPage({ params }: MacroCollaboratorsPageProps) {
   const { id } = use(params);
   const { data } = useMacro(id);

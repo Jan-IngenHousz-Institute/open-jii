@@ -6,20 +6,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@repo/auth/client";
 
 /**
- * Give up the caller's own direct grant (`DELETE …/collaborators/me`).
- *
- * This exists for grantees below `share` — typically "Can view" — who cannot see
- * the collaborators list and so have no row to self-revoke through
- * `useCollaboratorRevoke`. The server authorizes on the caller's own grant, not
- * `can(share)`.
- *
- * Leaving always removes the caller's own access-conferring row, so on success
- * the resource's own detail and list caches are dropped unconditionally (the
- * self-detection dance in `useCollaboratorRevoke` is unnecessary here — leave is
- * self-affecting by definition). The refetch then either succeeds (access
- * survived via another precedence tier) or fails as the route already handles.
- * The collaborators list cache is invalidated too for the edge case where the
- * caller was share-capable.
+ * Grantees below `share` cannot see a row to self-revoke, so this uses the
+ * caller-own-grant endpoint. Leaving can remove the access rendering the page;
+ * refresh detail/list caches so stale private content does not stay mounted, and
+ * refresh collaborators for the share-capable edge case.
  */
 export const useResourceLeave = () => {
   const queryClient = useQueryClient();

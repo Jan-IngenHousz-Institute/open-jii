@@ -13,17 +13,13 @@ export interface VisibilityRow {
 }
 
 /**
- * Persists a resource's visibility. The read side (current visibility) is
- * served by `AuthorizationService.getOwnership`; this repository owns only the
- * write, keyed by resource type.
+ * Persists a resource's visibility; the read side is served by
+ * `AuthorizationService.getOwnership`.
  *
- * Devices are excluded at the type level (`PublishableResourceType`), not merely
- * unhandled: they are shareable but never publishable, so a device that reached
- * this switch would be a bug the compiler should have caught.
- *
- * Each type is updated in its own branch (rather than a single union-typed
- * query) so Drizzle keeps the row type exact — `visibility` narrows to
- * `"private" | "public"` instead of degrading to `any`.
+ * Each type gets its own branch rather than one union-typed query so Drizzle keeps
+ * the row type exact — `visibility` narrows to `"private" | "public"` instead of
+ * degrading to `any`. Devices are excluded at the type level, so the switch has no
+ * device case by construction.
  */
 @Injectable()
 export class VisibilityRepository {

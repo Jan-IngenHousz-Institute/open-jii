@@ -23,17 +23,9 @@ interface LeaveResourceCardProps {
 }
 
 /**
- * The self-leave affordance for grantees below `share` (`capabilities.canLeave`
- * without `canShare`). They cannot see the collaborators list — it is
- * deliberately share-gated — so they have no row of their own to act on;
- * this card is the surface they get instead.
- *
- * Share-capable users don't need it (their own row's revoke is "leave"), so
- * hosts render this only for `canLeave && !canShare`.
- *
- * On success the user is sent back to the resource list: their access may be
- * gone entirely, and the hook has already dropped the resource's own caches so
- * nothing stale is left behind.
+ * Grantees below `share` cannot see their own row in the share-gated list, so they
+ * need a separate leave surface. Share-capable users leave from their row instead;
+ * after success this redirects to the list because resource access may be gone.
  */
 export function LeaveResourceCard({
   resourceType,

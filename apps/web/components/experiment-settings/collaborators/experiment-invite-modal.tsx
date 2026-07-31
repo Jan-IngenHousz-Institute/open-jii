@@ -24,17 +24,7 @@ interface ExperimentInviteModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * Invite someone to an experiment: an existing account, a whole organization, or
- * an email address that has no account yet.
- *
- * The tier chosen here is the tier they end up with — immediately for a grant,
- * on acceptance for an emailed invitation. It defaults to "Can view", which on an
- * experiment is the contributing tier: reading plus adding measurements and
- * annotations. That is also why a public experiment gets a different hint —
- * viewing is already universal there, so "Can view" is bought for the
- * contribution it carries.
- */
+/** Invites an account, organization, or email with the selected experiment tier. */
 export function ExperimentInviteModal({
   experimentId,
   invitations,

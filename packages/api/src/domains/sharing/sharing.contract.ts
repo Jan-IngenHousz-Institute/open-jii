@@ -12,18 +12,16 @@ import {
 } from "./sharing.schema";
 
 /**
- * Generic per-resource sharing (collaborators), backed by the polymorphic
- * `resource_grants` table and gated inside each use-case by
- * `can(userId, { resourceType, resourceId, action: "share" })` — no static guard,
- * since `resourceType` is a runtime path value. One contract serves
- * every shareable resource type (experiment/macro/protocol/workbook/device).
+ * Generic per-resource sharing (collaborators) over the polymorphic
+ * `resource_grants` table — one contract for every shareable type. Authorization is
+ * `can(share)` inside each use-case rather than a static guard, because
+ * `resourceType` is a runtime path value.
  *
  * Every operation is scoped to its resource, so a grant id from elsewhere cannot be
- * read or edited through it. listGrants is gated on `share` (not `read`) so
- * collaborator identities are not enumerable on public resources.
+ * read or edited through it, and `listGrants` is gated on `share` rather than
+ * `read` so collaborator identities are not enumerable on public resources.
  *
- * Mutations return the full updated collaborators list so the UI can render it
- * without a follow-up fetch.
+ * Mutations return the full updated list so the UI needs no follow-up fetch.
  */
 export const sharingContract = {
   listGrants: oc
@@ -51,14 +49,13 @@ export const sharingContract = {
     .input(zCollaboratorGrantPathParams.merge(zUpdateCollaboratorBody))
     .output(zResourceGrantList),
   /**
-   * Give up the caller's own direct grant ("leave"). The one sharing operation
-   * NOT gated on `share`: the caller's own grant is the authority, so a viewer
-   * ("Can view") can remove themselves even though they can never see the
-   * collaborators list. 404 when the caller holds no direct grant — including
-   * access held only via an organization grant or org membership (leaving an
-   * organization is a different operation) — so nothing about the resource's
-   * existence or other grantees is disclosed. Declared before `revokeGrant` so
-   * the literal `me` segment is matched ahead of `{grantId}`.
+   * Give up the caller's own direct grant ("leave"). The one sharing operation NOT
+   * gated on `share`: the caller's own grant is the authority, so a "Can view"
+   * grantee can remove themselves even though the collaborators list is invisible to
+   * them. A uniform 404 when they hold no direct grant — including access held only
+   * via an org grant or org membership (leaving an organization is a different
+   * operation) — so nothing about the resource or its other grantees is disclosed.
+   * Declared before `revokeGrant` so `me` is matched ahead of `{grantId}`.
    */
   leaveResource: oc
     .route({
@@ -77,12 +74,10 @@ export const sharingContract = {
     .input(zCollaboratorGrantPathParams)
     .output(z.void()),
   /**
-   * Organization lookup for the grantee picker's "share with an organization"
-   * option. Lives in the sharing domain (not a general `organizations` domain)
-   * because it exists solely to feed that picker and is scoped accordingly —
-   * organizations the caller is a member of, personal workspaces excluded. A
-   * full organizations domain (CRUD, members, teams, base permission) is Phase
-   * 4's to design; it should absorb this route then.
+   * Organization lookup for the grantee picker. Lives in the sharing domain rather
+   * than a general `organizations` one because it exists solely to feed that picker
+   * and is scoped accordingly — organizations the caller is a member of, personal
+   * workspaces excluded. A full organizations domain should absorb it later.
    */
   searchGranteeOrganizations: oc
     .route({

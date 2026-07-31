@@ -8,14 +8,7 @@ interface WorkbookCollaboratorsPageProps {
   params: Promise<{ id: string }>;
 }
 
-/**
- * Who this workbook is shared with — a route of its own, so reaching it leaves
- * the notebook editor, its metadata and the danger zone behind rather than
- * hiding them.
- *
- * The layout has already loaded the workbook (and gated on it) before this
- * renders, so the hook resolves from cache and adds no request.
- */
+/** Workbook collaborators route; the layout's detail query supplies cached access. */
 export default function WorkbookCollaboratorsPage({ params }: WorkbookCollaboratorsPageProps) {
   const { id } = use(params);
   const { data } = useWorkbook(id);

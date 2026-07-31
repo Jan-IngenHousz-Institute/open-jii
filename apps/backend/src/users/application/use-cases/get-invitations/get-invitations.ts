@@ -17,15 +17,10 @@ export class GetInvitationsUseCase {
   /**
    * Retrieves all pending invitations for a given resource.
    *
-   * Gated on **`share`**, like `listGrants` — a pending invitation is part of the
-   * same collaborator picture, and it discloses more than the grants list does: the
-   * invitee's email address (someone who may not even have an account yet) plus the
-   * access they were offered. Reading it therefore requires the capability that
-   * manages collaborators, not merely read access to the resource.
-   *
-   * `not-found` is distinguished from `forbidden` the same way the sharing module
-   * does it, so a caller learns nothing from the status code that the resource's own
-   * visibility does not already tell them.
+   * Gated on **`share`**, like `listGrants`: a pending invitation discloses more
+   * than the grants list does — the invitee's email address (someone who may not
+   * even have an account) plus the access they were offered — so reading it requires
+   * the capability that manages collaborators, not merely read access.
    */
   async execute(
     resourceType: "experiment",

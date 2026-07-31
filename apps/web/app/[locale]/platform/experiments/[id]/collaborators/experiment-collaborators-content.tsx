@@ -25,18 +25,7 @@ interface ExperimentCollaboratorsPageProps {
   params: Promise<{ id: string }>;
 }
 
-/**
- * The one place people are managed on an experiment: collaborators (direct
- * grants), pending email invitations, and requests to join — one filter, one
- * invite action, one tab strip.
- *
- * Every tab here mirrors the capability its endpoint is guarded on: grants and
- * pending invitations are `can(share)` surfaces (the latter exposes invitee
- * addresses), join requests are `can(manage)`. Nothing is fetched — or rendered —
- * for a caller the capability signal already rules out, so a viewer with neither
- * capability gets the heading and their leave card rather than tabs that could
- * only ever look empty.
- */
+/** Capability-gated collaborators, invitations, and join-request tabs. */
 export default function ExperimentCollaboratorsPage({ params }: ExperimentCollaboratorsPageProps) {
   const { id } = use(params);
   const { t } = useTranslation();

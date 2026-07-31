@@ -14,22 +14,15 @@ interface ResourceCollaboratorsRouteProps {
   resourceType: SharingResourceType;
   resourceId: string;
   /**
-   * `capabilities` from the detail response — `undefined` while it is still
-   * unknown. `canShare` earns the full surface; `canLeave` without it earns only
-   * the leave card, because a grantee below `share` cannot see the list and so
-   * has no row of their own to give up their access from.
+   * Share access earns the list; leave-only access earns the self-leave card.
+   * Undefined means unresolved and must not be mistaken for no surface.
    */
   capabilities?: { canShare: boolean; canLeave: boolean };
 }
 
 /**
- * The body of a macro's, protocol's or workbook's Collaborators route — the same
- * three outcomes on all of them, so the routes themselves stay thin wrappers
- * that only know which detail hook to read.
- *
- * Someone with neither capability has no sharing surface at all, and never saw
- * the tab that leads here. They can still type the URL, so send them back to the
- * resource rather than leaving them on a blank route.
+ * A user with neither capability never saw this tab but may visit its URL, so
+ * redirect them to the detail route instead of leaving a blank page behind.
  */
 export function ResourceCollaboratorsRoute({
   resourceType,
@@ -40,12 +33,10 @@ export function ResourceCollaboratorsRoute({
   const locale = useLocale();
 
   const detailPath = resourceDetailPath(locale, resourceType, resourceId);
-  // Only once the capabilities are actually in hand: "not yet known" must not
-  // read as "nothing to show here".
+  // Wait for capabilities before deciding that no surface exists.
   const hasNoSurface = !!capabilities && !capabilities.canShare && !capabilities.canLeave;
 
   useEffect(() => {
-    // `replace`, not `push`: this route is not somewhere to come back to.
     if (hasNoSurface) router.replace(detailPath);
   }, [hasNoSurface, detailPath, router]);
 

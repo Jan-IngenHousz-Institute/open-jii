@@ -11,18 +11,14 @@ import { SharingRepository } from "../sharing.repository";
  * "Can view" grantee remove themselves even though the collaborators list is
  * invisible to them.
  *
- * No `can()` call and no resource lookup happen at all: the answer depends only
- * on the caller's own rows. Holding no direct grant — whether the resource is
- * missing, private-and-invisible, or reachable only via an organization grant,
- * org role, or public visibility — is one uniform 404, so this route discloses
- * nothing about the resource or its other grantees.
+ * No `can()` call and no resource lookup happen at all. Holding no direct grant —
+ * whether the resource is missing, invisible, or reachable only via an org grant,
+ * org role or public visibility — is one uniform 404, so this route discloses
+ * nothing about the resource or its other grantees. Access may survive the leave
+ * through another tier; the UI says so rather than promising otherwise.
  *
- * Access may survive the leave through another precedence tier (org role,
- * org grant, public read); the UI says so rather than promising otherwise.
- *
- * The last-admin staffing invariant still applies (inside `repo.leave`'s
- * transaction): a resource's last admin cannot leave it — including its creator,
- * who holds a direct admin grant from create time on all four resource types.
+ * The last-admin staffing invariant still applies, inside `repo.leave`'s
+ * transaction.
  */
 @Injectable()
 export class LeaveResourceUseCase {

@@ -322,8 +322,8 @@ describe("AcceptPendingInvitationsUseCase", () => {
       //
       // The owner is the inviter here: their share access comes from the owning
       // personal-org role, so their *direct* grant can be removed to leave the
-      // invitee as the only staffing grant while F2's re-auth still passes — which
-      // isolates the staffing guard as the thing under test.
+      // invitee as the only staffing grant while the inviter re-auth check still
+      // passes — which isolates the staffing guard as the thing under test.
       const ownerId = await testApp.createTestUser({ email: `owner-${crypto.randomUUID()}@x.com` });
       const { experiment } = await testApp.createExperiment({
         name: `Exp ${crypto.randomUUID()}`,

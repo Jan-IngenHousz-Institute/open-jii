@@ -26,19 +26,9 @@ interface RevokeCollaboratorDialogProps {
 }
 
 /**
- * Revoke confirmation.
- *
- * Carries the caveat that revoking removes *this grant only*. The grantee may
- * still reach the resource through another precedence tier — an owner/admin role
- * in the owning organization, that organization's base permission, another
- * grant (team or organization), or public visibility. Removing access entirely
- * means checking those too, so the dialog says so rather than implying the
- * revoke is sufficient.
- *
- * Giving up one's own grant is the same operation seen from the other side, so it
- * reuses this dialog under "leave" wording: what is lost is the caller's own
- * access, and the caveat becomes the reassurance that they may still be able to
- * read the resource by another route.
+ * Revoking removes only this grant, so organization, another grant, or public
+ * access may survive. Self-leave reuses the same operation and caveat under
+ * caller-focused wording instead of implying all access is necessarily lost.
  */
 export function RevokeCollaboratorDialog({
   open,

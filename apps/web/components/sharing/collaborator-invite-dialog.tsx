@@ -36,26 +36,13 @@ interface CollaboratorInviteDialogProps {
   existingGranteeIds?: string[];
   /** Addresses with a pending invitation — not offered again either. */
   existingEmails?: string[];
-  /**
-   * Send an email invitation carrying the chosen tier. Supplying it is what turns
-   * on the picker's "invite by email" affordance, so a resource with nowhere to
-   * park a pending invitation simply omits it.
-   */
+  /** Omit when the host has nowhere to persist a pending email invitation. */
   onEmailInvite?: (email: string, tier: ShareableRole) => Promise<void>;
   isEmailInvitePending?: boolean;
   /** What the chosen tier means here — e.g. contribution on a public experiment. */
   hint?: React.ReactNode;
 }
 
-/**
- * The one place where collaborators are added.
- *
- * A single search field resolves to a user, an organization, or an email address
- * to invite; a single dropdown picks the tier. Users and organizations get their
- * grant immediately; an invited address gets the same tier once the invitation is
- * accepted. Both paths default to "Can view", which on an experiment is the
- * contributing tier — reading plus adding measurements and annotations.
- */
 export function CollaboratorInviteDialog({
   resourceType,
   resourceId,

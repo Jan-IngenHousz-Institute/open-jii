@@ -38,15 +38,7 @@ interface EmbargoFormValues {
   embargoUntil?: string;
 }
 
-/**
- * Experiment visibility settings: the visibility select, and — while private —
- * the embargo date that schedules the automatic transition.
- *
- * Choosing "public" is irreversible, so it is confirmed in a dialog and written
- * through the dedicated `setVisibility` route rather than the general update
- * body, which does not accept `visibility` at all. The select never submits; it
- * reflects the persisted value and goes inert once public.
- */
+/** One-way publish control and private-experiment embargo settings. */
 export function ExperimentVisibilityCard({
   experimentId,
   initialVisibility,

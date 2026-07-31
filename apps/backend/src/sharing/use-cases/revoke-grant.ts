@@ -7,12 +7,9 @@ import { AppError, Result, failure, success } from "../../common/utils/fp-utils"
 import { SharingRepository } from "../sharing.repository";
 
 /**
- * Revoke a grant. Gated on `share`. Access may still persist via another
- * precedence tier (org role, another grant, public read), and the UI says so rather
- * than promising that revoking one grant removes access.
- *
- * Refuses to revoke the **last** admin/owner user grant on an experiment, which
- * would leave it with nobody able to administer it.
+ * Revoke a grant. Gated on `share`. Access may still persist via another precedence
+ * tier (org role, another grant, public read), and the UI says so rather than
+ * promising that revoking one grant removes access.
  */
 @Injectable()
 export class RevokeGrantUseCase {
@@ -36,7 +33,7 @@ export class RevokeGrantUseCase {
       );
     }
 
-    // The staffing invariant is enforced inside `repo.revoke`, in the same
+    // The last-admin invariant is enforced inside `repo.revoke`, in the same
     // transaction as the delete — see SharingRepository.guardedWrite.
     const deleted = await this.repo.revoke({ resourceType, resourceId, grantId });
     if (deleted.isFailure()) {

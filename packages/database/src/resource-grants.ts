@@ -48,12 +48,10 @@ const grantUniqueTarget = [
 ] as const;
 
 /**
- * Grant roles that count as **staffing** a resource: they confer full control,
- * so at least one of them must survive on every shared resource. The last-admin
- * invariant, the account-deletion sole-admin blocker and the join-request admin
- * notifications all read user grants carrying one of these. Team and organization
- * grantees deliberately do not count — a named person has to be answerable for
- * the resource.
+ * Grant roles that count as **staffing** a resource — they confer full control, and
+ * the last-admin invariant, the account-deletion blocker and the join-request admin
+ * notifications all read user grants carrying one of them. Team and organization
+ * grantees deliberately do not count: a named person has to be answerable.
  */
 export const STAFFING_GRANT_ROLES = ["owner", "admin"] as const;
 
@@ -91,16 +89,13 @@ export async function upsertGrant(db: DbOrTx, input: GrantInput): Promise<Resour
 }
 
 /**
- * Ensure `userId` holds a grant that **staffs** this resource. The two paths that
- * mint an admin tier outside the sharing endpoints both go through here: seeding a
- * resource's creator at create time, and handing admin to a transfer target.
+ * Ensure `userId` holds a grant that **staffs** this resource — used by the two
+ * paths that mint an admin tier outside the sharing endpoints (creator seeding and
+ * the admin hand-off).
  *
- * Idempotent, and never lowers anyone's access: a grantee who already holds a
- * staffing role (`owner` or `admin`) is left alone, so re-running can't demote an
- * `owner` to `admin`; a `viewer`/`member` grant is promoted to `admin`.
- *
- * That "raises only" property is why callers need no staffing guard: this can only
- * ever add a staffing grant, never remove the last one.
+ * Idempotent and raises only: an existing `owner`/`admin` is left alone (so a
+ * re-run cannot demote an owner), a `viewer`/`member` is promoted. That is why
+ * callers need no staffing guard — this can never remove the last staffing grant.
  */
 export async function ensureDirectAdminGrant(
   db: DbOrTx,

@@ -52,14 +52,12 @@ export class UpgradeWorkbookVersionUseCase {
         );
       }
 
-      // The route only guards `manage` on the experiment, but this operation
-      // reads the workbook's current cells and pins (or mints) a version from
-      // them. Require read access to the workbook itself, mirroring
-      // attach-workbook: a client-supplied cross-resource reference is checked in
-      // the use-case. Without this, someone whose workbook grant was revoked could
-      // still capture post-revocation workbook state through an experiment they
-      // manage. Gated before both branches below, since pinning an existing
-      // latest version never reaches PublishVersionUseCase.
+      // The route only guards `manage` on the experiment, but this reads the
+      // workbook's current cells and pins (or mints) a version from them. Without a
+      // read check here, someone whose workbook grant was revoked could still
+      // capture post-revocation workbook state through an experiment they manage.
+      // Gated before both branches: pinning an existing latest version never
+      // reaches PublishVersionUseCase.
       const workbookAccess = await this.authz.can(userId, {
         resourceType: "workbook",
         resourceId: experiment.workbookId,

@@ -250,10 +250,8 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
 // ── Capability signal (detail responses) ────────────────────────
 
 /**
- * The caller's capabilities as the macro/protocol/workbook *detail* routes
- * return them. Defaults to full control (the common case: you are looking at
- * your own resource); pass `{ canUpdate: false, ... }` to model a read-only
- * viewer, or use `readOnlyCapabilities`.
+ * A fully enabled capability fixture. Override individual flags or use
+ * `readOnlyCapabilities` for a viewer.
  */
 export function createCapabilities(
   overrides: Partial<ResourceCapabilities> = {},
@@ -263,9 +261,6 @@ export function createCapabilities(
     canUpdate: true,
     canManage: true,
     canShare: true,
-    // Creation seeds the creator's own admin grant on every shareable type, so the
-    // common case does have a row to give up (the leave affordance still only shows
-    // below `share`, and the server refuses a last admin's departure).
     canLeave: true,
     ...overrides,
   };

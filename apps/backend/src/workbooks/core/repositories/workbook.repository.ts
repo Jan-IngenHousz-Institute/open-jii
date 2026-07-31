@@ -190,11 +190,10 @@ export class WorkbookRepository {
         );
       }
 
-      // Access scoping is unconditional — it applies to the "my" view too. A view
-      // may narrow what the caller can see; it must never widen it. Authorship is
-      // not an access path (`can()` does not consult `created_by`), so a creator
-      // since removed from the owning organization, holding no grant, can no longer
-      // read the workbook and must not get its body back through a listing.
+      // Unconditional, the "my" view included: a view may narrow what the caller
+      // sees but must never widen it. Authorship is not an access path (`can()`
+      // does not consult `created_by`), so a creator since removed from the owning
+      // org, holding no grant, must not get the workbook's body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "workbook",
@@ -283,10 +282,9 @@ export class WorkbookRepository {
 
   async delete(id: string): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
-      // Grant cleanup and the workbook delete are one transaction: the grants
-      // table is polymorphic (no FK cascade), so it must be cleaned by hand —
-      // and if the workbook delete failed after a committed cleanup, the
-      // workbook would survive with every grant on it already gone, silently
+      // One transaction: the grants table is polymorphic (no FK cascade) so it must
+      // be cleaned by hand, and a delete that failed after a committed cleanup
+      // would leave the workbook alive with every grant on it gone — silently
       // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "workbook", id);

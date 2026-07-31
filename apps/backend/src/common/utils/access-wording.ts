@@ -4,12 +4,10 @@ export interface AccessTerms {
 }
 
 /**
- * Human-readable description of what someone was granted, for the transactional
- * "added to an experiment" / invitation emails.
- *
- * The wording matches the labels the collaborators UI uses — "Can edit" / "Can
- * view" — so the email and the screen agree. "Can view" also carries the right to
- * add measurements and annotations, which is why it reads as contributing.
+ * Human-readable description of what someone was granted, for the invitation
+ * emails. Tracks the collaborators UI's "Can edit" / "Can view" labels so the email
+ * and the screen agree; "Can view" reads as contributing because that tier also
+ * carries the right to add measurements and annotations.
  */
 export function describeAccess({ tier }: AccessTerms): string {
   return tier === "admin"

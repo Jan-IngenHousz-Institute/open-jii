@@ -7,16 +7,9 @@ import initTranslations from "@repo/i18n/server";
 import { createServerOrpcClient } from "./server-orpc";
 
 /**
- * Server-side title helpers for authenticated `/platform` entity routes.
- *
- * Each route resolves a recognizable, localized title before the root
- * `%s | openJII` template (see `app/layout.tsx`). The fetchers below run under
- * the caller's session (cookie-forwarded, see {@link createServerOrpcClient})
- * and are request-memoized with React `cache`, so the metadata fetch shares a
- * response with any sibling fetch of the same entity in the same request and is
- * never persisted across users. Any failure (403/404/network) resolves to
- * `null`, and callers fall back to a safe generic localized label rather than
- * leaking inaccessible entity data.
+ * Fetches run with the caller's session and are memoized only within that request,
+ * so titles can share detail responses without crossing users. Failures fall back
+ * to generic localized labels instead of leaking inaccessible entity names.
  */
 
 /** Middot separator used between title segments (`Section · Entity`). */
@@ -129,12 +122,8 @@ const EXPERIMENT_SECTION_KEY: Record<Exclude<ExperimentSection, "overview">, str
 };
 
 /**
- * Title for an experiment overview or section route.
- *
- * - overview: `{name}` (or the generic `Experiment` noun when inaccessible)
- * - section: `{Section} · {name}` (or `{Section}` alone when inaccessible)
- * - archived: the localized `Archived` marker is appended so active and
- *   archived tabs are always distinguishable.
+ * Inaccessible sections keep their section label without an entity name; archived
+ * titles append a marker so active and archived tabs remain distinguishable.
  */
 export async function buildExperimentMetadata({
   locale,

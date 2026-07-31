@@ -16,15 +16,12 @@ export interface SetVisibilityResult {
 
 /**
  * Change a resource's visibility, enforcing the monotonic private→public rule via
- * the shared `visibility-transition` helper. Generic across the publishable
- * resource types — devices are shareable but have no publish path at all, so they
- * are excluded from the parameter type rather than refused at runtime.
+ * the shared `visibility-transition` helper. Devices are excluded at the type level
+ * rather than refused at runtime — they are shareable but never publishable.
  *
- * Authorization (`can(manage)`) is enforced *declaratively* on the route by
- * `@CanAccess`, so this use-case carries no authz itself — which also lets
- * the automated embargo cron reuse the exact same publish path without a user
- * context. It is pure domain logic: load current visibility → apply the rule →
- * persist (skipping the write on a same-state no-op).
+ * Authorization (`can(manage)`) is enforced declaratively on the route by
+ * `@CanAccess`, so this carries no authz itself — which is also what lets the
+ * embargo cron reuse the same publish path without a user context.
  */
 @Injectable()
 export class SetVisibilityUseCase {

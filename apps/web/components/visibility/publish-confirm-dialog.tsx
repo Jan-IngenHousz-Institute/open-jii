@@ -18,13 +18,7 @@ interface PublishConfirmDialogProps {
   isPending: boolean;
 }
 
-/**
- * The gate in front of publishing. Private → public is irreversible and enforced
- * that way server-side, so it is never written straight off a click.
- *
- * It carries the consequence copy, so the surfaces that trigger it do not have to
- * spell out what publishing does before the fact.
- */
+/** Confirms the irreversible private-to-public transition. */
 export function PublishConfirmDialog({
   open,
   onOpenChange,

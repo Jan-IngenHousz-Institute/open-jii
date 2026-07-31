@@ -10,19 +10,17 @@ import {
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
 /**
- * Build the list-scoping predicate for an org-owned, shareable resource,
- * matching `can()`'s read precedence: a row is visible when it
- * is public, the caller is a member of the owning organization, or the caller
- * holds a grant on it (a direct user grant, a team grant, or an org grant).
+ * Build the list-scoping predicate for an org-owned, shareable resource, matching
+ * `can()`'s read precedence: a row is visible when it is public, the caller is a
+ * member of the owning organization, or the caller holds a grant on it (direct,
+ * team or org).
  *
- * This mirrors the experiment `findAll` EXISTS-subquery scoping (minus the
- * experiment-only contributor-membership tier), so listing **and** global search
- * — which delegates to the same `findAll`s — enforce the same undiscoverability
- * rule identically for macros, protocols, workbooks, and devices: a private row the
- * caller cannot reach is never revealed, not even by name.
+ * Shared by every type's `findAll`, so listing **and** global search — which
+ * delegates to the same `findAll`s — enforce undiscoverability identically: a
+ * private row the caller cannot reach is never revealed, not even by name.
  *
- * When `userId` is undefined (no authenticated caller) only public rows match:
- * membership and grants cannot be resolved without a user.
+ * With no authenticated caller only public rows match: membership and grants cannot
+ * be resolved without a user.
  */
 export function accessibleResourceCondition(params: {
   database: DatabaseInstance;

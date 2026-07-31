@@ -62,7 +62,7 @@ function getSortColumnName(columnName: string, columnType?: string): string {
 const bulkSelectionFormSchema = z.object({
   selectedRowIds: z.array(z.string()),
 });
-export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
+type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 
 export function ExperimentDataTable({
   experimentId,
@@ -79,11 +79,7 @@ export function ExperimentDataTable({
   displayName?: string;
   defaultSortColumn?: string;
   errorColumn?: string;
-  /**
-   * `can(contribute)` from the experiment's access response. Annotating is a write,
-   * so without it the annotation controls are not offered — the routes refuse them
-   * anyway, and offering a button that 403s is worse than not showing it.
-   */
+  /** Whether annotation controls are available. */
   canContribute?: boolean;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });

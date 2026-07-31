@@ -44,17 +44,10 @@ interface ExperimentVisibilityFormProps {
 }
 
 /**
- * Visibility and embargo for an experiment.
- *
- * The visibility select is a plain controlled input, not a form field: nothing
- * here is submitted. Picking a value hands it straight to the card, which
- * confirms the change and writes it through the dedicated publish route — so the
- * select goes on showing the persisted visibility until that write lands. Once
- * public it is disabled, which is how the interface carries the one-way rule the
- * backend enforces.
- *
- * The embargo date schedules the automatic private→public transition, so it is
- * only meaningful — and only rendered — while the experiment is still private.
+ * Visibility is controlled outside the form so it stays persisted until the
+ * confirmed publish request lands, then becomes inert because publication is
+ * one-way. Embargo is rendered only while private because it schedules that same
+ * private → public transition.
  */
 export function ExperimentVisibilityForm({
   form,

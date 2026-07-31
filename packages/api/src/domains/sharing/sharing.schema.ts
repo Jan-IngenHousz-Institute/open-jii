@@ -80,12 +80,10 @@ export const zResourceGrantRow = zResourceGrant.extend({ kind: z.literal("grant"
  * A synthesized row for somebody who **owns** the resource, derived from its
  * organization's living owners rather than from any grant.
  *
- * Owners are not collaborators — GitHub's shape, and ours since answerability
- * comes from ownership. They hold every action through the org role, so there is
- * no tier to display or change, nothing to revoke, and no way to leave (leaving is
- * a matter of the organization, not the resource). Consequently the row carries no
- * grant id, no role, and no outside-collaborator flag: an owner is by definition
- * inside the owning org.
+ * Owners are not collaborators: they hold every action through the org role, so
+ * there is no tier to change, nothing to revoke, and no way to leave (leaving is a
+ * matter of the organization, not the resource). Hence no grant id, no role, and no
+ * outside-collaborator flag — an owner is by definition inside the owning org.
  */
 export const zResourceOwnerRow = z.object({
   kind: z.literal("owner"),

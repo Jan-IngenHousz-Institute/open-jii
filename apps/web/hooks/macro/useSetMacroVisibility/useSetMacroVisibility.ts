@@ -1,16 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/**
- * Publishes a macro (private → public) via the dedicated one-way `setVisibility`
- * route. Mirrors `useSetExperimentVisibility`: the update path deliberately does
- * not carry `visibility`, because publishing is an irreversible capability
- * distinct from editing content.
- *
- * Invalidation is wider than the resource itself: the list and global-search
- * queries are scoped by visibility, so publishing changes *what is listed* for
- * other users, not just this macro's own state.
- */
+/** Publishes a macro and refreshes visibility-scoped detail, list, and search caches. */
 export const useSetMacroVisibility = () => {
   const queryClient = useQueryClient();
 

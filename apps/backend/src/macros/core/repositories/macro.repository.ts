@@ -117,11 +117,10 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
-      // Access scoping is unconditional — it applies to the "my" view too. A view
-      // may narrow what the caller can see; it must never widen it. Authorship is
-      // not an access path (`can()` does not consult `created_by`), so a creator
-      // since removed from the owning organization, holding no grant, can no longer
-      // read the macro and must not get its body back through a listing.
+      // Unconditional, the "my" view included: a view may narrow what the caller
+      // sees but must never widen it. Authorship is not an access path (`can()`
+      // does not consult `created_by`), so a creator since removed from the owning
+      // org, holding no grant, must not get the macro's body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "macro",
@@ -265,11 +264,10 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      // Grant cleanup and the macro delete are one transaction: the grants table
-      // is polymorphic (no FK cascade), so it must be cleaned by hand — and if
-      // the macro delete failed after a committed cleanup, the macro would
-      // survive with every grant on it already gone, silently stripping
-      // collaborators' access while the API reported failure.
+      // One transaction: the grants table is polymorphic (no FK cascade) so it must
+      // be cleaned by hand, and a delete that failed after a committed cleanup
+      // would leave the macro alive with every grant on it gone — silently
+      // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "macro", id);
 

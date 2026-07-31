@@ -70,8 +70,8 @@ export class MacroController {
       const result = await this.getMacroUseCase.execute(input.id);
       if (isSuccess(result)) {
         // The caller's effective capabilities ride along so the web app can gate
-        // editing/publishing/sharing on capability rather than on `createdBy`
-        //. Resolved after the fetch succeeded, so a 404 stays a 404.
+        // editing/publishing/sharing on capability rather than on `createdBy`.
+        // Resolved after the fetch succeeded, so a 404 stays a 404.
         const capabilities = await resolveResourceCapabilities(
           this.authz,
           session.user.id,

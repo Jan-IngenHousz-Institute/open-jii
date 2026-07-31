@@ -12,9 +12,6 @@ import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
 /**
  * Change the role of an existing grant, identified by id and scoped to its
  * resource. Gated on `share`. Returns the updated collaborators list.
- *
- * Refuses to demote the **last** admin/owner user grant on an experiment, which
- * would leave it with nobody able to administer it.
  */
 @Injectable()
 export class UpdateGrantUseCase {
@@ -39,8 +36,8 @@ export class UpdateGrantUseCase {
       );
     }
 
-    // The staffing invariant is enforced inside `repo.updateRole`, in the
-    // same transaction as the update — see SharingRepository.guardedWrite.
+    // The last-admin invariant is enforced inside `repo.updateRole`, in the same
+    // transaction as the update — see SharingRepository.guardedWrite.
     const updated = await this.repo.updateRole({
       resourceType,
       resourceId,

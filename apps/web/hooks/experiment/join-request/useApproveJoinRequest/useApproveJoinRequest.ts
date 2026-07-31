@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-export type UseApproveJoinRequestOptions = Pick<
+type UseApproveJoinRequestOptions = Pick<
   ReturnType<typeof orpc.experiments.approveJoinRequest.mutationOptions>,
   "onSuccess" | "onError" | "onSettled"
 >;
@@ -36,8 +36,7 @@ export const useApproveJoinRequest = (options?: UseApproveJoinRequestOptions) =>
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.listExperimentContributors.key(),
         });
-        // Approval writes a viewer grant, so the Collaborators tab's list (and
-        // its count) changes too, not just the requests list.
+        // Approval creates a viewer grant, so refresh the collaborators list too.
         await queryClient.invalidateQueries({
           queryKey: orpc.sharing.listGrants.key(),
         });
