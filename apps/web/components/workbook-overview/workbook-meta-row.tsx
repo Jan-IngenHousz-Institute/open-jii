@@ -1,19 +1,29 @@
 "use client";
 
-import { ResourcePublishControl } from "@/components/visibility/resource-publish-control";
+import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useLocale } from "@/hooks/useLocale";
+import { useSetWorkbookVisibility } from "@/hooks/workbook/useSetWorkbookVisibility/useSetWorkbookVisibility";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
-import { GitFork, Loader2 } from "lucide-react";
+import { GitFork, Globe, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
 import type { WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface WorkbookMetaRowProps {
   id: string;
@@ -22,12 +32,16 @@ interface WorkbookMetaRowProps {
 
 /**
  * The workbook's provenance row: created / updated / created by / version /
- * forked-from, plus the publish control and the Fork action.
+ * forked-from / visibility, plus the Publish and Fork actions.
  *
  * It belongs to the workbook's Overview, not to the title block above the tab
  * strip — the Collaborators route is about who has access, and none of this
  * answers that. The version fetch and the fork mutation travel with it so
  * neither runs on the route that does not show them.
+ *
+ * Visibility is shown as a field rather than a control: it reads as provenance
+ * like everything else in the row, and the one thing you can do to it — publish,
+ * once, irreversibly — is an action, so it sits with the other actions.
  */
 export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   const { t } = useTranslation(["workbook", "common"]);
@@ -53,6 +67,31 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
     });
   };
 
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  // Show the published state immediately on confirm, before the refetch lands.
+  // Visibility is monotonic, so OR-ing with the prop is safe.
+  const [publishedLocally, setPublishedLocally] = useState(false);
+  const { mutateAsync: setVisibility, isPending: isPublishing } = useSetWorkbookVisibility();
+  const isPublic = workbook.visibility === "public" || publishedLocally;
+
+  const publishHelpText = isPublic
+    ? tCommon("resourceVisibility.publishedDescription")
+    : tCommon("resourceVisibility.privateDescription");
+
+  const handlePublish = async () => {
+    try {
+      await setVisibility({ id, visibility: "public" });
+      setPublishedLocally(true);
+      setShowPublishConfirm(false);
+      toast({ description: tCommon("resourceVisibility.publishedToast") });
+    } catch (err) {
+      toast({
+        description: parseApiError(err)?.message ?? tCommon("resourceVisibility.publishFailed"),
+        variant: "destructive",
+      });
+    }
+  };
+
   // Versions are returned newest-first; the live page is the draft, so the
   // latest published version is the meaningful number to surface here.
   const latestVersion = versionsData?.[0]?.version;
@@ -60,7 +99,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   const { canManage } = workbook.capabilities;
 
   return (
-    <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-6 border-b border-[#EDF2F6] pb-8 sm:gap-x-10">
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
           {tCommon("common.created")}
@@ -116,23 +155,61 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
         </div>
       ) : null}
 
-      {/* Visibility. The cell needs a floor width of its own: the select sizes to
-          its container, and this container would otherwise shrink to the width of
-          the word above it. Even so it is one short cell in a horizontal row, so
-          the explanatory copy goes on the info icon — a block would wrap here and
-          push the row out of line. */}
-      <div className="flex min-w-[9rem] flex-col gap-1">
-        <ResourcePublishControl
-          resourceType="workbook"
-          resourceId={id}
-          visibility={workbook.visibility}
-          canManage={canManage}
-          infoPlacement="tooltip"
-        />
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+            {tCommon("resourceVisibility.statusLabel")}
+          </span>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* The copy is the icon's accessible name too, so it is readable
+                    without hovering. */}
+                <button
+                  type="button"
+                  className="text-muted-foreground"
+                  aria-label={publishHelpText}
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs leading-snug">
+                {publishHelpText}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <span className="text-sm leading-[21px] text-[#68737B]">
+          {isPublic
+            ? tCommon("resourceVisibility.publicStatus")
+            : tCommon("resourceVisibility.privateStatus")}
+        </span>
       </div>
 
-      <div className="ml-auto self-center">
-        <Button variant="outline" size="sm" onClick={handleFork} disabled={isForking}>
+      {/* Narrow screens give the actions a line of their own and let them share
+          its full width; from `sm` up they shrink to their labels and sit at the
+          end of the row. */}
+      <div className="flex w-full items-center gap-2 self-center sm:ml-auto sm:w-auto">
+        {/* Nothing left to offer once public, so the action goes rather than
+            lingering as an inert control. */}
+        {canManage && !isPublic && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setShowPublishConfirm(true)}
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            {tCommon("resourceVisibility.publishAction")}
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 sm:flex-none"
+          onClick={handleFork}
+          disabled={isForking}
+        >
           {isForking ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -141,6 +218,13 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
           {t("workbooks.actions.fork")}
         </Button>
       </div>
+
+      <PublishConfirmDialog
+        open={showPublishConfirm}
+        onOpenChange={setShowPublishConfirm}
+        onConfirm={() => void handlePublish()}
+        isPending={isPublishing}
+      />
     </div>
   );
 }

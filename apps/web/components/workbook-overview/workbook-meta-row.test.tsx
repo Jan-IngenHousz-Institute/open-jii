@@ -128,6 +128,80 @@ describe("WorkbookMetaRow", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the visibility state as a plain provenance field, not a control", () => {
+    renderRow({ visibility: "private" });
+
+    expect(screen.getByText("resourceVisibility.statusLabel")).toBeInTheDocument();
+    expect(screen.getByText("resourceVisibility.privateStatus")).toBeInTheDocument();
+    // The state is read-only here; publishing is an action, over with the others.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    // The copy is the info icon's accessible name, readable without hovering.
+    expect(screen.getByLabelText("resourceVisibility.privateDescription")).toBeInTheDocument();
+  });
+
+  it("offers Publish beside Fork while the workbook is private", async () => {
+    renderRow({ visibility: "private" });
+
+    expect(
+      await screen.findByRole("button", { name: "resourceVisibility.publishAction" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides Publish from a caller who cannot manage", () => {
+    renderRow({
+      visibility: "private",
+      capabilities: { ...workbook.capabilities, canManage: false },
+    });
+
+    // Publishing is manage-gated, matching what the route enforces — but the
+    // state itself is still worth showing to a viewer.
+    expect(
+      screen.queryByRole("button", { name: "resourceVisibility.publishAction" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("resourceVisibility.privateStatus")).toBeInTheDocument();
+  });
+
+  it("shows the public state with no Publish action left", () => {
+    renderRow({ visibility: "public" });
+
+    // Visibility is monotonic: there is nothing left to do.
+    expect(screen.getByText("resourceVisibility.publicStatus")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "resourceVisibility.publishAction" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("resourceVisibility.publishedDescription")).toBeInTheDocument();
+  });
+
+  it("confirms before publishing, then flips the field to public and drops the action", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.workbooks.setVisibility, {
+      body: { id: "wb-1", visibility: "public" },
+    });
+
+    renderRow({ visibility: "private" });
+
+    await user.click(screen.getByRole("button", { name: "resourceVisibility.publishAction" }));
+
+    // Irreversible, so it is confirmed rather than written on the click itself.
+    expect(screen.getByText("resourceVisibility.publishConfirmTitle")).toBeInTheDocument();
+    expect(spy.called).toBe(false);
+
+    await user.click(
+      screen.getByRole("button", { name: "resourceVisibility.publishConfirmButton" }),
+    );
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params).toMatchObject({ id: "wb-1" });
+    expect(spy.body).toEqual({ visibility: "public" });
+
+    await waitFor(() =>
+      expect(screen.getByText("resourceVisibility.publicStatus")).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "resourceVisibility.publishAction" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("disables the Fork button while a fork is in flight", async () => {
     server.mount(contract.workbooks.createWorkbook, {
       status: 201,

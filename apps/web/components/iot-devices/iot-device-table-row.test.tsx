@@ -29,6 +29,20 @@ describe("IotDeviceTableRow", () => {
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
   });
 
+  it("badges a private device, the way the other resource lists do", () => {
+    renderRow(createIotDevice({ name: "Greenhouse 1", visibility: "private" }));
+
+    expect(screen.getByText("resourceVisibility.privateStatus")).toBeInTheDocument();
+  });
+
+  it("leaves a public device unbadged", () => {
+    renderRow(createIotDevice({ name: "Greenhouse 1", visibility: "public" }));
+
+    // "Public" is the unremarkable default; only the exception is worth marking.
+    expect(screen.queryByText("resourceVisibility.privateStatus")).not.toBeInTheDocument();
+    expect(screen.queryByText("resourceVisibility.publicStatus")).not.toBeInTheDocument();
+  });
+
   it("falls back to the canonical product name when the device is unnamed", () => {
     renderRow(createIotDevice({ name: null, deviceType: "multispeq", serialNumber: "SN-XYZ" }));
 

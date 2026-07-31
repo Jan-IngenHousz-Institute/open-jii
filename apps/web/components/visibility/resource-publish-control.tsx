@@ -1,5 +1,6 @@
 "use client";
 
+import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { useSetMacroVisibility } from "@/hooks/macro/useSetMacroVisibility/useSetMacroVisibility";
 import { useSetProtocolVisibility } from "@/hooks/protocol/useSetProtocolVisibility/useSetProtocolVisibility";
 import { useSetWorkbookVisibility } from "@/hooks/workbook/useSetWorkbookVisibility/useSetWorkbookVisibility";
@@ -12,15 +13,6 @@ import type {
   Visibility,
 } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components/dialog";
 import {
   Select,
   SelectContent,
@@ -182,31 +174,12 @@ export function ResourcePublishControl({
         </div>
       )}
 
-      {/* Irreversible: private → public only, enforced server-side. */}
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("resourceVisibility.publishConfirmTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("resourceVisibility.publishConfirmDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirm(false)}
-              disabled={mutation.isPending}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={() => void confirmPublish()} disabled={mutation.isPending}>
-              {mutation.isPending
-                ? t("resourceVisibility.publishing")
-                : t("resourceVisibility.publishConfirmButton")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PublishConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        onConfirm={() => void confirmPublish()}
+        isPending={mutation.isPending}
+      />
     </div>
   );
 }

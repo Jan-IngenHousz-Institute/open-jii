@@ -1,4 +1,5 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
@@ -53,9 +54,19 @@ export function ExperimentOverviewCards({
           <Link key={experiment.id} href={experimentPath}>
             <div className="relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
               <div className="mb-auto">
-                <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-                  {experiment.name}
-                </h3>
+                {/* The badge shares the title's line rather than floating over the
+                    corner, so a title long enough to wrap cannot run under it.
+                    Only when private: "public" is the unremarkable default. */}
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h3 className="line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
+                    {experiment.name}
+                  </h3>
+                  <VisibilityBadge
+                    visibility={experiment.visibility}
+                    privateOnly
+                    className="shrink-0"
+                  />
+                </div>
                 <div className="overflow-hidden text-sm text-gray-500">
                   <RichTextRenderer content={experiment.description ?? " "} truncate maxLines={2} />
                 </div>
