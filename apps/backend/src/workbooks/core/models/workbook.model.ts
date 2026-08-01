@@ -30,6 +30,14 @@ export const selectWorkbookSchema = createSelectSchema(workbooks)
     experimentCount: z.number().int().nonnegative().optional(),
   });
 
+// List rows carry no `cells`: they dominate the payload and per-cell validation of
+// every row would let one legacy workbook 500 the whole collection endpoint.
+// `cellTypeCounts` is the SQL-computed projection the list UI needs instead.
+export const selectWorkbookListItemSchema = selectWorkbookSchema.omit({ cells: true }).extend({
+  cellTypeCounts: z.record(z.string(), z.number()).optional(),
+});
+
 export type CreateWorkbookDto = z.infer<typeof createWorkbookSchema>;
 export type UpdateWorkbookDto = z.infer<typeof updateWorkbookSchema>;
 export type WorkbookDto = z.infer<typeof selectWorkbookSchema>;
+export type WorkbookListItemDto = z.infer<typeof selectWorkbookListItemSchema>;

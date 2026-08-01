@@ -14,7 +14,8 @@ export const zExperimentJoinRequest = z.object({
     id: z.string().uuid(),
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().email().nullable(),
+    // Stored value returned as-is; format-validating on output can 500 the list.
+    email: z.string().nullable(),
     avatarUrl: z.string().nullable(),
   }),
   message: z.string().nullable(),

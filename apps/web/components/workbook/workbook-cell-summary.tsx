@@ -16,6 +16,8 @@ const cellIcons: Record<string, ReactNode> = {
   markdown: <FileText className="h-3 w-3" />,
 };
 
+const cellTypeOrder = Object.keys(cellIcons);
+
 /** Count cells by type, ignoring runtime-only output cells. */
 export function getWorkbookCellSummary(cells: WorkbookCell[]): [string, number][] {
   const counts: Record<string, number> = {};
@@ -26,32 +28,34 @@ export function getWorkbookCellSummary(cells: WorkbookCell[]): [string, number][
   return Object.entries(counts);
 }
 
-/** Pill badges summarizing a workbook's cells by type. */
+/**
+ * Pill badges summarizing a workbook's cells by type. Takes per-type counts (list
+ * responses ship `cellTypeCounts` instead of full cells); types without an icon —
+ * runtime-only output cells and unknown legacy types — are skipped.
+ */
 export function WorkbookCellSummary({
-  cells,
+  counts,
   className,
 }: {
-  cells: WorkbookCell[];
+  counts: Record<string, number>;
   className?: string;
 }) {
   const { t } = useTranslation("workbook");
-  const summary = getWorkbookCellSummary(cells);
+  const summary = Object.entries(counts)
+    .filter(([type]) => type in cellIcons)
+    .sort(([a], [b]) => cellTypeOrder.indexOf(a) - cellTypeOrder.indexOf(b));
   if (summary.length === 0) return null;
   return (
     <div className={cn("flex flex-wrap gap-1.5", className)}>
-      {summary.map(([type, count]) => {
-        const icon = cellIcons[type];
-        if (!icon) return null;
-        return (
-          <span
-            key={type}
-            className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-          >
-            {icon}
-            {t(`workbooks.cellSummary.${type}`, { count })}
-          </span>
-        );
-      })}
+      {summary.map(([type, count]) => (
+        <span
+          key={type}
+          className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+        >
+          {cellIcons[type]}
+          {t(`workbooks.cellSummary.${type}`, { count })}
+        </span>
+      ))}
     </div>
   );
 }

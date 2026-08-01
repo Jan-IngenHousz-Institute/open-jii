@@ -90,6 +90,8 @@ describe("WorkbookList row actions", () => {
   });
 
   it("duplicates a workbook from the row menu", async () => {
+    // List rows carry no cells, so duplication first fetches the full workbook.
+    server.mount(contract.workbooks.getWorkbook, { status: 200, body: unused });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: makeWorkbook({ id: "99999999-9999-9999-9999-999999999999", name: "Copy of Source WB" }),
@@ -106,7 +108,25 @@ describe("WorkbookList row actions", () => {
     expect(spy.body).toMatchObject({ name: "Fork of Source WB" });
   });
 
+  it("shows an error toast when fetching the source workbook fails", async () => {
+    server.mount(contract.workbooks.getWorkbook, { status: 500 });
+    const spy = server.mount(contract.workbooks.createWorkbook, { status: 201 });
+    const user = userEvent.setup();
+    render(<WorkbookList workbooks={[unused]} />);
+
+    const row = screen.getByText("Source WB").closest("tr");
+    if (!row) throw new Error("row not found");
+    await user.click(within(row).getByLabelText("workbooks.actions.more"));
+    await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
+    );
+    expect(spy.called).toBe(false);
+  });
+
   it("shows an error toast when duplicate fails", async () => {
+    server.mount(contract.workbooks.getWorkbook, { status: 200, body: unused });
     server.mount(contract.workbooks.createWorkbook, { status: 500 });
     const user = userEvent.setup();
     render(<WorkbookList workbooks={[unused]} />);
