@@ -55,7 +55,11 @@ export function WorkbookSelect({
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const { data: workbooks = [], isSearching } = useWorkbookList({ search });
+  const { data: workbooks = [], isSearching, error } = useWorkbookList({ search });
+
+  // Only a settled failure is shown: while a retry or the next term is in flight,
+  // the searching state below is the more truthful one.
+  const showError = !!error && !isSearching;
 
   // The "none" entry is synthetic rather than a server result, so it is matched here.
   const query = search.trim().toLowerCase();
@@ -106,33 +110,46 @@ export function WorkbookSelect({
         <Command shouldFilter={false}>
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
-            {isSearching && workbooks.length === 0 ? (
+            {showError ? (
               <div
-                role="status"
-                className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm"
+                role="alert"
+                className="text-destructive flex items-center justify-center py-6 text-sm"
               >
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("experiments.searchingWorkbooks")}
+                {t("experiments.workbookSearchFailed")}
               </div>
             ) : (
-              <CommandEmpty>{emptyText}</CommandEmpty>
+              <>
+                {isSearching && workbooks.length === 0 ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("experiments.searchingWorkbooks")}
+                  </div>
+                ) : (
+                  <CommandEmpty>{emptyText}</CommandEmpty>
+                )}
+                {/* Rows held over from the previous query are dimmed, so it is visible that
+                    they are not yet an answer to what is currently typed. */}
+                <CommandGroup className={cn(isSearching && workbooks.length > 0 && "opacity-60")}>
+                  {showNone && (
+                    <CommandItem value={NONE_VALUE} onSelect={() => handleSelect(undefined)}>
+                      <Check className={cn("h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
+                      <span className="truncate">{noneLabel}</span>
+                    </CommandItem>
+                  )}
+                  {workbooks.map((wb) => (
+                    <CommandItem key={wb.id} value={wb.id} onSelect={() => handleSelect(wb.id)}>
+                      <Check
+                        className={cn("h-4 w-4", value === wb.id ? "opacity-100" : "opacity-0")}
+                      />
+                      <span className="truncate">{wb.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
             )}
-            {/* Rows held over from the previous query are dimmed, so it is visible that
-                they are not yet an answer to what is currently typed. */}
-            <CommandGroup className={cn(isSearching && workbooks.length > 0 && "opacity-60")}>
-              {showNone && (
-                <CommandItem value={NONE_VALUE} onSelect={() => handleSelect(undefined)}>
-                  <Check className={cn("h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{noneLabel}</span>
-                </CommandItem>
-              )}
-              {workbooks.map((wb) => (
-                <CommandItem key={wb.id} value={wb.id} onSelect={() => handleSelect(wb.id)}>
-                  <Check className={cn("h-4 w-4", value === wb.id ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{wb.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>

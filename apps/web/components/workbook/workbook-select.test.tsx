@@ -198,6 +198,40 @@ describe("WorkbookSelect", () => {
     await waitFor(() => expect(screen.getByText("No workbooks found")).toBeInTheDocument());
   });
 
+  it("shows an error instead of the empty text when the list request fails", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.workbooks.listWorkbooks, { status: 500 });
+    render(<WorkbookSelect onChange={vi.fn()} noneLabel="None" {...labels} />);
+
+    await user.click(screen.getByRole("combobox"));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("experiments.workbookSearchFailed"),
+    );
+    // Neither the empty text nor the synthetic "none" row should suggest a settled list.
+    expect(screen.queryByText("No workbooks found")).not.toBeInTheDocument();
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("shows an error instead of stale results when a search fails", async () => {
+    const user = userEvent.setup();
+    mountList(() => [alpha, beta]);
+    render(<WorkbookSelect onChange={vi.fn()} {...labels} />);
+
+    await user.click(screen.getByRole("combobox"));
+    await waitFor(() => expect(screen.getByText("Alpha Workbook")).toBeInTheDocument());
+
+    // Mounted after the successful load: the most recent handler wins, so only
+    // the search request fails.
+    server.mount(contract.workbooks.listWorkbooks, { status: 500 });
+    await user.type(screen.getByPlaceholderText("Search workbooks..."), "beta");
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("experiments.workbookSearchFailed"),
+    );
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
   it("shows the empty text when the server returns no matches", async () => {
     const user = userEvent.setup();
     mountList((search) => (search ? [] : [alpha, beta]));
