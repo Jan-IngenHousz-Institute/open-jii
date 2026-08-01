@@ -270,6 +270,52 @@ def _freeze(value):
     return value
 
 
+def _json_typeof(value):
+    """Match JavaScript's typeof strings for values representable in JSON."""
+    if value is None or isinstance(value, (dict, list)):
+        return "object"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, (int, float)):
+        return "number"
+    return type(value).__name__
+
+
+def _build_shape_fingerprint(item):
+    """Describe input structure without retaining measurement content."""
+    data = item.get("data")
+    is_array = isinstance(data, list)
+    is_record = isinstance(data, dict)
+    set_value = data.get("set") if is_record else None
+    set_is_array = isinstance(set_value, list)
+
+    return {
+        "msg": "Macro input shape fingerprint",
+        "operation": "executeMacro",
+        "boundary": "sandbox-pre-execution",
+        "typeof": _json_typeof(data),
+        "isArray": is_array,
+        # Python string length is already measured in Unicode code points.
+        "length": len(data) if is_array or isinstance(data, str) else None,
+        "topLevelKeys": sorted(data.keys()) if is_record else [],
+        "setIsArray": set_is_array,
+        "setLength": len(set_value) if set_is_array else None,
+        "setLabels": [
+            entry["label"]
+            for entry in set_value or []
+            if isinstance(entry, dict) and isinstance(entry.get("label"), str)
+        ] if set_is_array else [],
+        "macro_id": item.get("macro_id") if isinstance(item.get("macro_id"), str) else None,
+        "workbook_version_id": (
+            item.get("workbook_version_id")
+            if isinstance(item.get("workbook_version_id"), str)
+            else None
+        ),
+    }
+
+
 results = []
 
 # 4. EXECUTION LOOP
@@ -330,6 +376,12 @@ for item in batch_items:
         "scipy": SafeModule(scipy),
         "json_module": SafeModule(json)
     }
+
+    print(
+        json.dumps(_build_shape_fingerprint(item), separators=(",", ":")),
+        file=sys.stderr,
+        flush=True,
+    )
     
     try:
         # 1s per-item timeout via SIGALRM

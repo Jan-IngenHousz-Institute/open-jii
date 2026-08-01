@@ -4,6 +4,7 @@ import gzip
 import subprocess
 import os
 import shutil
+import sys
 import tempfile
 
 
@@ -108,6 +109,13 @@ def _execute(event):
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
+
+        # Fingerprints are emitted on stderr so they cannot enter the macro
+        # response. Forward each line as its own CloudWatch diagnostic.
+        for line in result.stderr.splitlines():
+            trimmed = line.strip()
+            if trimmed:
+                print(f"[handler] wrapper stderr: {trimmed[:4000]}", file=sys.stderr, flush=True)
 
         stdout = result.stdout.strip()
         if len(stdout) > MAX_OUTPUT_SIZE:

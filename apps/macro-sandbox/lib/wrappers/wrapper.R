@@ -85,6 +85,56 @@ parsed_code <- tryCatch(
   }
 )
 
+# Match JavaScript's typeof strings for values representable in JSON.
+json_typeof <- function(value) {
+  if (is.null(value) || is.list(value)) return("object")
+  if (is.logical(value)) return("boolean")
+  if (is.character(value)) return("string")
+  if (is.numeric(value)) return("number")
+  typeof(value)
+}
+
+is_json_array <- function(value) {
+  is.list(value) && is.null(names(value))
+}
+
+build_shape_fingerprint <- function(item) {
+  data <- item$data
+  is_array <- is_json_array(data)
+  is_record <- is.list(data) && !is_array
+  set_value <- if (is_record) data$set else NULL
+  set_is_array <- is_json_array(set_value)
+  set_labels <- if (set_is_array) {
+    Filter(
+      Negate(is.null),
+      lapply(set_value, function(entry) {
+        if (is.list(entry) && is.character(entry$label) && length(entry$label) == 1) {
+          entry$label
+        } else {
+          NULL
+        }
+      })
+    )
+  } else {
+    list()
+  }
+
+  list(
+    msg = "Macro input shape fingerprint",
+    operation = "executeMacro",
+    boundary = "sandbox-pre-execution",
+    typeof = json_typeof(data),
+    isArray = is_array,
+    length = if (is_array) length(data) else if (is.character(data) && length(data) == 1) nchar(data, type = "chars") else NULL,
+    topLevelKeys = if (is_record) as.list(sort(names(data))) else list(),
+    setIsArray = set_is_array,
+    setLength = if (set_is_array) length(set_value) else NULL,
+    setLabels = set_labels,
+    macro_id = if (is.character(item$macro_id) && length(item$macro_id) == 1) item$macro_id else NULL,
+    workbook_version_id = if (is.character(item$workbook_version_id) && length(item$workbook_version_id) == 1) item$workbook_version_id else NULL
+  )
+}
+
 # 4. EXECUTION LOOP
 for (item in batch_items) {
   
@@ -188,6 +238,12 @@ for (item in batch_items) {
   lockBinding("ctx", run_env)
   # Use an environment (reference semantics) so output$key <- val works in-place.
   run_env$output <- new.env(parent = emptyenv())
+
+  writeLines(
+    toJSON(build_shape_fingerprint(item), auto_unbox = TRUE, null = "null"),
+    con = stderr()
+  )
+  flush(stderr())
   
   # B. Run User Code
   execution_result <- if (!is.null(parse_error)) {
