@@ -72,6 +72,10 @@ jobs:
       - uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "24"
+      - name: Build test workspace prerequisites
+        run: pnpm turbo run build --filter=@repo/vitest-config
+      - name: Verify shared Vitest config bootstrap
+        run: test -f tooling/vitest-config/dist/configs/base-config.js
       - name: Verify cross-language fingerprint parity and privacy
         run: pnpm --filter macro-sandbox test:container
 
