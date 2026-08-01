@@ -15,7 +15,7 @@ on:
           - prod
         required: true
       tables:
-        description: 'Comma-separated tables to full-refresh (e.g. "experiment_macro_data,experiment_macro_data_sandbox")'
+        description: 'Comma-separated tables to full-refresh (e.g. "experiment_status,experiment_table_metadata")'
         required: true
       reason:
         description: 'Audit reason (e.g. "OJD-571 RIDES repair")'
@@ -52,7 +52,7 @@ jobs:
         run: |
           IFS=',' read -ra REQ <<< "$TABLES"
           for t in "${REQ[@]}"; do
-            case "$(echo "$t" | xargs)" in raw_data)
+            case "$(echo "$t" | xargs)" in raw_data|experiment_macro_data)
                 echo "::error::Table '$t' is forbidden from full-refresh"
                 exit 1
                 ;;

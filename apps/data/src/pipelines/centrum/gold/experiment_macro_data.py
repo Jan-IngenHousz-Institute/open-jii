@@ -28,7 +28,8 @@ from openjii.centrum.runtime import ENVIRONMENT
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported"
+        "delta.feature.variantType-preview": "supported",
+        "pipelines.reset.allowed": "false",
     }
 )
 def experiment_macro_data():
