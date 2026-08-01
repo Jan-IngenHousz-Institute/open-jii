@@ -85,6 +85,49 @@ function deepFreezeClone(value) {
   return value;
 }
 
+// Describe input structure without emitting measurement content. The only
+// data values retained are the explicitly permitted set labels.
+function buildShapeFingerprint(item) {
+  const data = item.data;
+  const isArray = Array.isArray(data);
+  const isRecord = data !== null && typeof data === "object" && !isArray;
+  const set = isRecord ? data.set : undefined;
+  const setIsArray = Array.isArray(set);
+
+  return {
+    msg: "Macro input shape fingerprint",
+    operation: "executeMacro",
+    boundary: "sandbox-pre-execution",
+    typeof: typeof data,
+    isArray,
+    length: isArray ? data.length : typeof data === "string" ? Array.from(data).length : null,
+    topLevelKeys: isRecord ? Object.keys(data).sort() : [],
+    setIsArray,
+    setLength: setIsArray ? set.length : null,
+    setLabels: setIsArray
+      ? set.flatMap((entry) => {
+          if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return [];
+          return typeof entry.label === "string" ? [entry.label] : [];
+        })
+      : [],
+    macro_id: typeof item.macro_id === "string" ? item.macro_id : null,
+    workbook_version_id:
+      typeof item.workbook_version_id === "string" ? item.workbook_version_id : null,
+  };
+}
+
+function formatError(error) {
+  const type =
+    error !== null && typeof error === "object" && error.constructor
+      ? error.constructor.name
+      : typeof error;
+  const message =
+    error !== null && typeof error === "object" && typeof error.message === "string"
+      ? error.message
+      : String(error);
+  return `${type}: ${message}`;
+}
+
 // 4. CREATE CONTEXT ONCE
 // Minimal sandbox: no Date, performance, setTimeout, process, require, eval
 const sandbox = {
@@ -164,6 +207,8 @@ for (const item of batchItems) {
   sandbox.ctx = item.context ? deepFreezeClone(item.context) : Object.create(null);
   sandbox.output = Object.create(null);
 
+  process.stderr.write(`${JSON.stringify(buildShapeFingerprint(item))}\n`);
+
   try {
     script.runInContext(context, { timeout: 1000, displayErrors: false });
     results.push({
@@ -175,7 +220,7 @@ for (const item of batchItems) {
     results.push({
       id: item.id,
       success: false,
-      error: e.message,
+      error: formatError(e),
     });
   }
 }

@@ -188,7 +188,7 @@ describe("ExecuteMacroBatchUseCase", () => {
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({
-          items: [{ id: "item-1", data: {}, context }],
+          items: [expect.objectContaining({ id: "item-1", macro_id: macro.id, data: {}, context })],
         }),
       );
     });
@@ -490,6 +490,73 @@ describe("ExecuteMacroBatchUseCase", () => {
         );
       });
     }
+
+    it("logs each received shape with macro and workbook identifiers only", async () => {
+      const macro = await createTestMacro();
+      const workbookVersionId = faker.string.uuid();
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+      vi.spyOn(macroSnapshotRepository, "findScriptsByVersionIds").mockResolvedValue(
+        success(
+          new Map([
+            [macroSnapshotKey(workbookVersionId, macro.id), { ...macro, code: "snapshot-code" }],
+          ]),
+        ),
+      );
+      const invokeSpy = mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      await useCase.execute({
+        items: [
+          {
+            id: "row-1",
+            macro_id: macro.id,
+            workbook_version_id: workbookVersionId,
+            data: {
+              set: [
+                {
+                  label: "SPAD",
+                  measurement: "MEASUREMENT_VALUE_MUST_NOT_APPEAR",
+                  latitude: 52.3676,
+                  longitude: 4.9041,
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const fingerprintCall = logSpy.mock.calls.find(
+        ([arg]) =>
+          typeof arg === "object" &&
+          arg !== null &&
+          (arg as { boundary?: string }).boundary === "backend-received",
+      );
+      expect(fingerprintCall?.[0]).toMatchObject({
+        boundary: "backend-received",
+        topLevelKeys: ["set"],
+        setIsArray: true,
+        setLength: 1,
+        setLabels: ["SPAD"],
+        macro_id: macro.id,
+        workbook_version_id: workbookVersionId,
+      });
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [
+            expect.objectContaining({
+              macro_id: macro.id,
+              workbook_version_id: workbookVersionId,
+            }),
+          ],
+        }),
+      );
+
+      const serialized = JSON.stringify(logSpy.mock.calls);
+      expect(serialized).not.toContain("MEASUREMENT_VALUE_MUST_NOT_APPEAR");
+      expect(serialized).not.toContain("52.3676");
+      expect(serialized).not.toContain("4.9041");
+    });
 
     it("normalizes a mixed valid/empty/wrapped batch, runs only valid siblings, and preserves order", async () => {
       const macro = await createTestMacro();

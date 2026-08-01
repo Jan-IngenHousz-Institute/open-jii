@@ -63,6 +63,18 @@ jobs:
           trivyignores: apps/macro-sandbox/functions/${{ matrix.language }}/.trivyignore.yaml
           use-gha-cache: "false"
 
+  macro-sandbox-contract:
+    name: Cross-Language Contract (Macro Sandbox)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'macro-sandbox')
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+      - name: Verify cross-language fingerprint parity and privacy
+        run: pnpm --filter macro-sandbox test:container
+
   web-opennext:
     name: OpenNext Build (Web)
     runs-on: ubuntu-latest

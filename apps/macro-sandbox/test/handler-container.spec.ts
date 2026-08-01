@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -89,6 +90,34 @@ interface Envelope {
   errors?: string[];
 }
 
+interface ShapeFingerprintFields {
+  typeof: string;
+  isArray: boolean;
+  length: number | null;
+  topLevelKeys: string[];
+  setIsArray: boolean;
+  setLength: number | null;
+  setLabels: string[];
+}
+
+interface ShapeFingerprintFixtures {
+  fixtureVersion: number;
+  privacySentinels: string[];
+  cases: {
+    name: string;
+    data: unknown;
+    assertRoundTrip?: boolean;
+    expected: ShapeFingerprintFields;
+  }[];
+}
+
+const shapeFingerprintFixtures = JSON.parse(
+  readFileSync(
+    resolve(__dirname, "../../../packages/api/fixtures/macro-input-shape-fingerprints.json"),
+    "utf8",
+  ),
+) as ShapeFingerprintFixtures;
+
 async function invoke(port: number, event: unknown): Promise<Envelope> {
   const res = await fetch(`http://localhost:${port}${INVOKE_PATH}`, {
     method: "POST",
@@ -115,6 +144,24 @@ async function waitReady(port: number, event: unknown, attempts = 90): Promise<v
 }
 
 const containers: string[] = [];
+const containerByLanguage = new Map<string, string>();
+
+function readFingerprint(logs: string, macroId: string): Record<string, unknown> {
+  const lines = logs.split("\n");
+  const needle = `"macro_id":"${macroId}"`;
+  let line: string | undefined;
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const candidate = lines[index];
+    if (candidate.includes(needle)) {
+      line = candidate;
+      break;
+    }
+  }
+  if (!line) throw new Error(`No fingerprint found for ${macroId}`);
+  const jsonStart = line.indexOf("{");
+  if (jsonStart === -1) throw new Error(`Fingerprint line contained no JSON: ${line}`);
+  return JSON.parse(line.slice(jsonStart)) as Record<string, unknown>;
+}
 
 describe.skipIf(!ENABLED)("handler container data contract", () => {
   beforeAll(async () => {
@@ -126,6 +173,7 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
       const name = `mstest-${spec.language}-passthrough`;
       runContainer(name, spec.image, spec.port);
       containers.push(name);
+      containerByLanguage.set(spec.language, name);
       await waitReady(spec.port, {
         script: b64(spec.echoScript),
         items: [{ id: "warm", data: { ready: true } }],
@@ -187,6 +235,49 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
         expect(response.results[2]?.output).toEqual({ tag: "third" });
         expect(response.results[3]?.output).toEqual({ tag: "fourth" });
       });
+
+      it.each(shapeFingerprintFixtures.cases)(
+        "forwards the canonical value-free $name fingerprint to container logs",
+        async ({ name: fixtureName, data, assertRoundTrip, expected }) => {
+          const fixtureId = fixtureName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+          const macroId = `macro-fingerprint-${spec.language}-${fixtureId}`;
+          const workbookVersionId = `workbook-fingerprint-${spec.language}-${fixtureId}`;
+
+          const response = await invoke(spec.port, {
+            script: b64(spec.echoScript),
+            items: [
+              {
+                id: `fingerprint-${fixtureId}`,
+                macro_id: macroId,
+                workbook_version_id: workbookVersionId,
+                data,
+              },
+            ],
+            timeout: 10,
+          });
+
+          expect(response.status).toBe("success");
+          if (assertRoundTrip) {
+            expect(response.results[0]?.output?.seen).toEqual(data);
+          }
+          const containerName = containerByLanguage.get(spec.language);
+          if (!containerName) throw new Error(`Missing container for ${spec.language}`);
+          const logResult = spawnSync("docker", ["logs", containerName], { encoding: "utf8" });
+          const logs = `${logResult.stdout}${logResult.stderr}`;
+          expect(readFingerprint(logs, macroId)).toEqual({
+            msg: "Macro input shape fingerprint",
+            operation: "executeMacro",
+            boundary: "sandbox-pre-execution",
+            ...expected,
+            macro_id: macroId,
+            workbook_version_id: workbookVersionId,
+          });
+          for (const sentinel of shapeFingerprintFixtures.privacySentinels) {
+            expect(logs).not.toContain(sentinel);
+          }
+          expect(logs.toLowerCase()).not.toContain("\\ud83d\\ude00");
+        },
+      );
     });
   }
 });

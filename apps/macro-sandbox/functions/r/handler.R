@@ -6,6 +6,13 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# The base image defaults to the C locale, where jsonlite treats non-ASCII UTF-8
+# bytes as separate characters. Use Debian's built-in UTF-8 locale so JSON
+# strings survive the handler-to-wrapper file boundary as Unicode code points.
+if (identical(Sys.setlocale("LC_CTYPE", "C.UTF-8"), "")) {
+  stop("C.UTF-8 locale is required for canonical JSON string handling")
+}
+
 # Limits
 MAX_SCRIPT_SIZE <- 1048576  # 1MB
 MAX_ITEM_COUNT  <- 1000
@@ -90,6 +97,7 @@ result <- tryCatch({
       "-i",
       "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
       "HOME=/tmp",
+      "LC_CTYPE=C.UTF-8",
       "timeout", as.character(timeout + 5),
       "Rscript", WRAPPER_PATH, script_path, input_path, output_path
     ),

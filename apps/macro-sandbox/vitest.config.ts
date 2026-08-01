@@ -6,7 +6,7 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
-      include: ["test/test.ts"],
+      include: ["test/test.ts", "test/wrapper.spec.ts"],
       testTimeout: 60_000,
       hookTimeout: 120_000,
       pool: "forks",

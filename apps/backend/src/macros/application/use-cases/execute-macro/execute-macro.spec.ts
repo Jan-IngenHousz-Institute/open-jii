@@ -321,6 +321,58 @@ describe("ExecuteMacroUseCase", () => {
       );
     }
 
+    it("fingerprints the received envelope before normalization without logging values", async () => {
+      const macro = await createTestMacro();
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+      const invokeSpy = mockOkLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const measurement = {
+        set: [
+          {
+            label: "SPAD",
+            measurement: "MEASUREMENT_VALUE_MUST_NOT_APPEAR",
+            latitude: 52.3676,
+            longitude: 4.9041,
+          },
+        ],
+        gps: { latitude: 52.3676, longitude: 4.9041 },
+      };
+      await useCase.execute(macro.id, {
+        data: { sample: [measurement] },
+      });
+
+      const fingerprintCall = logSpy.mock.calls.find(
+        ([arg]) =>
+          typeof arg === "object" &&
+          arg !== null &&
+          (arg as { boundary?: string }).boundary === "backend-received",
+      );
+      expect(fingerprintCall?.[0]).toEqual({
+        msg: "Macro input shape fingerprint",
+        operation: "executeMacro",
+        boundary: "backend-received",
+        typeof: "object",
+        isArray: false,
+        length: null,
+        topLevelKeys: ["sample"],
+        setIsArray: false,
+        setLength: null,
+        setLabels: [],
+        macro_id: macro.id,
+        workbook_version_id: null,
+      });
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({ items: [expect.objectContaining({ data: measurement })] }),
+      );
+
+      const serialized = JSON.stringify(logSpy.mock.calls);
+      expect(serialized).not.toContain("MEASUREMENT_VALUE_MUST_NOT_APPEAR");
+      expect(serialized).not.toContain("52.3676");
+      expect(serialized).not.toContain("4.9041");
+    });
+
     it("unwraps a { sample: [measurement] } envelope", async () => {
       const macro = await createTestMacro();
       const measurement = { phi2: 0.8, trace_1: [1, 2, 3] };

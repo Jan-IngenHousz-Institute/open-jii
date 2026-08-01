@@ -12,6 +12,7 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
+  buildMacroInputShapeFingerprint,
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
@@ -36,6 +37,15 @@ export class ExecuteMacroBatchUseCase {
   async execute(
     request: MacroBatchExecutionRequestBody,
   ): Promise<Result<MacroBatchExecutionResponse>> {
+    for (const item of request.items) {
+      this.logger.log({
+        msg: "Macro input shape fingerprint",
+        operation: "executeMacroBatch",
+        boundary: "backend-received",
+        ...buildMacroInputShapeFingerprint(item.data, item.macro_id, item.workbook_version_id),
+      });
+    }
+
     this.logger.log({
       msg: "Starting macro batch execution",
       operation: "executeMacroBatch",
@@ -230,6 +240,8 @@ export class ExecuteMacroBatchUseCase {
       script: macro.code,
       items: validItems.map(({ item, data }) => ({
         id: item.id,
+        macro_id: macroId,
+        workbook_version_id: workbookVersionId,
         data,
         context: item.context,
       })),
