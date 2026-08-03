@@ -52,10 +52,9 @@ export class RevokeInvitationUseCase {
       return failure(AppError.forbidden("You do not have access to this experiment"));
     }
 
-    // The status read above is advisory — an acceptance can commit between it and
-    // here. `revoke` claims the row atomically (`WHERE status='pending'`), so a lost
-    // claim means someone accepted it in the meantime and we report that rather than
-    // stamping `revoked` over a terminal status.
+    // The status read above is advisory: an acceptance can land in between. `revoke`
+    // claims the row atomically, so a lost claim means it was accepted — report that
+    // rather than stamping `revoked` over a terminal status.
     const revokeResult = await this.invitationRepository.revoke(invitationId);
     if (revokeResult.isFailure()) {
       return failure(revokeResult.error);

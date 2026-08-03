@@ -52,12 +52,10 @@ export class UpgradeWorkbookVersionUseCase {
         );
       }
 
-      // The route only guards `manage` on the experiment, but this reads the
-      // workbook's current cells and pins (or mints) a version from them. Without a
-      // read check here, someone whose workbook grant was revoked could still
-      // capture post-revocation workbook state through an experiment they manage.
-      // Gated before both branches: pinning an existing latest version never
-      // reaches PublishVersionUseCase.
+      // The route guards the experiment; this reads the workbook's current cells.
+      // Without a check here, a revoked grantee could still capture the workbook's
+      // later state via an experiment they manage. Before both branches: the
+      // pin-existing path never reaches PublishVersionUseCase.
       const workbookAccess = await this.authz.can(userId, {
         resourceType: "workbook",
         resourceId: experiment.workbookId,

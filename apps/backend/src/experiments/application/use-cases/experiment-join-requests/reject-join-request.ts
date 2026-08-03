@@ -56,11 +56,9 @@ export class RejectJoinRequestUseCase {
         return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
       }
 
-      // If the requester was granted access while this request was pending, close it
-      // rather than sending a rejection email to someone who now has access.
-      // `contribute` is the "is already a collaborator" question: only an explicit
-      // grant (or an owning-org admin role) confers it, so a mere public reader
-      // still has a request worth deciding.
+      // The requester may have been granted access while this sat pending — close it
+      // instead of emailing a rejection to someone who now has access. `contribute`
+      // is the right check: a public reader lacks it, so their request still stands.
       const alreadyCollaborator = await this.authz.can(existing.user.id, {
         resourceType: "experiment",
         resourceId: experimentId,

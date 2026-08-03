@@ -4,7 +4,8 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
+import type { ResourceCollaborator } from "../core/models/sharing.model";
+import { SharingRepository } from "../sharing.repository";
 
 /**
  * List the direct collaborators on a resource. Gated on `share` (not `read`) so

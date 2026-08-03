@@ -23,6 +23,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { CACHE_PORT } from "../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../macros/core/repositories/macro.repository";
@@ -848,6 +849,70 @@ describe("UserRepository", () => {
         .where(eq(organizationMembers.organizationId, orgId));
       expect(members).toHaveLength(1);
       expect(members[0].userId).toBe(userToDeleteId);
+    });
+
+    it("clears every grant held by the deleted user", async () => {
+      const owner = await testApp.createTestUser({ name: "Owner" });
+      const doomed = await testApp.createTestUser({ name: "Doomed" });
+      const survivor = await testApp.createTestUser({ name: "Survivor" });
+      const grantsForUser = (userId: string) =>
+        testApp.database
+          .select()
+          .from(resourceGrants)
+          .where(and(eq(resourceGrants.granteeType, "user"), eq(resourceGrants.granteeId, userId)));
+
+      // A collaborator grant on an experiment...
+      const { experiment } = await testApp.createExperiment({
+        name: `Exp ${crypto.randomUUID()}`,
+        userId: owner,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, doomed);
+      // ...and a direct share on a macro.
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      for (const userId of [doomed, survivor]) {
+        await testApp.addResourceGrant({
+          resourceType: "macro",
+          resourceId: macro.id,
+          granteeType: "user",
+          granteeId: userId,
+          role: "viewer",
+        });
+      }
+      expect((await grantsForUser(doomed)).length).toBeGreaterThanOrEqual(2);
+
+      assertSuccess(await repository.delete(doomed));
+
+      expect(await grantsForUser(doomed)).toHaveLength(0);
+      // Other users' grants are untouched.
+      expect(await grantsForUser(survivor)).toHaveLength(1);
+    });
+
+    it("leaves the deleted user without access through can()", async () => {
+      const owner = await testApp.createTestUser({ name: "Owner" });
+      const doomed = await testApp.createTestUser({ name: "Doomed" });
+      const privateMacro = await testApp.createMacro({
+        name: "Private M",
+        createdBy: owner,
+        visibility: "private",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: privateMacro.id,
+        granteeType: "user",
+        granteeId: doomed,
+        role: "admin",
+      });
+
+      const authz = testApp.module.get(AuthorizationService);
+      const canRead = () =>
+        authz
+          .can(doomed, { resourceType: "macro", resourceId: privateMacro.id, action: "read" })
+          .then((d) => d.allow);
+      expect(await canRead()).toBe(true);
+
+      assertSuccess(await repository.delete(doomed));
+
+      expect(await canRead()).toBe(false);
     });
   });
 

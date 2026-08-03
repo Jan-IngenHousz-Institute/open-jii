@@ -7,7 +7,8 @@ import type {
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
+import type { ResourceCollaborator } from "../core/models/sharing.model";
+import { SharingRepository } from "../sharing.repository";
 
 /**
  * Change the role of an existing grant, identified by id and scoped to its

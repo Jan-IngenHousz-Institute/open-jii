@@ -170,7 +170,10 @@ describe("listGrants", () => {
     );
     const result = await listGrants.execute(owner, "macro", macro.id);
     assertSuccess(result);
-    const grant = result.value.find((g) => g.granteeId === member);
+    const grant = result.value.find(
+      (g): g is Extract<typeof g, { kind: "grant" }> =>
+        g.kind === "grant" && g.granteeId === member,
+    );
     expect(grant?.isOutsideCollaborator).toBe(false);
   });
 
@@ -192,7 +195,10 @@ describe("listGrants", () => {
     );
     const result = await listGrants.execute(owner, "macro", macro.id);
     assertSuccess(result);
-    const grant = result.value.find((g) => g.granteeId === otherOrg);
+    const grant = result.value.find(
+      (g): g is Extract<typeof g, { kind: "grant" }> =>
+        g.kind === "grant" && g.granteeId === otherOrg,
+    );
     expect(grant?.granteeType).toBe("organization");
     expect(grant?.isOutsideCollaborator).toBe(true);
   });

@@ -15,18 +15,13 @@ export class AcceptPendingInvitationsUseCase {
   ) {}
 
   /**
-   * Accepts all pending invitations for a given email, granting each one's access
-   * tier on its resource.
+   * Accept all pending invitations for an email, granting each one's tier. Called
+   * when a user completes registration.
    *
-   * Called automatically when a user creates their profile (completes registration).
-   *
-   * **Every invitation is re-authorized at acceptance time.** A stored invitation
-   * can sit around indefinitely while the world moves underneath it — the inviter
-   * may have been demoted or had their grant revoked, or the resource deleted — so
-   * applying its terms verbatim would mint access the inviter could no longer
-   * create. We re-check `can(share)` for the inviter (whose `not-found` reason also
-   * covers the deleted resource) and, on failure, retire the invitation so it is not
-   * retried on every future sign-in.
+   * Every invitation is re-authorized first: one can sit around while the inviter is
+   * demoted or the resource deleted, and applying it verbatim would mint access the
+   * inviter could no longer create. A failed check retires the invitation so it is
+   * not retried on every sign-in.
    */
   async execute(userId: string, email: string): Promise<Result<number>> {
     this.logger.log({
@@ -63,18 +58,13 @@ export class AcceptPendingInvitationsUseCase {
     let acceptedCount = 0;
 
     for (const invitation of pendingInvitations) {
-      // Re-authorize before applying anything. `can()` answers `not-found` when the
-      // resource is gone, so this one check covers both "resource still exists" and
-      // "the inviter could still create this access today".
+      // `can()` answers `not-found` for a deleted resource, so this covers both
+      // "still exists" and "the inviter could still create this today".
       //
-      // KNOWN LIMITATION (accepted): this runs before the acceptance transaction
-      // opens, so something invalidating it in that window still lets one acceptance
-      // through. Either outcome is benign — a grant the inviter could no longer
-      // create is visible and revocable in the collaborators list, and a grant on a
-      // just-deleted resource is an unreachable row rather than live access, since
-      // `can()` resolves the resource first. Closing the window needs a
-      // transaction-aware `can()` or SERIALIZABLE + retry. The invitation's own
-      // status is separate and safe: the acceptance claims it atomically.
+      // Accepted limitation: it runs before the acceptance transaction, so a change
+      // in that window lets one acceptance through. Both outcomes are benign — the
+      // grant is revocable from the collaborators list, or unreachable if the
+      // resource is gone. Closing it needs a transaction-aware `can()`.
       const inviterDecision = await this.authz.can(invitation.invitedBy, {
         resourceType: invitation.resourceType,
         resourceId: invitation.resourceId,
@@ -93,9 +83,8 @@ export class AcceptPendingInvitationsUseCase {
           userId,
         });
 
-        // Retire it so a stale invitation is not re-evaluated on every sign-in.
-        // `revoked` is the existing terminal status; the invitation's authority was
-        // effectively revoked along with the inviter's.
+        // `revoked` is the existing terminal status — the invitation's authority
+        // went with the inviter's.
         const revokeResult = await this.invitationRepository.revoke(invitation.id);
         if (revokeResult.isFailure()) {
           this.logger.error({
@@ -132,8 +121,7 @@ export class AcceptPendingInvitationsUseCase {
       }
 
       if (!acceptResult.value) {
-        // Lost the claim: revoked (or already accepted) between the read above and
-        // the transaction. Nothing was applied, and it is not an error.
+        // Lost the claim — revoked or already accepted since the read. Not an error.
         this.logger.log({
           msg: "Invitation was no longer pending when acceptance landed",
           operation: "accept-pending-invitations",

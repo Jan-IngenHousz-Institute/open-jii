@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { protocols as protocolsTable, eq } from "@repo/database";
+import { and, protocols as protocolsTable, eq, resourceGrants } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -756,6 +756,50 @@ describe("ProtocolRepository", () => {
 
       // Should return an empty array
       expect(protocols.length).toBe(0);
+    });
+  });
+
+  describe("grant teardown on delete", () => {
+    let owner: string;
+    let grantee: string;
+
+    beforeEach(async () => {
+      owner = await testApp.createTestUser({ name: "Teardown Owner" });
+      grantee = await testApp.createTestUser({ name: "Teardown Grantee" });
+    });
+
+    /** The grants on one resource — no FK cascade cleans `resource_grants` up. */
+    const grantsFor = (resourceId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "protocol"),
+            eq(resourceGrants.resourceId, resourceId),
+          ),
+        );
+
+    async function sharedProtocol() {
+      const resource = await testApp.createProtocol({ name: "P", createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "protocol",
+        resourceId: resource.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+      // Only the share above: a creator holds no grant on what they create.
+      expect(await grantsFor(resource.id)).toHaveLength(1);
+      return resource;
+    }
+
+    it("deletes the protocol's grants along with it", async () => {
+      const resource = await sharedProtocol();
+
+      assertSuccess(await repository.delete(resource.id));
+
+      expect(await grantsFor(resource.id)).toHaveLength(0);
     });
   });
 });

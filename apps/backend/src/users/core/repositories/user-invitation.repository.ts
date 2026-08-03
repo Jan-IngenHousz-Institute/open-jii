@@ -17,29 +17,22 @@ import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { assertResourceStaysStaffed } from "../../../sharing/resource-staffing";
 import type { InvitationDto } from "../models/user-invitation.model";
 
-/**
- * The access tier an invitation confers on acceptance, stored as the
- * `resourceGrants` role the invitee will hold. `viewer` is read plus data
- * contribution; `admin` is full control.
- */
+/** The tier an invitation confers, stored as the grant role the invitee will hold. */
 export interface InvitationTerms {
   tier: InvitationTier;
 }
 
 /**
- * Read a stored tier. Anything other than `admin` is the read-and-contribute tier:
- * that covers `viewer`, the historical name `member` written before the rename
- * (same meaning, so no backfill was needed), and any unexpected value — for which
- * the lower tier is also the safe answer.
+ * Anything but `admin` reads as the lower tier — covering `viewer`, the historical
+ * `member` (same meaning, so no backfill), and any unexpected value.
  */
 function normaliseTier(stored: string | null): InvitationTier {
   return stored === "admin" ? "admin" : "viewer";
 }
 
 /**
- * The DTO's `tier` lives in the `invitations.role` column, kept under its original
- * name so no rename was needed. Every read goes through this projection and
- * {@link normaliseTier}, so the rest of the app only sees the current tier names.
+ * `tier` lives in the `invitations.role` column, unrenamed. Every read goes through
+ * this projection, so the rest of the app only sees the current names.
  */
 const invitationColumns = {
   id: invitations.id,
@@ -53,11 +46,7 @@ const invitationColumns = {
   updatedAt: invitations.updatedAt,
 };
 
-/**
- * Shape returned by {@link invitationColumns}. The column types are wider than the
- * DTO's (the table also models platform invitations, which have no resource id),
- * so narrowing happens here, at the single point every read passes through.
- */
+/** Wider than the DTO — the table also models platform invitations with no resource id. */
 interface InvitationRow {
   storedTier: string | null;
   [key: string]: unknown;
@@ -167,13 +156,9 @@ export class InvitationRepository {
   }
 
   /**
-   * Revoke a **pending** invitation, claiming it atomically.
-   *
-   * The `status='pending'` predicate is what makes this safe against a concurrent
-   * acceptance: whichever statement commits first takes the invitation out of
-   * `pending`, and the other claims zero rows. Resolves to `false` when the claim
-   * was lost, so the caller can report "already accepted/revoked" instead of
-   * silently overwriting a terminal status.
+   * Revoke a pending invitation, claiming it atomically. The `status='pending'`
+   * predicate is what makes it safe against a concurrent acceptance — whoever commits
+   * first wins, the other claims zero rows. `false` means the claim was lost.
    */
   async revoke(id: string): Promise<Result<boolean>> {
     return tryCatch(async () => {
@@ -248,14 +233,9 @@ export class InvitationRepository {
   }
 
   /**
-   * Accept an invitation and apply its terms to the associated resource in one
-   * transaction. Currently only supports experiment resources. Writing the tier as a
-   * grant is the whole of what an invitation confers.
-   *
-   * Resolves to `false` when the invitation was no longer pending, in which case
-   * nothing at all was applied.
-   *
-   * @param invitedBy authorship for the direct grant — the person who invited them
+   * Accept an invitation and write its tier as a grant, in one transaction —
+   * experiments only. `false` means it was no longer pending and nothing was applied.
+   * `invitedBy` becomes the grant's author.
    */
   async acceptInvitation(
     invitationId: string,
@@ -267,11 +247,9 @@ export class InvitationRepository {
   ): Promise<Result<boolean>> {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
-        // Claim the invitation as the FIRST statement: flipping the status is only
-        // allowed from `pending`, so a concurrent revoke (or a duplicate acceptance)
-        // that commits first leaves this claim matching zero rows. Applying the terms
-        // afterwards in the same transaction is what makes "terms applied ⇔ status
-        // accepted" hold.
+        // Claim first: a concurrent revoke or duplicate acceptance that commits
+        // before this leaves it matching zero rows. Applying the terms afterwards in
+        // the same transaction is what makes "terms applied ⇔ accepted" hold.
         const claimed = await tx
           .update(invitations)
           .set({ status: "accepted" })
@@ -283,10 +261,8 @@ export class InvitationRepository {
           return false;
         }
 
-        // This is an upsert, so a `viewer` invitation accepted by someone who
-        // already holds a direct `admin` grant would *demote* them. Run the shared
-        // staffing guard inside this transaction so every path that can lower a
-        // direct grant's role passes through one check.
+        // The upsert can demote: a `viewer` invitation accepted by an existing
+        // direct `admin`. Same guard as every other role-lowering path.
         await assertResourceStaysStaffed(tx, {
           resourceType: "experiment",
           resourceId,

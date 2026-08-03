@@ -18,9 +18,8 @@ export class UpdateExperimentUseCase {
       experimentId: id,
     });
 
-    // Publishing is a one-way action exposed only via `setVisibility`.
-    // Strip any `visibility` that reaches here defensively — the contract no
-    // longer carries it, so this closes the back door for good.
+    // Publishing is one-way and goes through `setVisibility` only. The DTO still
+    // carries `visibility` because the embargo cron writes it, so strip it here.
     const { visibility: _visibility, ...updateData } = data;
 
     const experimentResult = await this.experimentRepository.findOne(id);
@@ -36,10 +35,8 @@ export class UpdateExperimentUseCase {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
-      // The embargo date is only meaningful while the experiment is still
-      // private — it can change only while the experiment is still private. Once the
-      // experiment is public there is nothing left to embargo, so reject the
-      // change rather than silently ignoring it.
+      // An embargo only means "stay private until X", so once public there is
+      // nothing left to embargo. Reject rather than silently ignore the change.
       if (updateData.embargoUntil !== undefined && experiment.visibility === "public") {
         this.logger.warn({
           msg: "Attempt to change embargo on a public experiment",

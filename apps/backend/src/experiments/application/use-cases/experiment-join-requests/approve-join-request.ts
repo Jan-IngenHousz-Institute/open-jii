@@ -58,11 +58,9 @@ export class ApproveJoinRequestUseCase {
       if (existing.status !== "pending") {
         return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
       }
-      // If the requester was granted access while this request was pending, surface
-      // that to the admin instead of acting on a request that has become moot.
-      // `contribute` is the "is already a collaborator" question: only an explicit
-      // grant (or an owning-org admin role) confers it, so a mere public reader
-      // still has a request worth deciding.
+      // The requester may have been granted access while this sat pending, which
+      // makes the request moot — say so rather than act on it. `contribute` is the
+      // right check: a public reader lacks it, so their request still stands.
       const alreadyCollaborator = await this.authz.can(existing.user.id, {
         resourceType: "experiment",
         resourceId: experimentId,

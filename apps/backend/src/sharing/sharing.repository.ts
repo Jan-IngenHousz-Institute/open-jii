@@ -1,7 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import type {
+  GranteeDto,
+  GranteeOrganizationDto,
   GrantRole,
+  ResourceOwnerDto,
   SharingGranteeType,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
@@ -40,6 +43,12 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../common/utils/profile-anonymization";
+import type {
+  CreateGrantInput,
+  DirectGrantRow,
+  EnrichedGrant,
+  ResourceCollaborator,
+} from "./core/models/sharing.model";
 import { userIsSelectableGrantee } from "./grantee-selectability";
 import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "./resource-staffing";
 import type { StaffingGuardedWrite } from "./resource-staffing";
@@ -68,62 +77,6 @@ async function assertResourceIsUnarchived(
   if (rows.length > 0 && rows[0].status === "archived") {
     throw AppError.forbidden("Cannot modify an archived experiment");
   }
-}
-
-/** Display info for a grant's grantee (user or organization). */
-export interface GranteeInfo {
-  type: SharingGranteeType;
-  displayName: string | null;
-  email: string | null;
-  avatarUrl: string | null;
-}
-
-/** A grant enriched with its grantee's display info + the outside-collaborator flag. */
-export interface EnrichedGrant {
-  kind: "grant";
-  id: string;
-  resourceType: SharingResourceType;
-  resourceId: string;
-  granteeType: SharingGranteeType;
-  granteeId: string;
-  role: GrantRole;
-  createdAt: Date;
-  createdBy: string | null;
-  isOutsideCollaborator: boolean;
-  grantee: GranteeInfo;
-}
-
-/** A synthesized row for a living owner of the resource's owning organization. */
-export interface OwnerRow {
-  kind: "owner";
-  granteeType: "user";
-  granteeId: string;
-  grantee: GranteeInfo;
-}
-
-/** Everything the collaborators surface lists. */
-export type ResourceCollaborator = OwnerRow | EnrichedGrant;
-
-/** An organization the caller may pick as a grantee in the collaborators UI. */
-export interface GranteeOrganizationRow {
-  id: string;
-  name: string;
-  slug: string | null;
-}
-
-/** A plain direct-grant row (no enrichment). */
-export interface DirectGrantRow {
-  id: string;
-  role: string;
-}
-
-export interface CreateGrantInput {
-  resourceType: SharingResourceType;
-  resourceId: string;
-  granteeType: SharingGranteeType;
-  granteeId: string;
-  role: GrantRole;
-  createdBy: string;
 }
 
 /**
@@ -170,7 +123,7 @@ export class SharingRepository {
     return tryCatch(async () => {
       // Owners come first and are not grants: they are synthesized from the owning
       // org, so a creator appears here without ever having been granted anything.
-      const owners = await this.listOwnerRows(owningOrganizationId);
+      const owners = await this.listResourceOwnerDtos(owningOrganizationId);
       const ownerIds = new Set(owners.map((o) => o.granteeId));
 
       // Membership probe for the outside-collaborator label: a user grantee is
@@ -256,7 +209,9 @@ export class SharingRepository {
    * account: a closed one is nobody to escalate to, and an org whose last owner
    * closed their account leaves its resources relying on admin grants instead.
    */
-  private async listOwnerRows(owningOrganizationId: string | null): Promise<OwnerRow[]> {
+  private async listResourceOwnerDtos(
+    owningOrganizationId: string | null,
+  ): Promise<ResourceOwnerDto[]> {
     if (!owningOrganizationId) return [];
 
     // Who counts as an owner comes from the one shared fragment the staffing
@@ -445,7 +400,7 @@ export class SharingRepository {
   searchGranteeOrganizations(
     userId: string,
     params: { query?: string; limit: number },
-  ): Promise<Result<GranteeOrganizationRow[]>> {
+  ): Promise<Result<GranteeOrganizationDto[]>> {
     return tryCatch(() =>
       this.db
         .select({
@@ -517,7 +472,7 @@ interface GranteeJoinRow {
 }
 
 /** Collapse the LEFT-JOINed grantee columns into one display object. */
-function buildGrantee(type: SharingGranteeType, r: GranteeJoinRow): GranteeInfo {
+function buildGrantee(type: SharingGranteeType, r: GranteeJoinRow): GranteeDto {
   if (type === "user") {
     const profileName =
       r.profileFirstName && r.profileLastName ? `${r.profileFirstName} ${r.profileLastName}` : null;

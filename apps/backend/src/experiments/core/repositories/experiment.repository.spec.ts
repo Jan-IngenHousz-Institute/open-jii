@@ -1319,4 +1319,45 @@ describe("ExperimentRepository", () => {
     //   expect(experiments.some((e) => e.name === "Boundary Private")).toBe(false);
     // });
   });
+
+  describe("grant teardown on delete", () => {
+    /** The grants on one resource — no FK cascade cleans `resource_grants` up. */
+    const grantsFor = (resourceId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, resourceId),
+          ),
+        );
+
+    async function sharedExperiment() {
+      const grantee = await testApp.createTestUser({ name: "Teardown Grantee" });
+      const { experiment } = await testApp.createExperiment({
+        name: `Exp ${crypto.randomUUID()}`,
+        userId: testUserId,
+      });
+      // The creator holds no grant, so the only row is this direct share.
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "admin",
+      });
+      const before = await grantsFor(experiment.id);
+      expect(before.map((g) => g.granteeId)).toEqual([grantee]);
+      return experiment;
+    }
+
+    it("deletes every grant on the experiment along with it", async () => {
+      const experiment = await sharedExperiment();
+
+      assertSuccess(await repository.delete(experiment.id));
+
+      expect(await grantsFor(experiment.id)).toHaveLength(0);
+    });
+  });
 });

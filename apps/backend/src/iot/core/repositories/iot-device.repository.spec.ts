@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { and, eq, iotDevices, organizationMembers } from "@repo/database";
+import { and, eq, iotDevices, organizationMembers, resourceGrants } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -248,5 +248,46 @@ describe("IotDeviceRepository — listAccessible scoping", () => {
       );
 
     expect(await listIdsFor(owner)).toContain(privateDeviceId);
+  });
+
+  describe("grant teardown on delete", () => {
+    let owner: string;
+    let grantee: string;
+
+    beforeEach(async () => {
+      owner = await testApp.createTestUser({ name: "Teardown Owner" });
+      grantee = await testApp.createTestUser({ name: "Teardown Grantee" });
+    });
+
+    /** The grants on one resource — no FK cascade cleans `resource_grants` up. */
+    const grantsFor = (resourceId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(eq(resourceGrants.resourceType, "device"), eq(resourceGrants.resourceId, resourceId)),
+        );
+
+    async function sharedDevice() {
+      const resource = await testApp.createIotDevice({ createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: resource.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+      // Only the share above: a creator holds no grant on what they create.
+      expect(await grantsFor(resource.id)).toHaveLength(1);
+      return resource;
+    }
+
+    it("deletes the device's grants along with it", async () => {
+      const resource = await sharedDevice();
+
+      assertSuccess(await repository.delete(resource.id));
+
+      expect(await grantsFor(resource.id)).toHaveLength(0);
+    });
   });
 });

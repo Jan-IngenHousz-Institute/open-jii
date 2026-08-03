@@ -14,9 +14,6 @@ export class MacroProtocolRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  // Lists the protocols compatible with a macro, filtered to those the caller
-  // can read: a private protocol the caller cannot access is never
-  // surfaced through the compatibility list, even if it is linked.
   async listProtocols(macroId: string, userId?: string): Promise<Result<MacroProtocolDto[]>> {
     return tryCatch(async () => {
       return this.database

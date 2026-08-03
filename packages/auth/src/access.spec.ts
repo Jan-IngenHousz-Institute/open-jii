@@ -1,17 +1,14 @@
-import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
-import type { ResourceAction } from "@repo/auth/access";
+import { describe, expect, it } from "vitest";
+
+import { STAFFING_GRANT_ROLES } from "@repo/database";
+
+import { grantRoleCan, orgRoleCan } from "./access";
+import type { ResourceAction } from "./access";
 
 /**
- * The capability matrix, pinned action by action.
- *
- * The load-bearing asymmetry is the middle tier: on an experiment, a **grant** of
- * "Can view" carries `contribute` (being handed an experiment is what makes you a
- * contributor to it), while the owning organization's `member` role does not. Both
- * used to resolve through the same read-only role, so this table is what stops them
- * being re-aliased.
- *
- * The second asymmetry is per resource type: `contribute` is only handed out at the
- * read tier where there is data to contribute, which is experiments alone.
+ * The capability matrix, pinned action by action. Two asymmetries to hold: a grant
+ * of "Can view" carries `contribute` where an org `member` role does not, and
+ * `contribute` exists on experiments only.
  */
 const ALL_ACTIONS: ResourceAction[] = ["read", "contribute", "update", "share", "manage"];
 
@@ -109,6 +106,33 @@ describe("the grant and organization matrices disagree only about the middle tie
         expect(grantRoleCan(role, "experiment", action)).toBe(true);
         expect(orgRoleCan(role, "experiment", action)).toBe(true);
       }
+    }
+  });
+});
+
+describe("STAFFING_GRANT_ROLES agrees with the matrix", () => {
+  /**
+   * `@repo/database` cannot import this matrix — `@repo/auth` depends on it, so the
+   * reverse would be circular — and so re-states which roles confer full control.
+   * The staffing invariant counts with that list, so a divergence would miscount who
+   * is answerable for a resource and could orphan it.
+   */
+  const ALL_GRANT_ROLES = ["owner", "admin", "member", "viewer"] as const;
+
+  it("holds exactly the grant roles the matrix gives `manage`", () => {
+    const manageCapable = ALL_GRANT_ROLES.filter((role) =>
+      grantRoleCan(role, "experiment", "manage"),
+    );
+
+    expect([...STAFFING_GRANT_ROLES].sort()).toEqual([...manageCapable].sort());
+  });
+
+  it("holds the same set for every resource type", () => {
+    for (const resourceType of ["experiment", "protocol", "macro", "workbook", "device"] as const) {
+      const manageCapable = ALL_GRANT_ROLES.filter((role) =>
+        grantRoleCan(role, resourceType, "manage"),
+      );
+      expect([...manageCapable].sort()).toEqual([...STAFFING_GRANT_ROLES].sort());
     }
   });
 });

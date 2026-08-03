@@ -1,6 +1,12 @@
 import { faker } from "@faker-js/faker";
 
-import { and, macros as macrosTable, eq, organizationMembers } from "@repo/database";
+import {
+  and,
+  macros as macrosTable,
+  eq,
+  organizationMembers,
+  resourceGrants,
+} from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertSuccess } from "../../../common/utils/fp-utils";
@@ -1311,6 +1317,67 @@ describe("MacroRepository", () => {
       await repository.invalidateCache(id);
 
       expect(invalidateSpy).toHaveBeenCalledWith(id);
+    });
+  });
+
+  describe("grant teardown on delete", () => {
+    let owner: string;
+    let grantee: string;
+
+    beforeEach(async () => {
+      owner = await testApp.createTestUser({ name: "Teardown Owner" });
+      grantee = await testApp.createTestUser({ name: "Teardown Grantee" });
+    });
+
+    /** The grants on one resource — no FK cascade cleans `resource_grants` up. */
+    const grantsFor = (resourceId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(eq(resourceGrants.resourceType, "macro"), eq(resourceGrants.resourceId, resourceId)),
+        );
+
+    async function sharedMacro() {
+      const resource = await testApp.createMacro({ name: "M", createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: resource.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+      // Only the share above: a creator holds no grant on what they create.
+      expect(await grantsFor(resource.id)).toHaveLength(1);
+      return resource;
+    }
+
+    it("deletes the macro's grants along with it", async () => {
+      const resource = await sharedMacro();
+
+      assertSuccess(await repository.delete(resource.id));
+
+      expect(await grantsFor(resource.id)).toHaveLength(0);
+    });
+
+    it("leaves other resources' grants untouched", async () => {
+      const doomed = await testApp.createMacro({ name: "Doomed", createdBy: owner });
+      const survivor = await testApp.createMacro({ name: "Survivor", createdBy: owner });
+      for (const id of [doomed.id, survivor.id]) {
+        await testApp.addResourceGrant({
+          resourceType: "macro",
+          resourceId: id,
+          granteeType: "user",
+          granteeId: grantee,
+          role: "viewer",
+        });
+      }
+
+      assertSuccess(await repository.delete(doomed.id));
+
+      expect(await grantsFor(doomed.id)).toHaveLength(0);
+      // The survivor keeps its share.
+      expect(await grantsFor(survivor.id)).toHaveLength(1);
     });
   });
 });

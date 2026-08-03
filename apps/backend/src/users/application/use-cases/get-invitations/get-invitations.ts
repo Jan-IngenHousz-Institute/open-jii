@@ -17,10 +17,9 @@ export class GetInvitationsUseCase {
   /**
    * Retrieves all pending invitations for a given resource.
    *
-   * Gated on **`share`**, like `listGrants`: a pending invitation discloses more
-   * than the grants list does — the invitee's email address (someone who may not
-   * even have an account) plus the access they were offered — so reading it requires
-   * the capability that manages collaborators, not merely read access.
+   * Gated on `share` like `listGrants`, and for a stronger reason: a pending
+   * invitation discloses the invitee's email — possibly someone with no account —
+   * plus the access they were offered.
    */
   async execute(
     resourceType: "experiment",

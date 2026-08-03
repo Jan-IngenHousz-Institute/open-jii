@@ -7,7 +7,8 @@ import type {
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import { ResourceCollaborator, SharingRepository } from "../sharing.repository";
+import type { ResourceCollaborator } from "../core/models/sharing.model";
+import { SharingRepository } from "../sharing.repository";
 
 /**
  * Share a resource with a user or organization. Gated on `share`. Re-sharing an

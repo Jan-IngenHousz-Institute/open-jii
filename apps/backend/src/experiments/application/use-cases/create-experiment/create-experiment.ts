@@ -72,15 +72,10 @@ export class CreateExperimentUseCase {
         userId,
       });
 
-      // Anyone picked in the create form gets the read-and-contribute tier: they
-      // can open the experiment and add data to it, which is what being listed as
-      // a collaborator at creation time has always meant. The creator is filtered
-      // out — full control already follows from their role in the owning org, and
-      // a grant can only raise access, never lower it.
-      //
-      // Seeded by `create` itself, inside the same transaction as the experiment:
-      // an unselectable grantee refuses the create outright (400) rather than
-      // leaving an experiment behind with some of its collaborators attached.
+      // Everyone picked in the create form gets the read-and-contribute tier. The
+      // creator is filtered out: their org role already grants full control, and a
+      // grant can only raise access. `create` seeds these in the same transaction,
+      // so an unselectable grantee fails the whole create rather than half of it.
       const invitedCollaborators = (Array.isArray(data.members) ? data.members : [])
         .filter((member) => member.userId !== userId)
         .map((member) => member.userId);

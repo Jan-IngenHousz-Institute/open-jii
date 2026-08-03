@@ -17,20 +17,10 @@ export class ListExperimentContributorsUseCase {
   ) {}
 
   /**
-   * The experiment's credited contributors: the activated users who hold a grant on
-   * it, and can therefore add data to it.
-   *
-   * Read authorization is enforced declaratively on the route. This returns names
-   * and avatars only — who holds *which* tier is a separate, `can(share)`-gated
-   * question answered by the sharing routes.
-   *
-   * **Honours `anonymizeContributors`.** This route is `read`-gated, so on a public
-   * experiment it answers to anyone; publishing real names from it would defeat the
-   * experiment's own anonymization setting, which the data grid already respects.
-   * When the flag is on, every caller gets the same pseudonyms the measurement rows
-   * carry — so the two surfaces agree on who "Contributor-A1B2C3" is. People who may
-   * actually administer sharing still see real identities through the
-   * `can(share)`-gated collaborators list, which is a different route and unaffected.
+   * Credited contributors: activated users holding a grant on the experiment. Names
+   * and avatars only — who holds which tier is the `can(share)`-gated sharing
+   * routes' question. This route is `read`-gated, so it must honour
+   * `anonymizeContributors` or real names leak past what the data grid hides.
    */
   async execute(experimentId: string): Promise<Result<ExperimentContributor[]>> {
     this.logger.log({
@@ -47,9 +37,8 @@ export class ListExperimentContributorsUseCase {
           if (!anonymizeContributors) {
             return { userId, firstName, lastName, avatarUrl };
           }
-          // The same pseudonym the CONTRIBUTOR cells carry, split across the two name
-          // fields the UI renders. The user id is pseudonymised too: leaving it real
-          // would let a caller join this list back to the data grid and undo it.
+          // Same pseudonym the CONTRIBUTOR cells carry. The id is pseudonymised too,
+          // or a caller could join this list back to the data grid and undo it.
           const pseudonym = this.contributorAnonymizer.pseudonymFor(experimentId, userId);
           return {
             userId: pseudonym,

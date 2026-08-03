@@ -40,10 +40,8 @@ export class IotDeviceRepository {
           .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
           .returning();
 
-        // Access-neutral seeding, as for every other shareable type: a plain
-        // `member` may register a device into a shared org, and `member` is
-        // read-only, so without a grant they could not rotate or revoke the
-        // certificates of the device they just brought online.
+        // A plain org `member` may register a device but is read-only, so without a
+        // grant they could not manage certificates on the device they just added.
         await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
 
         return results;
@@ -51,11 +49,9 @@ export class IotDeviceRepository {
     });
   }
 
-  // Org-aware device listing, over the shared access predicate. `createdBy` is an
-  // extra tier on top of it, so a creator later removed from a non-personal owning
-  // org still sees the devices they registered. The predicate's public tier stays
-  // unreachable: devices are permanently private and no path writes their
-  // visibility.
+  // `createdBy` is an extra tier on the shared predicate, so a creator later removed
+  // from the owning org still sees devices they registered. The predicate's public
+  // arm is unreachable — devices are permanently private.
   async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       const scope = accessibleResourceCondition({
@@ -127,10 +123,8 @@ export class IotDeviceRepository {
 
   async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(() =>
-      // One transaction: the grants table is polymorphic (no FK cascade) so it must
-      // be cleaned by hand, and a delete that failed after a committed cleanup
-      // would leave the device alive with every grant on it gone — silently
-      // stripping collaborators' access while the API reported failure.
+      // Grants are polymorphic (no FK cascade), so they need cleaning by hand. One
+      // transaction, or a failure here strips access while the API reports failure.
       this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "device", deviceId);
 

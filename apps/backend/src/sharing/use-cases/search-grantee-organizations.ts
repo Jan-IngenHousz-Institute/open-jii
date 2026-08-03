@@ -1,7 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import type { GranteeOrganizationDto } from "@repo/api/domains/sharing/sharing.schema";
+
 import { Result } from "../../common/utils/fp-utils";
-import { GranteeOrganizationRow, SharingRepository } from "../sharing.repository";
+import { SharingRepository } from "../sharing.repository";
 
 /**
  * Organization lookup for the collaborators grantee picker. Authorization is the
@@ -18,7 +20,7 @@ export class SearchGranteeOrganizationsUseCase {
   async execute(
     userId: string,
     params: { query?: string; limit: number },
-  ): Promise<Result<GranteeOrganizationRow[]>> {
+  ): Promise<Result<GranteeOrganizationDto[]>> {
     this.logger.log({
       msg: "Searching grantee organizations",
       operation: "searchGranteeOrganizations",

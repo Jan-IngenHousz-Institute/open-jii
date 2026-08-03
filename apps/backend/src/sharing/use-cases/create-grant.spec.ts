@@ -58,7 +58,10 @@ describe("createGrant", () => {
     });
     assertSuccess(second);
     // One row for the grantee, not two — beside the creator's own grant.
-    const granteeRows = second.value.filter((grant) => grant.granteeId === outsider);
+    const granteeRows = second.value.filter(
+      (row): row is Extract<typeof row, { kind: "grant" }> =>
+        row.kind === "grant" && row.granteeId === outsider,
+    );
     expect(granteeRows).toHaveLength(1);
     expect(granteeRows[0].role).toBe("admin");
     expect(granteeRows[0].isOutsideCollaborator).toBe(true);

@@ -97,10 +97,6 @@ export class ProtocolRepository {
         );
       }
 
-      // Unconditional, the "my" view included: a view may narrow what the caller
-      // sees but must never widen it. Authorship is not an access path (`can()`
-      // does not consult `created_by`), so a creator since removed from the owning
-      // org, holding no grant, must not get the protocol's body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "protocol",
@@ -218,10 +214,6 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      // One transaction: the grants table is polymorphic (no FK cascade) so it must
-      // be cleaned by hand, and a delete that failed after a committed cleanup
-      // would leave the protocol alive with every grant on it gone — silently
-      // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "protocol", id);
 

@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { ExperimentFilter, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 import {
   desc,
@@ -42,30 +43,17 @@ import {
   ExperimentDto,
 } from "../models/experiment.model";
 
-/** A named collaborator on an experiment: who they are and what tier they hold. */
-export interface ExperimentCollaborator {
-  userId: string;
-  role: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl: string | null;
-}
-
 /**
- * An experiment's collaborators together with the experiment's own contributor
- * anonymization setting, so no caller can surface the identities without first
- * deciding what to do about the flag.
+ * Contributors plus the experiment's anonymization setting, so no caller can publish
+ * identities without first deciding what to do about the flag.
  */
 export interface ExperimentCollaborators {
   /** `experiments.anonymize_contributors`: identities must not be published as-is. */
   anonymizeContributors: boolean;
-  collaborators: ExperimentCollaborator[];
+  collaborators: ExperimentContributor[];
 }
 
-/**
- * The tier a collaborator is given when they are added to an experiment: read plus
- * data contribution. Its stored name is the grant role `member`.
- */
+/** Read plus data contribution. Stored as the grant role `member`. */
 const COLLABORATOR_GRANT_ROLE = "member";
 
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
@@ -81,14 +69,9 @@ export class ExperimentRepository {
   ) {}
 
   /**
-   * Create the experiment, put its creator in control of it, and give anyone picked
-   * in the create form the read-and-contribute tier — **all in one transaction**, so
-   * a failure anywhere leaves no experiment rather than one with half its
-   * collaborators.
-   *
-   * @param collaboratorUserIds Users to seed a `member` grant for. Validated against
-   *   {@link userIsSelectableGrantee}; an unselectable one fails the whole create
-   *   with a 400.
+   * Insert, seed creator control, and grant the picked collaborators in one
+   * transaction — a failure anywhere leaves no experiment at all. An unselectable
+   * `collaboratorUserIds` entry fails the whole create with a 400.
    */
   async create(
     createExperimentDto: CreateExperimentDto,
@@ -120,13 +103,10 @@ export class ExperimentRepository {
   }
 
   /**
-   * Give each user the read-and-contribute tier on the experiment, as a direct
-   * grant, when an experiment is created with collaborators already picked.
-   *
-   * Every grantee is checked first — `resource_grants` has no FK on `grantee_id`, so
-   * an unchecked write would happily store a row for a uuid naming nobody. Runs on
-   * the caller's transaction and is deliberately non-destructive: an existing direct
-   * grant is left alone, so this can never lower access and needs no staffing guard.
+   * Direct `member` grants for collaborators picked at create time. Grantees are
+   * validated first: `resource_grants` has no FK on `grantee_id`, so an unchecked
+   * write would store a row for a uuid naming nobody. Non-destructive — an existing
+   * grant is left alone, so it never lowers access and needs no staffing guard.
    */
   private async grantCollaborators(
     tx: DbOrTx,
@@ -169,17 +149,10 @@ export class ExperimentRepository {
   }
 
   /**
-   * The activated users who hold a grant on the experiment — its named
-   * collaborators — **plus the owners of the organization that owns it**, and the
-   * experiment's `anonymizeContributors` setting. Deactivated and soft-deleted
-   * accounts are excluded: they can neither contribute nor take an experiment over.
-   *
-   * The owners are not a garnish: a creator holds no grant on what they create, so
-   * grants alone would credit nobody at all on a personal-workspace experiment.
-   *
-   * The flag rides along because callers cannot safely publish the names without it.
-   * Driven from `experiments` with outer joins so it is still readable when the
-   * experiment has no collaborators.
+   * Activated grant-holders plus the owning org's owners, and the experiment's
+   * `anonymizeContributors` flag. The owners matter because a creator holds no grant
+   * on what they create, so grants alone would credit nobody on a personal-workspace
+   * experiment. Outer joins so it still reads with no collaborators.
    */
   async listCollaborators(experimentId: string): Promise<Result<ExperimentCollaborators>> {
     return tryCatch(async () => {
@@ -189,12 +162,9 @@ export class ExperimentRepository {
           anonymizeContributors: experiments.anonymizeContributors,
           createdBy: experiments.createdBy,
           userId: resourceGrants.granteeId,
-          // Whether the profile join matched at all. The anonymized name columns
-          // below cannot answer that: they are CASE expressions that fall back to
-          // "Unknown"/"User" for a NULL row, so a deactivated grantee would
-          // otherwise look like a real one.
+          // Whether the profile join matched. The name columns below can't answer
+          // that — they fall back to "Unknown"/"User" for a NULL row.
           profileUserId: profiles.userId,
-          role: resourceGrants.role,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           avatarUrl: getAnonymizedAvatarUrl(),
@@ -222,21 +192,18 @@ export class ExperimentRepository {
       // or the experiment on its own with nobody granted.
       const granted = rows
         .filter(
-          (r): r is typeof r & { userId: string; role: string } =>
-            r.userId !== null && r.profileUserId !== null,
+          (r): r is typeof r & { userId: string } => r.userId !== null && r.profileUserId !== null,
         )
-        .map(({ userId, role, firstName, lastName, avatarUrl }) => ({
+        .map(({ userId, firstName, lastName, avatarUrl }) => ({
           userId,
-          role,
           firstName,
           lastName,
           avatarUrl,
         }));
 
-      // Credited by their relationship to the experiment rather than by a grant row:
-      // the owning org's owners, plus the creator in their own right — someone who
-      // creates into an org they merely administer is not an owner, and crediting
-      // the org's owner in their place would put the wrong name on their work.
+      // Credited by relationship, not by a grant row. The creator counts in their
+      // own right: creating into an org you merely administer makes you no owner, and
+      // crediting that org's owner would put the wrong name on your work.
       const createdBy = rows[0]?.createdBy;
       const relatedIds = [...new Set([...ownerIds, ...(createdBy ? [createdBy] : [])])].filter(
         (id) => !granted.some((collaborator) => collaborator.userId === id),
@@ -244,23 +211,21 @@ export class ExperimentRepository {
       const related =
         relatedIds.length === 0
           ? []
-          : (
-              await this.database
-                .select({
-                  userId: profiles.userId,
-                  firstName: getAnonymizedFirstName(),
-                  lastName: getAnonymizedLastName(),
-                  avatarUrl: getAnonymizedAvatarUrl(),
-                })
-                .from(profiles)
-                .where(
-                  and(
-                    inArray(profiles.userId, relatedIds),
-                    eq(profiles.activated, true),
-                    isNull(profiles.deletedAt),
-                  ),
-                )
-            ).map((person) => ({ ...person, role: "owner" }));
+          : await this.database
+              .select({
+                userId: profiles.userId,
+                firstName: getAnonymizedFirstName(),
+                lastName: getAnonymizedLastName(),
+                avatarUrl: getAnonymizedAvatarUrl(),
+              })
+              .from(profiles)
+              .where(
+                and(
+                  inArray(profiles.userId, relatedIds),
+                  eq(profiles.activated, true),
+                  isNull(profiles.deletedAt),
+                ),
+              );
 
       return {
         anonymizeContributors: rows[0]?.anonymizeContributors ?? false,
@@ -314,11 +279,9 @@ export class ExperimentRepository {
           ),
       );
 
-      // Access scoping is unconditional — it applies to every filter, including
-      // "member". A view may narrow what the caller can see; it must never widen it.
-      // Authorship is not an access path (`can()` does not consult `created_by`), so
-      // a creator since removed from the owning org, holding no grant, must not get
-      // the experiment's body back through a listing.
+      // Unconditional, "member" included: a view may narrow what the caller sees but
+      // never widen it. Authorship is not an access path, so a creator since removed
+      // from the owning org must not get the body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "experiment",
@@ -332,10 +295,8 @@ export class ExperimentRepository {
       }
 
       if (filter === "member") {
-        // "My experiments": the ones I made or was explicitly given, narrowed out
-        // of what I can already see. Authorship is one of the two ways in because a
-        // creator holds no grant on what they create — without it this view would
-        // hide exactly the experiments most obviously the caller's.
+        // "Mine": made or explicitly given, narrowed out of what I can already see.
+        // Authorship counts because a creator holds no grant on their own work.
         conditions.push(or(userGrantExists, eq(experiments.createdBy, userId)));
       }
 
@@ -470,14 +431,11 @@ export class ExperimentRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      // One transaction: both side tables must be cleaned by hand (grants are
-      // polymorphic, so no FK cascade; `experiment_members` has a plain FK with no
-      // cascade), and a partial failure would leave the experiment alive with its
-      // access rows gone — silently stripping collaborators while the API reported
-      // failure. Same pattern as the macro/protocol/workbook delete paths.
+      // Both side tables need cleaning by hand (grants are polymorphic; the roster
+      // FK does not cascade). One transaction, or a partial failure strips
+      // collaborators while the API reports failure.
       await this.database.transaction(async (tx) => {
-        // Referential cleanup only: the roster rows carry no access any more, but the
-        // FK still refuses to let the parent go while they exist.
+        // Referential only — the roster carries no access, but the FK still blocks.
         await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
         await deleteResourceGrants(tx, "experiment", id);
@@ -537,10 +495,8 @@ export class ExperimentRepository {
 
       const { experiment } = result[0];
 
-      // Every signal comes from the unified can(), so access is decided in one place.
-      // `canContribute` gates field measurements and annotations: only an explicit
-      // grant (or an owning-org admin/owner role) confers it — public visibility and
-      // plain org membership grant read alone.
+      // All three from can(), so access is decided in one place. `canContribute`
+      // gates measurements and annotations: public and plain org membership read only.
       const [read, contribute, manage] = await Promise.all([
         this.authz.can(userId, {
           resourceType: "experiment",

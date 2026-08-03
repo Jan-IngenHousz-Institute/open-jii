@@ -30,11 +30,7 @@ import type {
   JoinRequestStatus,
 } from "../models/experiment-join-request.model";
 
-/**
- * The tier an approved join request confers — the same role the sharing UI writes
- * for "Can view", so approved requesters are indistinguishable from
- * directly-added collaborators.
- */
+/** Same role the sharing UI writes for "Can view". */
 const JOIN_APPROVAL_GRANT_ROLE = "viewer";
 
 const joinRequestSelectFields = {
@@ -144,13 +140,9 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Approve a join request: mark it approved AND grant the requester the
-   * read-and-contribute tier, atomically.
-   *
-   * The staffing guard runs inside this transaction rather than through the sharing
-   * repository's guarded write, which would open a second transaction and cost the
-   * approve its atomicity. Same guard, same locked row set — the upsert can lower an
-   * existing role, so it is checked like every other direct-grant write.
+   * Mark approved and grant the requester read-and-contribute, atomically. The
+   * staffing guard runs inline rather than via the sharing repository's guarded
+   * write, which would open a second transaction and cost the approve its atomicity.
    */
   async approve(
     requestId: string,
@@ -226,13 +218,10 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Email addresses of everyone who can decide a join request: holders of an
-   * admin/owner user grant **plus the living owners of the owning organization**.
-   *
-   * The owners are usually the only recipients — a creator holds no grant on what
-   * they create, so an experiment in its creator's personal workspace has no admin
-   * grants at all and grants alone would silently notify nobody. Team/organization
-   * grants are excluded: there is no individual mailbox behind them.
+   * Who can decide a join request: admin/owner grant holders plus the owning org's
+   * living owners. The owners are usually the only ones — a creator holds no grant,
+   * so grants alone would notify nobody on a personal-workspace experiment.
+   * Team/org grants are excluded: no individual mailbox behind them.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
@@ -251,8 +240,7 @@ export class ExperimentJoinRequestRepository {
         findOwningOrgOwnerIds(this.database, "experiment", experimentId),
       ]);
 
-      // One mailbox per person: an owner who also holds an admin grant is in both
-      // sets and must not be mailed twice.
+      // An owner who also holds an admin grant is in both sets — mail them once.
       const recipientIds = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
       if (recipientIds.length === 0) {
         return [];

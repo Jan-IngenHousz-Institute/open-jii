@@ -64,7 +64,7 @@ describe("UpdateExperimentUseCase", () => {
     });
   });
 
-  it("ignores a visibility change on the update path (back door closed)", async () => {
+  it("ignores a visibility change on the update path", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Back Door",
       visibility: "public",

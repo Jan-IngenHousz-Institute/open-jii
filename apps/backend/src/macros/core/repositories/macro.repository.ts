@@ -117,10 +117,6 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
-      // Unconditional, the "my" view included: a view may narrow what the caller
-      // sees but must never widen it. Authorship is not an access path (`can()`
-      // does not consult `created_by`), so a creator since removed from the owning
-      // org, holding no grant, must not get the macro's body back through a listing.
       const scope = accessibleResourceCondition({
         database: this.database,
         resourceType: "macro",
@@ -134,7 +130,6 @@ export class MacroRepository {
       }
 
       if (filter?.filter === "my" && filter.userId) {
-        // "My macros" narrows that down to what the caller authored.
         conditions.push(eq(macros.createdBy, filter.userId));
       }
 
@@ -264,10 +259,6 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      // One transaction: the grants table is polymorphic (no FK cascade) so it must
-      // be cleaned by hand, and a delete that failed after a committed cleanup
-      // would leave the macro alive with every grant on it gone — silently
-      // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
         await deleteResourceGrants(tx, "macro", id);
 

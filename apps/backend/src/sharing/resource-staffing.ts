@@ -143,14 +143,11 @@ export function orgRoleIsOwnerSql(roleRef: SQL): SQL {
 }
 
 /**
- * Take a **shared** lock on a user's own row, as the anchor that orders anything
- * depending on whether that account is still open against its deletion.
- *
- * `users` rather than `profiles`: that row always exists, including for an account
- * that signed up but never onboarded. Shared, not exclusive, so concurrent creates
- * by the same person do not queue behind each other — only the deletion, which
- * takes it exclusively, has to block them. Creation and deletion both acquire in
- * the order user → organization → grants, so they cannot form a cycle.
+ * A **shared** lock on the user's own row, ordering anything that depends on the
+ * account still being open against its deletion. `users` not `profiles` — that row
+ * always exists. Shared so concurrent creates by one person do not queue; only the
+ * deletion takes it exclusively. Everything acquires user → organization → grants,
+ * so no cycle.
  */
 export async function lockUserAccount(
   tx: DbOrTx,
@@ -247,24 +244,14 @@ async function orgHasLivingOwner(tx: DbOrTx, organizationId: string | null): Pro
 }
 
 /**
- * Make sure the creator ends up in control of what they just created, seeding an
- * `admin` grant **only when something else does not already guarantee it**. Runs in
- * the caller's transaction so the resource and the grant land together.
+ * Seed the creator an `admin` grant, but only when nothing else already guarantees
+ * control. Your own workspace seeds nothing: an owner holds every action, and the
+ * grant would render you a collaborator on your own resource. Two cases need it —
+ * creating into an org you are a plain (read-only) `member` of, and an org with no
+ * living owner, where the resource would be born unstaffed.
  *
- * The usual case (your own workspace) seeds nothing — an owner already holds every
- * action, so the grant would be bookkeeping that also renders you as a collaborator
- * on your own resource. Two cases do need it:
- *
- * 1. Creating into an organization you are a plain `member` of — `member` is
- *    read-only, so without the grant you could not update, share or manage what you
- *    just made.
- * 2. The organization has no living owner (or there is no owning org), so nobody
- *    inherits control and the resource would be born unstaffed.
- *
- * Case 2 also closes the race against an owner deleting their account mid-create:
- * the owner-membership rows are locked first, so whichever transaction commits
- * second re-reads the world the first left — this one sees the husk and seeds, or
- * the deletion finds the new resource and refuses.
+ * Locking the owner rows first also settles the race against that owner deleting
+ * their account mid-create: whoever commits second re-reads what the first left.
  */
 export async function seedCreatorControl(
   tx: DbOrTx,
@@ -301,19 +288,13 @@ export async function seedCreatorControl(
 }
 
 /**
- * The living owners of an organization, as a self-contained `SELECT` — the single
- * definition of who is answerable for what an organization owns, shared by the
- * staffing invariant, both account-deletion prongs, the collaborators surface's
- * Owner rows and the join-request notifications.
+ * The living owners of an organization — the single definition of who is answerable
+ * for what it owns, shared by the staffing invariant, both deletion prongs, the
+ * Owner rows and join-request notifications.
  *
- * "Living" means `profiles.deleted_at` is unset (`users` has no soft-delete column
- * of its own). The profile is joined **LEFT deliberately**: the personal org is
- * provisioned at sign-up, before the profile row exists, so an inner join would
- * declare every pre-onboarding owner dead and drop their resources into the
- * husk-org rules.
- *
- * @param organizationId SQL resolving to the organization id to scope to. NULL
- *   matches nothing, which treats the resource exactly like a husk org.
+ * The profile join is LEFT deliberately: personal orgs are provisioned at sign-up,
+ * before the profile row exists, so an inner join would declare every
+ * pre-onboarding owner dead. A NULL `organizationId` matches nothing, i.e. a husk.
  */
 export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
   return sql`
@@ -376,19 +357,13 @@ export interface StaffingGuardedWrite {
 }
 
 /**
- * Whether the holder of a user grant can actually administer with it: an
- * `activated` account that has not been closed. The single definition of an
- * answerable grantee, shared by the staffing invariant and the account-deletion
- * blocker's escape hatch so the two cannot disagree.
+ * Whether a user grant's holder can administer with it: activated, not closed. One
+ * definition, shared by the staffing invariant and the deletion blocker's escape
+ * hatch so they cannot disagree.
  *
- * A missing `profiles` row reads as "cannot administer" — the opposite of
- * {@link livingOrgOwnerIdsSql}'s LEFT JOIN, deliberately. That one answers who
- * *owns* an org, where a pre-onboarding owner is still a real person; this one
- * answers who can act through a *grant*, and invitation acceptance seeds grants
- * before onboarding writes the profile.
- *
- * An `EXISTS` subquery rather than a join, so a caller can add it to a
- * `SELECT … FOR UPDATE` without widening what gets locked.
+ * A missing profile reads as "cannot administer" — deliberately the opposite of
+ * {@link livingOrgOwnerIdsSql}, since invitations seed grants before onboarding.
+ * `EXISTS` not a join, so adding it to a `FOR UPDATE` widens no lock.
  */
 export function granteeCanAdministerSql(granteeIdRef: SQL | AnyColumn): SQL<boolean> {
   return sql<boolean>`EXISTS (
@@ -409,16 +384,13 @@ export interface StaffingGrantRow {
 }
 
 /**
- * The single definition of "the rows that could staff a resource" (user grants with
- * an admin/owner role), read `FOR UPDATE` so concurrent staffing reductions
- * serialize. Must run inside a transaction — outside one the lock is released
- * immediately and buys nothing.
- *
- * Every admin-tier row is returned and locked, including those whose holder cannot
- * administer: whether a row *counts* is {@link assertResourceStaysStaffed}'s
- * question, but a caller still has to lock the row it is about to write.
- * `canAdminister` rides along as a scalar subquery so the `FROM` stays one table
- * and `FOR UPDATE` locks nothing but the grants.
+ * The rows that could staff a resource (admin/owner user grants), `FOR UPDATE` so
+ * concurrent staffing reductions serialize. Must run in a transaction, or the lock
+ * releases immediately. Every admin-tier row is locked, including holders who
+ * cannot administer — whether a row *counts* is
+ * {@link assertResourceStaysStaffed}'s question, but the caller still has to lock
+ * what it is about to write. `canAdminister` is a scalar subquery so `FOR UPDATE`
+ * locks nothing but the grants.
  */
 export async function lockStaffingGrants(
   tx: DbOrTx,
@@ -445,24 +417,15 @@ export async function lockStaffingGrants(
 }
 
 /**
- * The **last-admin invariant**, in the only case where it still bites: a resource
- * whose owning organization has no living owner must not lose its last user grant
- * with an admin/owner role *that somebody can actually administer with*, so
- * revoking or demoting it is refused (400). Must run in the same transaction as the
- * write it guards.
+ * The **last-admin invariant**. Refuses (400) a revoke or demotion that would take
+ * the last administrable admin/owner user grant off a resource whose owning org has
+ * no living owner. Must run in the same transaction as the write it guards; while a
+ * living owner exists somebody answerable already has full control, so only the
+ * husk case is guarded.
  *
- * While a living org owner exists somebody answerable already holds full control,
- * so grants are freely revocable. Only the husk case (the last owner closed their
- * account, or there is no owning org) is guarded.
- *
- * The lock is taken **before** the owner check, and that order is load-bearing:
- * checking ownership first would let a revoke (owner still alive) and that owner's
- * deletion (another admin grant still present) both observe a safe world and both
- * commit, leaving the resource with neither.
- *
- * Team/org grants never count — a named person has to be answerable — and neither
- * does a grant its holder cannot administer with ({@link granteeCanAdministerSql},
- * the same rule the deletion blocker applies).
+ * The lock comes **before** the owner check, and that order is load-bearing:
+ * reversed, a revoke and that owner's deletion would both see a safe world and both
+ * commit. Team/org grants never count — a named person has to be answerable.
  */
 export async function assertResourceStaysStaffed(
   tx: DbOrTx,
