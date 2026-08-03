@@ -90,7 +90,7 @@
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
         "members": "Teilen Sie die Geräteverwaltung mit Mitarbeitenden, so wie Experimente den Zugriff teilen.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen.",
-        "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab Onboarding). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
+        "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {

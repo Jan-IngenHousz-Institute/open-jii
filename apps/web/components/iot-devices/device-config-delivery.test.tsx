@@ -24,6 +24,27 @@ vi.mock("@/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   useIotCommunication: () => communication,
 }));
 
+// jsdom supports neither transport, so support is simulated per test.
+const browserSupport = {
+  bluetooth: false,
+  serial: false,
+  any: false,
+  bluetoothReason: "browser" as "browser" | "device" | null,
+  serialReason: "browser" as "browser" | "device" | null,
+};
+
+vi.mock("@/hooks/iot/useIotBrowserSupport", () => ({
+  useIotBrowserSupport: () => browserSupport,
+}));
+
+function setBrowserSupport(bluetooth: boolean, serial: boolean) {
+  browserSupport.bluetooth = bluetooth;
+  browserSupport.serial = serial;
+  browserSupport.any = bluetooth || serial;
+  browserSupport.bluetoothReason = bluetooth ? null : "browser";
+  browserSupport.serialReason = serial ? null : "browser";
+}
+
 vi.mock("@repo/iot", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@repo/iot")>();
   return { ...actual, deliverDeviceConfig: vi.fn() };
@@ -53,6 +74,7 @@ describe("DeviceConfigDelivery", () => {
   beforeEach(() => {
     downloads.length = 0;
     communication.isConnected = false;
+    setBrowserSupport(false, false);
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
@@ -103,6 +125,45 @@ describe("DeviceConfigDelivery", () => {
       });
     });
     expect(toast).toHaveBeenCalledWith({ title: "iot.onboarding.pushSuccess" });
+  });
+
+  it("disables Connect while the selected transport is unsupported in this browser", () => {
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+
+    expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeDisabled();
+  });
+
+  it("enables Connect when the selected transport is supported", () => {
+    setBrowserSupport(false, true);
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+
+    expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeEnabled();
+  });
+
+  it("auto-selects the only supported transport", () => {
+    // Default selection is serial; with only bluetooth available, the
+    // auto-select must switch to it or Connect would stay disabled.
+    setBrowserSupport(true, false);
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+
+    expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeEnabled();
+  });
+
+  it("surfaces the driver's reason when the push fails", async () => {
+    const user = userEvent.setup();
+    communication.isConnected = true;
+    vi.mocked(deliverDeviceConfig).mockRejectedValueOnce(new Error("SET_CONFIG unsupported"));
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.push/ }));
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith({
+        title: "iot.onboarding.pushError",
+        description: "SET_CONFIG unsupported",
+        variant: "destructive",
+      });
+    });
   });
 
   it("is download-only for multispeq", () => {

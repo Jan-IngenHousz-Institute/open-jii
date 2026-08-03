@@ -3952,6 +3952,151 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/devices": {
+      "get": {
+        "operationId": "experiments.listExperimentDevices",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "device": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "thingName": {
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "multispeq",
+                              "ambyte",
+                              "minipar",
+                              "generic",
+                              "ambit"
+                            ],
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "pending",
+                              "active",
+                              "rotating",
+                              "revoked"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "thingName",
+                          "serialNumber",
+                          "name",
+                          "deviceType",
+                          "status"
+                        ]
+                      },
+                      "addedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "device",
+                      "addedBy",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/devices/{deviceId}": {
+      "delete": {
+        "operationId": "experiments.removeExperimentDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}/metadata": {
       "get": {
         "operationId": "experiments.listExperimentMetadata",
@@ -13800,6 +13945,666 @@
                     "publicKey",
                     "privateKey"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/onboard": {
+      "post": {
+        "operationId": "iot.onboardDevice",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentIds": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100,
+                    "description": "Experiments to bind the device to. An empty list re-issues the config."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit"
+                      ],
+                      "type": "string"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "description": "MQTT broker host (AWS IoT ATS data endpoint)"
+                    },
+                    "experiments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "experimentName": {
+                            "type": "string"
+                          },
+                          "topicPrefix": {
+                            "type": "string",
+                            "description": "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement."
+                          },
+                          "workbook": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "cells": {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "protocol"
+                                            },
+                                            "payload": {
+                                              "type": "object",
+                                              "properties": {
+                                                "protocolId": {
+                                                  "type": "string",
+                                                  "format": "uuid"
+                                                },
+                                                "version": {
+                                                  "type": "integer",
+                                                  "minimum": 0
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "protocolId",
+                                                "version"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "payload"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "command"
+                                            },
+                                            "payload": {
+                                              "type": "object",
+                                              "properties": {
+                                                "format": {
+                                                  "enum": [
+                                                    "string",
+                                                    "json",
+                                                    "yaml"
+                                                  ],
+                                                  "type": "string"
+                                                },
+                                                "content": {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "format",
+                                                "content"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "payload"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "macro"
+                                            },
+                                            "payload": {
+                                              "type": "object",
+                                              "properties": {
+                                                "macroId": {
+                                                  "type": "string",
+                                                  "format": "uuid"
+                                                },
+                                                "language": {
+                                                  "enum": [
+                                                    "python",
+                                                    "r",
+                                                    "javascript"
+                                                  ],
+                                                  "type": "string"
+                                                },
+                                                "name": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "macroId",
+                                                "language"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "payload"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "question"
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
+                                            },
+                                            "question": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "kind": {
+                                                      "const": "yes_no"
+                                                    },
+                                                    "text": {
+                                                      "type": "string",
+                                                      "maxLength": 64
+                                                    },
+                                                    "required": {
+                                                      "default": false,
+                                                      "type": "boolean"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "kind",
+                                                    "text"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "kind": {
+                                                      "const": "open_ended"
+                                                    },
+                                                    "text": {
+                                                      "type": "string",
+                                                      "maxLength": 64
+                                                    },
+                                                    "required": {
+                                                      "default": false,
+                                                      "type": "boolean"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "kind",
+                                                    "text"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "kind": {
+                                                      "const": "multi_choice"
+                                                    },
+                                                    "text": {
+                                                      "type": "string",
+                                                      "maxLength": 64
+                                                    },
+                                                    "options": {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "type": "string",
+                                                        "minLength": 1,
+                                                        "maxLength": 64
+                                                      },
+                                                      "minItems": 1
+                                                    },
+                                                    "required": {
+                                                      "default": false,
+                                                      "type": "boolean"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "kind",
+                                                    "text",
+                                                    "options"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "kind": {
+                                                      "const": "number"
+                                                    },
+                                                    "text": {
+                                                      "type": "string",
+                                                      "maxLength": 64
+                                                    },
+                                                    "required": {
+                                                      "default": false,
+                                                      "type": "boolean"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "kind",
+                                                    "text"
+                                                  ],
+                                                  "additionalProperties": false
+                                                }
+                                              ]
+                                            },
+                                            "answer": {
+                                              "type": "string"
+                                            },
+                                            "isAnswered": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "name",
+                                            "question"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "branch"
+                                            },
+                                            "paths": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "id": {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                  },
+                                                  "label": {
+                                                    "type": "string",
+                                                    "maxLength": 64
+                                                  },
+                                                  "color": {
+                                                    "type": "string"
+                                                  },
+                                                  "conditions": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "id": {},
+                                                        "sourceCellId": {},
+                                                        "field": {},
+                                                        "operator": {},
+                                                        "value": {}
+                                                      }
+                                                    }
+                                                  },
+                                                  "gotoCellId": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "id",
+                                                  "label",
+                                                  "color",
+                                                  "conditions"
+                                                ]
+                                              },
+                                              "minItems": 1
+                                            },
+                                            "defaultPathId": {
+                                              "type": "string"
+                                            },
+                                            "evaluatedPathId": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "paths"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "output"
+                                            },
+                                            "producedBy": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "data": {},
+                                            "executionTime": {
+                                              "type": "number",
+                                              "minimum": 0
+                                            },
+                                            "messages": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "deviceResults": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "deviceId": {
+                                                    "type": "string"
+                                                  },
+                                                  "deviceLabel": {
+                                                    "type": "string"
+                                                  },
+                                                  "family": {
+                                                    "enum": [
+                                                      "multispeq",
+                                                      "ambyte",
+                                                      "minipar",
+                                                      "generic",
+                                                      "ambit"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "deviceName": {
+                                                    "type": "string"
+                                                  },
+                                                  "data": {},
+                                                  "error": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "deviceId"
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "producedBy"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "isCollapsed": {
+                                              "default": false,
+                                              "type": "boolean"
+                                            },
+                                            "type": {
+                                              "const": "markdown"
+                                            },
+                                            "content": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "type",
+                                            "content"
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "entitySnapshots": {
+                                    "type": "object",
+                                    "properties": {
+                                      "protocols": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                          "type": "object",
+                                          "properties": {
+                                            "code": {},
+                                            "family": {
+                                              "enum": [
+                                                "multispeq",
+                                                "ambyte",
+                                                "minipar",
+                                                "generic",
+                                                "ambit"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "macros": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                          "type": "object",
+                                          "properties": {
+                                            "code": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "code"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "protocols",
+                                      "macros"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "version",
+                                  "cells",
+                                  "entitySnapshots"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "experimentName",
+                          "topicPrefix",
+                          "workbook"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "thingName",
+                    "deviceType",
+                    "endpoint",
+                    "experiments"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/experiments": {
+      "get": {
+        "operationId": "iot.listDeviceExperiments",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "active",
+                          "stale",
+                          "archived",
+                          "published"
+                        ],
+                        "type": "string"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "status",
+                      "addedAt"
+                    ]
+                  }
                 }
               }
             }

@@ -172,7 +172,8 @@ export function IotDeviceDetail({ deviceId }: { deviceId: string }) {
         </NavTabsContent>
 
         <NavTabsContent value="onboarding">
-          <DeviceOnboardingPanel device={device} />
+          {/* Keyed so an issued config never survives a device-to-device navigation. */}
+          <DeviceOnboardingPanel key={device.id} device={device} />
         </NavTabsContent>
 
         <NavTabsContent value="members">

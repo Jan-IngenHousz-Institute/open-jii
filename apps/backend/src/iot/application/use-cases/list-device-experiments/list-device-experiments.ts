@@ -39,13 +39,28 @@ export class ListDeviceExperimentsUseCase {
       bindingsResult.value.map((binding) => this.canReadExperiment(binding.id, userId)),
     );
 
-    return success(bindingsResult.value.filter((binding, index) => visible[index]));
+    for (const readableResult of visible) {
+      if (readableResult.isFailure()) {
+        return failure(readableResult.error);
+      }
+    }
+
+    return success(
+      bindingsResult.value.filter((_binding, index) => {
+        const readableResult = visible[index];
+        return readableResult.isSuccess() && readableResult.value;
+      }),
+    );
   }
 
-  private async canReadExperiment(experimentId: string, userId: string): Promise<boolean> {
+  private async canReadExperiment(experimentId: string, userId: string): Promise<Result<boolean>> {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-    if (accessResult.isSuccess() && accessResult.value.hasAccess) {
-      return true;
+    if (accessResult.isFailure()) {
+      return failure(accessResult.error);
+    }
+
+    if (accessResult.value.hasAccess) {
+      return success(true);
     }
 
     const decision = await this.authorizationService.can(userId, {
@@ -53,6 +68,6 @@ export class ListDeviceExperimentsUseCase {
       resourceId: experimentId,
       action: "read",
     });
-    return decision.allow;
+    return success(decision.allow);
   }
 }

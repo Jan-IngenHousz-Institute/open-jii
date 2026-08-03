@@ -2,11 +2,12 @@
 
 import { ConnectionTypeSelector } from "@/components/iot/iot-connection-type-selector";
 import { sensorFamilyToDeviceType } from "@/hooks/iot/device-type-mapping";
+import { useAutoConnectionType } from "@/hooks/iot/useAutoConnectionType";
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import type { ConnectionType } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import { Download, Loader2, Send, Usb } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -27,15 +28,7 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
   const [isPushing, setIsPushing] = useState(false);
 
   const browserSupport = useIotBrowserSupport(device.deviceType);
-
-  // Auto-select the first supported connection type
-  useEffect(() => {
-    if (!browserSupport.bluetooth && browserSupport.serial) {
-      setConnectionType("serial");
-    } else if (browserSupport.bluetooth && !browserSupport.serial) {
-      setConnectionType("bluetooth");
-    }
-  }, [browserSupport.bluetooth, browserSupport.serial]);
+  useAutoConnectionType(browserSupport, setConnectionType);
 
   const { isConnected, isConnecting, error, driver, connect, disconnect } = useIotCommunication(
     device.deviceType,

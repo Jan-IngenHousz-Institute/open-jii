@@ -264,6 +264,45 @@ describe("OnboardDeviceUseCase", () => {
     expect(result.error.statusCode).toBe(403);
   });
 
+  it("a refusal over an inaccessible existing binding leaves the new binding unmade", async () => {
+    const { experiment: privateExperiment } = await testApp.createExperiment({
+      name: "Private",
+      userId,
+    });
+    const device = await createActiveDevice(userId);
+    await useCase.execute(device.id, [privateExperiment.id], userId);
+
+    const stranger = await testApp.createTestUser({});
+    const { experiment: own } = await testApp.createExperiment({ name: "Own", userId: stranger });
+
+    const result = await useCase.execute(device.id, [own.id], stranger);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+
+    const bound = await repository.listExperimentsByDevice(device.id);
+    assertSuccess(bound);
+    expect(bound.value?.map((binding) => binding.id)).toEqual([privateExperiment.id]);
+  });
+
+  it("does not reveal archived status to a caller without access", async () => {
+    const stranger = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "E",
+      userId,
+      status: "archived",
+    });
+    const device = await createActiveDevice(stranger);
+
+    const result = await useCase.execute(device.id, [experiment.id], stranger);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(result.error.message).toBe(
+      "Only experiment members or managers can onboard a device to it",
+    );
+  });
+
   it("excludes since-archived experiments from the re-issued config", async () => {
     const device = await createActiveDevice(userId);
     const { experiment } = await testApp.createExperiment({ name: "E", userId });

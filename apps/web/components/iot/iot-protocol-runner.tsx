@@ -3,6 +3,7 @@
 import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
+import { useAutoConnectionType } from "~/hooks/iot/useAutoConnectionType";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
@@ -54,14 +55,7 @@ export function IotProtocolRunner({
   // device's prompts rather than assuming it hung. See OJD-1643.
   const requiresInteraction = protocolRequiresInteraction(protocolCode);
 
-  // Auto-select the first supported connection type
-  useEffect(() => {
-    if (!browserSupport.bluetooth && browserSupport.serial) {
-      setConnectionType("serial");
-    } else if (browserSupport.bluetooth && !browserSupport.serial) {
-      setConnectionType("bluetooth");
-    }
-  }, [browserSupport.bluetooth, browserSupport.serial]);
+  useAutoConnectionType(browserSupport, setConnectionType);
 
   const { isConnected, isConnecting, error, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
