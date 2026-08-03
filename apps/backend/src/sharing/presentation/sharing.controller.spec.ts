@@ -3,8 +3,8 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
 
-import { AuthorizationService } from "../authorization/authorization.service";
-import { TestHarness } from "../test/test-harness";
+import { AuthorizationService } from "../../authorization/authorization.service";
+import { TestHarness } from "../../test/test-harness";
 
 /**
  * HTTP-level tests for the sharing controller. Authorization runs through the

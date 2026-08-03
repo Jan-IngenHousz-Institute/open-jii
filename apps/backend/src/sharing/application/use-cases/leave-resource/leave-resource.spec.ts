@@ -2,9 +2,9 @@ import { StatusCodes } from "http-status-codes";
 
 import { and, eq, profiles, resourceGrants } from "@repo/database";
 
-import { AuthorizationService } from "../../authorization/authorization.service";
-import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
-import { TestHarness } from "../../test/test-harness";
+import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../test/test-harness";
 import { LeaveResourceUseCase } from "./leave-resource";
 
 /**

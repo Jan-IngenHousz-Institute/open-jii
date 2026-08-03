@@ -5,10 +5,10 @@ import type {
   UpdateCollaboratorBody,
 } from "@repo/api/domains/sharing/sharing.schema";
 
-import { AuthorizationService } from "../../authorization/authorization.service";
-import { AppError, Result, failure } from "../../common/utils/fp-utils";
-import type { ResourceCollaborator } from "../core/models/sharing.model";
-import { SharingRepository } from "../sharing.repository";
+import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import type { ResourceCollaborator } from "../../../core/models/sharing.model";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
 /**
  * Change the role of an existing grant, identified by id and scoped to its

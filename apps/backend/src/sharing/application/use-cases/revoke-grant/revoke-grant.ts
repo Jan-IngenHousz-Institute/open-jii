@@ -2,9 +2,9 @@ import { Injectable } from "@nestjs/common";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
-import { AuthorizationService } from "../../authorization/authorization.service";
-import { AppError, Result, failure, success } from "../../common/utils/fp-utils";
-import { SharingRepository } from "../sharing.repository";
+import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
 /**
  * Revoke a grant. Gated on `share`. Access may still persist via another precedence

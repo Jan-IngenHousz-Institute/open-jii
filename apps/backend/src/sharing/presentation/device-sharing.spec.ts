@@ -4,12 +4,12 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 
-import { AuthorizationService } from "../authorization/authorization.service";
-import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
-import { assertSuccess } from "../common/utils/fp-utils";
-import { ListIotDevicesUseCase } from "../iot/application/use-cases/list-iot-devices/list-iot-devices";
-import type { MockAnalyticsAdapter } from "../test/mocks/adapters/analytics.adapter.mock";
-import { TestHarness } from "../test/test-harness";
+import { AuthorizationService } from "../../authorization/authorization.service";
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
+import { assertSuccess } from "../../common/utils/fp-utils";
+import { ListIotDevicesUseCase } from "../../iot/application/use-cases/list-iot-devices/list-iot-devices";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
+import { TestHarness } from "../../test/test-harness";
 
 /**
  * Devices on the sharing surface, end to end over HTTP.

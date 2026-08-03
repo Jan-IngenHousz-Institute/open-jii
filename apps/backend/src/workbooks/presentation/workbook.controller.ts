@@ -12,7 +12,7 @@ import { resolveResourceCapabilities } from "../../authorization/resource-capabi
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
-import { SetVisibilityUseCase } from "../../visibility/set-visibility";
+import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
 import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook-version/get-workbook-version";

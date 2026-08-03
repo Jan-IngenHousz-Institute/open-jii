@@ -35,23 +35,23 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
-import { AppError, Result, tryCatch } from "../common/utils/fp-utils";
-import { escapeLike } from "../common/utils/fts";
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
+import { escapeLike } from "../../../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
   getAnonymizedFirstName,
   getAnonymizedLastName,
-} from "../common/utils/profile-anonymization";
+} from "../../../common/utils/profile-anonymization";
+import { userIsSelectableGrantee } from "../grantee-selectability";
 import type {
   CreateGrantInput,
   DirectGrantRow,
   EnrichedGrant,
   ResourceCollaborator,
-} from "./core/models/sharing.model";
-import { userIsSelectableGrantee } from "./grantee-selectability";
-import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "./resource-staffing";
-import type { StaffingGuardedWrite } from "./resource-staffing";
+} from "../models/sharing.model";
+import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "../resource-staffing";
+import type { StaffingGuardedWrite } from "../resource-staffing";
 
 /**
  * Archived experiments are immutable server-side, grant writes included. Only

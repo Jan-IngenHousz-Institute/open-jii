@@ -11,17 +11,17 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { AuthorizationService } from "../authorization/authorization.service";
-import { assertFailure, assertSuccess } from "../common/utils/fp-utils";
-import { IotDeviceRepository } from "../iot/core/repositories/iot-device.repository";
-import { MacroRepository } from "../macros/core/repositories/macro.repository";
-import { TestHarness } from "../test/test-harness";
-import { UserRepository } from "../users/core/repositories/user.repository";
-import { SharingRepository } from "./sharing.repository";
-import { CreateGrantUseCase } from "./use-cases/create-grant";
-import { ListGrantsUseCase } from "./use-cases/list-grants";
-import { RevokeGrantUseCase } from "./use-cases/revoke-grant";
-import { UpdateGrantUseCase } from "./use-cases/update-grant";
+import { AuthorizationService } from "../../authorization/authorization.service";
+import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
+import { IotDeviceRepository } from "../../iot/core/repositories/iot-device.repository";
+import { MacroRepository } from "../../macros/core/repositories/macro.repository";
+import { TestHarness } from "../../test/test-harness";
+import { UserRepository } from "../../users/core/repositories/user.repository";
+import { CreateGrantUseCase } from "../application/use-cases/create-grant/create-grant";
+import { ListGrantsUseCase } from "../application/use-cases/list-grants/list-grants";
+import { RevokeGrantUseCase } from "../application/use-cases/revoke-grant/revoke-grant";
+import { UpdateGrantUseCase } from "../application/use-cases/update-grant/update-grant";
+import { SharingRepository } from "./repositories/sharing.repository";
 
 /**
  * The last-admin invariant, which is **conditional**: a resource must never be

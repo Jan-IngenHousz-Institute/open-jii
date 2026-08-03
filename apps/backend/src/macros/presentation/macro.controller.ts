@@ -13,7 +13,7 @@ import { resolveResourceCapabilities } from "../../authorization/resource-capabi
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
-import { SetVisibilityUseCase } from "../../visibility/set-visibility";
+import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";

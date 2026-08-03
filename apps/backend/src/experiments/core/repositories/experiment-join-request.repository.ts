@@ -24,7 +24,7 @@ import {
 import {
   assertResourceStaysStaffed,
   findOwningOrgOwnerIds,
-} from "../../../sharing/resource-staffing";
+} from "../../../sharing/core/resource-staffing";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,

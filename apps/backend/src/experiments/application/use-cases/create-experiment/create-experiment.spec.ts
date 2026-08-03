@@ -9,7 +9,7 @@ import {
 } from "@repo/database";
 
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
-import { LocationRepository } from "../../../../experiments/core/repositories/experiment-location.repository";
+import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { CreateExperimentUseCase } from "./create-experiment";
 

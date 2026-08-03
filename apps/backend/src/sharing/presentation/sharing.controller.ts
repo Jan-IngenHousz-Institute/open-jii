@@ -6,15 +6,15 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { sharingContract } from "@repo/api/domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "@repo/api/domains/sharing/transfer-admin/sharing-transfer-admin.contract";
 
-import { formatDatesList } from "../common/utils/date-formatter";
-import { throwOrpcFailure } from "../common/utils/orpc-fp";
-import { CreateGrantUseCase } from "./use-cases/create-grant";
-import { LeaveResourceUseCase } from "./use-cases/leave-resource";
-import { ListGrantsUseCase } from "./use-cases/list-grants";
-import { RevokeGrantUseCase } from "./use-cases/revoke-grant";
-import { SearchGranteeOrganizationsUseCase } from "./use-cases/search-grantee-organizations";
-import { TransferResourceAdminUseCase } from "./use-cases/transfer-resource-admin";
-import { UpdateGrantUseCase } from "./use-cases/update-grant";
+import { formatDatesList } from "../../common/utils/date-formatter";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { CreateGrantUseCase } from "../application/use-cases/create-grant/create-grant";
+import { LeaveResourceUseCase } from "../application/use-cases/leave-resource/leave-resource";
+import { ListGrantsUseCase } from "../application/use-cases/list-grants/list-grants";
+import { RevokeGrantUseCase } from "../application/use-cases/revoke-grant/revoke-grant";
+import { SearchGranteeOrganizationsUseCase } from "../application/use-cases/search-grantee-organizations/search-grantee-organizations";
+import { TransferResourceAdminUseCase } from "../application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { UpdateGrantUseCase } from "../application/use-cases/update-grant/update-grant";
 
 /**
  * Generic per-resource sharing (collaborators). Every operation authorizes with

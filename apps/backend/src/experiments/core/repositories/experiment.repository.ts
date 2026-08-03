@@ -35,8 +35,8 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { userIsSelectableGrantee } from "../../../sharing/grantee-selectability";
-import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/resource-staffing";
+import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
+import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,

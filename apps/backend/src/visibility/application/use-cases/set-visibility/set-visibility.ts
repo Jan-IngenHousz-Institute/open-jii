@@ -2,12 +2,12 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { PublishableResourceType } from "@repo/api/domains/visibility/visibility.schema";
 
-import { AuthorizationService } from "../authorization/authorization.service";
-import { AppError, Result, failure, success } from "../common/utils/fp-utils";
-import { resolveVisibilityTransition } from "./visibility-transition";
-import type { Visibility } from "./visibility-transition";
-import { VisibilityRepository } from "./visibility.repository";
-import type { VisibilityRow } from "./visibility.repository";
+import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { VisibilityRepository } from "../../../core/repositories/visibility.repository";
+import type { VisibilityRow } from "../../../core/repositories/visibility.repository";
+import { resolveVisibilityTransition } from "../../../core/visibility-transition";
+import type { Visibility } from "../../../core/visibility-transition";
 
 export interface SetVisibilityResult {
   id: string;

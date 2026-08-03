@@ -7,10 +7,7 @@ import { NEWSLETTER_PORT } from "../../../../newsletter/core/ports/newsletter.po
 import { UserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import {
-  SOLE_ADMIN_DELETE_MESSAGE,
-  UserRepository,
-} from "../../../core/repositories/user.repository";
+import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
 export class DeleteUserUseCase {
@@ -56,7 +53,11 @@ export class DeleteUserUseCase {
             operation: "deleteUser",
             userId: id,
           });
-          return failure(AppError.forbidden(SOLE_ADMIN_DELETE_MESSAGE));
+          return failure(
+            AppError.forbidden(
+              "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
+            ),
+          );
         }
 
         // Soft delete

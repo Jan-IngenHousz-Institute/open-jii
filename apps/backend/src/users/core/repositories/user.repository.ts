@@ -52,7 +52,7 @@ import {
   lockStaffingGrants,
   lockUserAccount,
   orgRoleIsOwnerSql,
-} from "../../../sharing/resource-staffing";
+} from "../../../sharing/core/resource-staffing";
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -65,30 +65,15 @@ import {
 } from "../models/user.model";
 
 /**
- * Refusal shared by the pre-flight deletion blocker and the in-transaction guard, so
- * the caller sees the same message whichever one catches it.
- */
-export const SOLE_ADMIN_DELETE_MESSAGE =
-  "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.";
-
-/**
- * The resources whose last answerable person is `userId`, so closing that account
- * would orphan them. Two prongs, because answerability has two sources:
+ * Resources whose last answerable person is `userId`. Two prongs:
  *
- * - **(a) ownership** — the resource belongs to an organization `userId` is the
- *   sole living owner of, so deleting the account leaves the org a husk.
- * - **(b) the husk case** — the owning org already has no living owner (or there is
- *   no owning org), and `userId` holds the only full-control grant left. This is
- *   what keeps the hand-off chain from breaking: a transferee who accepted admin on
- *   a husk-org resource is themselves blocked until they pass it on.
+ * - **(a)** the owning org's sole living owner is `userId`, so deleting leaves a husk.
+ * - **(b)** the org is *already* a husk and `userId` holds the only full-control
+ *   grant — this is what stops a hand-off chain breaking.
  *
- * Both prongs share the leading escape hatch: somebody *else* holds an admin/owner
- * grant they can administer with, per {@link granteeCanAdministerSql} — the same
- * definition the staffing invariant counts with.
- *
- * One polymorphic statement rather than a typed query per type, because it is
- * re-run verbatim inside the deletion transaction and having exactly one copy is
- * what stops the pre-flight blocker and the in-transaction guard from drifting.
+ * Both escape when somebody *else* holds an administrable admin/owner grant. One
+ * polymorphic statement because it is re-run verbatim inside the deletion
+ * transaction, and one copy is what stops the two from drifting.
  */
 function blockingResourcesQuery(userId: string) {
   return sql`
@@ -236,10 +221,6 @@ export class UserRepository {
         .innerJoin(users, eq(profiles.userId, users.id))
         .$dynamic();
 
-      // Only activated, non-deleted profiles are discoverable — applied on EVERY
-      // branch, including the empty-query listing. Grant creation validates against
-      // the same rule, so a user you cannot discover here cannot be made a
-      // collaborator (whose email/profile the collaborators list would disclose).
       const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
 
       // Match by name or email: substring (ILIKE) handles prefixes, trigram (%)
@@ -261,9 +242,7 @@ export class UserRepository {
           .orderBy(
             sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
             asc(profiles.firstName),
-            // Total order: names tie constantly (shared first names), and without
-            // a unique tiebreaker Postgres may order tied rows differently per
-            // query — which makes limit/offset pagination drop or repeat rows.
+            // Names tie constantly, and without a unique tiebreaker paging drops rows.
             asc(profiles.userId),
           );
       } else {
@@ -363,24 +342,17 @@ export class UserRepository {
   }
 
   /**
-   * Transactional counterpart of {@link findSoleAdminResources}: refuse the deletion
-   * if it would leave any resource with nobody answerable for it, running the *same*
-   * two-pronged predicate so the two cannot disagree.
-   *
-   * Locks first, decides second, via the shared {@link lockStaffingGrants} over
-   * every resource either prong could name. Without that, a revoke (owning-org owner
-   * still alive, so its invariant stands down) and that owner's deletion (another
-   * admin grant still present, so this guard stands down) would both see a safe
-   * world and both commit, leaving the resource with neither.
+   * Transactional counterpart of {@link findSoleAdminResources}, running the *same*
+   * predicate so the two cannot disagree. Locks first, decides second: otherwise a
+   * revoke (owner still alive) and that owner's deletion (a grant still present)
+   * would both see a safe world and both commit, leaving neither.
    *
    * @throws AppError (403) when the user is the last answerable person for a resource
    */
   private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
-    // 1. Lock the owner-membership rows of every organization this user owns, in a
-    //    fixed order. Grant rows cannot anchor this: a resource owned outright has
-    //    none, so two owners of the same organization would each see the other still
-    //    there and both commit. Resource creation takes the same lock, which is what
-    //    orders it against an in-flight create.
+    // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
+    //    rows cannot anchor this — a resource owned outright has none. Creation takes
+    //    the same lock, which orders this against an in-flight create.
     const ownedOrgs = await tx
       .selectDistinct({ organizationId: organizationMembers.organizationId })
       .from(organizationMembers)
@@ -396,11 +368,9 @@ export class UserRepository {
       await lockOrgOwnerships(tx, organizationId);
     }
 
-    // 2. Then the per-resource staffing rows, in a fixed global order rather than
-    //    whatever the plan returns: the loop takes one lock per resource, so two
-    //    concurrent deletions sharing resources could otherwise take them in
-    //    opposite orders and deadlock (40P01 → a 500 instead of the refusal).
-    //    Organizations are always locked before grants, so the classes cannot cycle.
+    // 2. Then per-resource staffing rows, in a fixed global order: one lock per
+    //    resource, so two deletions sharing resources could otherwise take them in
+    //    opposite orders and deadlock. Orgs always before grants, so no cycle.
     const candidates = await tx.execute<BlockingResourceKey>(lockCandidatesQuery(userId));
 
     for (const { resource_type, id } of candidates) {
@@ -411,7 +381,9 @@ export class UserRepository {
     const blocking = await tx.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
 
     if (blocking.length > 0) {
-      throw AppError.forbidden(SOLE_ADMIN_DELETE_MESSAGE);
+      throw AppError.forbidden(
+        "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
+      );
     }
   }
 
@@ -452,13 +424,10 @@ export class UserRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
-        // 0. Claim this account exclusively, before anything is torn down. Creation
-        //    takes the same row (shared) before deciding whether to seed a grant, so
-        //    only two orders are possible: a create commits first and its grant is
-        //    swept up below, or it queues behind this and then refuses. Without the
-        //    lock a create could land a grant *after* the teardown, stranding it —
-        //    nothing revisits a deleted account's grants. Taken before the
-        //    organization and grant locks, matching creation's order.
+        // 0. Claim the account exclusively first. Creation takes the same row
+        //    (shared), so either a create commits first and its grant is swept up
+        //    below, or it queues behind this and refuses. Without the lock a create
+        //    could land a grant *after* the teardown, and nothing revisits those.
         await lockUserAccount(tx, id, "update");
 
         // 1. Revoke every credential and browser session. The user row is kept
@@ -468,26 +437,22 @@ export class UserRepository {
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
 
-        // 2. Re-check the sole-admin invariant *inside* the transaction, under the
-        //    same row locks the sharing guard uses. The pre-flight check in
-        //    DeleteUserUseCase stays where it is for the blocker/hand-off UX, but on
-        //    its own it is raceable: an experiment's last two admins deleting
-        //    concurrently would both observe a second admin and both commit.
+        // 2. Re-check the sole-admin invariant inside the transaction. The
+        //    pre-flight check in DeleteUserUseCase drives the hand-off UX but is
+        //    raceable on its own: two last admins deleting at once would both see
+        //    the other and both commit.
         await this.assertNotSoleAdmin(tx, id);
 
-        // Then clear the dormant roster rows (a plain FK to `users`, no cascade) and
-        // every grant this user holds. can() reads resource_grants, so leaving grants
-        // behind would keep a deleted account's access alive, and the table is
-        // polymorphic on the grantee side, so nothing cascades.
+        // Clear the dormant roster rows and every grant. `can()` reads
+        // resource_grants, so leaving grants behind keeps a deleted account's access
+        // alive — and nothing cascades on the grantee side.
 
         await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
         await deleteGranteeGrants(tx, id, "user");
 
-        // 3. Anonymize profile: scrub PII and mark deleted. An **upsert**, because
-        //    `deleted_at` is the only marker that an account is closed and an UPDATE
-        //    would quietly do nothing for someone who signed up but never onboarded
-        //    — leaving them indistinguishable from a living person forever, still
-        //    counted as a living org owner and still eligible for seeded grants.
+        // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
+        //    the only closed-account marker, and an UPDATE does nothing for someone
+        //    who never onboarded — leaving them a living owner forever.
         await tx
           .insert(profiles)
           .values({

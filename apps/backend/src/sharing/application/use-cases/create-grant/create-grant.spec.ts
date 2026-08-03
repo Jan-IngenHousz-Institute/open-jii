@@ -2,8 +2,8 @@ import { StatusCodes } from "http-status-codes";
 
 import { and, eq, resourceGrants } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../common/utils/fp-utils";
-import { TestHarness } from "../../test/test-harness";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../test/test-harness";
 import { CreateGrantUseCase } from "./create-grant";
 
 describe("createGrant", () => {

@@ -22,7 +22,7 @@ import {
 } from "@repo/database";
 import type { AnyColumn, DbOrTx, SQL } from "@repo/database";
 
-import { AppError } from "../common/utils/fp-utils";
+import { AppError } from "../../common/utils/fp-utils";
 
 /** Whether a grant role staffs a resource (confers full control). */
 function isStaffingRole(role: string): boolean {

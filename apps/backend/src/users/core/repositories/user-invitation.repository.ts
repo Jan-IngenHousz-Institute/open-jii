@@ -14,7 +14,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { assertResourceStaysStaffed } from "../../../sharing/resource-staffing";
+import { assertResourceStaysStaffed } from "../../../sharing/core/resource-staffing";
 import type { InvitationDto } from "../models/user-invitation.model";
 
 /** The tier an invitation confers, stored as the grant role the invitee will hold. */

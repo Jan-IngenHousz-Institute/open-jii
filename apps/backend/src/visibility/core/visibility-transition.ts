@@ -1,5 +1,5 @@
-import { AppError, failure, success } from "../common/utils/fp-utils";
-import type { Result } from "../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
+import type { Result } from "../../common/utils/fp-utils";
 
 /** Two-value visibility shared by every org-scoped resource type. */
 export type Visibility = "private" | "public";

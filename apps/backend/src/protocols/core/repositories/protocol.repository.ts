@@ -26,7 +26,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/resource-staffing";
+import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).

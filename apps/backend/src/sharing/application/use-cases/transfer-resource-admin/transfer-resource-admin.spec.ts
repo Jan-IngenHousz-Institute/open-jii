@@ -1,8 +1,8 @@
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { and, eq, resourceGrants } from "@repo/database";
 
-import { assertSuccess } from "../../common/utils/fp-utils";
-import { TestHarness } from "../../test/test-harness";
+import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../test/test-harness";
 import { TransferResourceAdminUseCase } from "./transfer-resource-admin";
 
 describe("TransferResourceAdminUseCase", () => {

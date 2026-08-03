@@ -31,7 +31,7 @@ import {
   livingOrgOwnerIdsSql,
   lockOrgOwnerships,
   lockStaffingGrants,
-} from "../../../sharing/resource-staffing";
+} from "../../../sharing/core/resource-staffing";
 import { TestHarness } from "../../../test/test-harness";
 import { UserRepository } from "./user.repository";
 

@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
-import { AppError, Result, failure, success } from "../../common/utils/fp-utils";
-import { SharingRepository } from "../sharing.repository";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
 /**
  * Give up the caller's own direct grant. The one sharing operation NOT gated on

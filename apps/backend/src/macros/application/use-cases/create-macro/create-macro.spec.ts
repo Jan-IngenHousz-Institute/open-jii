@@ -10,8 +10,8 @@ import {
 } from "@repo/database";
 
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
-import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
-import { generateHashedFilename } from "../../../../macros/core/models/macro.model";
+import type { CreateMacroDto } from "../../../core/models/macro.model";
+import { generateHashedFilename } from "../../../core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { CreateMacroUseCase } from "./create-macro";

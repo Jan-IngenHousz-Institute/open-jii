@@ -4,8 +4,8 @@ import type { PublishableResourceType } from "@repo/api/domains/visibility/visib
 import { eq, experiments, macros, protocols, workbooks } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../common/utils/fp-utils";
-import type { Visibility } from "./visibility-transition";
+import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import type { Visibility } from "../visibility-transition";
 
 export interface VisibilityRow {
   id: string;

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AuthorizationService } from "../authorization/authorization.service";
-import { success } from "../common/utils/fp-utils";
+import type { AuthorizationService } from "../../../../authorization/authorization.service";
+import { success } from "../../../../common/utils/fp-utils";
+import type { VisibilityRepository } from "../../../core/repositories/visibility.repository";
 import { SetVisibilityUseCase } from "./set-visibility";
-import type { VisibilityRepository } from "./visibility.repository";
 
 describe("SetVisibilityUseCase", () => {
   let authz: { getOwnership: ReturnType<typeof vi.fn> };

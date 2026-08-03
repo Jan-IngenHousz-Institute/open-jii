@@ -2,10 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
-import { AwsLocationService } from "../../../common/modules/aws/services/location/location.service";
-import { ErrorCodes } from "../../../common/utils/error-codes";
-import type { Result } from "../../../common/utils/fp-utils";
-import { success, failure, AppError } from "../../../common/utils/fp-utils";
+import { AwsLocationService } from "./services/location/location.service";
+import { ErrorCodes } from "../../utils/error-codes";
+import type { Result } from "../../utils/fp-utils";
+import { success, failure, AppError } from "../../utils/fp-utils";
 import type {
   SearchPlacesRequest,
   GeocodeLocationRequest,

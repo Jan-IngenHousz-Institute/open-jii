@@ -1,7 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 
-import { SetVisibilityUseCase } from "./set-visibility";
-import { VisibilityRepository } from "./visibility.repository";
+import { SetVisibilityUseCase } from "./application/use-cases/set-visibility/set-visibility";
+import { VisibilityRepository } from "./core/repositories/visibility.repository";
 
 /**
  * Provides the shared `setVisibility` capability (monotonic private→public) used by

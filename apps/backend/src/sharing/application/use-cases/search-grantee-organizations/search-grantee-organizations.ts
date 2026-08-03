@@ -2,8 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { GranteeOrganizationDto } from "@repo/api/domains/sharing/sharing.schema";
 
-import { Result } from "../../common/utils/fp-utils";
-import { SharingRepository } from "../sharing.repository";
+import { Result } from "../../../../common/utils/fp-utils";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
 /**
  * Organization lookup for the collaborators grantee picker. Authorization is the

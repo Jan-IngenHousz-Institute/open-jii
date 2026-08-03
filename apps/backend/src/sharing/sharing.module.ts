@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
 
-import { SharingController } from "./sharing.controller";
-import { SharingRepository } from "./sharing.repository";
-import { CreateGrantUseCase } from "./use-cases/create-grant";
-import { LeaveResourceUseCase } from "./use-cases/leave-resource";
-import { ListGrantsUseCase } from "./use-cases/list-grants";
-import { RevokeGrantUseCase } from "./use-cases/revoke-grant";
-import { SearchGranteeOrganizationsUseCase } from "./use-cases/search-grantee-organizations";
-import { TransferResourceAdminUseCase } from "./use-cases/transfer-resource-admin";
-import { UpdateGrantUseCase } from "./use-cases/update-grant";
+import { CreateGrantUseCase } from "./application/use-cases/create-grant/create-grant";
+import { LeaveResourceUseCase } from "./application/use-cases/leave-resource/leave-resource";
+import { ListGrantsUseCase } from "./application/use-cases/list-grants/list-grants";
+import { RevokeGrantUseCase } from "./application/use-cases/revoke-grant/revoke-grant";
+import { SearchGranteeOrganizationsUseCase } from "./application/use-cases/search-grantee-organizations/search-grantee-organizations";
+import { TransferResourceAdminUseCase } from "./application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { UpdateGrantUseCase } from "./application/use-cases/update-grant/update-grant";
+import { SharingRepository } from "./core/repositories/sharing.repository";
+import { SharingController } from "./presentation/sharing.controller";
 
 /**
  * Generic per-resource sharing over `resource_grants`, authorized inside each
