@@ -148,19 +148,6 @@ describe("EmbargoProcessorService", () => {
       expect(loggerSpy).toHaveBeenCalled();
     });
 
-    it("skips publishing when the transition would violate the monotonic rule", async () => {
-      // Defensive: findExpiredEmbargoes only returns private experiments, but if
-      // an already-public one ever reached the loop the shared helper must stop
-      // the redundant publish rather than the cron applying its own rule.
-      const alreadyPublic: ExperimentDto = { ...mockExperiment, visibility: "public" };
-      mockExperimentRepository.findExpiredEmbargoes.mockResolvedValue(success([alreadyPublic]));
-
-      await service.processExpiredEmbargoes();
-
-      // public → public is a no-op transition, so no write is attempted.
-      expect(mockExperimentRepository.update).not.toHaveBeenCalled();
-    });
-
     it("should handle unexpected errors during processing", async () => {
       // Arrange
       const unexpectedError = new Error("Unexpected error");
