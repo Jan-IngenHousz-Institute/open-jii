@@ -2,10 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 
-import { AwsLocationService } from "./services/location/location.service";
-import { ErrorCodes } from "../../utils/error-codes";
-import type { Result } from "../../utils/fp-utils";
-import { success, failure, AppError } from "../../utils/fp-utils";
 import type {
   SearchPlacesRequest,
   GeocodeLocationRequest,
@@ -13,6 +9,9 @@ import type {
 } from "../../../experiments/core/ports/aws.port";
 import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
 import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
+import { ErrorCodes } from "../../utils/error-codes";
+import type { Result } from "../../utils/fp-utils";
+import { success, failure, AppError } from "../../utils/fp-utils";
 import { CognitoService } from "./services/cognito/cognito.service";
 import type { IotCredentials } from "./services/cognito/cognito.types";
 import { AwsConfigService } from "./services/config/config.service";
@@ -25,6 +24,7 @@ import type {
 } from "./services/iot/iot.types";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
+import { AwsLocationService } from "./services/location/location.service";
 import { AwsS3Service } from "./services/s3/s3.service";
 import type { IotUploadUrl } from "./services/s3/s3.types";
 

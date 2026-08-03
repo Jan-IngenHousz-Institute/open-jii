@@ -9,8 +9,8 @@ import {
 } from "@repo/database";
 
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
-import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { CreateExperimentUseCase } from "./create-experiment";
 
 describe("CreateExperimentUseCase", () => {
