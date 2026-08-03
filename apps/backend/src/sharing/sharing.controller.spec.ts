@@ -188,4 +188,94 @@ describe("SharingController", () => {
       expect((res.body as { id: string }[]).map((o) => o.id)).toEqual([drought]);
     });
   });
+
+  describe("transferResourceAdmin", () => {
+    const transferPath = () => testApp.resolveOrpcPath(contract.sharing.transferResourceAdmin);
+
+    it("hands admin to the target across resource types in one request", async () => {
+      const successor = await testApp.createTestUser({ name: "Successor" });
+      const macro = await testApp.createMacro({
+        name: "M",
+        createdBy: owner,
+        visibility: "private",
+      });
+      const protocol = await testApp.createProtocol({
+        name: "P",
+        createdBy: owner,
+        visibility: "private",
+      });
+
+      // The successor starts with no access at all to either private resource.
+      for (const [resourceType, resourceId] of [
+        ["macro", macro.id],
+        ["protocol", protocol.id],
+      ] as const) {
+        expect(
+          (await authz.can(successor, { resourceType, resourceId, action: "read" })).allow,
+        ).toBe(false);
+      }
+
+      const res = await testApp
+        .post(transferPath())
+        .withAuth(owner)
+        .send({
+          transfers: [
+            { resourceType: "macro", resourceId: macro.id, targetUserId: successor },
+            { resourceType: "protocol", resourceId: protocol.id, targetUserId: successor },
+          ],
+        })
+        .expect(StatusCodes.OK);
+
+      const { results } = res.body as {
+        results: { resourceType: string; resourceId: string; success: boolean }[];
+      };
+      expect(results).toEqual([
+        { resourceType: "macro", resourceId: macro.id, success: true },
+        { resourceType: "protocol", resourceId: protocol.id, success: true },
+      ]);
+
+      // Real `can()`: the grant actually confers management, not just a 200.
+      for (const [resourceType, resourceId] of [
+        ["macro", macro.id],
+        ["protocol", protocol.id],
+      ] as const) {
+        expect(
+          (await authz.can(successor, { resourceType, resourceId, action: "manage" })).allow,
+        ).toBe(true);
+      }
+    });
+  });
+
+  describe("grant write failures surface as errors", () => {
+    it("returns an error when updating a grant that does not exist", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+
+      await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId: crypto.randomUUID(),
+          }),
+        )
+        .withAuth(owner)
+        .send({ role: "viewer" })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("returns an error when revoking a grant that does not exist", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+
+      await testApp
+        .delete(
+          testApp.resolveOrpcPath(contract.sharing.revokeGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId: crypto.randomUUID(),
+          }),
+        )
+        .withAuth(owner)
+        .expect(StatusCodes.NOT_FOUND);
+    });
+  });
 });

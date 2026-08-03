@@ -158,6 +158,41 @@ describe("ProtocolController - read and update endpoints", () => {
       .expect(StatusCodes.FORBIDDEN);
   });
 
+  describe("setVisibility", () => {
+    const visibilityPath = (id: string) =>
+      testApp.resolveOrpcPath(contract.protocols.setVisibility, { id });
+
+    it("publishes a private protocol and returns its new visibility", async () => {
+      const protocol = await testApp.createProtocol({
+        name: "Private Protocol",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+
+      const response = await testApp
+        .patch(visibilityPath(protocol.id))
+        .withAuth(testUserId)
+        .send({ visibility: "public" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ id: protocol.id, visibility: "public" });
+    });
+
+    it("refuses to take a public protocol back to private", async () => {
+      const protocol = await testApp.createProtocol({
+        name: "Public Protocol",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      await testApp
+        .patch(visibilityPath(protocol.id))
+        .withAuth(testUserId)
+        .send({ visibility: "private" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
     // resource/action declared by its @CanAccess decorator, and turn a denial

@@ -636,6 +636,40 @@ describe("MacroController", () => {
     });
   });
 
+  describe("setVisibility", () => {
+    // Unlike the mocked use-cases above, these drive the real SetVisibilityUseCase
+    // against real rows — the monotonic rule is the point of the endpoint.
+    it("publishes a private macro and returns its new visibility", async () => {
+      const macro = await testApp.createMacro({
+        name: "Private macro",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+
+      const res = await testApp
+        .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id: macro.id }))
+        .withAuth(testUserId)
+        .send({ visibility: "public" })
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toEqual({ id: macro.id, visibility: "public" });
+    });
+
+    it("refuses to take a public macro back to private", async () => {
+      const macro = await testApp.createMacro({
+        name: "Public macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      await testApp
+        .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id: macro.id }))
+        .withAuth(testUserId)
+        .send({ visibility: "private" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
   describe("authentication and authorization", () => {
     it("should reject requests without authentication for all endpoints", async () => {
       const macroId = faker.string.uuid();
