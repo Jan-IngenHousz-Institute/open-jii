@@ -87,10 +87,10 @@
       "comingSoon": {
         "title": "Coming soon",
         "groups": "Organize devices into groups you can manage, provision, and onboard together.",
-        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure.",
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
         "members": "Share device management with collaborators, the way experiments share access.",
-        "lineage": "Trace this device's identity through to its ingested measurements."
+        "lineage": "Trace this device's identity through to its ingested measurements.",
+        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure."
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
@@ -181,6 +181,43 @@
         "download": "Download",
         "downloadAll": "Download all"
       }
+    },
+    "onboarding": {
+      "currentTitle": "Experiments",
+      "currentDescription": "The experiments this device currently streams into.",
+      "currentEmpty": "This device is not onboarded to any experiment yet.",
+      "addTitle": "Onboard to experiments",
+      "addDescription": "Pick the experiments this device should stream into. Onboarding issues the configuration to hand to the device.",
+      "addEmpty": "No further experiments available. You can re-issue the current configuration below.",
+      "onboard": "Onboard",
+      "reissue": "Re-issue configuration",
+      "onboardSuccess": "Device onboarded. Configuration ready below.",
+      "onboardError": "Could not onboard the device",
+      "deliveryTitle": "Device configuration",
+      "deliveryDescription": "Hand this configuration to the device: download it, or push it over a direct connection.",
+      "endpointLabel": "Broker endpoint",
+      "topicsLabel": "Publish topics",
+      "download": "Download JSON",
+      "connect": "Connect device",
+      "disconnect": "Disconnect",
+      "push": "Push to device",
+      "connectError": "Could not connect to the device",
+      "pushSuccess": "Configuration pushed to the device",
+      "pushError": "Could not push the configuration",
+      "multispeqNote": "MultispeQ devices receive their procedure at measurement time; download the configuration instead.",
+      "loadError": "Could not load experiments. Try again.",
+      "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first."
+    },
+    "experimentDevices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
+      "loading": "Loading devices...",
+      "empty": "No devices are onboarded to this experiment yet.",
+      "detach": "Detach",
+      "detachSuccess": "Device detached from the experiment",
+      "detachError": "Could not detach the device",
+      "loadError": "Could not load the devices. Try again."
     }
   }
 }

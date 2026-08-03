@@ -2,6 +2,8 @@ import { oc } from "@orpc/contract";
 import { z } from "zod";
 
 import {
+  zDeviceExperimentList,
+  zDeviceOnboardingConfig,
   zDeviceRegistryWebhookPayload,
   zDeviceRegistryWebhookResponse,
   zIotCredentials,
@@ -11,6 +13,7 @@ import {
   zIotUploadUrl,
   zIotUploadUrlRequest,
   zIssueIotCredentialsResponse,
+  zOnboardDeviceBody,
   zRegisterIotDeviceBody,
   zRegisterIotDeviceResponse,
 } from "./iot.schema";
@@ -62,4 +65,15 @@ export const iotContract = {
     .route({ method: "DELETE", path: "/api/v1/devices/{deviceId}/credentials", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zIotDevice),
+
+  // Onboarding: bind the device to experiments and return the config to hand
+  // to the hardware. An empty body re-issues the config without new bindings.
+  onboardDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/{deviceId}/onboard", successStatus: 200 })
+    .input(zIotDevicePathParam.merge(zOnboardDeviceBody))
+    .output(zDeviceOnboardingConfig),
+  listDeviceExperiments: oc
+    .route({ method: "GET", path: "/api/v1/devices/{deviceId}/experiments", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zDeviceExperimentList),
 };

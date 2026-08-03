@@ -118,7 +118,8 @@ type ExperimentSection =
   | "design"
   | "collaborators"
   | "visualizations"
-  | "dashboards";
+  | "dashboards"
+  | "devices";
 
 const EXPERIMENT_SECTION_KEY: Record<Exclude<ExperimentSection, "overview">, string> = {
   data: "experiments:data",
@@ -126,6 +127,7 @@ const EXPERIMENT_SECTION_KEY: Record<Exclude<ExperimentSection, "overview">, str
   collaborators: "common:experimentSettings.collaborators",
   visualizations: "experiments:analysis.visualizations",
   dashboards: "experiments:dashboards.tabLabel",
+  devices: "iot:iot.experimentDevices.tabLabel",
 };
 
 /**
@@ -149,7 +151,7 @@ export async function buildExperimentMetadata({
 }): Promise<Metadata> {
   const { t } = await initTranslations({
     locale,
-    namespaces: ["experiments", "common"],
+    namespaces: ["experiments", "common", "iot"],
   });
   const experiment = await fetchExperimentSummary(id);
   const name = nonEmpty(experiment?.name);

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { zExperiment } from "../experiment/experiment.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
+import { zEntitySnapshots, zWorkbookVersion } from "../workbook/workbook-version.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -92,7 +94,52 @@ export const zIssueIotCredentialsResponse = z.object({
   privateKey: z.string(),
 });
 
+// --- Device onboarding ---
+// Onboarding binds a device to experiments and hands the hardware its full
+// desired state: broker endpoint plus, per experiment, the ingest topic prefix
+// and the pinned workbook version to run.
+export const zOnboardDeviceBody = z.object({
+  experimentIds: z
+    .array(z.string().uuid())
+    .max(100)
+    .default([])
+    .describe("Experiments to bind the device to. An empty list re-issues the config."),
+});
+
+export const zDeviceOnboardingWorkbook = zWorkbookVersion
+  .pick({ version: true, cells: true })
+  .extend({ entitySnapshots: zEntitySnapshots });
+
+export const zDeviceOnboardingExperiment = z.object({
+  experimentId: z.string().uuid(),
+  experimentName: z.string(),
+  topicPrefix: z
+    .string()
+    .describe(
+      "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement.",
+    ),
+  workbook: zDeviceOnboardingWorkbook.nullable(),
+});
+
+export const zDeviceOnboardingConfig = z.object({
+  thingName: z.string(),
+  deviceType: zDeviceType,
+  endpoint: z.string().describe("MQTT broker host (AWS IoT ATS data endpoint)"),
+  experiments: z.array(zDeviceOnboardingExperiment),
+});
+
+// The experiments a device serves, for the device-detail view.
+export const zDeviceExperiment = zExperiment
+  .pick({ id: true, name: true, status: true })
+  .extend({ addedAt: z.string().datetime() });
+
+export const zDeviceExperimentList = z.array(zDeviceExperiment);
+
 // --- Inferred types ---
+export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
+export type DeviceOnboardingConfig = z.infer<typeof zDeviceOnboardingConfig>;
+export type DeviceExperiment = z.infer<typeof zDeviceExperiment>;
+export type DeviceExperimentList = z.infer<typeof zDeviceExperimentList>;
 export type IotCredentials = z.infer<typeof zIotCredentials>;
 export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;

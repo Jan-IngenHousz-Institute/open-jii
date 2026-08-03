@@ -36,6 +36,11 @@ export interface DeviceTransportSupport {
    * Bluetooth Classic is available on React Native but NOT on Web Bluetooth API.
    */
   supportsBluetoothClassic: boolean;
+  /**
+   * Whether the device accepts a stored configuration (SET_CONFIG). MultispeQ,
+   * Ambit and MiniPAR do not: their procedures are sent inline per measurement.
+   */
+  supportsStoredConfig: boolean;
 }
 
 /**
@@ -51,6 +56,7 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: true,
+    supportsStoredConfig: false,
   },
   // Ambit and MiniPAR are ESP32 measurement devices that expose only a USB-CDC serial
   // console to hosts (the Ambit's radio talks to its Ambyte gateway, not us).
@@ -58,16 +64,19 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: false,
+    supportsStoredConfig: false,
   },
   minipar: {
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: false,
+    supportsStoredConfig: false,
   },
   generic: {
     supportedTransports: ["bluetooth", "serial"],
     supportsBLE: true,
     supportsBluetoothClassic: false,
+    supportsStoredConfig: true,
   },
 };
 

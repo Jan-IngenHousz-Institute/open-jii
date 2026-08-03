@@ -1,6 +1,7 @@
 import { experimentDashboardsContract } from "./domains/experiment/dashboards/experiment-dashboards.contract";
 import { experimentDataAnnotationsContract } from "./domains/experiment/data-annotations/experiment-data-annotations.contract";
 import { experimentDataContract } from "./domains/experiment/data/experiment-data.contract";
+import { experimentDevicesContract } from "./domains/experiment/devices/experiment-devices.contract";
 import { experimentContract } from "./domains/experiment/experiment.contract";
 import { experimentExportsContract } from "./domains/experiment/exports/experiment-exports.contract";
 import { experimentFlowsContract } from "./domains/experiment/flows/experiment-flows.contract";
@@ -35,6 +36,7 @@ export const contract = {
     ...experimentDataAnnotationsContract,
     ...experimentLocationsContract,
     ...experimentMembersContract,
+    ...experimentDevicesContract,
     ...experimentMetadataContract,
     ...experimentFlowsContract,
     ...experimentWorkbooksContract,
