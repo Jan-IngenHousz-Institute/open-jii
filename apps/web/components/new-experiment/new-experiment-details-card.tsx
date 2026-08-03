@@ -13,7 +13,6 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
 
-import { useWorkbookList } from "../../hooks/workbook/useWorkbookList/useWorkbookList";
 import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface NewExperimentDetailsCardProps {
@@ -22,8 +21,6 @@ interface NewExperimentDetailsCardProps {
 
 export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps) {
   const { t } = useTranslation();
-
-  const { data: workbooks = [] } = useWorkbookList();
 
   return (
     <Card>
@@ -69,7 +66,6 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
             <FormItem>
               <FormLabel>{t("newExperiment.workbook")}</FormLabel>
               <WorkbookSelect
-                workbooks={workbooks}
                 value={field.value ?? undefined}
                 onChange={(id) => field.onChange(id ?? undefined)}
                 triggerPlaceholder={t("newExperiment.workbookPlaceholder")}

@@ -5,7 +5,6 @@ import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttac
 import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { orpc } from "@/lib/orpc";
@@ -110,7 +109,6 @@ export function LinkedWorkbookCard({
 
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
-  const { data: workbooks = [] } = useWorkbookList();
   const [isChanging, setIsChanging] = useState(false);
 
   const renameWorkbook = useWorkbookUpdate(workbookId);
@@ -419,7 +417,6 @@ export function LinkedWorkbookCard({
       {isChanging && hasAccess && (
         <div className="flex items-center gap-2 border-t px-4 py-3">
           <WorkbookSelect
-            workbooks={workbooks}
             value={selectedWorkbookId || undefined}
             onChange={(id) => setSelectedWorkbookId(id ?? "")}
             triggerPlaceholder={t("flow.selectWorkbook")}
