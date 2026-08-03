@@ -1,7 +1,6 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { WorkbookDangerZone } from "@/components/workbook-overview/workbook-danger-zone";
 import { WorkbookMetaRow } from "@/components/workbook-overview/workbook-meta-row";
 import { WorkbookDescription } from "@/components/workbook/workbook-description";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
@@ -56,16 +55,6 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
             initialCells={data.cells}
             canEdit={data.capabilities.canUpdate}
             name={data.name}
-          />
-
-          {/* Renders nothing unless the viewer may manage this workbook. Deletion
-              lives here rather than on list rows: capabilities are detail-only, so a
-              row could not tell a manager from a plain reader. */}
-          <WorkbookDangerZone
-            workbookId={id}
-            workbookName={data.name}
-            usedBy={data.experimentCount ?? 0}
-            canManage={data.capabilities.canManage}
           />
         </div>
       </div>

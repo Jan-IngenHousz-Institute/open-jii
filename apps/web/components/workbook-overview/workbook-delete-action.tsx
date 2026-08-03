@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
@@ -22,7 +22,7 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-interface WorkbookDangerZoneProps {
+interface WorkbookDeleteActionProps {
   workbookId: string;
   workbookName: string;
   /** Experiments currently using this workbook (`experimentCount`). */
@@ -32,17 +32,16 @@ interface WorkbookDangerZoneProps {
 }
 
 /**
- * Delete moved off list rows because only detail responses carry `canManage`;
- * otherwise readers of public/shared workbooks saw an action that could only 403.
- * The separate feature flag remains because deleting an in-use workbook unlinks
- * experiments and loses their measurement flow.
+ * Not on list rows: only detail responses carry `canManage`, so a row cannot tell a
+ * manager from a reader. The feature flag is a separate gate because deleting an
+ * in-use workbook unlinks its experiments and loses their measurement flow.
  */
-export function WorkbookDangerZone({
+export function WorkbookDeleteAction({
   workbookId,
   workbookName,
   usedBy,
   canManage,
-}: WorkbookDangerZoneProps) {
+}: WorkbookDeleteActionProps) {
   const { t } = useTranslation("workbook");
   const { t: tCommon } = useTranslation("common");
   const router = useRouter();
@@ -70,14 +69,15 @@ export function WorkbookDangerZone({
   };
 
   return (
-    <section className="space-y-2">
-      <h4 className="text-destructive text-base font-medium">{t("workbooks.dangerZone")}</h4>
-      <p className="text-muted-foreground text-sm">
-        {usedBy > 0
-          ? t("workbooks.messages.deleteInUseWarning", { count: usedBy })
-          : t("workbooks.deleteWarning")}
-      </p>
-      <Button variant="destructive" onClick={() => setConfirming(true)} disabled={isDeleting}>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-destructive hover:text-destructive flex-1 sm:flex-none"
+        onClick={() => setConfirming(true)}
+        disabled={isDeleting}
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
         {t("workbooks.actions.delete")}
       </Button>
 
@@ -110,6 +110,6 @@ export function WorkbookDangerZone({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
+import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-delete-action";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { useSetWorkbookVisibility } from "@/hooks/workbook/useSetWorkbookVisibility/useSetWorkbookVisibility";
@@ -209,6 +210,12 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
           )}
           {t("workbooks.actions.fork")}
         </Button>
+        <WorkbookDeleteAction
+          workbookId={id}
+          workbookName={workbook.name}
+          usedBy={workbook.experimentCount ?? 0}
+          canManage={canManage}
+        />
       </div>
 
       <PublishConfirmDialog

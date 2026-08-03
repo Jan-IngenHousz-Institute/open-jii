@@ -6,34 +6,33 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { WorkbookDangerZone } from "./workbook-danger-zone";
+import { WorkbookDeleteAction } from "./workbook-delete-action";
 
-function renderDangerZone(overrides: Partial<ComponentProps<typeof WorkbookDangerZone>> = {}) {
-  const defaults: ComponentProps<typeof WorkbookDangerZone> = {
+function renderDeleteAction(overrides: Partial<ComponentProps<typeof WorkbookDeleteAction>> = {}) {
+  const defaults: ComponentProps<typeof WorkbookDeleteAction> = {
     workbookId: "wb-1",
     workbookName: "My Workbook",
     usedBy: 0,
     canManage: true,
   };
-  return render(<WorkbookDangerZone {...defaults} {...overrides} />);
+  return render(<WorkbookDeleteAction {...defaults} {...overrides} />);
 }
 
-describe("<WorkbookDangerZone />", () => {
+describe("<WorkbookDeleteAction />", () => {
   beforeEach(() => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
   });
 
   it("offers delete to a caller who may manage the workbook", () => {
-    renderDangerZone({ canManage: true });
+    renderDeleteAction({ canManage: true });
 
-    expect(screen.getByText("workbooks.dangerZone")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "workbooks.actions.delete" })).toBeInTheDocument();
   });
 
   it("renders nothing for a viewer", () => {
     // A grantee with read-only access, or a plain public reader, gains no control
     // — the affordance is absent rather than present-and-403ing.
-    const { container } = renderDangerZone({ canManage: false });
+    const { container } = renderDeleteAction({ canManage: false });
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -41,14 +40,14 @@ describe("<WorkbookDangerZone />", () => {
   it("hides delete for an in-use workbook while the deletion flag is off", () => {
     // Deleting an attached workbook unlinks experiments and loses their
     // measurement flow — a separate safety gate from authorization.
-    const { container } = renderDangerZone({ canManage: true, usedBy: 2 });
+    const { container } = renderDeleteAction({ canManage: true, usedBy: 2 });
 
     expect(container).toBeEmptyDOMElement();
   });
 
   it("offers delete for an in-use workbook once the flag is on", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    renderDangerZone({ canManage: true, usedBy: 2 });
+    renderDeleteAction({ canManage: true, usedBy: 2 });
 
     expect(screen.getByRole("button", { name: "workbooks.actions.delete" })).toBeInTheDocument();
   });
@@ -57,7 +56,7 @@ describe("<WorkbookDangerZone />", () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
-    const { router } = renderDangerZone({ workbookId: "wb-42" });
+    const { router } = renderDeleteAction({ workbookId: "wb-42" });
 
     await user.click(screen.getByRole("button", { name: "workbooks.actions.delete" }));
 
@@ -77,7 +76,7 @@ describe("<WorkbookDangerZone />", () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
-    renderDangerZone();
+    renderDeleteAction();
 
     await user.click(screen.getByRole("button", { name: "workbooks.actions.delete" }));
     const dialog = await screen.findByRole("alertdialog");
@@ -91,7 +90,7 @@ describe("<WorkbookDangerZone />", () => {
     const user = userEvent.setup();
     server.mount(contract.workbooks.deleteWorkbook, { status: 204 });
 
-    renderDangerZone({ usedBy: 3 });
+    renderDeleteAction({ usedBy: 3 });
 
     await user.click(screen.getByRole("button", { name: "workbooks.actions.delete" }));
     const dialog = await screen.findByRole("alertdialog");

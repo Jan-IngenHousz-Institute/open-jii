@@ -30,7 +30,7 @@ export function ExperimentInfoCard({
 
   const isArchived = experiment.status === "archived";
 
-  if (!isAdmin && !isDeletionEnabled) return null;
+  if (!isAdmin) return null;
 
   return (
     <>
@@ -40,18 +40,16 @@ export function ExperimentInfoCard({
         className="text-muted-foreground mx-4 border-t"
       />
       <div className="px-6 py-4">
-        {isAdmin && (
-          <p className="text-muted-foreground mb-2 text-sm">
-            {t(
-              isDeletionEnabled
-                ? "experimentSettings.dangerZoneNote_deleteAllowed"
-                : "experimentSettings.dangerZoneNote",
-            )}
-          </p>
-        )}
+        <p className="text-muted-foreground mb-2 text-sm">
+          {t(
+            isDeletionEnabled
+              ? "experimentSettings.dangerZoneNote_deleteAllowed"
+              : "experimentSettings.dangerZoneNote",
+          )}
+        </p>
 
         <div className="flex flex-col gap-3 md:flex-row">
-          {isAdmin && <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />}
+          <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />
 
           <ExperimentDelete experimentId={experimentId} experimentName={experiment.name} />
         </div>

@@ -6,6 +6,7 @@ import {
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -200,6 +201,52 @@ describe("WorkbookMetaRow", () => {
     expect(
       screen.queryByRole("button", { name: "resourceVisibility.publishAction" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers Delete last in the action row, after Publish and Fork", async () => {
+    renderRow({ visibility: "private" });
+
+    const actions = (await screen.findByRole("button", { name: "workbooks.actions.delete" }))
+      .parentElement;
+    if (!actions) throw new Error("action row not found");
+
+    const labels = Array.from(actions.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toEqual([
+      "resourceVisibility.publishAction",
+      "workbooks.actions.fork",
+      "workbooks.actions.delete",
+    ]);
+  });
+
+  it("hides Delete from a caller who cannot manage", () => {
+    renderRow({ capabilities: { ...workbook.capabilities, canManage: false } });
+
+    // Deletion is manage-gated on the route; a viewer gets no control rather than
+    // one that 403s.
+    expect(
+      screen.queryByRole("button", { name: "workbooks.actions.delete" }),
+    ).not.toBeInTheDocument();
+    // Fork stays — anyone who can read the workbook may copy it.
+    expect(screen.getByRole("button", { name: "workbooks.actions.fork" })).toBeInTheDocument();
+  });
+
+  it("hides Delete for an in-use workbook while the deletion flag is off", () => {
+    // Unlinking experiments loses their measurement flow, so that path is a
+    // separate safety gate from authorization.
+    renderRow({ experimentCount: 2 });
+
+    expect(
+      screen.queryByRole("button", { name: "workbooks.actions.delete" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers Delete for an in-use workbook once the deletion flag is on", async () => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    renderRow({ experimentCount: 2 });
+
+    expect(
+      await screen.findByRole("button", { name: "workbooks.actions.delete" }),
+    ).toBeInTheDocument();
   });
 
   it("disables the Fork button while a fork is in flight", async () => {

@@ -45,4 +45,21 @@ describe("ExperimentInfoCard", () => {
 
     expect(screen.queryByTestId("archive")).not.toBeInTheDocument();
   });
+
+  it("offers a read-only viewer no delete, even with the deletion flag on", () => {
+    // The flag governs whether managers may delete at all; it must never stand in
+    // for authorization. Deleting is manage-gated on the route, so a viewer offered
+    // the control could only ever get a 403.
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+
+    const { container } = render(
+      <ExperimentInfoCard experimentId="exp-1" experiment={experiment} canManage={false} />,
+    );
+
+    expect(screen.queryByTestId("delete")).not.toBeInTheDocument();
+    // Nothing manage-only is left, so the section does not render its separator
+    // and padding around an empty space either.
+    expect(container).toBeEmptyDOMElement();
+  });
 });

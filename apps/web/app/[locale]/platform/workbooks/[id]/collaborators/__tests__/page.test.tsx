@@ -55,9 +55,10 @@ describe("WorkbookCollaboratorsPage", () => {
 
     await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /sharing.invite/ })).toBeInTheDocument();
-    // The editor, its metadata and the danger zone belong to the Overview route.
+    // The editor and the meta row's actions — fork, publish, delete — belong to the
+    // Overview route.
     expect(screen.queryByText("workbooks.actions.fork")).not.toBeInTheDocument();
-    expect(screen.queryByText("workbooks.dangerZone")).not.toBeInTheDocument();
+    expect(screen.queryByText("workbooks.actions.delete")).not.toBeInTheDocument();
   });
 
   it("gives a grantee below share only the leave card", async () => {
