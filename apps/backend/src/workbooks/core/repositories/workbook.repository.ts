@@ -29,7 +29,12 @@ import {
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { seedCreatorControl } from "../../../sharing/resource-staffing";
-import { CreateWorkbookDto, UpdateWorkbookDto, WorkbookDto } from "../models/workbook.model";
+import {
+  CreateWorkbookDto,
+  UpdateWorkbookDto,
+  WorkbookDto,
+  WorkbookListItemDto,
+} from "../models/workbook.model";
 
 export interface WorkbookFilter {
   search?: string;
@@ -40,12 +45,35 @@ export interface WorkbookFilter {
 // All workbook columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _workbookSearchVector, ...workbookColumns } = getTableColumns(workbooks);
 
+// List queries additionally drop `cells`: the list contract doesn't expose them and
+// they are by far the heaviest column.
+const { cells: _workbookCells, ...workbookListColumns } = workbookColumns;
+
 // Number of experiments currently referencing a workbook. A correlated subquery
 // keeps findAll/findById single-query (no N+1).
 function experimentCountSql() {
   return sql<number>`(select count(*)::int from ${experiments} where ${experiments.workbookId} = ${workbooks.id})`.mapWith(
     Number,
   );
+}
+
+// Cells grouped by raw `type` for list badges. Computed in SQL on purpose: it works
+// for rows whose cells no longer parse under the current contract, which is exactly
+// when the list must keep rendering.
+function cellTypeCountsSql() {
+  return sql<Record<string, number>>`(
+    select case when jsonb_typeof(${workbooks.cells}) = 'array'
+      then coalesce((
+        select jsonb_object_agg(t.cell_type, t.cnt)
+        from (
+          select coalesce(cell->>'type', 'unknown') as cell_type, count(*)::int as cnt
+          from jsonb_array_elements(${workbooks.cells}) as cell
+          group by 1
+        ) t
+      ), '{}'::jsonb)
+      else '{}'::jsonb
+    end
+  )`;
 }
 
 // Set of protocol/macro ids referenced by the workbook's cells.
@@ -90,14 +118,15 @@ export class WorkbookRepository {
     });
   }
 
-  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookDto[]>> {
+  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookListItemDto[]>> {
     return tryCatch(async () => {
       let query = this.database
         .select({
-          workbooks: workbookColumns,
+          workbooks: workbookListColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
           experimentCount: experimentCountSql(),
+          cellTypeCounts: cellTypeCountsSql(),
         })
         .from(workbooks)
         .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
@@ -228,11 +257,12 @@ export class WorkbookRepository {
 
       const results = await query;
       return results.map((result) => {
-        const augmented = result.workbooks as WorkbookDto;
+        const augmented = result.workbooks as WorkbookListItemDto;
         const firstName = result.firstName;
         const lastName = result.lastName;
         augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
         augmented.experimentCount = result.experimentCount;
+        augmented.cellTypeCounts = result.cellTypeCounts;
         return augmented;
       });
     });

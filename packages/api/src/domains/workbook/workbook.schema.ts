@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zVisibility } from "../visibility/visibility.schema";
-import { zWorkbookCellArray } from "./workbook-cells.schema";
+import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
 
 export const zWorkbook = z.object({
   id: z.string().uuid(),
@@ -21,7 +21,15 @@ export const zWorkbook = z.object({
   experimentCount: z.number().int().nonnegative().optional(),
 });
 
-export const zWorkbookList = z.array(zWorkbook);
+// List rows omit `cells`: they dominate the payload (output cells embed run data)
+// and one legacy row failing cell validation must not 500 the whole collection.
+// `cellTypeCounts` is the cheap projection list badges need, computed in SQL so it
+// works regardless of whether the stored cells still parse under the current contract.
+export const zWorkbookListItem = zWorkbook.omit({ cells: true }).extend({
+  cellTypeCounts: z.record(z.string(), z.number().int().nonnegative()).optional(),
+});
+
+export const zWorkbookList = z.array(zWorkbookListItem);
 
 /**
  * A single workbook plus the caller's effective capabilities on it. Detail route
@@ -47,7 +55,7 @@ export const zCreateWorkbookRequestBody = z.object({
     .min(1, "Name is required")
     .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
-  cells: zWorkbookCellArray.optional(),
+  cells: zWorkbookCellArrayInput.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   // Set when duplicating an existing workbook, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
@@ -68,7 +76,7 @@ export const zUpdateWorkbookRequestBody = z.object({
     .max(255, "Name must be at most 255 characters")
     .optional(),
   description: z.string().optional(),
-  cells: zWorkbookCellArray.optional(),
+  cells: zWorkbookCellArrayInput.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -79,6 +87,7 @@ export const zWorkbookErrorResponse = z.object({
 
 export type Workbook = z.infer<typeof zWorkbook>;
 export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
+export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;
 export type WorkbookIdPathParam = z.infer<typeof zWorkbookIdPathParam>;

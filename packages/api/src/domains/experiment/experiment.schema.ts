@@ -341,7 +341,9 @@ export const zCreateExperimentBodyBase = z.object({
         // people without a second lookup; the backend only reads `userId`.
         firstName: z.string().optional(),
         lastName: z.string().optional(),
-        email: z.string().email().nullable().optional(),
+        // Another user's stored email passed through from the picker; format-validating
+        // it here would reject experiment creation over data the caller can't fix.
+        email: z.string().nullable().optional(),
         avatarUrl: z.string().nullable().optional(),
       }),
     )

@@ -54,7 +54,8 @@ export function ExperimentLinkedWorkbook({
 
   if (!workbook) return null;
 
-  const hasCells = getWorkbookCellSummary(workbook.cells).length > 0;
+  const cellSummary = getWorkbookCellSummary(workbook.cells);
+  const hasCells = cellSummary.length > 0;
   const plainDescription = workbook.description ? stripHtml(workbook.description) : "";
 
   return (
@@ -97,7 +98,7 @@ export function ExperimentLinkedWorkbook({
           )}
 
           {hasCells ? (
-            <WorkbookCellSummary cells={workbook.cells} className="mt-3" />
+            <WorkbookCellSummary counts={Object.fromEntries(cellSummary)} className="mt-3" />
           ) : (
             <p className="text-muted-foreground mt-3 text-sm italic">{t("workbooks.noCells")}</p>
           )}

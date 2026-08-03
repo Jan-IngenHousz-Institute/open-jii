@@ -10,6 +10,7 @@ import {
   zMarkdownCell,
   zWorkbookCell,
   zWorkbookCellArray,
+  zWorkbookCellArrayInput,
 } from "./workbook-cells.schema";
 
 const uuidA = "11111111-1111-1111-1111-111111111111";
@@ -213,7 +214,10 @@ describe("Workbook Cells Schema", () => {
           question: { kind: "open_ended", text: "B?" },
         },
       ];
-      expect(() => zWorkbookCellArray.parse(cells)).toThrow(/must be unique/i);
+      expect(() => zWorkbookCellArrayInput.parse(cells)).toThrow(/must be unique/i);
+      // The plain (output) array tolerates them: rows persisted before the rule
+      // existed must still serialize on read.
+      expect(zWorkbookCellArray.parse(cells)).toHaveLength(2);
     });
   });
 

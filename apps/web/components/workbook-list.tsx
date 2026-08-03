@@ -5,13 +5,15 @@ import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
+import { orpc } from "@/lib/orpc";
 import { formatDate } from "@/util/date";
+import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
-import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
+import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import {
@@ -33,7 +35,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 interface WorkbookListProps {
-  workbooks: Workbook[] | undefined;
+  workbooks: WorkbookListItem[] | undefined;
   isLoading?: boolean;
   showEmptyHelp?: boolean;
 }
@@ -131,21 +133,32 @@ function SkeletonRow() {
   );
 }
 
-function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
+function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
   const { t } = useTranslation("workbook");
   const locale = useLocale();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({
     onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.id}`),
   });
 
-  const handleDuplicate = () => {
+  // List rows don't carry cells, so duplication first fetches the full workbook.
+  const handleDuplicate = async () => {
+    let cells;
+    try {
+      ({ cells } = await queryClient.fetchQuery(
+        orpc.workbooks.getWorkbook.queryOptions({ input: { id: workbook.id } }),
+      ));
+    } catch {
+      toast({ title: t("workbooks.createError"), variant: "destructive" });
+      return;
+    }
     createWorkbook(
       {
         name: t("workbooks.duplicateName", { name: workbook.name }),
         description: workbook.description ?? undefined,
-        cells: workbook.cells,
+        cells,
         metadata: workbook.metadata,
         forkedFrom: workbook.id,
       },
@@ -181,7 +194,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
           </Link>
           {/* Only when private: "public" is the unremarkable default. */}
           <VisibilityBadge visibility={workbook.visibility} privateOnly className="ml-2" />
-          <WorkbookCellSummary cells={workbook.cells} className="mt-1.5" />
+          <WorkbookCellSummary counts={workbook.cellTypeCounts ?? {}} className="mt-1.5" />
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", TEXT_MUTED)}>
           {usedBy > 0 ? (
@@ -229,7 +242,7 @@ function WorkbookTableRow({ workbook }: { workbook: Workbook }) {
                   disabled={isDuplicating}
                   onSelect={(e) => {
                     e.preventDefault();
-                    handleDuplicate();
+                    void handleDuplicate();
                   }}
                 >
                   <GitFork className="mr-2 size-4" />

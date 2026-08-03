@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
@@ -19,6 +19,7 @@ import emailConfig from "./common/config/email.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
+import { createOrpcErrorLoggingInterceptor } from "./common/utils/orpc-error-logging";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
@@ -30,6 +31,8 @@ import { SharingModule } from "./sharing/sharing.module";
 import { UserModule } from "./users/user.module";
 import { VisibilityModule } from "./visibility/visibility.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
+
+const orpcLogger = new Logger("ORPC");
 
 @Module({
   imports: [
@@ -54,6 +57,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     ScheduleModule.forRoot(),
     BetterAuthModule.forRoot({ auth }),
     ORPCModule.forRoot({
+      interceptors: [createOrpcErrorLoggingInterceptor(orpcLogger)],
       plugins: [new RethrowHandlerPlugin({ filter: (error) => !(error instanceof ORPCError) })],
     }),
     AnalyticsModule,
