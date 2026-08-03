@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../../experiments/core/models/experiment.model";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -13,6 +14,7 @@ export class ListExperimentDevicesUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentDeviceDto[]>> {
@@ -37,10 +39,20 @@ export class ListExperimentDevicesUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
-        // Devices are operational infrastructure, not published results, so they
-        // are not exposed on public experiments the way members are.
+        // Devices are operational infrastructure, not published results:
+        // members and org-role/grant readers see them, the public-read tier
+        // (anyone, on a public experiment) does not.
         if (!hasAccess) {
-          return failure(AppError.forbidden("Only experiment members can view its devices"));
+          const decision = await this.authorizationService.can(userId, {
+            resourceType: "experiment",
+            resourceId: experimentId,
+            action: "read",
+          });
+          if (!decision.allow || decision.reason === "public") {
+            return failure(
+              AppError.forbidden("Only experiment members or managers can view its devices"),
+            );
+          }
         }
 
         return this.experimentDeviceRepository.listByExperiment(experimentId);

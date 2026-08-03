@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
@@ -22,6 +22,8 @@ import type {
 
 @Injectable()
 export class ExperimentDeviceRepository {
+  private readonly logger = new Logger(ExperimentDeviceRepository.name);
+
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
@@ -137,15 +139,18 @@ export class ExperimentDeviceRepository {
       return rows.map((row) => ({
         experimentId: row.experimentId,
         experimentName: row.experimentName,
-        workbook: row.version === null ? null : this.parseWorkbook(row.version, row),
+        workbook:
+          row.version === null ? null : this.parseWorkbook(row.experimentId, row.version, row),
       }));
     });
   }
 
   // Parse (not cast) the jsonb into the typed procedure. A version that no
   // longer conforms (written before a schema change) degrades to a null
-  // workbook instead of failing the device's whole config.
+  // workbook instead of failing the device's whole config; the warn log is the
+  // only way to tell that apart from an experiment with no pinned version.
   private parseWorkbook(
+    experimentId: string,
     version: number,
     row: { cells: unknown; entitySnapshots: unknown },
   ): DeviceOnboardingExperimentDto["workbook"] {
@@ -153,6 +158,11 @@ export class ExperimentDeviceRepository {
     const entitySnapshots = zEntitySnapshots.safeParse(row.entitySnapshots);
 
     if (!cells.success || !entitySnapshots.success) {
+      this.logger.warn({
+        msg: "Pinned workbook version no longer matches the cell schema; onboarding config degrades to a null workbook",
+        experimentId,
+        version,
+      });
       return null;
     }
 

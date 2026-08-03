@@ -90,7 +90,7 @@
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
         "members": "Share device management with collaborators, the way experiments share access.",
         "lineage": "Trace this device's identity through to its ingested measurements.",
-        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure."
+        "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
@@ -204,9 +204,9 @@
       "connectError": "Could not connect to the device",
       "pushSuccess": "Configuration pushed to the device",
       "pushError": "Could not push the configuration",
-      "multispeqNote": "MultispeQ devices receive their procedure at measurement time; download the configuration instead.",
       "loadError": "Could not load experiments. Try again.",
-      "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first."
+      "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first.",
+      "inlineProcedureNote": "This device does not accept a stored configuration; it receives its procedure per measurement. Download the configuration instead."
     },
     "experimentDevices": {
       "tabLabel": "Devices",

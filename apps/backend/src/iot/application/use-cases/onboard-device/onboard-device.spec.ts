@@ -1,6 +1,13 @@
 import { faker } from "@faker-js/faker";
 
-import { and, eq, experimentMembers, experiments, workbookVersions } from "@repo/database";
+import {
+  and,
+  eq,
+  experimentMembers,
+  experiments,
+  resourceGrants,
+  workbookVersions,
+} from "@repo/database";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import {
@@ -220,7 +227,7 @@ describe("OnboardDeviceUseCase", () => {
     expect(bound.value).toEqual([]);
   });
 
-  it("excludes experiments the caller lost access to from the re-issued config", async () => {
+  it("refuses to re-issue when the caller lost access to a live binding", async () => {
     const member = await testApp.createTestUser({});
     const { experiment } = await testApp.createExperiment({ name: "Private", userId });
     await testApp.addExperimentMember(experiment.id, member, "member");
@@ -236,10 +243,25 @@ describe("OnboardDeviceUseCase", () => {
         ),
       );
 
+    // Real member removal deletes the membership AND its mirrored grant
+    // (ExperimentMemberRepository does both), so the simulation must too.
+    await testApp.database
+      .delete(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          eq(resourceGrants.resourceId, experiment.id),
+          eq(resourceGrants.granteeType, "user"),
+          eq(resourceGrants.granteeId, member),
+        ),
+      );
+
+    // A partial config pushed to hardware would silently drop the streams the
+    // caller cannot see, so the whole re-issue fails instead.
     const result = await useCase.execute(device.id, [], member);
 
-    assertSuccess(result);
-    expect(result.value.experiments).toEqual([]);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
   });
 
   it("excludes since-archived experiments from the re-issued config", async () => {

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Rocket } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -37,8 +37,10 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     [experimentsData, boundIds],
   );
 
-  const { mutate: onboard, isPending: isOnboarding, data: onboardData } = useOnboardDevice();
-  const config = onboardData ?? null;
+  const { mutate: onboard, isPending: isOnboarding } = useOnboardDevice();
+  // Held in state, not read from the mutation: a failed retry resets mutation
+  // data, and the previously issued config must stay available for delivery.
+  const [config, setConfig] = useState<DeviceOnboardingConfig | null>(null);
 
   const handleToggle = (experimentId: string, checked: boolean) => {
     setSelectedIds((ids) =>
@@ -50,7 +52,8 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     onboard(
       { deviceId: device.id, experimentIds: selectedIds },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          setConfig(data);
           setSelectedIds([]);
           toast({ title: t("iot.onboarding.onboardSuccess") });
         },

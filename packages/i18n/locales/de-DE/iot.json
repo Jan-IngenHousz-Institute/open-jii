@@ -90,7 +90,7 @@
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
         "members": "Teilen Sie die Geräteverwaltung mit Mitarbeitenden, so wie Experimente den Zugriff teilen.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen.",
-        "onboarding": "Richten Sie Geräte für Experimente ein: Übergeben Sie jedem Gerät seine Verbindung, sein Experiment und seine Workbook-Prozedur."
+        "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab Onboarding). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
@@ -204,9 +204,9 @@
       "connectError": "Verbindung zum Gerät fehlgeschlagen",
       "pushSuccess": "Konfiguration an das Gerät übertragen",
       "pushError": "Konfiguration konnte nicht übertragen werden",
-      "multispeqNote": "MultispeQ-Geräte erhalten ihre Prozedur zur Messzeit; laden Sie stattdessen die Konfiguration herunter.",
       "loadError": "Experimente konnten nicht geladen werden. Bitte erneut versuchen.",
-      "inactiveDevice": "Dieses Gerät hat keine aktiven Zugangsdaten und kann daher nicht onboardet werden. Stellen Sie zuerst Zugangsdaten aus."
+      "inactiveDevice": "Dieses Gerät hat keine aktiven Zugangsdaten und kann daher nicht onboardet werden. Stellen Sie zuerst Zugangsdaten aus.",
+      "inlineProcedureNote": "Dieses Gerät akzeptiert keine gespeicherte Konfiguration; es erhält sein Verfahren pro Messung. Laden Sie die Konfiguration stattdessen herunter."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",

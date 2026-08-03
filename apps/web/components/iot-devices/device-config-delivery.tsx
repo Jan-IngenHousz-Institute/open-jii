@@ -6,7 +6,7 @@ import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import type { ConnectionType } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import { Download, Loader2, Send, Usb } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -27,13 +27,26 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
   const [isPushing, setIsPushing] = useState(false);
 
   const browserSupport = useIotBrowserSupport(device.deviceType);
+
+  // Auto-select the first supported connection type
+  useEffect(() => {
+    if (!browserSupport.bluetooth && browserSupport.serial) {
+      setConnectionType("serial");
+    } else if (browserSupport.bluetooth && !browserSupport.serial) {
+      setConnectionType("bluetooth");
+    }
+  }, [browserSupport.bluetooth, browserSupport.serial]);
+
   const { isConnected, isConnecting, error, driver, connect, disconnect } = useIotCommunication(
     device.deviceType,
     connectionType,
   );
 
-  // MultispeQ has no stored-config command, so delivery for it is download-only.
+  // Families without a stored-config command (MultispeQ, Ambit, MiniPAR) get
+  // their procedure per measurement, so delivery for them is download-only.
   const supportsPush = supportsConfigDelivery(sensorFamilyToDeviceType(device.deviceType));
+  const isSelectedTransportSupported =
+    connectionType === "bluetooth" ? browserSupport.bluetooth : browserSupport.serial;
   const showConnectError = error !== null && !isConnected && !isConnecting;
 
   const handleDownload = () => {
@@ -60,8 +73,13 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
     try {
       await deliverDeviceConfig(driver, { config: { ...config }, id: config.thingName });
       toast({ title: t("iot.onboarding.pushSuccess") });
-    } catch {
-      toast({ title: t("iot.onboarding.pushError"), variant: "destructive" });
+    } catch (pushError) {
+      // The driver's message states exactly why (e.g. SET_CONFIG unsupported).
+      toast({
+        title: t("iot.onboarding.pushError"),
+        description: pushError instanceof Error ? pushError.message : undefined,
+        variant: "destructive",
+      });
     } finally {
       setIsPushing(false);
     }
@@ -107,7 +125,7 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
         </Button>
 
         {supportsPush && !isConnected && (
-          <Button onClick={handleConnect} disabled={isConnecting}>
+          <Button onClick={handleConnect} disabled={isConnecting || !isSelectedTransportSupported}>
             {isConnecting ? (
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
             ) : (
@@ -139,7 +157,7 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
       )}
 
       {!supportsPush && (
-        <p className="text-muted-foreground text-xs">{t("iot.onboarding.multispeqNote")}</p>
+        <p className="text-muted-foreground text-xs">{t("iot.onboarding.inlineProcedureNote")}</p>
       )}
     </section>
   );

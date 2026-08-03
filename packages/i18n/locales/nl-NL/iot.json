@@ -90,7 +90,7 @@
         "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
         "members": "Deel apparaatbeheer met medewerkers, zoals experimenten toegang delen.",
         "lineage": "Traceer de identiteit van dit apparaat tot aan zijn opgenomen metingen.",
-        "onboarding": "Onboard apparaten naar experimenten: geef elk apparaat zijn verbinding, experiment en workbook-procedure."
+        "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {
@@ -204,9 +204,9 @@
       "connectError": "Kon geen verbinding maken met het apparaat",
       "pushSuccess": "Configuratie naar het apparaat gestuurd",
       "pushError": "Kon de configuratie niet versturen",
-      "multispeqNote": "MultispeQ-apparaten ontvangen hun procedure op meetmoment; download in plaats daarvan de configuratie.",
       "loadError": "Kon de experimenten niet laden. Probeer het opnieuw.",
-      "inactiveDevice": "Dit apparaat heeft geen actieve inloggegevens en kan daarom niet worden onboardet. Geef eerst inloggegevens uit."
+      "inactiveDevice": "Dit apparaat heeft geen actieve inloggegevens en kan daarom niet worden onboardet. Geef eerst inloggegevens uit.",
+      "inlineProcedureNote": "Dit apparaat accepteert geen opgeslagen configuratie; het ontvangt zijn procedure per meting. Download de configuratie in plaats daarvan."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",

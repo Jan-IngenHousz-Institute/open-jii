@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -21,6 +22,7 @@ export class OnboardDeviceUseCase {
     private readonly deviceRepository: IotDeviceRepository,
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async execute(
@@ -59,12 +61,13 @@ export class OnboardDeviceUseCase {
       );
     }
 
-    // The broker endpoint and access checks are independent, and both must
-    // succeed before anything binds, so a late failure cannot leave the
-    // onboard half-applied.
+    // The broker endpoint and access checks are independent, and both are
+    // verified before anything binds, so their failures cannot leave bindings
+    // behind. Failures in the read-back after the insert can still surface as
+    // errors with the (idempotent) bindings already committed.
     const [endpointResult, accessFailure] = await Promise.all([
       this.awsPort.getIotDataEndpoint(),
-      this.checkMembership(experimentIds, userId),
+      this.checkBindingAccess(experimentIds, userId),
     ]);
     if (accessFailure) {
       return failure(accessFailure);
@@ -114,9 +117,14 @@ export class OnboardDeviceUseCase {
     });
   }
 
-  // Binding requires membership of every target experiment; any missing,
-  // archived, or inaccessible experiment aborts the whole onboard.
-  private async checkMembership(experimentIds: string[], userId: string): Promise<AppError | null> {
+  // Binding requires membership of, or IAM update rights on, every target
+  // experiment; any missing, archived, or inaccessible experiment aborts the
+  // whole onboard. The public-read tier never grants update, so public
+  // experiments cannot be bound by strangers.
+  private async checkBindingAccess(
+    experimentIds: string[],
+    userId: string,
+  ): Promise<AppError | null> {
     const accessResults = await Promise.all(
       experimentIds.map((experimentId) =>
         this.experimentRepository.checkAccess(experimentId, userId),
@@ -139,13 +147,27 @@ export class OnboardDeviceUseCase {
       }
 
       if (!hasAccess) {
-        return AppError.forbidden("Only experiment members can onboard a device to it");
+        const decision = await this.authorizationService.can(userId, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          action: "update",
+        });
+        if (!decision.allow) {
+          return AppError.forbidden(
+            "Only experiment members or managers can onboard a device to it",
+          );
+        }
       }
     }
 
     return null;
   }
 
+  // The config is a full-state replacement, so it is only issued to callers who
+  // can see every live binding: a partial config pushed to hardware would
+  // silently drop the streams the caller cannot see. Archived experiments are
+  // excluded deliberately (the device should stop serving them); experiments
+  // the caller cannot read make the whole call fail instead.
   private async filterAccessible<T extends { experimentId: string }>(
     bound: T[],
     userId: string,
@@ -161,9 +183,29 @@ export class OnboardDeviceUseCase {
       }
 
       const { experiment, hasAccess } = accessResult.value;
-      if (experiment && hasAccess && experiment.status !== "archived") {
-        included.push(bound[index]);
+      if (!experiment || experiment.status === "archived") {
+        continue;
       }
+
+      if (hasAccess) {
+        included.push(bound[index]);
+        continue;
+      }
+
+      const decision = await this.authorizationService.can(userId, {
+        resourceType: "experiment",
+        resourceId: bound[index].experimentId,
+        action: "read",
+      });
+      if (!decision.allow) {
+        return failure(
+          AppError.forbidden(
+            "The device serves experiments you don't have access to; onboarding requires access to all of them",
+          ),
+        );
+      }
+
+      included.push(bound[index]);
     }
 
     return success(included);

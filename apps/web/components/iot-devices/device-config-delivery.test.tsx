@@ -108,7 +108,7 @@ describe("DeviceConfigDelivery", () => {
   it("is download-only for multispeq", () => {
     render(<DeviceConfigDelivery device={multispeqDevice} config={config} />);
 
-    expect(screen.getByText("iot.onboarding.multispeqNote")).toBeInTheDocument();
+    expect(screen.getByText("iot.onboarding.inlineProcedureNote")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /iot.onboarding.connect/ }),
     ).not.toBeInTheDocument();

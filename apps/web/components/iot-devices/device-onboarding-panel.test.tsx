@@ -95,6 +95,33 @@ describe("DeviceOnboardingPanel", () => {
     expect(screen.getByText(config.experiments[0].topicPrefix)).toBeInTheDocument();
   });
 
+  it("keeps the previously issued config visible when a retry fails", async () => {
+    const user = userEvent.setup();
+    const fresh = createExperiment({ id: "22222222-2222-4222-8222-222222222222", name: "Fresh" });
+    const second = createExperiment({ id: "33333333-3333-4333-8333-333333333333", name: "Second" });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [fresh, second] });
+    server.mount(contract.iot.onboardDevice, { body: config });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByLabelText("Fresh"));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.onboard/ }));
+    await waitFor(() => {
+      expect(screen.getByText(config.endpoint)).toBeInTheDocument();
+    });
+
+    // A failed second attempt must not wipe the config already on screen.
+    server.mount(contract.iot.onboardDevice, { status: 403, body: { message: "Nope" } });
+    await user.click(await screen.findByLabelText("Second"));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.onboard/ }));
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
+    });
+    expect(screen.getByText(config.endpoint)).toBeInTheDocument();
+  });
+
   it("shows an error toast when onboarding fails", async () => {
     const user = userEvent.setup();
     const fresh = createExperiment({ id: "22222222-2222-4222-8222-222222222222", name: "Fresh" });

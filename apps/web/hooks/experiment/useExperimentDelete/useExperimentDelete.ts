@@ -24,6 +24,8 @@ export const useExperimentDelete = () => {
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.listExperiments.key(),
         });
+        // Deleting an experiment cascades its device bindings away.
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listDeviceExperiments.key() });
       },
     }),
   );
