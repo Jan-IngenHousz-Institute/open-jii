@@ -3,7 +3,6 @@
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
 import { BookOpen, LinkIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -31,7 +30,6 @@ export function EmptyWorkbookState({
 
   const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
-  const { data: workbooks = [] } = useWorkbookList();
 
   // Create + attach + open in one step: a fresh workbook is only useful once it
   // is linked to this experiment and the user can start adding cells.
@@ -88,7 +86,6 @@ export function EmptyWorkbookState({
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
               <WorkbookSelect
-                workbooks={workbooks}
                 value={selectedWorkbookId || undefined}
                 onChange={(id) => setSelectedWorkbookId(id ?? "")}
                 triggerPlaceholder={t("newExperiment.workbookPlaceholder")}
