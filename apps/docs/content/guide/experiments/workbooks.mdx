@@ -3,7 +3,7 @@ title: "Working with workbooks"
 description: "Attach a versioned field workflow to an experiment and review upgrades safely."
 ---
 
-{/* verified: code@147e5cf48 2026-07-22 */}
+{/* verified: code@efd66bdd4 2026-08-04 */}
 
 A **workbook** is the data-collection design an experiment runs. Its ordered
 cells can contain instructions, questions, protocols, device commands, analysis
@@ -68,8 +68,9 @@ experiment and adjust it. This is the recommended way to start from a
 [baseline workbook](/guide/devices-protocols/writing-protocols#recommended-starting-points)
 someone else published.
 
-An experiment continues to use its pinned version until an admin changes it. A
-newer version produces an update indicator. Before upgrading, open the review:
+An experiment continues to use its pinned version until someone with **Can
+edit** changes it. A newer version produces an update indicator. Before
+upgrading, open the review:
 
 - compare added, removed, and changed cells;
 - review protocol and macro code changes;

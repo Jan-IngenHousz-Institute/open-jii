@@ -3,7 +3,7 @@ title: "Identity & access management"
 description: "Authentication methods, sessions, API keys, organization-scoped authorization, rollout state, and the north-star access model."
 ---
 
-{/* verified: auth PR@50a852783, IAM Phase 2@5944bbcec, north-star branch@0f453383f 2026-07-23 */}
+{/* verified: IAM Phase 3@efd66bdd4 2026-08-04, north-star branch@0f453383f 2026-07-23 */}
 
 openJII separates three concerns that are easy to conflate:
 
@@ -23,12 +23,13 @@ This architecture is landing in phases. Read the rows independently: later
 rows build on earlier ones, but an item in the north-star row is not a shipped
 product promise.
 
-| State                            | What exists                                                                                                                                                                                   | User-visible effect                                                                                                                                              |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **IAM Phase 1**                  | Better Auth organizations, invitations, and teams; every account is provisioned an owner-only personal organization; browser sessions receive an active organization.                         | Existing resource access stayed unchanged. The personal organization is the ownership anchor for later phases.                                                   |
-| **Authentication PR**            | Passkey registration and sign-in, remembered last-used method, personal API-key lifecycle, and API-key-to-session bridging for REST requests.                                                 | People can manage passkeys and API keys under Account. Scripts can authenticate as their owning user.                                                            |
-| **IAM Phase 2 on latest `main`** | One shared access matrix, organization ownership on experiments/protocols/macros/workbooks/devices, polymorphic resource grants, one authorization service, and declarative Nest guards.      | Deliberately no access-policy change yet: personal organizations have one owner, current collaborators retain access, and public resources remain readable.      |
-| **North-star branch**            | Shared organization directory and profiles, membership and invitations, teams, user/team/organization grants, outside collaborators, email invitations, and per-resource Collaborators views. | **Not shipped from `main`.** This is the intended end state being exercised on `feature/ojd-1638-iam-org-access-control`; details may still change before merge. |
+| State                 | What exists                                                                                                                                                                                                                                                   | User-visible effect                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **IAM Phase 1**       | Better Auth organizations, invitations, and teams; every account is provisioned an owner-only personal organization; browser sessions receive an active organization.                                                                                         | Existing resource access stayed unchanged. The personal organization is the ownership anchor for later phases.                                                   |
+| **Authentication PR** | Passkey registration and sign-in, remembered last-used method, personal API-key lifecycle, and API-key-to-session bridging for REST requests.                                                                                                                 | People can manage passkeys and API keys under Account. Scripts can authenticate as their owning user.                                                            |
+| **IAM Phase 2**       | One shared access matrix, organization ownership on experiments/protocols/macros/workbooks/devices, polymorphic resource grants, one authorization service, and declarative Nest guards.                                                                      | Deliberately no access-policy change yet: personal organizations have one owner, current collaborators retain access, and public resources remain readable.      |
+| **IAM Phase 3**       | `resource_grants` becomes the only access system: `experiment_members` is retired, grants are the write path, the `contribute` action separates data entry from reading, and every resource type gets a Collaborators view with user and organization grants. | Two access levels replace admin/member. Resources can be shared with a whole organization. Outside collaborators are labelled. Visibility is one-way.            |
+| **North-star branch** | Shared organization directory and profiles, organization membership management, teams and team grants in the UI, and a configurable per-organization base permission.                                                                                         | **Not shipped from `main`.** This is the intended end state being exercised on `feature/ojd-1638-iam-org-access-control`; details may still change before merge. |
 
 ## Authentication paths
 
@@ -92,9 +93,8 @@ organization in the credential.
 
 ## Organization-scoped authorization
 
-IAM Phase 2 makes authorization a shared, explainable backend decision. The
-Better Auth access matrix in `packages/auth/src/access.ts` is the source of
-truth for these resource types:
+Authorization is a shared, explainable backend decision. `packages/auth/src/access.ts`
+is the source of truth for these resource types:
 
 - experiment;
 - protocol;
@@ -102,10 +102,24 @@ truth for these resource types:
 - workbook; and
 - device.
 
-The common actions are `read`, `update`, `share`, and `manage`. Organization
-owners and admins receive all four. In Phase 2, members receive `read`; the
-schema reserves a configurable organization base permission for the north-star
-model, but Phase 2 does not expose that setting yet.
+The actions are `read`, `contribute`, `update`, `share`, and `manage`.
+`contribute` sits between `read` and `update` so that seeing an experiment never
+implies writing measurements or annotations into it; only experiments have data to
+contribute to, but the verb stays in the statement because Better Auth needs one
+literal action list.
+
+That file exports **two** role matrices, because "member" means two different
+things depending on where the role is stored:
+
+| Matrix       | Role stored on              | Read by          | Middle tier                                                |
+| ------------ | --------------------------- | ---------------- | ---------------------------------------------------------- |
+| `roles`      | `organization_members.role` | `orgRoleCan()`   | `member` → `read`                                          |
+| `grantRoles` | `resource_grants.role`      | `grantRoleCan()` | `member`/`viewer` → `read` + `contribute` on an experiment |
+
+`owner` and `admin` mean full control in both, so `grantRoles` reuses
+`roles.owner` and `roles.admin` directly; only the middle tier is redefined. A
+configurable per-organization base permission is reserved in the schema but
+deferred until multi-member organizations exist.
 
 ### One decision point
 
@@ -126,19 +140,21 @@ Each allowed decision records its reason (`org-role`, a grant tier, or
 additive: if an organization member's role does not cover an action, evaluation
 continues so a more specific grant can raise their access.
 
-Grant roles use the same matrix: `owner` and `admin` allow all resource actions;
-`member` and `viewer` are read-only. A public resource only adds read access—it
-never grants update, sharing, or management rights.
+The owning-organization step reads `roles`; all three grant steps read
+`grantRoles`. The middle tiers differ on purpose: a grant is somebody
+deliberately handing you a resource, which belonging to the owning organization
+is not, so the collaborators picker's "Can view" carries `contribute` where an
+organization `member` does not. A public resource only adds read access—it never
+grants contribution, update, sharing, or management rights.
 
 ### Declarative guard boundary
 
 Controllers declare policy instead of reproducing membership checks:
 
-- `@CanAccess({ resource, action })` authorizes an existing resource;
-- `@CanCreateInOrg()` checks organization membership before a resource exists;
-  and
-- `@CanContributeToExperiment()` keeps data contribution stricter than generic
-  read access.
+- `@CanAccess({ resource, action })` authorizes an existing resource — including
+  `action: "contribute"` on the measurement, upload, and annotation routes, which
+  keeps data entry stricter than generic read access; and
+- `@CanCreateInOrg()` checks organization membership before a resource exists.
 
 The global authentication guard first populates `request.session`. Resource
 guards then use only its user ID and delegate to the authorization service.
@@ -163,6 +179,15 @@ Organization IDs remain nullable during the transition. A resource whose
 creator has no personal organization stays readable only if public and is not
 editable through the ownership path. Making ownership non-null depends on a
 later deleted-user and orphan-resource policy.
+
+Phase 3 then makes those mirrored rows the only access system: `experiment_members`
+is dropped, every write path goes through `resource_grants`, and the tier the
+mirror wrote as `member` gains `contribute` so existing collaborators keep the
+ability to take measurements. Because a grant is now the only thing that carries
+`contribute`, deleting a user or emptying an organization can strand a resource
+with nobody able to administer it — the staffing invariants in
+`apps/backend/src/sharing/core/resource-staffing.ts` are what refuse those
+operations, and they are the one place in the backend that takes row locks.
 
 ## North-star end state
 
@@ -192,14 +217,13 @@ direction of travel, not a statement that every screen or rule is available on
 
 ### Grants handle exceptions and cross-organization work
 
-- A resource can be granted directly to a user, a team, or another
-  organization.
-- Per-resource Collaborators views explain direct access separately from access
-  inherited through the owning organization.
-- A person with a resource grant but no membership in the owning organization
-  is labelled an **outside collaborator**.
-- A collaborator can be invited by email before they have an account; accepting
-  the invitation creates the corresponding resource access.
+Shipped in Phase 3: per-resource Collaborators views that list direct grants only,
+grants to a user or to another organization, the **outside collaborator** label
+for a grantee outside the owning organization, and email invitations that create
+the grant on account creation.
+
+Still north-star: **team** grants. The decision chain already evaluates them and
+the schema already stores them, but no surface creates one.
 
 ### The boundary stays explicit
 
@@ -215,8 +239,8 @@ direction of travel, not a statement that every screen or rule is available on
 
 - Define transfer, deletion, and recovery rules so resource ownership can
   become non-null without stranding data.
-- Finalize which roles and base-permission controls are exposed in the product,
-  including how existing experiment `admin`/`member` roles migrate.
+- Expose the per-organization base permission, and decide whether a team-grant
+  surface is needed once shared organizations exist.
 - Decide whether personal API keys need resource scopes, organization
   restrictions, or separate service-account credentials.
 - Add operational audit history for membership, grants, invitations, API-key
@@ -232,11 +256,15 @@ direction of travel, not a statement that every screen or rule is available on
 | Better Auth server, sessions, plugins | `packages/auth/src/server.ts`                                                 |
 | Browser auth client                   | `packages/auth/src/clients/client.web.ts`                                     |
 | API-key session boundary              | `packages/auth/src/api-key-session.ts`                                        |
-| Shared role/action matrix             | `packages/auth/src/access.ts` on latest `main`                                |
+| Shared role/action matrix             | `packages/auth/src/access.ts`                                                 |
 | Personal organization provisioning    | `packages/database/src/organizations.ts`                                      |
 | Resource ownership and grants         | `packages/database/src/schema.ts`, `packages/database/src/resource-grants.ts` |
 | Central resource decisions            | `apps/backend/src/authorization/authorization.service.ts`                     |
 | Controller policy guards              | `apps/backend/src/authorization/*guard.ts`                                    |
+| Grant read/write surface              | `apps/backend/src/sharing/`                                                   |
+| Staffing invariants and row locks     | `apps/backend/src/sharing/core/resource-staffing.ts`                          |
+| One-way visibility transitions        | `apps/backend/src/visibility/`                                                |
+| List-query access scoping             | `apps/backend/src/common/utils/resource-access-scope.ts`                      |
 | Account security UI                   | `apps/web/components/account-settings/`, `apps/web/components/auth/`          |
 
 For the user workflow, read

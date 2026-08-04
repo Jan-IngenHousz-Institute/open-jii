@@ -3,7 +3,7 @@ title: "Collaborators & access levels"
 description: "Add people or organizations to your experiment, choose between Can view and Can edit, and handle requests to join."
 ---
 
-{/* verified: code@42fda9cf1 2026-07-28 */}
+{/* verified: code@efd66bdd4 2026-08-04 */}
 
 Experiments are meant to be shared. Everyone you share an experiment with directly
 appears in one list, and each row carries one setting: how much they can do.
@@ -28,9 +28,11 @@ experiment is readable by anyone, in both cases with no row here.
 | See the experiment, its data and visualizations          |    ✓     |    ✓     |
 | Take measurements with the mobile app                    |    ✓     |    ✓     |
 | Add annotations, comments and flags                      |    ✓     |    ✓     |
-| Upload data and metadata on the web                      |    ✓     |    ✓     |
+| Upload measurement data on the web                       |    ✓     |    ✓     |
+| Add or edit experiment metadata                          |    –     |    ✓     |
 | Edit experiment settings (name, description, visibility) |    –     |    ✓     |
 | Create and edit visualizations                           |    –     |    ✓     |
+| Attach or change the workbook, and edit locations        |    –     |    ✓     |
 | Add or remove collaborators and change their level       |    –     |    ✓     |
 | Archive the experiment                                   |    –     |    ✓     |
 
@@ -105,6 +107,9 @@ The collaborator list, the pending invitations and the access levels are only
 visible to people who can manage access — that is, holders of **Can edit** and
 admins of the owning organization. Everyone else sees the experiment's
 contributor credit (names and avatars) and nothing about who holds which level.
+
+If you hold **Can view**, the Collaborators tab shows you a **Your access** card
+instead of the list, with a **Leave** button for giving up your own access.
 
 For access to macros, protocols and workbooks, see
 [Sharing & Collaboration](/guide/sharing) — those resources use the same two

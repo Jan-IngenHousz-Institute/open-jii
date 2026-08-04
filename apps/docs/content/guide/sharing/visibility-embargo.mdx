@@ -3,15 +3,17 @@ title: "Visibility & embargo"
 description: "Choose public access now or a time-limited private embargo."
 ---
 
-{/* verified: code@42fda9cf1 2026-07-28 */}
+{/* verified: code@efd66bdd4 2026-08-04 */}
 
 New experiments are **Public** by default. Choose **Private** during creation
 when the data needs a temporary embargo.
 
 ## Public
 
-A public experiment can be viewed by anyone, not just its collaborators. Reading is all that public visibility grants: contributing measurements and annotations still requires being added as a collaborator. Once an experiment is
-public, the interface warns that it cannot be changed back to private.
+A public experiment can be viewed by anyone, not just its collaborators. Reading
+is all that public visibility grants: contributing measurements and annotations
+still requires being added as a collaborator. Once an experiment is public, the
+interface warns that it cannot be changed back to private.
 
 ## Private under embargo
 
@@ -33,8 +35,8 @@ period rather than a promise of publication at a precise local minute.
 3. For Private, set the embargo end date and read the calculated public date.
 4. Review the setting before selecting **Create Experiment**.
 
-An admin can later review visibility in experiment settings. Moving from private
-to public is presented as irreversible.
+Anyone with **Can edit** can later review visibility in experiment settings.
+Moving from private to public is presented as irreversible.
 
 {/* NEEDS-LIVE-CHECK: create a private dev experiment, verify timezone/date copy, test the settings transition, and observe the scheduled publication behavior in a safe test. */}
 ![The Collaborators and Visibility step with Private selected and an unsaved embargo date](/img/guide/web/visibility-embargo.png)
