@@ -708,9 +708,6 @@ export const resourceGrants = pgTable(
     ...timestamps,
   },
   (t) => [
-    // One grant per (resource, grantee): re-sharing with someone updates their
-    // role rather than stacking a second row, and every write path upserts on
-    // this key.
     uniqueIndex("resource_grants_unique").on(
       t.resourceType,
       t.resourceId,
