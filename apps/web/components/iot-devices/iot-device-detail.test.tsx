@@ -29,6 +29,21 @@ describe("IotDeviceDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the onboarding panel under its tab", async () => {
+    const device = createIotDevice({ name: "Gateway", status: "active" });
+    server.mount(contract.iot.getIotDevice, { body: device });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+    const user = userEvent.setup();
+
+    render(<IotDeviceDetail deviceId={device.id} />);
+    await screen.findByRole("heading", { name: "Gateway" });
+
+    await user.click(screen.getByRole("tab", { name: "iot.devices.detailTabs.onboarding" }));
+
+    expect(await screen.findByText("iot.onboarding.currentEmpty")).toBeInTheDocument();
+  });
+
   it("deletes from the danger zone and navigates back to the list", async () => {
     const device = createIotDevice({ name: "Doomed" });
     server.mount(contract.iot.getIotDevice, { body: device });
