@@ -337,6 +337,68 @@ describe("WorkbookController", () => {
     });
   });
 
+  // The pinned-version read is what the experiment design tab and the mobile flow
+  // both depend on, and it is gated on the WORKBOOK — an experiment grant carries
+  // nothing here. Runs against the real guard, so the mocked `can()` is restored.
+  describe("getWorkbookVersion honours workbook visibility, not experiment access", () => {
+    let granteeId: string;
+
+    const versionFor = (workbookId: string): WorkbookVersionDto => ({
+      id: faker.string.uuid(),
+      workbookId,
+      version: 1,
+      cells: [],
+      metadata: {},
+      createdAt: new Date(),
+      createdBy: testUserId,
+    });
+
+    beforeEach(async () => {
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockRestore();
+      granteeId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment with a workbook the grantee cannot read",
+        userId: testUserId,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, granteeId);
+    });
+
+    it("refuses a private workbook to an experiment collaborator who holds no grant on it", async () => {
+      const workbook = await testApp.createWorkbook({
+        name: "Private workbook",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(
+        success(versionFor(workbook.id)),
+      );
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: workbook.id,
+        versionId: faker.string.uuid(),
+      });
+      await testApp.get(path).withAuth(granteeId).expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("allows the same read once the workbook is public", async () => {
+      const workbook = await testApp.createWorkbook({
+        name: "Public workbook",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const version = versionFor(workbook.id);
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(success(version));
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: workbook.id,
+        versionId: version.id,
+      });
+      const response = await testApp.get(path).withAuth(granteeId).expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ id: version.id });
+    });
+  });
+
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
     // resource/action declared by its @CanAccess decorator, and turn a denial

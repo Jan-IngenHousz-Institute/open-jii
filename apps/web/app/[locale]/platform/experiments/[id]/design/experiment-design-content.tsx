@@ -2,6 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-state";
+import { InaccessibleWorkbookState } from "@/components/experiment-flow/inaccessible-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
 import { PageContainer } from "@/components/page-container";
@@ -57,12 +58,16 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   // Fetch the pinned workbook version (immutable snapshot with cells + entity
   // snapshots) for the read-only view, and the live draft for editing.
-  const { data: pinnedVersionData } = useWorkbookVersion(
-    workbookId ?? "",
-    workbookVersionId ?? "",
-    { enabled: !!(workbookId && workbookVersionId) },
-  );
-  const { data: workbookDraft } = useWorkbook(workbookId ?? "", { enabled: !!workbookId });
+  const {
+    data: pinnedVersionData,
+    error: pinnedVersionError,
+    isLoading: pinnedVersionLoading,
+  } = useWorkbookVersion(workbookId ?? "", workbookVersionId ?? "", {
+    enabled: !!(workbookId && workbookVersionId),
+  });
+  const { data: workbookDraft, isLoading: workbookDraftLoading } = useWorkbook(workbookId ?? "", {
+    enabled: !!workbookId,
+  });
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -103,7 +108,10 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     }
   }, [versionedCells, id]);
 
-  if (isLoading || accessLoading) {
+  // The workbook queries are in here too: until they settle there are no cells to
+  // show, and rendering that reads as "this workbook is empty" rather than "still
+  // loading". Both are disabled when no workbook is attached, so this cannot hang.
+  if (isLoading || accessLoading || pinnedVersionLoading || workbookDraftLoading) {
     return (
       <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-start justify-between">
@@ -137,6 +145,13 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         hasAccess={hasAccess}
       />
     );
+  }
+
+  // The refs above come from the experiment, so they resolve even when the workbook
+  // itself is unreadable — without this the tab would render a nameless card over an
+  // empty flow. Access is per resource, so an experiment grant covers neither.
+  if (pinnedVersionError) {
+    return <InaccessibleWorkbookState />;
   }
 
   return (

@@ -216,12 +216,12 @@ describe("ExperimentDesignPage", () => {
     });
   });
 
-  it("renders WorkbookEditor when workbook is linked", async () => {
+  it("renders the workbook editor when a workbook is linked", async () => {
     mountWithWorkbook();
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+      expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
   });
 
@@ -277,7 +277,7 @@ describe("ExperimentDesignPage", () => {
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+      expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
     expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
   });
@@ -313,23 +313,12 @@ describe("ExperimentDesignPage", () => {
     });
   });
 
-  it("renders WorkbookEditor with readOnly prop", async () => {
-    mountWithWorkbook();
-    render(<ExperimentDesignPage params={defaultProps.params} />);
-
-    await waitFor(() => {
-      const editor = screen.getByTestId("workbook-editor");
-      expect(editor).toBeInTheDocument();
-      expect(editor).toHaveAttribute("data-readonly", "true");
-    });
-  });
-
   it("shows the read-only editor when the viewer may not update the workbook", async () => {
     mountWithWorkbook({ canUpdateWorkbook: false });
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("workbook-editor")).toBeInTheDocument();
+      expect(screen.getByTestId("workbook-editor")).toHaveAttribute("data-readonly", "true");
     });
     expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
