@@ -51,8 +51,8 @@ CVE-2026-59874
 # CVE-2026-69152: brace-expansion DoS via unbounded intermediate arrays, a third CVE ID
 # against the same bundled copy (usr/local/lib/node_modules/npm/node_modules/brace-expansion@5.0.6).
 # Not fixable via this repo's pnpm overrides; the vulnerable copy is vendored inside the
-# node:24 image's own npm CLI, which the containers never invoke. The app's own copy is
-# pinned >= 5.0.9 via the workspace override.
+# node:24 image's own npm CLI, which the containers never invoke. The app's own tree
+# resolves brace-expansion >= 5.0.9 in the lockfile, which the dependency-scan job checks.
 # Clears once the Node 24 base image bundles npm with brace-expansion >= 5.0.9.
 CVE-2026-69152
 

@@ -1,47 +1,22 @@
 # AWS Lambda Python base image CVEs (public.ecr.aws/lambda/python:3.12)
 # All in AWS-managed components. Fixes require AWS to publish updated base images.
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
+#
+# Pruned 2026-08-04 against a fresh build: AWS refreshed parts of the base
+# (urllib3, libnghttp2, glibc, libcap, most openssl packages, most of the RIE
+# binary's Go CVEs cleared). Entries below are the ones still live in the built
+# image.
 
 vulnerabilities:
-  # urllib3 in botocore/boto3 transitive (var/lang/lib/python3.12/site-packages/).
-  - id: CVE-2026-44431
-    statement: >-
-      Sensitive headers forwarded across origins on proxied
-      low-level redirects. Sandbox has no outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44432
-    statement: >-
-      Decompression-bomb safeguards bypassed in streaming API.
-      Sandbox has no outbound HTTP.
-    expired_at: 2026-07-12
-
-  # libnghttp2
-  - id: CVE-2026-27135
-    statement: >-
-      libnghttp2 DoS via malformed HTTP/2 frames.
-      Sandbox cannot make outbound HTTP/2 connections.
-
-  # openssl - all require specific protocol usage that Lambda does not do
-  - id: CVE-2026-28387
-    statement: "DANE TLSA use-after-free. Lambda does not use DANE."
-  - id: CVE-2026-28388
-    statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
-  - id: CVE-2026-28389
-    statement: "CMS KeyAgree NULL deref. No CMS processing."
-  - id: CVE-2026-28390
-    statement: "CMS EnvelopedData NULL deref. No CMS processing."
-  - id: CVE-2026-31790
-    statement: "RSASVE info disclosure. No RSA key encapsulation."
-
+  # openssl-fips-provider-latest and openssl-snapsafe-libs still ship
+  # 1:3.5.5-1.amzn2023.0.4 (the main openssl-libs package was updated).
+  # Batch fixed in amzn2023.0.5; awaiting AWS base image republish.
+  # Sandbox is VPC-isolated: no TLS, no network, no certificate/CMS processing.
   - id: CVE-2026-34180
     statement: >-
       Heap buffer over-read in ASN.1 decoding. Sandbox parses no
-      certificates and has no TLS. Fixed in amzn2023.0.5; awaiting
-      AWS base image republish.
+      certificates and has no TLS.
     expired_at: 2026-11-05
-
-  # openssl batch fixed in amzn2023.0.5; awaiting AWS base image republish.
-  # Sandbox is VPC-isolated: no TLS, no network, no certificate/CMS processing.
   - id: CVE-2026-34181
     statement: "PKCS#12 PBMAC1 short-salt acceptance. Sandbox parses no PKCS#12."
     expired_at: 2026-11-05
@@ -85,44 +60,60 @@ vulnerabilities:
     statement: "DoS via heap. No untrusted TLS/crypto input in sandbox."
     expired_at: 2026-11-05
 
-  # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
-  # CVE is in Go's html/template package. Sandbox does not render HTML.
-  - id: CVE-2026-27142
-    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
-  - id: CVE-2026-39823
-    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
+  # sqlite-libs in Amazon Linux 2023 base image (installed 3.40.0-1.amzn2023.0.7).
+  # Both require parsing an attacker-controlled database file or SQL. The macro
+  # vm context blocks __import__/open/eval, so user code cannot reach sqlite3,
+  # and the sandbox itself opens no databases. Awaiting AWS base image republish.
+  - id: CVE-2026-11822
+    statement: "SQLite crafted-database memory corruption. No untrusted SQLite input in sandbox."
+    expired_at: 2026-11-05
+  - id: CVE-2026-11824
+    statement: "SQLite crafted-SQL memory corruption. No untrusted SQLite input in sandbox."
+    expired_at: 2026-11-05
+
+  # util-linux libs in Amazon Linux 2023 base image (installed 2.37.4-1.amzn2023.0.4).
+  - id: CVE-2026-53615
+    statement: >-
+      libblkid/libmount crafted filesystem-metadata parsing. Lambda mounts
+      nothing at runtime and the sandbox exposes no block devices, so no
+      attacker-controlled metadata is ever parsed.
+    expired_at: 2026-11-05
 
   # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
   # Only used for local testing - production Lambda ignores this binary.
-  - id: CVE-2026-32280
+  - id: CVE-2026-39822
     statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-32282
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-33811
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-33814
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-39820
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-39836
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-42499
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-42504
-    statement: >-
-      Go std/mime MIME-header decode DoS (Go before 1.25.11 / 1.26.4).
-      Present only in the aws-lambda-rie binary, which is used for local
-      testing — production Lambda ignores it and runs the runtime interface
-      client instead.
 
-  # glibc in Amazon Linux 2023 base image
-  - id: CVE-2026-4046
-    statement: >-
-      glibc iconv() DoS triggered by IBM1390/IBM1399 destination
-      charset. Unreachable: CPython has no ibm1390/ibm1399 codec,
-      so bytes.decode/str.encode raise LookupError before any C
-      call; sandbox builtins also block __import__, open, eval.
-      Fix is in amzn2023.0.4; awaiting AWS base image republish.
+  # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.
+  # All four are buffer overflows reachable only when a package manager parses
+  # crafted repo metadata, solv files, or PGP signatures. The sandbox invokes no
+  # package manager at runtime: the handler spawns a wrapper subprocess to run the
+  # user macro, and no dnf/yum/microdnf calls exist anywhere in the image.
+  # Base image currently ships 0.7.22-1.amzn2023.0.3; all four are fixed upstream
+  # in 0.7.22-1.amzn2023.0.4 (per the libsolv rpm changelog). Awaiting AWS republish.
+  - id: CVE-2026-48863
+    statement: "libsolv EdDSA PGP signature overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-48864
+    statement: "libsolv repopagestore decompression overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-9149
+    statement: "libsolv repo_add_solv overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-9150
+    statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
+    expired_at: 2026-11-05
+
+  # libacl in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
+  # libacl`: no installed package depends on it. Both CVEs require running
+  # getfacl/setfacl against an attacker-controlled symlink path; the sandbox
+  # invokes no ACL tooling at runtime. Fixed upstream in libacl-2.4.0-1.amzn2023.0.1
+  # (installed: 2.3.1-2.amzn2023.0.2); awaiting AWS base image republish.
+  - id: CVE-2026-54369
+    statement: "acl symlink traversal privilege escalation. No ACL tooling invoked at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-54370
+    statement: "acl TOCTOU symlink traversal via getfacl/setfacl. No ACL tooling invoked at runtime."
     expired_at: 2026-11-05
 
   # glib2 in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
@@ -150,36 +141,4 @@ vulnerabilities:
     expired_at: 2026-11-05
   - id: CVE-2026-58016
     statement: "glib GDBus introspection integer underflow. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-
-  # libacl in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
-  # libacl`: no installed package depends on it. Both CVEs require running
-  # getfacl/setfacl against an attacker-controlled symlink path; the sandbox
-  # invokes no ACL tooling at runtime. Fixed upstream in libacl-2.4.0-1.amzn2023.0.1
-  # (installed: 2.3.1-2.amzn2023.0.2); awaiting AWS base image republish.
-  - id: CVE-2026-54369
-    statement: "acl symlink traversal privilege escalation. No ACL tooling invoked at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-54370
-    statement: "acl TOCTOU symlink traversal via getfacl/setfacl. No ACL tooling invoked at runtime."
-    expired_at: 2026-11-05
-
-  # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.
-  # All four are buffer overflows reachable only when a package manager parses
-  # crafted repo metadata, solv files, or PGP signatures. The sandbox invokes no
-  # package manager at runtime: the handler spawns a wrapper subprocess to run the
-  # user macro, and no dnf/yum/microdnf calls exist anywhere in the image.
-  # Base image currently ships 0.7.22-1.amzn2023.0.3; all four are fixed upstream
-  # in 0.7.22-1.amzn2023.0.4 (per the libsolv rpm changelog). Awaiting AWS republish.
-  - id: CVE-2026-48863
-    statement: "libsolv EdDSA PGP signature overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-48864
-    statement: "libsolv repopagestore decompression overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-9149
-    statement: "libsolv repo_add_solv overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-9150
-    statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
     expired_at: 2026-11-05

@@ -1,76 +1,23 @@
 # AWS Lambda Node.js base image CVEs (public.ecr.aws/lambda/nodejs:24)
 # All in AWS-managed components. Fixes require AWS to publish updated base images.
 # Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
+#
+# Pruned 2026-08-04 against a fresh build: AWS republished the base (updated
+# Amazon Linux snapshot and runtime SDK), clearing the previous openssl/glibc/
+# glib2/libsolv/libacl/libcap/RIE batches and most axios CVEs. Entries below are
+# the ones still live in the built image.
 
 vulnerabilities:
-  # axios in Lambda runtime SDK (/var/runtime/node_modules/@aws-sdk/).
-  # Version drifts as AWS refreshes the base image; observed 1.13.5, 1.15.0.
-  - id: CVE-2025-62718
-    statement: >-
-      axios SSRF requires proxy config that Lambda does not have.
-  - id: CVE-2026-40175
-    statement: >-
-      axios RCE chain needs a separate prototype-pollution gadget
-      that does not exist in our code.
-  - id: CVE-2026-42033
-    statement: >-
-      HTTP transport hijack via prototype pollution. Sandbox has
-      no outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-42035
-    statement: >-
-      Header injection via prototype pollution. Sandbox has no
-      outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-42043
-    statement: >-
-      NO_PROXY bypass on crafted URL. Sandbox has no outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-42264
-    statement: >-
-      Credential exfil via prototype-pollution gadget in HTTP
-      adapter. Sandbox has no IAM creds and no outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44492
-    statement: >-
-      shouldBypassProxy IPv4-mapped address handling. Sandbox
-      has no outbound HTTP and no proxy config.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44494
-    statement: >-
-      Full MITM via prototype pollution in HTTP path. Sandbox
-      has no outbound HTTP.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44486
-    statement: >-
-      Proxy-Authorization header leaks to the redirect target.
-      Sandbox has no outbound HTTP, no proxy config, and no IAM
-      creds, so the redirect path is unreachable.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44487
-    statement: >-
-      Proxy-Authorization credential leak to the origin server on
-      an HTTP-to-HTTPS redirect. Sandbox has no outbound HTTP, no
-      proxy config, and no IAM creds.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44488
-    statement: >-
-      Unbounded resource allocation (no response throttling).
-      Sandbox has no outbound HTTP, so no attacker-controlled
-      response reaches axios.
-    expired_at: 2026-07-12
-  - id: CVE-2026-44496
-    statement: >-
-      ReDoS via a crafted value. Sandbox has no outbound HTTP, so
-      no attacker-controlled response reaches axios.
-    expired_at: 2026-07-12
+  # axios@1.16.1 in the Lambda runtime SDK
+  # (var/runtime/node_modules/@aws-sdk/node_modules/axios).
   - id: GHSA-gcfj-64vw-6mp9
     statement: >-
       Node HTTP adapter can reuse an inherited proxy after interceptor
       config changes it. Sandbox has no outbound HTTP and no proxy
       configuration, so no request ever reaches the adapter's proxy logic.
 
-  # brace-expansion in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
+  # brace-expansion@1.1.15 in the Lambda runtime SDK
+  # (var/runtime/node_modules/@aws-sdk/node_modules/brace-expansion).
   - id: CVE-2026-13149
     statement: >-
       ReDoS via exponential-time complexity. Bundled inside @aws-sdk's own
@@ -82,198 +29,9 @@ vulnerabilities:
       Bundled inside @aws-sdk's own dependency tree, not invoked by sandbox
       code; sandbox has no outbound HTTP and no IAM creds, so no
       attacker-controlled string ever reaches it.
-
-  # fast-xml-builder in @aws-sdk (/var/runtime/node_modules/@aws-sdk/node_modules/).
-  # Builder serializes outgoing XML for AWS APIs (S3, SQS XML).
-  - id: CVE-2026-44665
+  - id: CVE-2026-69152
     statement: >-
-      Attribute-quote bypass in fast-xml-builder. Bundled inside
-      @aws-sdk; sandbox has no IAM creds or outbound HTTP, so SDK
-      serialization paths that invoke the builder are unreachable.
-    expired_at: 2026-07-12
-
-  # libnghttp2
-  - id: CVE-2026-27135
-    statement: >-
-      libnghttp2 DoS via malformed HTTP/2 frames.
-      Sandbox cannot make outbound HTTP/2 connections.
-
-  # openssl - all require specific protocol usage that Lambda does not do
-  - id: CVE-2026-28387
-    statement: "DANE TLSA use-after-free. Lambda does not use DANE."
-  - id: CVE-2026-28388
-    statement: "delta CRL NULL deref. Requires X509_V_FLAG_USE_DELTAS."
-  - id: CVE-2026-28389
-    statement: "CMS KeyAgree NULL deref. No CMS processing."
-  - id: CVE-2026-28390
-    statement: "CMS EnvelopedData NULL deref. No CMS processing."
-  - id: CVE-2026-31790
-    statement: "RSASVE info disclosure. No RSA key encapsulation."
-
-  - id: CVE-2026-34180
-    statement: >-
-      Heap buffer over-read in ASN.1 decoding. Sandbox parses no
-      certificates and has no TLS. Fixed in amzn2023.0.5; awaiting
-      AWS base image republish.
-    expired_at: 2026-11-05
-
-  # openssl batch fixed in amzn2023.0.5; awaiting AWS base image republish.
-  # Sandbox is VPC-isolated: no TLS, no network, no certificate/CMS processing.
-  - id: CVE-2026-34181
-    statement: "PKCS#12 PBMAC1 short-salt acceptance. Sandbox parses no PKCS#12."
-    expired_at: 2026-11-05
-  - id: CVE-2026-34182
-    statement: "CMS AuthEnvelopedData forgery. No CMS processing."
-    expired_at: 2026-11-05
-  - id: CVE-2026-34183
-    statement: "QUIC PATH_CHALLENGE memory growth. No QUIC; sandbox has no network."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42764
-    statement: "QUIC server NULL deref. No QUIC; sandbox has no network."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42766
-    statement: "Password-based CMS NULL deref. No CMS processing."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42767
-    statement: "CRMF EncryptedValue NULL deref. No CMP/CRMF."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42768
-    statement: "Multi-RecipientInfo Bleichenbacher oracle. No CMS decryption."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42769
-    statement: "Trust-anchor substitution in cert verification. Sandbox verifies no certs."
-    expired_at: 2026-11-05
-  - id: CVE-2026-42770
-    statement: "FFC-DH peer validation flaw. No DH key exchange."
-    expired_at: 2026-11-05
-  - id: CVE-2026-45445
-    statement: "AES-OCB IV ignored on EVP_Cipher path. Sandbox does no OCB encryption."
-    expired_at: 2026-11-05
-  - id: CVE-2026-45446
-    statement: "Empty-message tag mis-processing. Sandbox does no AEAD on untrusted input."
-    expired_at: 2026-11-05
-  - id: CVE-2026-45447
-    statement: "Heap UAF in PKCS7_verify. Sandbox verifies no PKCS7."
-    expired_at: 2026-11-05
-  - id: CVE-2026-7383
-    statement: "Heap overflow via signed integer. No untrusted crypto input in sandbox."
-    expired_at: 2026-11-05
-  - id: CVE-2026-9076
-    statement: "DoS via heap. No untrusted TLS/crypto input in sandbox."
-    expired_at: 2026-11-05
-
-  # libcap RPM bundles a Go binary compiled with a vulnerable Go toolchain.
-  # CVE is in Go's html/template package. Sandbox does not render HTML.
-  - id: CVE-2026-27142
-    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
-  - id: CVE-2026-39823
-    statement: "Go html/template in libcap RPM. Sandbox does not render HTML."
-
-  # Go stdlib in aws-lambda-rie (Lambda Runtime Interface Emulator)
-  # Only used for local testing - production Lambda ignores this binary.
-  - id: CVE-2026-32280
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-32282
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-33811
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-33814
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-39820
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-39836
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-42499
-    statement: "Go stdlib in aws-lambda-rie. Only used for local testing."
-  - id: CVE-2026-42504
-    statement: >-
-      Go std/mime MIME-header decode DoS (Go before 1.25.11 / 1.26.4).
-      Present only in the aws-lambda-rie binary, which is used for local
-      testing — production Lambda ignores it and runs the runtime interface
-      client instead.
-
-  # glibc in Amazon Linux 2023 base image
-  - id: CVE-2026-4046
-    statement: >-
-      glibc iconv() DoS triggered by IBM1390/IBM1399 destination
-      charset. Unreachable: macro vm context has no Buffer,
-      TextDecoder, require, or Function, and Buffer.transcode
-      would not accept these charsets anyway. Fix is in
-      amzn2023.0.4; awaiting AWS base image republish.
-    expired_at: 2026-11-05
-
-  # form-data in Lambda runtime (/var/runtime/node_modules/form-data).
-  # Used by AWS SDK for multipart HTTP uploads. Fix requires AWS to republish the base image.
-  - id: CVE-2026-12143
-    statement: >-
-      form-data multipart-stream vulnerability in AWS Lambda runtime SDK.
-      Sandbox has no outbound HTTP and no IAM creds; SDK upload paths are unreachable.
-    expired_at: 2026-11-05
-
-  # ws in Lambda runtime (/var/runtime/node_modules/).
-  # Used by AWS SDK for WebSocket-based APIs. Fix requires AWS to republish the base image.
-  - id: CVE-2026-48779
-    statement: >-
-      ws memory-exhaustion DoS via tiny WebSocket fragments.
-      Lambda is invoked via the runtime API, not inbound WebSocket connections;
-      no attacker-controlled frames can reach this library.
-    expired_at: 2026-11-05
-
-  # libsolv (dnf dependency solver) in Amazon Linux 2023 base image.
-  # All four are buffer overflows reachable only when a package manager parses
-  # crafted repo metadata, solv files, or PGP signatures. The sandbox invokes no
-  # package manager at runtime: the handler spawns a wrapper subprocess to run the
-  # user macro, and no dnf/yum/microdnf calls exist anywhere in the image.
-  # Base image currently ships 0.7.22-1.amzn2023.0.3; all four are fixed upstream
-  # in 0.7.22-1.amzn2023.0.4 (per the libsolv rpm changelog). Awaiting AWS republish.
-  - id: CVE-2026-48863
-    statement: "libsolv EdDSA PGP signature overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-48864
-    statement: "libsolv repopagestore decompression overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-9149
-    statement: "libsolv repo_add_solv overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-9150
-    statement: "libsolv Debian metadata parser overflow. No package-manager ops at runtime."
-    expired_at: 2026-11-05
-
-  # glib2 in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
-  # glib2` on the image: no installed package depends on it — it ships unused.
-  # The JS macro sandbox and its runtime deps never touch
-  # GVariant/GDateTime/GRegex/GIOChannel/GKeyFile/GDBus. Fixed upstream in
-  # glib2-2.82.2-770.amzn2023 (installed: -769); awaiting AWS base image republish.
-  - id: CVE-2026-58010
-    statement: "glib GVariant buffer over-read. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58011
-    statement: "glib GDateTime out-of-bounds read. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58012
-    statement: "glib GRegex buffer over-read. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58013
-    statement: "glib GIOChannel buffer over-read. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58014
-    statement: "glib GKeyFile off-by-one. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58015
-    statement: "glib GDBus SHA1 auth path traversal. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-  - id: CVE-2026-58016
-    statement: "glib GDBus introspection integer underflow. glib2 unused; no package requires it."
-    expired_at: 2026-11-05
-
-  # libacl in Amazon Linux 2023 base image. Confirmed via `rpm -q --whatrequires
-  # libacl`: no installed package depends on it. Both CVEs require running
-  # getfacl/setfacl against an attacker-controlled symlink path; the sandbox
-  # invokes no ACL tooling at runtime. Fixed upstream in libacl-2.4.0-1.amzn2023.0.1
-  # (installed: 2.3.1-2.amzn2023.0.2); awaiting AWS base image republish.
-  - id: CVE-2026-54369
-    statement: "acl symlink traversal privilege escalation. No ACL tooling invoked at runtime."
-    expired_at: 2026-11-05
-  - id: CVE-2026-54370
-    statement: "acl TOCTOU symlink traversal via getfacl/setfacl. No ACL tooling invoked at runtime."
-    expired_at: 2026-11-05
+      brace-expansion DoS via unbounded intermediate arrays, a third CVE ID
+      against the same bundled copy. Bundled inside @aws-sdk's own dependency
+      tree, not invoked by sandbox code; sandbox has no outbound HTTP and no
+      IAM creds, so no attacker-controlled string ever reaches it.
