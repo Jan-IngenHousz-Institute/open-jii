@@ -50,6 +50,16 @@ describe("ExperimentDevicesPanel", () => {
     });
   });
 
+  it("shows an error state when the list cannot load", async () => {
+    server.mount(contract.experiments.listExperimentDevices, { status: 403 });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("iot.experimentDevices.loadError")).toBeInTheDocument();
+    });
+  });
+
   it("detaches a device", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, { body: [binding] });
