@@ -5,6 +5,9 @@ import {
   zIotDevice,
   zRegisterIotDeviceBody,
   zIssueIotCredentialsResponse,
+  zOnboardDeviceBody,
+  zDeviceOnboardingConfig,
+  zDeviceExperiment,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -172,6 +175,93 @@ describe("Iot Schema", () => {
     it("rejects a bundle missing the private key", () => {
       const { privateKey: _pk, ...withoutKey } = validBundle;
       expect(zIssueIotCredentialsResponse.safeParse(withoutKey).success).toBe(false);
+    });
+  });
+
+  describe("zOnboardDeviceBody", () => {
+    it("defaults a missing experiment list to empty (config re-issue)", () => {
+      const result = zOnboardDeviceBody.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.experimentIds).toEqual([]);
+      }
+    });
+
+    it("rejects non-uuid experiment ids", () => {
+      expect(zOnboardDeviceBody.safeParse({ experimentIds: ["not-a-uuid"] }).success).toBe(false);
+    });
+
+    it("caps the experiment list at 100", () => {
+      const ids = Array.from(
+        { length: 101 },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      );
+      expect(zOnboardDeviceBody.safeParse({ experimentIds: ids }).success).toBe(false);
+    });
+  });
+
+  describe("zDeviceOnboardingConfig", () => {
+    const validConfig = {
+      thingName: "ambyte_AA11",
+      deviceType: "ambyte",
+      endpoint: "abc123-ats.iot.eu-central-1.amazonaws.com",
+      experiments: [
+        {
+          experimentId: "11111111-1111-4111-8111-111111111111",
+          experimentName: "Corn",
+          topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
+          workbook: null,
+        },
+      ],
+    };
+
+    it("accepts a config with a workbook-less experiment", () => {
+      expect(zDeviceOnboardingConfig.safeParse(validConfig).success).toBe(true);
+    });
+
+    it("accepts a pinned workbook payload", () => {
+      const withWorkbook = {
+        ...validConfig,
+        experiments: [
+          {
+            ...validConfig.experiments[0],
+            workbook: {
+              version: 1,
+              cells: [],
+              entitySnapshots: { protocols: {}, macros: {} },
+            },
+          },
+        ],
+      };
+      expect(zDeviceOnboardingConfig.safeParse(withWorkbook).success).toBe(true);
+    });
+
+    it("rejects an unknown device type", () => {
+      expect(
+        zDeviceOnboardingConfig.safeParse({ ...validConfig, deviceType: "toaster" }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("zDeviceExperiment", () => {
+    it("accepts a bound experiment with its added timestamp", () => {
+      const binding = {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Corn",
+        status: "active",
+        addedAt: new Date().toISOString(),
+      };
+      expect(zDeviceExperiment.safeParse(binding).success).toBe(true);
+    });
+
+    it("rejects a non-datetime addedAt", () => {
+      const binding = {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Corn",
+        status: "active",
+        addedAt: "yesterday",
+      };
+      expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
     });
   });
 });

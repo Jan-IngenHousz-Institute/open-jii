@@ -13,6 +13,11 @@ describe("supportsConfigDelivery", () => {
   it("does not support multispeq (procedure is sent inline at measurement time)", () => {
     expect(supportsConfigDelivery("multispeq")).toBe(false);
   });
+
+  it("does not support the command/response-only families", () => {
+    expect(supportsConfigDelivery("ambit")).toBe(false);
+    expect(supportsConfigDelivery("minipar")).toBe(false);
+  });
 });
 
 describe("deliverDeviceConfig", () => {
