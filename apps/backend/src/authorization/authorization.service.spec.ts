@@ -238,7 +238,7 @@ describe("AuthorizationService.can", () => {
       resourceId: macro.id,
       granteeType: "organization",
       granteeId: orgB.id,
-      role: "member",
+      role: "viewer",
     });
 
     const read = await authz.can(outsider, {
@@ -246,7 +246,7 @@ describe("AuthorizationService.can", () => {
       resourceId: macro.id,
       action: "read",
     });
-    expect(read).toMatchObject({ allow: true, reason: "resource-grant:org", role: "member" });
+    expect(read).toMatchObject({ allow: true, reason: "resource-grant:org", role: "viewer" });
 
     // member grant is read-only.
     const update = await authz.can(outsider, {
@@ -414,22 +414,19 @@ describe("can() — the right to contribute, by access path", () => {
       expect(await allows(orgAdmin, experiment.id)).toEqual(FULL);
     });
 
-    it.each(["member", "viewer"] as const)(
-      "a direct %s grant contributes but cannot administer",
-      async (role) => {
-        const experiment = await makeExperiment("private");
-        const grantee = await testApp.createTestUser({ email: `${role}-grantee@example.com` });
-        await testApp.addResourceGrant({
-          resourceType: "experiment",
-          resourceId: experiment.id,
-          granteeType: "user",
-          granteeId: grantee,
-          role,
-        });
+    it("a direct viewer grant contributes but cannot administer", async () => {
+      const experiment = await makeExperiment("private");
+      const grantee = await testApp.createTestUser({ email: `viewer-grantee@example.com` });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
 
-        expect(await allows(grantee, experiment.id)).toEqual(CONTRIBUTOR);
-      },
-    );
+      expect(await allows(grantee, experiment.id)).toEqual(CONTRIBUTOR);
+    });
 
     it.each(["admin", "owner"] as const)("a direct %s grant can do everything", async (role) => {
       const experiment = await makeExperiment("private");
@@ -458,7 +455,7 @@ describe("can() — the right to contribute, by access path", () => {
         resourceId: experiment.id,
         granteeType: "team",
         granteeId: team.id,
-        role: "member",
+        role: "viewer",
       });
 
       expect(await allows(teamMember, experiment.id)).toEqual(CONTRIBUTOR);
@@ -474,7 +471,7 @@ describe("can() — the right to contribute, by access path", () => {
         resourceId: experiment.id,
         granteeType: "organization",
         granteeId: otherOrgId,
-        role: "member",
+        role: "viewer",
       });
 
       expect(await allows(otherOrgMember, experiment.id)).toEqual(CONTRIBUTOR);
@@ -494,7 +491,7 @@ describe("can() — the right to contribute, by access path", () => {
         resourceId: experiment.id,
         granteeType: "user",
         granteeId: orgMember,
-        role: "member",
+        role: "viewer",
       });
 
       expect(await allows(orgMember, experiment.id)).toEqual(CONTRIBUTOR);

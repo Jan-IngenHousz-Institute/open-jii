@@ -21,8 +21,14 @@ import {
  * openJII resource types that are organization-owned and access-controlled.
  * Mirrors the `resource_type` enum in `@repo/database`; kept in sync by hand
  * because Better Auth needs a literal statement at configuration time.
+ *
+ * Exported as a value, not just a type, so the matrix tests can walk every type
+ * rather than restating the list — a type nobody granted anything on is a silent
+ * read-only hole, and a hand-copied list in the spec would not catch it.
  */
-export type ResourceType = "experiment" | "protocol" | "macro" | "workbook" | "device";
+export const RESOURCE_TYPES = ["experiment", "protocol", "macro", "workbook", "device"] as const;
+
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
 /**
  * Actions a role may hold on a resource.
@@ -33,9 +39,9 @@ export type ResourceType = "experiment" | "protocol" | "macro" | "workbook" | "d
  * have data to contribute to, but the verb stays in the statement for every type
  * because Better Auth needs one literal action list.
  */
-const ACTIONS = ["read", "contribute", "update", "share", "manage"] as const;
+export const RESOURCE_ACTIONS = ["read", "contribute", "update", "share", "manage"] as const;
 
-export type ResourceAction = (typeof ACTIONS)[number];
+export type ResourceAction = (typeof RESOURCE_ACTIONS)[number];
 
 /** Read-only: see the resource, write nothing. */
 const READ_ONLY = ["read"] as const;
@@ -50,11 +56,11 @@ const READ_AND_CONTRIBUTE = ["read", "contribute"] as const;
  */
 const statement = {
   ...defaultStatements,
-  experiment: ACTIONS,
-  protocol: ACTIONS,
-  macro: ACTIONS,
-  workbook: ACTIONS,
-  device: ACTIONS,
+  experiment: RESOURCE_ACTIONS,
+  protocol: RESOURCE_ACTIONS,
+  macro: RESOURCE_ACTIONS,
+  workbook: RESOURCE_ACTIONS,
+  device: RESOURCE_ACTIONS,
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -70,19 +76,19 @@ export const ac = createAccessControl(statement);
 export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
-    experiment: ACTIONS,
-    protocol: ACTIONS,
-    macro: ACTIONS,
-    workbook: ACTIONS,
-    device: ACTIONS,
+    experiment: RESOURCE_ACTIONS,
+    protocol: RESOURCE_ACTIONS,
+    macro: RESOURCE_ACTIONS,
+    workbook: RESOURCE_ACTIONS,
+    device: RESOURCE_ACTIONS,
   }),
   admin: ac.newRole({
     ...adminAc.statements,
-    experiment: ACTIONS,
-    protocol: ACTIONS,
-    macro: ACTIONS,
-    workbook: ACTIONS,
-    device: ACTIONS,
+    experiment: RESOURCE_ACTIONS,
+    protocol: RESOURCE_ACTIONS,
+    macro: RESOURCE_ACTIONS,
+    workbook: RESOURCE_ACTIONS,
+    device: RESOURCE_ACTIONS,
   }),
   member: ac.newRole({
     ...memberAc.statements,
@@ -101,17 +107,20 @@ export type OrgRole = keyof typeof roles;
  * because the two disagree about the middle tier on purpose.
  *
  * A grant is somebody deliberately handing you a resource, so on an experiment the
- * lowest grant tier ("Can view") carries `contribute`. Belonging to the owning
- * organization is not the same act: an org `member` gets read only, as does a public
- * experiment's passer-by. That is why grant `member`/`viewer` can no longer be
+ * lowest grant tier ("Can view", stored as `viewer`) carries `contribute`. Belonging
+ * to the owning organization is not the same act: an org `member` gets read only, as
+ * does a public experiment's passer-by. That is why the grant `viewer` tier cannot be
  * aliased onto the org `member` role the way it was when both meant read-only.
+ *
+ * These keys are the whole set. `GRANT_ROLES` in `@repo/database` types every write
+ * path against them, so anything else reaching `grantRoleCan` is a bug and is refused.
  *
  * `owner`/`admin` mean full control in both matrices, so they are shared.
  */
 const grantRoles = {
   owner: roles.owner,
   admin: roles.admin,
-  member: ac.newRole({
+  viewer: ac.newRole({
     ...memberAc.statements,
     experiment: READ_AND_CONTRIBUTE,
     // Silent on the other types rather than generous: only experiments have data to
@@ -155,7 +164,7 @@ export function orgRoleCan(
  * Whether a per-resource **grant** role permits `action` on `resourceType`.
  *
  * Two tiers, as the collaborators picker presents them:
- * - `member`/`viewer` ("Can view") → `read`, plus `contribute` on an experiment;
+ * - `viewer` ("Can view") → `read`, plus `contribute` on an experiment;
  * - `owner`/`admin` ("Can edit") → everything.
  *
  * Evaluated against {@link grantRoles}, not the org matrix — see the note there
@@ -174,10 +183,8 @@ export function grantRoleCan(
     .map((r) => r.trim())
     .filter(Boolean)
     .some((token) => {
-      // `viewer` is the picker's name for the read+contribute tier.
-      const normalized = token === "viewer" ? "member" : token;
       // Ignore unknown tokens (e.g. a stale or renamed role).
-      if (!(normalized in grantRoles)) return false;
-      return grantRoles[normalized as GrantRoleKey].authorize(request).success;
+      if (!(token in grantRoles)) return false;
+      return grantRoles[token as GrantRoleKey].authorize(request).success;
     });
 }

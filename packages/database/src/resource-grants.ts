@@ -8,12 +8,26 @@ export type GranteeType = (typeof resourceGrants.granteeType.enumValues)[number]
 /** A full `resource_grants` row. */
 export type ResourceGrantRow = typeof resourceGrants.$inferSelect;
 
+/**
+ * Roles a grant may carry — `owner`/`admin` confer full control, `viewer` read plus
+ * contributing data on an experiment.
+ *
+ * Re-stated here rather than imported: `@repo/auth` owns the matrix and depends on
+ * this package, so the import can only go one way. `resource_grants.role` is plain
+ * `text`, so this union on the write helpers is what keeps the column to the set the
+ * matrix can resolve — a value it does not recognise is access silently lost.
+ * `packages/auth/src/access.spec.ts` fails if the two drift.
+ */
+export const GRANT_ROLES = ["owner", "admin", "viewer"] as const;
+
+export type GrantRole = (typeof GRANT_ROLES)[number];
+
 export interface ResourceGrantInput {
   resourceType: ResourceType;
   resourceId: string;
   granteeType: GranteeType;
   granteeId: string;
-  role?: string;
+  role?: GrantRole;
   createdBy?: string | null;
 }
 
@@ -33,7 +47,7 @@ export async function grantResource(
       resourceId: grant.resourceId,
       granteeType: grant.granteeType,
       granteeId: grant.granteeId,
-      role: grant.role ?? "member",
+      role: grant.role ?? "viewer",
       createdBy: grant.createdBy ?? null,
     })
     .onConflictDoNothing();
@@ -60,7 +74,7 @@ export interface GrantInput {
   resourceId: string;
   granteeType: GranteeType;
   granteeId: string;
-  role: string;
+  role: GrantRole;
   createdBy?: string | null;
 }
 
@@ -94,7 +108,7 @@ export async function upsertGrant(db: DbOrTx, input: GrantInput): Promise<Resour
  * the admin hand-off).
  *
  * Idempotent and raises only: an existing `owner`/`admin` is left alone (so a
- * re-run cannot demote an owner), a `viewer`/`member` is promoted. That is why
+ * re-run cannot demote an owner), a `viewer` is promoted. That is why
  * callers need no staffing guard — this can never remove the last staffing grant.
  */
 export async function ensureDirectAdminGrant(
@@ -143,7 +157,7 @@ export async function ensureDirectAdminGrant(
  */
 export async function updateGrantRole(
   db: DbOrTx,
-  params: { resourceType: ResourceType; resourceId: string; grantId: string; role: string },
+  params: { resourceType: ResourceType; resourceId: string; grantId: string; role: GrantRole },
 ): Promise<ResourceGrantRow | undefined> {
   const [row] = await db
     .update(resourceGrants)

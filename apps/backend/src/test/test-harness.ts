@@ -410,7 +410,7 @@ export class TestHarness {
       resourceId: experimentId,
       granteeType: "user",
       granteeId: userId,
-      role: "member",
+      role: "viewer",
     });
   }
 
@@ -478,7 +478,7 @@ export class TestHarness {
     resourceId: string;
     granteeType: "user" | "team" | "organization";
     granteeId: string;
-    role: "owner" | "admin" | "member" | "viewer";
+    role: "owner" | "admin" | "viewer";
     createdBy?: string;
   }) {
     const [grant] = await this.database.insert(resourceGrants).values(data).returning();

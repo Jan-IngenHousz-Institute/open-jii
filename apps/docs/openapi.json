@@ -16010,7 +16010,6 @@
                             "enum": [
                               "owner",
                               "admin",
-                              "member",
                               "viewer"
                             ],
                             "type": "string"
@@ -16154,11 +16153,9 @@
                     "format": "uuid"
                   },
                   "role": {
-                    "default": "member",
+                    "default": "viewer",
                     "enum": [
-                      "owner",
                       "admin",
-                      "member",
                       "viewer"
                     ],
                     "type": "string"
@@ -16286,7 +16283,6 @@
                             "enum": [
                               "owner",
                               "admin",
-                              "member",
                               "viewer"
                             ],
                             "type": "string"
@@ -16432,9 +16428,7 @@
                 "properties": {
                   "role": {
                     "enum": [
-                      "owner",
                       "admin",
-                      "member",
                       "viewer"
                     ],
                     "type": "string"
@@ -16561,7 +16555,6 @@
                             "enum": [
                               "owner",
                               "admin",
-                              "member",
                               "viewer"
                             ],
                             "type": "string"

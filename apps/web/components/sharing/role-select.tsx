@@ -1,5 +1,6 @@
 "use client";
 
+import type { ShareableRole } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -9,7 +10,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import type { ShareableRole } from "./collaborator-roles";
 import { SHAREABLE_ROLES, shareableRoleLabelKey } from "./collaborator-roles";
 
 interface RoleSelectProps {

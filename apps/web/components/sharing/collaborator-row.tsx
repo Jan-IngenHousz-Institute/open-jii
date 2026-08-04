@@ -3,12 +3,14 @@
 import { UserAvatar } from "@/components/user-avatar";
 import { Building2, LogOut, Trash2 } from "lucide-react";
 
-import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  ResourceCollaboratorDto,
+  ShareableRole,
+} from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 
-import type { ShareableRole } from "./collaborator-roles";
 import { collapseRole } from "./collaborator-roles";
 import { RoleSelect } from "./role-select";
 

@@ -246,6 +246,82 @@ describe("SharingController", () => {
     });
   });
 
+  describe("the grantable role set is narrower than the stored one", () => {
+    it("refuses a create that tries to grant 'owner' with a 400", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const grantee = await testApp.createTestUser({ name: "Would-be Owner" });
+
+      // Ownership follows from the owning organization; a share cannot hand it over.
+      // Refused by contract validation, before any use case sees it.
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.sharing.createGrant, {
+            resourceType: "macro",
+            id: macro.id,
+          }),
+        )
+        .withAuth(owner)
+        .send({ granteeType: "user", granteeId: grantee, role: "owner" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("refuses an update to 'owner' with a 400", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const grantee = await testApp.createTestUser({ name: "Grantee" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+
+      await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId: grant.id,
+          }),
+        )
+        .withAuth(owner)
+        .send({ role: "owner" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("still lists a stored 'owner' grant", async () => {
+      const macro = await testApp.createMacro({
+        name: "M",
+        createdBy: owner,
+        visibility: "private",
+      });
+      const legacy = await testApp.createTestUser({ name: "Legacy Owner Grant" });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: legacy,
+        role: "owner",
+      });
+
+      const res = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.sharing.listGrants, {
+            resourceType: "macro",
+            id: macro.id,
+          }),
+        )
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      // The other half of the asymmetry: no caller can write this row, and response
+      // validation still has to let it through rather than 500 on the whole list.
+      const grants = res.body as ResourceGrantDto[];
+      const stored = grants.find((grant) => grant.granteeId === legacy);
+      expect(stored?.role).toBe("owner");
+    });
+  });
+
   describe("grant write failures surface as errors", () => {
     it("returns an error when updating a grant that does not exist", async () => {
       const macro = await testApp.createMacro({ name: "M", createdBy: owner });

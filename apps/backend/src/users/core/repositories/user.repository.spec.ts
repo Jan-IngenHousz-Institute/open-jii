@@ -634,7 +634,7 @@ describe("UserRepository", () => {
         name: "Contributor Only Experiment",
         userId: soloAdminId,
       });
-      // A `member` grant contributes; only `admin`/`owner` staff an experiment, so
+      // A `viewer` grant contributes; only `admin`/`owner` staff an experiment, so
       // this collaborator is not what stands between it and having no admin.
       await testApp.addExperimentCollaborator(experiment.id, contributorId);
 

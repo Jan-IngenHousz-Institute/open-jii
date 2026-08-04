@@ -62,7 +62,7 @@ describe("TransferResourceAdminUseCase", () => {
       resourceId: experiment.id,
       granteeType: "user",
       granteeId: collaboratorId,
-      role: "member",
+      role: "viewer",
     });
 
     const result = await useCase.execute(

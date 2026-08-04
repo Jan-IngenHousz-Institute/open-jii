@@ -3,12 +3,12 @@
 import { CollaboratorInviteDialog } from "@/components/sharing/collaborator-invite-dialog";
 import { useEffect } from "react";
 
+import type { ShareableRole } from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation } from "@repo/api/domains/user/user.schema";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useUserInvitationCreate } from "../../../hooks/user-invitation/useUserInvitationCreate/useUserInvitationCreate";
-import type { ShareableRole } from "../../sharing/collaborator-roles";
 
 interface ExperimentInviteModalProps {
   experimentId: string;

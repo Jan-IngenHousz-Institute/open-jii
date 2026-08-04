@@ -9,6 +9,7 @@ import { parseApiError } from "~/util/apiError";
 import type {
   ResourceCollaboratorDto,
   ResourceGrantDto,
+  ShareableRole,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
@@ -16,7 +17,6 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import type { ShareableRole } from "./collaborator-roles";
 import { CollaboratorRow } from "./collaborator-row";
 import { RevokeCollaboratorDialog } from "./revoke-collaborator-dialog";
 

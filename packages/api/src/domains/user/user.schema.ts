@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { zExperimentStatus } from "../experiment/experiment.schema";
-import { zSharingResourceType } from "../sharing/sharing.schema";
+import { zShareableRole, zSharingResourceType } from "../sharing/sharing.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -143,12 +143,12 @@ export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
 export const zInvitationResourceType = z.enum(["platform", "experiment"]);
 
 /**
- * The access tier an invitation confers on acceptance — the two tiers the
- * collaborators UI offers, expressed as the `resource_grants` roles they map to:
- * `viewer` ("Can view") is read plus data contribution, `admin` ("Can edit") is
- * full control.
+ * The access tier an invitation confers on acceptance. Accepting one writes a grant,
+ * so this is the grantable role set under the name this domain uses for it — aliased
+ * rather than restated, since a divergence would let an invitation promise a tier the
+ * sharing surface cannot grant.
  */
-export const zInvitationTier = z.enum(["admin", "viewer"]);
+export const zInvitationTier = zShareableRole;
 
 export const zInvitation = z.object({
   id: z.string().uuid(),

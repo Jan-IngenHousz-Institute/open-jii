@@ -14,14 +14,17 @@
 -- they are resolved from `organization_id` at read time. A creator therefore gets
 -- no grant of their own — see statement 2.
 --
--- No DDL: `resource_grants` already has the shape this model needs (one row per
--- resource + grantee, carrying a role). This migration only moves data.
+-- The DDL settles the read-and-contribute tier on the single name `viewer`, and
+-- statements 3-4 rewrite the rows still carrying the older `member`. The readers
+-- resolve a role by exact match, so a column holding two names for one tier is a
+-- standing invitation to miss half the rows. `resource_grants` otherwise already has
+-- the shape this model needs (one row per resource + grantee, carrying a role).
 --
 -- Folded into the migration rather than a hand-run script so it applies
 -- automatically and atomically on db:migrate in every environment. Statement 1 is
--- a set-based INSERT with ON CONFLICT DO NOTHING and statement 2 is a set-based
--- DELETE, so a half-applied migration can be run again and lands in exactly the
--- same place.
+-- a set-based INSERT with ON CONFLICT DO NOTHING, statement 2 is a set-based
+-- DELETE and statements 3-4 are set-based UPDATEs keyed on the value they replace,
+-- so a half-applied migration can be run again and lands in exactly the same place.
 --
 -- That is not the same as being a no-op forever. Statement 1 inserts where a grant
 -- is absent, so if it were re-run long after the app went live it would restore a
@@ -31,12 +34,16 @@
 -- that owns the consequence.
 --
 -- `experiment_members` is only ever READ here. The table and its rows are left
--- physically untouched, with their data frozen.
+-- physically untouched, with their data frozen — its own `member` roster role is a
+-- separate vocabulary and is deliberately not renamed.
 -- ============================================================================
+ALTER TABLE "invitations" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
+ALTER TABLE "resource_grants" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
 -- 1. Give every experiment member the grant that matches their roster role
---    (admin -> admin, member -> member — the same mapping 0039's mirror used, and
---    already the right answer: an `admin` grant administers, a `member` grant
---    reads and contributes, which is exactly what the two roster roles meant).
+--    (admin -> admin, member -> viewer — the same two tiers 0039's mirror produced,
+--    written under the grant vocabulary's own names: an `admin` grant administers, a
+--    `viewer` grant reads and contributes, which is exactly what the two roster roles
+--    meant. The roster keeps its own spelling; it is a separate vocabulary).
 --
 --    Most members already have this row, which is why no conversion is needed.
 --    The gap this closes is invitation acceptance: it inserted a roster row
@@ -51,7 +58,7 @@
 --    Members whose profile is soft-deleted are skipped: a closed account must not
 --    be handed access it no longer holds anywhere else.
 INSERT INTO "resource_grants" ("resource_type", "resource_id", "grantee_type", "grantee_id", "role")
-SELECT 'experiment', em."experiment_id", 'user', em."user_id", em."role"::text
+SELECT 'experiment', em."experiment_id", 'user', em."user_id", CASE WHEN em."role" = 'admin' THEN 'admin' ELSE 'viewer' END
 FROM "experiment_members" em
 WHERE NOT EXISTS (
   SELECT 1 FROM "profiles" p
@@ -111,4 +118,14 @@ WHERE g."resource_type" = r."resource_type"
     WHERE om."organization_id" = r."organization_id"
       AND om."user_id" = r."created_by"
       AND om."role" IN ('owner', 'admin')
-  );
+  );--> statement-breakpoint
+-- 3. Rewrite the rows still spelling the middle tier `member` — 0039's mirror output
+--    and anything the runtime wrote before this release. Both names always meant the
+--    same tier, so no access changes; what changes is that one spelling is left, so a
+--    `WHERE role = 'viewer'` can be trusted to find every row of that tier.
+--
+--    Runs after statement 1 so it also covers what the mirror just inserted.
+UPDATE "resource_grants" SET "role" = 'viewer' WHERE "role" = 'member';--> statement-breakpoint
+-- 4. The same for pending invitations, whose `role` column stores a grant role and
+--    carried the same two spellings for one tier.
+UPDATE "invitations" SET "role" = 'viewer' WHERE "role" = 'member';

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { GrantRole } from "@repo/api/domains/sharing/sharing.schema";
+import { zGrantRole, zShareableRole } from "@repo/api/domains/sharing/sharing.schema";
 
 import {
-  DEFAULT_SHARE_ROLE,
   SHAREABLE_ROLES,
   collapseRole,
   roleLabelKey,
@@ -18,27 +17,30 @@ describe("collaborator role collapse", () => {
     expect(roleLabelKey("admin")).toBe("sharing.roleCanEdit");
   });
 
-  it("collapses the read-only roles onto 'Can view'", () => {
-    expect(collapseRole("member")).toBe("viewer");
+  it("collapses the read-only role onto 'Can view'", () => {
     expect(collapseRole("viewer")).toBe("viewer");
-    expect(roleLabelKey("member")).toBe("sharing.roleCanView");
     expect(roleLabelKey("viewer")).toBe("sharing.roleCanView");
   });
 
   it("covers every API role exhaustively", () => {
-    const allRoles: GrantRole[] = ["owner", "admin", "member", "viewer"];
-    for (const role of allRoles) {
+    // Driven off the contract, so a role added there without a label fails here
+    // rather than rendering under whichever branch happens to catch it.
+    for (const role of zGrantRole.options) {
       expect(SHAREABLE_ROLES).toContain(collapseRole(role));
     }
   });
 
-  it("offers exactly the two UI roles, most access first", () => {
+  it("offers exactly the grantable roles, most access first", () => {
+    // The select renders this order, so the contract's order is the UI's order.
     expect(SHAREABLE_ROLES).toEqual(["admin", "viewer"]);
+    expect(SHAREABLE_ROLES).toEqual(zShareableRole.options);
     expect(shareableRoleLabelKey("admin")).toBe("sharing.roleCanEdit");
     expect(shareableRoleLabelKey("viewer")).toBe("sharing.roleCanView");
   });
 
-  it("defaults a new share to least privilege", () => {
-    expect(DEFAULT_SHARE_ROLE).toBe("viewer");
+  it("does not offer a role the API refuses on a write", () => {
+    // `owner` deserializes on a read and must never be offered as something to grant.
+    expect(SHAREABLE_ROLES).not.toContain("owner");
+    expect(zShareableRole.safeParse("owner").success).toBe(false);
   });
 });

@@ -23,8 +23,9 @@ export interface InvitationTerms {
 }
 
 /**
- * Anything but `admin` reads as the lower tier — covering `viewer`, the historical
- * `member` (same meaning, so no backfill), and any unexpected value.
+ * Anything but `admin` reads as the lower tier. Total by design: an invitation whose
+ * stored tier cannot be resolved is still a real invitation, so it renders at the
+ * lower tier rather than throwing.
  */
 function normaliseTier(stored: string | null): InvitationTier {
   return stored === "admin" ? "admin" : "viewer";

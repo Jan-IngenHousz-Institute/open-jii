@@ -1,13 +1,11 @@
-import type { GrantRole } from "@repo/api/domains/sharing/sharing.schema";
+import { zShareableRole } from "@repo/api/domains/sharing/sharing.schema";
+import type { GrantRole, ShareableRole } from "@repo/api/domains/sharing/sharing.schema";
 
-/** UI roles; API `owner`/`member` values collapse to `admin`/`viewer`. */
-export type ShareableRole = "admin" | "viewer";
-
-/** Options offered in the role selects, most access first. */
-export const SHAREABLE_ROLES: readonly ShareableRole[] = ["admin", "viewer"] as const;
-
-/** Least-privilege default for a new share. */
-export const DEFAULT_SHARE_ROLE: ShareableRole = "viewer";
+/**
+ * Options offered in the role selects. The contract declares them most access first,
+ * which is the order the selects want, so it is taken as-is rather than re-listed.
+ */
+export const SHAREABLE_ROLES: readonly ShareableRole[] = zShareableRole.options;
 
 /** Collapse any API grant role onto the two the UI surfaces. */
 export function collapseRole(role: GrantRole): ShareableRole {

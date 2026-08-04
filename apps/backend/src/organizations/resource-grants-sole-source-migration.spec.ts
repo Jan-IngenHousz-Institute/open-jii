@@ -4,6 +4,7 @@ import {
   ensurePersonalOrganization,
   experiments,
   experimentMembers,
+  invitations,
   macros,
   protocols,
   resourceGrants,
@@ -22,13 +23,17 @@ import { TestHarness } from "../test/test-harness";
  * duplicated here so the migration's data ops are locked by tests — update both
  * together if the migration changes.
  *
- * The migration carries no DDL: `resource_grants` already had the right shape.
  * `experiment_members` is only ever READ, so the specs seed it to reproduce the
  * pre-consolidation state and then assert what the grants look like afterwards.
+ *
+ * The migration's DDL — the column defaults and the role CHECKs — is not mirrored
+ * here: it has applied by the time these run, and the end-state block below asserts
+ * it directly against the database instead.
  */
 const GRANT_EVERY_MEMBER_THEIR_ROLE_SQL = sql`
   INSERT INTO "resource_grants" ("resource_type", "resource_id", "grantee_type", "grantee_id", "role")
-  SELECT 'experiment', em."experiment_id", 'user', em."user_id", em."role"::text
+  SELECT 'experiment', em."experiment_id", 'user', em."user_id",
+    CASE WHEN em."role" = 'admin' THEN 'admin' ELSE 'viewer' END
   FROM "experiment_members" em
   WHERE NOT EXISTS (
     SELECT 1 FROM "profiles" p
@@ -63,9 +68,20 @@ const DELETE_CREATOR_GRANTS_SQL = sql`
     );
 `;
 
+/** Rewrites the rows that still spell the read-and-contribute tier `member`. */
+const RETIRE_MEMBER_SPELLING_SQL = sql`
+  UPDATE "resource_grants" SET "role" = 'viewer' WHERE "role" = 'member';
+`;
+
+const RETIRE_MEMBER_SPELLING_INVITATIONS_SQL = sql`
+  UPDATE "invitations" SET "role" = 'viewer' WHERE "role" = 'member';
+`;
+
 async function runDataMigration(db: DatabaseInstance): Promise<void> {
   await db.execute(GRANT_EVERY_MEMBER_THEIR_ROLE_SQL);
   await db.execute(DELETE_CREATOR_GRANTS_SQL);
+  await db.execute(RETIRE_MEMBER_SPELLING_SQL);
+  await db.execute(RETIRE_MEMBER_SPELLING_INVITATIONS_SQL);
 }
 
 describe("grants-as-sole-access-source migration data ops (0041)", () => {
@@ -106,9 +122,12 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     return experiment;
   }
 
-  it.each(["member", "admin"] as const)(
-    "grants a %s member the matching role when they hold no grant at all",
-    async (role) => {
+  it.each([
+    ["member", "viewer"],
+    ["admin", "admin"],
+  ] as const)(
+    "grants a roster %s the matching grant role when they hold no grant at all",
+    async (rosterRole, grantRole) => {
       const owner = await testApp.createTestUser({ name: "Owner" });
       const joiner = await testApp.createTestUser({ name: "Joiner" });
       const experiment = await seedExperiment(owner);
@@ -116,12 +135,12 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
       // Without this migration that person loses access entirely.
       await testApp.database
         .insert(experimentMembers)
-        .values({ experimentId: experiment.id, userId: joiner, role });
+        .values({ experimentId: experiment.id, userId: joiner, role: rosterRole });
 
       await runDataMigration(testApp.database);
 
       expect(await grantsFor("experiment", experiment.id)).toEqual([
-        expect.objectContaining({ granteeId: joiner, role, createdBy: null }),
+        expect.objectContaining({ granteeId: joiner, role: grantRole, createdBy: null }),
       ]);
     },
   );
@@ -396,7 +415,7 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     );
     // The creator is gone; only the joiner's roster-derived grant remains.
     expect(Object.fromEntries(afterSecond.map((g) => [g.granteeId, g.role]))).toEqual({
-      [joiner]: "member",
+      [joiner]: "viewer",
     });
 
     // The creator-grant delete is naturally idempotent: the second pass finds
@@ -427,9 +446,47 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     // Documented rather than defended against: drizzle applies a migration once per
     // database, and reaching this state means someone edited the journal by hand.
     expect(await grantsFor("experiment", experiment.id)).toEqual([
-      expect.objectContaining({ granteeId: joiner, role: "member" }),
+      expect.objectContaining({ granteeId: joiner, role: "viewer" }),
     ]);
   });
+
+  it.each(["resource_grants", "invitations"] as const)(
+    "rewrites a pre-existing 'member' row in %s to 'viewer'",
+    async (table) => {
+      const owner = await testApp.createTestUser({ name: "Owner" });
+      const subject = await testApp.createTestUser({ name: "Subject" });
+      const experiment = await seedExperiment(owner);
+
+      // What 0039's mirror and the pre-release write paths left behind. Inserted
+      // directly because no typed helper can express the retired spelling any more.
+      if (table === "resource_grants") {
+        await testApp.database.insert(resourceGrants).values({
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          granteeType: "user",
+          granteeId: subject,
+          role: "member",
+        });
+      } else {
+        await testApp.database.insert(invitations).values({
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          email: `legacy-${crypto.randomUUID()}@example.com`,
+          role: "member",
+          invitedBy: owner,
+        });
+      }
+
+      await runDataMigration(testApp.database);
+
+      const roles = await testApp.database.execute<{ role: string }>(
+        sql`SELECT "role" FROM ${sql.identifier(table)}`,
+      );
+      // Same tier either way, so nobody's access moves — but only one name is left,
+      // which is what makes a `WHERE role = 'viewer'` find every row of that tier.
+      expect(roles.map((r) => r.role)).toEqual(["viewer"]);
+    },
+  );
 
   it("gives one grant per member even when the same person is on several experiments", async () => {
     const owner = await testApp.createTestUser({ name: "Owner" });
@@ -444,7 +501,7 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
     await runDataMigration(testApp.database);
 
     expect(await grantsFor("experiment", first.id)).toEqual([
-      expect.objectContaining({ granteeId: joiner, role: "member" }),
+      expect.objectContaining({ granteeId: joiner, role: "viewer" }),
     ]);
     expect(await grantsFor("experiment", second.id)).toEqual([
       expect.objectContaining({ granteeId: joiner, role: "admin" }),
@@ -458,6 +515,14 @@ describe("grants-as-sole-access-source migration end state (0041)", () => {
 
   beforeAll(async () => {
     await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
   });
 
   afterAll(async () => {
@@ -494,6 +559,17 @@ describe("grants-as-sole-access-source migration end state (0041)", () => {
           WHERE t."relname" = 'resource_grants' AND c."contype" = 'c'`,
     );
     expect(checks).toEqual([]);
+  });
+
+  it.each([
+    ["resource_grants", "viewer"],
+    ["invitations", "viewer"],
+  ])("defaults %s.role to %s", async (table, expected) => {
+    const [column] = await testApp.database.execute<{ column_default: string | null }>(
+      sql`SELECT column_default FROM information_schema.columns
+          WHERE table_name = ${table} AND column_name = 'role'`,
+    );
+    expect(column.column_default).toBe(`'${expected}'::text`);
   });
 
   it("leaves experiment_members physically intact, role column and enum included", async () => {

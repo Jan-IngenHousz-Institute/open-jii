@@ -53,8 +53,8 @@ export interface ExperimentCollaborators {
   collaborators: ExperimentContributor[];
 }
 
-/** Read plus data contribution. Stored as the grant role `member`. */
-const COLLABORATOR_GRANT_ROLE = "member";
+/** Read plus data contribution. Stored as the grant role `viewer`. */
+const COLLABORATOR_GRANT_ROLE = "viewer";
 
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
@@ -103,7 +103,7 @@ export class ExperimentRepository {
   }
 
   /**
-   * Direct `member` grants for collaborators picked at create time. Grantees are
+   * Direct `viewer` grants for collaborators picked at create time. Grantees are
    * validated first: `resource_grants` has no FK on `grantee_id`, so an unchecked
    * write would store a row for a uuid naming nobody. Non-destructive — an existing
    * grant is left alone, so it never lowers access and needs no staffing guard.

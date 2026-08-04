@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { zPublishableResourceType } from "../visibility/visibility.schema";
-import { zResourceGrant, zSharingResourceType } from "./sharing.schema";
+import {
+  zCreateCollaboratorBody,
+  zGrantRole,
+  zResourceGrant,
+  zShareableRole,
+  zSharingResourceType,
+  zUpdateCollaboratorBody,
+} from "./sharing.schema";
 
 describe("zSharingResourceType", () => {
   it("covers every resource type that can hold a grant, devices included", () => {
@@ -41,12 +48,53 @@ describe("zResourceGrant response schema", () => {
   };
 
   it("accepts every grant-role enum value", () => {
-    for (const role of ["owner", "admin", "member", "viewer"] as const) {
+    for (const role of zGrantRole.options) {
       expect(zResourceGrant.safeParse({ ...base, role }).success).toBe(true);
     }
   });
 
+  it("still deserializes a stored 'owner' row", () => {
+    // Nothing writes `owner` and no caller may send it, but rows that hold it have to
+    // keep listing — which is the whole reason the response enum stays wider.
+    expect(zResourceGrant.safeParse({ ...base, role: "owner" }).success).toBe(true);
+  });
+
   it("rejects a role outside the grant-role enum (no unknown role leaks to clients)", () => {
     expect(zResourceGrant.safeParse({ ...base, role: "superuser" }).success).toBe(false);
+    // The retired spelling included: it is not a role any longer.
+    expect(zResourceGrant.safeParse({ ...base, role: "member" }).success).toBe(false);
+  });
+});
+
+describe("the grantable role set is narrower than the stored one", () => {
+  const body = {
+    granteeType: "user" as const,
+    granteeId: "33333333-3333-3333-3333-333333333333",
+  };
+
+  it("refuses 'owner' on create and update", () => {
+    // `owner` means "answerable through the owning organization", which is not
+    // something a share can hand over — so it must not be reachable as a write.
+    expect(zCreateCollaboratorBody.safeParse({ ...body, role: "owner" }).success).toBe(false);
+    expect(zUpdateCollaboratorBody.safeParse({ role: "owner" }).success).toBe(false);
+  });
+
+  it("accepts each grantable role on create and update", () => {
+    for (const role of zShareableRole.options) {
+      expect(zCreateCollaboratorBody.safeParse({ ...body, role }).success).toBe(true);
+      expect(zUpdateCollaboratorBody.safeParse({ role }).success).toBe(true);
+    }
+  });
+
+  it("defaults an omitted create role to the least-privilege tier", () => {
+    const parsed = zCreateCollaboratorBody.parse(body);
+    expect(parsed.role).toBe("viewer");
+  });
+
+  it("is a strict subset of what a response may carry", () => {
+    for (const role of zShareableRole.options) {
+      expect(zGrantRole.options).toContain(role);
+    }
+    expect(zShareableRole.options.length).toBeLessThan(zGrantRole.options.length);
   });
 });

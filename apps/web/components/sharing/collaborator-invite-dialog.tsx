@@ -4,7 +4,8 @@ import { useCollaboratorAdd } from "@/hooks/sharing/useCollaboratorAdd/useCollab
 import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import { zCreateCollaboratorBody } from "@repo/api/domains/sharing/sharing.schema";
+import type { ShareableRole, SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -17,11 +18,12 @@ import {
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import type { ShareableRole } from "./collaborator-roles";
-import { DEFAULT_SHARE_ROLE } from "./collaborator-roles";
 import type { GranteeSelection } from "./grantee-picker";
 import { GranteePicker } from "./grantee-picker";
 import { RoleSelect } from "./role-select";
+
+/** The tier the create endpoint applies when the field is omitted. */
+const DEFAULT_ROLE: ShareableRole = zCreateCollaboratorBody.shape.role.parse(undefined);
 
 interface CollaboratorInviteDialogProps {
   resourceType: SharingResourceType;
@@ -60,7 +62,7 @@ export function CollaboratorInviteDialog({
   const { t } = useTranslation();
 
   const [selection, setSelection] = useState<GranteeSelection | null>(null);
-  const [role, setRole] = useState<ShareableRole>(DEFAULT_SHARE_ROLE);
+  const [role, setRole] = useState<ShareableRole>(DEFAULT_ROLE);
 
   const { mutateAsync: addCollaborator, isPending: isSharing } = useCollaboratorAdd();
 
@@ -69,7 +71,7 @@ export function CollaboratorInviteDialog({
 
   const reset = () => {
     setSelection(null);
-    setRole(DEFAULT_SHARE_ROLE);
+    setRole(DEFAULT_ROLE);
   };
 
   const handleOpenChange = (next: boolean) => {

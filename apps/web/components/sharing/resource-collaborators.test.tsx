@@ -200,7 +200,7 @@ describe("<ResourceCollaborators />", () => {
     server.mount(contract.sharing.listGrants, {
       body: [
         createResourceGrant({
-          role: "member",
+          role: "viewer",
           grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
         }),
       ],

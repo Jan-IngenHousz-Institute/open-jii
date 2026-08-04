@@ -1,12 +1,8 @@
 import { z } from "zod";
 
 /**
- * Resource types that expose a sharing (collaborators) surface — every value of
- * the `resource_grants.resource_type` enum.
- *
- * Devices are in here, but *sharing* a device is a different question from
- * *publishing* one: they stay permanently private, with no write path to their
- * visibility (see `zPublishableResourceType`, which is this set minus devices).
+ * Every value of the `resource_grants.resource_type` enum. Devices are shareable but
+ * never publishable — see `zPublishableResourceType`, this set minus devices.
  */
 export const zSharingResourceType = z.enum([
   "experiment",
@@ -16,18 +12,20 @@ export const zSharingResourceType = z.enum([
   "device",
 ]);
 
-/**
- * Who a share can be granted to: individual users and whole organizations. Team
- * grantees arrive with team management (the DB enum and can() already support
- * `team`, so no backend change is needed later).
- */
+/** Team grantees arrive with team management; the DB enum and `can()` already take them. */
 export const zGranteeType = z.enum(["user", "organization"]);
 
 /**
- * Role conferred by a grant. owner/admin ⇒ full control; member/viewer ⇒ read, plus
- * contributing data on an experiment.
+ * As stored and returned (mirrors `GRANT_ROLES` in `@repo/database`). `owner` is
+ * read-only vocabulary: nothing writes it, but existing rows must still deserialize.
  */
-export const zGrantRole = z.enum(["owner", "admin", "member", "viewer"]);
+export const zGrantRole = z.enum(["owner", "admin", "viewer"]);
+
+/**
+ * What a caller may grant: "Can edit" and "Can view", most access first. Narrower than
+ * {@link zGrantRole} on purpose — readers accept a legacy `owner`, writers must not mint one.
+ */
+export const zShareableRole = z.enum(["admin", "viewer"]);
 
 export const zCollaboratorsPathParams = z.object({
   resourceType: zSharingResourceType,
@@ -47,10 +45,8 @@ export const zGrantee = z.object({
 });
 
 /**
- * A direct grant on a resource, enriched with its grantee's display info and the
- * computed "Outside Collaborator" flag:
- * - user grantee → true when they are not a member of the resource's owning org;
- * - organization grantee → true when the grantee org is not the owning org.
+ * A direct grant plus its grantee's display info. `isOutsideCollaborator` is computed:
+ * a user not in the owning org, or a grantee org that is not the owning org.
  */
 export const zResourceGrant = z.object({
   id: z.string().uuid(),
@@ -58,9 +54,8 @@ export const zResourceGrant = z.object({
   resourceId: z.string().uuid(),
   granteeType: zGranteeType,
   granteeId: z.string().uuid(),
-  // Response role is the closed grant-role set, not free text: a malformed/legacy
-  // DB row fails output validation loudly here instead of leaking an unknown role
-  // to clients, and generated client types stay exhaustively narrow for the UI.
+  // Closed set, not free text: a malformed row fails output validation here rather
+  // than leaking an unknown role to clients.
   role: zGrantRole,
   createdAt: z.string(),
   createdBy: z.string().uuid().nullable(),
@@ -68,22 +63,13 @@ export const zResourceGrant = z.object({
   grantee: zGrantee,
 });
 
-/**
- * A row of the collaborators surface backed by an actual grant.
- *
- * The `kind` discriminator is what separates it from an owner row: only grant
- * rows have an id, a role, and therefore something to change or revoke.
- */
+/** Only grant rows have an id and a role, so only they have something to change or revoke. */
 export const zResourceGrantRow = zResourceGrant.extend({ kind: z.literal("grant") });
 
 /**
- * A synthesized row for somebody who **owns** the resource, derived from its
- * organization's living owners rather than from any grant.
- *
- * Owners are not collaborators: they hold every action through the org role, so
- * there is no tier to change, nothing to revoke, and no way to leave (leaving is a
- * matter of the organization, not the resource). Hence no grant id, no role, and no
- * outside-collaborator flag — an owner is by definition inside the owning org.
+ * Synthesized from the owning organization's living owners, not from a grant. Owners
+ * hold every action through the org role, so there is no tier, nothing to revoke, and
+ * no leaving (that is an organization matter) — hence no id, role or outside flag.
  */
 export const zResourceOwnerRow = z.object({
   kind: z.literal("owner"),
@@ -103,19 +89,16 @@ export const zResourceGrantList = z.array(zResourceCollaborator);
 export const zCreateCollaboratorBody = z.object({
   granteeType: zGranteeType,
   granteeId: z.string().uuid(),
-  role: zGrantRole.default("member"),
+  role: zShareableRole.default("viewer"),
 });
 
 export const zUpdateCollaboratorBody = z.object({
-  role: zGrantRole,
+  role: zShareableRole,
 });
 
 /**
- * Query for the grantee picker's organization search. Deliberately narrow: it
- * exists to populate the "share with an organization" side of the collaborators
- * picker, so it is read-scoped to organizations the caller is a member of and
- * excludes personal workspaces (sharing with someone's personal org is just
- * sharing with that user).
+ * Scoped to organizations the caller belongs to, excluding personal workspaces —
+ * sharing with someone's personal org is just sharing with that user.
  */
 export const zSearchGranteeOrganizationsQuery = z.object({
   query: z.string().optional().describe("Name substring to match"),
@@ -141,6 +124,7 @@ export const zGranteeOrganizationList = z.array(zGranteeOrganization);
 export type SharingResourceType = z.infer<typeof zSharingResourceType>;
 export type SharingGranteeType = z.infer<typeof zGranteeType>;
 export type GrantRole = z.infer<typeof zGrantRole>;
+export type ShareableRole = z.infer<typeof zShareableRole>;
 export type ResourceGrantDto = z.infer<typeof zResourceGrantRow>;
 export type ResourceOwnerDto = z.infer<typeof zResourceOwnerRow>;
 export type ResourceCollaboratorDto = z.infer<typeof zResourceCollaborator>;

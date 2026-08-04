@@ -398,10 +398,9 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
-    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin', or
-    // the read-and-contribute tier under either its historical name 'member' or its
-    // current name 'viewer' (the invitation repository normalises both on read).
-    role: text("role").default("member").notNull(),
+    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin' or
+    // the read-and-contribute tier 'viewer'. Written only from `InvitationTier`.
+    role: text("role").default("viewer").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")
       .references(() => users.id)
@@ -702,7 +701,9 @@ export const resourceGrants = pgTable(
     resourceId: uuid("resource_id").notNull(),
     granteeType: granteeTypeEnum("grantee_type").notNull(),
     granteeId: uuid("grantee_id").notNull(),
-    role: text("role").default("member").notNull(),
+    // 'owner'/'admin' confer full control, 'viewer' read plus contributing data on an
+    // experiment. Narrowed to that set by `GrantRole` on the write helpers.
+    role: text("role").default("viewer").notNull(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },

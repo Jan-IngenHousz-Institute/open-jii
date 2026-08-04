@@ -108,18 +108,26 @@ implies writing measurements or annotations into it; only experiments have data 
 contribute to, but the verb stays in the statement because Better Auth needs one
 literal action list.
 
-That file exports **two** role matrices, because "member" means two different
-things depending on where the role is stored:
+That file exports **two** role matrices, because the middle tier means two
+different things depending on where the role is stored:
 
-| Matrix       | Role stored on              | Read by          | Middle tier                                                |
-| ------------ | --------------------------- | ---------------- | ---------------------------------------------------------- |
-| `roles`      | `organization_members.role` | `orgRoleCan()`   | `member` → `read`                                          |
-| `grantRoles` | `resource_grants.role`      | `grantRoleCan()` | `member`/`viewer` → `read` + `contribute` on an experiment |
+| Matrix       | Role stored on              | Read by          | Middle tier                                       |
+| ------------ | --------------------------- | ---------------- | ------------------------------------------------- |
+| `roles`      | `organization_members.role` | `orgRoleCan()`   | `member` → `read`                                 |
+| `grantRoles` | `resource_grants.role`      | `grantRoleCan()` | `viewer` → `read` + `contribute` on an experiment |
 
 `owner` and `admin` mean full control in both, so `grantRoles` reuses
 `roles.owner` and `roles.admin` directly; only the middle tier is redefined. A
 configurable per-organization base permission is reserved in the schema but
 deferred until multi-member organizations exist.
+
+`grantRoleCan()` resolves a role by exact match and refuses anything it does not
+recognise. `resource_grants.role` is a plain `text` column, so what holds it to
+that set is `GRANT_ROLES` in `@repo/database`, which types every grant write path
+and is cross-checked against the matrix in `packages/auth/src/access.spec.ts`. One
+spelling per tier is what makes both the matrix and a `WHERE role = 'viewer'`
+trustworthy. The organization role `member` in the left-hand row is a separate
+vocabulary and keeps its name.
 
 ### One decision point
 
@@ -181,9 +189,9 @@ editable through the ownership path. Making ownership non-null depends on a
 later deleted-user and orphan-resource policy.
 
 Phase 3 then makes those mirrored rows the only access system: `experiment_members`
-is dropped, every write path goes through `resource_grants`, and the tier the
-mirror wrote as `member` gains `contribute` so existing collaborators keep the
-ability to take measurements. Because a grant is now the only thing that carries
+is dropped, every write path goes through `resource_grants`, and the mirrored
+middle tier — now spelled `viewer` — gains `contribute` so existing collaborators
+keep the ability to take measurements. Because a grant is now the only thing that carries
 `contribute`, deleting a user or emptying an organization can strand a resource
 with nobody able to administer it — the staffing invariants in
 `apps/backend/src/sharing/core/resource-staffing.ts` are what refuse those

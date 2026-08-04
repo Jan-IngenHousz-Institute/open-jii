@@ -520,7 +520,7 @@ async function main() {
       resourceId: c.experimentId,
       granteeType: "user",
       granteeId: c.id,
-      role: "member",
+      role: "viewer",
       createdBy: c.id,
     });
   }

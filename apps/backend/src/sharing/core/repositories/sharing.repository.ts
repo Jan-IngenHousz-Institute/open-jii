@@ -3,8 +3,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import type {
   GranteeDto,
   GranteeOrganizationDto,
-  GrantRole,
   ResourceOwnerDto,
+  ShareableRole,
   SharingGranteeType,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
@@ -33,7 +33,7 @@ import {
   users,
   deleteGranteeGrant,
 } from "@repo/database";
-import type { DatabaseInstance, DbOrTx } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, GrantRole } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike } from "../../../common/utils/fts";
@@ -78,6 +78,15 @@ async function assertResourceIsUnarchived(
     throw AppError.forbidden("Cannot modify an archived experiment");
   }
 }
+
+/**
+ * `role` is a `text` column, so a read hands back a plain string. Every write path is
+ * typed `GrantRole`, so narrowing is all that is needed — named rather than cast inline
+ * because this is the single place that guarantee is leaned on. A value written around
+ * those paths reaches response validation as itself and is refused there, rather than
+ * being read as some tier it never meant.
+ */
+const toGrantRole = (stored: string) => stored as GrantRole;
 
 /**
  * Display columns for a user grantee/owner, anonymized like every other
@@ -192,7 +201,7 @@ export class SharingRepository {
             resourceId: r.resourceId,
             granteeType,
             granteeId: r.granteeId,
-            role: r.role as GrantRole,
+            role: toGrantRole(r.role),
             createdAt: r.createdAt,
             createdBy: r.createdBy,
             isOutsideCollaborator,
@@ -307,7 +316,7 @@ export class SharingRepository {
     resourceType: SharingResourceType;
     resourceId: string;
     grantId: string;
-    role: GrantRole;
+    role: ShareableRole;
   }): Promise<Result<DirectGrantRow | null>> {
     return this.guardedWrite(
       {

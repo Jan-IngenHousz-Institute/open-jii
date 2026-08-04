@@ -30,7 +30,12 @@ import { TestHarness } from "../test/test-harness";
  * The member mirror below reads `experiment_members.role`. Nothing at runtime
  * does that any more — the table went dormant when membership was folded into
  * `resource_grants` — but it is still physically there, so this spec keeps
- * exercising 0038's SQL exactly as 0038 ran it.
+ * exercising 0038's SQL.
+ *
+ * One departure from 0038 as written: it copied the roster role through verbatim,
+ * and the grant column now has a CHECK that admits only the roles the access matrix
+ * knows. The mirror here maps to the grant vocabulary's names for the same two
+ * tiers, which is what 0041 does. The tiers are what the assertions are about.
  */
 const OWN_EXPERIMENTS_SQL = sql`
   UPDATE "experiments" e
@@ -42,7 +47,8 @@ const OWN_EXPERIMENTS_SQL = sql`
 
 const MIRROR_EXPERIMENT_MEMBERS_SQL = sql`
   INSERT INTO "resource_grants" ("resource_type", "resource_id", "grantee_type", "grantee_id", "role")
-  SELECT 'experiment', em."experiment_id", 'user', em."user_id", em."role"::text
+  SELECT 'experiment', em."experiment_id", 'user', em."user_id",
+    CASE WHEN em."role" = 'admin' THEN 'admin' ELSE 'viewer' END
   FROM "experiment_members" em
   ON CONFLICT DO NOTHING;
 `;
@@ -131,7 +137,7 @@ describe("resource-org migration data ops (0038)", () => {
   }
 
   describe("experiments", () => {
-    it("owns each experiment with the creator's personal org and mirrors experiment_members into grants (roles preserved)", async () => {
+    it("owns each experiment with the creator's personal org and mirrors experiment_members into grants (tiers preserved)", async () => {
       const owner = await testApp.createTestUser({ name: "Exp Owner" });
       const collaborator = await testApp.createTestUser({ name: "Exp Collaborator" });
       const ownerOrgId = await ensurePersonalOrganization(testApp.database, { id: owner });
@@ -166,7 +172,7 @@ describe("resource-org migration data ops (0038)", () => {
       expect(grants).toHaveLength(2);
       const byUser = Object.fromEntries(grants.map((g) => [g.granteeId, g.role]));
       expect(byUser[owner]).toBe("admin");
-      expect(byUser[collaborator]).toBe("member");
+      expect(byUser[collaborator]).toBe("viewer");
       expect(grants.every((g) => g.granteeType === "user")).toBe(true);
     });
   });

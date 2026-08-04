@@ -1,5 +1,5 @@
 {
-  "id": "31ae3eb5-d091-405f-bec4-3d60408e9fc7",
+  "id": "5594984f-9871-47a3-860a-477222577209",
   "prevId": "9bd91674-2ffb-45f6-a622-ea71f8596de5",
   "version": "7",
   "dialect": "postgresql",
@@ -1210,7 +1210,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'member'"
+          "default": "'viewer'"
         },
         "status": {
           "name": "status",
@@ -2465,7 +2465,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'member'"
+          "default": "'viewer'"
         },
         "created_by": {
           "name": "created_by",

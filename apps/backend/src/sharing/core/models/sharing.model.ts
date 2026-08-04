@@ -1,7 +1,7 @@
 import type {
-  GrantRole,
   ResourceGrantDto,
   ResourceOwnerDto,
+  ShareableRole,
   SharingGranteeType,
   SharingResourceType,
 } from "@repo/api/domains/sharing/sharing.schema";
@@ -23,6 +23,8 @@ export interface CreateGrantInput {
   resourceId: string;
   granteeType: SharingGranteeType;
   granteeId: string;
-  role: GrantRole;
+  // The grantable set, not the stored one: a caller may not mint an `owner`, though a
+  // row that already holds one still reads back.
+  role: ShareableRole;
   createdBy: string;
 }

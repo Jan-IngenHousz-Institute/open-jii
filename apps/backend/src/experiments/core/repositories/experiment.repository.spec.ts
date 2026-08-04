@@ -1150,7 +1150,7 @@ describe("ExperimentRepository", () => {
             eq(resourceGrants.granteeId, memberId),
           ),
         );
-      expect(grants.map((g) => g.role)).toEqual(["member"]);
+      expect(grants.map((g) => g.role)).toEqual(["viewer"]);
     });
 
     it("should indicate no access when user has no relation to the experiment", async () => {

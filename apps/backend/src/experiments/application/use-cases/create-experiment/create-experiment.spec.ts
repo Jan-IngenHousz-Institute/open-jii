@@ -150,7 +150,7 @@ describe("CreateExperimentUseCase", () => {
       );
     // Only the person they listed gets a grant; the creator needs none.
     expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
-      [contributorId]: "member",
+      [contributorId]: "viewer",
     });
   });
 
@@ -229,8 +229,8 @@ describe("CreateExperimentUseCase", () => {
       assertSuccess(result);
       const grants = await grantsOn(result.value.id);
       expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
-        [first]: "member",
-        [second]: "member",
+        [first]: "viewer",
+        [second]: "viewer",
       });
     });
   });

@@ -168,11 +168,10 @@ describe("<CollaboratorsList />", () => {
   });
 
   describe("tier collapse", () => {
-    it("displays the four API roles under the two tiers the UI offers", () => {
+    it("displays the three API roles under the two tiers the UI offers", () => {
       renderList([
         grantFor("Owner Grant", { role: "owner" }),
         grantFor("Admin Grant", { role: "admin" }),
-        grantFor("Member Grant", { role: "member" }),
         grantFor("Viewer Grant", { role: "viewer" }),
       ]);
 
@@ -181,9 +180,6 @@ describe("<CollaboratorsList />", () => {
       );
       expect(within(rowFor("Admin Grant")).getByRole("combobox")).toHaveTextContent(
         "sharing.roleCanEdit",
-      );
-      expect(within(rowFor("Member Grant")).getByRole("combobox")).toHaveTextContent(
-        "sharing.roleCanView",
       );
       expect(within(rowFor("Viewer Grant")).getByRole("combobox")).toHaveTextContent(
         "sharing.roleCanView",
