@@ -82,6 +82,27 @@ describe("BranchNode", () => {
     expect(screen.getByText(/default/i)).toBeInTheDocument();
   });
 
+  it("leaves an ambiguous duplicate default unmarked", () => {
+    const duplicatePaths = [
+      { id: "duplicate", label: "First", color: "#10B981" },
+      { id: "duplicate", label: "Second", color: "#EF4444" },
+    ];
+    render(
+      <BranchNode
+        nodes={[node]}
+        onNodeDelete={() => null}
+        {...node}
+        {...baseProps}
+        data={{
+          title: "Broken branch",
+          stepSpecification: { paths: duplicatePaths, defaultPathId: "duplicate" },
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/^default$/i)).not.toBeInTheDocument();
+  });
+
   it("shows a placeholder when no paths are configured", () => {
     render(
       <BranchNode

@@ -1,7 +1,11 @@
 import type { SensorFamily } from "../domains/protocol/protocol.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import { DEVICE_CONTEXT_KEY } from "./device-context";
-import { isDeviceScopedBranch, isGotoBranchCell } from "./evaluate-branch";
+import {
+  isDeviceScopedBranch,
+  isGotoBranchCell,
+  resolveBranchDefaultPath,
+} from "./evaluate-branch";
 
 export type WorkbookIssueLevel = "error" | "warning";
 
@@ -108,10 +112,9 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
       if (path.gotoCellId) enqueue(indexById.get(path.gotoCellId));
     }
 
-    const defaultPaths = cell.defaultPathId
-      ? cell.paths.filter((path) => path.id === cell.defaultPathId)
-      : [];
-    const defaultPath = defaultPaths.length === 1 ? defaultPaths[0] : undefined;
+    const defaultPathResolution = resolveBranchDefaultPath(cell);
+    const defaultPath =
+      defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
     const allPathsJumpStrictlyForward =
       defaultPath !== undefined &&
       cell.paths.every((path) => {
@@ -134,10 +137,7 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
 
     if (cell.type !== "branch") continue;
 
-    const defaultPathCount = cell.defaultPathId
-      ? cell.paths.filter((path) => path.id === cell.defaultPathId).length
-      : 0;
-    if (defaultPathCount !== 1) {
+    if (resolveBranchDefaultPath(cell).status !== "resolved") {
       issues.push({
         level: "warning",
         code: "branch-no-default",

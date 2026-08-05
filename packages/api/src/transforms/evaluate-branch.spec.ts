@@ -8,6 +8,7 @@ import {
   evaluatePathConditions,
   isGotoBranchCell,
   isDeviceScopedBranch,
+  resolveBranchDefaultPath,
   resolveConditionValue,
   validateBranchCell,
   validateDeviceBranch,
@@ -396,6 +397,36 @@ describe("evaluateBranch", () => {
 
     const result = evaluateBranch(branch, cells);
     expect(result?.id).toBe("pathDefault");
+  });
+
+  it("fails closed when the default path id is ambiguous", () => {
+    const duplicate = {
+      id: "duplicate",
+      label: "Default",
+      color: "",
+      conditions: [],
+    };
+    const branch = makeBranchCell({
+      id: "b1",
+      defaultPathId: duplicate.id,
+      paths: [duplicate, { ...duplicate, label: "Also default" }],
+    });
+
+    expect(resolveBranchDefaultPath(branch)).toEqual({ status: "ambiguous" });
+    expect(evaluateBranch(branch, cells)).toBeUndefined();
+  });
+
+  it("distinguishes absent and uniquely resolved default paths", () => {
+    const path = { id: "only", label: "Only", color: "", conditions: [] };
+
+    expect(resolveBranchDefaultPath({ paths: [path] })).toEqual({ status: "absent" });
+    expect(resolveBranchDefaultPath({ paths: [path], defaultPathId: "missing" })).toEqual({
+      status: "absent",
+    });
+    expect(resolveBranchDefaultPath({ paths: [path], defaultPathId: path.id })).toEqual({
+      status: "resolved",
+      path,
+    });
   });
 
   it("returns undefined when no path matches and no default", () => {
