@@ -271,35 +271,57 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           edge.sourceHandle &&
           typeof nextLabel === "string"
         ) {
+          const branchCell = workbookCellsRef.current?.find((cell) => cell.id === edge.source);
+          const cellPathResolution =
+            branchCell?.type === "branch"
+              ? resolveBranchPathById(branchCell.paths, edge.sourceHandle)
+              : { status: "absent" as const };
+          const branchNode = nodes.find((node) => node.id === edge.source);
+          const specification = branchNode?.data.stepSpecification as
+            | { paths?: { id: string; label: string; color: string }[] }
+            | undefined;
+          const nodePathResolution = resolveBranchPathById(
+            specification?.paths ?? [],
+            edge.sourceHandle,
+          );
+          if (
+            cellPathResolution.status !== "resolved" ||
+            nodePathResolution.status !== "resolved"
+          ) {
+            setStructuralError(
+              `Branch path "${edge.sourceHandle}" is ${
+                cellPathResolution.status === "ambiguous" ||
+                nodePathResolution.status === "ambiguous"
+                  ? "ambiguous"
+                  : "missing"
+              }. Repair its path id before editing the canvas.`,
+            );
+            return;
+          }
+          const cellPath = cellPathResolution.path;
+          const nodePath = nodePathResolution.path;
+          setStructuralError(null);
           updateDraftCell(edge.source, (cell) => {
             if (cell.type !== "branch") return cell;
-            const pathIndex = cell.paths.findIndex((path) => path.id === edge.sourceHandle);
-            if (pathIndex === -1) return cell;
             return {
               ...cell,
-              paths: cell.paths.map((path, index) =>
-                index === pathIndex ? { ...path, label: nextLabel } : path,
+              paths: cell.paths.map((path) =>
+                path === cellPath ? { ...path, label: nextLabel } : path,
               ),
             };
           });
           setNodes((current) =>
             current.map((node) => {
               if (node.id !== edge.source) return node;
-              const specification = node.data.stepSpecification as
-                | { paths?: { id: string; label: string; color: string }[] }
-                | undefined;
-              const pathIndex = specification?.paths?.findIndex(
-                (path) => path.id === edge.sourceHandle,
-              );
-              if (pathIndex === undefined || pathIndex < 0 || !specification?.paths) return node;
+              if (!specification?.paths) return node;
               return {
                 ...node,
                 data: {
                   ...node.data,
                   stepSpecification: {
                     ...specification,
-                    paths: specification.paths.map((path, index) =>
-                      index === pathIndex ? { ...path, label: nextLabel } : path,
+                    paths: specification.paths.map((path) =>
+                      path === nodePath ? { ...path, label: nextLabel } : path,
                     ),
                   },
                 },
@@ -309,7 +331,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         }
         setEdges((eds) => eds.map((edge) => (edge.id === edgeId ? { ...edge, ...updates } : edge)));
       },
-      [edges, setEdges, setNodes, updateDraftCell],
+      [edges, nodes, setEdges, setNodes, updateDraftCell],
     );
 
     // Handle edge deletion

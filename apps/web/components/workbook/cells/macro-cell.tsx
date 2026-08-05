@@ -108,7 +108,7 @@ export function MacroCellComponent({
     async (code: string) => {
       try {
         await saveMacro({ id: macroId, code: encodeBase64(code) });
-        onEntitySaved();
+        await onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
@@ -269,7 +269,11 @@ export function MacroCellComponent({
               </>
             ) : null}
             {isEditable && localCode != null ? (
-              <AutosaveIndicator status={autosave.status} variant="compact" />
+              <AutosaveIndicator
+                status={autosave.status}
+                variant="compact"
+                onRetry={autosave.flush}
+              />
             ) : null}
           </div>
         ) : undefined

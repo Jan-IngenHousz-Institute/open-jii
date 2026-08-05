@@ -510,6 +510,23 @@ describe("<ExperimentSidePanel />", () => {
     expect(infoIcon).toHaveClass("lucide-info");
   });
 
+  it("keeps question labels within the workbook schema bounds", async () => {
+    const user = userEvent.setup();
+    const { props } = renderPanel({
+      nodeType: "QUESTION",
+      nodeTitle: "Original",
+    });
+    const input = screen.getByPlaceholderText<HTMLInputElement>("sidePanelFlow.labelPlaceholder");
+
+    expect(input).toHaveAttribute("maxlength", "64");
+    await user.clear(input);
+    expect(props.onTitleChange).not.toHaveBeenCalledWith("");
+    await user.type(input, "x".repeat(65));
+
+    expect(input).toHaveValue("x".repeat(64));
+    expect(props.onTitleChange).toHaveBeenLastCalledWith("x".repeat(64));
+  });
+
   it("does not show info icon for non-QUESTION nodes", () => {
     renderPanel({
       nodeType: "INSTRUCTION",

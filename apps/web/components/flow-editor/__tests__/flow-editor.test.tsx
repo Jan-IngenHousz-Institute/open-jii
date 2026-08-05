@@ -421,6 +421,65 @@ describe("<FlowEditor /> (stable suite)", () => {
     expect(lastCells?.[0].paths?.[0].label).toBe("Renamed");
   });
 
+  it("refuses to edit an ambiguous legacy branch handle", async () => {
+    const onWorkbookCellsChange = vi.fn();
+    const paths = [
+      { id: "duplicate", label: "First", color: "" },
+      { id: "duplicate", label: "Second", color: "" },
+    ];
+    const initialFlow = toInitialFlow(
+      [
+        {
+          id: "branch-1",
+          type: "BRANCH",
+          position: { x: 0, y: 0 },
+          data: {
+            title: "Branch",
+            isStartNode: true,
+            stepSpecification: { paths },
+          },
+        },
+        {
+          id: "target-1",
+          type: "INSTRUCTION",
+          position: { x: 100, y: 0 },
+          data: { title: "Target", isStartNode: false },
+        },
+      ],
+      [
+        {
+          id: "edge-path",
+          source: "branch-1",
+          target: "target-1",
+          sourceHandle: "duplicate",
+          data: { kind: "branch", label: "First" },
+        },
+      ],
+    );
+    renderEditor({
+      initialFlow,
+      workbookCells: [
+        {
+          id: "branch-1",
+          type: "branch",
+          isCollapsed: false,
+          paths: paths.map((path) => ({ ...path, conditions: [], gotoCellId: "target-1" })),
+        },
+        { id: "target-1", type: "markdown", isCollapsed: false, content: "Target" },
+      ],
+      onWorkbookCellsChange,
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+    const input = screen.getByPlaceholderText("edgePanel.labelPlaceholder");
+    await user.clear(input);
+    await user.type(input, "Changed");
+
+    expect(onWorkbookCellsChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/ambiguous/);
+  });
+
   it("updates nodes/edges when initialFlow prop changes", () => {
     const firstNodes: readonly xyflowReact.Node[] = [
       {

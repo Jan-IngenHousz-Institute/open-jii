@@ -107,7 +107,7 @@ export function ProtocolCellComponent({
           id: protocolId,
           code: JSON.parse(code) as Record<string, unknown>[],
         });
-        onEntitySaved();
+        await onEntitySaved();
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
         throw err;
@@ -302,7 +302,11 @@ export function ProtocolCellComponent({
               </>
             ) : null}
             {isEditable && localCode != null ? (
-              <AutosaveIndicator status={autosave.status} variant="compact" />
+              <AutosaveIndicator
+                status={autosave.status}
+                variant="compact"
+                onRetry={autosave.flush}
+              />
             ) : null}
           </div>
         ) : undefined

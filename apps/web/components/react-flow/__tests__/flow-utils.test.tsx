@@ -233,6 +233,54 @@ describe("flow-utils", () => {
         }),
       ]);
     });
+
+    it("refuses to retarget an ambiguous legacy branch handle", () => {
+      const branchNodes: Node[] = [
+        {
+          ...nodes[0],
+          id: "branch",
+          type: "BRANCH",
+          data: {
+            isStartNode: true,
+            stepSpecification: {
+              paths: [
+                { id: "duplicate", label: "First" },
+                { id: "duplicate", label: "Second" },
+              ],
+            },
+          },
+        },
+        nodes[1],
+        nodes[2],
+      ];
+      const branchEdges: Edge[] = [
+        { id: "seq-1", source: "branch", target: "B", data: { kind: "sequence" } },
+        { id: "seq-2", source: "B", target: "C", data: { kind: "sequence" } },
+        {
+          id: "first",
+          source: "branch",
+          target: "B",
+          sourceHandle: "duplicate",
+          data: { kind: "branch" },
+        },
+        {
+          id: "second",
+          source: "branch",
+          target: "C",
+          sourceHandle: "duplicate",
+          data: { kind: "branch" },
+        },
+      ];
+
+      expect(() =>
+        connectFlowNodes(
+          { source: "branch", target: "C", sourceHandle: "duplicate", targetHandle: "in" },
+          branchNodes,
+          branchEdges,
+        ),
+      ).toThrow(/ambiguous/);
+      expect(branchEdges).toHaveLength(4);
+    });
   });
 
   describe("getWorkbookCellInsertionIndex", () => {

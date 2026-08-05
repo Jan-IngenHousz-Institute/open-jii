@@ -1,11 +1,16 @@
 import { createExperiment, createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import {
+  WorkbookPersistenceCoordinatorProvider,
+  useWorkbookPersistenceCoordinator,
+} from "../workbook/workbook-persistence-coordinator";
 import { LinkedWorkbookCard } from "./linked-workbook-card";
 
 const workbook = createWorkbook({ id: "wb-1", name: "Test Workbook" });
@@ -20,6 +25,24 @@ const defaultProps = {
   workbookVersionId: "ver-1",
   hasAccess: true,
 };
+
+function PersistenceHarness({ children }: { children: ReactElement }) {
+  const coordinator = useWorkbookPersistenceCoordinator({
+    experimentId: defaultProps.experimentId,
+    workbookId: defaultProps.workbookId,
+    cells: [],
+    enabled: false,
+  });
+  return (
+    <WorkbookPersistenceCoordinatorProvider coordinator={coordinator}>
+      {children}
+    </WorkbookPersistenceCoordinatorProvider>
+  );
+}
+
+function renderCard(element: ReactElement) {
+  return render(<PersistenceHarness>{element}</PersistenceHarness>);
+}
 
 function mountDefaults() {
   server.mount(contract.workbooks.getWorkbook, { body: workbook });
@@ -47,13 +70,13 @@ describe("LinkedWorkbookCard", () => {
 
   it("renders the workbook name after loading", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
   });
 
   it("renders a link to the workbook page", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
     expect(screen.getByRole("link")).toHaveAttribute("href", "/en-US/platform/workbooks/wb-1");
   });
@@ -68,7 +91,7 @@ describe("LinkedWorkbookCard", () => {
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v2, v1] });
     server.mount(contract.workbooks.listWorkbooks, { body: [workbook, otherWorkbook] });
 
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
 
     const description = await screen.findByText("Measures chlorophyll fluorescence");
     expect(description).toHaveClass("line-clamp-2");
@@ -78,13 +101,13 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows version badge for the pinned version", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
   });
 
   it("opens the version history dialog from the history button", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     const user = userEvent.setup();
@@ -95,7 +118,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("shows upgrade banner when a newer version is available", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
   });
 
@@ -104,7 +127,7 @@ describe("LinkedWorkbookCard", () => {
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
     server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
   });
@@ -115,7 +138,7 @@ describe("LinkedWorkbookCard", () => {
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
     server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() =>
       expect(screen.getByText(/Workbook has updates available/)).toBeInTheDocument(),
     );
@@ -127,7 +150,7 @@ describe("LinkedWorkbookCard", () => {
     server.mount(contract.workbooks.listWorkbookVersions, { body: [v1] });
     server.mount(contract.workbooks.listWorkbooks, { body: [workbook] });
 
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     expect(screen.queryByText(/is available/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Workbook has updates available/)).not.toBeInTheDocument();
@@ -135,7 +158,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("hides controls when hasAccess is false", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} hasAccess={false} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} hasAccess={false} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
     expect(screen.queryByText("flow.changeWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.detach")).not.toBeInTheDocument();
@@ -144,7 +167,7 @@ describe("LinkedWorkbookCard", () => {
   it("toggles the change workbook inline picker", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
@@ -158,7 +181,7 @@ describe("LinkedWorkbookCard", () => {
       body: createExperiment({ id: "exp-1" }),
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.detach/ }));
@@ -179,7 +202,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     server.mount(contract.experiments.detachWorkbook, { status: 500 });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.detach/ }));
@@ -202,7 +225,7 @@ describe("LinkedWorkbookCard", () => {
       body: { workbookId: "wb-1", workbookVersionId: "ver-2", version: 2 },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
@@ -221,7 +244,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     server.mount(contract.experiments.upgradeWorkbookVersion, { status: 500 });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText(/v2 is available/)).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /flow\.reviewAndUpgrade/ }));
@@ -240,7 +263,7 @@ describe("LinkedWorkbookCard", () => {
 
   it("hides the rename affordance without update capability on the workbook", async () => {
     mountDefaults();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
     expect(screen.queryByLabelText("flow.renameWorkbook")).not.toBeInTheDocument();
   });
@@ -251,7 +274,7 @@ describe("LinkedWorkbookCard", () => {
       body: { ...workbook, name: "Renamed Workbook" },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -273,7 +296,7 @@ describe("LinkedWorkbookCard", () => {
       body: { ...workbook, name: "Via Enter" },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -288,7 +311,7 @@ describe("LinkedWorkbookCard", () => {
   it("cancels the rename with Escape", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -301,7 +324,7 @@ describe("LinkedWorkbookCard", () => {
   it("cancels the rename via the cancel button", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -314,7 +337,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     const spy = server.mount(contract.workbooks.updateWorkbook, { body: workbook });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -328,7 +351,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     server.mount(contract.workbooks.updateWorkbook, { status: 500 });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -348,7 +371,7 @@ describe("LinkedWorkbookCard", () => {
   it("closes the change-workbook picker via cancel", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByText("flow.changeWorkbook"));
@@ -362,7 +385,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     server.mount(contract.experiments.attachWorkbook, { status: 500 });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByText("flow.changeWorkbook"));
@@ -389,7 +412,7 @@ describe("LinkedWorkbookCard", () => {
       body: { workbookId: "wb-2", workbookVersionId: "ver-3", version: 1 },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} />);
+    renderCard(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByText("flow.changeWorkbook"));

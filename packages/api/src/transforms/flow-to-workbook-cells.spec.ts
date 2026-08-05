@@ -493,4 +493,41 @@ describe("flowNodesToWorkbookCells", () => {
       ],
     });
   });
+
+  it("refuses structural write-back when legacy branch path ids are ambiguous", () => {
+    const branch: WorkbookCell = {
+      id: "b1",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "#10b981",
+          conditions: [],
+          gotoCellId: "q1",
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "#f59e0b",
+          conditions: [],
+          gotoCellId: "b1",
+        },
+      ],
+    };
+    const target: WorkbookCell = {
+      id: "q1",
+      type: "question",
+      isCollapsed: false,
+      name: "answer",
+      question: { kind: "yes_no", text: "Continue?", required: false },
+      isAnswered: false,
+    };
+    const graph = cellsToFlowGraph([branch, target]);
+
+    expect(() => flowNodesToWorkbookCells(graph.nodes, graph.edges, [branch, target])).toThrow(
+      /ambiguous/,
+    );
+  });
 });

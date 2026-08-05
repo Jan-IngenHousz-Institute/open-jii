@@ -30,7 +30,11 @@ export function EdgeSidePanel({
     if (displayEdge) {
       const updatedEdge = { ...displayEdge, data: { ...displayEdge.data, label: newLabel } };
       setDisplayEdge(updatedEdge);
-      onEdgeUpdate?.(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
+      // Empty is a useful transient input state, but is not a schema-valid
+      // branch-path label and therefore never enters the controlled draft.
+      if (newLabel.length > 0) {
+        onEdgeUpdate?.(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
+      }
     }
   };
 
@@ -57,6 +61,11 @@ export function EdgeSidePanel({
   }, [open, selectedEdge]);
 
   const { t } = useTranslation("experiments");
+  const isBranchEdge =
+    displayEdge?.data?.kind === "branch" ||
+    (displayEdge?.data?.kind !== "sequence" &&
+      typeof displayEdge?.sourceHandle === "string" &&
+      displayEdge.sourceHandle.length > 0);
   return (
     <>
       {/* Always render backdrop for fade animation */}
@@ -100,14 +109,14 @@ export function EdgeSidePanel({
                 onChange={handleLabelChange}
                 maxLength={64}
                 placeholder={t("edgePanel.labelPlaceholder")}
-                disabled={isDisabled}
+                disabled={isDisabled || !isBranchEdge}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
 
           {/* Sequence edges are the workbook spine and are intentionally not removable. */}
-          {onEdgeDelete && (
+          {onEdgeDelete && isBranchEdge && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>

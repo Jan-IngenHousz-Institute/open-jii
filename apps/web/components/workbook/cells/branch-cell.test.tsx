@@ -67,6 +67,18 @@ function renderBranch(
 }
 
 describe("BranchCellComponent", () => {
+  it("caps path labels at the workbook schema bound", async () => {
+    const user = userEvent.setup();
+    renderBranch();
+    const input = screen.getByDisplayValue<HTMLInputElement>("Path 1");
+
+    expect(input).toHaveAttribute("maxlength", "64");
+    await user.click(input);
+    await user.keyboard("{Control>}a{/Control}");
+    await user.type(input, "x".repeat(65));
+
+    expect(input.value.length).toBeLessThanOrEqual(64);
+  });
   beforeEach(() => vi.clearAllMocks());
 
   it("displays the path name and its condition row with IF label", () => {

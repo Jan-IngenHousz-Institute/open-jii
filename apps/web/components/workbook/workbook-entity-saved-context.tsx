@@ -11,13 +11,13 @@ import type { ReactNode } from "react";
  * `cells` array, so they bypass the cells-autosave `onSaved` path. Defaults to a
  * no-op, so the standalone workbook page (no provider) simply does nothing.
  */
-const WorkbookEntitySavedContext = createContext<() => void>(() => undefined);
+const WorkbookEntitySavedContext = createContext<() => Promise<void>>(() => Promise.resolve());
 
 export function WorkbookEntitySavedProvider({
   onEntitySaved,
   children,
 }: {
-  onEntitySaved: () => void;
+  onEntitySaved: () => Promise<void>;
   children: ReactNode;
 }) {
   return (
@@ -27,6 +27,6 @@ export function WorkbookEntitySavedProvider({
   );
 }
 
-export function useWorkbookEntitySaved(): () => void {
+export function useWorkbookEntitySaved(): () => Promise<void> {
   return useContext(WorkbookEntitySavedContext);
 }

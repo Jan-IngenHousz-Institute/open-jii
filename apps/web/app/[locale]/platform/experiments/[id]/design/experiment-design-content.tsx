@@ -16,28 +16,25 @@ import { WorkbookCanvasDraftEditor } from "@/components/workbook/workbook-canvas
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { WorkbookEntitySavedProvider } from "@/components/workbook/workbook-entity-saved-context";
+import {
+  WorkbookPersistenceCoordinatorProvider,
+  useWorkbookPersistenceCoordinator,
+} from "@/components/workbook/workbook-persistence-coordinator";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
-import { useAutosave } from "@/hooks/useAutosave";
+import type { UseAutosaveReturn } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
-import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  zWorkbookCellArray,
-  type WorkbookCell,
-} from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
@@ -51,16 +48,13 @@ interface ControlledDraft {
 const AUTO_SAVE_DELAY = 1500;
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
-function EditAutosaveStatus() {
+function EditAutosaveStatus({ onRetry }: { onRetry: () => Promise<void> }) {
   const autosave = useAutosaveStatus();
   if (!autosave?.status) return null;
-  return <AutosaveIndicator status={autosave.status} variant="compact" />;
+  return <AutosaveIndicator status={autosave.status} variant="compact" onRetry={onRetry} />;
 }
 
-function EditAutosaveReporter({
-  status,
-  error,
-}: Pick<ReturnType<typeof useAutosave>, "status" | "error">) {
+function EditAutosaveReporter({ status, error }: Pick<UseAutosaveReturn, "status" | "error">) {
   useReportAutosaveStatus({ status, error });
   return null;
 }
@@ -122,42 +116,14 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   // toast) on every save. Everyone else gets the read-only view.
   const canEdit = !!workbookDraft && canUpdateWorkbook && hasAccess;
 
-  // Each autosave re-pins the experiment to the latest version (OJD-1626).
-  const { mutateAsync: upgradeWorkbookVersion } = useUpgradeWorkbookVersion(id);
-  const handleDraftSaved = useCallback(async () => {
-    await upgradeWorkbookVersion({ id });
-  }, [id, upgradeWorkbookVersion]);
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId ?? "");
-  const saveDraft = useCallback(
-    async (next: WorkbookCell[]) => {
-      if (!workbookId) return;
-      try {
-        await updateWorkbook({ id: workbookId, cells: next });
-      } catch (saveError) {
-        const message = parseApiError(saveError)?.message;
-        if (message) toast({ description: message, variant: "destructive" });
-        throw saveError;
-      }
-    },
-    [updateWorkbook, workbookId],
-  );
-  const autosave = useAutosave({
-    value: draftCells ?? [],
-    // Scope the anchor and every in-flight comparison to the linked workbook.
-    // A same-shaped draft from another workbook must still supersede the old queue.
-    toKey: useCallback(
-      (value: WorkbookCell[]) => JSON.stringify([workbookId ?? null, value]),
-      [workbookId],
-    ),
-    isValid: useCallback(
-      (value: WorkbookCell[]) => zWorkbookCellArray.safeParse(value).success,
-      [],
-    ),
-    save: saveDraft,
-    onSaved: handleDraftSaved,
-    delayMs: AUTO_SAVE_DELAY,
+  const persistence = useWorkbookPersistenceCoordinator({
+    experimentId: id,
+    workbookId: workbookId ?? "",
+    cells: draftCells ?? [],
     enabled: canEdit && draftCells !== null,
+    delayMs: AUTO_SAVE_DELAY,
   });
+  const { autosave } = persistence;
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
@@ -212,11 +178,9 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   if (!workbookId || !workbookVersionId) {
     return (
-      <EmptyWorkbookState
-        experimentId={id}
-        experimentName={experimentData.name}
-        hasAccess={hasAccess}
-      />
+      <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
+        <EmptyWorkbookState experimentName={experimentData.name} hasAccess={hasAccess} />
+      </WorkbookPersistenceCoordinatorProvider>
     );
   }
 
@@ -230,96 +194,97 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   return (
     <PageContainer width="fluid" className="space-y-3">
       <AutosaveStatusProvider>
-        {canEdit && <EditAutosaveReporter status={autosave.status} error={autosave.error} />}
-        {canEdit && (
-          <div className="flex items-start justify-between gap-3">
-            <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
-                <Link
-                  href={`/${locale}/platform/workbooks/${workbookId}`}
-                  className="text-primary font-medium underline underline-offset-2"
-                >
-                  {t("flow.editOpenWorkbookLink")}
-                </Link>
-              </p>
+        <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
+          {canEdit && <EditAutosaveReporter status={autosave.status} error={autosave.error} />}
+          {canEdit && (
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
+                  <Link
+                    href={`/${locale}/platform/workbooks/${workbookId}`}
+                    className="text-primary font-medium underline underline-offset-2"
+                  >
+                    {t("flow.editOpenWorkbookLink")}
+                  </Link>
+                </p>
+              </div>
+              <EditAutosaveStatus onRetry={autosave.flush} />
             </div>
-            <EditAutosaveStatus />
-          </div>
-        )}
+          )}
 
-        <LinkedWorkbookCard
-          experimentId={id}
-          locale={locale}
-          workbookId={workbookId}
-          workbookVersionId={workbookVersionId}
-          hasAccess={hasAccess}
-          canUpdateWorkbook={canUpdateWorkbook}
-        />
+          <LinkedWorkbookCard
+            experimentId={id}
+            locale={locale}
+            workbookId={workbookId}
+            workbookVersionId={workbookVersionId}
+            hasAccess={hasAccess}
+            canUpdateWorkbook={canUpdateWorkbook}
+          />
 
-        <NavTabs defaultValue="list">
-          <NavTabsList>
-            <NavTabsTrigger value="list">
-              <List className="h-4 w-4" />
-              {t("flow.viewList")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="graph">
-              <GitBranch className="h-4 w-4" />
-              {t("flow.viewGraph")}
-            </NavTabsTrigger>
-          </NavTabsList>
+          <NavTabs defaultValue="list">
+            <NavTabsList>
+              <NavTabsTrigger value="list">
+                <List className="h-4 w-4" />
+                {t("flow.viewList")}
+              </NavTabsTrigger>
+              <NavTabsTrigger value="graph">
+                <GitBranch className="h-4 w-4" />
+                {t("flow.viewGraph")}
+              </NavTabsTrigger>
+            </NavTabsList>
 
-          <NavTabsContent value="list" className="mt-6">
-            {canEdit ? (
-              draftCells ? (
-                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                  <WorkbookDraftEditor
-                    key={workbookId}
-                    id={workbookId}
-                    initialCells={workbookDraft.cells}
-                    cells={draftCells}
-                    // Same capability the branch above gated on.
-                    canEdit={canUpdateWorkbook}
-                    name={workbookDraft.name}
-                    onCellsChange={handleDraftCellsChange}
-                    onSaved={handleDraftSaved}
-                    autosaveEnabled={false}
-                  />
-                </WorkbookEntitySavedProvider>
+            <NavTabsContent value="list" className="mt-6">
+              {canEdit ? (
+                draftCells ? (
+                  <WorkbookEntitySavedProvider onEntitySaved={persistence.entitySaved}>
+                    <WorkbookDraftEditor
+                      key={workbookId}
+                      id={workbookId}
+                      initialCells={workbookDraft.cells}
+                      cells={draftCells}
+                      // Same capability the branch above gated on.
+                      canEdit={canUpdateWorkbook}
+                      name={workbookDraft.name}
+                      onCellsChange={handleDraftCellsChange}
+                      autosaveEnabled={false}
+                    />
+                  </WorkbookEntitySavedProvider>
+                ) : (
+                  <Skeleton className="h-64 w-full" />
+                )
               ) : (
-                <Skeleton className="h-64 w-full" />
-              )
-            ) : (
-              <WorkbookEditor
-                cells={versionedCells}
-                entitySnapshots={pinnedVersionData?.entitySnapshots}
-                onCellsChange={() => undefined}
-                readOnly
-              />
-            )}
-          </NavTabsContent>
+                <WorkbookEditor
+                  cells={versionedCells}
+                  entitySnapshots={pinnedVersionData?.entitySnapshots}
+                  onCellsChange={() => undefined}
+                  readOnly
+                />
+              )}
+            </NavTabsContent>
 
-          <NavTabsContent value="graph" className="mt-6">
-            {canEdit ? (
-              draftCells ? (
-                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                  <WorkbookCanvasDraftEditor
-                    key={workbookId}
-                    experimentId={id}
-                    initialCells={workbookDraft.cells}
-                    cells={draftCells}
-                    onCellsChange={handleDraftCellsChange}
-                  />
-                </WorkbookEntitySavedProvider>
+            <NavTabsContent value="graph" className="mt-6">
+              {canEdit ? (
+                draftCells ? (
+                  <WorkbookEntitySavedProvider onEntitySaved={persistence.entitySaved}>
+                    <WorkbookCanvasDraftEditor
+                      key={workbookId}
+                      experimentId={id}
+                      initialCells={workbookDraft.cells}
+                      cells={draftCells}
+                      onCellsChange={handleDraftCellsChange}
+                    />
+                  </WorkbookEntitySavedProvider>
+                ) : (
+                  <Skeleton className="h-64 w-full" />
+                )
               ) : (
-                <Skeleton className="h-64 w-full" />
-              )
-            ) : (
-              <FlowEditor initialFlow={derivedFlow} isDisabled />
-            )}
-          </NavTabsContent>
-        </NavTabs>
+                <FlowEditor initialFlow={derivedFlow} isDisabled />
+              )}
+            </NavTabsContent>
+          </NavTabs>
+        </WorkbookPersistenceCoordinatorProvider>
       </AutosaveStatusProvider>
     </PageContainer>
   );

@@ -3,6 +3,7 @@ import { MarkerType } from "@xyflow/react";
 
 import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveBranchPathById } from "@repo/api/transforms/evaluate-branch";
 
 import { FlowMapper } from "../flow-editor/flow-mapper";
 import { createNewNode } from "./node-utils";
@@ -79,9 +80,16 @@ export function connectFlowNodes(
     connection.sourceHandle !== "out";
 
   if (isBranchReference) {
-    const path = (
+    const paths = (
       sourceNode.data.stepSpecification as { paths?: { id: string; label: string }[] } | undefined
-    )?.paths?.find((candidate) => candidate.id === connection.sourceHandle);
+    )?.paths;
+    const pathResolution = resolveBranchPathById(paths ?? [], connection.sourceHandle ?? undefined);
+    if (pathResolution.status !== "resolved") {
+      throw new Error(
+        `Branch path "${connection.sourceHandle}" is ${pathResolution.status}. Repair its path id before retargeting it.`,
+      );
+    }
+    const path = pathResolution.path;
     const nextEdges = edges.filter(
       (edge) =>
         !(
@@ -101,7 +109,7 @@ export function connectFlowNodes(
           sourceHandle: connection.sourceHandle,
           targetHandle: connection.targetHandle,
           markerEnd: { type: MarkerType.ArrowClosed },
-          data: { kind: "branch", label: path?.label ?? null },
+          data: { kind: "branch", label: path.label },
         },
       ],
     };
@@ -223,7 +231,7 @@ export function handleNodesDeleteWithReconnection(
         source,
         target,
         markerEnd: { type: MarkerType.ArrowClosed },
-        animated: incomingSequence[0].animated || outgoingSequence[0].animated,
+        animated: [incomingSequence[0].animated, outgoingSequence[0].animated].some(Boolean),
         data: { kind: "sequence" },
       },
     ];

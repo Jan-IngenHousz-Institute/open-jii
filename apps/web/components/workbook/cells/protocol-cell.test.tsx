@@ -442,7 +442,7 @@ describe("ProtocolCellComponent", () => {
 
       await vi.advanceTimersByTimeAsync(1100);
       await waitFor(() =>
-        expect(screen.getByRole("status")).toHaveAttribute("aria-label", "autosave.failed"),
+        expect(screen.getByRole("button", { name: /autosave\.failed.*tryAgain/ })).toBeVisible(),
       );
       vi.useRealTimers();
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSetWorkbookVersion } from "@/hooks/experiment/useSetWorkbookVersion/useSetWorkbookVersion";
+import { useWorkbookPersistence } from "@/components/workbook/workbook-persistence-coordinator";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
 import { History, Loader2, RotateCcw, XCircle } from "lucide-react";
@@ -48,16 +48,15 @@ interface WorkbookVersionHistoryDialogProps {
 export function WorkbookVersionHistoryDialog({
   open,
   onOpenChange,
-  experimentId,
   workbookId,
   currentVersionId,
   canManage,
 }: WorkbookVersionHistoryDialogProps) {
   const { t } = useTranslation("experiments");
+  const persistence = useWorkbookPersistence();
   const { data, isLoading, error } = useWorkbookVersions(workbookId, { enabled: open });
   const versions = (data ?? []) as VersionSummary[];
 
-  const setVersion = useSetWorkbookVersion(experimentId);
   const [pending, setPending] = useState<VersionSummary | null>(null);
 
   const handleRestore = (e: React.MouseEvent) => {
@@ -66,20 +65,17 @@ export function WorkbookVersionHistoryDialog({
     e.preventDefault();
     if (!pending) return;
     const target = pending;
-    setVersion.mutate(
-      { id: experimentId, versionId: target.id },
-      {
-        onSuccess: () => {
-          toast({ description: t("flow.versionHistory.restored", { version: target.version }) });
-          setPending(null);
-          onOpenChange(false);
-        },
-        onError: () => {
-          toast({ description: t("flow.versionHistory.restoreFailed"), variant: "destructive" });
-          setPending(null);
-        },
-      },
-    );
+    void persistence
+      .setWorkbookVersion(target.id)
+      .then(() => {
+        toast({ description: t("flow.versionHistory.restored", { version: target.version }) });
+        setPending(null);
+        onOpenChange(false);
+      })
+      .catch(() => {
+        toast({ description: t("flow.versionHistory.restoreFailed"), variant: "destructive" });
+        setPending(null);
+      });
   };
 
   return (
@@ -133,7 +129,7 @@ export function WorkbookVersionHistoryDialog({
                         variant="outline"
                         className="shrink-0"
                         onClick={() => setPending(v)}
-                        disabled={setVersion.isPending}
+                        disabled={persistence.isPending}
                       >
                         <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                         {t("flow.versionHistory.restore")}
@@ -156,9 +152,9 @@ export function WorkbookVersionHistoryDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={setVersion.isPending}>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRestore} disabled={setVersion.isPending}>
-              {setVersion.isPending ? (
+            <AlertDialogCancel disabled={persistence.isPending}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestore} disabled={persistence.isPending}>
+              {persistence.isPending ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
                 <RotateCcw className="mr-1.5 h-4 w-4" />

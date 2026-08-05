@@ -1,7 +1,7 @@
 import { act, renderHook } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAutosave } from "./useAutosave";
+import { AutosaveValidationError, useAutosave } from "./useAutosave";
 
 // Drain microtasks (Promise.resolve callbacks) without advancing fake timers.
 async function flushMicrotasks() {
@@ -272,9 +272,9 @@ describe("useAutosave", () => {
     expect(save).toHaveBeenCalledWith("v2");
   });
 
-  it("respects isValid to gate save firing", async () => {
+  it("surfaces an invalid draft instead of reporting it saved", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
       ({ value }: { value: string }) =>
         useAutosave({
           value,
@@ -291,12 +291,77 @@ describe("useAutosave", () => {
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(save).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("error");
+    expect(result.current.error).toBeInstanceOf(AutosaveValidationError);
 
     rerender({ value: "abc" });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(save).toHaveBeenCalledWith("abc");
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("keeps a failed success effect retryable through flush", async () => {
+    const failure = new Error("pin failed");
+    const save = vi.fn().mockResolvedValue(undefined);
+    const onSaved = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "v0" } },
+    );
+
+    rerender({ value: "v1" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(result.current.status).toBe("error");
+    expect(result.current.error).toBe(failure);
+
+    await act(async () => result.current.flush());
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("discards an in-flight completion after the persistence scope changes", async () => {
+    let releaseOldSave: (() => void) | undefined;
+    const save = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseOldSave = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+    const onSaved = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ value, scopeKey }: { value: string; scopeKey: string }) =>
+        useAutosave({ value, scopeKey, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "a0", scopeKey: "workbook-a" } },
+    );
+
+    rerender({ value: "a1", scopeKey: "workbook-a" });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenCalledWith("a1");
+
+    rerender({ value: "b0", scopeKey: "workbook-b" });
+    await act(async () => {
+      releaseOldSave?.();
+      await Promise.resolve();
+    });
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("idle");
+
+    rerender({ value: "b1", scopeKey: "workbook-b" });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenLastCalledWith("b1");
+    expect(onSaved).toHaveBeenCalledWith("b1");
   });
 
   it("flush() fires the pending save and resolves once it settles", async () => {

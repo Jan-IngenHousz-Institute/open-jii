@@ -10,6 +10,7 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "../domains/workbook/workbook-cells.schema";
+import { resolveBranchPathById } from "./evaluate-branch";
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;
 type FlowEdge = z.infer<typeof zExperimentFlowEdge>;
@@ -179,22 +180,38 @@ function mergeBranchTargets(
   branchNode: FlowNode,
   edges: FlowEdge[],
 ): BranchCell {
-  const targets = new Map<string, string>();
+  // A React Flow handle contains only the path id. When legacy/imported data
+  // contains duplicates, even the absence of an edge is ambiguous: clearing
+  // it could erase either path's goto. Refuse the whole structural merge.
+  for (const path of branch.paths) {
+    if (resolveBranchPathById(branch.paths, path.id).status === "ambiguous") {
+      throw new Error(
+        `Branch path "${path.id}" is ambiguous. Repair its path id before saving the canvas.`,
+      );
+    }
+  }
+  const targets = new Map<BranchPath, string>();
   for (const edge of edges) {
     if (getFlowEdgeKind(edge) !== "branch" || edge.source !== branchNode.id) continue;
     if (!edge.sourceHandle) {
       throw new Error(`Branch edge "${edge.id}" is missing its path handle.`);
     }
-    if (targets.has(edge.sourceHandle)) {
+    const pathResolution = resolveBranchPathById(branch.paths, edge.sourceHandle);
+    if (pathResolution.status !== "resolved") {
+      throw new Error(
+        `Branch path "${edge.sourceHandle}" is ${pathResolution.status}. Repair its path id before saving the canvas.`,
+      );
+    }
+    if (targets.has(pathResolution.path)) {
       throw new Error(`Branch path "${edge.sourceHandle}" has more than one target.`);
     }
-    targets.set(edge.sourceHandle, edge.target);
+    targets.set(pathResolution.path, edge.target);
   }
 
   return {
     ...branch,
     paths: branch.paths.map((path) => {
-      const gotoCellId = targets.get(path.id);
+      const gotoCellId = targets.get(path);
       if (gotoCellId) return { ...path, gotoCellId };
       const { gotoCellId: _removed, ...withoutTarget } = path;
       return withoutTarget;

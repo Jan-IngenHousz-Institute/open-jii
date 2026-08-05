@@ -1,11 +1,16 @@
 import { createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import {
+  WorkbookPersistenceCoordinatorProvider,
+  useWorkbookPersistenceCoordinator,
+} from "../workbook-persistence-coordinator";
 import { WorkbookVersionHistoryDialog } from "./workbook-version-history-dialog";
 
 const v1 = createWorkbookVersionSummary({ id: "ver-1", workbookId: "wb-1", version: 1 });
@@ -20,6 +25,24 @@ const baseProps = {
   canManage: true,
 };
 
+function PersistenceHarness({ children }: { children: ReactElement }) {
+  const coordinator = useWorkbookPersistenceCoordinator({
+    experimentId: baseProps.experimentId,
+    workbookId: baseProps.workbookId,
+    cells: [],
+    enabled: false,
+  });
+  return (
+    <WorkbookPersistenceCoordinatorProvider coordinator={coordinator}>
+      {children}
+    </WorkbookPersistenceCoordinatorProvider>
+  );
+}
+
+function renderDialog(element: ReactElement) {
+  return render(<PersistenceHarness>{element}</PersistenceHarness>);
+}
+
 describe("WorkbookVersionHistoryDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,7 +50,7 @@ describe("WorkbookVersionHistoryDialog", () => {
   });
 
   it("lists versions and marks the pinned one as current", async () => {
-    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} />);
     await waitFor(() => expect(screen.getByText("v2")).toBeInTheDocument());
     expect(screen.getByText("v1")).toBeInTheDocument();
     expect(screen.getByText("flow.versionHistory.current")).toBeInTheDocument();
@@ -38,7 +61,7 @@ describe("WorkbookVersionHistoryDialog", () => {
       status: 500,
       body: { message: "boom", statusCode: 500 },
     });
-    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} />);
 
     expect(await screen.findByText("flow.versionHistory.loadError")).toBeInTheDocument();
     expect(screen.queryByText("flow.versionHistory.empty")).not.toBeInTheDocument();
@@ -50,7 +73,7 @@ describe("WorkbookVersionHistoryDialog", () => {
       body: { workbookId: "wb-1", workbookVersionId: "ver-1", version: 1 },
     });
     const user = userEvent.setup();
-    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     // Only the non-current version (v1) offers Restore.
@@ -70,7 +93,7 @@ describe("WorkbookVersionHistoryDialog", () => {
       body: { message: "boom" },
     });
     const user = userEvent.setup();
-    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "flow.versionHistory.restore" }));
@@ -91,7 +114,7 @@ describe("WorkbookVersionHistoryDialog", () => {
       body: { workbookId: "wb-1", workbookVersionId: "ver-1", version: 1 },
     });
     const user = userEvent.setup();
-    render(<WorkbookVersionHistoryDialog {...baseProps} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} />);
 
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "flow.versionHistory.restore" }));
@@ -104,7 +127,7 @@ describe("WorkbookVersionHistoryDialog", () => {
   });
 
   it("hides restore controls for non-managers", async () => {
-    render(<WorkbookVersionHistoryDialog {...baseProps} canManage={false} />);
+    renderDialog(<WorkbookVersionHistoryDialog {...baseProps} canManage={false} />);
     await waitFor(() => expect(screen.getByText("v1")).toBeInTheDocument());
     expect(
       screen.queryByRole("button", { name: "flow.versionHistory.restore" }),

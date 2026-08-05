@@ -1,11 +1,8 @@
 "use client";
 
+import { useWorkbookPersistence } from "@/components/workbook/workbook-persistence-coordinator";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
-import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
-import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
-import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
-import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { orpc } from "@/lib/orpc";
 import { formatDate } from "@/util/date";
@@ -69,6 +66,7 @@ export function LinkedWorkbookCard({
 }: LinkedWorkbookCardProps) {
   const { t } = useTranslation("experiments");
   const { t: tWorkbook } = useTranslation("workbook");
+  const persistence = useWorkbookPersistence();
   const { data: workbook } = useWorkbook(workbookId, { enabled: !!workbookId });
 
   const { data: versionsData } = useWorkbookVersions(workbookId, {
@@ -107,11 +105,9 @@ export function LinkedWorkbookCard({
   if (!isSyncing) settledHasUpgradeRef.current = liveHasUpgrade;
   const hasUpgrade = settledHasUpgradeRef.current;
 
-  const attachWorkbook = useAttachWorkbook();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
   const [isChanging, setIsChanging] = useState(false);
 
-  const renameWorkbook = useWorkbookUpdate(workbookId);
   const [isRenaming, setIsRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const canRename = hasAccess && canUpdateWorkbook;
@@ -128,54 +124,42 @@ export function LinkedWorkbookCard({
       setIsRenaming(false);
       return;
     }
-    renameWorkbook.mutate(
-      { id: workbookId, name: next },
-      {
-        onSuccess: () => {
-          toast({ description: t("flow.workbookRenamed") });
-          setIsRenaming(false);
-        },
-        onError: () => {
-          toast({ description: t("flow.renameFailed"), variant: "destructive" });
-        },
-      },
-    );
+    void persistence
+      .renameWorkbook(next)
+      .then(() => {
+        toast({ description: t("flow.workbookRenamed") });
+        setIsRenaming(false);
+      })
+      .catch(() => {
+        toast({ description: t("flow.renameFailed"), variant: "destructive" });
+      });
   };
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
-    attachWorkbook.mutate(
-      { id: experimentId, workbookId: selectedWorkbookId },
-      {
-        onSuccess: () => {
-          toast({ description: t("flow.workbookAttached") });
-          setSelectedWorkbookId("");
-          setIsChanging(false);
-        },
-        onError: () => {
-          toast({ description: t("flow.attachFailed"), variant: "destructive" });
-        },
-      },
-    );
+    void persistence
+      .attachWorkbook(selectedWorkbookId)
+      .then(() => {
+        toast({ description: t("flow.workbookAttached") });
+        setSelectedWorkbookId("");
+        setIsChanging(false);
+      })
+      .catch(() => {
+        toast({ description: t("flow.attachFailed"), variant: "destructive" });
+      });
   };
-
-  const detachWorkbook = useDetachWorkbook();
 
   const handleDetach = () => {
-    detachWorkbook.mutate(
-      { id: experimentId },
-      {
-        onSuccess: () => {
-          toast({ description: t("flow.workbookDetached") });
-        },
-        onError: () => {
-          toast({ description: t("flow.detachFailed"), variant: "destructive" });
-        },
-      },
-    );
+    void persistence
+      .detachWorkbook()
+      .then(() => {
+        toast({ description: t("flow.workbookDetached") });
+      })
+      .catch(() => {
+        toast({ description: t("flow.detachFailed"), variant: "destructive" });
+      });
   };
 
-  const upgradeVersion = useUpgradeWorkbookVersion(experimentId);
   const [upgradeState, setUpgradeState] = useState<"idle" | "upgrading" | "success">("idle");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -189,20 +173,17 @@ export function LinkedWorkbookCard({
 
   const handleUpgrade = useCallback(() => {
     setUpgradeState("upgrading");
-    upgradeVersion.mutate(
-      { id: experimentId },
-      {
-        onSuccess: () => {
-          setReviewOpen(false);
-          setUpgradeState("success");
-        },
-        onError: () => {
-          setUpgradeState("idle");
-          toast({ description: t("flow.upgradeFailed"), variant: "destructive" });
-        },
-      },
-    );
-  }, [experimentId, upgradeVersion, t]);
+    void persistence
+      .manualUpgrade()
+      .then(() => {
+        setReviewOpen(false);
+        setUpgradeState("success");
+      })
+      .catch(() => {
+        setUpgradeState("idle");
+        toast({ description: t("flow.upgradeFailed"), variant: "destructive" });
+      });
+  }, [persistence, t]);
 
   return (
     <Card className="overflow-hidden shadow-none">
@@ -229,7 +210,7 @@ export function LinkedWorkbookCard({
                     }}
                     className="h-7 w-56 text-sm font-semibold"
                     autoFocus
-                    disabled={renameWorkbook.isPending}
+                    disabled={persistence.isPending}
                     aria-label={t("flow.renameWorkbook")}
                   />
                   <Button
@@ -237,7 +218,7 @@ export function LinkedWorkbookCard({
                     variant="ghost"
                     className="h-7 w-7 shrink-0"
                     onClick={handleRename}
-                    disabled={renameWorkbook.isPending}
+                    disabled={persistence.isPending}
                     aria-label={t("flow.saveRename")}
                   >
                     <Check className="h-4 w-4" />
@@ -247,7 +228,7 @@ export function LinkedWorkbookCard({
                     variant="ghost"
                     className="h-7 w-7 shrink-0"
                     onClick={() => setIsRenaming(false)}
-                    disabled={renameWorkbook.isPending}
+                    disabled={persistence.isPending}
                     aria-label={t("cancel")}
                   >
                     <X className="h-4 w-4" />
@@ -315,7 +296,7 @@ export function LinkedWorkbookCard({
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={detachWorkbook.isPending}>
+                  <Button variant="outline" size="sm" disabled={persistence.isPending}>
                     <Unlink className="mr-1.5 h-4 w-4" />
                     {t("flow.detach")}
                   </Button>
@@ -426,7 +407,7 @@ export function LinkedWorkbookCard({
           />
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button disabled={!selectedWorkbookId || attachWorkbook.isPending} size="sm">
+              <Button disabled={!selectedWorkbookId || persistence.isPending} size="sm">
                 <LinkIcon className="mr-1.5 h-4 w-4" />
                 {t("flow.attach")}
               </Button>

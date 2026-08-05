@@ -130,6 +130,9 @@ export function ExperimentSidePanel({
     if (isDisabled) return;
     const newTitle = e.target.value;
     setCurrentTitle(newTitle);
+    // Question names are required by the workbook schema. Keep a transiently
+    // empty input local instead of invalidating the controlled draft.
+    if (displayNodeType === "QUESTION" && newTitle.length === 0) return;
     if (onTitleChange) {
       onTitleChange(newTitle);
     }
@@ -215,6 +218,7 @@ export function ExperimentSidePanel({
                 type="text"
                 value={currentTitle}
                 onChange={handleTitleChange}
+                maxLength={displayNodeType === "QUESTION" ? 64 : undefined}
                 placeholder={t("sidePanelFlow.labelPlaceholder")}
                 disabled={isDisabled}
                 required={displayNodeType === "QUESTION"}

@@ -21,12 +21,14 @@ interface AutosaveIndicatorProps {
   /** `compact` swaps the label for a tooltip — sized for editor toolbars. */
   variant?: AutosaveIndicatorVariant;
   className?: string;
+  onRetry?: () => void | Promise<void>;
 }
 
 export function AutosaveIndicator({
   status: statusProp,
   variant = "full",
   className,
+  onRetry,
 }: AutosaveIndicatorProps) {
   const fromContext = useAutosaveStatus();
   const status = statusProp ?? fromContext?.status ?? undefined;
@@ -57,18 +59,25 @@ export function AutosaveIndicator({
   })();
 
   if (variant === "compact") {
+    const trigger =
+      status === "error" && onRetry ? (
+        <button
+          type="button"
+          className={cn("flex items-center", className)}
+          aria-label={`${view.label}. ${t("tryAgain", "Try again")}`}
+          onClick={() => void onRetry()}
+        >
+          {view.icon}
+        </button>
+      ) : (
+        <span className={cn("flex items-center", className)} aria-label={view.label} role="status">
+          {view.icon}
+        </span>
+      );
     return (
       <TooltipProvider delayDuration={200}>
         <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className={cn("flex items-center", className)}
-              aria-label={view.label}
-              role="status"
-            >
-              {view.icon}
-            </span>
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
           <TooltipContent side="bottom">{view.label}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -79,6 +88,15 @@ export function AutosaveIndicator({
     <div className={cn("flex items-center gap-2 text-[15px]", className)}>
       {view.icon}
       <span className={view.labelClassName}>{view.label}</span>
+      {status === "error" && onRetry ? (
+        <button
+          type="button"
+          className="text-primary text-sm font-medium underline underline-offset-2"
+          onClick={() => void onRetry()}
+        >
+          {t("tryAgain", "Try again")}
+        </button>
+      ) : null}
     </div>
   );
 }
