@@ -172,7 +172,7 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
           ignore-unfixed: true
-          trivyignores: .trivyignore.docker-images
+          trivyignores: .trivyignore.docker-images.yaml
 
       - name: Push image to Amazon ECR
         run: |

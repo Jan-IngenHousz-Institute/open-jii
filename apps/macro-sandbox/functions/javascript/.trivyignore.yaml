@@ -7,14 +7,18 @@ vulnerabilities:
   # axios@1.16.1 in the runtime SDK (@aws-sdk's bundled tree).
   - id: GHSA-gcfj-64vw-6mp9
     statement: "Proxy reuse after interceptor change. No outbound HTTP or proxy config."
+    expired_at: 2026-11-05
 
   # brace-expansion@1.1.15 in the runtime SDK (@aws-sdk's bundled tree).
   - id: CVE-2026-13149
     statement: "ReDoS. Not invoked by sandbox code."
+    expired_at: 2026-11-05
   - id: CVE-2026-14257
     statement: "Same ReDoS, different CVE id."
+    expired_at: 2026-11-05
   - id: CVE-2026-69152
     statement: "DoS via unbounded arrays, same copy."
+    expired_at: 2026-11-05
 
   # gawk@5.1.0-3.amzn2023.0.3, fixed in .0.4.
   - id: CVE-2026-40467
