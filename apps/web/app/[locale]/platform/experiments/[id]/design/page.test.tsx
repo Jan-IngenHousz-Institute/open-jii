@@ -69,6 +69,14 @@ vi.mock("@/components/workbook/workbook-draft-editor", () => ({
   ),
 }));
 
+vi.mock("@/components/workbook/workbook-canvas-draft-editor", () => ({
+  WorkbookCanvasDraftEditor: ({ initialCells }: { initialCells: unknown[] }) => (
+    <div data-testid="workbook-canvas-draft-editor">
+      Canvas Draft Editor ({initialCells.length} cells)
+    </div>
+  ),
+}));
+
 const EXP_ID = "exp-123";
 const WB_ID = "wb-1";
 const VERSION_ID = "ver-1";
@@ -342,6 +350,32 @@ describe("ExperimentDesignPage", () => {
     // No edit/view toggle: anyone who may edit does so in place.
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
+  });
+
+  it("renders the editable canvas over the same draft for an admin workbook grantee", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "grantee-not-the-creator" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await user.click(await screen.findByText("flow.viewGraph"));
+    expect(await screen.findByTestId("workbook-canvas-draft-editor")).toHaveTextContent("1 cells");
+    expect(screen.queryByTestId("flow-editor")).not.toBeInTheDocument();
+  });
+
+  it("keeps the graph read-only for a viewer without the edit gate", async () => {
+    mountWithWorkbook({ isAdmin: false });
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await user.click(await screen.findByText("flow.viewGraph"));
+    expect(await screen.findByTestId("flow-editor")).toHaveAttribute("data-disabled", "true");
+    expect(screen.queryByTestId("workbook-canvas-draft-editor")).not.toBeInTheDocument();
   });
 
   it("shows the read-only editor for a non-admin who may update the workbook", async () => {

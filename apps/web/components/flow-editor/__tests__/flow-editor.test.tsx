@@ -7,6 +7,27 @@ import * as nodeUtils from "../../react-flow/node-utils";
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
+const flowUtilsMocks = vi.hoisted(() => ({
+  connectFlowNodes: vi.fn(
+    (
+      params: { source: string | null; target: string | null },
+      nodes: xyflowReact.Node[],
+      edges: xyflowReact.Edge[],
+    ) => ({
+      nodes,
+      edges: [
+        ...edges,
+        {
+          id: `e-${params.source}-${params.target}`,
+          source: params.source ?? "",
+          target: params.target ?? "",
+          data: { kind: "sequence" },
+        },
+      ],
+    }),
+  ),
+}));
+
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
@@ -26,7 +47,7 @@ vi.mock("@xyflow/react", async () => {
     nodesDraggable,
     nodesConnectable,
   }: xyflowReact.ReactFlowProps) => (
-    <div data-testid="rf">
+    <div data-testid="rf" data-has-connect={typeof onConnect}>
       <div data-testid="rf-nodes-count">{nodes.length}</div>
       <div data-testid="rf-edges-count">{edges.length}</div>
       <div data-testid="rf-draggable">{String(nodesDraggable)}</div>
@@ -94,13 +115,14 @@ const toInitialFlow = (
     React.ComponentProps<typeof FlowEditor>["initialFlow"]
   >;
 
-vi.mock("../react-flow/flow-utils", () => ({
+vi.mock("../../react-flow/flow-utils", () => ({
+  connectFlowNodes: flowUtilsMocks.connectFlowNodes,
   getFlowData: (...args: [xyflowReact.Node[], xyflowReact.Edge[]]) => getFlowDataSpy(...args),
   handleNodesDeleteWithReconnection: (
     _deleted: xyflowReact.Node,
     _nodes: xyflowReact.Node,
     edges: xyflowReact.Edge,
-  ) => edges,
+  ) => ({ edges, issues: [] }),
   handleNodeDrop: (_e: React.DragEvent, nodes: xyflowReact.Node[]) => ({
     newNode: {
       id: `new-${nodes.length + 1}`,
@@ -268,8 +290,11 @@ describe("<FlowEditor /> (stable suite)", () => {
     const user = userEvent.setup();
     const before = getCounts();
     expect(before.e).toBe(1);
+    expect(screen.getByTestId("rf-connectable").textContent).toBe("true");
+    expect(screen.getByTestId("rf")).toHaveAttribute("data-has-connect", "function");
 
     await user.click(screen.getByRole("button", { name: "Sim Connect" }));
+    expect(flowUtilsMocks.connectFlowNodes).toHaveBeenCalled();
     const after = getCounts();
     expect(after.e).toBe(2);
   });

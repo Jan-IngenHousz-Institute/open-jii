@@ -4,6 +4,8 @@ import type { Node, Edge } from "@xyflow/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import {
+  connectFlowNodes,
+  getWorkbookCellInsertionIndex,
   getInitialFlowData,
   handleNodesDeleteWithReconnection,
   handleNodeDrop,
@@ -151,6 +153,109 @@ describe("flow-utils", () => {
         data: { kind: "sequence" },
       });
       expect(res.edges.some((edge) => edge.source === "D")).toBe(false);
+    });
+  });
+
+  describe("connectFlowNodes", () => {
+    const nodes: Node[] = [
+      { id: "A", type: "INSTRUCTION", position: { x: 0, y: 0 }, data: { isStartNode: true } },
+      { id: "B", type: "QUESTION", position: { x: 0, y: 0 }, data: {} },
+      { id: "C", type: "ANALYSIS", position: { x: 0, y: 0 }, data: {} },
+    ];
+    const edges: Edge[] = [
+      { id: "AB", source: "A", target: "B", data: { kind: "sequence" } },
+      { id: "BC", source: "B", target: "C", data: { kind: "sequence" } },
+    ];
+
+    it("moves a sequence target immediately after the source and rebuilds one chain", () => {
+      const result = connectFlowNodes(
+        { source: "A", target: "C", sourceHandle: "out", targetHandle: "in" },
+        nodes,
+        edges,
+      );
+      expect(result.edges).toEqual([
+        expect.objectContaining({ source: "A", target: "C", data: { kind: "sequence" } }),
+        expect.objectContaining({ source: "C", target: "B", data: { kind: "sequence" } }),
+      ]);
+      expect(result.nodes.find((node) => node.id === "A")?.data.isStartNode).toBe(true);
+    });
+
+    it("updates the start marker when the previous start is moved", () => {
+      const result = connectFlowNodes(
+        { source: "C", target: "A", sourceHandle: "out", targetHandle: "in" },
+        nodes,
+        edges,
+      );
+      expect(result.nodes.find((node) => node.id === "B")?.data.isStartNode).toBe(true);
+      expect(result.edges.map((edge) => `${edge.source}->${edge.target}`)).toEqual([
+        "B->C",
+        "C->A",
+      ]);
+    });
+
+    it("retargets one branch path without touching sequence edges", () => {
+      const branchNodes: Node[] = [
+        {
+          ...nodes[0],
+          id: "branch",
+          type: "BRANCH",
+          data: {
+            isStartNode: true,
+            stepSpecification: { paths: [{ id: "path-1", label: "Retry" }] },
+          },
+        },
+        nodes[1],
+        nodes[2],
+      ];
+      const branchEdges: Edge[] = [
+        { id: "seq-1", source: "branch", target: "B", data: { kind: "sequence" } },
+        { id: "seq-2", source: "B", target: "C", data: { kind: "sequence" } },
+        {
+          id: "old-path",
+          source: "branch",
+          target: "B",
+          sourceHandle: "path-1",
+          data: { kind: "branch" },
+        },
+      ];
+      const result = connectFlowNodes(
+        { source: "branch", target: "C", sourceHandle: "path-1", targetHandle: "in" },
+        branchNodes,
+        branchEdges,
+      );
+      expect(result.edges.filter((edge) => edge.data?.kind === "sequence")).toHaveLength(2);
+      expect(result.edges.filter((edge) => edge.data?.kind === "branch")).toEqual([
+        expect.objectContaining({
+          source: "branch",
+          target: "C",
+          sourceHandle: "path-1",
+          data: { kind: "branch", label: "Retry" },
+        }),
+      ]);
+    });
+  });
+
+  describe("getWorkbookCellInsertionIndex", () => {
+    it("inserts before the first node to the right while keeping an output with its producer", () => {
+      const cells = [
+        {
+          id: "A",
+          type: "protocol" as const,
+          isCollapsed: false,
+          payload: {
+            protocolId: "11111111-1111-1111-1111-111111111111",
+            version: 1,
+          },
+        },
+        { id: "out", type: "output" as const, isCollapsed: false, producedBy: "A" },
+        { id: "B", type: "markdown" as const, isCollapsed: false, content: "Next" },
+      ];
+      const nodes: Node[] = [
+        { id: "A", position: { x: 0, y: 0 }, data: {} },
+        { id: "B", position: { x: 200, y: 0 }, data: {} },
+      ];
+      expect(getWorkbookCellInsertionIndex(cells, nodes, 100)).toBe(2);
+      expect(getWorkbookCellInsertionIndex(cells, nodes, 300)).toBe(3);
     });
   });
 

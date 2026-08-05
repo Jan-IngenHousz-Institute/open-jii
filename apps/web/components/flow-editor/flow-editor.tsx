@@ -1,6 +1,6 @@
 "use client";
 
-import type { Node, Edge, Connection } from "@xyflow/react";
+import type { Node, Edge, Connection, ReactFlowInstance } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import {
   Background,
@@ -8,7 +8,6 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
-  addEdge,
   useNodesState,
   useEdgesState,
 } from "@xyflow/react";
@@ -21,13 +20,18 @@ import type {
   ExperimentFlow,
   ExperimentUpsertFlowBody,
 } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 import { resolveBranchPathById } from "@repo/api/transforms/evaluate-branch";
+import { flowNodesToWorkbookCells } from "@repo/api/transforms/flow-to-workbook-cells";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
 import { LegendFlow } from "../legend-flow";
 import {
+  connectFlowNodes,
+  getWorkbookCellInsertionIndex,
   getFlowData,
   handleNodesDeleteWithReconnection,
   handleNodeDrop,
@@ -64,18 +68,35 @@ export interface FlowEditorHandle {
 
 interface FlowEditorProps {
   initialFlow?: ExperimentFlow;
+  workbookCells?: WorkbookCell[];
+  onWorkbookCellsChange?: (cells: WorkbookCell[]) => void;
   onNodeSelect?: (node: Node | null) => void;
   onDirtyChange?: (dirty: boolean) => void; // notify parent that there are unsaved changes
   isDisabled?: boolean; // whether the flow is read-only
 }
 
 export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
-  ({ initialFlow, onNodeSelect, onDirtyChange, isDisabled = false }, ref) => {
+  (
+    {
+      initialFlow,
+      workbookCells,
+      onWorkbookCellsChange,
+      onNodeSelect,
+      onDirtyChange,
+      isDisabled = false,
+    },
+    ref,
+  ) => {
     // State for selected edge and node
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [repairIssues, setRepairIssues] = useState<FlowRepairIssue[]>([]);
+    const [structuralError, setStructuralError] = useState<string | null>(null);
+    const [pendingCell, setPendingCell] = useState<WorkbookCell | null>(null);
+    const workbookCellsRef = useRef(workbookCells);
+    const flowInstanceRef = useRef<ReactFlowInstance | null>(null);
+    workbookCellsRef.current = workbookCells;
 
     const initialData = initialFlow
       ? FlowMapper.toReactFlow(initialFlow)
@@ -86,6 +107,27 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialData.nodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
+
+    useEffect(() => {
+      if (!onWorkbookCellsChange || !workbookCellsRef.current) return;
+      try {
+        const graph = FlowMapper.toApiGraph(nodes, edges);
+        const nextCells = flowNodesToWorkbookCells(
+          graph.nodes,
+          graph.edges,
+          workbookCellsRef.current,
+        );
+        setStructuralError(null);
+        if (JSON.stringify(nextCells) !== JSON.stringify(workbookCellsRef.current)) {
+          workbookCellsRef.current = nextCells;
+          onWorkbookCellsChange(nextCells);
+        }
+      } catch (error) {
+        setStructuralError(
+          error instanceof Error ? error.message : "The flow structure is invalid.",
+        );
+      }
+    }, [nodes, edges, onWorkbookCellsChange]);
 
     // Ref for flow area container used by LegendFlow overlay
     const flowAreaRef = useRef<HTMLDivElement | null>(null);
@@ -224,21 +266,18 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const onConnect = useCallback(
       (params: Connection) => {
         if (isDisabled) return; // No connections in disabled mode
-        if (params.source === params.target) return;
-
-        const id = `e-${params.source}-${params.target}-${Date.now()}`;
-        const newEdge: Edge = {
-          id,
-          source: params.source,
-          target: params.target,
-          sourceHandle: params.sourceHandle ?? null,
-          targetHandle: params.targetHandle ?? null,
-          animated: false,
-          markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
-        };
-        setEdges((eds) => addEdge(newEdge, eds));
+        try {
+          const result = connectFlowNodes(params, nodes, edges);
+          setNodes(result.nodes);
+          setEdges(result.edges);
+          setStructuralError(null);
+        } catch (error) {
+          setStructuralError(
+            error instanceof Error ? error.message : "The flow structure is invalid.",
+          );
+        }
       },
-      [setEdges, isDisabled],
+      [nodes, edges, setNodes, setEdges, isDisabled],
     );
 
     // Edge selection
@@ -377,16 +416,17 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     onDrop={isDisabled ? undefined : handleDrop}
                   >
                     {/* Fullscreen controls overlay */}
-                    {repairIssues.length > 0 && (
+                    {(repairIssues.length > 0 || structuralError) && (
                       <div
                         role="alert"
                         className="border-destructive/30 bg-background text-destructive absolute left-4 top-4 z-10 flex max-w-md gap-2 rounded-md border px-3 py-2 text-xs shadow-sm"
                       >
                         <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
                         <span>
-                          {repairIssues.length === 1
-                            ? "A branch target was deleted and cleared. You can choose a new target."
-                            : `${repairIssues.length} branch targets were deleted and cleared. You can choose new targets.`}
+                          {structuralError ??
+                            (repairIssues.length === 1
+                              ? "A branch target was deleted and cleared. You can choose a new target."
+                              : `${repairIssues.length} branch targets were deleted and cleared. You can choose new targets.`)}
                         </span>
                       </div>
                     )}

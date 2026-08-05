@@ -11,6 +11,7 @@ import {
   AutosaveStatusProvider,
   useAutosaveStatus,
 } from "@/components/shared/autosave/autosave-status-context";
+import { WorkbookCanvasDraftEditor } from "@/components/workbook/workbook-canvas-draft-editor";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { WorkbookEntitySavedProvider } from "@/components/workbook/workbook-entity-saved-context";
@@ -22,7 +23,7 @@ import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkb
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { use, useCallback, useMemo } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
@@ -68,6 +69,12 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: workbookDraft, isLoading: workbookDraftLoading } = useWorkbook(workbookId ?? "", {
     enabled: !!workbookId,
   });
+  const [draftCells, setDraftCells] = useState<WorkbookCell[] | null>(null);
+
+  useEffect(() => {
+    if (workbookDraft) setDraftCells(workbookDraft.cells);
+  }, [workbookDraft]);
+  const editableCells = draftCells ?? workbookDraft?.cells ?? [];
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -201,10 +208,11 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
               <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
                 <WorkbookDraftEditor
                   id={workbookId}
-                  initialCells={workbookDraft.cells}
+                  initialCells={editableCells}
                   // Same capability the branch above gated on.
                   canEdit={canUpdateWorkbook}
                   name={workbookDraft.name}
+                  onCellsChange={setDraftCells}
                   onSaved={handleDraftSaved}
                 />
               </WorkbookEntitySavedProvider>
@@ -219,7 +227,19 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
           </NavTabsContent>
 
           <NavTabsContent value="graph" className="mt-6">
-            <FlowEditor initialFlow={derivedFlow} isDisabled />
+            {canEdit ? (
+              <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
+                <WorkbookCanvasDraftEditor
+                  id={workbookId}
+                  experimentId={id}
+                  initialCells={editableCells}
+                  onCellsChange={setDraftCells}
+                  onSaved={handleDraftSaved}
+                />
+              </WorkbookEntitySavedProvider>
+            ) : (
+              <FlowEditor initialFlow={derivedFlow} isDisabled />
+            )}
           </NavTabsContent>
         </NavTabs>
       </AutosaveStatusProvider>

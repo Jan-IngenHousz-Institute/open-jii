@@ -101,6 +101,18 @@ export function BranchNode(props: BranchNodeProps) {
               top: HEADER_HEIGHT / 2,
             }}
           />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="out"
+            className="!h-2 !w-2 !rounded-full !border transition-colors duration-150"
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderColor: isActive ? "#005e5e" : accent,
+              borderWidth: isActive ? 2 : 1.5,
+              top: HEADER_HEIGHT / 2,
+            }}
+          />
 
           <div
             className="flex items-center gap-3 px-3 pl-4"

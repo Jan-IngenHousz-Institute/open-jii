@@ -24,6 +24,8 @@ interface WorkbookDraftEditorProps {
   name: string;
   /** Called after each successful autosave. */
   onSaved?: (workbook: Workbook) => void;
+  /** Mirrors live local edits so sibling editing surfaces can share one draft. */
+  onCellsChange?: (cells: WorkbookCell[]) => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export function WorkbookDraftEditor({
   canEdit,
   name,
   onSaved,
+  onCellsChange,
 }: WorkbookDraftEditorProps) {
   const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
@@ -86,9 +89,13 @@ export function WorkbookDraftEditor({
 
   useReportAutosaveStatus(autosave);
 
-  const handleCellsChange = useCallback((next: WorkbookCell[]) => {
-    setCells(next);
-  }, []);
+  const handleCellsChange = useCallback(
+    (next: WorkbookCell[]) => {
+      setCells(next);
+      onCellsChange?.(next);
+    },
+    [onCellsChange],
+  );
 
   const {
     isConnected,

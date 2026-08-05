@@ -1,7 +1,8 @@
-import type { Node, Edge } from "@xyflow/react";
+import type { Connection, Node, Edge } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 
 import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { FlowMapper } from "../flow-editor/flow-mapper";
 import { createNewNode } from "./node-utils";
@@ -24,6 +25,126 @@ export function getReactFlowEdgeKind(edge: Edge): "sequence" | "branch" {
     : edge.sourceHandle
       ? "branch"
       : "sequence";
+}
+
+export interface ConnectFlowResult {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+function orderReactFlowNodes(nodes: Node[], edges: Edge[]): Node[] {
+  if (nodes.length === 0) return [];
+  const start = nodes.find((node) => node.data.isStartNode === true);
+  if (!start) throw new Error("Exactly one start node is required.");
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const nextById = new Map<string, string>();
+  for (const edge of edges) {
+    if (getReactFlowEdgeKind(edge) !== "sequence") continue;
+    if (nextById.has(edge.source)) {
+      throw new Error(`Node "${edge.source}" has more than one sequence successor.`);
+    }
+    nextById.set(edge.source, edge.target);
+  }
+
+  const ordered: Node[] = [];
+  const visited = new Set<string>();
+  let current: Node | undefined = start;
+  while (current && !visited.has(current.id)) {
+    ordered.push(current);
+    visited.add(current.id);
+    const nextId = nextById.get(current.id);
+    current = nextId ? byId.get(nextId) : undefined;
+  }
+  if (ordered.length !== nodes.length) {
+    throw new Error("Sequence edges must form one chain covering every node exactly once.");
+  }
+  return ordered;
+}
+
+/** Connect a branch reference, or atomically move the target after the source in the sequence. */
+export function connectFlowNodes(
+  connection: Connection,
+  nodes: Node[],
+  edges: Edge[],
+): ConnectFlowResult {
+  if (!connection.source || !connection.target || connection.source === connection.target) {
+    return { nodes, edges };
+  }
+
+  const sourceNode = nodes.find((node) => node.id === connection.source);
+  const isBranchReference =
+    sourceNode?.type === "BRANCH" &&
+    Boolean(connection.sourceHandle) &&
+    connection.sourceHandle !== "out";
+
+  if (isBranchReference) {
+    const path = (
+      sourceNode.data.stepSpecification as { paths?: { id: string; label: string }[] } | undefined
+    )?.paths?.find((candidate) => candidate.id === connection.sourceHandle);
+    const nextEdges = edges.filter(
+      (edge) =>
+        !(
+          getReactFlowEdgeKind(edge) === "branch" &&
+          edge.source === connection.source &&
+          edge.sourceHandle === connection.sourceHandle
+        ),
+    );
+    return {
+      nodes,
+      edges: [
+        ...nextEdges,
+        {
+          id: `e-${connection.source}-${connection.sourceHandle}-${connection.target}`,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle,
+          targetHandle: connection.targetHandle,
+          markerEnd: { type: MarkerType.ArrowClosed },
+          data: { kind: "branch", label: path?.label ?? null },
+        },
+      ],
+    };
+  }
+
+  const ordered = orderReactFlowNodes(nodes, edges);
+  const target = ordered.find((node) => node.id === connection.target);
+  if (!target) return { nodes, edges };
+  const withoutTarget = ordered.filter((node) => node.id !== connection.target);
+  const sourceIndex = withoutTarget.findIndex((node) => node.id === connection.source);
+  if (sourceIndex === -1) return { nodes, edges };
+  withoutTarget.splice(sourceIndex + 1, 0, target);
+
+  const nextNodes = nodes.map((node) => ({
+    ...node,
+    data: { ...node.data, isStartNode: node.id === withoutTarget[0].id },
+  }));
+  const branchEdges = edges.filter((edge) => getReactFlowEdgeKind(edge) === "branch");
+  const sequenceEdges: Edge[] = withoutTarget.slice(0, -1).map((node, index) => ({
+    id: `e-${node.id}-${withoutTarget[index + 1].id}`,
+    source: node.id,
+    target: withoutTarget[index + 1].id,
+    sourceHandle: node.type === "BRANCH" ? "out" : undefined,
+    targetHandle: "in",
+    markerEnd: { type: MarkerType.ArrowClosed },
+    data: { kind: "sequence" },
+  }));
+
+  return { nodes: nextNodes, edges: [...sequenceEdges, ...branchEdges] };
+}
+
+/** Resolve a spatial drop to a raw cell-array insertion point without ungluing outputs. */
+export function getWorkbookCellInsertionIndex(
+  cells: WorkbookCell[],
+  nodes: Node[],
+  dropX: number,
+): number {
+  const beforeId = [...nodes]
+    .sort((left, right) => left.position.x - right.position.x)
+    .find((node) => node.position.x > dropX)?.id;
+  if (!beforeId) return cells.length;
+  const index = cells.findIndex((cell) => cell.id === beforeId);
+  return index < 0 ? cells.length : index;
 }
 
 // Start with an empty canvas; real flows are loaded & transformed via FlowMapper

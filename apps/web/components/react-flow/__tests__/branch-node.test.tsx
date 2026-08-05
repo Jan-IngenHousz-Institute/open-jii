@@ -65,7 +65,7 @@ describe("BranchNode", () => {
     const sourceHandleIds = handles
       .filter((h) => h.getAttribute("data-handle-type") === "source")
       .map((h) => h.getAttribute("data-handle-id"));
-    expect(sourceHandleIds).toEqual(expect.arrayContaining(["p1", "p2"]));
+    expect(sourceHandleIds).toEqual(expect.arrayContaining(["out", "p1", "p2"]));
   });
 
   it("badges the default path", () => {
