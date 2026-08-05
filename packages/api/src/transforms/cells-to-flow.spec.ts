@@ -137,6 +137,7 @@ describe("cellsToFlowGraph", () => {
       target: "p1",
       label: null,
       sourceHandle: null,
+      data: { kind: "sequence" },
     });
     expect(edges[1]).toEqual({
       id: "e-p1-m1",
@@ -144,6 +145,7 @@ describe("cellsToFlowGraph", () => {
       target: "m1",
       label: null,
       sourceHandle: null,
+      data: { kind: "sequence" },
     });
 
     expect(nodes[0].position).toEqual({ x: -250, y: 240 });
@@ -186,6 +188,7 @@ describe("cellsToFlowGraph", () => {
     const loopEdge = edges.find((e) => e.source === "b1" && e.target === "p1");
     expect(loopEdge).toBeTruthy();
     expect(loopEdge?.label).toBe("Retry");
+    expect(loopEdge?.data).toEqual({ kind: "branch" });
 
     expect(edges.find((e) => e.source === "b1" && e.target === "md-end")).toBeTruthy();
   });

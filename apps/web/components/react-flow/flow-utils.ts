@@ -1,10 +1,30 @@
 import type { Node, Edge } from "@xyflow/react";
-import { MarkerType, getIncomers, getOutgoers, getConnectedEdges } from "@xyflow/react";
+import { MarkerType } from "@xyflow/react";
 
 import type { ExperimentUpsertFlowBody } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 
 import { FlowMapper } from "../flow-editor/flow-mapper";
 import { createNewNode } from "./node-utils";
+
+export interface FlowRepairIssue {
+  kind: "branch-target-deleted" | "invalid-sequence-neighborhood";
+  deletedNodeId: string;
+  branchNodeId?: string;
+  pathId?: string;
+}
+
+export interface NodeDeletionResult {
+  edges: Edge[];
+  issues: FlowRepairIssue[];
+}
+
+export function getReactFlowEdgeKind(edge: Edge): "sequence" | "branch" {
+  return edge.data?.kind === "branch" || edge.data?.kind === "sequence"
+    ? edge.data.kind
+    : edge.sourceHandle
+      ? "branch"
+      : "sequence";
+}
 
 // Start with an empty canvas; real flows are loaded & transformed via FlowMapper
 export function getInitialFlowData(): { nodes: Node[]; edges: Edge[] } {
@@ -33,42 +53,62 @@ export function getFlowData(nodes: Node[], edges: Edge[]): ExperimentUpsertFlowB
  */
 export function handleNodesDeleteWithReconnection(
   deletedNodes: Node[],
-  allNodes: Node[],
+  _allNodes: Node[],
   currentEdges: Edge[],
-): Edge[] {
-  return deletedNodes.reduce<Edge[]>((acc, node) => {
-    const incomers = getIncomers(node, allNodes, acc);
-    const outgoers = getOutgoers(node, allNodes, acc);
-    const connected = getConnectedEdges([node], acc);
-
-    // Drop edges touching this node
-    const filtered = acc.filter((e) => !connected.includes(e));
-
-    // Reconnect incomers to outgoers
-    const reconnected = incomers.flatMap(({ id: s }) =>
-      outgoers.flatMap(({ id: t }) => {
-        const alreadyExists = filtered.some((e) => e.source === s && e.target === t);
-        if (alreadyExists) return [];
-
-        const wasAnimated = connected.some((e) =>
-          (e.source === s && e.target === node.id) || (e.source === node.id && e.target === t)
-            ? e.animated
-            : false,
-        );
-        return [
-          {
-            id: `${s}->${t}`,
-            source: s,
-            target: t,
-            markerEnd: { type: MarkerType.ArrowClosed },
-            animated: wasAnimated,
-          },
-        ];
-      }),
+): NodeDeletionResult {
+  const issues: FlowRepairIssue[] = [];
+  const edges = deletedNodes.reduce<Edge[]>((acc, node) => {
+    const incomingSequence = acc.filter(
+      (edge) => edge.target === node.id && getReactFlowEdgeKind(edge) === "sequence",
+    );
+    const outgoingSequence = acc.filter(
+      (edge) => edge.source === node.id && getReactFlowEdgeKind(edge) === "sequence",
+    );
+    const incomingBranches = acc.filter(
+      (edge) => edge.target === node.id && getReactFlowEdgeKind(edge) === "branch",
     );
 
-    return [...filtered, ...reconnected];
+    for (const edge of incomingBranches) {
+      issues.push({
+        kind: "branch-target-deleted",
+        deletedNodeId: node.id,
+        branchNodeId: edge.source,
+        pathId: edge.sourceHandle ?? undefined,
+      });
+    }
+
+    const filtered = acc.filter((edge) => edge.source !== node.id && edge.target !== node.id);
+    if (incomingSequence.length === 0 || outgoingSequence.length === 0) return filtered;
+
+    if (incomingSequence.length !== 1 || outgoingSequence.length !== 1) {
+      issues.push({ kind: "invalid-sequence-neighborhood", deletedNodeId: node.id });
+      return filtered;
+    }
+
+    const source = incomingSequence[0].source;
+    const target = outgoingSequence[0].target;
+    const alreadyExists = filtered.some(
+      (edge) =>
+        edge.source === source &&
+        edge.target === target &&
+        getReactFlowEdgeKind(edge) === "sequence",
+    );
+    if (alreadyExists) return filtered;
+
+    return [
+      ...filtered,
+      {
+        id: `e-${source}-${target}`,
+        source,
+        target,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        animated: incomingSequence[0].animated || outgoingSequence[0].animated,
+        data: { kind: "sequence" },
+      },
+    ];
   }, currentEdges);
+
+  return { edges, issues };
 }
 
 /**

@@ -14,7 +14,7 @@ import {
 } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { AlertCircle, Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
 import type {
@@ -32,6 +32,7 @@ import {
   handleNodesDeleteWithReconnection,
   handleNodeDrop,
 } from "../react-flow/flow-utils";
+import type { FlowRepairIssue } from "../react-flow/flow-utils";
 import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges, nodeTypeColorMap } from "../react-flow/node-config";
 import { FlowContextProvider, BaseNodeWrapper, ensureOneStartNode } from "../react-flow/node-utils";
@@ -74,6 +75,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [repairIssues, setRepairIssues] = useState<FlowRepairIssue[]>([]);
 
     const initialData = initialFlow
       ? FlowMapper.toReactFlow(initialFlow)
@@ -137,7 +139,11 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Delete logic and reconnection
     const onNodesDelete = useCallback(
       (deleted: Node[]) => {
-        setEdges((eds) => handleNodesDeleteWithReconnection(deleted, nodes, eds));
+        setEdges((eds) => {
+          const result = handleNodesDeleteWithReconnection(deleted, nodes, eds);
+          setRepairIssues(result.issues);
+          return result.edges;
+        });
       },
       [nodes, setEdges],
     );
@@ -371,6 +377,19 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     onDrop={isDisabled ? undefined : handleDrop}
                   >
                     {/* Fullscreen controls overlay */}
+                    {repairIssues.length > 0 && (
+                      <div
+                        role="alert"
+                        className="border-destructive/30 bg-background text-destructive absolute left-4 top-4 z-10 flex max-w-md gap-2 rounded-md border px-3 py-2 text-xs shadow-sm"
+                      >
+                        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>
+                          {repairIssues.length === 1
+                            ? "A branch target was deleted and cleared. You can choose a new target."
+                            : `${repairIssues.length} branch targets were deleted and cleared. You can choose new targets.`}
+                        </span>
+                      </div>
+                    )}
                     <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
                       <Button
                         type="button"

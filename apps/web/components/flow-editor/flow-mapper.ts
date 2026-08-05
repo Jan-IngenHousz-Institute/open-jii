@@ -61,6 +61,7 @@ export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
 
 export interface FlowEdgeData extends Record<string, unknown> {
   label?: string | null;
+  kind?: "sequence" | "branch";
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -191,7 +192,10 @@ export class FlowMapper {
       type: "default",
       animated: false,
       markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
-      data: { label: apiEdge.label },
+      data: {
+        label: apiEdge.label,
+        kind: apiEdge.data?.kind ?? (apiEdge.sourceHandle ? "branch" : "sequence"),
+      },
     }));
 
     return { nodes, edges };
@@ -346,6 +350,14 @@ export class FlowMapper {
         target: edge.target,
         sourceHandle: edge.sourceHandle ?? null,
         label,
+        data: {
+          kind:
+            edge.data?.kind === "branch" || edge.data?.kind === "sequence"
+              ? edge.data.kind
+              : edge.sourceHandle
+                ? "branch"
+                : "sequence",
+        },
       };
     });
 

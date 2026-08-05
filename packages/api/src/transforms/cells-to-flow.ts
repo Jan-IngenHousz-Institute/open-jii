@@ -15,7 +15,13 @@ export interface DerivedFlowGraph {
   edges: FlowEdge[];
 }
 
-function makeEdge(source: string, target: string, label?: string, sourceHandle?: string): FlowEdge {
+function makeEdge(
+  source: string,
+  target: string,
+  kind: "sequence" | "branch",
+  label?: string,
+  sourceHandle?: string,
+): FlowEdge {
   const id = sourceHandle ? `e-${source}-${sourceHandle}-${target}` : `e-${source}-${target}`;
   return {
     id,
@@ -23,6 +29,7 @@ function makeEdge(source: string, target: string, label?: string, sourceHandle?:
     target,
     label: label ?? null,
     sourceHandle: sourceHandle ?? null,
+    data: { kind },
   };
 }
 
@@ -127,13 +134,13 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
     firstId ??= node.id;
 
     if (previousId) {
-      edges.push(makeEdge(previousId, node.id));
+      edges.push(makeEdge(previousId, node.id, "sequence"));
     }
 
     if (cell.type === "branch") {
       for (const path of cell.paths) {
         if (path.gotoCellId) {
-          edges.push(makeEdge(cell.id, path.gotoCellId, path.label, path.id));
+          edges.push(makeEdge(cell.id, path.gotoCellId, "branch", path.label, path.id));
         }
       }
     }

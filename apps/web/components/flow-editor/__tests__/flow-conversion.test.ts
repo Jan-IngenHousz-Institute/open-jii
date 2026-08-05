@@ -267,6 +267,7 @@ describe("Flow Conversion", () => {
         target: "start",
         label: "Continue",
         sourceHandle: null,
+        data: { kind: "sequence" },
       });
     });
 
