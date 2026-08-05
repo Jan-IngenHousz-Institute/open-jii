@@ -677,4 +677,54 @@ describe("ExperimentDataAnnotationsController", () => {
       });
     });
   });
+
+  describe("a body id that shadows the path id", () => {
+    // The handler receives the route params merged with the request body, body last,
+    // so a body `id` would replace the experiment the guard authorized and the write
+    // would land on a different one. See the matching read-route group in
+    // `experiment.controller.spec.ts` for the full mechanism.
+    const annotationBody: ExperimentAddAnnotationBody = {
+      tableName: "data_table_1",
+      rowId: "row_123",
+      annotation: {
+        type: "comment",
+        content: { type: "comment", text: "Contradiction check" },
+      },
+    };
+
+    it("is rejected without writing anything", async () => {
+      const execute = vi
+        .spyOn(addAnnotationsUseCase, "execute")
+        .mockResolvedValue(success({ rowsAffected: 1 }));
+      // Owned by somebody else and private, so the caller may not contribute to it.
+      const strangerId = await testApp.createTestUser({});
+      const { experiment: offLimits } = await testApp.createExperiment({
+        name: "Off-limits annotations experiment",
+        userId: strangerId,
+        visibility: "private",
+      });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.addAnnotation, { id: experimentId }))
+        .withAuth(testUserId)
+        .send({ ...annotationBody, id: offLimits.id })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("writes to the path experiment when the body restates its id", async () => {
+      const execute = vi
+        .spyOn(addAnnotationsUseCase, "execute")
+        .mockResolvedValue(success({ rowsAffected: 1 }));
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.addAnnotation, { id: experimentId }))
+        .withAuth(testUserId)
+        .send({ ...annotationBody, id: experimentId })
+        .expect(StatusCodes.CREATED);
+
+      expect(execute).toHaveBeenCalledWith(experimentId, expect.anything(), testUserId);
+    });
+  });
 });

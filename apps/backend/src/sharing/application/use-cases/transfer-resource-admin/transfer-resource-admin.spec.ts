@@ -3,6 +3,7 @@ import { and, eq, resourceGrants } from "@repo/database";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { TransferResourceAdminUseCase } from "./transfer-resource-admin";
 
 describe("TransferResourceAdminUseCase", () => {
@@ -12,6 +13,39 @@ describe("TransferResourceAdminUseCase", () => {
 
   /** The one answer every authorization negative gets, whatever its cause. */
   const NO_ACCESS_ERROR = "You have no access to transfer admin rights on this resource";
+
+  /**
+   * The answer when the caller may share the resource but is not the last person
+   * answerable for it, so this archived-exempt hand-off is not theirs to use.
+   */
+  const NOT_SOLE_ADMIN_ERROR =
+    "Admin can only be handed over this way while you are the resource's only admin";
+
+  /**
+   * Read the caller's blocker list through the same predicate the hand-off proves,
+   * so a test that relies on the caller being blocked says so instead of assuming it.
+   */
+  const isDeletionBlocker = async (
+    resourceType: SharingResourceType,
+    resourceId: string,
+    userId: string,
+  ) => {
+    const blockers = await testApp.module.get(UserRepository).findSoleAdminResources(userId);
+    assertSuccess(blockers);
+    return blockers.value.some((b) => b.resourceType === resourceType && b.id === resourceId);
+  };
+
+  const expectIsDeletionBlocker = async (
+    resourceType: SharingResourceType,
+    resourceId: string,
+    userId: string,
+  ) => expect(await isDeletionBlocker(resourceType, resourceId, userId)).toBe(true);
+
+  const expectIsNotDeletionBlocker = async (
+    resourceType: SharingResourceType,
+    resourceId: string,
+    userId: string,
+  ) => expect(await isDeletionBlocker(resourceType, resourceId, userId)).toBe(false);
 
   /** A hand-off writes a grant — the surface that owns access tiers. */
   const directGrantRoleOf = async (
@@ -96,13 +130,18 @@ describe("TransferResourceAdminUseCase", () => {
     expect(await directGrantRoleOf("experiment", experiment.id, outsiderId)).toBe("admin");
   });
 
-  it("works on archived experiments (the controlled exception)", async () => {
+  it("works on archived experiments for a caller it actually blocks (the controlled exception)", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Archived Transfer",
       userId: testUserId,
       status: "archived",
     });
     const targetId = await testApp.createTestUser({ email: "archived-target@example.com" });
+
+    // The exception exists for exactly this state, so state it: without a hand-off
+    // this experiment is a deletion blocker the caller cannot clear any other way,
+    // because archived resources refuse ordinary grant writes.
+    await expectIsDeletionBlocker("experiment", experiment.id, testUserId);
 
     const result = await useCase.execute(
       [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: targetId }],
@@ -112,6 +151,68 @@ describe("TransferResourceAdminUseCase", () => {
     assertSuccess(result);
     expect(result.value[0].success).toBe(true);
     expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBe("admin");
+  });
+
+  it("refuses an archived experiment the caller is not actually blocked by", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived But Staffed",
+      userId: testUserId,
+      status: "archived",
+    });
+    // A second administrable admin means the caller is answerable for nothing here:
+    // the resource never appears among their deletion blockers, so the
+    // archived-exempt write has nothing to earn it.
+    const coAdminId = await testApp.createTestUser({ email: "archived-co-admin@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: coAdminId,
+      role: "admin",
+    });
+    const targetId = await testApp.createTestUser({ email: "archived-outsider@example.com" });
+
+    await expectIsNotDeletionBlocker("experiment", experiment.id, testUserId);
+
+    const result = await useCase.execute(
+      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: targetId }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value[0].success).toBe(false);
+    expect(result.value[0].error).toBe(NOT_SOLE_ADMIN_ERROR);
+    // The refusal must leave nothing behind — on an archived experiment a stray
+    // grant could never be revoked.
+    expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBeNull();
+  });
+
+  it("refuses a hand-off by an owner who is not the resource's only admin", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Already Staffed",
+      userId: testUserId,
+    });
+    const coAdminId = await testApp.createTestUser({ email: "staffed-co-admin@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: coAdminId,
+      role: "admin",
+    });
+    const targetId = await testApp.createTestUser({ email: "staffed-target@example.com" });
+
+    // The caller still holds `share` — this is refused on the deletion-blocker
+    // proof, not on authorization.
+    const result = await useCase.execute(
+      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: targetId }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value[0].success).toBe(false);
+    expect(result.value[0].error).toBe(NOT_SOLE_ADMIN_ERROR);
+    expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBeNull();
   });
 
   // Every other shareable type blocks account deletion exactly as experiments do,
@@ -261,28 +362,31 @@ describe("TransferResourceAdminUseCase", () => {
     expect(await directGrantRoleOf("experiment", experiment.id, closed)).toBeNull();
   });
 
-  it("is a no-op when the target is already an admin", async () => {
+  it("leaves the handed-over grant intact when the same hand-off is replayed", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Already Admin",
+      name: "Replayed Hand-off",
       userId: testUserId,
     });
-    const coAdminId = await testApp.createTestUser({ email: "co-admin@example.com" });
-    await testApp.addResourceGrant({
-      resourceType: "experiment",
-      resourceId: experiment.id,
-      granteeType: "user",
-      granteeId: coAdminId,
-      role: "admin",
-    });
+    const targetId = await testApp.createTestUser({ email: "co-admin@example.com" });
 
-    const result = await useCase.execute(
-      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: coAdminId }],
+    const first = await useCase.execute(
+      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: targetId }],
       testUserId,
     );
+    assertSuccess(first);
+    expect(first.value[0].success).toBe(true);
 
-    assertSuccess(result);
-    expect(result.value[0].success).toBe(true);
-    expect(await directGrantRoleOf("experiment", experiment.id, coAdminId)).toBe("admin");
+    // The first hand-off is what cleared the blocker, so the second has nothing left
+    // to clear and is refused. What matters is that the replay is harmless: the grant
+    // it already wrote is untouched, not lowered or removed.
+    const replay = await useCase.execute(
+      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: targetId }],
+      testUserId,
+    );
+    assertSuccess(replay);
+    expect(replay.value[0].success).toBe(false);
+    expect(replay.value[0].error).toBe(NOT_SOLE_ADMIN_ERROR);
+    expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBe("admin");
   });
 
   it("processes several resources of different types independently", async () => {

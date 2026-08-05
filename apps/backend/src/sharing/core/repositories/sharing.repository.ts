@@ -50,7 +50,11 @@ import type {
   EnrichedGrant,
   ResourceCollaborator,
 } from "../models/sharing.model";
-import { assertResourceStaysStaffed, livingOrgOwnerIdsSql } from "../resource-staffing";
+import {
+  assertResourceStaysStaffed,
+  livingOrgOwnerIdsSql,
+  lockAndFindBlockingResources,
+} from "../resource-staffing";
 import type { StaffingGuardedWrite } from "../resource-staffing";
 
 /**
@@ -381,9 +385,19 @@ export class SharingRepository {
   /**
    * Give a user a direct `admin` grant on a resource, for the account-deletion
    * hand-off. Not routed through {@link guardedWrite}: it only ever raises a
-   * grantee's tier, so there is nothing for the invariant to check — which is also
-   * what keeps the hand-off working on an archived experiment, whose sole admin
-   * would otherwise be unable to close their account.
+   * grantee's tier, so there is nothing for the staffing invariant to check — which
+   * is also what keeps the hand-off working on an archived experiment, whose sole
+   * admin would otherwise be unable to close their account.
+   *
+   * That exemption from {@link assertResourceIsUnarchived} is why the hand-off has to
+   * earn it here rather than merely be authorized: `createdBy` must currently be the
+   * last answerable person for this resource, which is what makes it a deletion
+   * blocker with no other way out. Anyone who cannot show that has the ordinary
+   * sharing path, archived rules included, and is refused here.
+   *
+   * Proven inside the transaction that writes the grant, on the same locks the
+   * deletion guard takes: a pre-flight answer could go stale between the check and
+   * the write.
    */
   ensureDirectAdminGrant(params: {
     resourceType: SharingResourceType;
@@ -391,7 +405,21 @@ export class SharingRepository {
     userId: string;
     createdBy: string;
   }): Promise<Result<void>> {
-    return tryCatch(() => ensureDirectAdminGrant(this.db, params));
+    return tryCatch(() =>
+      this.db.transaction(async (tx) => {
+        const blocking = await lockAndFindBlockingResources(tx, params.createdBy);
+        const isDeletionBlocker = blocking.some(
+          (row) => row.resource_type === params.resourceType && row.id === params.resourceId,
+        );
+        if (!isDeletionBlocker) {
+          throw AppError.forbidden(
+            "Admin can only be handed over this way while you are the resource's only admin",
+          );
+        }
+
+        await ensureDirectAdminGrant(tx, params);
+      }),
+    );
   }
 
   /** Plain (unenriched) grants on a resource. */

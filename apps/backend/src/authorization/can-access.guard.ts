@@ -79,6 +79,8 @@ export class CanAccessGuard implements CanActivate {
       throw new ForbiddenException("Unauthorized");
     }
 
+    this.assertPathParamsNotContradicted(request);
+
     const param = meta.param ?? "id";
     const source = meta.source ?? "params";
     const container = source === "body" ? asRecord(request.body) : request.params;
@@ -129,5 +131,47 @@ export class CanAccessGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  /**
+   * Refuse a request whose payload contradicts its own URL.
+   *
+   * The handler does not receive the route params this guard authorized; it
+   * receives them merged with the client-supplied payload, built as
+   * `{ ...routeParams, ...payload }`. The payload is spread last, so a key that
+   * repeats a path param name replaces the value that was authorized here — a
+   * caller could pass a resource it may read in the path and the one it may not in
+   * the payload, and be checked against the first while being served the second.
+   *
+   * Restating a path param verbatim is allowed; anything else is not. The
+   * comparison is strict, so a value that differs in letter case, arrives as a
+   * number, or arrives as an array (which is what a repeated query key produces)
+   * counts as a contradiction — the generated request builder strips path params
+   * out of the payload before sending, so a payload value under a path param name
+   * only ever reaches here from a hand-built request.
+   *
+   * Only the payload the request decoder actually merges is inspected — the query
+   * string on `GET`, the parsed body on every other method — so a stray query param
+   * on a write, which the decoder ignores and which therefore cannot reach the
+   * handler, does not produce a spurious rejection.
+   */
+  private assertPathParamsNotContradicted(request: Request): void {
+    const payload = request.method === "GET" ? asRecord(request.query) : asRecord(request.body);
+    if (!payload) {
+      return;
+    }
+
+    for (const [name, pathValue] of Object.entries(request.params)) {
+      if (!(name in payload) || payload[name] === pathValue) {
+        continue;
+      }
+      this.logger.warn({
+        msg: "Rejected a request whose payload contradicts a path parameter",
+        operation: "canAccess",
+        param: name,
+        path: request.path,
+      });
+      throw new BadRequestException(`${name} in the request does not match the URL path`);
+    }
   }
 }

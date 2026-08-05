@@ -180,6 +180,27 @@ describe("leaveResource", () => {
     expect(await grantsFor("macro", macro.id, keeper)).toHaveLength(1);
   });
 
+  it("refuses the last admin's departure even after they deactivate themselves", async () => {
+    // Permissions never read the activated flag, so deactivating must not buy a way
+    // out of the invariant either.
+    const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+    const keeper = await testApp.createTestUser({ name: "Deactivating Keeper" });
+    await testApp.addResourceAdmin("macro", macro.id, keeper);
+    await testApp.database
+      .update(profiles)
+      .set({ deletedAt: new Date() })
+      .where(eq(profiles.userId, owner));
+    await testApp.database
+      .update(profiles)
+      .set({ activated: false })
+      .where(eq(profiles.userId, keeper));
+
+    const result = await leave.execute(keeper, "macro", macro.id);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+    expect(await grantsFor("macro", macro.id, keeper)).toHaveLength(1);
+  });
+
   it("lets a non-last admin leave an experiment", async () => {
     const experiment = (
       await testApp.createExperiment({ name: `Exp ${crypto.randomUUID()}`, userId: owner })

@@ -555,8 +555,8 @@ describe("UserRepository", () => {
         userId: activeAdminId,
       });
 
-      // A second admin exists but is deactivated, so the active user is effectively the sole
-      // admin and deletion must stay blocked.
+      // A second admin exists but has stepped away, so the active user is still the
+      // only cover and deletion stays blocked.
       await testApp.addExperimentAdmin(experiment.id, deactivatedAdminId);
 
       // Act
@@ -564,6 +564,44 @@ describe("UserRepository", () => {
 
       // Assert
       expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return true when the only other admin's account is closed", async () => {
+      const activeAdminId = await testApp.createTestUser({ email: "active-vs-closed@example.com" });
+      const closedAdminId = await testApp.createTestUser({
+        email: "closedadmin@example.com",
+        deletedAt: new Date(),
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Closed Co-Admin Experiment",
+        userId: activeAdminId,
+      });
+      await testApp.addExperimentAdmin(experiment.id, closedAdminId);
+
+      const result = await repository.isOnlyAdminOfAnyResources(activeAdminId);
+
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return true for a deactivated user who is the only admin", async () => {
+      // Still blocked, so the hand-off flow remains their way out.
+      const soleAdminId = await testApp.createTestUser({ email: "deactivated-sole@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Deactivated Sole Admin Experiment",
+        userId: soleAdminId,
+      });
+      expect(experiment.id).toBeDefined();
+      await testApp.database
+        .update(profiles)
+        .set({ activated: false })
+        .where(eq(profiles.userId, soleAdminId));
+
+      const result = await repository.isOnlyAdminOfAnyResources(soleAdminId);
+
       assertSuccess(result);
       expect(result.value).toBe(true);
     });
@@ -1473,8 +1511,31 @@ describe("UserRepository", () => {
         role: "admin",
       });
 
-      // Same rule as the pre-flight check: a deactivated account cannot administer
-      // an experiment, so it does not keep one staffed.
+      // Same rule as the pre-flight check: an admin who stepped away is not cover.
+      const result = await repository.delete(activeAdmin);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only admin");
+    });
+
+    it("refuses when the only other admin's account is already closed", async () => {
+      const activeAdmin = await testApp.createTestUser({ email: "active-n3@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Closed Co-admin N3",
+        userId: activeAdmin,
+      });
+      const closed = await testApp.createTestUser({
+        email: "closed-n3@example.com",
+        deletedAt: new Date(),
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: closed,
+        role: "admin",
+      });
+
       const result = await repository.delete(activeAdmin);
 
       assertFailure(result);

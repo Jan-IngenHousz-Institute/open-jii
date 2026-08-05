@@ -22,6 +22,9 @@ export interface InvitationTerms {
   tier: InvitationTier;
 }
 
+/** What an acceptance attempt settled on. See {@link InvitationRepository.acceptInvitation}. */
+export type AcceptInvitationOutcome = "accepted" | "not-pending" | "resource-archived";
+
 /**
  * Anything but `admin` reads as the lower tier. Total by design: an invitation whose
  * stored tier cannot be resolved is still a real invitation, so it renders at the
@@ -235,8 +238,12 @@ export class InvitationRepository {
 
   /**
    * Accept an invitation and write its tier as a grant, in one transaction —
-   * experiments only. `false` means it was no longer pending and nothing was applied.
-   * `invitedBy` becomes the grant's author.
+   * experiments only. `invitedBy` becomes the grant's author.
+   *
+   * - `accepted` — the tier was applied.
+   * - `not-pending` — it was revoked or accepted by someone else first; nothing applied.
+   * - `resource-archived` — the experiment was archived before this landed, so the
+   *   invitation was retired instead of granted.
    */
   async acceptInvitation(
     invitationId: string,
@@ -245,7 +252,7 @@ export class InvitationRepository {
     resourceId: string,
     invite: InvitationTerms,
     invitedBy: string,
-  ): Promise<Result<boolean>> {
+  ): Promise<Result<AcceptInvitationOutcome>> {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
         // Claim first: a concurrent revoke or duplicate acceptance that commits
@@ -259,7 +266,31 @@ export class InvitationRepository {
 
         if (claimed.length === 0) {
           // Someone else already revoked or accepted it. Apply nothing.
-          return false;
+          return "not-pending";
+        }
+
+        // An archived experiment refuses grant writes, so a grant minted here would
+        // be one nobody could ever revoke and the grantee could not leave. Archival
+        // is a plain update of this row, so `FOR UPDATE` either waits for it and then
+        // reads the new status, or holds it off until this transaction commits.
+        const target = await tx
+          .select({ status: experiments.status })
+          .from(experiments)
+          .where(eq(experiments.id, resourceId))
+          .limit(1)
+          .for("update");
+
+        // A missing experiment is not refused here, matching the archived guard on the
+        // sharing write paths: the pre-transaction authorization check already answers
+        // not-found for a resource that is gone.
+        if (target.length > 0 && target[0].status === "archived") {
+          // Retire it rather than granting: the invitation's authority went with the
+          // experiment's mutability, the same way it goes with a demoted inviter's.
+          await tx
+            .update(invitations)
+            .set({ status: "revoked" })
+            .where(eq(invitations.id, invitationId));
+          return "resource-archived";
         }
 
         // The upsert can demote: a `viewer` invitation accepted by an existing
@@ -280,7 +311,7 @@ export class InvitationRepository {
           createdBy: invitedBy,
         });
 
-        return true;
+        return "accepted";
       });
     });
   }

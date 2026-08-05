@@ -477,7 +477,7 @@ describe("AcceptPendingInvitationsUseCase", () => {
       );
 
       assertSuccess(claimed);
-      expect(claimed.value).toBe(false);
+      expect(claimed.value).toBe("not-pending");
       expect(await statusOf(invitationId)).toBe("revoked");
       expect(await directGrantsFor(experiment.id, inviteeId)).toHaveLength(0);
     });
@@ -529,6 +529,118 @@ describe("AcceptPendingInvitationsUseCase", () => {
       } finally {
         await secondary.close();
       }
+    });
+  });
+
+  /**
+   * An invitation issued while an experiment was active can be accepted after it is
+   * archived. Archived experiments refuse grant writes, so a grant minted then could
+   * never be revoked by an admin and the grantee could never leave it — a permanent
+   * collaborator on an immutable resource. The acceptance transaction therefore
+   * re-reads the experiment's status under lock and retires the invitation instead.
+   */
+  describe("an invitation whose experiment was archived before acceptance", () => {
+    const inviteeEmail = "archived-invite@example.com";
+
+    const directGrantsFor = (experimentId: string, userId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+            eq(resourceGrants.granteeId, userId),
+          ),
+        );
+
+    async function seedInvitationThenArchive() {
+      const ownerId = await testApp.createTestUser({ email: `owner-${crypto.randomUUID()}@x.com` });
+      const { experiment } = await testApp.createExperiment({
+        name: `Archived Invite Exp ${crypto.randomUUID()}`,
+        userId: ownerId,
+      });
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+      // Issued while the experiment was still active — the invitation is legitimate.
+      const created = await createUseCase.execute(
+        "experiment",
+        experiment.id,
+        inviteeEmail,
+        { tier: "viewer" },
+        ownerId,
+      );
+      assertSuccess(created);
+
+      await testApp.database
+        .update(experiments)
+        .set({ status: "archived" })
+        .where(eq(experiments.id, experiment.id));
+
+      return { experiment, invitationId: created.value.id, ownerId };
+    }
+
+    it("retires the invitation instead of granting access", async () => {
+      const { experiment, invitationId } = await seedInvitationThenArchive();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(0);
+
+      const found = await invitationRepo.findById(invitationId);
+      assertSuccess(found);
+      expect(found.value?.status).toBe("revoked");
+
+      // The grant is the thing that would have been unremovable.
+      expect(await directGrantsFor(experiment.id, inviteeId)).toHaveLength(0);
+    });
+
+    it("reports the archived outcome from the repository rather than a lost claim", async () => {
+      const { experiment, invitationId, ownerId } = await seedInvitationThenArchive();
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+
+      // Straight at the repository: the two non-granting outcomes have to stay
+      // distinguishable, since one is a benign race and this one is a refusal.
+      const outcome = await invitationRepo.acceptInvitation(
+        invitationId,
+        inviteeId,
+        "experiment",
+        experiment.id,
+        { tier: "viewer" },
+        ownerId,
+      );
+
+      assertSuccess(outcome);
+      expect(outcome.value).toBe("resource-archived");
+      expect(await directGrantsFor(experiment.id, inviteeId)).toHaveLength(0);
+    });
+
+    it("still grants when the experiment is merely inactive rather than archived", async () => {
+      // Only archival makes a resource unwritable, so no other status may be caught by
+      // the same check.
+      const ownerId = await testApp.createTestUser({ email: `owner-${crypto.randomUUID()}@x.com` });
+      const { experiment } = await testApp.createExperiment({
+        name: `Stale Invite Exp ${crypto.randomUUID()}`,
+        userId: ownerId,
+        status: "stale",
+      });
+      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
+      const created = await createUseCase.execute(
+        "experiment",
+        experiment.id,
+        inviteeEmail,
+        { tier: "viewer" },
+        ownerId,
+      );
+      assertSuccess(created);
+
+      const inviteeId = await testApp.createTestUser({ email: inviteeEmail });
+      const result = await useCase.execute(inviteeId, inviteeEmail);
+
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+      expect(await directGrantsFor(experiment.id, inviteeId)).toHaveLength(1);
     });
   });
 });

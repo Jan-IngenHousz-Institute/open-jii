@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { desc, eq, workbookVersions } from "@repo/database";
+import { and, desc, eq, workbookVersions } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -27,12 +27,20 @@ export class WorkbookVersionRepository {
     });
   }
 
-  async findById(id: string): Promise<Result<WorkbookVersionDto | null>> {
+  /**
+   * Look a version up within one workbook. `workbookId` is required rather than
+   * optional on purpose: callers reach this from a route that authorizes the
+   * workbook, and a lookup by version id alone would happily return a version of
+   * some *other* workbook — handing back cells and entity snapshots the caller was
+   * never authorized for. A version id that does not belong to `workbookId` is
+   * indistinguishable here from one that does not exist.
+   */
+  async findById(id: string, workbookId: string): Promise<Result<WorkbookVersionDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
         .select()
         .from(workbookVersions)
-        .where(eq(workbookVersions.id, id))
+        .where(and(eq(workbookVersions.id, id), eq(workbookVersions.workbookId, workbookId)))
         .limit(1);
       if (result.length === 0) return null;
       return result[0] as WorkbookVersionDto;

@@ -62,9 +62,15 @@ export class AcceptPendingInvitationsUseCase {
       // "still exists" and "the inviter could still create this today".
       //
       // Accepted limitation: it runs before the acceptance transaction, so a change
-      // in that window lets one acceptance through. Both outcomes are benign — the
-      // grant is revocable from the collaborators list, or unreachable if the
-      // resource is gone. Closing it needs a transaction-aware `can()`.
+      // in that window lets one acceptance through. That is tolerable for the changes
+      // this check is about — a grant minted after the inviter was demoted is still
+      // revocable from the collaborators list, and one on a deleted resource is
+      // unreachable. Closing it properly needs a transaction-aware `can()`.
+      //
+      // Archival is the exception, and it is not tolerable: the resource is neither
+      // gone nor writable, so the grant would be permanent — unrevocable by an admin
+      // and impossible for the grantee to leave. It is therefore re-checked under lock
+      // inside the acceptance transaction rather than here.
       const inviterDecision = await this.authz.can(invitation.invitedBy, {
         resourceType: invitation.resourceType,
         resourceId: invitation.resourceId,
@@ -120,12 +126,24 @@ export class AcceptPendingInvitationsUseCase {
         continue;
       }
 
-      if (!acceptResult.value) {
+      if (acceptResult.value === "not-pending") {
         // Lost the claim — revoked or already accepted since the read. Not an error.
         this.logger.log({
           msg: "Invitation was no longer pending when acceptance landed",
           operation: "accept-pending-invitations",
           invitationId: invitation.id,
+          userId,
+        });
+        continue;
+      }
+
+      if (acceptResult.value === "resource-archived") {
+        this.logger.log({
+          msg: "Retired invitation: the experiment was archived before acceptance landed",
+          operation: "accept-pending-invitations",
+          invitationId: invitation.id,
+          resourceType: invitation.resourceType,
+          resourceId: invitation.resourceId,
           userId,
         });
         continue;

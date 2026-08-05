@@ -110,7 +110,9 @@ export class TransferResourceAdminUseCase {
     }
 
     // Idempotent, so a re-run (or a target who already holds admin/owner) is a
-    // harmless no-op.
+    // harmless no-op. The repository also proves, under lock, that this resource is
+    // currently one of the caller's deletion blockers — the only case this
+    // archived-exempt write exists for.
     const grantResult = await this.repo.ensureDirectAdminGrant({
       resourceType,
       resourceId,
@@ -118,7 +120,13 @@ export class TransferResourceAdminUseCase {
       createdBy: currentUserId,
     });
     if (grantResult.isFailure()) {
-      return fail("Failed to assign admin role");
+      // A refused hand-off explains itself; anything else is an internal fault and
+      // gets the generic answer.
+      return fail(
+        grantResult.error.statusCode === 403
+          ? grantResult.error.message
+          : "Failed to assign admin role",
+      );
     }
 
     return { resourceType, resourceId, success: true };

@@ -23,7 +23,6 @@ import {
   experiments,
   experimentMembers,
   organizations,
-  organizationMembers,
   sql,
   isNull,
   syncPersonalOrganizationName,
@@ -45,14 +44,11 @@ import {
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
 import {
-  ALL_STAFFED_RESOURCES,
-  granteeCanAdministerSql,
-  livingOrgOwnerIdsSql,
-  lockOrgOwnerships,
-  lockStaffingGrants,
+  findBlockingResources,
+  lockAndFindBlockingResources,
   lockUserAccount,
-  orgRoleIsOwnerSql,
 } from "../../../sharing/core/resource-staffing";
+import type { BlockingResourceKey } from "../../../sharing/core/resource-staffing";
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -63,88 +59,6 @@ import {
   UserProfileMetadata,
   SoleAdminResource,
 } from "../models/user.model";
-
-/**
- * Resources whose last answerable person is `userId`. Two prongs:
- *
- * - **(a)** the owning org's sole living owner is `userId`, so deleting leaves a husk.
- * - **(b)** the org is *already* a husk and `userId` holds the only full-control
- *   grant — this is what stops a hand-off chain breaking.
- *
- * Both escape when somebody *else* holds an administrable admin/owner grant. One
- * polymorphic statement because it is re-run verbatim inside the deletion
- * transaction, and one copy is what stops the two from drifting.
- */
-function blockingResourcesQuery(userId: string) {
-  return sql`
-    WITH r AS (${ALL_STAFFED_RESOURCES})
-    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
-    FROM r
-    WHERE NOT EXISTS (
-            SELECT 1 FROM "resource_grants" g
-            WHERE g."resource_type" = r."resource_type"
-              AND g."resource_id" = r."id"
-              AND g."grantee_type" = 'user'
-              AND g."role" IN ('owner', 'admin')
-              AND g."grantee_id" <> ${userId}
-              AND ${granteeCanAdministerSql(sql`g."grantee_id"`)}
-          )
-      AND (
-            (
-              (SELECT count(*) FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o) = 1
-              AND EXISTS (
-                SELECT 1 FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o
-                WHERE o."user_id" = ${userId}
-              )
-            )
-            OR (
-              EXISTS (
-                SELECT 1 FROM "resource_grants" g
-                WHERE g."resource_type" = r."resource_type"
-                  AND g."resource_id" = r."id"
-                  AND g."grantee_type" = 'user'
-                  AND g."grantee_id" = ${userId}
-                  AND g."role" IN ('owner', 'admin')
-              )
-              AND NOT EXISTS (${livingOrgOwnerIdsSql(sql`r."organization_id"`)})
-            )
-          )
-  `;
-}
-
-/**
- * Everything the deletion guard has to lock before it decides: the resources
- * either prong could name. Locking these serializes the guard against a
- * concurrent sharing write on the same resource — see {@link assertNotSoleAdmin}.
- */
-function lockCandidatesQuery(userId: string) {
-  return sql`
-    WITH r AS (${ALL_STAFFED_RESOURCES})
-    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
-    FROM r
-    WHERE EXISTS (
-            SELECT 1 FROM "organization_members" om
-            WHERE om."organization_id" = r."organization_id"
-              AND om."user_id" = ${userId}
-              AND ${orgRoleIsOwnerSql(sql`om."role"`)}
-          )
-       OR EXISTS (
-            SELECT 1 FROM "resource_grants" g
-            WHERE g."resource_type" = r."resource_type"
-              AND g."resource_id" = r."id"
-              AND g."grantee_type" = 'user'
-              AND g."grantee_id" = ${userId}
-              AND g."role" IN ('owner', 'admin')
-          )
-    ORDER BY r."resource_type", r."id"
-  `;
-}
-
-/** One row of the polymorphic blocking-resource queries above. */
-type BlockingResourceKey = Record<string, unknown> & {
-  resource_type: SharingResourceType;
-  id: string;
-};
 
 @Injectable()
 export class UserRepository {
@@ -275,13 +189,13 @@ export class UserRepository {
    * Returns the resources this user is the last answerable person for, across every
    * shareable type. These block account deletion.
    *
-   * See {@link blockingResourcesQuery} for the two prongs. This is the pre-flight
+   * See {@link findBlockingResources} for the two prongs. This is the pre-flight
    * check that drives the delete dialog's blocker list and hand-off flow; the
    * authoritative re-check runs inside the deletion transaction.
    */
   async findSoleAdminResources(userId: string): Promise<Result<SoleAdminResource[]>> {
     return tryCatch(async () => {
-      const keys = await this.database.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
+      const keys = await findBlockingResources(this.database, userId);
       return this.hydrateResources(keys);
     });
   }
@@ -342,43 +256,15 @@ export class UserRepository {
   }
 
   /**
-   * Transactional counterpart of {@link findSoleAdminResources}, running the *same*
-   * predicate so the two cannot disagree. Locks first, decides second: otherwise a
-   * revoke (owner still alive) and that owner's deletion (a grant still present)
-   * would both see a safe world and both commit, leaving neither.
+   * The deletion guard: refuses when the user is the last answerable person for any
+   * resource. Shares {@link lockAndFindBlockingResources} with
+   * {@link findSoleAdminResources} and with the deletion hand-off, so the pre-flight
+   * list, this guard and the hand-off cannot disagree about who is blocked.
    *
    * @throws AppError (403) when the user is the last answerable person for a resource
    */
   private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
-    // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
-    //    rows cannot anchor this — a resource owned outright has none. Creation takes
-    //    the same lock, which orders this against an in-flight create.
-    const ownedOrgs = await tx
-      .selectDistinct({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, userId),
-          orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
-        ),
-      )
-      .orderBy(organizationMembers.organizationId);
-
-    for (const { organizationId } of ownedOrgs) {
-      await lockOrgOwnerships(tx, organizationId);
-    }
-
-    // 2. Then per-resource staffing rows, in a fixed global order: one lock per
-    //    resource, so two deletions sharing resources could otherwise take them in
-    //    opposite orders and deadlock. Orgs always before grants, so no cycle.
-    const candidates = await tx.execute<BlockingResourceKey>(lockCandidatesQuery(userId));
-
-    for (const { resource_type, id } of candidates) {
-      await lockStaffingGrants(tx, resource_type, id);
-    }
-
-    // 3. Decide only now, on a world nothing else can still be changing.
-    const blocking = await tx.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
+    const blocking = await lockAndFindBlockingResources(tx, userId);
 
     if (blocking.length > 0) {
       throw AppError.forbidden(

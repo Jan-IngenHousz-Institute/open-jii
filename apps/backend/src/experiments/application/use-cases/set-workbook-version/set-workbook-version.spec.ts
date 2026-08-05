@@ -111,6 +111,95 @@ describe("SetWorkbookVersionUseCase", () => {
     expect(access.value.experiment?.workbookVersionId).toBe(v2Id);
   });
 
+  // Pinning materialises the target version's cells into the experiment, and the
+  // route only guards experiment `manage`. So a manager who has lost read access to
+  // the attached workbook must not be able to select a version published after the
+  // revocation and capture its contents.
+  describe("workbook access enforcement", () => {
+    /**
+     * Experiment administered by `manager`, with a PRIVATE workbook owned by a
+     * different user attached. `manager` holds a workbook grant that the test then
+     * revokes, reproducing the post-revocation case.
+     */
+    async function setupRevokedManager() {
+      const workbookOwner = await testApp.createTestUser({ name: "Workbook Owner" });
+      const manager = await testApp.createTestUser({ name: "Experiment Manager" });
+
+      const privateWorkbook = await testApp.createWorkbook({
+        name: `Private WB ${crypto.randomUUID()}`,
+        cells: [{ id: "md1", type: "markdown", content: "secret", isCollapsed: false }],
+        createdBy: workbookOwner,
+        visibility: "private",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: `Managed Exp ${crypto.randomUUID()}`,
+        userId: manager,
+      });
+
+      // Grant the manager workbook access so the attach succeeds, then revoke it.
+      const grant = await testApp.addResourceGrant({
+        resourceType: "workbook",
+        resourceId: privateWorkbook.id,
+        granteeType: "user",
+        granteeId: manager,
+        role: "admin",
+      });
+      const attach = await attachUseCase.execute(experiment.id, privateWorkbook.id, manager);
+      assertSuccess(attach);
+
+      // A second version, so there is something other than the pinned one to select.
+      await workbookRepo.update(privateWorkbook.id, {
+        cells: [{ id: "md1", type: "markdown", content: "post-attach secret", isCollapsed: false }],
+      });
+      const upgrade = await upgradeUseCase.execute(experiment.id, manager);
+      assertSuccess(upgrade);
+
+      return {
+        manager,
+        experimentId: experiment.id,
+        workbookId: privateWorkbook.id,
+        firstVersionId: attach.value.workbookVersionId,
+        secondVersionId: upgrade.value.workbookVersionId,
+        grant,
+      };
+    }
+
+    it("allows pinning while the manager still has workbook access", async () => {
+      const { manager, experimentId: expId, firstVersionId } = await setupRevokedManager();
+
+      const result = await setUseCase.execute(expId, firstVersionId, manager);
+      assertSuccess(result);
+      expect(result.value.workbookVersionId).toBe(firstVersionId);
+    });
+
+    it("denies pinning a workbook version after the workbook grant is revoked", async () => {
+      const { manager, experimentId: expId, firstVersionId, grant } = await setupRevokedManager();
+      await testApp.removeResourceGrant(grant.id);
+
+      const result = await setUseCase.execute(expId, firstVersionId, manager);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+    });
+
+    it("leaves the experiment on its current version when the pin is refused", async () => {
+      const {
+        manager,
+        experimentId: expId,
+        firstVersionId,
+        secondVersionId,
+        grant,
+      } = await setupRevokedManager();
+      await testApp.removeResourceGrant(grant.id);
+
+      assertFailure(await setUseCase.execute(expId, firstVersionId, manager));
+
+      const access = await experimentRepo.checkAccess(expId, manager);
+      assertSuccess(access);
+      expect(access.value.experiment?.workbookVersionId).toBe(secondVersionId);
+    });
+  });
+
   it("rejects a version that belongs to a different workbook", async () => {
     const otherWorkbook = await testApp.createWorkbook({
       name: "Other Workbook",

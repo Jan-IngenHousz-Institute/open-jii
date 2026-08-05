@@ -161,7 +161,7 @@ export class WorkbookController {
   @Implement(workbookContract.getWorkbookVersion)
   getWorkbookVersion() {
     return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {
-      const result = await this.getWorkbookVersionUseCase.execute(input.versionId);
+      const result = await this.getWorkbookVersionUseCase.execute(input.versionId, input.id);
 
       if (result.isSuccess()) {
         return formatDates(result.value);

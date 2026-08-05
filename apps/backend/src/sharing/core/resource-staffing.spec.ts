@@ -572,6 +572,8 @@ describe("last-admin invariant (sharing use-cases)", () => {
         expect(await directGrant(experiment.id, keeper)).toBeDefined();
       });
 
+      // The count's standard, stricter than the waiver's: the keeper's own grant is
+      // what is written and it is not inert, so the count decides.
       it("does not let a deactivated grantee stand in for the last admin", async () => {
         const { experiment, keeper, grant } = await seedHusk();
         const deactivated = await testApp.createTestUser({
@@ -588,6 +590,145 @@ describe("last-admin invariant (sharing use-cases)", () => {
         expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
         expect(result.error.message).toContain("last admin");
         expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+      });
+
+      it("still refuses when the only other admin's account is closed", async () => {
+        const { experiment, keeper, grant } = await seedHusk();
+        const closed = await testApp.createTestUser({ name: "Closed" });
+        await seedRawAdminGrant(experiment.id, closed);
+        await closeAccount(closed);
+
+        const result = await updateGrant.execute(keeper, "experiment", experiment.id, grant.id, {
+          role: "viewer",
+        });
+
+        assertFailure(result);
+        expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+        expect(result.error.message).toContain("last admin");
+        expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+      });
+
+      /**
+       * Permissions never read the activated flag, so deactivating changes nothing about
+       * what a holder may do — a direct API caller can set it false and keep their
+       * session. Their grant is not inert, so the waiver stays silent and the count
+       * refuses. Pinned on every write path a `can(share)` holder can reach.
+       */
+      describe("a sole admin who has deactivated their own account", () => {
+        async function seedDeactivatedSoleAdmin() {
+          const { experiment, keeper, grant } = await seedHusk();
+          await testApp.database
+            .update(profiles)
+            .set({ activated: false })
+            .where(eq(profiles.userId, keeper));
+          return { experiment, keeper, grant };
+        }
+
+        it("cannot revoke their own last admin grant", async () => {
+          const { experiment, keeper, grant } = await seedDeactivatedSoleAdmin();
+
+          const result = await revokeGrant.execute(keeper, "experiment", experiment.id, grant.id);
+
+          assertFailure(result);
+          expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+          expect(result.error.message).toContain("last admin");
+          expect(await directGrant(experiment.id, keeper)).toBeDefined();
+        });
+
+        it("cannot demote their own last admin grant", async () => {
+          const { experiment, keeper, grant } = await seedDeactivatedSoleAdmin();
+
+          const result = await updateGrant.execute(keeper, "experiment", experiment.id, grant.id, {
+            role: "viewer",
+          });
+
+          assertFailure(result);
+          expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+          expect(result.error.message).toContain("last admin");
+          expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+        });
+
+        it("cannot demote themselves by re-sharing at a lower role", async () => {
+          const { experiment, keeper } = await seedDeactivatedSoleAdmin();
+
+          const result = await createGrant.execute(keeper, "experiment", experiment.id, {
+            granteeType: "user",
+            granteeId: keeper,
+            role: "viewer",
+          });
+
+          // Refused by grantee-selectability before the staffing check is reached, so
+          // this asserts the outcome rather than the message.
+          assertFailure(result);
+          expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+          expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+        });
+
+        /**
+         * The same hole with no deactivated session anywhere, so it needs nothing the UI
+         * does not already do. An org admin's `can(share)` survives the org losing its
+         * last living owner, so they can reach the sharing surface on a husk resource
+         * whose only admin grant belongs to someone deactivated.
+         */
+        it("cannot be revoked by an active third party either", async () => {
+          const org = await testApp.createOrganization();
+          const orgOwner = await testApp.createTestUser({ name: "Org Owner" });
+          const orgAdmin = await testApp.createTestUser({ name: "Org Admin" });
+          await testApp.addOrganizationMember(org, orgOwner, "owner");
+          await testApp.addOrganizationMember(org, orgAdmin, "admin");
+
+          const macro = await testApp.createMacro({
+            name: `M ${crypto.randomUUID()}`,
+            createdBy: orgOwner,
+            organizationId: org,
+          });
+          const stepped = await testApp.createTestUser({ name: "Stepped Away" });
+          const grant = await shareAdmin(macro.id, stepped, "macro", orgOwner);
+
+          // Husk the org, then have the grant holder deactivate the ordinary way.
+          await closeAccount(orgOwner);
+          await testApp.database
+            .update(profiles)
+            .set({ activated: false })
+            .where(eq(profiles.userId, stepped));
+
+          const result = await revokeGrant.execute(orgAdmin, "macro", macro.id, grant.id);
+
+          assertFailure(result);
+          expect(result.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+          expect(result.error.message).toContain("last admin");
+          expect(await directGrant(macro.id, stepped, "macro")).toBeDefined();
+        });
+
+        it("is still listed on the collaborators surface, anonymized", async () => {
+          // The list is how the remaining people find out who to ask for a hand-off, so
+          // an anonymized admin still has to appear on it.
+          const { experiment, keeper } = await seedDeactivatedSoleAdmin();
+
+          const listed = await testApp.module
+            .get(ListGrantsUseCase)
+            .execute(keeper, "experiment", experiment.id);
+
+          assertSuccess(listed);
+          const row = listed.value.find((r) => r.kind === "grant" && r.granteeId === keeper);
+          expect(row?.kind).toBe("grant");
+          expect(row?.kind === "grant" && row.role).toBe("admin");
+          expect(row?.grantee.displayName).toBe("Unknown User");
+          // Anonymized, not omitted: the identity is withheld, the row is not.
+          expect(row?.grantee.email).toBeNull();
+        });
+
+        it("is still blocked from closing their account, so the resource has an exit", async () => {
+          // Refused a way to abandon the resource, not left with no way out of it.
+          const { experiment, keeper } = await seedDeactivatedSoleAdmin();
+
+          const blocked = await testApp.module
+            .get(UserRepository)
+            .isOnlyAdminOfAnyResources(keeper);
+          assertSuccess(blocked);
+          expect(blocked.value).toBe(true);
+          expect((await directGrant(experiment.id, keeper)).role).toBe("admin");
+        });
       });
 
       it("agrees with the deletion blocker about who counts as a replacement", async () => {

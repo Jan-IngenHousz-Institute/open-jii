@@ -20,7 +20,7 @@ import {
   users,
   workbooks,
 } from "@repo/database";
-import type { AnyColumn, DbOrTx, SQL } from "@repo/database";
+import type { AnyColumn, DbOrTx, SQL, Transaction } from "@repo/database";
 
 import { AppError } from "../../common/utils/fp-utils";
 
@@ -357,11 +357,9 @@ export interface StaffingGuardedWrite {
 }
 
 /**
- * Whether a user grant's holder can administer with it: activated, not closed. One
- * definition, shared by the staffing invariant and the deletion blocker's escape
- * hatch so they cannot disagree.
- *
- * A missing profile reads as "cannot administer" — deliberately the opposite of
+ * Whether a grant is adequate cover — read by the last-admin count and
+ * {@link findBlockingResources}. Not for waiving the invariant; that is
+ * {@link granteeIsClosedSql}. A missing profile does not count, unlike
  * {@link livingOrgOwnerIdsSql}, since invitations seed grants before onboarding.
  * `EXISTS` not a join, so adding it to a `FOR UPDATE` widens no lock.
  */
@@ -374,13 +372,28 @@ export function granteeCanAdministerSql(granteeIdRef: SQL | AnyColumn): SQL<bool
   )`;
 }
 
+/**
+ * Whether a grant is inert: no profile row, or a closed account. The only condition
+ * that cannot reverse, hence the only one allowed to waive the last-admin invariant —
+ * a deactivated holder can sign back in, so their grant is not inert.
+ */
+export function granteeIsClosedSql(granteeIdRef: SQL | AnyColumn): SQL<boolean> {
+  return sql<boolean>`NOT EXISTS (
+    SELECT 1 FROM ${profiles}
+    WHERE ${profiles.userId} = ${granteeIdRef}
+      AND ${profiles.deletedAt} IS NULL
+  )`;
+}
+
 /** One staffing-tier grant row, as the invariant sees it. */
 export interface StaffingGrantRow {
   id: string;
   granteeType: string;
   granteeId: string;
-  /** Whether this row's holder can administer at all — see {@link granteeCanAdministerSql}. */
+  /** Whether this row counts as adequate cover — see {@link granteeCanAdministerSql}. */
   canAdminister: boolean;
+  /** Whether this row's holder can never act again — see {@link granteeIsClosedSql}. */
+  isClosed: boolean;
 }
 
 /**
@@ -389,8 +402,8 @@ export interface StaffingGrantRow {
  * releases immediately. Every admin-tier row is locked, including holders who
  * cannot administer — whether a row *counts* is
  * {@link assertResourceStaysStaffed}'s question, but the caller still has to lock
- * what it is about to write. `canAdminister` is a scalar subquery so `FOR UPDATE`
- * locks nothing but the grants.
+ * what it is about to write. `canAdminister` and `isClosed` are scalar subqueries so
+ * `FOR UPDATE` locks nothing but the grants.
  */
 export async function lockStaffingGrants(
   tx: DbOrTx,
@@ -403,6 +416,7 @@ export async function lockStaffingGrants(
       granteeType: resourceGrants.granteeType,
       granteeId: resourceGrants.granteeId,
       canAdminister: granteeCanAdministerSql(resourceGrants.granteeId).mapWith(Boolean),
+      isClosed: granteeIsClosedSql(resourceGrants.granteeId).mapWith(Boolean),
     })
     .from(resourceGrants)
     .where(
@@ -451,9 +465,9 @@ export async function assertResourceStaysStaffed(
   // Somebody living owns this resource independently of any grant.
   if (await hasLivingOwningOrgOwner(tx, resourceType, resourceId)) return;
 
-  // Taking away a grant nobody could act on cannot leave the resource any less
-  // administered than it already is.
-  if (!targetGrant.canAdminister) return;
+  // Removing an inert row leaves the resource exactly as administered as before.
+  // Inertness, not the cover standard below — see granteeIsClosedSql.
+  if (targetGrant.isClosed) return;
 
   if (staffing.filter((g) => g.canAdminister).length <= 1) {
     throw AppError.badRequest(
@@ -462,4 +476,145 @@ export async function assertResourceStaysStaffed(
         : `Cannot demote the last admin of the ${resourceType}`,
     );
   }
+}
+
+/** One row of the polymorphic sole-admin queries below. */
+export type BlockingResourceKey = Record<string, unknown> & {
+  resource_type: SharingResourceType;
+  id: string;
+};
+
+/**
+ * Resources whose last answerable person is `userId`. Two prongs:
+ *
+ * - **(a)** the owning org's sole living owner is `userId`, so deleting leaves a husk.
+ * - **(b)** the org is *already* a husk and `userId` holds the only full-control
+ *   grant — this is what stops a hand-off chain breaking.
+ *
+ * Both escape when somebody *else* holds an administrable admin/owner grant. One
+ * polymorphic statement, read by every caller that asks the question — the
+ * pre-flight blocker list, the deletion guard and the deletion hand-off — so none of
+ * them can drift from the others.
+ */
+function blockingResourcesQuery(userId: string) {
+  return sql`
+    WITH r AS (${ALL_STAFFED_RESOURCES})
+    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
+    FROM r
+    WHERE NOT EXISTS (
+            SELECT 1 FROM "resource_grants" g
+            WHERE g."resource_type" = r."resource_type"
+              AND g."resource_id" = r."id"
+              AND g."grantee_type" = 'user'
+              AND g."role" IN ('owner', 'admin')
+              AND g."grantee_id" <> ${userId}
+              AND ${granteeCanAdministerSql(sql`g."grantee_id"`)}
+          )
+      AND (
+            (
+              (SELECT count(*) FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o) = 1
+              AND EXISTS (
+                SELECT 1 FROM (${livingOrgOwnerIdsSql(sql`r."organization_id"`)}) o
+                WHERE o."user_id" = ${userId}
+              )
+            )
+            OR (
+              EXISTS (
+                SELECT 1 FROM "resource_grants" g
+                WHERE g."resource_type" = r."resource_type"
+                  AND g."resource_id" = r."id"
+                  AND g."grantee_type" = 'user'
+                  AND g."grantee_id" = ${userId}
+                  AND g."role" IN ('owner', 'admin')
+              )
+              AND NOT EXISTS (${livingOrgOwnerIdsSql(sql`r."organization_id"`)})
+            )
+          )
+  `;
+}
+
+/**
+ * Everything the sole-admin question has to lock before it decides: the resources
+ * either prong could name. Locking these serializes the decision against a
+ * concurrent sharing write on the same resource — see
+ * {@link lockAndFindBlockingResources}.
+ */
+function lockCandidatesQuery(userId: string) {
+  return sql`
+    WITH r AS (${ALL_STAFFED_RESOURCES})
+    SELECT r."resource_type" AS "resource_type", r."id" AS "id"
+    FROM r
+    WHERE EXISTS (
+            SELECT 1 FROM "organization_members" om
+            WHERE om."organization_id" = r."organization_id"
+              AND om."user_id" = ${userId}
+              AND ${orgRoleIsOwnerSql(sql`om."role"`)}
+          )
+       OR EXISTS (
+            SELECT 1 FROM "resource_grants" g
+            WHERE g."resource_type" = r."resource_type"
+              AND g."resource_id" = r."id"
+              AND g."grantee_type" = 'user'
+              AND g."grantee_id" = ${userId}
+              AND g."role" IN ('owner', 'admin')
+          )
+    ORDER BY r."resource_type", r."id"
+  `;
+}
+
+/**
+ * The sole-admin predicate without locks: the pre-flight read behind the deletion
+ * dialog's blocker list. Raceable on its own, which is why every path that acts on
+ * the answer uses {@link lockAndFindBlockingResources} instead.
+ */
+export async function findBlockingResources(
+  tx: DbOrTx,
+  userId: string,
+): Promise<BlockingResourceKey[]> {
+  return tx.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
+}
+
+/**
+ * Locks the world the sole-admin predicate reads, then answers it: the resources
+ * `userId` is currently the last answerable person for. Must run in a transaction,
+ * or the locks release before the answer is used.
+ *
+ * Locks first, decides second: otherwise a revoke (owner still alive) and that
+ * owner's deletion (a grant still present) would both see a safe world and both
+ * commit, leaving neither. Callers differ only in what they do with the answer —
+ * refuse an account deletion, or refuse a hand-off on a resource that is not
+ * actually blocking one — so the predicate and its locks live here once.
+ */
+export async function lockAndFindBlockingResources(
+  tx: Transaction,
+  userId: string,
+): Promise<BlockingResourceKey[]> {
+  // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
+  //    rows cannot anchor this — a resource owned outright has none. Creation takes
+  //    the same lock, which orders this against an in-flight create.
+  const ownedOrgs = await tx
+    .selectDistinct({ organizationId: organizationMembers.organizationId })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
+      ),
+    )
+    .orderBy(organizationMembers.organizationId);
+
+  for (const { organizationId } of ownedOrgs) {
+    await lockOrgOwnerships(tx, organizationId);
+  }
+
+  // 2. Then per-resource staffing rows, in a fixed global order: one lock per
+  //    resource, so two callers sharing resources could otherwise take them in
+  //    opposite orders and deadlock. Orgs always before grants, so no cycle.
+  const candidates = await tx.execute<BlockingResourceKey>(lockCandidatesQuery(userId));
+  for (const { resource_type, id } of candidates) {
+    await lockStaffingGrants(tx, resource_type, id);
+  }
+
+  // 3. Decide only now, on a world nothing else can still be changing.
+  return tx.execute<BlockingResourceKey>(blockingResourcesQuery(userId));
 }

@@ -516,6 +516,73 @@ describe("ExperimentController", () => {
     });
   });
 
+  /**
+   * The handler does not receive the route params the authorization guard checked; it
+   * receives them merged with the client-supplied payload, payload last — the query
+   * string on a GET, the parsed body otherwise. So a payload key named after a path
+   * param would replace the id that was authorized, and a caller could be checked
+   * against an experiment it may read while being served one it may not. A request
+   * may restate a path param verbatim; anything else is refused. Only reachable over
+   * HTTP, because the merge happens in the request-decoding pipeline.
+   */
+  describe("getExperiment with a query param that shadows the path id", () => {
+    it("is rejected when the query id differs from the path id", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Reachable experiment",
+        userId: testUserId,
+      });
+      // Owned by somebody else and private: the caller is neither an organization
+      // member nor a grantee, so every action on it is denied.
+      const strangerId = await testApp.createTestUser({});
+      const { experiment: offLimits } = await testApp.createExperiment({
+        name: "Off-limits experiment",
+        userId: strangerId,
+        visibility: "private",
+      });
+
+      const response: SuperTestResponse<unknown> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: offLimits.id })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Nothing about the experiment the caller cannot read may leak into the reply.
+      expect(JSON.stringify(response.body)).not.toContain(offLimits.id);
+      expect(JSON.stringify(response.body)).not.toContain(offLimits.name);
+    });
+
+    it("is served normally when the query restates the path id", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Restated id experiment",
+        userId: testUserId,
+      });
+
+      const response: SuperTestResponse<Experiment> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: experiment.id })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.id).toBe(experiment.id);
+    });
+
+    it("is rejected when the query id differs from the path id only in letter case", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Case variant experiment",
+        userId: testUserId,
+      });
+
+      // Postgres would resolve the uppercased uuid to the same row and serve a 200, so
+      // only the strict comparison stops it: a restatement has to be character for
+      // character what the path says.
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: experiment.id.toUpperCase() })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
   describe("getExperimentAccess", () => {
     it("reports read access without granting manage access to an organization member", async () => {
       const { experiment } = await testApp.createExperiment({

@@ -147,6 +147,44 @@ describe("GetDeletionBlockersUseCase", () => {
     expect(result.value).toEqual([]);
   });
 
+  // Keys off the clause about *other people's* grants. A deactivated caller's own
+  // resource is a different clause, and also blocks — pinned in the sharing spec.
+  it("still blocks when the only other admin is deactivated", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Deactivated Other Admin Experiment",
+      userId: testUserId,
+    });
+    const deactivatedAdminId = await testApp.createTestUser({
+      email: "deactivated-other-admin@example.com",
+      activated: false,
+    });
+    await testApp.addExperimentAdmin(experiment.id, deactivatedAdminId);
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({ id: experiment.id });
+  });
+
+  it("still blocks when the only other admin's account is closed", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Closed Other Admin Experiment",
+      userId: testUserId,
+    });
+    const closedAdminId = await testApp.createTestUser({
+      email: "closed-other-admin@example.com",
+      deletedAt: new Date(),
+    });
+    await testApp.addExperimentAdmin(experiment.id, closedAdminId);
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({ id: experiment.id });
+  });
+
   it("lists the experiment's other members as candidates, excluding the user", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Experiment With A Member",

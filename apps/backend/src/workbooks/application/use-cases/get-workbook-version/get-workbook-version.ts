@@ -11,8 +11,13 @@ export class GetWorkbookVersionUseCase {
 
   constructor(private readonly workbookVersionRepository: WorkbookVersionRepository) {}
 
-  async execute(versionId: string): Promise<Result<WorkbookVersionDto>> {
-    const result = await this.workbookVersionRepository.findById(versionId);
+  /**
+   * `workbookId` is the workbook the caller was authorized against, and the lookup
+   * is scoped to it — a version belonging to a different workbook reads as not
+   * found, so the pair in the URL cannot be mixed to reach another workbook's cells.
+   */
+  async execute(versionId: string, workbookId: string): Promise<Result<WorkbookVersionDto>> {
+    const result = await this.workbookVersionRepository.findById(versionId, workbookId);
 
     if (result.isFailure()) {
       return result;
@@ -20,10 +25,11 @@ export class GetWorkbookVersionUseCase {
 
     if (!result.value) {
       this.logger.warn({
-        msg: "Workbook version not found",
+        msg: "Workbook version not found in workbook",
         errorCode: ErrorCodes.WORKBOOK_VERSION_NOT_FOUND,
         operation: "getWorkbookVersion",
         versionId,
+        workbookId,
       });
       return failure(AppError.notFound(`Workbook version with ID ${versionId} not found`));
     }
