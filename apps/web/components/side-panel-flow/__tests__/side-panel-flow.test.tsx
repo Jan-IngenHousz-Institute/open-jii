@@ -129,6 +129,29 @@ vi.mock("../analysis-panel", () => ({
   ),
 }));
 
+vi.mock("../branch-panel", () => ({
+  BranchPanel: ({
+    cell,
+    onChange,
+    disabled,
+  }: {
+    cell: { id: string; type: "branch"; paths: unknown[] };
+    onChange: (cell: { id: string; type: "branch"; paths: unknown[] }) => void;
+    disabled?: boolean;
+  }) => (
+    <div>
+      <span>BranchPanel</span>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange({ ...cell, paths: [...cell.paths, { id: "new-path" }] })}
+      >
+        Apply Branch Change
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("../edge-panel", () => {
   type EdgeId = Edge["id"];
   interface EdgeSidePanelProps {
@@ -415,6 +438,31 @@ describe("<ExperimentSidePanel />", () => {
     expect(props.onNodeDataChange).toHaveBeenCalledWith("nc", {
       ...node.data,
       command: { format: "json", content: '{"cmd":"battery"}' },
+    });
+  });
+
+  it("BranchPanel: reuses the workbook branch editor and propagates changes", async () => {
+    const user = userEvent.setup();
+    const branchCell = {
+      id: "branch-1",
+      type: "branch" as const,
+      isCollapsed: false,
+      paths: [],
+    };
+    const onBranchCellChange = vi.fn();
+    renderPanel({
+      selectedNode: makeNode("branch-1"),
+      nodeType: "BRANCH",
+      branchCell,
+      workbookCells: [branchCell],
+      onBranchCellChange,
+    });
+
+    expect(screen.getByText("BranchPanel")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply Branch Change" }));
+    expect(onBranchCellChange).toHaveBeenCalledWith({
+      ...branchCell,
+      paths: [{ id: "new-path" }],
     });
   });
 

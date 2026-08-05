@@ -45,6 +45,11 @@ import { resolveBranchPathColor } from "../workbook/branch-path-colors";
 import { autoLayout } from "./auto-layout";
 import { BackEdge } from "./back-edge";
 import { FlowMapper } from "./flow-mapper";
+import { WorkbookCanvasModebar } from "./workbook-canvas-modebar";
+import {
+  mergePanelDataIntoWorkbookCell,
+  mergePanelTitleIntoWorkbookCell,
+} from "./workbook-cell-panel-merge";
 
 // Define nodeTypes outside the component to avoid re-creation
 const nodeTypes = ALL_NODE_TYPES.reduce(
@@ -212,10 +217,25 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
       [onNodeSelect],
     );
 
+    const updateDraftCell = useCallback(
+      (nodeId: string, update: (cell: WorkbookCell) => WorkbookCell) => {
+        const currentCells = workbookCellsRef.current;
+        if (!currentCells || !onWorkbookCellsChange) return;
+        const nextCells = currentCells.map((cell) => (cell.id === nodeId ? update(cell) : cell));
+        if (JSON.stringify(nextCells) === JSON.stringify(currentCells)) return;
+        workbookCellsRef.current = nextCells;
+        onWorkbookCellsChange(nextCells);
+      },
+      [onWorkbookCellsChange],
+    );
+
     // Handle node title changes
     const handleTitleChange = useCallback(
       (newTitle: string) => {
         if (selectedNode) {
+          updateDraftCell(selectedNode.id, (cell) =>
+            mergePanelTitleIntoWorkbookCell(cell, newTitle),
+          );
           setNodes((nds) =>
             nds.map((node) =>
               node.id === selectedNode.id
@@ -228,7 +248,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           );
         }
       },
-      [selectedNode, setNodes],
+      [selectedNode, setNodes, updateDraftCell],
     );
 
     // Handle edge updates
@@ -251,6 +271,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Handle node data changes
     const handleNodeDataChange = useCallback(
       (nodeId: string, newData: Record<string, unknown>) => {
+        updateDraftCell(nodeId, (cell) => mergePanelDataIntoWorkbookCell(cell, newData));
         setNodes((nds) =>
           nds.map((node) => (node.id === nodeId ? { ...node, data: newData } : node)),
         );
@@ -259,7 +280,56 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           prevSelected?.id === nodeId ? { ...prevSelected, data: newData } : prevSelected,
         );
       },
-      [setNodes],
+      [setNodes, updateDraftCell],
+    );
+
+    const handleBranchCellChange = useCallback(
+      (updated: BranchCell) => {
+        const currentCells = workbookCellsRef.current;
+        if (!currentCells || !onWorkbookCellsChange) return;
+        const nextCells = currentCells.map((cell) => (cell.id === updated.id ? updated : cell));
+        workbookCellsRef.current = nextCells;
+        onWorkbookCellsChange(nextCells);
+
+        const stepSpecification = {
+          paths: updated.paths.map((path) => ({
+            id: path.id,
+            label: path.label,
+            color: path.color,
+          })),
+          defaultPathId: updated.defaultPathId,
+        };
+        setNodes((current) =>
+          current.map((node) =>
+            node.id === updated.id ? { ...node, data: { ...node.data, stepSpecification } } : node,
+          ),
+        );
+        setSelectedNode((current) =>
+          current?.id === updated.id
+            ? { ...current, data: { ...current.data, stepSpecification } }
+            : current,
+        );
+        setEdges((current) => [
+          ...current.filter(
+            (edge) => !(edge.source === updated.id && edge.data?.kind === "branch"),
+          ),
+          ...updated.paths.flatMap((path) =>
+            path.gotoCellId
+              ? [
+                  {
+                    id: `e-${updated.id}-${path.id}-${path.gotoCellId}`,
+                    source: updated.id,
+                    target: path.gotoCellId,
+                    sourceHandle: path.id,
+                    targetHandle: "in",
+                    data: { kind: "branch", label: path.label },
+                  } satisfies Edge,
+                ]
+              : [],
+          ),
+        ]);
+      },
+      [onWorkbookCellsChange, setEdges, setNodes],
     );
 
     // Edge creation
@@ -288,10 +358,56 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     }, []);
 
     // Pane click (deselect)
-    const onPaneClick = useCallback(() => {
-      setSelectedEdgeId(null);
-      setSelectedNode(null);
-    }, []);
+    const placePendingCell = useCallback(
+      (position: { x: number; y: number }) => {
+        const currentCells = workbookCellsRef.current;
+        if (!pendingCell || !currentCells || !onWorkbookCellsChange) return;
+
+        const insertAt = getWorkbookCellInsertionIndex(currentCells, nodes, position.x);
+        const nextCells = [...currentCells];
+        nextCells.splice(insertAt, 0, pendingCell);
+
+        const graph = cellsToFlowGraph(nextCells);
+        const now = new Date().toISOString();
+        const converted = FlowMapper.toReactFlow({
+          id: "derived-draft",
+          experimentId: initialFlow?.experimentId ?? "derived",
+          graph,
+          createdAt: now,
+          updatedAt: now,
+        });
+        const positionsById = new Map(nodes.map((node) => [node.id, node.position]));
+        setNodes(
+          converted.nodes.map((node) => ({
+            ...node,
+            position:
+              node.id === pendingCell.id ? position : (positionsById.get(node.id) ?? node.position),
+          })),
+        );
+        setEdges(converted.edges);
+        workbookCellsRef.current = nextCells;
+        onWorkbookCellsChange(nextCells);
+        setPendingCell(null);
+        setStructuralError(null);
+      },
+      [initialFlow?.experimentId, nodes, onWorkbookCellsChange, pendingCell, setEdges, setNodes],
+    );
+
+    const onPaneClick = useCallback(
+      (event?: React.MouseEvent) => {
+        if (pendingCell && event) {
+          const position = flowInstanceRef.current?.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+          if (position) placePendingCell(position);
+          return;
+        }
+        setSelectedEdgeId(null);
+        setSelectedNode(null);
+      },
+      [pendingCell, placePendingCell],
+    );
 
     // Handle drag and drop for new nodes
     const handleDrop = useCallback(
@@ -383,6 +499,16 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           nodes={nodes}
           edges={edges}
           isDisabled={isDisabled}
+          branchCell={
+            selectedNode
+              ? (workbookCellsRef.current?.find(
+                  (cell): cell is BranchCell =>
+                    cell.id === selectedNode.id && cell.type === "branch",
+                ) ?? undefined)
+              : undefined
+          }
+          workbookCells={workbookCellsRef.current}
+          onBranchCellChange={isDisabled ? undefined : handleBranchCellChange}
         />
 
         {/* Fullscreen wrapper */}
@@ -412,8 +538,10 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                       isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full",
                       "bg-slate-50/60",
                     )}
-                    onDragOver={isDisabled ? undefined : (e) => e.preventDefault()}
-                    onDrop={isDisabled ? undefined : handleDrop}
+                    onDragOver={
+                      isDisabled || workbookCellsRef.current ? undefined : (e) => e.preventDefault()
+                    }
+                    onDrop={isDisabled || workbookCellsRef.current ? undefined : handleDrop}
                   >
                     {/* Fullscreen controls overlay */}
                     {(repairIssues.length > 0 || structuralError) && (
@@ -464,6 +592,9 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         onConnect={isDisabled ? undefined : onConnect}
                         onEdgeClick={onEdgeClick}
                         onPaneClick={onPaneClick}
+                        onInit={(instance) => {
+                          flowInstanceRef.current = instance;
+                        }}
                         nodeTypes={nodeTypes}
                         edgeTypes={edgeTypes}
                         deleteKeyCode={[]}
@@ -510,8 +641,20 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                       </ReactFlow>
                     </FlowContextProvider>
 
+                    {!isDisabled && workbookCellsRef.current && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 [&_[data-toolbar-shell]]:pointer-events-auto">
+                        <WorkbookCanvasModebar
+                          visible={!selectedNode && !selectedEdgeId}
+                          existingCells={workbookCellsRef.current}
+                          pendingCell={pendingCell}
+                          onArmCell={setPendingCell}
+                          onCursor={() => setPendingCell(null)}
+                        />
+                      </div>
+                    )}
+
                     {/* Overlay legend always, except on small screens and when disabled */}
-                    {!isDisabled && (
+                    {!isDisabled && !workbookCellsRef.current && (
                       <div className="hidden md:block">
                         <LegendFlow overlay />
                       </div>
@@ -521,7 +664,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
               </Card>
 
               {/* Legend below on small screens - hide in disabled mode */}
-              {!isDisabled && (
+              {!isDisabled && !workbookCellsRef.current && (
                 <div className="md:hidden">
                   <LegendFlow />
                 </div>

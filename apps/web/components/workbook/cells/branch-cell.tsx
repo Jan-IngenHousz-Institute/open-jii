@@ -48,7 +48,7 @@ import { CellWrapper } from "../cell-wrapper";
 interface BranchCellProps {
   cell: BranchCellType;
   onUpdate: (cell: BranchCellType) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onRun?: () => void;
   /** All cells in the workbook - used to populate source/target dropdowns */
   allCells?: WorkbookCell[];
