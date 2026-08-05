@@ -1,3 +1,6 @@
+import { FEATURE_FLAGS } from "@repo/analytics";
+
+import { AnalyticsAdapter } from "../../../../common/modules/analytics/analytics.adapter";
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
@@ -9,6 +12,7 @@ describe("PublishVersionUseCase", () => {
   let useCase: PublishVersionUseCase;
   let workbookRepo: WorkbookRepository;
   let versionRepo: WorkbookVersionRepository;
+  let analyticsAdapter: AnalyticsAdapter;
   let userId: string;
 
   beforeAll(async () => {
@@ -21,6 +25,7 @@ describe("PublishVersionUseCase", () => {
     useCase = testApp.module.get(PublishVersionUseCase);
     workbookRepo = testApp.module.get(WorkbookRepository);
     versionRepo = testApp.module.get(WorkbookVersionRepository);
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
   });
 
   afterEach(() => {
@@ -150,6 +155,7 @@ describe("PublishVersionUseCase", () => {
   });
 
   it("snapshots protocols and macros referenced only inside a parallel lane", async () => {
+    const flagSpy = vi.spyOn(analyticsAdapter, "isFeatureFlagEnabled").mockResolvedValue(true);
     const protocol = await testApp.createProtocol({
       name: "Nested protocol",
       code: [{ pulses: [10, 20] }],
@@ -201,5 +207,40 @@ describe("PublishVersionUseCase", () => {
     assertSuccess(result);
     expect(result.value.entitySnapshots.protocols[protocol.id].code).toEqual(protocol.code);
     expect(result.value.entitySnapshots.macros[macro.id].code).toBe(macro.code);
+    expect(flagSpy).toHaveBeenCalledWith(FEATURE_FLAGS.WORKBOOK_PARALLEL_PUBLISH, userId);
+    flagSpy.mockRestore();
+  });
+
+  it("refuses to publish a parallel workbook while the default-off gate is disabled", async () => {
+    const flagSpy = vi.spyOn(analyticsAdapter, "isFeatureFlagEnabled").mockResolvedValue(false);
+    const workbook = await testApp.createWorkbook({
+      name: "Gated container",
+      createdBy: userId,
+      cells: [
+        {
+          id: "parallel-1",
+          type: "parallel",
+          name: "device_lanes",
+          defaultLaneId: "lane-1",
+          isCollapsed: false,
+          lanes: [
+            {
+              id: "lane-1",
+              label: "Lane 1",
+              color: "#005E5E",
+              conditions: [],
+              body: [{ id: "note", type: "markdown", isCollapsed: false, content: "inside" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("WORKBOOK_PARALLEL_PUBLISH_DISABLED");
+    expect(await versionRepo.getLatestVersion(workbook.id)).toMatchObject({ value: null });
+    flagSpy.mockRestore();
   });
 });

@@ -2,6 +2,11 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import {
+  WORKBOOK_CAPABILITIES_HEADER,
+  WORKBOOK_PARALLEL_CAPABILITY,
+} from "@repo/api/domains/workbook/workbook-capabilities";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
@@ -73,6 +78,23 @@ describe("WorkbookController", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
+  });
+
+  const parallelCell = (): WorkbookCell => ({
+    id: "parallel-1",
+    type: "parallel",
+    name: "device_lanes",
+    isCollapsed: false,
+    defaultLaneId: "lane-1",
+    lanes: [
+      {
+        id: "lane-1",
+        label: "Lane 1",
+        color: "#005E5E",
+        conditions: [],
+        body: [{ id: "inside", type: "markdown", isCollapsed: false, content: "inside" }],
+      },
+    ],
   });
 
   describe("createWorkbook", () => {
@@ -335,6 +357,42 @@ describe("WorkbookController", () => {
         versionId: faker.string.uuid(),
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("returns an empty 426 for container content when the header is absent", async () => {
+      const version = mockVersion({ cells: [parallelCell()] });
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(success(version));
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: version.workbookId,
+        versionId: version.id,
+      });
+
+      const response = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.UPGRADE_REQUIRED);
+
+      expect(response.text).toBe("");
+      expect(response.body).toEqual({});
+      expect(response.text).not.toContain("parallel-1");
+      expect(response.text).not.toContain("inside");
+    });
+
+    it("returns container content only when the exact capability token is declared", async () => {
+      const version = mockVersion({ cells: [parallelCell()] });
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(success(version));
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: version.workbookId,
+        versionId: version.id,
+      });
+
+      const response = await testApp
+        .get(path)
+        .set(WORKBOOK_CAPABILITIES_HEADER, WORKBOOK_PARALLEL_CAPABILITY)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ cells: [{ id: "parallel-1", type: "parallel" }] });
     });
   });
 

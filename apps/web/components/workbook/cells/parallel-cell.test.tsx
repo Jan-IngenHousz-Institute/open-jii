@@ -84,6 +84,12 @@ describe("ParallelCellComponent", () => {
     expect(update.lanes[2]?.id).not.toBe("");
   });
 
+  it("states the web-only mobile limitation in the authoring surface", () => {
+    render(<ParallelCellComponent cell={container()} onUpdate={vi.fn()} allCells={[]} />);
+
+    expect(screen.getByText(/not supported in the mobile app yet/i)).toBeInTheDocument();
+  });
+
   it("threads a pending lane question through the recursive cell renderer", async () => {
     const cell = container();
     cell.isCollapsed = true;

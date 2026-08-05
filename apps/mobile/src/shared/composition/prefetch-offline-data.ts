@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { guardMobileWorkbookContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import { orpc } from "~/shared/api/orpc";
 import { createLogger } from "~/shared/observability/logger";
 
@@ -85,14 +86,16 @@ async function _prefetchOfflineData(
       if (!workbookId || !workbookVersionId) {
         throw new Error(`Experiment ${experiment.id} has no workbook version`);
       }
-      await queryClient.fetchQuery(
+      const version = await queryClient.fetchQuery(
         orpc.workbooks.getWorkbookVersion.queryOptions({
           input: { id: workbookId, versionId: workbookVersionId },
           // Immutable pinned version: reuse the cache rather than refetch.
           staleTime: Infinity,
           meta: { suppressToast: true },
+          select: (value) => guardMobileWorkbookContent(value),
         }),
       );
+      guardMobileWorkbookContent(version);
     }),
   );
 

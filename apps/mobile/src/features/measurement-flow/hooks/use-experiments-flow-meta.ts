@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { estimateFlowDuration } from "~/features/measurement-flow/utils/estimate-flow-duration";
 import { orderFlowNodes } from "~/features/measurement-flow/utils/order-flow-nodes";
+import { guardMobileFlowContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import { orpc } from "~/shared/api/orpc";
 import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
@@ -25,7 +26,11 @@ export function useExperimentsFlowMeta(
 ): Record<string, ExperimentFlowMeta> {
   const results = useQueries({
     queries: experimentIds.map((id) =>
-      orpc.experiments.getFlow.queryOptions({ input: { id }, enabled: !!id }),
+      orpc.experiments.getFlow.queryOptions({
+        input: { id },
+        enabled: !!id,
+        select: (value) => guardMobileFlowContent(value),
+      }),
     ),
   });
 

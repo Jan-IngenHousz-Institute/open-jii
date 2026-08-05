@@ -92,6 +92,7 @@ export enum ErrorCodes {
   WORKBOOK_NOT_FOUND = "WORKBOOK_NOT_FOUND", // Workbook not found
   WORKBOOK_VERSION_NOT_FOUND = "WORKBOOK_VERSION_NOT_FOUND", // Workbook version not found
   WORKBOOK_VERSION_CREATE_FAILED = "WORKBOOK_VERSION_CREATE_FAILED", // Failed to create workbook version
+  WORKBOOK_PARALLEL_PUBLISH_DISABLED = "WORKBOOK_PARALLEL_PUBLISH_DISABLED", // Parallel version gate is off
 
   // ==================== Domain Operations - Protocols ====================
   // Location: src/protocols/application/use-cases/

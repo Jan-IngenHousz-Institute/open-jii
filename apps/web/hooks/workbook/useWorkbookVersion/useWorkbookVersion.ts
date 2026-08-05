@@ -1,4 +1,5 @@
 import { orpc } from "@/lib/orpc";
+import { guardWebWorkbookContent } from "@/lib/workbook-capabilities";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
@@ -19,6 +20,7 @@ export function useWorkbookVersion(
       // caller staring at a wrong interim state for the length of the backoff.
       retry: shouldRetryQuery,
       enabled,
+      select: (value) => guardWebWorkbookContent(value),
     }),
   );
 

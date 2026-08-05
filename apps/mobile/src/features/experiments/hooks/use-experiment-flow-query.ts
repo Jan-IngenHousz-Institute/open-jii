@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { guardMobileWorkbookContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import { orpc } from "~/shared/api/orpc";
 
 /**
@@ -17,6 +18,7 @@ export function useWorkbookVersionQuery(
       input: { id: workbookId ?? "", versionId: workbookVersionId ?? "" },
       enabled: !!workbookId && !!workbookVersionId,
       networkMode: "offlineFirst",
+      select: (value) => guardMobileWorkbookContent(value),
     }),
   );
 }

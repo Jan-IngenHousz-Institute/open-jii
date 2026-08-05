@@ -1,6 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import {
+  WORKBOOK_CAPABILITIES_HEADER,
+  WORKBOOK_PARALLEL_CAPABILITY,
+} from "@repo/api/domains/workbook/workbook-capabilities";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { TestHarness } from "../../test/test-harness";
@@ -9,6 +13,31 @@ describe("ExperimentFlowsController", () => {
   const testApp = TestHarness.App;
   let ownerId: string;
   let memberId: string;
+
+  const parallelGraph = () => ({
+    nodes: [
+      {
+        id: "parallel-1",
+        type: "parallel" as const,
+        name: "device_lanes",
+        isStart: true,
+        content: {
+          name: "device_lanes",
+          defaultLaneId: "lane-1",
+          lanes: [
+            {
+              id: "lane-1",
+              label: "Lane 1",
+              color: "#005E5E",
+              conditions: [],
+              body: [{ id: "inside", type: "markdown", isCollapsed: false, content: "inside" }],
+            },
+          ],
+        },
+      },
+    ],
+    edges: [],
+  });
 
   beforeAll(async () => {
     await testApp.setup();
@@ -45,6 +74,32 @@ describe("ExperimentFlowsController", () => {
       const path = testApp.resolveOrpcPath(contract.experiments.getFlow, { id: experiment.id });
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
+
+    it("returns an empty 426 for a stored container graph unless capability is declared", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      const path = testApp.resolveOrpcPath(contract.experiments.getFlow, { id: experiment.id });
+      await testApp
+        .post(path)
+        .set(WORKBOOK_CAPABILITIES_HEADER, WORKBOOK_PARALLEL_CAPABILITY)
+        .withAuth(ownerId)
+        .send(parallelGraph())
+        .expect(StatusCodes.CREATED);
+
+      const refusal = await testApp
+        .get(path)
+        .withAuth(ownerId)
+        .expect(StatusCodes.UPGRADE_REQUIRED);
+      expect(refusal.text).toBe("");
+      expect(refusal.body).toEqual({});
+      expect(refusal.text).not.toContain("parallel-1");
+      expect(refusal.text).not.toContain("inside");
+
+      await testApp
+        .get(path)
+        .set(WORKBOOK_CAPABILITIES_HEADER, WORKBOOK_PARALLEL_CAPABILITY)
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+    });
   });
 
   describe("POST /api/v1/experiments/:id/flow", () => {
@@ -65,6 +120,25 @@ describe("ExperimentFlowsController", () => {
       const getRes = await testApp.get(getPath).withAuth(ownerId).expect(StatusCodes.OK);
       const getResBody = getRes.body as { graph: typeof body };
       expect(getResBody.graph).toEqual(body);
+    });
+
+    it("refuses a container graph before mutation when the capability header is absent", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      const path = testApp.resolveOrpcPath(contract.experiments.createFlow, {
+        id: experiment.id,
+      });
+
+      const refusal = await testApp
+        .post(path)
+        .withAuth(ownerId)
+        .send(parallelGraph())
+        .expect(StatusCodes.UPGRADE_REQUIRED);
+      expect(refusal.text).toBe("");
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getFlow, { id: experiment.id }))
+        .withAuth(ownerId)
+        .expect(StatusCodes.NOT_FOUND);
     });
 
     it("returns 403 when non-admin members try to create", async () => {

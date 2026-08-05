@@ -9,6 +9,7 @@ export const FEATURE_FLAGS = {
   EXPERIMENT_DELETION: "experiment-deletion",
   MACRO_DELETION: "macro-deletion",
   WORKBOOK_DELETION: "workbook-deletion",
+  WORKBOOK_PARALLEL_PUBLISH: "workbook-parallel-publish",
   IOT_DEVICES: "iot-devices",
 } as const;
 
@@ -25,5 +26,6 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.EXPERIMENT_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.MACRO_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
+  [FEATURE_FLAGS.WORKBOOK_PARALLEL_PUBLISH]: false, // Web-only until explicitly released
   [FEATURE_FLAGS.IOT_DEVICES]: false, // Device registry & certificates hidden until released
 };

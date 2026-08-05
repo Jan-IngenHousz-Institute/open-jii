@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { guardMobileWorkbookContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import { orpc } from "~/shared/api/orpc";
 
 interface ExperimentRef {
@@ -46,15 +47,17 @@ async function precacheExperimentWorkbookFn(
   }
 
   const { workbookId, workbookVersionId } = ref;
-  await queryClient.fetchQuery(
+  const version = await queryClient.fetchQuery(
     orpc.workbooks.getWorkbookVersion.queryOptions({
       input: { id: workbookId, versionId: workbookVersionId },
       meta: { suppressToast: true },
       // A pinned version is immutable, so reuse the cache instead of refetching
       // (a stale refetch would fail offline even with the version already cached).
       staleTime: Infinity,
+      select: (value) => guardMobileWorkbookContent(value),
     }),
   );
+  guardMobileWorkbookContent(version);
 
   return { workbookVersionId };
 }

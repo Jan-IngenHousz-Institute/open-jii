@@ -166,6 +166,11 @@ export function ParallelCellComponent({
       headerBadges={<span className="text-xs text-[#68737B]">{cell.lanes.length} lanes</span>}
     >
       <div className="space-y-4">
+        {!readOnly && (
+          <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Parallel containers run on the web only and are not supported in the mobile app yet.
+          </p>
+        )}
         <div className="grid gap-2 sm:grid-cols-2">
           <Input
             aria-label="Container name"

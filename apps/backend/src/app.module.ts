@@ -59,6 +59,16 @@ const orpcLogger = new Logger("ORPC");
     ORPCModule.forRoot({
       interceptors: [createOrpcErrorLoggingInterceptor(orpcLogger)],
       plugins: [new RethrowHandlerPlugin({ filter: (error) => !(error instanceof ORPCError) })],
+      // Capability refusals intentionally disclose no serialized workbook or
+      // graph payload (and no error envelope): old clients receive only 426.
+      sendResponseInterceptors: [
+        (options) => {
+          if (options.standardResponse.status === 426) {
+            options.standardResponse.body = undefined;
+          }
+          return options.next();
+        },
+      ],
     }),
     AnalyticsModule,
     AuthorizationModule,

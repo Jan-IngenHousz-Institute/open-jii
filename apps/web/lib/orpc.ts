@@ -5,10 +5,17 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { env } from "~/env";
 
 import { contract } from "@repo/api/contract";
+import {
+  WORKBOOK_CAPABILITIES_HEADER,
+  WORKBOOK_PARALLEL_CAPABILITY,
+} from "@repo/api/domains/workbook/workbook-capabilities";
 
 const link = new OpenAPILink(contract, {
   url: env.NEXT_PUBLIC_API_URL,
-  headers: () => ({ "x-app-source": "orpc" }),
+  headers: () => ({
+    "x-app-source": "orpc",
+    [WORKBOOK_CAPABILITIES_HEADER]: WORKBOOK_PARALLEL_CAPABILITY,
+  }),
   // Send the session cookie with every request (browser-managed); oRPC throws
   // an ORPCError on >= 400, which hooks narrow via `getOrpcError`.
   fetch: (request, init) => fetch(request, { ...init, credentials: "include" }),

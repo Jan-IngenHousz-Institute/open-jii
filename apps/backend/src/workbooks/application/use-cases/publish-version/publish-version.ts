@@ -1,5 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
+import { hasParallelWorkbookCells } from "@repo/api/domains/workbook/workbook-capabilities";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
@@ -10,6 +12,8 @@ import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import type { WorkbookVersionDto } from "../../../core/models/workbook-version.model";
+import { WORKBOOK_ANALYTICS_PORT } from "../../../core/ports/analytics.port";
+import type { WorkbookAnalyticsPort } from "../../../core/ports/analytics.port";
 import { WorkbookVersionRepository } from "../../../core/repositories/workbook-version.repository";
 import { WorkbookRepository } from "../../../core/repositories/workbook.repository";
 
@@ -23,6 +27,8 @@ export class PublishVersionUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
     private readonly authz: AuthorizationService,
+    @Inject(WORKBOOK_ANALYTICS_PORT)
+    private readonly analyticsPort: WorkbookAnalyticsPort,
   ) {}
 
   // Always mints a new version. Callers gate via IsWorkbookUpgradableUseCase; reuse the latest if undrifted.
@@ -66,11 +72,26 @@ export class PublishVersionUseCase {
       );
     }
 
+    const cells = workbook.cells as WorkbookCell[];
+    if (
+      hasParallelWorkbookCells(cells) &&
+      !(await this.analyticsPort.isFeatureFlagEnabled(
+        FEATURE_FLAGS.WORKBOOK_PARALLEL_PUBLISH,
+        userId,
+      ))
+    ) {
+      return failure(
+        AppError.forbidden(
+          "Publishing parallel container workbooks is not enabled",
+          ErrorCodes.WORKBOOK_PARALLEL_PUBLISH_DISABLED,
+        ),
+      );
+    }
+
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
     if (latestResult.isFailure()) return latestResult;
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
-    const cells = workbook.cells as WorkbookCell[];
     const cellTree = walkWorkbookCells(cells).map(({ cell }) => cell);
     const protocolIds = [
       ...new Set(cellTree.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),

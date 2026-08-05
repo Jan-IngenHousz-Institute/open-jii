@@ -1,4 +1,5 @@
 import { orpc } from "@/lib/orpc";
+import { guardWebWorkbookContent } from "@/lib/workbook-capabilities";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
@@ -10,6 +11,7 @@ export function useWorkbook(id: string, options?: { enabled?: boolean }) {
       input: { id },
       retry: shouldRetryQuery,
       enabled,
+      select: (value) => guardWebWorkbookContent(value),
     }),
   );
 

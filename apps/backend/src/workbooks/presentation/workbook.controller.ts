@@ -1,8 +1,9 @@
-import { Controller, Logger } from "@nestjs/common";
+import { Controller, Headers, Logger } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
+import { WORKBOOK_CAPABILITIES_HEADER } from "@repo/api/domains/workbook/workbook-capabilities";
 import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -12,6 +13,7 @@ import { resolveResourceCapabilities } from "../../authorization/resource-capabi
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { requireWorkbookCellsCapability } from "../../common/utils/workbook-capabilities";
 import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
@@ -40,8 +42,12 @@ export class WorkbookController {
 
   @CanCreateInOrg()
   @Implement(workbookContract.createWorkbook)
-  createWorkbook(@Session() session: UserSession) {
+  createWorkbook(
+    @Session() session: UserSession,
+    @Headers(WORKBOOK_CAPABILITIES_HEADER) capabilityHeader?: string,
+  ) {
     return implement(workbookContract.createWorkbook).handler(async ({ input }) => {
+      if (input.cells) requireWorkbookCellsCapability(input.cells, capabilityHeader);
       const result = await this.createWorkbookUseCase.execute(
         input as CreateWorkbookDto,
         session.user.id,
@@ -49,6 +55,7 @@ export class WorkbookController {
       );
 
       if (result.isSuccess()) {
+        requireWorkbookCellsCapability(result.value.cells, capabilityHeader);
         return formatDates(result.value);
       }
 
@@ -58,11 +65,15 @@ export class WorkbookController {
 
   @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbook)
-  getWorkbook(@Session() session: UserSession) {
+  getWorkbook(
+    @Session() session: UserSession,
+    @Headers(WORKBOOK_CAPABILITIES_HEADER) capabilityHeader?: string,
+  ) {
     return implement(workbookContract.getWorkbook).handler(async ({ input }) => {
       const result = await this.getWorkbookUseCase.execute(input.id);
 
       if (isSuccess(result)) {
+        requireWorkbookCellsCapability(result.value.cells, capabilityHeader);
         // See the macro controller: capabilities drive capability-gated UI.
         const capabilities = await resolveResourceCapabilities(
           this.authz,
@@ -86,9 +97,7 @@ export class WorkbookController {
         userId: session.user.id,
       });
 
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
+      if (result.isSuccess()) return formatDatesList(result.value);
 
       return throwOrpcFailure(result, this.logger);
     });
@@ -96,9 +105,13 @@ export class WorkbookController {
 
   @CanAccess({ resource: "workbook", action: "update" })
   @Implement(workbookContract.updateWorkbook)
-  updateWorkbook(@Session() session: UserSession) {
+  updateWorkbook(
+    @Session() session: UserSession,
+    @Headers(WORKBOOK_CAPABILITIES_HEADER) capabilityHeader?: string,
+  ) {
     return implement(workbookContract.updateWorkbook).handler(async ({ input }) => {
       const { id, ...body } = input;
+      if (body.cells) requireWorkbookCellsCapability(body.cells, capabilityHeader);
       const result = await this.updateWorkbookUseCase.execute(
         id,
         body as UpdateWorkbookDto,
@@ -106,6 +119,7 @@ export class WorkbookController {
       );
 
       if (result.isSuccess()) {
+        requireWorkbookCellsCapability(result.value.cells, capabilityHeader);
         return formatDates(result.value);
       }
 
@@ -159,11 +173,12 @@ export class WorkbookController {
 
   @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbookVersion)
-  getWorkbookVersion() {
+  getWorkbookVersion(@Headers(WORKBOOK_CAPABILITIES_HEADER) capabilityHeader?: string) {
     return implement(workbookContract.getWorkbookVersion).handler(async ({ input }) => {
       const result = await this.getWorkbookVersionUseCase.execute(input.versionId, input.id);
 
       if (result.isSuccess()) {
+        requireWorkbookCellsCapability(result.value.cells, capabilityHeader);
         return formatDates(result.value);
       }
 
