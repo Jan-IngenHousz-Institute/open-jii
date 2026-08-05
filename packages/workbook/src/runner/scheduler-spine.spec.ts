@@ -142,15 +142,24 @@ describe("scheduler spine: two-effect lifecycle matrix", () => {
 });
 
 describe("scheduler spine: ownership and routing", () => {
-  it("never advances a completed track into a foreign lane body", () => {
-    const { started, effects } = twoCommands("flow");
-    const step = transition(started.state, commandCompletion(effects[0]));
+  it("rejects a non-main track without a lane body before it can execute a root cell", () => {
+    const state = spawnTracks(
+      createInitialState({ cells: [commandCell("root-command")], mode: "flow" }),
+      [
+        {
+          id: "lane-A",
+          laneId: "A",
+          deviceIds: ["dev-A"],
+          cellId: "root-command",
+        },
+      ],
+    );
+
+    const step = scheduleTracks(state, ["lane-A"]);
 
     expect(step.effects).toEqual([]);
-    expect(step.state.tracks["lane-A"].status).toBe("done");
-    expect(Object.values(step.state.inFlight)).toEqual([
-      expect.objectContaining({ trackId: "lane-B", cellId: "cB" }),
-    ]);
+    expect(step.state.fatalReason).toBe("non-main track lane-A requires a non-root body");
+    expect(step.state.cellRuns["root-command"]).toBeUndefined();
   });
 
   it("chains protocol resolution to a command on the same track and subset", () => {
@@ -342,7 +351,7 @@ describe("scheduler spine: ownership and routing", () => {
     expect(step.state.cellRuns.qB?.executionOrder).toEqual([2]);
   });
 
-  it("parks a waiting-human sibling so a late answer cannot launch work after STOP", () => {
+  it("stores a stopped lane answer and launches its next cell only after explicit resume", () => {
     const cells = laneWorkbook([
       { id: "A", body: [commandCell("cA")] },
       { id: "B", body: [questionCell("qB", "B?"), commandCell("cB")] },
@@ -370,11 +379,11 @@ describe("scheduler spine: ownership and routing", () => {
 
     step = transition(step.state, { type: "STOP" });
     expect(step.state.tracks["lane-B"].pendingInteraction).toEqual({
-      kind: "resume",
+      kind: "question",
       cellId: "qB",
     });
     step = transition(step.state, commandCompletion(effect));
-    expect(step.state.stopRequested).toBe(false);
+    expect(step.state.stopRequested).toBe(true);
 
     step = transition(step.state, {
       type: "ANSWER",
@@ -384,10 +393,18 @@ describe("scheduler spine: ownership and routing", () => {
     });
     expect(step.effects).toEqual([]);
     expect(step.state.cellRuns.cB).toBeUndefined();
-    expect(step.state.tracks["lane-B"].pendingInteraction).toEqual({
-      kind: "resume",
-      cellId: "qB",
+    expect(step.state.answersByCycle[0].qB).toBe("too late");
+    expect(step.state.tracks["lane-B"]).toMatchObject({
+      status: "active",
+      pendingInteraction: null,
+      cursor: { cellId: "cB" },
     });
+
+    step = transition(step.state, { type: "RUN_ALL" });
+    expect(step.state.stopRequested).toBe(false);
+    expect(step.effects).toEqual([
+      expect.objectContaining({ kind: "runCommand", trackId: "lane-B", cellId: "cB" }),
+    ]);
   });
 
   it("reserves lane/container retry targets noisily", () => {

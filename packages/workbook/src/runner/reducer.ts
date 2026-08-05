@@ -75,11 +75,17 @@ export function scheduleTracks(state: RunnerState, trackIds: readonly string[]):
 
 function finish(result: TransitionResult, finalizeStopped = false): TransitionResult {
   let state = result.state;
+  const hasLiveHumanInteraction = Object.values(state.tracks).some(
+    (track) =>
+      track.pendingInteraction?.kind === "question" ||
+      track.pendingInteraction?.kind === "instruction",
+  );
   if (
     finalizeStopped &&
     state.stopRequested &&
     Object.keys(state.inFlight).length === 0 &&
-    Object.keys(state.cancellingEffectIds).length === 0
+    Object.keys(state.cancellingEffectIds).length === 0 &&
+    !hasLiveHumanInteraction
   ) {
     state = {
       ...trace(state, "all stopped effects drained"),
@@ -130,6 +136,22 @@ function handleAnswer(
   let next = recording.state;
   if (awaitedHere) {
     next = clearTrackInteraction(next, trackId);
+    if (next.stopRequested) {
+      const stoppedTrack = getTrack(next, trackId);
+      return {
+        state: setTrack(trace(next, `track ${trackId} answer stored while stopped`), {
+          ...stoppedTrack,
+          status: "active",
+          cursor: {
+            ...stoppedTrack.cursor,
+            cellId: nextTrackCellId(next, trackId, cellId),
+            enteredVia: "forward",
+            atStart: false,
+          },
+        }),
+        effects: [],
+      };
+    }
     return landOn(next, nextTrackCellId(next, trackId, cellId), "forward", trackId);
   }
   return { state: next, effects: [] };
@@ -172,26 +194,11 @@ function handleStop(state: RunnerState): TransitionResult {
   if (!state.runAllActive && !hasActiveWork && !hasLiveHumanInteraction) {
     return ignored(state, "STOP");
   }
-  const tracks = Object.fromEntries(
-    Object.entries(state.tracks).map(([trackId, track]) => {
-      const interaction = track.pendingInteraction;
-      return [
-        trackId,
-        interaction?.kind === "question" || interaction?.kind === "instruction"
-          ? {
-              ...track,
-              pendingInteraction: { kind: "resume" as const, cellId: interaction.cellId },
-            }
-          : track,
-      ];
-    }),
-  );
   return {
     state: {
-      ...trace(state, "all human interactions parked for STOP"),
-      tracks,
+      ...trace(state, "STOP gated new work; human interactions remain live"),
       runAllActive: hasActiveWork ? state.runAllActive : false,
-      stopRequested: hasActiveWork,
+      stopRequested: hasActiveWork || hasLiveHumanInteraction,
     },
     effects: [],
   };
@@ -512,6 +519,20 @@ function handleSetDevices(state: RunnerState, devices: RunnerState["devices"]): 
 function handleRunAll(state: RunnerState): TransitionResult {
   if (Object.keys(state.inFlight).length > 0 || Object.keys(state.cancellingEffectIds).length > 0) {
     return ignored(state, "RUN_ALL");
+  }
+  const resumableTrackIds = Object.keys(state.tracks).filter(
+    (trackId) => trackId !== MAIN_TRACK_ID,
+  );
+  if (state.stopRequested && resumableTrackIds.length > 0) {
+    const resumed = {
+      ...trace(
+        state,
+        `parallel attempt ${state.activeContainerAttemptId ?? "tracks"} explicitly resumed`,
+      ),
+      stopRequested: false,
+      runAllActive: true,
+    };
+    return scheduleTracks(resumed, resumableTrackIds);
   }
   const main = mainTrack(state);
   let next: RunnerState = {

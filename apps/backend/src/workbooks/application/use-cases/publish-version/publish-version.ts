@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -70,11 +71,12 @@ export class PublishVersionUseCase {
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
 
     const cells = workbook.cells as WorkbookCell[];
+    const cellTree = walkWorkbookCells(cells).map(({ cell }) => cell);
     const protocolIds = [
-      ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
+      ...new Set(cellTree.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
     ];
     const macroIds = [
-      ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
+      ...new Set(cellTree.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
 
     // A version snapshots the full code of every referenced protocol/macro, and the

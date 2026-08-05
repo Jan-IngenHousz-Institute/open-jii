@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { inArray, workbookVersions } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -70,7 +71,7 @@ export class MacroSnapshotRepository {
     const bundle: MacroSnapshotBundle = {};
     const cells = row.cells as WorkbookCell[];
     const snapshots = row.entitySnapshots as Partial<EntitySnapshots>;
-    for (const cell of cells) {
+    for (const { cell } of walkWorkbookCells(cells)) {
       if (cell.type !== "macro") continue;
       const macroId = cell.payload.macroId;
       const snapshot = snapshots.macros?.[macroId];

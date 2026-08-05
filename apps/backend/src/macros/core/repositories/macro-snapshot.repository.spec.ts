@@ -65,6 +65,55 @@ describe("MacroSnapshotRepository", () => {
     });
   });
 
+  it("resolves a macro referenced only inside a parallel lane", async () => {
+    const macroId = faker.string.uuid();
+    const workbook = await testApp.createWorkbook({ name: "Nested macro", createdBy: userId });
+    const versionResult = await workbookVersionRepository.create({
+      workbookId: workbook.id,
+      version: 1,
+      cells: [
+        {
+          id: "parallel-1",
+          type: "parallel",
+          name: "device_lanes",
+          defaultLaneId: "lane-1",
+          isCollapsed: false,
+          lanes: [
+            {
+              id: "lane-1",
+              label: "Lane 1",
+              color: "#005E5E",
+              conditions: [],
+              body: [
+                {
+                  id: "macro-cell",
+                  type: "macro",
+                  isCollapsed: false,
+                  payload: { macroId, language: "python", name: "Pinned nested analysis" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      metadata: {},
+      entitySnapshots: {
+        protocols: {},
+        macros: { [macroId]: { code: "cGlubmVkLW5lc3RlZC1jb2Rl" } },
+      },
+      createdBy: userId,
+    });
+    assertSuccess(versionResult);
+
+    const result = await repository.findScriptsByVersionIds([versionResult.value.id]);
+
+    assertSuccess(result);
+    expect(result.value.get(macroSnapshotKey(versionResult.value.id, macroId))).toMatchObject({
+      name: "Pinned nested analysis",
+      code: "cGlubmVkLW5lc3RlZC1jb2Rl",
+    });
+  });
+
   it("does not invent a script when a referenced snapshot is missing", async () => {
     const macroId = faker.string.uuid();
     const workbook = await testApp.createWorkbook({ name: "Old workbook", createdBy: userId });

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { mapWorkbookCellTree, walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { stableStringify } from "../../../../common/utils/stable-json";
@@ -22,11 +23,13 @@ const RUNTIME_FIELDS = new Set([
 // Output cells are runtime artifacts produced by execution; they are not part
 // of the workbook's design and must not register as "upgradable" drift.
 const designOf = (cells: WorkbookCell[]) =>
-  cells
-    .filter((cell) => cell.type !== "output")
-    .map((cell) =>
-      Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_FIELDS.has(k))),
-    );
+  mapWorkbookCellTree(cells, ({ cell }) =>
+    cell.type === "output"
+      ? null
+      : (Object.fromEntries(
+          Object.entries(cell).filter(([key]) => !RUNTIME_FIELDS.has(key)),
+        ) as WorkbookCell),
+  );
 
 @Injectable()
 export class IsWorkbookUpgradableUseCase {
@@ -55,13 +58,12 @@ export class IsWorkbookUpgradableUseCase {
       stableStringify(designOf(workbook.cells)) !== stableStringify(designOf(latest.cells));
     if (cellsChanged) return success(true);
 
+    const cells = walkWorkbookCells(workbook.cells).map(({ cell }) => cell);
     const protocolIds = [
-      ...new Set(
-        workbook.cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : [])),
-      ),
+      ...new Set(cells.flatMap((c) => (c.type === "protocol" ? [c.payload.protocolId] : []))),
     ];
     const macroIds = [
-      ...new Set(workbook.cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
+      ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
 
     const [protocolsResult, macrosResult] = await Promise.all([

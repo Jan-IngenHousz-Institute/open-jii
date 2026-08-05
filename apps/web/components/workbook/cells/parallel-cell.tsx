@@ -111,6 +111,9 @@ export function ParallelCellComponent({
 }: ParallelCellProps) {
   const defaultResolution = resolveParallelDefaultLane(cell);
   const defaultLane = defaultResolution.kind === "resolved" ? defaultResolution.lane : undefined;
+  const hasPromptedLaneQuestion =
+    promptedQuestionId !== undefined &&
+    cell.lanes.some((lane) => lane.body.some((bodyCell) => bodyCell.id === promptedQuestionId));
 
   const updateLane = (laneIndex: number, update: (lane: ParallelLane) => ParallelLane) => {
     onUpdate({
@@ -153,7 +156,7 @@ export function ParallelCellComponent({
       icon={<Layers3 className="h-3.5 w-3.5" />}
       label="Parallel"
       accentColor="#119DA4"
-      isCollapsed={cell.isCollapsed}
+      isCollapsed={hasPromptedLaneQuestion ? false : cell.isCollapsed}
       onToggleCollapse={(isCollapsed) => onUpdate({ ...cell, isCollapsed })}
       onDelete={onDelete}
       onRun={() => onRun?.()}

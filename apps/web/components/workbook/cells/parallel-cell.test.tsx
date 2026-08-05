@@ -86,6 +86,7 @@ describe("ParallelCellComponent", () => {
 
   it("threads a pending lane question through the recursive cell renderer", async () => {
     const cell = container();
+    cell.isCollapsed = true;
     cell.lanes[0].body = [
       {
         id: "lane-question",

@@ -28,6 +28,17 @@ const output = (id: string, producedBy: string): WorkbookCell => ({
   data: { v: 1 },
 });
 
+const parallel = (
+  body: Extract<WorkbookCell, { type: "parallel" }>["lanes"][number]["body"],
+): WorkbookCell => ({
+  id: "parallel-1",
+  type: "parallel",
+  name: "device_lanes",
+  defaultLaneId: "lane-1",
+  isCollapsed: false,
+  lanes: [{ id: "lane-1", label: "Lane 1", color: "#005E5E", conditions: [], body }],
+});
+
 describe("diffCells", () => {
   it("returns no changes for identical designs", () => {
     const cells = [protocol("p1"), question("q1", "reading")];
@@ -80,6 +91,19 @@ describe("diffCells", () => {
     };
     const afterRun: WorkbookCell[] = [protocol("p1"), answered, output("out1", "p1")];
     expect(diffCells(before, afterRun)).toEqual([]);
+  });
+
+  it("ignores runtime fields and output cells recursively inside a lane", () => {
+    const nestedProtocol = protocol("nested") as Extract<WorkbookCell, { type: "protocol" }>;
+    const before = [parallel([nestedProtocol])];
+    const after = [
+      parallel([
+        { ...nestedProtocol, isCollapsed: true },
+        output("nested-output", nestedProtocol.id) as Extract<WorkbookCell, { type: "output" }>,
+      ]),
+    ];
+
+    expect(diffCells(before, after)).toEqual([]);
   });
 
   it("detects a reordered cell", () => {

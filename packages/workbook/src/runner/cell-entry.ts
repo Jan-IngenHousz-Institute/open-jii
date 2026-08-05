@@ -1208,10 +1208,18 @@ export function landOn(
       const track = getTrack(s, trackId);
       const drained =
         Object.keys(s.inFlight).length === 0 && Object.keys(s.cancellingEffectIds).length === 0;
-      if (drained && activeParallelAttempt(s)) {
+      const hasLiveHumanInteraction = Object.values(s.tracks).some(
+        (candidate) =>
+          candidate.pendingInteraction?.kind === "question" ||
+          candidate.pendingInteraction?.kind === "instruction",
+      );
+      if (drained && activeParallelAttempt(s) && !hasLiveHumanInteraction) {
         return { state: abortActiveParallelAttempt(s, "Stopped by researcher"), effects: [] };
       }
-      const stopped = drained ? { ...s, runAllActive: false, stopRequested: false } : s;
+      const stopped =
+        drained && !hasLiveHumanInteraction
+          ? { ...s, runAllActive: false, stopRequested: false }
+          : s;
       return {
         state: setTrack(trace(stopped, `track ${trackId} stopped`), {
           ...track,

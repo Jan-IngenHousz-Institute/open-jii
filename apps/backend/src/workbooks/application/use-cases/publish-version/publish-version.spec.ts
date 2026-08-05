@@ -148,4 +148,58 @@ describe("PublishVersionUseCase", () => {
     assertSuccess(result);
     expect(result.value.cells).toEqual(cells);
   });
+
+  it("snapshots protocols and macros referenced only inside a parallel lane", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Nested protocol",
+      code: [{ pulses: [10, 20] }],
+      createdBy: userId,
+    });
+    const macro = await testApp.createMacro({
+      name: "Nested macro",
+      code: "bmVzdGVkLW1hY3Jv",
+      createdBy: userId,
+    });
+    const workbook = await testApp.createWorkbook({
+      name: "Nested entities",
+      createdBy: userId,
+      cells: [
+        {
+          id: "parallel-1",
+          type: "parallel",
+          name: "device_lanes",
+          defaultLaneId: "lane-1",
+          isCollapsed: false,
+          lanes: [
+            {
+              id: "lane-1",
+              label: "Lane 1",
+              color: "#005E5E",
+              conditions: [],
+              body: [
+                {
+                  id: "protocol-1",
+                  type: "protocol",
+                  isCollapsed: false,
+                  payload: { protocolId: protocol.id, version: 1 },
+                },
+                {
+                  id: "macro-1",
+                  type: "macro",
+                  isCollapsed: false,
+                  payload: { macroId: macro.id, language: "python" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+
+    assertSuccess(result);
+    expect(result.value.entitySnapshots.protocols[protocol.id].code).toEqual(protocol.code);
+    expect(result.value.entitySnapshots.macros[macro.id].code).toBe(macro.code);
+  });
 });

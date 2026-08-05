@@ -1,4 +1,5 @@
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { mapWorkbookCellTree } from "@repo/api/transforms/workbook-cell-tree";
 
 // Mirrors the backend drift projection (is-workbook-upgradable `designOf`): the
 // upgrade diff must ignore the same runtime/UI artifacts so a re-run never shows
@@ -31,10 +32,18 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(deepSort(value));
 }
 
-function designCell(cell: WorkbookCell): string {
-  return stableStringify(
-    Object.fromEntries(Object.entries(cell).filter(([k]) => !RUNTIME_CELL_FIELDS.has(k))),
+function designCells(cells: WorkbookCell[]): WorkbookCell[] {
+  return mapWorkbookCellTree(cells, ({ cell }) =>
+    cell.type === "output"
+      ? null
+      : (Object.fromEntries(
+          Object.entries(cell).filter(([key]) => !RUNTIME_CELL_FIELDS.has(key)),
+        ) as WorkbookCell),
   );
+}
+
+function designCell(cell: WorkbookCell): string {
+  return stableStringify(cell);
 }
 
 function labelOf(cell: WorkbookCell): string | undefined {
@@ -91,8 +100,8 @@ function lcsIds(a: string[], b: string[]): Set<string> {
  * Output cells and runtime state are ignored.
  */
 export function diffCells(oldCells: WorkbookCell[], newCells: WorkbookCell[]): CellChange[] {
-  const oldD = oldCells.filter((c) => c.type !== "output");
-  const newD = newCells.filter((c) => c.type !== "output");
+  const oldD = designCells(oldCells);
+  const newD = designCells(newCells);
   const oldById = new Map(oldD.map((c) => [c.id, c]));
   const newById = new Map(newD.map((c) => [c.id, c]));
 

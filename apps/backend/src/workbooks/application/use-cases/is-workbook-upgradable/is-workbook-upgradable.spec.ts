@@ -157,6 +157,53 @@ describe("IsWorkbookUpgradableUseCase", () => {
     expect(drifted.value).toBe(true);
   });
 
+  it("tracks entity drift for a protocol referenced only inside a lane", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Nested protocol",
+      code: [{ pulses: [10, 20] }],
+      createdBy: userId,
+    });
+    const workbook = await testApp.createWorkbook({
+      name: "Nested entities",
+      createdBy: userId,
+      cells: [
+        {
+          id: "parallel-1",
+          type: "parallel",
+          name: "device_lanes",
+          defaultLaneId: "lane-1",
+          isCollapsed: false,
+          lanes: [
+            {
+              id: "lane-1",
+              label: "Lane 1",
+              color: "#005E5E",
+              conditions: [],
+              body: [
+                {
+                  id: "protocol-1",
+                  type: "protocol",
+                  isCollapsed: false,
+                  payload: { protocolId: protocol.id, version: 1 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await publishV1(workbook);
+
+    const protocolRepo = testApp.module.get(ProtocolRepository);
+    await protocolRepo.update(protocol.id, { code: [{ pulses: [10, 30] }] });
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+    const drifted = await useCase.execute(expectValue(fresh.value));
+
+    assertSuccess(drifted);
+    expect(drifted.value).toBe(true);
+  });
+
   it("is false when only UI fold state (isCollapsed) changes", async () => {
     const workbook = await testApp.createWorkbook({
       name: "WB",
@@ -221,6 +268,67 @@ describe("IsWorkbookUpgradableUseCase", () => {
           isCollapsed: false,
           producedBy: source.id,
           data: { value: 42 },
+        },
+      ],
+    });
+    const fresh = await workbookRepo.findById(workbook.id);
+    assertSuccess(fresh);
+
+    const result = await useCase.execute(expectValue(fresh.value));
+    assertSuccess(result);
+    expect(result.value).toBe(false);
+  });
+
+  it("is false when nested runtime state and an output are added inside a lane", async () => {
+    const command = {
+      id: "command-1",
+      type: "command" as const,
+      isCollapsed: false,
+      payload: { format: "string" as const, content: "battery" },
+    };
+    const container = {
+      id: "parallel-1",
+      type: "parallel" as const,
+      name: "device_lanes",
+      defaultLaneId: "lane-1",
+      isCollapsed: false,
+      lanes: [
+        {
+          id: "lane-1",
+          label: "Lane 1",
+          color: "#005E5E",
+          conditions: [],
+          body: [command],
+        },
+      ],
+    };
+    const workbook = await testApp.createWorkbook({
+      name: "Nested runtime",
+      cells: [container],
+      createdBy: userId,
+    });
+    await publishV1(workbook);
+
+    await workbookRepo.update(workbook.id, {
+      cells: [
+        {
+          ...container,
+          isCollapsed: true,
+          lanes: [
+            {
+              ...container.lanes[0],
+              body: [
+                { ...command, isCollapsed: true },
+                {
+                  id: "output-1",
+                  type: "output",
+                  isCollapsed: false,
+                  producedBy: command.id,
+                  data: { battery: 90 },
+                },
+              ],
+            },
+          ],
         },
       ],
     });
