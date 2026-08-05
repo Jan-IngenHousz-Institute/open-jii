@@ -24,7 +24,7 @@ const timestamps = {
     .notNull(),
   updatedAt: timestamp("updated_at")
     .default(sql`(now() AT TIME ZONE 'UTC')`)
-    .$onUpdate(() => sql`(now() AT TIME ZONE 'UTC')`)
+    .$onUpdate(() => new Date())
     .notNull(),
 };
 
