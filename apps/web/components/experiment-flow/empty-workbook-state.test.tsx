@@ -27,11 +27,11 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
       hasError: false,
       hasUnsavedChanges: false,
       error: null,
-      flush: async () => undefined,
+      flush: () => Promise.resolve(),
     },
-    entitySaved: async () => undefined,
-    manualUpgrade: async () => undefined,
-    renameWorkbook: async () => undefined,
+    entitySaved: () => Promise.resolve(),
+    manualUpgrade: () => Promise.resolve(),
+    renameWorkbook: () => Promise.resolve(),
     attachWorkbook: async (nextWorkbook: { id: string; revision: number }) => {
       await orpcClient.experiments.attachWorkbook({
         id: "exp-1",
@@ -42,9 +42,9 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
       });
       setWorkbookId(nextWorkbook.id);
     },
-    detachWorkbook: async () => undefined,
-    setWorkbookVersion: async () => undefined,
-    retryFailed: async () => undefined,
+    detachWorkbook: () => Promise.resolve(),
+    setWorkbookVersion: () => Promise.resolve(),
+    retryFailed: () => Promise.resolve(),
     isPending: false,
     error: null,
   };

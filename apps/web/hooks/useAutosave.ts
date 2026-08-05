@@ -244,7 +244,10 @@ export function useAutosave<T>({
       }
       await runSave();
     }
-    if (pendingFlushRef.current && errorRef.current) throw errorRef.current;
+    if (pendingFlushRef.current && errorRef.current) {
+      if (errorRef.current instanceof Error) throw errorRef.current;
+      throw new Error("Autosave failed", { cause: errorRef.current });
+    }
   }, [runSave]);
 
   useEffect(() => {

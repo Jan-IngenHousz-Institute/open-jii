@@ -111,7 +111,7 @@ export function useWorkbookPersistenceCoordinator({
   const versionPropRef = useRef({ workbookId, versionId: workbookVersionId });
   const pendingCellPinRef = useRef<PendingCellPin | null>(null);
   const cellsRef = useRef(cells);
-  const flushForTransitionRef = useRef<() => Promise<void>>(async () => undefined);
+  const flushForTransitionRef = useRef<() => Promise<void>>(() => Promise.resolve());
   cellsRef.current = cells;
 
   if (scopeRef.current.workbookId !== workbookId) {
@@ -258,7 +258,7 @@ export function useWorkbookPersistenceCoordinator({
           "cells",
           async (assertCurrent) => {
             let pendingPin = pendingCellPinRef.current;
-            if (!pendingPin || pendingPin.fingerprint !== fingerprint) {
+            if (pendingPin?.fingerprint !== fingerprint) {
               assertCurrent();
               const saved = await updateWorkbook({ id: workbookId, cells: nextCells });
               assertCurrent();

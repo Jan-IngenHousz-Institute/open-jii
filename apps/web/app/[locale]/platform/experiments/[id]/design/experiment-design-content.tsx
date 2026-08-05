@@ -100,7 +100,9 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   useEffect(() => {
     if (!workbookId || !workbookDraft) return;
     setControlledDrafts((current) =>
-      current[workbookId] ? current : { ...current, [workbookId]: workbookDraft.cells },
+      Object.hasOwn(current, workbookId)
+        ? current
+        : { ...current, [workbookId]: workbookDraft.cells },
     );
   }, [workbookDraft, workbookId]);
 

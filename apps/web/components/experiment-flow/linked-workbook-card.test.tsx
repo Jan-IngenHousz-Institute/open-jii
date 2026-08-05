@@ -35,9 +35,9 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
       hasError: false,
       hasUnsavedChanges: false,
       error: null,
-      flush: async () => undefined,
+      flush: () => Promise.resolve(),
     },
-    entitySaved: async () => undefined,
+    entitySaved: () => Promise.resolve(),
     manualUpgrade: async () => {
       await orpcClient.experiments.upgradeWorkbookVersion({
         id: defaultProps.experimentId,
@@ -71,8 +71,8 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
       });
       setWorkbookId("");
     },
-    setWorkbookVersion: async () => undefined,
-    retryFailed: async () => undefined,
+    setWorkbookVersion: () => Promise.resolve(),
+    retryFailed: () => Promise.resolve(),
     isPending: false,
     error: null,
   };

@@ -63,7 +63,9 @@ describe("useWorkbookPersistenceCoordinator", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    mutations.update.mockImplementation(({ id }) => Promise.resolve({ id, revision: 2 }));
+    mutations.update.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve({ id, revision: 2 }),
+    );
     mutations.upgrade.mockResolvedValue({ workbookVersionId: "version-next" });
     mutations.attach.mockResolvedValue({ workbookVersionId: "version-attached" });
     mutations.detach.mockResolvedValue(undefined);
