@@ -44,4 +44,10 @@ An over-the-air JavaScript update does not change `nativeApplicationVersion`; on
 4. Activate the entry and test one below-minimum and one allowed build.
 5. Use `active: false` as the immediate rollback.
 
+### Required floor for mobile database migration 0006
+
+Before releasing the first native build containing `apps/mobile/drizzle/0006_add_delivery_generation.sql`, set `minVersion` to that build's version and keep the gate active for older builds. A pre-migration outbox uses the original row id as `_client_id` and lacks generation-gated acknowledgements; against a migrated database, AWS IoT dedupe can suppress a replacement while that old client records it as delivered.
+
+Do not use an OTA rollback, embedded-update rollback, or sideloaded native build that predates migration `0006` on a device where the migration has run.
+
 Implementation lives under `apps/mobile/src/features/force-update/`; the CMS query is `packages/cms/src/lib/graphql/pageForceUpdate.graphql`.

@@ -164,6 +164,12 @@ Local equivalent:
 pnpm run update:production
 ```
 
+### Required force-update floor for delivery generation
+
+The first native release containing `drizzle/0006_add_delivery_generation.sql` must set the CMS force-update `minVersion` to that release version before migrated databases can reach users. Keep that floor in place: older builds reuse `_client_id = id` and do not generation-gate delivery acknowledgements, so running one against a migrated database can let AWS IoT dedupe suppress a replacement while the old client records it as delivered.
+
+This is a release constraint, not an OTA-compatible change. Do not roll back or sideload a pre-migration native build after migration `0006` has run.
+
 ### Rollback
 
 OTA is reversible at any stage. Choose based on what you're rolling back to:
