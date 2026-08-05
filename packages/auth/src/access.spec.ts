@@ -48,10 +48,15 @@ describe("grant roles", () => {
     expectExactly((a) => grantRoleCan("owner", "experiment", a), ALL_ACTIONS);
   });
 
+  it("treats an old-pod-written 'member' grant exactly like 'viewer'", () => {
+    expectExactly((a) => grantRoleCan("member", "experiment", a), ["read", "contribute"]);
+    for (const resourceType of TYPES_WITHOUT_DATA) {
+      expectExactly((a) => grantRoleCan("member", resourceType, a), ["read"]);
+    }
+  });
+
   it("refuses an unknown role outright", () => {
-    // `member` is in here as an unknown role, which is what it is: the matrix knows
-    // three grant roles and a CHECK keeps the column to them.
-    for (const role of ["bogus", "member"]) {
+    for (const role of ["bogus"]) {
       for (const resourceType of RESOURCE_TYPES) {
         expectExactly((a) => grantRoleCan(role, resourceType, a), []);
       }
@@ -144,17 +149,15 @@ describe("GRANT_ROLES agrees with the matrix", () => {
     }
   });
 
-  it("holds every role the matrix recognizes", () => {
-    // The other direction: a tier added to `grantRoles` that the writers cannot express
-    // is a tier nothing can ever be granted.
+  it("recognizes only the write vocabulary plus the mixed-version read alias", () => {
     const recognized = ["owner", "admin", "viewer", "member", "bogus"].filter((role) =>
       grantRoleCan(role, "experiment", "read"),
     );
 
-    expect([...recognized].sort()).toEqual([...GRANT_ROLES].sort());
+    expect([...recognized].sort()).toEqual([...GRANT_ROLES, "member"].sort());
   });
 
-  it("does not carry the retired 'member' spelling", () => {
+  it("does not let writers mint the compatibility 'member' spelling", () => {
     expect(GRANT_ROLES).not.toContain("member");
   });
 });

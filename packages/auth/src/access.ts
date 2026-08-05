@@ -112,25 +112,29 @@ export type OrgRole = keyof typeof roles;
  * does a public experiment's passer-by. That is why the grant `viewer` tier cannot be
  * aliased onto the org `member` role the way it was when both meant read-only.
  *
- * These keys are the whole set. `GRANT_ROLES` in `@repo/database` types every write
- * path against them, so anything else reaching `grantRoleCan` is a bug and is refused.
+ * `GRANT_ROLES` in `@repo/database` types every write path against the current role
+ * names. The additional `member` key below is read-only compatibility for grants
+ * written by an older application instance during a rolling deployment.
  *
  * `owner`/`admin` mean full control in both matrices, so they are shared.
  */
+const viewerGrantRole = ac.newRole({
+  ...memberAc.statements,
+  experiment: READ_AND_CONTRIBUTE,
+  // Silent on the other types rather than generous: only experiments have data to
+  // contribute to, so a future generic surface cannot read a promise out of this
+  // that nothing enforces.
+  protocol: READ_ONLY,
+  macro: READ_ONLY,
+  workbook: READ_ONLY,
+  device: READ_ONLY,
+});
+
 const grantRoles = {
   owner: roles.owner,
   admin: roles.admin,
-  viewer: ac.newRole({
-    ...memberAc.statements,
-    experiment: READ_AND_CONTRIBUTE,
-    // Silent on the other types rather than generous: only experiments have data to
-    // contribute to, so a future generic surface cannot read a promise out of this
-    // that nothing enforces.
-    protocol: READ_ONLY,
-    macro: READ_ONLY,
-    workbook: READ_ONLY,
-    device: READ_ONLY,
-  }),
+  viewer: viewerGrantRole,
+  member: viewerGrantRole,
 } as const;
 
 type GrantRoleKey = keyof typeof grantRoles;

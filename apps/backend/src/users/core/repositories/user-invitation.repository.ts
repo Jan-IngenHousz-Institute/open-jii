@@ -34,6 +34,11 @@ function normaliseTier(stored: string | null): InvitationTier {
   return stored === "admin" ? "admin" : "viewer";
 }
 
+/** Store the lower tier in the spelling older application instances can accept. */
+function storeTier(tier: InvitationTier): "admin" | "member" {
+  return tier === "admin" ? "admin" : "member";
+}
+
 /**
  * `tier` lives in the `invitations.role` column, unrenamed. Every read goes through
  * this projection, so the rest of the app only sees the current names.
@@ -81,7 +86,7 @@ export class InvitationRepository {
           resourceType,
           resourceId,
           email: email.toLowerCase(),
-          role: invite.tier,
+          role: storeTier(invite.tier),
           invitedBy,
         })
         .returning(invitationColumns);

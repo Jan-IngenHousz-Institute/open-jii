@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { and, eq, invitations, resourceGrants } from "@repo/database";
+
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { InvitationRepository } from "./user-invitation.repository";
@@ -54,6 +56,12 @@ describe("InvitationRepository", () => {
       });
       expect(result.value.id).toBeDefined();
       expect(result.value.createdAt).toBeDefined();
+
+      const [stored] = await testApp.database
+        .select({ role: invitations.role })
+        .from(invitations)
+        .where(eq(invitations.id, result.value.id));
+      expect(stored.role).toBe("member");
     });
 
     it("should lowercase the email", async () => {
@@ -448,7 +456,7 @@ describe("InvitationRepository", () => {
   });
 
   describe("acceptInvitation", () => {
-    it("should mark invitation as accepted and add experiment member", async () => {
+    it("accepts a stored 'member' invitation as a 'viewer' grant", async () => {
       const inviteeEmail = "accept@example.com";
       const { experiment } = await testApp.createExperiment({
         name: "Accept Invitation Test",
@@ -464,6 +472,12 @@ describe("InvitationRepository", () => {
       );
       assertSuccess(createResult);
 
+      const [storedInvitation] = await testApp.database
+        .select({ role: invitations.role })
+        .from(invitations)
+        .where(eq(invitations.id, createResult.value.id));
+      expect(storedInvitation.role).toBe("member");
+
       const newUserId = await testApp.createTestUser({ email: inviteeEmail });
 
       const acceptResult = await repository.acceptInvitation(
@@ -471,11 +485,25 @@ describe("InvitationRepository", () => {
         newUserId,
         "experiment",
         experiment.id,
-        { tier: "viewer" },
+        { tier: createResult.value.tier },
         testUserId,
       );
 
       assertSuccess(acceptResult);
+      expect(acceptResult.value).toBe("accepted");
+
+      const [grant] = await testApp.database
+        .select({ role: resourceGrants.role })
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, newUserId),
+          ),
+        );
+      expect(grant.role).toBe("viewer");
 
       // Verify invitation status changed
       const findResult = await repository.findById(createResult.value.id);

@@ -398,9 +398,9 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
-    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin' or
-    // the read-and-contribute tier 'viewer'. Written only from `InvitationTier`.
-    role: text("role").default("viewer").notNull(),
+    // Kept as `member` for the lower tier while older application instances can
+    // accept pending invitations; application reads normalize it to `viewer`.
+    role: text("role").default("member").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")
       .references(() => users.id)

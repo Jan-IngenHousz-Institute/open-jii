@@ -14,17 +14,22 @@
 -- they are resolved from `organization_id` at read time. A creator therefore gets
 -- no grant of their own — see statement 2.
 --
--- The DDL settles the read-and-contribute tier on the single name `viewer`, and
--- statements 3-4 rewrite the rows still carrying the older `member`. The readers
--- resolve a role by exact match, so a column holding two names for one tier is a
--- standing invitation to miss half the rows. `resource_grants` otherwise already has
--- the shape this model needs (one row per resource + grantee, carrying a role).
+-- Grant readers in this release accept both `member` and `viewer` as the same
+-- read-and-contribute tier. Existing rows are deliberately not renamed here: older
+-- application instances can still write `member` grants while a rolling deployment
+-- is in progress, and they require pending invitations to keep the `member` spelling.
+-- The data rename and invitation default change are deferred to a follow-up release,
+-- once no pre-rename application instance can still be live.
+--
+-- New grant writes use `viewer`, which the previous application version already
+-- understands on reads. `resource_grants` otherwise already has the shape this model
+-- needs (one row per resource + grantee, carrying a role).
 --
 -- Folded into the migration rather than a hand-run script so it applies
 -- automatically and atomically on db:migrate in every environment. Statement 1 is
--- a set-based INSERT with ON CONFLICT DO NOTHING, statement 2 is a set-based
--- DELETE and statements 3-4 are set-based UPDATEs keyed on the value they replace,
--- so a half-applied migration can be run again and lands in exactly the same place.
+-- a set-based INSERT with ON CONFLICT DO NOTHING and statement 2 is a set-based
+-- DELETE, so a half-applied migration can be run again and lands in exactly the same
+-- place.
 --
 -- That is not the same as being a no-op forever. Statement 1 inserts where a grant
 -- is absent, so if it were re-run long after the app went live it would restore a
@@ -37,7 +42,6 @@
 -- physically untouched, with their data frozen — its own `member` roster role is a
 -- separate vocabulary and is deliberately not renamed.
 -- ============================================================================
-ALTER TABLE "invitations" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
 ALTER TABLE "resource_grants" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
 -- 1. Give every experiment member the grant that matches their roster role
 --    (admin -> admin, member -> viewer — the same two tiers 0039's mirror produced,
@@ -118,14 +122,4 @@ WHERE g."resource_type" = r."resource_type"
     WHERE om."organization_id" = r."organization_id"
       AND om."user_id" = r."created_by"
       AND om."role" IN ('owner', 'admin')
-  );--> statement-breakpoint
--- 3. Rewrite the rows still spelling the middle tier `member` — 0039's mirror output
---    and anything the runtime wrote before this release. Both names always meant the
---    same tier, so no access changes; what changes is that one spelling is left, so a
---    `WHERE role = 'viewer'` can be trusted to find every row of that tier.
---
---    Runs after statement 1 so it also covers what the mirror just inserted.
-UPDATE "resource_grants" SET "role" = 'viewer' WHERE "role" = 'member';--> statement-breakpoint
--- 4. The same for pending invitations, whose `role` column stores a grant role and
---    carried the same two spellings for one tier.
-UPDATE "invitations" SET "role" = 'viewer' WHERE "role" = 'member';
+  );

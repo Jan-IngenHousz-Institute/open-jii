@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import { resourceGrants } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { TestHarness } from "../../test/test-harness";
@@ -87,6 +88,44 @@ describe("SharingController", () => {
       (await authz.can(grantee, { resourceType: "macro", resourceId: macro.id, action: "read" }))
         .allow,
     ).toBe(true);
+  });
+
+  it("authorizes and renders an old-pod-written 'member' grant in a mixed-version deployment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Mixed-version experiment",
+      userId: owner,
+    });
+    const collaborator = await testApp.createTestUser({ name: "Legacy Collaborator" });
+    await testApp.database.insert(resourceGrants).values({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "member",
+    });
+
+    expect(
+      (
+        await authz.can(collaborator, {
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          action: "contribute",
+        })
+      ).allow,
+    ).toBe(true);
+
+    const res = await testApp
+      .get(
+        testApp.resolveOrpcPath(contract.sharing.listGrants, {
+          resourceType: "experiment",
+          id: experiment.id,
+        }),
+      )
+      .withAuth(owner)
+      .expect(StatusCodes.OK);
+
+    const grants = res.body as ResourceGrantDto[];
+    expect(grants.find((grant) => grant.granteeId === collaborator)?.role).toBe("viewer");
   });
 
   it("rejects a non-sharer (plain public reader) with 403", async () => {

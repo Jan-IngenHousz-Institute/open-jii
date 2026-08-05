@@ -84,13 +84,14 @@ async function assertResourceIsUnarchived(
 }
 
 /**
- * `role` is a `text` column, so a read hands back a plain string. Every write path is
- * typed `GrantRole`, so narrowing is all that is needed — named rather than cast inline
- * because this is the single place that guarantee is leaned on. A value written around
- * those paths reaches response validation as itself and is refused there, rather than
- * being read as some tier it never meant.
+ * `role` is a `text` column, so a read hands back a plain string. Grants written as
+ * `member` by an older application instance are the same tier as `viewer` and must be
+ * projected onto the current API vocabulary. Any other value reaches response
+ * validation as itself and is refused there rather than being read as a tier it never
+ * meant.
  */
-const toGrantRole = (stored: string) => stored as GrantRole;
+const toGrantRole = (stored: string): GrantRole =>
+  (stored === "member" ? "viewer" : stored) as GrantRole;
 
 /**
  * Display columns for a user grantee/owner, anonymized like every other

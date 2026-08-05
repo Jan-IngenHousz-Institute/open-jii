@@ -26,9 +26,9 @@ import { TestHarness } from "../test/test-harness";
  * `experiment_members` is only ever READ, so the specs seed it to reproduce the
  * pre-consolidation state and then assert what the grants look like afterwards.
  *
- * The migration's DDL — the column defaults and the role CHECKs — is not mirrored
- * here: it has applied by the time these run, and the end-state block below asserts
- * it directly against the database instead.
+ * The migration's DDL — the grant column default — is not mirrored here: it has
+ * applied by the time these run, and the end-state block below asserts the relevant
+ * defaults directly against the database instead.
  */
 const GRANT_EVERY_MEMBER_THEIR_ROLE_SQL = sql`
   INSERT INTO "resource_grants" ("resource_type", "resource_id", "grantee_type", "grantee_id", "role")
@@ -68,20 +68,9 @@ const DELETE_CREATOR_GRANTS_SQL = sql`
     );
 `;
 
-/** Rewrites the rows that still spell the read-and-contribute tier `member`. */
-const RETIRE_MEMBER_SPELLING_SQL = sql`
-  UPDATE "resource_grants" SET "role" = 'viewer' WHERE "role" = 'member';
-`;
-
-const RETIRE_MEMBER_SPELLING_INVITATIONS_SQL = sql`
-  UPDATE "invitations" SET "role" = 'viewer' WHERE "role" = 'member';
-`;
-
 async function runDataMigration(db: DatabaseInstance): Promise<void> {
   await db.execute(GRANT_EVERY_MEMBER_THEIR_ROLE_SQL);
   await db.execute(DELETE_CREATOR_GRANTS_SQL);
-  await db.execute(RETIRE_MEMBER_SPELLING_SQL);
-  await db.execute(RETIRE_MEMBER_SPELLING_INVITATIONS_SQL);
 }
 
 describe("grants-as-sole-access-source migration data ops (0041)", () => {
@@ -451,14 +440,14 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
   });
 
   it.each(["resource_grants", "invitations"] as const)(
-    "rewrites a pre-existing 'member' row in %s to 'viewer'",
+    "preserves a pre-existing 'member' row in %s for mixed-version deployments",
     async (table) => {
       const owner = await testApp.createTestUser({ name: "Owner" });
       const subject = await testApp.createTestUser({ name: "Subject" });
       const experiment = await seedExperiment(owner);
 
-      // What 0039's mirror and the pre-release write paths left behind. Inserted
-      // directly because no typed helper can express the retired spelling any more.
+      // What 0039's mirror and an older application instance can leave behind.
+      // Inserted directly because current typed grant helpers cannot write the alias.
       if (table === "resource_grants") {
         await testApp.database.insert(resourceGrants).values({
           resourceType: "experiment",
@@ -482,9 +471,7 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
       const roles = await testApp.database.execute<{ role: string }>(
         sql`SELECT "role" FROM ${sql.identifier(table)}`,
       );
-      // Same tier either way, so nobody's access moves — but only one name is left,
-      // which is what makes a `WHERE role = 'viewer'` find every row of that tier.
-      expect(roles.map((r) => r.role)).toEqual(["viewer"]);
+      expect(roles.map((r) => r.role)).toEqual(["member"]);
     },
   );
 
@@ -563,7 +550,7 @@ describe("grants-as-sole-access-source migration end state (0041)", () => {
 
   it.each([
     ["resource_grants", "viewer"],
-    ["invitations", "viewer"],
+    ["invitations", "member"],
   ])("defaults %s.role to %s", async (table, expected) => {
     const [column] = await testApp.database.execute<{ column_default: string | null }>(
       sql`SELECT column_default FROM information_schema.columns
